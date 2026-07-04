@@ -1,6 +1,6 @@
 ## Monorepo layout
 
-27 projects live under `projects/*` (declared as the sole yarn workspace glob). Today that's yarn 4
+26 projects live under `projects/*` (declared as the sole yarn workspace glob). Today that's yarn 4
 in PnP mode plus nx for the task graph — `nx run-many` drives build, typecheck, e2e, and codegen via
 the yarn scripts; CI additionally uses `nx affected` for changed-project detection; `nx.json` wires
 the `@nx/vite` plugin and per-target caching. Only `app-web` has its
