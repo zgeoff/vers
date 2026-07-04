@@ -7,3 +7,6 @@
 .pnp.cjs
 .pnp.loader.mjs
 schema.graphql
+# vendored from zgeoff/tools (must stay byte-identical) + generated output
+agents/shared.md
+AGENTS.md

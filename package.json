@@ -8,6 +8,7 @@
   "scripts": {
     "clean": "./scripts/clean.sh",
     "build": "nx run-many -t build",
+    "build:agents": "bash scripts/build-agents-md.sh agents/shared.md agents/project.md AGENTS.md",
     "build:base": "docker build -t vers/monorepo-base:latest -f Dockerfile .",
     "lint": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/lint.ts",
     "test": "vitest",

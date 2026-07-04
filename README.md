@@ -80,13 +80,7 @@ fly secrets set SESSION_SECRET=$(openssl rand -hex 32) HONEYPOT_SECRET=$(openssl
 fly secrets set --app=vers-service-api JWT_SIGNING_PRIVKEY=- < privkey.pem
 ```
 
-## development with cursor
+## development with agents
 
-all of our cursor rules are in the [.cursor](.cursor) directory.
-
-consider prompting an agentic composer like:
-
-> We are working on a new feature for the \<project-name> project.  
-> At a high level, we want to \<describe-feature>.
->
-> Read @\_\_initialization.mdc and confirm you're ready to proceed.
+See [AGENTS.md](AGENTS.md) for agent guidelines (generated from `agents/shared.md` and
+`agents/project.md` — edit the partials, never `AGENTS.md` itself).

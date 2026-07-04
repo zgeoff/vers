@@ -1,8 +1,0 @@
----
-description: Styling Standards using base-ui and Panda CSS
-globs: **/*.tsx
-alwaysApply: false
----
-# Styling Standards
-
-Example code: TODO
