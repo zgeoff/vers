@@ -182,6 +182,8 @@
     "commander": "13.1.0",
     "drizzle-orm": "catalog:",
     "execa": "9.5.2",
-    "ora": "8.2.0"
+    "ora": "8.2.0",
+    "postgres": "catalog:",
+    "zod": "catalog:"
   }
 }
