@@ -1,0 +1,11 @@
+{
+  "name": "vers-spike-158",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev:probe": "pnpm --filter @vers/spike-probe dev",
+    "bench": "pnpm --filter @vers/spike-probe bench",
+    "typecheck": "pnpm --recursive typecheck"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@vers/spike-store",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@event-driven-io/emmett": "0.42.3",
+    "@event-driven-io/emmett-postgresql": "0.42.3",
+    "@event-driven-io/pongo": "0.16.11"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

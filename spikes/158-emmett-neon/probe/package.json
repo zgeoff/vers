@@ -1,0 +1,20 @@
+{
+  "name": "@vers/spike-probe",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/serve.ts",
+    "start": "bun src/serve.ts",
+    "bench": "bun src/run-bench.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@event-driven-io/emmett": "0.42.3",
+    "@vers/spike-store": "workspace:*",
+    "elysia": "1.4.29"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.14",
+    "typescript": "5.9.3"
+  }
+}

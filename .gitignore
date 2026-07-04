@@ -66,3 +66,5 @@ todo.md
 ## Panda
 styled-system
 styled-system-studio
+# spike secrets
+spikes/**/.env
