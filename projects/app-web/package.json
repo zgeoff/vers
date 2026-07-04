@@ -6,7 +6,13 @@
   "license": "",
   "type": "module",
   "scripts": {
-    "start": "NODE_ENV=production node ./server.mjs"
+    "build": "react-router build",
+    "codegen": "panda cssgen",
+    "dev": "react-router dev --config=vite.config.ts",
+    "start": "NODE_ENV=production node ./server.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typegen": "react-router typegen"
   },
   "dependencies": {
     "@conform-to/react": "1.2.2",

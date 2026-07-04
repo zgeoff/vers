@@ -4,11 +4,10 @@ export default {
     `bun run codegen:graphql`,
     'git add .',
   ],
-  'projects/**/*.{ts,tsx}': [
+  'projects/**/*.{ts,tsx}': () => [
     'bun run codegen:styles',
-    (files) =>
-      `bun run nx affected --target=typecheck --files=${files.join(',')}`,
-    'bun run test run --changed',
+    'bun run typecheck',
+    'bun run test',
   ],
   'projects/**/*.{js,ts,jsx,tsx,json}': (files) => [
     `bun run format --files ${files.join(',')}`,

@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "typescript": "catalog:"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

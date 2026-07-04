@@ -18,3 +18,12 @@ exports.plugins = [
     },
   }),
 ];
+
+exports.assets = ['src/assets'];
+exports.entryPoint = 'src/main.ts';
+exports.external = [
+  'pino',
+  'pino-pretty',
+  'pino-sentry-transport',
+  '@sentry/node',
+];

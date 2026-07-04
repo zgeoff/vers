@@ -18,3 +18,7 @@ exports.plugins = [
     },
   }),
 ];
+
+exports.assets = ['src/assets'];
+exports.entryPoint = 'migrate.ts';
+exports.external = ['pino', 'pino-pretty', 'pino-sentry-transport'];

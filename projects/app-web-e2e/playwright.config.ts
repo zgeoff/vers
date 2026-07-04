@@ -1,15 +1,16 @@
 import path from 'node:path';
-import { workspaceRoot } from '@nx/devkit';
 import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.BASE_URL ?? 'http://localhost:4000';
 
 // having a million issues trying to use __dirname to establish a reliable path
 // so it's easier to do this to handle the case when this file gets parsed for
-// building our nx graph
+// building our task graph
 const projectRoot = process.cwd().includes('app-web-e2e')
   ? process.cwd()
   : `${process.cwd()}/projects/app-web-e2e`;
+
+const workspaceRoot = path.resolve(projectRoot, '..', '..');
 
 const dotEnvFile = path.join(projectRoot, '.env');
 

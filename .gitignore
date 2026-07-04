@@ -46,9 +46,8 @@ Thumbs.db
 # caches
 .cache
 
-# nx
-.nx
-!.nx/workflows
+# turbo
+.turbo
 
 # secrets & keys
 privkey.pem
