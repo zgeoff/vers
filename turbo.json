@@ -72,7 +72,11 @@
       "dependsOn": ["codegen", "typegen", "//#codegen:graphql"]
     },
     "e2e": {
-      "dependsOn": ["^build", "@vers/web#build"],
+      "dependsOn": [
+        "@vers/web#codegen",
+        "@vers/web#typegen",
+        "//#codegen:graphql"
+      ],
       "cache": false
     },
     "dev": {

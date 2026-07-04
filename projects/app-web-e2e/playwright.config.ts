@@ -24,11 +24,21 @@ export default defineConfig({
   outputDir: '.test-results',
   projects: [
     {
+      name: 'warmup',
+      testMatch: /warmup\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      dependencies: ['warmup'],
       name: 'chromium',
+      testIgnore: /warmup\.setup\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  retries: 0,
+  // vite's dev-server dependency optimizer can still force a full page
+  // reload the first time a code-split route loads a dependency the warmup
+  // pass didn't reach; one retry absorbs that without masking real failures
+  retries: process.env.CI ? 1 : 0,
   timeout: 30 * 1000,
   use: {
     baseURL,

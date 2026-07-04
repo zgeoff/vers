@@ -1,7 +1,7 @@
-import * as pg from 'postgres';
+import postgres from 'postgres';
 
 export function isUniqueConstraintError(
-  error: pg.PostgresError,
+  error: postgres.PostgresError,
   constraintName: string,
 ) {
   return error.code === '23505' && error.constraint_name === constraintName;

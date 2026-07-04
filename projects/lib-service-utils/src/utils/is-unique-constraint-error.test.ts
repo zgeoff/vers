@@ -1,9 +1,9 @@
 import { expect, test } from 'vitest';
-import * as pg from 'postgres';
+import postgres from 'postgres';
 import { isUniqueConstraintError } from './is-unique-constraint-error';
 
 test('it returns true for unique constraint violations', () => {
-  const error = new pg.PostgresError(
+  const error = new postgres.PostgresError(
     'duplicate key value violates unique constraint "users_email_unique"',
   );
 
@@ -14,7 +14,7 @@ test('it returns true for unique constraint violations', () => {
 });
 
 test('it returns false for non-matching constraint names', () => {
-  const error = new pg.PostgresError(
+  const error = new postgres.PostgresError(
     'duplicate key value violates unique constraint "users_email_unique"',
   );
 
@@ -25,7 +25,7 @@ test('it returns false for non-matching constraint names', () => {
 });
 
 test('it returns false for non-unique constraint errors', () => {
-  const error = new pg.PostgresError(
+  const error = new postgres.PostgresError(
     'insert or update on table "users" violates foreign key constraint "users_email_fkey"',
   );
 
@@ -35,7 +35,9 @@ test('it returns false for non-unique constraint errors', () => {
 });
 
 test('it returns false for other postgres errors', () => {
-  const error = new pg.PostgresError('undefined table "users_email_unique"');
+  const error = new postgres.PostgresError(
+    'undefined table "users_email_unique"',
+  );
 
   error.code = '42P01'; // undefined table
 
