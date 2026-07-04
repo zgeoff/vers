@@ -44,6 +44,7 @@
     "typecheck": "nx run-many -t typecheck",
     "e2e": "nx run-many -t e2e",
     "format": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/format.ts",
+    "email:preview": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/email-preview.ts",
     "codegen:graphql": "TS_NODE_PROJECT=./tsconfig.codegen.json dotenvx run -f projects/service-api/.env.development -- graphql-codegen --require tsconfig-paths/register --import jiti/register",
     "codegen:styles": "nx run-many -t codegen",
     "codegen:types": "nx run-many -t typegen",
