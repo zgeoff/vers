@@ -1,8 +1,9 @@
 ## Monorepo layout
 
 27 projects live under `projects/*` (declared as the sole yarn workspace glob). Today that's yarn 4
-in PnP mode plus nx for the task graph — `nx run-many`/`nx affected` drive build, typecheck, e2e,
-and codegen; `nx.json` wires the `@nx/vite` plugin and per-target caching. Only `app-web` has its
+in PnP mode plus nx for the task graph — `nx run-many` drives build, typecheck, e2e, and codegen via
+the yarn scripts; CI additionally uses `nx affected` for changed-project detection; `nx.json` wires
+the `@nx/vite` plugin and per-target caching. Only `app-web` has its
 own `package.json` (needed for its own `react-router build`); every other project's dependencies
 live in the single root `package.json`, which nx's project graph still splits per `projects/*`
 directory. See `docs/000-overview.md` for the project list and what each one is.
@@ -18,7 +19,7 @@ directory. See `docs/000-overview.md` for the project list and what each one is.
 - `yarn format` / `yarn format --check` — `tsx scripts/format.ts`, a wrapper that shells out to
   `prettier`.
 - `yarn build` — `nx run-many -t build`; `yarn build:<project>` for a single one.
-- `yarn e2e` — `nx affected -t e2e` (Playwright, `app-web-e2e`).
+- `yarn e2e` — `nx run-many -t e2e` (Playwright, `app-web-e2e`).
 
 ## Tooling migration in progress
 
