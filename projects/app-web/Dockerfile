@@ -10,9 +10,12 @@ RUN \
   rm -f projects/app-web/.env.development && \
   rm -f projects/app-web/.env.test && \
   # build application
-  yarn build:app-web --mode production && \
+  bun run build:app-web --mode production && \
   # clean up msw
   rm -f projects/app-web/build/client/mockServiceWorker.js && \
+  # make app-web's manifest standalone for the npm install below: drop
+  # workspace deps (bundled into the build) and inline catalog versions
+  bun scripts/write-standalone-manifest.ts projects/app-web/package.json && \
   # remove our root package.json so no workspace shenanigans
   rm -f package.json && \
   # install our minimum required dependencies to run our server

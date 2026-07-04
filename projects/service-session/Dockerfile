@@ -16,11 +16,12 @@ ENV SENTRY_AUTH_TOKEN $SENTRY_AUTH_TOKEN
 RUN apt-get update && apt-get install -y ca-certificates
 
 RUN \
-  yarn run build:service-session --mode "$BUILD_MODE" && \
+  bun run build:service-session --mode "$BUILD_MODE" && \
+  # make the generated manifest standalone: drop workspace deps (bundled)
+  # and inline catalog versions so npm can install it
+  bun scripts/write-standalone-manifest.ts projects/service-session/dist/package.json && \
   cd projects/service-session/dist && \
-  # disable pnp so we can simply resolve our modules 
-  yarn config set nodeLinker node-modules && \
-  yarn install
+  npm install --omit=dev
 
 FROM node:${NODE_VERSION}-alpine
 

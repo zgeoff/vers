@@ -9,7 +9,7 @@ ENV NODE_ENV="production"
 COPY --link . .
 
 RUN \
-  yarn run build:db-mongo && \
+  bun run build:db-mongo && \
   cd projects/db-mongo && \
   node --experimental-sea-config sea-config.json && \
   cp $(command -v node) dist/run-flycheck-server && \

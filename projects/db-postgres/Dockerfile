@@ -11,11 +11,12 @@ ARG BUILD_MODE=production
 ENV BUILD_MODE $BUILD_MODE
 
 RUN \
-  yarn run build:db-postgres --mode "$BUILD_MODE" && \
+  bun run build:db-postgres --mode "$BUILD_MODE" && \
+  # make the generated manifest standalone: drop workspace deps (bundled)
+  # and inline catalog versions so npm can install it
+  bun scripts/write-standalone-manifest.ts projects/db-postgres/dist/package.json && \
   cd projects/db-postgres/dist && \
-  # disable pnp so we can simply resolve our modules 
-  yarn config set nodeLinker node-modules && \
-  yarn install
+  npm install --omit=dev
 
 FROM node:${NODE_VERSION}-alpine
 
