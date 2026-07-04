@@ -1,0 +1,16 @@
+{
+  "name": "@vers/web-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@vers/service-utils": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.51.0",
+    "@types/node": "22.13.10",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

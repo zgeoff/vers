@@ -1,0 +1,36 @@
+{
+  "name": "@vers/service-avatar",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:",
+    "@hono/sentry": "catalog:",
+    "@hono/trpc-server": "catalog:",
+    "@paralleldrive/cuid2": "catalog:",
+    "@trpc/server": "catalog:",
+    "@vers/data": "workspace:*",
+    "@vers/postgres-schema": "workspace:*",
+    "@vers/service-test-utils": "workspace:*",
+    "@vers/service-types": "workspace:*",
+    "@vers/service-utils": "workspace:*",
+    "@vers/validation": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "hono": "catalog:",
+    "postgres": "catalog:",
+    "superjson": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@sentry/esbuild-plugin": "catalog:",
+    "@types/node": "22.13.10",
+    "jest-extended": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
+  }
+}

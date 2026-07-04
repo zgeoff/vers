@@ -1,0 +1,39 @@
+{
+  "name": "@vers/service-user",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:",
+    "@hono/sentry": "catalog:",
+    "@hono/trpc-server": "catalog:",
+    "@paralleldrive/cuid2": "catalog:",
+    "@trpc/server": "catalog:",
+    "@vers/game-utils": "workspace:*",
+    "@vers/postgres-schema": "workspace:*",
+    "@vers/service-test-utils": "workspace:*",
+    "@vers/service-types": "workspace:*",
+    "@vers/service-utils": "workspace:*",
+    "@vers/validation": "workspace:*",
+    "bcryptjs": "3.0.2",
+    "drizzle-orm": "catalog:",
+    "hono": "catalog:",
+    "postgres": "catalog:",
+    "superjson": "catalog:",
+    "tiny-invariant": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@sentry/esbuild-plugin": "catalog:",
+    "@types/bcryptjs": "2.4.6",
+    "@types/node": "22.13.10",
+    "jest-extended": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
+  }
+}

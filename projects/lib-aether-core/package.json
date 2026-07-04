@@ -1,0 +1,21 @@
+{
+  "name": "@vers/aether-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@paralleldrive/cuid2": "catalog:",
+    "@vers/game-utils": "workspace:*",
+    "tiny-invariant": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "22.13.10",
+    "jest-extended": "catalog:",
+    "typescript": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
+  }
+}
