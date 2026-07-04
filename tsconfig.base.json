@@ -26,7 +26,6 @@
     "paths": {
       "@vers/web": ["projects/app-web/src"],
       "@vers/web-e2e": ["projects/app-web-e2e/src"],
-      "@vers/db-mongo": ["projects/db-mongo/src"],
       "@vers/db-postgres": ["projects/db-postgres/src"],
       "@vers/aether-client": ["projects/lib-aether-client/src"],
       "@vers/aether-core": ["projects/lib-aether-core/src"],
