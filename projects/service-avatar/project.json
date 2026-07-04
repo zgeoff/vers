@@ -17,7 +17,12 @@
         "tsConfig": "projects/service-avatar/tsconfig.app.json",
         "assets": ["projects/service-avatar/src/assets"],
         "generatePackageJson": true,
-        "external": ["pino-pretty", "pino-sentry-transport", "@sentry/node"],
+        "external": [
+          "pino",
+          "pino-pretty",
+          "pino-sentry-transport",
+          "@sentry/node"
+        ],
         "esbuildConfig": "projects/service-avatar/esbuild.config.cjs"
       }
     },
