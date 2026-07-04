@@ -7,7 +7,9 @@ export default {
   'projects/**/*.{ts,tsx}': () => [
     'bun run codegen:styles',
     'bun run typecheck',
-    'bun run test',
+    // changed-only: the full turbo test task drags in postgres-backed suites
+    // that need the test container running
+    'bunx vitest run --changed',
   ],
   'projects/**/*.{js,ts,jsx,tsx,json}': (files) => [
     `bun run format --files ${files.join(',')}`,

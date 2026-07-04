@@ -252,7 +252,7 @@ export default tseslint.config(
   },
   {
     ignores: [
-      '**/.nx/**',
+      '**/.turbo/**',
       '**/build/**',
       '**/dist/**',
       '**/*timestamp*.mjs',

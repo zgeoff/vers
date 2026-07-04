@@ -25,7 +25,7 @@ Development:
 
 - Build - [Vite](https://vitejs.dev), [esbuild](https://esbuild.github.io)
 - Testing - [Vitest](https://vitest.dev), [Playwright](https://playwright.dev), [MSW](https://mswjs.io)
-- Monorepo - [NX](https://nx.dev)
+- Monorepo - [Turborepo](https://turborepo.dev)
 - Type Safety - [TypeScript](https://typescriptlang.org), [Zod](https://zod.dev)
 - Monitoring - [Sentry](https://sentry.io)
 

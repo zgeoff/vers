@@ -110,7 +110,8 @@ jobs:
         id: record-affected-projects
         if: ${{ github.ref_name == 'main' }}
         run: |
-          affected="$(bunx turbo run build --affected --dry=json | jq -r '.packages[]')"
+          # each name is wrapped in <> so the contains() gates below can't substring-match (e.g. @vers/web vs @vers/web-e2e)
+          affected="$(bunx turbo run build --affected --dry=json | jq -r '.packages[] | "<\(.)>"')"
           echo "${affected}"
           delimiter="$(openssl rand -hex 8)"
           echo "affected-projects<<${delimiter}" >> "${GITHUB_OUTPUT}"
@@ -119,8 +120,8 @@ jobs:
 
       - name: Build db-postgres Image
         if: ${{ github.ref_name == 'main' &&
-          (contains(steps.record-affected-projects.outputs.affected-projects, '@vers/db-postgres') ||
-          contains(steps.record-affected-projects.outputs.affected-projects, '@vers/postgres-schema')) }}
+          (contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/db-postgres>') ||
+          contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/postgres-schema>')) }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -129,7 +130,7 @@ jobs:
           push: false
 
       - name: Build API Service Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '@vers/service-api') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-api>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -138,7 +139,7 @@ jobs:
           push: false
 
       - name: Build Avatar Service Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '@vers/service-avatar') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-avatar>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -147,7 +148,7 @@ jobs:
           push: false
 
       - name: Build Email Service Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '@vers/service-email') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-email>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -156,7 +157,7 @@ jobs:
           push: false
 
       - name: Build Session Service Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '@vers/service-session') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-session>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -165,7 +166,7 @@ jobs:
           push: false
 
       - name: Build User Service Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '@vers/service-user') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-user>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -174,7 +175,7 @@ jobs:
           push: false
 
       - name: Build Verification Service Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '@vers/service-verification') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-verification>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -183,7 +184,7 @@ jobs:
           push: false
 
       - name: Build Web App Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '@vers/web') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/web>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
