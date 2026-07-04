@@ -37,6 +37,11 @@ jobs:
       - name: Install Dependencies
         run: yarn install --immutable
 
+      - name: Check AGENTS.md Drift
+        run: |
+          yarn build:agents
+          git diff --exit-code AGENTS.md agents/ scripts/build-agents-md.sh
+
       - name: Capture SHA in NX Cloud
         uses: nrwl/nx-set-shas@v4
         env:

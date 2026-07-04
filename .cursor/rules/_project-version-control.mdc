@@ -1,9 +1,0 @@
----
-description: Standards for version control, including branch naming and commit messages
-globs: *
-alwaysApply: false
----
-# Version Control Standards
-
-* Use descriptive kebab case branch names e.g. `feat/#57-implement-a-thing`
-* Write clear conventional commits e.g. `fix(#55): prevent thing from doing the thing` 

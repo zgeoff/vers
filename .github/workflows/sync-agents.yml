@@ -1,0 +1,13 @@
+name: sync-agents
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    uses: zgeoff/tools/.github/workflows/sync-agents.yml@main
+    permissions:
+      contents: write
+      pull-requests: write
