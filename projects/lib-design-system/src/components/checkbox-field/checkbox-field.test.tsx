@@ -1,4 +1,4 @@
-import { expect, test, vi } from 'vitest';
+import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CheckboxField } from './checkbox-field';
@@ -18,28 +18,22 @@ test('it renders a label and a checkbox input', () => {
   expect(checkbox).toHaveRole('checkbox');
 });
 
-test('it handles checkbox state changes', async () => {
-  const handleChange = vi.fn();
+test('it toggles the checked state on click', async () => {
   const user = userEvent.setup();
 
   render(
     <CheckboxField
-      checkboxProps={{ onCheckedChange: handleChange }}
+      checkboxProps={{ name: 'rememberMe' }}
       errors={[]}
       labelProps={{ children: 'Remember me' }}
     />,
   );
 
-  await user.click(screen.getByLabelText('Remember me'));
+  const checkbox = screen.getByLabelText('Remember me');
 
-  expect(handleChange).toHaveBeenCalledWith(
-    true,
-    expect.objectContaining({
-      target: expect.objectContaining({
-        checked: true,
-      }),
-    }),
-  );
+  await user.click(checkbox);
+
+  expect(checkbox).toBeChecked();
 });
 
 test('it displays error messages', () => {

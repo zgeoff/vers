@@ -12,7 +12,6 @@ import {
   CheckboxField,
   Field,
   Heading,
-  Link,
   StatusButton,
   Text,
 } from '@vers/design-system';
@@ -23,6 +22,7 @@ import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import type { ForceLogoutPayload, TwoFactorLoginPayload } from '~/gql/graphql';
 import { FormErrorList } from '~/components/form-error-list/form-error-list';
+import { Link } from '~/components/link';
 import { RouteErrorBoundary } from '~/components/route-error-boundary';
 import { LoginWithPasswordMutation } from '~/data/mutations/login-with-password';
 import { VerificationType } from '~/gql/graphql';

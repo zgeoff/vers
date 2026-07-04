@@ -7,21 +7,18 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@base-ui-components/react": "1.0.0-alpha.6",
+    "@ark-ui/react": "5.37.2",
     "@react-hookz/web": "25.1.0",
     "@vers/panda-preset": "workspace:*",
     "@vers/styled-system": "workspace:*",
-    "input-otp": "1.4.2",
     "react": "catalog:",
-    "react-icons": "5.5.0",
-    "react-router": "7.3.0",
-    "tiny-invariant": "catalog:"
+    "react-icons": "5.5.0"
   },
   "devDependencies": {
     "@conform-to/react": "1.2.2",
     "@conform-to/zod": "1.2.2",
     "@ladle/react": "5.0.1",
-    "@pandacss/dev": "0.53.1",
+    "@pandacss/dev": "1.11.4",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@testing-library/user-event": "14.6.1",

@@ -1,20 +1,14 @@
 import { data, Form, redirect, Link as RRLink } from 'react-router';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
-import {
-  Brand,
-  Field,
-  Heading,
-  Link,
-  StatusButton,
-  Text,
-} from '@vers/design-system';
+import { Brand, Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { UserEmailSchema } from '@vers/validation';
 import { HoneypotInputs } from 'remix-utils/honeypot/react';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import { FormErrorList } from '~/components/form-error-list/form-error-list';
+import { Link } from '~/components/link';
 import { RouteErrorBoundary } from '~/components/route-error-boundary';
 import { StartEmailSignupMutation } from '~/data/mutations/start-email-signup';
 import { VerificationType } from '~/gql/graphql';

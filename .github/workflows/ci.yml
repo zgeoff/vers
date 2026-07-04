@@ -121,12 +121,6 @@ jobs:
           tags: vers/monorepo-base:latest
           push: false
 
-      - name: Deploy MongoDB
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'db-mongo') }}
-        run: bun run deploy:db-mongo
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
       - name: Deploy Postgres Migrations
         if: ${{ github.ref_name == 'main' &&
           (contains(steps.record-affected-projects.outputs.affected-projects, 'db-postgres') ||

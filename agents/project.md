@@ -1,6 +1,6 @@
 ## Monorepo layout
 
-27 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
+26 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
 `package.json` named `@vers/<name>`: internal deps use the `workspace:*` protocol, and versions
 shared by 5+ projects live in the root manifest's `workspaces.catalog` (referenced as `catalog:`).
 Libraries are consumed as TypeScript source (`exports` → `./src/index.ts`); there are no per-library

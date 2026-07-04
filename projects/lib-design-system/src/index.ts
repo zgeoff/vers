@@ -1,17 +1,13 @@
 export { BackgroundPattern } from './components/background-pattern/background-pattern';
 export { Brand } from './components/brand/brand';
 export { Button } from './components/button/button';
-export { Card } from './components/card/card';
 export { CheckboxField } from './components/checkbox-field/checkbox-field';
 export { Field } from './components/field/field';
 export { Heading } from './components/heading/heading';
 export { Icon } from './components/icon/icon';
-export { Input } from './components/input/input';
-export { Link } from './components/link/link';
-export { NavLink } from './components/nav-link/nav-link';
 export { OTPField } from './components/otp-field/otp-field';
 export { SingleLineCode } from './components/single-line-code/single-line-code';
 export { Spinner } from './components/spinner/spinner';
 export { StatusButton } from './components/status-button/status-button';
 export { Text } from './components/text/text';
-export { Tooltip } from './components/tooltip/tooltip';
+export type { PolymorphicComponentProps } from './types';

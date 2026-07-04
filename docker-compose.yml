@@ -1,15 +1,4 @@
 services:
-  mongo:
-    image: mongo:6.0
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
-    volumes:
-      - mongo:/data/db
-    expose:
-      - '27017'
-    ports:
-      - '27017:27017'
   postgres:
     image: postgres:16.2-alpine3.19
     environment:
@@ -113,4 +102,3 @@ services:
       - postgres
 volumes:
   postgres:
-  mongo:
