@@ -25,7 +25,7 @@ directory. See `docs/000-overview.md` for the project list and what each one is.
 
 See #160 for the full phase plan (turborepo + bun, spike-gated; shared configs and AGENTS.md from
 `zgeoff/tools`). This repo is mid-migration — several claims in `agents/shared.md` above describe
-the *target* state, not this repo yet:
+the _target_ state, not this repo yet:
 
 - **oxlint/oxfmt** — not adopted. Linting and formatting still run through eslint (`eslint.config.js`
   family) and prettier, invoked via `scripts/lint.ts` / `scripts/format.ts`. Lands in #188.
