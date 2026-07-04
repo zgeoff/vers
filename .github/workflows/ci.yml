@@ -109,8 +109,8 @@ jobs:
           NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
 
       - name: Create base Docker image
-        if: ${{ github.ref_name == 'main' }} && ${{ steps.docker-cache.outputs.cache-hit != 'true' }}
-        uses: docker/build-push-action@v6
+        if: ${{ github.ref_name == 'main' && steps.docker-cache.outputs.cache-hit != 'true' }}
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
           file: Dockerfile
@@ -121,7 +121,7 @@ jobs:
         if: ${{ github.ref_name == 'main' &&
           (contains(steps.record-affected-projects.outputs.affected-projects, 'db-postgres') ||
           contains(steps.record-affected-projects.outputs.affected-projects, 'lib-postgres-schema')) }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
           file: projects/db-postgres/Dockerfile
@@ -130,7 +130,7 @@ jobs:
 
       - name: Build API Service Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-api') }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
           file: projects/service-api/Dockerfile
@@ -139,7 +139,7 @@ jobs:
 
       - name: Build Avatar Service Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-avatar') }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
           file: projects/service-avatar/Dockerfile
@@ -148,7 +148,7 @@ jobs:
 
       - name: Build Email Service Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-email') }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
           file: projects/service-email/Dockerfile
@@ -157,7 +157,7 @@ jobs:
 
       - name: Build Session Service Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-session') }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
           file: projects/service-session/Dockerfile
@@ -166,7 +166,7 @@ jobs:
 
       - name: Build User Service Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-user') }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
           file: projects/service-user/Dockerfile
@@ -175,7 +175,7 @@ jobs:
 
       - name: Build Verification Service Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-verification') }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
           file: projects/service-verification/Dockerfile
@@ -184,7 +184,7 @@ jobs:
 
       - name: Build Web App Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'app-web') }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
           file: projects/app-web/Dockerfile
