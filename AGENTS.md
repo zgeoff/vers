@@ -218,6 +218,12 @@ filesystem, ignoring `.gitignore` — run it on a clean tree, or stale `dist/`/`
 `styled-system/` output reads as source. CI runs it straight after install, before codegen
 populates those directories.
 
+### Package naming
+
+A package's name is its folder name minus the `lib-` prefix (`projects/lib-validation` →
+`@vers/validation`). All other folder prefixes (`service-`, `app-`, `db-`, `contract-`) carry
+through to the package name unchanged.
+
 ## Running things today
 
 - `bun install` — whole workspace (`--frozen-lockfile` in CI; `bun.lock` is committed).
