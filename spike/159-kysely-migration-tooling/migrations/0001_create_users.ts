@@ -19,8 +19,12 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('password_reset_token', 'text')
     .addColumn('password_reset_token_expires_at', 'timestamp')
     .addColumn('seed', 'integer', (col) => col.notNull().defaultTo(0))
-    .addColumn('created_at', 'timestamp', (col) => col.notNull().defaultTo(sql`now()`))
-    .addColumn('updated_at', 'timestamp', (col) => col.notNull().defaultTo(sql`now()`))
+    .addColumn('created_at', 'timestamp', (col) =>
+      col.notNull().defaultTo(sql`now()`),
+    )
+    .addColumn('updated_at', 'timestamp', (col) =>
+      col.notNull().defaultTo(sql`now()`),
+    )
     .execute();
 }
 

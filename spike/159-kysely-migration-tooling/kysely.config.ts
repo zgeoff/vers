@@ -11,7 +11,8 @@ import postgres from 'postgres';
 export default defineConfig({
   dialect: new PostgresJSDialect({
     postgres: postgres(
-      process.env.DATABASE_URL ?? 'postgres://spike:spike@localhost:55432/postgres',
+      process.env.DATABASE_URL ??
+        'postgres://spike:spike@localhost:55432/postgres',
       { max: 1, onnotice: () => {} },
     ),
   }),

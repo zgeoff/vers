@@ -8,12 +8,12 @@ the runnable reference. Close the PR once the decisions land in the rebuild issu
 **kysely-ctl + kysely-codegen.** All four scope items pass; the `users` table is ported as the
 proof migration (exit criteria met).
 
-| Concern | Decision |
-| --- | --- |
-| Migration runner | **kysely-ctl** (0.21.0) — TS config, `migrate:latest/down/rollback/list`, wraps kysely's own `Migrator` |
-| Type generation | **kysely-codegen** (0.20.0) from the live DB with `--camel-case`, paired with `CamelCasePlugin` |
-| Seeds | **kysely-ctl first-class seeds** (`kysely seed make/run`) — reruns every invocation (no bookkeeping), so seeds must be idempotent (`ON CONFLICT DO NOTHING`) |
-| Dialect | **kysely-postgres-js** (3.0.0) over the existing postgres.js driver — same driver in migrations and runtime. `pg` is a dev-only dep for codegen's introspection |
+| Concern          | Decision                                                                                                                                                        |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Migration runner | **kysely-ctl** (0.21.0) — TS config, `migrate:latest/down/rollback/list`, wraps kysely's own `Migrator`                                                         |
+| Type generation  | **kysely-codegen** (0.20.0) from the live DB with `--camel-case`, paired with `CamelCasePlugin`                                                                 |
+| Seeds            | **kysely-ctl first-class seeds** (`kysely seed make/run`) — reruns every invocation (no bookkeeping), so seeds must be idempotent (`ON CONFLICT DO NOTHING`)    |
+| Dialect          | **kysely-postgres-js** (3.0.0) over the existing postgres.js driver — same driver in migrations and runtime. `pg` is a dev-only dep for codegen's introspection |
 
 ## What was proven here
 

@@ -12,7 +12,8 @@ import type { DB } from './src/schema.generated';
 const db = new Kysely<DB>({
   dialect: new PostgresJSDialect({
     postgres: postgres(
-      process.env.DATABASE_URL ?? 'postgres://spike:spike@localhost:55432/postgres',
+      process.env.DATABASE_URL ??
+        'postgres://spike:spike@localhost:55432/postgres',
       { max: 1 },
     ),
   }),
@@ -46,7 +47,8 @@ const devUser = await db
 console.log('seeded dev user:', devUser);
 
 if (inserted.seed !== 0) throw new Error('seed column default should be 0');
-if (devUser.seed !== 1337) throw new Error('seeded user should carry seed 1337');
+if (devUser.seed !== 1337)
+  throw new Error('seeded user should carry seed 1337');
 
 await db.destroy();
 console.log('VERIFY OK');
