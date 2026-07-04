@@ -220,9 +220,9 @@ populates those directories.
 
 ### Package naming
 
-A package's name is its folder name minus the `lib-` prefix (`projects/lib-validation` →
-`@vers/validation`). All other folder prefixes (`service-`, `app-`, `db-`, `contract-`) carry
-through to the package name unchanged.
+Every importable workspace package lives in a `lib-`-prefixed folder; deployables keep their role
+prefixes (`service-`, `app-`, `db-`). A package's name is its folder name minus the `lib-` prefix
+(`projects/lib-validation` → `@vers/validation`); deployable folder names carry through unchanged.
 
 ## Running things today
 

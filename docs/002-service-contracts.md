@@ -28,12 +28,12 @@ depends on the other.
 
 ## The packages
 
-| Package                    | Folder                         | Contains                                                                                                                        | Depended on by                  |
-| -------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `@vers/contract-<service>` | `projects/contract-<service>`  | one service's API declaration                                                                                                   | that service, gateway, web      |
-| `@vers/contract-base`      | `projects/lib-contract-base`   | standard error taxonomy, base builders, conformance-test helper                                                                 | contract packages, gateway, web |
-| `@vers/service-runtime`    | `projects/lib-service-runtime` | Elysia plugins every service composes: s2s token verification, health checks, OpenTelemetry, Sentry, request-id, env validation | services only                   |
-| `@vers/validation`         | `projects/lib-validation`      | domain-agnostic zod primitives (ids, timestamps, pagination); no oRPC imports                                                   | everything                      |
+| Package                    | Folder                            | Contains                                                                                                                        | Depended on by                  |
+| -------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `@vers/contract-<service>` | `projects/lib-contract-<service>` | one service's API declaration                                                                                                   | that service, gateway, web      |
+| `@vers/contract-base`      | `projects/lib-contract-base`      | standard error taxonomy, base builders, conformance-test helper                                                                 | contract packages, gateway, web |
+| `@vers/service-runtime`    | `projects/lib-service-runtime`    | Elysia plugins every service composes: s2s token verification, health checks, OpenTelemetry, Sentry, request-id, env validation | services only                   |
+| `@vers/validation`         | `projects/lib-validation`         | domain-agnostic zod primitives (ids, timestamps, pagination); no oRPC imports                                                   | everything                      |
 
 Why one contract package per service rather than a single `@vers/contracts` with subpath exports:
 
@@ -48,15 +48,13 @@ Why one contract package per service rather than a single `@vers/contracts` with
   contract package."
 
 The per-package boilerplate this creates is exactly what the #163 scaffold template amortizes.
-Per-service contract folders deliberately do _not_ take the `lib-` prefix: `lib-` means "shared by
-many"; a contract is one service's API surface.
 
-Naming convention, repo-wide: **a package's name is its folder name minus the `lib-` prefix**
-(`projects/lib-validation` → `@vers/validation`). The prefix is folder taxonomy — it groups shared
-libraries on disk — and would only stutter at the import site. All other folder prefixes
-(`service-`, `app-`, `db-`, `contract-`) carry through to the package name unchanged: they name a
-role, and stripping them would create ambiguity (`@vers/user` the service vs `@vers/contract-user`
-its contract).
+Folder and package naming, repo-wide: `lib-` prefixes every importable workspace package —
+contracts included, since service, gateway, and web all import them — while deployables keep their
+role prefixes (`service-`, `app-`, `db-`). **A package's name is its folder name minus the `lib-`
+prefix** (`projects/lib-validation` → `@vers/validation`,
+`projects/lib-contract-user` → `@vers/contract-user`); the prefix is folder taxonomy and would
+only stutter at the import site. Deployable folder names carry through unchanged.
 
 ## Anatomy of a contract package
 
