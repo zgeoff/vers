@@ -32,14 +32,18 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20.18.3
-          cache: 'yarn'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
 
       - name: Install Dependencies
-        run: yarn install --immutable
+        run: bun install --frozen-lockfile
 
       - name: Check AGENTS.md Drift
         run: |
-          yarn build:agents
+          bun run build:agents
           git diff --exit-code AGENTS.md agents/ scripts/build-agents-md.sh
 
       - name: Capture SHA in NX Cloud
@@ -58,31 +62,31 @@ jobs:
           key: docker-${{ runner.os }}-${{ github.sha }}
 
       - name: Generate Types
-        run: yarn nx run app-web:typegen
+        run: bun run nx run app-web:typegen
 
       - name: Generate Styles
-        run: yarn codegen:styles
+        run: bun run codegen:styles
 
       - name: Check Formatting
-        run: yarn format --check
+        run: bun run format --check
 
       - name: Lint
-        run: yarn lint
+        run: bun run lint
 
       - name: Unit Tests
         run: |
-          yarn pg:test-container:start
-          yarn test
+          bun run pg:test-container:start
+          bun run test
 
       - name: Build
         if: ${{ github.ref_name != 'main' }}
-        run: yarn nx affected -t build
+        run: bun run nx affected -t build
 
       - name: Install E2E browsers
-        run: yarn playwright install --with-deps --only-shell chromium
+        run: bun run playwright install --with-deps --only-shell chromium
 
       - name: E2E Tests
-        run: yarn nx affected -t e2e
+        run: bun run nx affected -t e2e
 
       - name: Upload Videos Of Failed E2E
         uses: actions/upload-artifact@v4
@@ -96,10 +100,10 @@ jobs:
         id: record-affected-projects
         if: ${{ github.ref_name == 'main' }}
         run: |
-          yarn nx show projects --affected
+          bun run nx show projects --affected
           delimiter="$(openssl rand -hex 8)"
           echo "affected-projects<<${delimiter}" >> "${GITHUB_OUTPUT}"
-          yarn nx show projects --affected >> "${GITHUB_OUTPUT}"
+          bun run nx show projects --affected >> "${GITHUB_OUTPUT}"
           echo "${delimiter}" >> "${GITHUB_OUTPUT}"
         env:
           NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
@@ -119,7 +123,7 @@ jobs:
 
       - name: Deploy MongoDB
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'db-mongo') }}
-        run: yarn deploy:db-mongo
+        run: bun run deploy:db-mongo
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
@@ -127,7 +131,7 @@ jobs:
         if: ${{ github.ref_name == 'main' &&
           (contains(steps.record-affected-projects.outputs.affected-projects, 'db-postgres') ||
           contains(steps.record-affected-projects.outputs.affected-projects, 'lib-postgres-schema')) }}
-        run: yarn deploy:db-postgres
+        run: bun run deploy:db-postgres
         env:
           COMMIT_SHA: ${{ github.sha }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -136,7 +140,7 @@ jobs:
 
       - name: Deploy API Service
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-api') }}
-        run: yarn deploy:service-api
+        run: bun run deploy:service-api
         env:
           COMMIT_SHA: ${{ github.sha }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -145,7 +149,7 @@ jobs:
 
       - name: Deploy Avatar Service
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-avatar') }}
-        run: yarn deploy:service-avatar
+        run: bun run deploy:service-avatar
         env:
           COMMIT_SHA: ${{ github.sha }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -154,7 +158,7 @@ jobs:
 
       - name: Deploy Email Service
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-email') }}
-        run: yarn deploy:service-email
+        run: bun run deploy:service-email
         env:
           COMMIT_SHA: ${{ github.sha }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -163,7 +167,7 @@ jobs:
 
       - name: Deploy Session Service
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-session') }}
-        run: yarn deploy:service-session
+        run: bun run deploy:service-session
         env:
           COMMIT_SHA: ${{ github.sha }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -172,7 +176,7 @@ jobs:
 
       - name: Deploy User Service
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-user') }}
-        run: yarn deploy:service-user
+        run: bun run deploy:service-user
         env:
           COMMIT_SHA: ${{ github.sha }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -181,7 +185,7 @@ jobs:
 
       - name: Deploy Verification Service
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-verification') }}
-        run: yarn deploy:service-verification
+        run: bun run deploy:service-verification
         env:
           COMMIT_SHA: ${{ github.sha }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -190,7 +194,7 @@ jobs:
 
       - name: Deploy Web App
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'app-web') }}
-        run: yarn deploy:app-web
+        run: bun run deploy:app-web
         env:
           COMMIT_SHA: ${{ github.sha }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
