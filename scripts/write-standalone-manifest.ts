@@ -7,7 +7,11 @@ import path from 'node:path';
  * catalog, and each workspace dep is replaced by that project's own
  * external runtime deps (recursively) — the project's bundle inlines
  * workspace source but leaves registry packages external, so those are
- * what the deploy image must install.
+ * what the deploy image must install. Peer and optional deps of expanded
+ * members are included the same way (a peer a member relies on at runtime
+ * must exist in the image). Any specifier that cannot be resolved to a
+ * registry pin is an error, never silently dropped, as is a version
+ * conflict between contributors.
  *
  * Usage: bun scripts/write-standalone-manifest.ts <manifest-path>
  * Must run from the repo root (reads ./package.json and projects/*).
@@ -22,6 +26,8 @@ interface Manifest {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   name?: string;
+  optionalDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
 }
 
 const root = JSON.parse(fs.readFileSync('package.json', 'utf8')) as {
@@ -55,47 +61,64 @@ delete manifest.devDependencies;
 fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 
 /**
- * Flattens a manifest's runtime deps into registry-installable pins:
- * catalog refs are resolved against the root catalog and workspace deps
- * are expanded into their own runtime deps, depth-first.
+ * Flattens a manifest's runtime deps (dependencies plus, for expanded
+ * workspace members, peer and optional deps) into registry-installable
+ * pins: catalog refs resolve against the root catalog and workspace deps
+ * expand into their own runtime deps, depth-first. Throws on unresolvable
+ * specifiers and on version conflicts between contributors.
  */
 function collectExternalDeps(
   target: Manifest,
   seen = new Set<string>(),
   collected: Record<string, string> = {},
 ): Record<string, string> {
-  for (const [name, version] of Object.entries(target.dependencies ?? {})) {
-    if (version.startsWith('workspace:')) {
-      if (seen.has(name)) {
+  const groups = [
+    target.dependencies ?? {},
+    // the entry manifest's own peers/optionals are its consumers' concern;
+    // expanded members' peers/optionals must land in the deploy image
+    ...(seen.size > 0
+      ? [target.peerDependencies ?? {}, target.optionalDependencies ?? {}]
+      : []),
+  ];
+
+  for (const group of groups) {
+    for (const [name, version] of Object.entries(group)) {
+      if (version.startsWith('workspace:')) {
+        if (seen.has(name)) {
+          continue;
+        }
+
+        seen.add(name);
+
+        const member = workspaceManifests.get(name);
+
+        if (!member) {
+          throw new Error(`no workspace member named ${name}`);
+        }
+
+        collectExternalDeps(member, seen, collected);
+
         continue;
       }
 
-      seen.add(name);
-
-      const member = workspaceManifests.get(name);
-
-      if (!member) {
-        throw new Error(`no workspace member named ${name}`);
-      }
-
-      collectExternalDeps(member, seen, collected);
-
-      continue;
-    }
-
-    if (version === 'catalog:') {
-      const pinned = catalog[name];
+      const pinned = version === 'catalog:' ? catalog[name] : version;
 
       if (!pinned) {
         throw new Error(`no catalog entry for ${name}`);
       }
 
-      collected[name] ??= pinned;
+      if (pinned.startsWith('catalog:') || pinned.startsWith('workspace:')) {
+        throw new Error(`unresolvable specifier for ${name}: ${pinned}`);
+      }
 
-      continue;
+      if (name in collected && collected[name] !== pinned) {
+        throw new Error(
+          `version conflict for ${name}: ${collected[name]} vs ${pinned}`,
+        );
+      }
+
+      collected[name] = pinned;
     }
-
-    collected[name] ??= version;
   }
 
   return sortDeps(collected);
