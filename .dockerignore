@@ -39,4 +39,10 @@ testem.log
 Thumbs.db
 
 .cache
-.nx
+.turbo
+out
+styled-system
+.react-router
+.git
+.worktrees
+.claude

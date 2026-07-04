@@ -1,28 +1,62 @@
+ARG BUN_VERSION=1.3.10
 ARG NODE_VERSION=20.18.3
 
-FROM vers/monorepo-base:latest AS build
+FROM oven/bun:${BUN_VERSION}-slim AS base
 
 WORKDIR /app
 
-ENV NODE_ENV="production"
+# no .git in the build context, so the husky postinstall must be skipped
+ENV HUSKY=0
 
-ARG BUILD_MODE=production
-ENV BUILD_MODE $BUILD_MODE
+# --- prune the workspace down to what @vers/service-api needs ---
+FROM base AS pruner
 
-ARG SENTRY_AUTH_TOKEN
-ENV SENTRY_AUTH_TOKEN $SENTRY_AUTH_TOKEN
+# a standalone turbo binary — no workspace install needed to run prune
+RUN bun add --global turbo@2.10.0
+
+COPY . .
+
+RUN turbo prune @vers/service-api --docker
+
+# --- full install (with devDependencies) to run the turbo build ---
+FROM base AS installer
+
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/bun.lock ./bun.lock
+
+RUN bun install --frozen-lockfile
+
+# --- bundle the service with esbuild ---
+FROM installer AS builder
+
+COPY --from=pruner /app/out/full/ .
+# turbo prune only copies workspace packages — the shared build driver and
+# the tsconfig every project's tsconfig.json extends live outside any
+# package, so they come straight from the build context
+COPY scripts/build-esbuild.ts scripts/build-esbuild.ts
+COPY tsconfig.base.json tsconfig.base.json
 
 # set up certificates so sentry can make a deployment
 RUN apt-get update && apt-get install -y ca-certificates
 
-RUN \
-  bun run build:service-api --mode "$BUILD_MODE" && \
-  # make the generated manifest standalone: drop workspace deps (bundled)
-  # and inline catalog versions so npm can install it
-  bun scripts/write-standalone-manifest.ts projects/service-api/dist/package.json && \
-  cd projects/service-api/dist && \
-  npm install --omit=dev
+ARG COMMIT_SHA
+ENV COMMIT_SHA=$COMMIT_SHA
 
+ARG SENTRY_AUTH_TOKEN
+ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
+
+RUN bun run build --filter=@vers/service-api
+
+# --- production-only deps, hoisted so the single esbuild bundle can
+# resolve externals that came from more than one source package ---
+FROM base AS prod-deps
+
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/bun.lock ./bun.lock
+
+RUN bun install --frozen-lockfile --production --linker=hoisted --ignore-scripts
+
+# --- runtime ---
 FROM node:${NODE_VERSION}-alpine
 
 LABEL fly_launch_runtime="Node.js"
@@ -31,7 +65,10 @@ WORKDIR /app
 
 ENV NODE_ENV="production"
 
-COPY --from=build /app/projects/service-api/dist /app
+COPY --from=prod-deps /app/package.json ./package.json
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=builder /app/projects/service-api/dist/main.js ./main.js
+COPY --from=builder /app/projects/service-api/dist/main.js.map ./main.js.map
 
 EXPOSE 3000
 CMD [ "main.js" ]
