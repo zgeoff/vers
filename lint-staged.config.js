@@ -1,23 +1,24 @@
 /* eslint-disable perfectionist/sort-objects */
 export default {
   'projects/{app-web,service-api}/**/*.{ts,tsx}': () => [
-    `yarn codegen:graphql`,
+    `bun run codegen:graphql`,
     'git add .',
   ],
   'projects/**/*.{ts,tsx}': [
-    'yarn codegen:styles',
-    (files) => `yarn nx affected --target=typecheck --files=${files.join(',')}`,
-    'yarn test run --changed',
+    'bun run codegen:styles',
+    (files) =>
+      `bun run nx affected --target=typecheck --files=${files.join(',')}`,
+    'bun run test run --changed',
   ],
   'projects/**/*.{js,ts,jsx,tsx,json}': (files) => [
-    `yarn format --files ${files.join(',')}`,
-    `yarn lint --files ${files.join(',')}`,
+    `bun run format --files ${files.join(',')}`,
+    `bun run lint --files ${files.join(',')}`,
     'git add .',
   ],
   'projects/lib-postgres-schema/**/*.ts': () => [
-    'yarn pg:migrations-generate',
+    'bun run pg:migrations-generate',
     'git add .',
   ],
-  '**/*.graphql': () => ['yarn format', 'git add .'],
+  '**/*.graphql': () => ['bun run format', 'git add .'],
 };
 /* eslint-enable perfectionist/sort-objects */
