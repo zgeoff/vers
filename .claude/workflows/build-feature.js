@@ -3,7 +3,7 @@ export const meta = {
   description:
     'Implement an agreed feature plan: sonnet builds on a worktree branch, opus reviews the diff, a PR opens once clean, haiku watches CI, with bounded fix loops at each gate',
   whenToUse:
-    'After a feature plan has been agreed interactively. Pass args: { plan: string, branch: string, issue?: number }. Returns the PR URL on success or a failure report with the branch left in place for inspection.',
+    'After a feature plan has been agreed interactively. Pass args: { plan: string, branch: string, issue?: number, prNumber?: number, verifyCommands?: string[] }. prNumber points at an existing PR to push to and mark ready instead of creating one; verifyCommands are extra full-graph gates the implementer must pass for cross-cutting work. A run cannot pause for conversation — bake every decision it will need into the plan, or split multi-decision phases into separate runs. Returns the PR URL on success or a failure report with the branch left in place for inspection.',
   phases: [
     {
       title: 'Implement',
@@ -18,7 +18,7 @@ export const meta = {
     },
     {
       title: 'Open PR',
-      detail: 'push the branch and open a PR with the template',
+      detail: 'rebase onto main, push, open (or ready) the PR',
     },
     {
       title: 'Watch CI',
@@ -32,11 +32,11 @@ const MAX_FIX_ROUNDS = 2;
 
 if (!args || !args.plan || !args.branch) {
   throw new Error(
-    'build-feature requires args: { plan: string, branch: string, issue?: number }',
+    'build-feature requires args: { plan: string, branch: string, issue?: number, prNumber?: number, verifyCommands?: string[] }',
   );
 }
 
-const { plan, branch, issue } = args;
+const { plan, branch, issue, prNumber, verifyCommands } = args;
 const worktree = `.worktrees/${branch}`;
 
 /**
@@ -104,15 +104,25 @@ const FIX_SCHEMA = {
     status: { enum: ['done', 'blocked'] },
     summary: { type: 'string' },
     blockedReason: { type: 'string' },
+    resolvedConflicts: {
+      type: 'boolean',
+      description:
+        'True when the fix involved resolving merge/rebase conflicts by hand',
+    },
   },
 };
 
 const PR_SCHEMA = {
   type: 'object',
-  required: ['url', 'number'],
+  required: ['url', 'number', 'resolvedConflicts'],
   properties: {
     url: { type: 'string' },
     number: { type: 'integer' },
+    resolvedConflicts: {
+      type: 'boolean',
+      description:
+        'True when the rebase onto origin/main hit conflicts that were resolved by hand',
+    },
   },
 };
 
@@ -140,6 +150,10 @@ const CI_SCHEMA = {
 };
 
 phase('Implement');
+const verifyGate =
+  verifyCommands && verifyCommands.length > 0
+    ? `\nThe pre-commit hooks only gate affected/changed scopes. Before your final commit, additionally run each of these from the worktree and get it green:\n${verifyCommands.map((c) => `- \`${c}\``).join('\n')}\n`
+    : '';
 const impl = await agent(
   `You are implementing a feature that has already been planned and agreed. Follow the plan; do not redesign it. If the plan is wrong in a way you cannot resolve locally, stop and return status=blocked with the reason rather than improvising a different design.
 ${REPO_RULES}
@@ -149,7 +163,9 @@ The plan:
 
 ${plan}
 
-Implement the plan completely, including tests for new behaviour per AGENTS.md testing rules. Commit in logical increments — the pre-commit hooks are your verification gate, so a passing commit means typecheck, changed tests, format, and lint are green for that increment. Do not push and do not open a PR; later stages handle that.`,
+Implement the plan completely, including tests for new behaviour per AGENTS.md testing rules. Commit in logical increments — the pre-commit hooks are your verification gate, so a passing commit means typecheck, changed tests, format, and lint are green for that increment.
+${verifyGate}
+Do not push and do not open a PR; later stages handle that.`,
   { label: 'implement', model: 'sonnet', schema: IMPLEMENT_SCHEMA },
 );
 
@@ -270,16 +286,23 @@ const minorFindings = review.findings.filter((f) => f.severity === 'minor');
 log(`Review clean (${minorFindings.length} minor finding(s) noted)`);
 
 phase('Open PR');
+const prBodySpec = `Write the PR body from the branch's actual final diff (\`git -C ${worktree} diff origin/main...HEAD\`) — do not paraphrase second-hand summaries — following the repo template (.github/PULL_REQUEST_TEMPLATE.md): condensed description (lead ≤2 sentences, one-line bullets, ≤150 words), no narrative about review rounds or fix history${issue ? `, starting with \`Closes #${issue}\`` : ''}. For orientation only, the implementer summarized the work as: ${impl.summary}`;
+const prAction = prNumber
+  ? `Update the existing PR #${prNumber}: refresh its body with \`gh pr edit ${prNumber}\` and mark it ready for review with \`gh pr ready ${prNumber}\`. Return its URL and number.`
+  : `Open the PR with \`gh pr create --head ${branch}\`, title in Conventional Commits form${issue ? ` with the issue scope, e.g. \`feat(#${issue}): …\`` : ''}. Return the new PR's URL and number.`;
 const pr = await agent(
   `Publish the reviewed feature branch in the worktree at ${worktree} as a PR against main.
 
-1. \`git -C ${worktree} push -u origin ${branch}\`
-2. Open the PR with \`gh pr create\` using the repo's template (.github/PULL_REQUEST_TEMPLATE.md): condensed description per the template's rules (lead ≤2 sentences, one-line bullets, ≤150 words)${issue ? `, starting with \`Closes #${issue}\`` : ''}. Title in Conventional Commits form${issue ? ` with the issue scope, e.g. \`feat(#${issue}): …\`` : ''}.
+1. Bring the branch up to date: \`git -C ${worktree} fetch origin\` then \`git -C ${worktree} rebase origin/main\`. If the rebase hits conflicts, resolve them faithfully to both sides' intent (rerun \`bun install\` in the worktree if dependency manifests changed) and return resolvedConflicts=true; if it was clean or a no-op, return resolvedConflicts=false.
+2. Push with \`git -C ${worktree} push -u origin ${branch}\`, adding \`--force-with-lease\` only if the rebase rewrote commits that were already pushed.
+3. ${prAction}
 
-What the branch does: ${impl.summary}
-
-Return the PR URL and number.`,
-  { label: 'open-pr', model: 'sonnet', schema: PR_SCHEMA },
+${prBodySpec}`,
+  {
+    label: prNumber ? 'ready-pr' : 'open-pr',
+    model: 'sonnet',
+    schema: PR_SCHEMA,
+  },
 );
 if (!pr)
   return {
@@ -289,12 +312,15 @@ if (!pr)
     worktree,
     reason: 'PR agent died or was skipped',
   };
-log(`PR opened: ${pr.url}`);
+let rebaseConflicts = Boolean(pr.resolvedConflicts);
+log(`${prNumber ? 'PR readied' : 'PR opened'}: ${pr.url}`);
 
 phase('Watch CI');
 for (let round = 0; ; round++) {
   const ci = await agent(
     `Watch CI for PR #${pr.number} in this repo until every check completes. Run \`gh pr checks ${pr.number} --watch\` with a 600000ms timeout; if the command times out while checks are still pending, simply run it again — loop until it exits on its own.
+
+If \`gh pr checks\` reports no checks at all (it can exit immediately), do NOT assume green: run \`gh pr view ${pr.number} --json mergeable,mergeStateStatus\`. If the PR is CONFLICTING, return conclusion=red with a single failures entry using check "merge-conflict" and what gh reported as the summary. If it is mergeable and checks simply have not started yet, wait briefly and watch again.
 
 When all checks have completed: if everything passed, return conclusion=green with an empty failures array. If anything failed, pull the failing logs (\`gh run view <run-id> --log-failed\`, run ids via \`gh pr checks ${pr.number}\` / \`gh run list --branch ${branch}\`) and return one failures entry per failing check with the decisive log lines as the excerpt. Do not attempt any fixes.`,
     {
@@ -323,6 +349,7 @@ When all checks have completed: if everything passed, return conclusion=green wi
       worktree,
       summary: impl.summary,
       minorFindings,
+      rebaseConflicts,
     };
   }
   if (round >= MAX_FIX_ROUNDS) {
@@ -334,6 +361,7 @@ When all checks have completed: if everything passed, return conclusion=green wi
       reason: `CI still red after ${MAX_FIX_ROUNDS} fix rounds`,
       failures: ci.failures,
       minorFindings,
+      rebaseConflicts,
     };
   }
 
@@ -345,7 +373,9 @@ When all checks have completed: if everything passed, return conclusion=green wi
 ${REPO_RULES}
 ${JSON.stringify(ci.failures, null, 2)}
 
-Commit the fixes (hooks must pass) and push to the existing branch. Do not force-push.`,
+If a failure's check is "merge-conflict", the branch has fallen behind main: \`git -C ${worktree} fetch origin\`, rebase onto origin/main, resolve conflicts faithfully to both sides' intent (rerun \`bun install\` in the worktree if dependency manifests changed), push with \`--force-with-lease\` — that flag is allowed for this case ONLY — and return resolvedConflicts=true if you resolved conflicts by hand.
+
+For every other failure, commit the fixes (hooks must pass) and push to the existing branch without force.`,
     {
       label: `fix-ci-${round + 1}`,
       model: 'sonnet',
@@ -363,6 +393,8 @@ Commit the fixes (hooks must pass) and push to the existing branch. Do not force
       reason: fix ? fix.blockedReason : 'CI fixer died or was skipped',
       failures: ci.failures,
       minorFindings,
+      rebaseConflicts,
     };
   }
+  if (fix.resolvedConflicts) rebaseConflicts = true;
 }
