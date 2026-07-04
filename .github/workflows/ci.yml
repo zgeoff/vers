@@ -108,10 +108,6 @@ jobs:
         env:
           NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
 
-      - name: Setup Fly CLI
-        if: ${{ github.ref_name == 'main' }}
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
       - name: Create base Docker image
         if: ${{ github.ref_name == 'main' }} && ${{ steps.docker-cache.outputs.cache-hit != 'true' }}
         uses: docker/build-push-action@v6
@@ -121,76 +117,76 @@ jobs:
           tags: vers/monorepo-base:latest
           push: false
 
-      - name: Deploy Postgres Migrations
+      - name: Build db-postgres Image
         if: ${{ github.ref_name == 'main' &&
           (contains(steps.record-affected-projects.outputs.affected-projects, 'db-postgres') ||
           contains(steps.record-affected-projects.outputs.affected-projects, 'lib-postgres-schema')) }}
-        run: bun run deploy:db-postgres
-        env:
-          COMMIT_SHA: ${{ github.sha }}
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: projects/db-postgres/Dockerfile
+          tags: vers/db-postgres:latest
+          push: false
 
-      - name: Deploy API Service
+      - name: Build API Service Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-api') }}
-        run: bun run deploy:service-api
-        env:
-          COMMIT_SHA: ${{ github.sha }}
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: projects/service-api/Dockerfile
+          tags: vers/service-api:latest
+          push: false
 
-      - name: Deploy Avatar Service
+      - name: Build Avatar Service Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-avatar') }}
-        run: bun run deploy:service-avatar
-        env:
-          COMMIT_SHA: ${{ github.sha }}
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: projects/service-avatar/Dockerfile
+          tags: vers/service-avatar:latest
+          push: false
 
-      - name: Deploy Email Service
+      - name: Build Email Service Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-email') }}
-        run: bun run deploy:service-email
-        env:
-          COMMIT_SHA: ${{ github.sha }}
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: projects/service-email/Dockerfile
+          tags: vers/service-email:latest
+          push: false
 
-      - name: Deploy Session Service
+      - name: Build Session Service Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-session') }}
-        run: bun run deploy:service-session
-        env:
-          COMMIT_SHA: ${{ github.sha }}
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: projects/service-session/Dockerfile
+          tags: vers/service-session:latest
+          push: false
 
-      - name: Deploy User Service
+      - name: Build User Service Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-user') }}
-        run: bun run deploy:service-user
-        env:
-          COMMIT_SHA: ${{ github.sha }}
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: projects/service-user/Dockerfile
+          tags: vers/service-user:latest
+          push: false
 
-      - name: Deploy Verification Service
+      - name: Build Verification Service Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-verification') }}
-        run: bun run deploy:service-verification
-        env:
-          COMMIT_SHA: ${{ github.sha }}
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: projects/service-verification/Dockerfile
+          tags: vers/service-verification:latest
+          push: false
 
-      - name: Deploy Web App
+      - name: Build Web App Image
         if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'app-web') }}
-        run: bun run deploy:app-web
-        env:
-          COMMIT_SHA: ${{ github.sha }}
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: projects/app-web/Dockerfile
+          tags: vers/app-web:latest
+          push: false
