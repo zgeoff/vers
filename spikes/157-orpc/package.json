@@ -1,0 +1,11 @@
+{
+  "name": "vers-spike-157",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev:service": "pnpm --filter @vers/service-user dev",
+    "dev:web": "pnpm --filter @vers/app-web dev",
+    "typecheck": "pnpm --recursive typecheck"
+  }
+}

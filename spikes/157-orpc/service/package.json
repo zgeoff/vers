@@ -1,0 +1,21 @@
+{
+  "name": "@vers/service-user",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/serve.ts",
+    "start": "bun src/serve.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@orpc/openapi": "1.14.6",
+    "@orpc/server": "1.14.6",
+    "@orpc/zod": "1.14.6",
+    "@vers/contract-user": "workspace:*",
+    "elysia": "1.4.29"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.14",
+    "typescript": "5.9.3"
+  }
+}
