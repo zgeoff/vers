@@ -112,7 +112,7 @@
     "@nx/js": "20.6.2",
     "@nx/vite": "20.6.2",
     "@nx/workspace": "20.6.2",
-    "@pandacss/dev": "0.53.1",
+    "@pandacss/dev": "1.11.4",
     "@parcel/watcher": "2.5.1",
     "@playwright/test": "1.51.0",
     "@react-router/dev": "7.3.0",
@@ -183,7 +183,7 @@
     "vitest": "3.0.8"
   },
   "dependencies": {
-    "@base-ui-components/react": "1.0.0-alpha.6",
+    "@ark-ui/react": "5.37.2",
     "@conform-to/react": "1.2.2",
     "@conform-to/zod": "1.2.2",
     "@epic-web/totp": "4.0.1",
@@ -225,7 +225,6 @@
     "hono": "4.7.4",
     "hono-rate-limiter": "0.4.2",
     "immer": "10.1.1",
-    "input-otp": "1.4.2",
     "isbot": "5.1.23",
     "jose": "6.0.8",
     "memoize-one": "6.0.0",

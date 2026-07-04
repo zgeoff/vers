@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useEventListener } from '@react-hookz/web';
-import { Text, Tooltip } from '@vers/design-system';
+import { Text } from '@vers/design-system';
 import { useHoveredNode } from '../state/use-hovered-node';
 import * as styles from './node-tooltip.styles';
+import { Tooltip } from './tooltip';
 
 interface NodeTooltipProps {
   className?: string;

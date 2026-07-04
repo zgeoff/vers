@@ -1,9 +1,10 @@
 import { data, Form, redirect, useFetcher } from 'react-router';
 import { parseWithZod } from '@conform-to/zod';
-import { Button, Heading, Link, StatusButton, Text } from '@vers/design-system';
+import { Button, Heading, StatusButton, Text } from '@vers/design-system';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import { ContentContainer } from '~/components/content-container';
+import { Link } from '~/components/link';
 import { RouteErrorBoundary } from '~/components/route-error-boundary';
 import { StartEnable2FAMutation } from '~/data/mutations/start-enable-2fa';
 import { StartStepUpAuthMutation } from '~/data/mutations/start-step-up-auth';

@@ -4,7 +4,6 @@ import defaultPreset from '@pandacss/dev/presets';
 export const preset = definePreset({
   conditions: {
     invalid: '&:is([aria-invalid=true])',
-    unchecked: '&:is([data-unchecked])',
   },
   globalCss: {
     html: {
