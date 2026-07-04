@@ -18,6 +18,9 @@ RUN \
   bun scripts/write-standalone-manifest.ts projects/app-web/package.json && \
   # remove our root package.json so no workspace shenanigans
   rm -f package.json && \
+  # drop the bun-linked node_modules trees - npm follows their symlinks into
+  # the isolated store and chokes running lifecycle scripts there
+  rm -rf node_modules projects/app-web/node_modules && \
   # install our minimum required dependencies to run our server
   cd projects/app-web && \
   npm install --omit=dev --legacy-peer-deps
