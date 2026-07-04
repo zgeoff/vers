@@ -8,26 +8,3 @@ exact = true
 # supply-chain guard: only install versions published >= 7 days ago
 minimumReleaseAge = 604800
 
-# versions already vetted and shipped on main are exempt from the age gate
-minimumReleaseAgeExcludes = [
-  "@pandacss/dev",
-  "@pandacss/config",
-  "@pandacss/core",
-  "@pandacss/extractor",
-  "@pandacss/generator",
-  "@pandacss/is-valid-prop",
-  "@pandacss/logger",
-  "@pandacss/mcp",
-  "@pandacss/node",
-  "@pandacss/parser",
-  "@pandacss/postcss",
-  "@pandacss/preset-base",
-  "@pandacss/preset-panda",
-  "@pandacss/reporter",
-  "@pandacss/shared",
-  "@pandacss/token-dictionary",
-  "@pandacss/types",
-  "@pandacss/plugin-lightningcss",
-  "@pandacss/plugin-svelte",
-  "@pandacss/plugin-vue",
-]

@@ -59,7 +59,7 @@
     "zustand": "5.0.3"
   },
   "devDependencies": {
-    "@pandacss/dev": "1.11.4",
+    "@pandacss/dev": "1.11.3",
     "@sentry/vite-plugin": "3.2.2",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
