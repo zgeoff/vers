@@ -119,6 +119,28 @@ test('it parses a service-specific envShape variable onto env', async () => {
   );
 });
 
+test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugin at boot', async () => {
+  const { publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv(
+    {
+      OTEL_EXPORTER_OTLP_ENDPOINT: 'http://127.0.0.1:1/',
+      SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM,
+    },
+    async () => {
+      const contract = buildTestContract();
+
+      await expect(
+        createService({
+          buildRouter: () => buildTestRouter(contract),
+          contract,
+          name: 'test-service',
+        }),
+      ).toResolve();
+    },
+  );
+});
+
 test('it rejects an /rpc call with no Authorization header with a plain 401', async () => {
   const { publicKeyPEM } = await createServiceKeyPair();
 
@@ -131,10 +153,14 @@ test('it rejects an /rpc call with no Authorization header with a plain 401', as
     });
 
     const response = await app.handle(
-      new Request('http://test.local/rpc/ping', { method: 'POST' }),
+      new Request('http://test.local/rpc/ping', {
+        headers: { 'x-request-id': 'abc' },
+        method: 'POST',
+      }),
     );
 
     expect(response.status).toBe(401);
+    expect(response.headers.get('x-request-id')).toBe('abc');
     await expect(response.json()).resolves.toStrictEqual({
       error: 'invalid-service-token',
     });
@@ -357,11 +383,12 @@ test('it serves the authed route over /api given a valid token', async () => {
     });
     const response = await app.handle(
       new Request('http://test.local/api/things?id=thing-1', {
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-request-id': 'abc' },
       }),
     );
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('x-request-id')).toBe('abc');
     await expect(response.json()).resolves.toStrictEqual({ id: 'thing-1' });
   });
 });
