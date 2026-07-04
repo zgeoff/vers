@@ -10,14 +10,14 @@
       "executor": "nx:run-commands",
       "options": {
         "cwd": "{projectRoot}",
-        "commands": ["yarn panda cssgen"]
+        "commands": ["./node_modules/.bin/panda cssgen"]
       }
     },
     "typegen": {
       "executor": "nx:run-commands",
       "options": {
         "cwd": "{projectRoot}",
-        "commands": ["yarn react-router typegen"]
+        "commands": ["./node_modules/.bin/react-router typegen"]
       }
     },
     "typecheck": {

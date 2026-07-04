@@ -7,7 +7,7 @@
     "codegen": {
       "executor": "nx:run-commands",
       "options": {
-        "commands": ["yarn panda"],
+        "commands": ["./node_modules/.bin/panda"],
         "cwd": "projects/lib-styled-system"
       }
     },
