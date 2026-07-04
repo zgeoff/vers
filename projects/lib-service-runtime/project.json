@@ -1,0 +1,16 @@
+{
+  "name": "lib-service-runtime",
+  "$schema": "https://raw.githubusercontent.com/nrwl/nx/refs/heads/master/packages/nx/schemas/project-schema.json",
+  "sourceRoot": "projects/lib-service-runtime/src",
+  "projectType": "library",
+  "// targets": "to see all targets run: nx show project lib-service-runtime --web",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "commands": ["tsc -p tsconfig.json --noEmit"]
+      }
+    }
+  }
+}

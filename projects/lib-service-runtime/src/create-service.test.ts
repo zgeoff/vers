@@ -1,0 +1,405 @@
+import { expect, test } from 'vitest';
+import type { ContractRouterClient } from '@orpc/contract';
+import { createORPCClient } from '@orpc/client';
+import { RPCLink } from '@orpc/client/fetch';
+import { implement } from '@orpc/server';
+import { authedRoute, publicRoute } from '@vers/contract-base';
+import { collectConformanceCases } from '@vers/contract-base/testing';
+import * as z from 'zod';
+import type { ServiceContext } from './types';
+import { createService } from './create-service';
+import { createServiceKeyPair } from './testing/create-service-key-pair';
+import { createServiceToken } from './testing/create-service-token';
+
+async function withServiceEnv(
+  overrides: Record<string, string | undefined>,
+  run: () => Promise<void>,
+): Promise<void> {
+  const original = { ...process.env };
+
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value === undefined) {
+      Reflect.deleteProperty(process.env, key);
+    } else {
+      process.env[key] = value;
+    }
+  }
+
+  try {
+    await run();
+  } finally {
+    for (const key of Object.keys(process.env)) {
+      if (!(key in original)) {
+        Reflect.deleteProperty(process.env, key);
+      }
+    }
+
+    Object.assign(process.env, original);
+  }
+}
+
+function buildTestContract() {
+  return {
+    getThing: authedRoute
+      .route({ method: 'GET', path: '/things' })
+      .input(z.object({ id: z.string() }))
+      .output(z.object({ id: z.string() })),
+    ping: publicRoute.output(z.object({ pong: z.boolean() })),
+  };
+}
+
+function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
+  const os = implement(contract).$context<ServiceContext>();
+
+  return {
+    getThing: os.getThing.handler(({ context, errors, input }) => {
+      if (context.actingUserId === null) {
+        throw errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+      }
+
+      return { id: input.id };
+    }),
+    ping: os.ping.handler(() => ({ pong: true })),
+  };
+}
+
+test('it throws at boot when SERVICE_AUTH_PUBLIC_KEY is missing', async () => {
+  await withServiceEnv({ SERVICE_AUTH_PUBLIC_KEY: undefined }, async () => {
+    const contract = buildTestContract();
+
+    await expect(
+      createService({
+        buildRouter: () => buildTestRouter(contract),
+        contract,
+        name: 'test-service',
+      }),
+    ).rejects.toThrowWithMessage(Error, /SERVICE_AUTH_PUBLIC_KEY/);
+  });
+});
+
+test('it applies default PORT and LOG_LEVEL when unset', async () => {
+  const { publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv(
+    {
+      LOG_LEVEL: undefined,
+      PORT: undefined,
+      SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM,
+    },
+    async () => {
+      const contract = buildTestContract();
+      const { env } = await createService({
+        buildRouter: () => buildTestRouter(contract),
+        contract,
+        name: 'test-service',
+      });
+
+      expect(env.PORT).toBe(3000);
+      expect(env.LOG_LEVEL).toBe('info');
+    },
+  );
+});
+
+test('it parses a service-specific envShape variable onto env', async () => {
+  const { publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv(
+    { CUSTOM_GREETING: 'hi there', SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM },
+    async () => {
+      const contract = buildTestContract();
+      const { env } = await createService({
+        buildRouter: () => buildTestRouter(contract),
+        contract,
+        envShape: { CUSTOM_GREETING: z.string() },
+        name: 'test-service',
+      });
+
+      expect(env.CUSTOM_GREETING).toBe('hi there');
+    },
+  );
+});
+
+test('it rejects an /rpc call with no Authorization header with a plain 401', async () => {
+  const { publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv({ SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM }, async () => {
+    const contract = buildTestContract();
+    const { app } = await createService({
+      buildRouter: () => buildTestRouter(contract),
+      contract,
+      name: 'test-service',
+    });
+
+    const response = await app.handle(
+      new Request('http://test.local/rpc/ping', { method: 'POST' }),
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toStrictEqual({
+      error: 'invalid-service-token',
+    });
+  });
+});
+
+test('it rejects an /rpc call with a garbage token with a plain 401', async () => {
+  const { publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv({ SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM }, async () => {
+    const contract = buildTestContract();
+    const { app } = await createService({
+      buildRouter: () => buildTestRouter(contract),
+      contract,
+      name: 'test-service',
+    });
+
+    const response = await app.handle(
+      new Request('http://test.local/rpc/ping', {
+        headers: { authorization: 'Bearer not-a-real-token' },
+        method: 'POST',
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toStrictEqual({
+      error: 'invalid-service-token',
+    });
+  });
+});
+
+test('it rejects an /rpc call with an expired token with a plain 401', async () => {
+  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv({ SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM }, async () => {
+    const contract = buildTestContract();
+    const { app } = await createService({
+      buildRouter: () => buildTestRouter(contract),
+      contract,
+      name: 'test-service',
+    });
+    const token = await createServiceToken({
+      audience: 'test-service',
+      expiresIn: '-1s',
+      privateKey,
+    });
+    const response = await app.handle(
+      new Request('http://test.local/rpc/ping', {
+        headers: { authorization: `Bearer ${token}` },
+        method: 'POST',
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toStrictEqual({
+      error: 'invalid-service-token',
+    });
+  });
+});
+
+test('it rejects an /rpc call with a wrong-audience token with a plain 401', async () => {
+  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv({ SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM }, async () => {
+    const contract = buildTestContract();
+    const { app } = await createService({
+      buildRouter: () => buildTestRouter(contract),
+      contract,
+      name: 'test-service',
+    });
+    const token = await createServiceToken({
+      audience: 'some-other-service',
+      privateKey,
+    });
+    const response = await app.handle(
+      new Request('http://test.local/rpc/ping', {
+        headers: { authorization: `Bearer ${token}` },
+        method: 'POST',
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toStrictEqual({
+      error: 'invalid-service-token',
+    });
+  });
+});
+
+test('it returns data from an authed procedure given a valid token naming an acting user', async () => {
+  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv({ SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM }, async () => {
+    const contract = buildTestContract();
+    const { app } = await createService({
+      buildRouter: () => buildTestRouter(contract),
+      contract,
+      name: 'test-service',
+    });
+    const token = await createServiceToken({
+      actingUserId: 'user-1',
+      audience: 'test-service',
+      privateKey,
+    });
+    const client = buildRPCClient(app, { authorization: `Bearer ${token}` });
+
+    await expect(client.getThing({ id: 'thing-1' })).resolves.toStrictEqual({
+      id: 'thing-1',
+    });
+  });
+});
+
+test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a valid anonymous token', async () => {
+  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv({ SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM }, async () => {
+    const contract = buildTestContract();
+    const { app } = await createService({
+      buildRouter: () => buildTestRouter(contract),
+      contract,
+      name: 'test-service',
+    });
+    const token = await createServiceToken({
+      audience: 'test-service',
+      privateKey,
+    });
+    const client = buildRPCClient(app, { authorization: `Bearer ${token}` });
+
+    await expect(client.getThing({ id: 'thing-1' })).rejects.toMatchObject({
+      code: 'UNAUTHORIZED',
+      data: { reason: 'missing-session' },
+    });
+  });
+});
+
+test('it serves /health without any token', async () => {
+  const { publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv({ SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM }, async () => {
+    const contract = buildTestContract();
+    const { app } = await createService({
+      buildRouter: () => buildTestRouter(contract),
+      contract,
+      name: 'test-service',
+    });
+    const response = await app.handle(new Request('http://test.local/health'));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toStrictEqual({
+      service: 'test-service',
+      status: 'ok',
+    });
+  });
+});
+
+test('it echoes a supplied x-request-id and mints one when absent', async () => {
+  const { publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv({ SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM }, async () => {
+    const contract = buildTestContract();
+    const { app } = await createService({
+      buildRouter: () => buildTestRouter(contract),
+      contract,
+      name: 'test-service',
+    });
+
+    const withoutHeader = await app.handle(
+      new Request('http://test.local/health'),
+    );
+
+    expect(withoutHeader.headers.get('x-request-id')).toBeString();
+
+    const withHeader = await app.handle(
+      new Request('http://test.local/health', {
+        headers: { 'x-request-id': 'abc' },
+      }),
+    );
+
+    expect(withHeader.headers.get('x-request-id')).toBe('abc');
+  });
+});
+
+test('it serves /spec.json declaring the 401 response for the authed route', async () => {
+  const { publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv({ SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM }, async () => {
+    const contract = buildTestContract();
+    const { app } = await createService({
+      buildRouter: () => buildTestRouter(contract),
+      contract,
+      name: 'test-service',
+    });
+    const response = await app.handle(
+      new Request('http://test.local/spec.json'),
+    );
+
+    expect(response.status).toBe(200);
+    const document = (await response.json()) as {
+      paths: Record<string, { get?: { responses: Record<string, unknown> } }>;
+    };
+
+    expect(Object.keys(document.paths)).not.toBeEmpty();
+    expect(document.paths['/things']?.get?.responses).toContainKey('401');
+  });
+});
+
+test('it serves the authed route over /api given a valid token', async () => {
+  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv({ SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM }, async () => {
+    const contract = buildTestContract();
+    const { app } = await createService({
+      buildRouter: () => buildTestRouter(contract),
+      contract,
+      name: 'test-service',
+    });
+    const token = await createServiceToken({
+      actingUserId: 'user-1',
+      audience: 'test-service',
+      privateKey,
+    });
+    const response = await app.handle(
+      new Request('http://test.local/api/things?id=thing-1', {
+        headers: { authorization: `Bearer ${token}` },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toStrictEqual({ id: 'thing-1' });
+  });
+});
+
+test('it passes every conformance case collected from its own contract', async () => {
+  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+
+  await withServiceEnv({ SERVICE_AUTH_PUBLIC_KEY: publicKeyPEM }, async () => {
+    const contract = buildTestContract();
+    const { app } = await createService({
+      buildRouter: () => buildTestRouter(contract),
+      contract,
+      name: 'test-service',
+    });
+    const anonymousToken = await createServiceToken({
+      audience: 'test-service',
+      privateKey,
+    });
+    const cases = collectConformanceCases(contract, {
+      anonymousHeaders: { authorization: `Bearer ${anonymousToken}` },
+      authedSamples: { getThing: { id: 'thing-1' } },
+    });
+
+    for (const conformanceCase of cases) {
+      await expect(conformanceCase.run(app)).toResolve();
+    }
+  });
+});
+
+function buildRPCClient(
+  app: { handle: (request: Request) => Promise<Response> | Response },
+  headers: Record<string, string>,
+): ContractRouterClient<ReturnType<typeof buildTestContract>> {
+  const link = new RPCLink<Record<never, never>>({
+    fetch: (request) => Promise.resolve(app.handle(request)),
+    headers,
+    url: 'http://test.local/rpc',
+  });
+
+  return createORPCClient(link);
+}

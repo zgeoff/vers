@@ -1,0 +1,27 @@
+{
+  "name": "@vers/contract-base",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "dependencies": {
+    "@orpc/client": "1.14.6",
+    "@orpc/contract": "1.14.6",
+    "@orpc/openapi": "1.14.6",
+    "@orpc/zod": "1.14.6",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@orpc/server": "1.14.6",
+    "@sinclair/typebox": "0.34.49",
+    "@types/node": "22.13.10",
+    "elysia": "1.4.29",
+    "jest-extended": "catalog:",
+    "typescript": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
+  }
+}

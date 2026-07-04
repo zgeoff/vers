@@ -48,6 +48,7 @@ Libraries:
 - `lib-aether-client` - client code (react, three, zustand) for the aether feature
 - `lib-aether-core` - platform agnostic code for the aether feature
 - `lib-client-test-utils` - react & web worker testing utilities
+- `lib-contract-base` - shared contract error taxonomy, base builders, and conformance-test helper
 - `lib-data` - core static game data
 - `lib-design-system` - ui component library
 - `lib-email-templates` - react email template factories
@@ -55,6 +56,7 @@ Libraries:
 - `lib-idle-core` - platform agnostic code for the idle simulation
 - `lib-panda-preset` - design tokens & panda css config
 - `lib-postgres-schema` - postgres schemas
+- `lib-service-runtime` - Elysia service runtime: createService, s2s auth, health, logging, OTel/Sentry wiring
 - `lib-service-test-utils` - postgres test container & mock data utils
 - `lib-service-types` - tRPC service payload types
 - `lib-service-utils` - postgres, logging, jwt utils & hono middleware
