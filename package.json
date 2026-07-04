@@ -45,6 +45,7 @@
     "typecheck": "turbo run typecheck",
     "e2e": "turbo run e2e",
     "format": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/format.ts",
+    "email:preview": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/email-preview.ts",
     "codegen:graphql": "TS_NODE_PROJECT=./tsconfig.codegen.json dotenvx run -f projects/service-api/.env.development -- graphql-codegen --require tsconfig-paths/register --import jiti/register",
     "codegen:styles": "turbo run codegen",
     "codegen:types": "turbo run typegen",
