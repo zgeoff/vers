@@ -57,9 +57,6 @@ export default defineConfig({
       allow: [
         // vite's default workspace root detection behaviour
         searchForWorkspaceRoot(process.cwd()),
-
-        // explicitly allow serving our pnp'd virtual modules
-        '../../.yarn',
       ],
     },
     host: 'localhost',
