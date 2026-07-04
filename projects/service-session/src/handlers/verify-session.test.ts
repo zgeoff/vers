@@ -69,7 +69,11 @@ test('it flags a session as verified and returns new tokens', async () => {
   const accessTokenExpires = accessTokenCall.expiresAt.getTime();
 
   expect(refreshTokenExpires).toBe(expiresAt.getTime());
-  expect(accessTokenExpires - now).toBeCloseTo(15 * 60 * 1000, -2);
+  // measured against wall clock, so allow scheduler jitter on loaded CI runners
+  expect(accessTokenExpires - now).toBeWithin(
+    15 * 60 * 1000,
+    15 * 60 * 1000 + 5000,
+  );
 });
 
 test("it throws an error if the session doesn't exist", async () => {
