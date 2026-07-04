@@ -18,7 +18,6 @@ depend on the contract, neither on each other.
 | `@vers/contract-<service>` | `projects/lib-contract-<service>` | one service's API declaration                                                                                                   | that service, gateway, web      |
 | `@vers/contract-base`      | `projects/lib-contract-base`      | standard error taxonomy, base builders, conformance-test helper                                                                 | contract packages, gateway, web |
 | `@vers/service-runtime`    | `projects/lib-service-runtime`    | Elysia plugins every service composes: s2s token verification, health checks, OpenTelemetry, Sentry, request-id, env validation | services only                   |
-| `@vers/validation`         | `projects/lib-validation`         | domain-agnostic zod primitives (ids, timestamps, pagination); no oRPC imports                                                   | everything                      |
 
 Why one contract package per service rather than a single `@vers/contracts` with subpath exports:
 
@@ -71,6 +70,10 @@ re-declaring it. Procedure-specific errors (`NOT_FOUND`, `CONFLICT`, …) are de
 contract that owns them. Entity schemas live in the contract package that owns the entity — not in
 a shared types package, even at some duplication cost — because sharing entity schemas across
 contracts would couple services through the back door.
+
+Contract packages pin zod 4 directly (not the workspace catalog, which holds zod 3 for the
+pre-rebuild projects). `@vers/validation` is one of those zod 3 packages, so its schemas are not
+consumable from contracts — any schema a contract needs lives in the contract package itself.
 
 ## The service side
 
