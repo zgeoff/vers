@@ -3,26 +3,7 @@
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
     "types": ["node", "vite/client"],
-    "baseUrl": ".",
-    "paths": {
-      "@vers/aether-client": ["../lib-aether-client/src"],
-      "@vers/aether-core": ["../lib-aether-core/src"],
-      "@vers/client-test-utils": ["../lib-client-test-utils/src"],
-      "@vers/data": ["../lib-data/src"],
-      "@vers/design-system": ["../lib-design-system/src"],
-      "@vers/email-templates": ["../lib-email-templates/src"],
-      "@vers/game-utils": ["../lib-game-utils/src"],
-      "@vers/idle-client": ["../lib-idle-client/src"],
-      "@vers/idle-core": ["../lib-idle-core/src"],
-      "@vers/panda-preset": ["../lib-panda-preset/src"],
-      "@vers/postgres-schema": ["../lib-postgres-schema/src"],
-      "@vers/service-test-utils": ["../lib-service-test-utils/src"],
-      "@vers/service-types": ["../lib-service-types/src"],
-      "@vers/service-utils": ["../lib-service-utils/src"],
-      "@vers/styled-system/*": ["../lib-styled-system/styled-system/*"],
-      "@vers/utils": ["../lib-utils/src"],
-      "@vers/validation": ["../lib-validation/src"]
-    }
+    "baseUrl": "."
   },
   "files": [],
   "include": [

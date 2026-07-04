@@ -8,7 +8,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-  // @ts-expect-error - outdated plugin types
   plugins: [tsconfigPaths()],
   server: {
     ws: process.env.VITEST === 'true' ? false : undefined,

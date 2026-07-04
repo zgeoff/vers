@@ -3,17 +3,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./projects/service-api/src/*"],
-      "@vers/idle-core": ["projects/lib-idle-core/src"],
-      "@vers/design-system": ["projects/lib-design-system/src"],
-      "@vers/email-templates": ["projects/lib-email-templates/src"],
-      "@vers/panda-preset": ["projects/lib-panda-preset/src"],
-      "@vers/postgres-schema": ["projects/lib-postgres-schema/src"],
-      "@vers/service-test-utils": ["projects/lib-service-test-utils/src"],
-      "@vers/service-types": ["projects/lib-service-types/src"],
-      "@vers/service-utils": ["projects/lib-service-utils/src"],
-      "@vers/styled-system/*": ["projects/lib-styled-system/styled-system/*"],
-      "@vers/utils": ["projects/lib-utils/src"]
+      "~/*": ["./projects/service-api/src/*"]
     }
   }
 }
