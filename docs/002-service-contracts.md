@@ -36,12 +36,12 @@ Why one contract package per service rather than a single `@vers/contracts` with
 
 The per-package boilerplate this creates is exactly what the #163 scaffold template amortizes.
 
-Folder and package naming, repo-wide: `lib-` prefixes every importable workspace package —
-contracts included, since service, gateway, and web all import them — while deployables keep their
-role prefixes (`service-`, `app-`, `db-`). **A package's name is its folder name minus the `lib-`
-prefix** (`projects/lib-validation` → `@vers/validation`,
-`projects/lib-contract-user` → `@vers/contract-user`); the prefix is folder taxonomy and would
-only stutter at the import site. Deployable folder names carry through unchanged.
+Folder and package naming, repo-wide (as minted by #205): `lib-` prefixes every importable
+workspace package — contracts included, since service, gateway, and web all import them. **A
+package's name is its folder name minus the taxonomy prefix**: `lib-` and `app-` strip
+(`lib-contract-user` → `@vers/contract-user`, `app-web` → `@vers/web`) because they group folders
+without naming the thing; `service-` and `db-` are part of the name and carry through
+(`@vers/service-user`, `@vers/db-postgres`).
 
 ## Anatomy of a contract package
 
