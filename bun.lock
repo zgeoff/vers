@@ -9,6 +9,8 @@
         "drizzle-orm": "catalog:",
         "execa": "9.5.2",
         "ora": "8.2.0",
+        "postgres": "catalog:",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@0no-co/graphqlsp": "1.12.16",
@@ -434,6 +436,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@hono/node-server": "catalog:",
+        "@sentry/node": "9.5.0",
         "@vers/service-test-utils": "workspace:*",
         "bcryptjs": "3.0.2",
         "hono": "catalog:",

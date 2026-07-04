@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@hono/node-server": "catalog:",
+    "@sentry/node": "9.5.0",
     "@vers/service-test-utils": "workspace:*",
     "bcryptjs": "3.0.2",
     "hono": "catalog:",
