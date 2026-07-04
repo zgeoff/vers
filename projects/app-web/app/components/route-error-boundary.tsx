@@ -2,8 +2,9 @@ import { useEffect } from 'react';
 import { Form } from 'react-router';
 import { isRouteErrorResponse, useRouteError } from 'react-router';
 import { captureException } from '@sentry/react';
-import { Brand, Button, Heading, Link, Text } from '@vers/design-system';
+import { Brand, Button, Heading, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
+import { Link } from '~/components/link';
 import { Routes } from '~/types';
 import { getErrorMessage } from '~/utils/get-error-message';
 

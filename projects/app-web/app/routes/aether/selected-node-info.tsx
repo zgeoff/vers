@@ -1,6 +1,7 @@
 import { useSelectedNode } from '@vers/aether-client';
-import { BackgroundPattern, Button, Link, Text } from '@vers/design-system';
+import { BackgroundPattern, Button, Text } from '@vers/design-system';
 import { cx } from '@vers/styled-system/css';
+import { Link } from '~/components/link';
 import { Routes } from '~/types';
 import * as styles from './selected-node-info.styles';
 

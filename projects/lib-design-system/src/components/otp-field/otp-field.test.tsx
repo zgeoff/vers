@@ -1,42 +1,49 @@
-import { expect, test, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { expect, test } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { OTPField } from './otp-field';
 
-test('it renders an OTP input', () => {
-  render(
-    <OTPField errors={[]} inputProps={{ onChange: vi.fn(), value: '' }} />,
-  );
+test('it renders six code inputs', () => {
+  render(<OTPField errors={[]} inputProps={{ name: 'code' }} />);
 
-  const input = screen.getByTestId('otp-input');
+  const inputs = screen.getAllByRole('textbox');
 
-  expect(input).toBeInTheDocument();
+  expect(inputs).toHaveLength(6);
 });
 
-test('it handles input changes', async () => {
-  const handleChange = vi.fn();
+test('it collects typed digits into the submitted value', async () => {
   const user = userEvent.setup();
 
-  render(<OTPField errors={[]} inputProps={{ onChange: handleChange }} />);
+  render(<OTPField errors={[]} inputProps={{ name: 'code' }} />);
 
-  const input = screen.getByTestId('otp-input');
+  await user.click(screen.getByTestId('otp-input'));
+  await user.keyboard('123456');
 
-  await user.type(input, '123456');
+  expect(document.querySelector('input[name="code"]')).toHaveValue('123456');
+});
 
-  expect(handleChange).toHaveBeenCalledTimes(6);
+test('it distributes a single fill across all inputs', async () => {
+  render(<OTPField errors={[]} inputProps={{ name: 'code' }} />);
+
+  const fillTarget = screen.getByTestId('otp-input');
+
+  fireEvent.focus(fillTarget);
+  fireEvent.input(fillTarget, { target: { value: '999999' } });
+
+  const inputs = screen.getAllByRole('textbox');
+
+  await waitFor(() => {
+    expect(inputs[5]).toHaveValue('9');
+  });
+  expect(document.querySelector('input[name="code"]')).toHaveValue('999999');
 });
 
 test('it displays error messages', () => {
-  render(
-    <OTPField
-      errors={['Invalid code']}
-      inputProps={{ onChange: vi.fn(), value: '' }}
-    />,
-  );
+  render(<OTPField errors={['Invalid code']} inputProps={{ name: 'code' }} />);
 
-  const input = screen.getByTestId('otp-input');
   const error = screen.getByText('Invalid code');
+  const [firstInput] = screen.getAllByRole('textbox');
 
   expect(error).toBeInTheDocument();
-  expect(input).toHaveAttribute('aria-invalid', 'true');
+  expect(firstInput).toHaveAttribute('aria-invalid', 'true');
 });

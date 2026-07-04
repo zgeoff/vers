@@ -1,6 +1,7 @@
 import { Link as RRLink } from 'react-router';
-import { Brand, Heading, Link, Text } from '@vers/design-system';
+import { Brand, Heading, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
+import { Link } from '~/components/link';
 import { RouteErrorBoundary } from '~/components/route-error-boundary';
 import { Routes } from '~/types';
 import { requireAnonymous } from '~/utils/require-anonymous.server';

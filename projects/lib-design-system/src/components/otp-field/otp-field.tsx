@@ -1,96 +1,122 @@
 import * as React from 'react';
-import { Field } from '@base-ui-components/react/field';
-import { css, cx } from '@vers/styled-system/css';
-import { REGEXP_ONLY_DIGITS, REGEXP_ONLY_DIGITS_AND_CHARS } from 'input-otp';
-import { InputOTP } from './input-otp';
+import { Field } from '@ark-ui/react/field';
+import { PinInput } from '@ark-ui/react/pin-input';
+import { cx, sva } from '@vers/styled-system/css';
 
 interface Props {
   className?: string;
   errors: Array<string>;
-  inputProps: React.ComponentProps<typeof Field.Control> & {
+  inputProps: React.ComponentProps<'input'> & {
+    key?: React.Key;
     mode?: 'alphanumeric' | 'numeric';
   };
 }
 
-const container = css({
-  alignItems: 'center',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '2',
-  justifyContent: 'center',
-  marginBottom: '4',
-});
-
-const errorStyle = css({
-  color: 'red.500',
-  fontSize: 'sm',
+const otpFieldRecipe = sva({
+  base: {
+    control: {
+      alignItems: 'center',
+      display: 'flex',
+      flexDirection: 'row',
+      gap: '2',
+    },
+    errorText: {
+      color: 'red.500',
+      fontSize: 'sm',
+    },
+    group: {
+      alignItems: 'center',
+      display: 'flex',
+      flexDirection: 'row',
+      gap: '2',
+    },
+    input: {
+      _disabled: {
+        cursor: 'not-allowed',
+      },
+      _focusVisible: {
+        borderColor: 'gray.500',
+        outline: 'none',
+        zIndex: '[10]',
+      },
+      backgroundColor: 'gray.900',
+      borderColor: 'gray.700',
+      borderWidth: '1',
+      color: 'gray.300',
+      fontSize: 'md',
+      height: '11',
+      lineHeight: 'normal',
+      rounded: 'sm',
+      textAlign: 'center',
+      textTransform: 'uppercase',
+      width: '9',
+    },
+    root: {
+      alignItems: 'center',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '2',
+      justifyContent: 'center',
+      marginBottom: '4',
+    },
+    separator: {
+      backgroundColor: 'gray.800',
+      height: '1',
+      rounded: 'sm',
+      width: '1',
+    },
+  },
+  slots: ['root', 'control', 'group', 'input', 'separator', 'errorText'],
 });
 
 export function OTPField(props: Props) {
-  const fallbackID = React.useId();
-  const id = props.inputProps.id ?? fallbackID;
-  const errorID = `${id}-error`;
+  const { autoFocus, defaultValue, id, key, mode, name, ...hiddenInputProps } =
+    props.inputProps;
   const [firstError] = props.errors;
+  const styles = otpFieldRecipe();
 
   return (
-    <Field.Root className={cx(container, props.className)}>
-      <Field.Control
-        {...props.inputProps}
-        aria-describedby={errorID}
-        aria-invalid={props.errors.length > 0}
-        id={id}
-        render={(controlProps: React.ComponentProps<'input'>) => {
-          // a hacky interop around the input-otp library to make it work with
-          // base-ui's Field component.
-          const onChange = (newValue: string) => {
-            const event = {
-              currentTarget: { value: newValue },
-              nativeEvent: { defaultPrevented: false },
-            } as React.ChangeEvent<HTMLInputElement>;
-
-            controlProps.onChange?.(event);
-          };
-
-          const pattern =
-            props.inputProps.mode === 'alphanumeric'
-              ? REGEXP_ONLY_DIGITS_AND_CHARS
-              : REGEXP_ONLY_DIGITS;
-
-          const inputMode =
-            props.inputProps.mode === 'alphanumeric' ? 'text' : 'numeric';
-
-          return (
-            <InputOTP
-              {...controlProps}
-              autoCapitalize="off"
-              autoComplete="off"
-              autoCorrect="off"
+    <Field.Root
+      className={cx(styles.root, props.className)}
+      invalid={props.errors.length > 0}
+    >
+      <PinInput.Root
+        // eslint-disable-next-line jsx-a11y/no-autofocus -- opt-in per form; code entry is the page's sole action
+        autoFocus={autoFocus}
+        defaultValue={
+          typeof defaultValue === 'string' ? [...defaultValue] : undefined
+        }
+        ids={id ? { hiddenInput: id } : undefined}
+        invalid={props.errors.length > 0}
+        name={name}
+        placeholder=""
+        type={mode === 'alphanumeric' ? 'alphanumeric' : 'numeric'}
+        otp
+      >
+        <PinInput.Control className={styles.control}>
+          <div className={styles.group}>
+            {/* a multi-character change on this input is treated as a paste
+                and distributed across all six inputs, so e2e fills target it */}
+            <PinInput.Input
+              className={styles.input}
               data-testid="otp-input"
-              inputMode={inputMode}
-              maxLength={6}
-              pattern={pattern}
-              spellCheck={false}
-              value={controlProps.value as string}
-              onChange={onChange}
-            >
-              <InputOTP.Group>
-                <InputOTP.Slot index={0} />
-                <InputOTP.Slot index={1} />
-                <InputOTP.Slot index={2} />
-              </InputOTP.Group>
-              <InputOTP.Separator />
-              <InputOTP.Group>
-                <InputOTP.Slot index={3} />
-                <InputOTP.Slot index={4} />
-                <InputOTP.Slot index={5} />
-              </InputOTP.Group>
-            </InputOTP>
-          );
-        }}
-      />
-      <Field.Error className={errorStyle} id={errorID} forceShow>
+              index={0}
+            />
+            <PinInput.Input className={styles.input} index={1} />
+            <PinInput.Input className={styles.input} index={2} />
+          </div>
+          <div className={styles.separator} role="separator" />
+          <div className={styles.group}>
+            <PinInput.Input className={styles.input} index={3} />
+            <PinInput.Input className={styles.input} index={4} />
+            <PinInput.Input className={styles.input} index={5} />
+          </div>
+        </PinInput.Control>
+        <PinInput.HiddenInput {...hiddenInputProps} key={key} />
+      </PinInput.Root>
+      <Field.ErrorText className={styles.errorText}>
         {firstError}
-      </Field.Error>
+      </Field.ErrorText>
     </Field.Root>
   );
 }
