@@ -35,7 +35,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'yarn dev:app-web',
+    command: 'bun run dev:app-web',
     cwd: workspaceRoot,
     reuseExistingServer: !process.env.CI,
     stderr: 'pipe',

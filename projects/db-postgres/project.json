@@ -17,7 +17,7 @@
         "tsConfig": "{projectRoot}/tsconfig.app.json",
         "assets": ["{projectRoot}/src/assets"],
         "generatePackageJson": true,
-        "external": ["pino-pretty", "pino-sentry-transport"],
+        "external": ["pino", "pino-pretty", "pino-sentry-transport"],
         "esbuildConfig": "{projectRoot}/esbuild.config.cjs"
       }
     },

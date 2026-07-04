@@ -253,11 +253,8 @@ export default tseslint.config(
   {
     ignores: [
       '**/.nx/**',
-      '**/.yarn/**',
       '**/build/**',
       '**/dist/**',
-      '.pnp.cjs',
-      '.pnp.loader.mjs',
       '**/*timestamp*.mjs',
       '**/mockServiceWorker.js',
       '**/projects/app-web/app/gql/**',

@@ -1,0 +1,31 @@
+{
+  "name": "@vers/service-utils",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:",
+    "@sentry/node": "9.5.0",
+    "@vers/service-test-utils": "workspace:*",
+    "bcryptjs": "3.0.2",
+    "hono": "catalog:",
+    "jose": "catalog:",
+    "pino": "9.6.0",
+    "pino-pretty": "13.0.0",
+    "pino-sentry-transport": "1.5.0",
+    "postgres": "catalog:",
+    "tiny-invariant": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "2.4.6",
+    "@types/node": "22.13.10",
+    "jest-extended": "catalog:",
+    "typescript": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -11,7 +11,6 @@ export default defineConfig({
       plugins: [pandacss, autoprefixer],
     },
   },
-  // @ts-expect-error - outdated plugin types
   plugins: [tsconfigPaths(), react()],
   server: {
     ws: process.env.VITEST === 'true' ? false : undefined,

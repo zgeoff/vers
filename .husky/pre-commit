@@ -1,1 +1,1 @@
-yarn dlx lint-staged --concurrent false --relative --allow-empty
+bunx lint-staged --concurrent false --relative --allow-empty

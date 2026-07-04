@@ -1,0 +1,27 @@
+{
+  "name": "@vers/service-test-utils",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@epic-web/totp": "4.0.1",
+    "@paralleldrive/cuid2": "catalog:",
+    "@testcontainers/postgresql": "10.18.0",
+    "@vers/game-utils": "workspace:*",
+    "@vers/postgres-schema": "workspace:*",
+    "@vers/service-utils": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "jose": "catalog:",
+    "postgres": "catalog:",
+    "vitest": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "22.13.10",
+    "jest-extended": "catalog:",
+    "typescript": "catalog:",
+    "vite-tsconfig-paths": "catalog:"
+  }
+}

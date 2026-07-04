@@ -2,10 +2,7 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  plugins: [
-    // @ts-expect-error - outdated plugin types
-    tsconfigPaths(),
-  ],
+  plugins: [tsconfigPaths()],
   server: {
     ws: process.env.VITEST === 'true' ? false : undefined,
   },

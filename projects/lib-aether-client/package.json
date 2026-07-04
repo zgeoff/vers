@@ -1,0 +1,40 @@
+{
+  "name": "@vers/aether-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@react-hookz/web": "25.1.0",
+    "@react-spring/three": "9.7.5",
+    "@react-three/drei": "10.0.5",
+    "@react-three/fiber": "9.1.0",
+    "@vers/aether-core": "workspace:*",
+    "@vers/client-test-utils": "workspace:*",
+    "@vers/design-system": "workspace:*",
+    "@vers/styled-system": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "19.0.0",
+    "three": "0.175.0",
+    "zustand": "5.0.3"
+  },
+  "devDependencies": {
+    "@react-three/test-renderer": "9.0.1",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "22.13.10",
+    "@types/react": "19.0.12",
+    "@types/react-dom": "19.0.4",
+    "@types/three": "0.175.0",
+    "@vitest/web-worker": "3.0.9",
+    "happy-dom": "catalog:",
+    "jest-extended": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
+  }
+}
