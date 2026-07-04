@@ -1,8 +1,6 @@
 # Service Contracts
 
-How the rebuilt services (#156) expose their APIs, and how everything else calls them. Decided
-ahead of the scaffold work in #163, building on the oRPC spike (#157, reference implementation in
-PR #200).
+How services expose their APIs, and how everything else calls them.
 
 ## Contract-first
 
@@ -34,9 +32,9 @@ Why one contract package per service rather than a single `@vers/contracts` with
 - **Ownership is crisp.** "A service owns its API" maps one-to-one to "a service's PR owns its
   contract package."
 
-The per-package boilerplate this creates is exactly what the #163 scaffold template amortizes.
+The per-package boilerplate this creates is exactly what the service scaffold template amortizes.
 
-Folder and package naming, repo-wide (as minted by #205): `lib-` prefixes every importable
+Folder and package naming, repo-wide: `lib-` prefixes every importable
 workspace package — contracts included, since service, gateway, and web all import them. **A
 package's name is its folder name minus the taxonomy prefix**: `lib-` and `app-` strip
 (`lib-contract-user` → `@vers/contract-user`, `app-web` → `@vers/web`) because they group folders
@@ -166,7 +164,7 @@ Two layers, per the repo's mock-free testing rules:
 
 The `/testing` subpath export keeps test-time code out of application bundles.
 
-## Known gotchas (from the #157 spike)
+## Known gotchas
 
 - Any package consuming a contract-typed client needs `@orpc/contract` as a **direct** dependency
   (for `ContractRouterClient`). Under strict dependency isolation the failure mode is a confusing
