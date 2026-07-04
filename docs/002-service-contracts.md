@@ -4,27 +4,14 @@ How the rebuilt services (#156) expose their APIs, and how everything else calls
 ahead of the scaffold work in #163, building on the oRPC spike (#157, reference implementation in
 PR #200).
 
-## The idea, plainly
+## Contract-first
 
-A restaurant prints its menu before the kitchen opens. The menu is the agreement: diners order
-from it, the kitchen cooks to it, and neither side needs to see inside the other. If the kitchen
-swaps ovens, the menu doesn't change; if a dish is added, old orders still work.
-
-A **contract package** is that menu. It is a small package that declares, for one service, every
-operation the service offers: the URL and method, the shape of the input, the shape of the output,
-and the errors a caller might get back. It contains **no implementation** — no database code, no
-business logic, nothing about _how_ the service works.
-
-Both sides then derive from it:
-
-- The **service** implements the contract, and TypeScript refuses to compile if the implementation
-  drifts from the declaration — a kitchen that physically cannot cook off-menu.
-- **Clients** (the web app, the gateway, other services) import the contract and get a fully typed
-  client — autocomplete, input checking, and typed errors — without ever importing a line of
-  service code.
-
-This is dependency inversion: the service and its callers both depend on the contract; neither
-depends on the other.
+A contract package declares, for one service, every operation it exposes — route, input/output
+schemas, and the errors a caller can receive — and contains no implementation. Both sides derive
+from it: the service implements it through oRPC's `implement()`, so an implementation that drifts
+from the declaration fails typecheck; clients construct a fully typed client from the contract
+alone, without importing service code. The dependency is inverted — service and callers both
+depend on the contract, neither on each other.
 
 ## The packages
 
@@ -58,8 +45,8 @@ only stutter at the import site. Deployable folder names carry through unchanged
 
 ## Anatomy of a contract package
 
-Contract packages are private, unversioned, and unbuilt. The load-bearing trick is that `exports`
-points straight at TypeScript source:
+Contract packages are private, unversioned, and unbuilt: `exports` points straight at TypeScript
+source:
 
 ```json
 {
@@ -115,7 +102,7 @@ rebuild-wide gauges (#182) light up as each service comes online.
 
 ## The client side
 
-One type annotation buys the whole API:
+Clients are typed by a single annotation against the contract:
 
 ```ts
 const client: ContractRouterClient<UserContract> = createORPCClient(link);
@@ -127,8 +114,7 @@ services are not reachable from the public internet.
 
 ## Errors and the trust boundary
 
-Two very different things can go wrong with authentication, and the design keeps them apart
-(#146):
+Authentication has two distinct failure classes, kept deliberately separate (#146):
 
 1. **The user's session is bad** — missing or expired. This is the _caller's_ problem and the
    caller can act on it (sign in again). It is a contract error: `UNAUTHORIZED` with a typed
