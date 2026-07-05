@@ -3,7 +3,7 @@ import { hydrateRoot } from 'react-dom/client';
 import { HydratedRouter } from 'react-router/dom';
 
 if (import.meta.env.PROD && import.meta.env['SENTRY_DSN']) {
-  // eslint-disable-next-line unicorn/prefer-top-level-await
+  // oxlint-disable-next-line unicorn/prefer-top-level-await -- sentry init is deliberately fire-and-forget so it never delays hydration
   void (async () => {
     const { initSentry } = await import('./utils/init-sentry.client');
 
@@ -25,7 +25,7 @@ const SILENCED_UNHANDLED_URLS = [
 ];
 
 if (!import.meta.env.PROD && import.meta.env.VITE_ENABLE_MSW === 'true') {
-  // eslint-disable-next-line unicorn/prefer-top-level-await
+  // oxlint-disable-next-line unicorn/prefer-top-level-await -- msw worker start is deliberately fire-and-forget so it never delays hydration
   void (async () => {
     const { worker } = await import('./mocks/browser');
 

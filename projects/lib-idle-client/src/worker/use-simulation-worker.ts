@@ -17,7 +17,7 @@ export function useSimulationWorker() {
 
     setSimulationWorker(worker);
 
-    // eslint-disable-next-line unicorn/prefer-add-event-listener
+    // oxlint-disable-next-line unicorn/prefer-add-event-listener -- assigning onmessage starts MessagePort delivery; addEventListener also needs an explicit port.start()
     worker.port.onmessage = handleWorkerMessage;
   }, [existingWorker]);
 

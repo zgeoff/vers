@@ -8,7 +8,7 @@ import { SelectedNodeInfo } from './selected-node-info';
 
 const aetherGraph = decompressAetherNodes(aetherNodes as Array<CompressedAetherNode>);
 
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+// oxlint-disable-next-line typescript/no-non-null-assertion -- the aether graph ships with at least one node
 const firstNode = Object.values(aetherGraph.nodes)[0]!;
 
 setAetherGraph(aetherGraph);

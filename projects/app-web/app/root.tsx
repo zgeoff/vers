@@ -29,7 +29,7 @@ export function links(): ReturnType<Route.LinksFunction> {
 export function meta(): ReturnType<Route.MetaFunction> {
   return [
     {
-      // eslint-disable-next-line unicorn/text-encoding-identifier-case
+      // oxlint-disable-next-line unicorn/text-encoding-identifier-case -- the html meta charset attribute value is the lowercase hyphenated form
       charset: 'utf-8',
       title: 'vers',
       viewport: 'width=device-width,initial-scale=1',

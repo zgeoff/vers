@@ -8,9 +8,10 @@
 interface Message {
   type: string;
 }
+
 export function postMessageAndWaitForReply(worker: SharedWorker, message: Message) {
   return new Promise<MessageEvent<Message>>((resolve) => {
-    // eslint-disable-next-line unicorn/prefer-add-event-listener
+    // oxlint-disable-next-line unicorn/prefer-add-event-listener -- assigning onmessage starts MessagePort delivery; addEventListener also needs an explicit port.start()
     worker.port.onmessage = (event: MessageEvent<Message>) => {
       resolve(event);
     };

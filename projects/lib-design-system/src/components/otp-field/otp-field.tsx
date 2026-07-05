@@ -61,6 +61,10 @@ const otpFieldRecipe = sva({
     },
     separator: {
       backgroundColor: 'gray.800',
+
+      // preflight gives hr a 1px top border in text color — zero it so the
+      // separator renders as a plain dot
+      borderTopWidth: '0',
       height: '1',
       rounded: 'sm',
       width: '1',
@@ -77,7 +81,7 @@ export function OTPField(props: Props) {
   return (
     <Field.Root className={cx(styles.root, props.className)} invalid={props.errors.length > 0}>
       <PinInput.Root
-        // eslint-disable-next-line jsx-a11y/no-autofocus -- opt-in per form; code entry is the page's sole action
+        // oxlint-disable-next-line jsx-a11y/no-autofocus -- opt-in per form; code entry is the page's sole action
         autoFocus={autoFocus}
         defaultValue={typeof defaultValue === 'string' ? [...defaultValue] : undefined}
         ids={id ? { hiddenInput: id } : undefined}

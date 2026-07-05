@@ -19,9 +19,8 @@ export function SideNavigation() {
 
   return (
     <>
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+      {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- backdrop dismiss layer; the nav itself stays keyboard-reachable */}
       <div className={styles.navOverlay({ isVisible: isNavVisible })} onClick={handleHideNav} />
-      {/* eslint-enable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
 
       <nav className={cx(styles.nav, !isNavVisible && styles.navHidden)}>
         <Brand className={styles.brand} size="lg" />

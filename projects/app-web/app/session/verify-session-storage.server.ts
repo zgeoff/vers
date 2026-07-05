@@ -6,6 +6,7 @@ import invariant from 'tiny-invariant';
 /* oxlint-disable @stylistic/lines-around-comment -- oxfmt pins the first union-member comment to the `=` line */
 export type SessionKey =
   // 2FA login
+  /* oxlint-enable @stylistic/lines-around-comment */
   | 'login2FA#sessionID'
   | 'login2FA#transactionID'
   | 'login2FA#transactionToken'
@@ -39,7 +40,6 @@ export type SessionKey =
   // reset password
   | 'resetPassword#transactionID'
   | 'resetPassword#transactionToken';
-/* oxlint-enable @stylistic/lines-around-comment */
 
 export type SessionData = Record<SessionKey, string>;
 

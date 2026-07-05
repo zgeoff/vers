@@ -22,7 +22,7 @@ test('runs a simulation with default configuration', async () => {
 
   const result = await runSimulation(activity, avatar, config);
 
-  // eslint-disable-next-line vitest/no-large-snapshots
+  // oxlint-disable-next-line vitest/no-large-snapshots -- the snapshot is the full deterministic simulation transcript; its size is the assertion
   expect(result).toMatchInlineSnapshot(`
     {
       "checkpoints": [

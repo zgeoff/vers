@@ -14,7 +14,7 @@ import { setCSPNonce } from './middleware/set-csp-nonce';
 import { setSecureHeaders } from './middleware/set-secure-headers';
 
 if (env.isProduction && env.SENTRY_DSN) {
-  // eslint-disable-next-line unicorn/prefer-top-level-await
+  // oxlint-disable-next-line unicorn/prefer-top-level-await -- sentry init is deliberately fire-and-forget so it never delays server startup
   void (async () => {
     const { initSentry } = await import('./utils/init-sentry');
 

@@ -8,7 +8,8 @@ export function getRandomEnemies(
 ): Array<Enemy> {
   if (activity.enemies.length === 1) {
     return Array.from({ length: count }, () =>
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
+      // oxlint-disable-next-line typescript/no-non-null-assertion -- guarded by the length === 1 check above
       createEnemy(activity.enemies[0]!, ctx),
     );
   }
@@ -16,7 +17,8 @@ export function getRandomEnemies(
   return (
     ctx.rng
       .getSeries(0, activity.enemies.length - 1, count)
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
+      // oxlint-disable-next-line typescript/no-non-null-assertion -- getSeries only yields indexes inside the enemies array bounds
       .map((index) => createEnemy(activity.enemies[index]!, ctx))
   );
 }
