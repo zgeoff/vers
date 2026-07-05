@@ -1,6 +1,7 @@
-import { afterEach, expect, test, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { createRoutesStub, type ErrorResponse } from 'react-router';
+import { createRoutesStub } from 'react-router';
+import type { ErrorResponse } from 'react-router';
+import { afterEach, expect, test, vi } from 'vitest';
 import { RouteErrorBoundary } from './route-error-boundary';
 
 interface TestConfig {
@@ -12,6 +13,7 @@ function createMockRouteError(
 ): ErrorResponse {
   return {
     data: null,
+
     // @ts-expect-error - `internal` is not typed but it is required for react-router's
     // util to determine this as a route error
     internal: false,
@@ -19,8 +21,7 @@ function createMockRouteError(
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-const noop = () => {};
+function noop() {}
 
 function setupTest(config: TestConfig) {
   vi.spyOn(console, 'error').mockImplementation(noop);
@@ -47,9 +48,7 @@ test('it displays a not found message for 404 errors', async () => {
     error: createMockRouteError({ status: 404, statusText: 'Not Found' }),
   });
 
-  const errorMessage = await screen.findByText(
-    "We couldn't find what you were looking for",
-  );
+  const errorMessage = await screen.findByText("We couldn't find what you were looking for");
 
   expect(errorMessage).toBeInTheDocument();
 });

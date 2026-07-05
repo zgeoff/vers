@@ -1,11 +1,11 @@
-import type { GetUserPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { GetUserPayload } from '@vers/service-types';
 import { eq, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { logger } from '~/logger';
-import type { Context } from '../types';
 import { t } from '../t';
+import type { Context } from '../types';
 
 export const GetUserInputSchema = z
   .object({
@@ -48,4 +48,4 @@ export async function getUser(
 
 export const procedure = t.procedure
   .input(GetUserInputSchema)
-  .query(async ({ ctx, input }) => getUser(input, ctx));
+  .query((opts) => getUser(opts.input, opts.ctx));

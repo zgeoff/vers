@@ -84,7 +84,6 @@ export const preset = definePreset({
       },
       tokens: {
         colors: {
-          /* eslint-disable perfectionist/sort-objects */
           twine: {
             50: { value: '#FBF8F1' },
             100: { value: '#F5EDDF' },
@@ -98,7 +97,6 @@ export const preset = definePreset({
             900: { value: '#623D2C' },
             950: { value: '#341E16' },
           },
-          /* eslint-enable perfectionist/sort-objects */
         },
         fonts: {
           fira: { value: 'var(--font-fira-code), Menlo, monospace' },

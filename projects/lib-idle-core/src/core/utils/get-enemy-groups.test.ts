@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import type { EnemyGroup } from 'src/types';
+import { expect, test } from 'vitest';
 import { createMockActivityData } from '../../test-utils/create-mock-activity-data';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
 import { getEnemyGroups } from './get-enemy-groups';
@@ -10,9 +10,7 @@ test('it returns groups of the specified size', () => {
 
   const groups = getEnemyGroups(activity, ctx, { groupSize: 3 });
 
-  expect(groups).toSatisfyAll(
-    (group: EnemyGroup) => group.enemies.length === 3,
-  );
+  expect(groups).toSatisfyAll((group: EnemyGroup) => group.enemies.length === 3);
 });
 
 test('it returns the specified number of groups', () => {

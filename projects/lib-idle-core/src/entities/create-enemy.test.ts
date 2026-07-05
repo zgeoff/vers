@@ -1,6 +1,5 @@
-import { expect, test, vi } from 'vitest';
 import invariant from 'tiny-invariant';
-import type { EnemyTestBehaviour } from '../types';
+import { expect, test, vi } from 'vitest';
 import { createActivity } from '../core/create-activity';
 import { createCombatExecutor } from '../core/create-combat-executor';
 import { createEnemyGroup } from '../core/utils/create-enemy-group';
@@ -8,12 +7,8 @@ import { createMockActivityData } from '../test-utils/create-mock-activity-data'
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
-import {
-  BehaviourID,
-  EntityStatus,
-  EntityType,
-  LifecycleEvent,
-} from '../types';
+import type { CombatLifecycleHandler, Enemy, EnemyTestBehaviour } from '../types';
+import { BehaviourID, EntityStatus, EntityType, LifecycleEvent } from '../types';
 import { createAvatar } from './create-avatar';
 import { createEnemy } from './create-enemy';
 
@@ -46,6 +41,7 @@ test('it exposes a method for setting the enemy state', () => {
 
 test('it reduces life and updates status when killed', () => {
   const ctx = createMockSimulationContext();
+
   const data = createMockEnemyData({
     life: 100,
   });
@@ -74,7 +70,7 @@ test('it calls all registered handlers when handling a tick', () => {
   const enemyGroup = createEnemyGroup(activityData, ctx, 1);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
 
-  const handlerSpy = vi.fn();
+  const handlerSpy = vi.fn<CombatLifecycleHandler<Enemy>>();
 
   const behaviour: EnemyTestBehaviour = {
     getState: () => ({}),
@@ -83,11 +79,11 @@ test('it calls all registered handlers when handling a tick', () => {
     },
     id: BehaviourID.Test,
     predicate: () => true,
-    setState: vi.fn(),
+    setState: vi.fn<EnemyTestBehaviour['setState']>(),
     state: {},
   };
 
-  const enemy = enemyGroup.enemies[0];
+  const [enemy] = enemyGroup.enemies;
 
   invariant(enemy, 'enemy is required');
 
@@ -106,7 +102,7 @@ test('it allows removing behaviours', () => {
   const enemyGroup = createEnemyGroup(activityData, ctx, 1);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
 
-  const handlerSpy = vi.fn();
+  const handlerSpy = vi.fn<CombatLifecycleHandler<Enemy>>();
 
   const behaviour: EnemyTestBehaviour = {
     getState: () => ({}),
@@ -115,11 +111,11 @@ test('it allows removing behaviours', () => {
     },
     id: BehaviourID.Test,
     predicate: () => true,
-    setState: vi.fn(),
+    setState: vi.fn<EnemyTestBehaviour['setState']>(),
     state: {},
   };
 
-  const enemy = enemyGroup.enemies[0];
+  const [enemy] = enemyGroup.enemies;
 
   invariant(enemy, 'enemy is required');
 

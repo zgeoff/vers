@@ -1,10 +1,10 @@
-import { expect, test } from 'vitest';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { createId } from '@paralleldrive/cuid2';
 import * as schema from '@vers/postgres-schema';
 import { createTestDB } from '@vers/service-test-utils';
 import { eq } from 'drizzle-orm';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import invariant from 'tiny-invariant';
+import { expect, test } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 

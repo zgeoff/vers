@@ -1,11 +1,6 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   plugins: [tsconfigPaths()],
@@ -17,7 +12,7 @@ export default defineConfig({
       provider: 'v8',
       reportsDirectory: '../../coverage/apps/service-user',
     },
-    env: loadEnv('test', __dirname, ''),
+    env: loadEnv('test', import.meta.dirname, ''),
     environment: 'node',
     globalSetup: ['./vitest.global-setup.ts'],
     include: ['src/**/*.test.ts'],

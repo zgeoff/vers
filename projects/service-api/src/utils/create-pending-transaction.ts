@@ -1,5 +1,4 @@
-import type { Context } from '~/types';
-import { SecureAction } from '~/types';
+import type { Context, SecureAction } from '~/types';
 import { pendingTransactionCache } from './pending-transaction-cache';
 
 interface Data {

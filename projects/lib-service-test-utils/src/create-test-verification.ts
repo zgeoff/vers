@@ -1,7 +1,7 @@
 import { generateTOTP } from '@epic-web/totp';
 import { createId } from '@paralleldrive/cuid2';
 import * as schema from '@vers/postgres-schema';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 type TestVerificationData = Partial<typeof schema.verifications.$inferSelect>;
 

@@ -1,8 +1,5 @@
-import { graphql, HttpResponse } from 'msw';
-import type {
-  RefreshAccessTokenInput,
-  RefreshAccessTokenPayload,
-} from '~/gql/graphql';
+import { HttpResponse, graphql } from 'msw';
+import type { RefreshAccessTokenInput, RefreshAccessTokenPayload } from '~/gql/graphql';
 import { db } from '../../db';
 import { UNKNOWN_ERROR } from '../../errors';
 import { encodeMockJWT } from '../../utils/encode-mock-jwt';
@@ -20,11 +17,11 @@ const EXPIRATION_IN_S = 60 * 60 * 24; // 1 day
 export const RefreshAccessToken = graphql.mutation<
   RefreshAccessTokenResponse,
   RefreshAccessTokenVariables
->('RefreshAccessToken', ({ variables }) => {
+>('RefreshAccessToken', (opts) => {
   const session = db.session.findFirst({
     where: {
       refreshToken: {
-        equals: variables.input.refreshToken,
+        equals: opts.variables.input.refreshToken,
       },
     },
   });

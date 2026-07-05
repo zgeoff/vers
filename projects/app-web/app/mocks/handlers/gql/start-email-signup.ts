@@ -1,8 +1,5 @@
-import { graphql, HttpResponse } from 'msw';
-import type {
-  StartEmailSignupInput,
-  StartEmailSignupPayload,
-} from '~/gql/graphql';
+import { HttpResponse, graphql } from 'msw';
+import type { StartEmailSignupInput, StartEmailSignupPayload } from '~/gql/graphql';
 import { db } from '../../db';
 
 interface StartEmailSignupVariables {
@@ -16,9 +13,9 @@ interface StartEmailSignupResponse {
 export const StartEmailSignup = graphql.mutation<
   StartEmailSignupResponse,
   StartEmailSignupVariables
->('StartEmailSignup', ({ variables }) => {
+>('StartEmailSignup', (opts) => {
   const existingUser = db.user.findFirst({
-    where: { email: { equals: variables.input.email } },
+    where: { email: { equals: opts.variables.input.email } },
   });
 
   // return a success response as to avoid user enumeration the user doesn't exist
@@ -33,7 +30,7 @@ export const StartEmailSignup = graphql.mutation<
   }
 
   db.verification.create({
-    target: variables.input.email,
+    target: opts.variables.input.email,
     type: 'onboarding',
   });
 

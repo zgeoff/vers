@@ -1,13 +1,13 @@
-import type { ChangePasswordPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
+import type { ChangePasswordPayload } from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const changeUserPassword = trpc.changePassword.mutation(({ input }) => {
+export const changeUserPassword = trpc.changePassword.mutation((opts) => {
   try {
     const user = db.user.findFirst({
       where: {
-        id: { equals: input.id },
+        id: { equals: opts.input.id },
       },
     });
 
@@ -21,7 +21,7 @@ export const changeUserPassword = trpc.changePassword.mutation(({ input }) => {
     db.user.update({
       data: {
         // in the mock, we store the plaintext password
-        passwordHash: input.password,
+        passwordHash: opts.input.password,
       },
       where: {
         id: { equals: user.id },

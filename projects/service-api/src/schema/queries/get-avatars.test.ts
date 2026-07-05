@@ -1,6 +1,6 @@
-import { afterEach, expect, test } from 'vitest';
 import { drop } from '@mswjs/data';
 import { createTestJWT } from '@vers/service-test-utils';
+import { afterEach, expect, test } from 'vitest';
 import { env } from '~/env';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
@@ -42,6 +42,7 @@ test('it returns all avatars for the authenticated user', async () => {
 
   expect(result).toBeArray();
   expect(result).toHaveLength(2);
+
   expect(result).toIncludeAllPartialMembers([
     {
       createdAt: expect.any(Date),

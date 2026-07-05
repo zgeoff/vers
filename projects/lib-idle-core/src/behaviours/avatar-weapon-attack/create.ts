@@ -17,9 +17,7 @@ export function create(entity: Avatar): AvatarWeaponAttackBehaviour {
 
   const getState = (): AvatarWeaponAttackBehaviourState => state;
 
-  const setState = (
-    setStateFn: SetEntityStateFn<AvatarWeaponAttackBehaviourState>,
-  ): void => {
+  const setState = (setStateFn: SetEntityStateFn<AvatarWeaponAttackBehaviourState>): void => {
     state = produce(state, setStateFn);
   };
 
@@ -44,8 +42,8 @@ export function create(entity: Avatar): AvatarWeaponAttackBehaviour {
 
     // handlers
     handlers: {
-      [LifecycleEvent.OnTick]: (entity: Avatar, executor: CombatExecutor) =>
-        handleTick(entity, behaviour, executor),
+      [LifecycleEvent.OnTick]: (tickEntity: Avatar, executor: CombatExecutor) =>
+        handleTick(tickEntity, behaviour, executor),
       [LifecycleEvent.Reset]: () => handleReset(),
     },
     predicate,

@@ -6,5 +6,5 @@
  * @returns True if the transaction token is valid, false otherwise
  */
 export function isValidTransactionToken(token?: null | string) {
-  return !!token?.includes('valid');
+  return Boolean(token?.includes('valid'));
 }

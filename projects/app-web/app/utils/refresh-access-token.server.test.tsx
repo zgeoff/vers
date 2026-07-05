@@ -1,8 +1,9 @@
-import { afterEach, expect, test } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { createRoutesStub, type LoaderFunction } from 'react-router';
 import { drop } from '@mswjs/data';
-import { graphql, HttpResponse } from 'msw';
+import { render, screen } from '@testing-library/react';
+import { HttpResponse, graphql } from 'msw';
+import { createRoutesStub } from 'react-router';
+import type { LoaderFunctionArgs } from 'react-router';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
 import { withRouteProps } from '~/test-utils/with-route-props';
@@ -10,31 +11,27 @@ import { Routes } from '~/types';
 import { createGQLClient } from './create-gql-client.server';
 import { refreshAccessToken } from './refresh-access-token.server';
 
-const loader: LoaderFunction = async ({ request }) => {
-  const client = await createGQLClient(request);
+async function loader(args: LoaderFunctionArgs) {
+  const client = await createGQLClient(args.request);
 
-  const tokenPayload = await refreshAccessToken(request, {
+  const tokenPayload = await refreshAccessToken(args.request, {
     refreshToken: 'valid-refresh-token',
     utils: {
-      appendHeaders: (operation) => {
-        return operation;
-      },
-      mutate: async (...args) => {
-        return client.mutation(...args);
-      },
+      appendHeaders: (operation) => operation,
+      mutate: async (...operationArgs) => await client.mutation(...operationArgs),
     },
   });
 
   return tokenPayload;
-};
+}
 
 function setupTest() {
   const TestRoutesStub = createRoutesStub([
     {
-      Component: withRouteProps(({ loaderData }) => (
+      Component: withRouteProps((props) => (
         <>
           <h1>TEST_ROUTE</h1>
-          <span>{JSON.stringify(loaderData, null, 2)}</span>
+          <span>{JSON.stringify(props.loaderData, null, 2)}</span>
         </>
       )),
       loader,

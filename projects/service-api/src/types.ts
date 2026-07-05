@@ -5,9 +5,9 @@ import type { ServiceRouter as SessionServiceRouter } from '@vers/service-sessio
 import type { SessionData, UserData } from '@vers/service-types';
 import type { ServiceRouter as UserServiceRouter } from '@vers/service-user';
 import type { ServiceRouter as VerificationServiceRouter } from '@vers/service-verification';
-import { z } from 'zod';
-import { MutationErrorPayload } from '~/schema/types/mutation-error-payload';
-import { envSchema } from './env';
+import type { z } from 'zod';
+import type { MutationErrorPayload } from '~/schema/types/mutation-error-payload';
+import type { envSchema } from './env';
 
 export type Env = z.infer<typeof envSchema>;
 
@@ -48,9 +48,7 @@ export interface Services {
   verification: TRPCClient<VerificationServiceRouter>;
 }
 
-export type StandardMutationPayload<T> =
-  | T
-  | typeof MutationErrorPayload.$inferType;
+export type StandardMutationPayload<T> = T | typeof MutationErrorPayload.$inferType;
 
 export enum SecureAction {
   ChangeEmail = 'ChangeEmail',

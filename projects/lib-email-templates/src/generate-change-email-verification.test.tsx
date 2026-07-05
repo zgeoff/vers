@@ -8,8 +8,7 @@ test('it generates a verification email with the provided configuration', async 
     verificationURL: 'https://example.com/verify?code=123456',
   };
 
-  const { html, plainText } =
-    await generateChangeEmailVerificationEmail(config);
+  const { html, plainText } = await generateChangeEmailVerificationEmail(config);
 
   expect(html).toContain('Verify your new email address');
   expect(html).toContain(config.newEmail);

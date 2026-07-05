@@ -5,10 +5,7 @@ import { Routes } from '~/types';
 import type { HandleVerificationContext } from './types';
 
 export async function handleChangePassword(ctx: HandleVerificationContext) {
-  invariant(
-    ctx.submission.status === 'success',
-    'submission should be successful by now',
-  );
+  invariant(ctx.submission.status === 'success', 'submission should be successful by now');
 
   const verifySession = await verifySessionStorage.getSession();
 

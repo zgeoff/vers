@@ -3,9 +3,7 @@ import type { ActivityData } from '../types';
 import { ActivityFailureAction, ActivityType } from '../types';
 import { createMockEnemyData } from './create-mock-enemy-data';
 
-export function createMockActivityData(
-  overrides: Partial<ActivityData> = {},
-): ActivityData {
+export function createMockActivityData(overrides: Partial<ActivityData> = {}): ActivityData {
   const activity: ActivityData = {
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,

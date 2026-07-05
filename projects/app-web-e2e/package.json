@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "e2e": "playwright test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "dependencies": {
     "@vers/service-utils": "workspace:*",
     "zod": "catalog:"
@@ -12,9 +16,5 @@
     "@types/node": "22.13.10",
     "typescript": "catalog:",
     "vitest": "catalog:"
-  },
-  "scripts": {
-    "e2e": "playwright test",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

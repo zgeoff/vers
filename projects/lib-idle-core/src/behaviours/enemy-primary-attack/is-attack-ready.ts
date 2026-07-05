@@ -1,8 +1,4 @@
-import type {
-  CombatExecutor,
-  Enemy,
-  EnemyPrimaryAttackBehaviourState,
-} from '../../types';
+import type { CombatExecutor, Enemy, EnemyPrimaryAttackBehaviourState } from '../../types';
 import { getNextAttackTime } from './get-next-attack-time';
 
 export function isAttackReady(

@@ -1,7 +1,7 @@
 import { Box } from '@vers/styled-system/jsx';
 import { Button } from './button';
 
-export const Default = () => {
+export function Default() {
   return (
     <>
       <Row>
@@ -74,9 +74,13 @@ export const Default = () => {
       </Row>
     </>
   );
-};
+}
 
-function Row(props: { children: React.ReactNode }) {
+interface RowProps {
+  children: React.ReactNode;
+}
+
+function Row(props: RowProps) {
   return (
     <Box display="flex" flexDirection="row" gap="2">
       {props.children}

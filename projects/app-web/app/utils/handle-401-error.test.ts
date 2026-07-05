@@ -1,5 +1,5 @@
-import { afterEach, expect, test, vi } from 'vitest';
 import { CombinedError } from '@urql/core';
+import { afterEach, expect, test, vi } from 'vitest';
 import { handle401Error } from './handle-401-error';
 import * as logoutModule from './logout.server';
 
@@ -24,8 +24,7 @@ test('it logs the user out and redirects to the login page with the current URL 
     }),
   );
 
-  expect(logoutSpy).toHaveBeenCalledOnce();
-  expect(logoutSpy).toHaveBeenCalledWith(request, {
+  expect(logoutSpy).toHaveBeenCalledExactlyOnceWith(request, {
     redirectTo: '/login?redirect=%2Fnexus%3Ftest%3Dtrue',
   });
 });

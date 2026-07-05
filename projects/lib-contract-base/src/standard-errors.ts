@@ -1,10 +1,7 @@
 import * as z from 'zod';
 
 /** Why a session failed to authenticate; carried in the UNAUTHORIZED error payload. */
-export const UnauthorizedReasonSchema = z.enum([
-  'missing-session',
-  'expired-session',
-]);
+export const UnauthorizedReasonSchema = z.enum(['missing-session', 'expired-session']);
 
 export type UnauthorizedReason = z.infer<typeof UnauthorizedReasonSchema>;
 
@@ -15,6 +12,7 @@ export type UnauthorizedReason = z.infer<typeof UnauthorizedReasonSchema>;
 export const STANDARD_ERRORS = {
   FORBIDDEN: {
     message: 'Insufficient permissions',
+
     // Deliberately empty: no permission model exists yet; fields are added additively when it lands.
     data: z.object({}),
   },

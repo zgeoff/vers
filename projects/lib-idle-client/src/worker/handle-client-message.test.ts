@@ -1,9 +1,5 @@
+import { createMockActivityData, createMockAvatarData, createSimulation } from '@vers/idle-core';
 import { afterEach, expect, test } from 'vitest';
-import {
-  createMockActivityData,
-  createMockAvatarData,
-  createSimulation,
-} from '@vers/idle-core';
 import xxhash from 'xxhash-wasm';
 import type { InitializeMessage, SetActivityMessage } from '../types';
 import { ClientMessageType } from '../types';

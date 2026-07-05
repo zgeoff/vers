@@ -1,12 +1,12 @@
-import type { VerifyPasswordPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { VerifyPasswordPayload } from '@vers/service-types';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { logger } from '~/logger';
-import type { Context } from '../types';
 import { t } from '../t';
+import type { Context } from '../types';
 
 export const VerifyPasswordInputSchema = z.object({
   email: z.string().email(),
@@ -60,4 +60,4 @@ export async function verifyPassword(
 
 export const procedure = t.procedure
   .input(VerifyPasswordInputSchema)
-  .mutation(async ({ ctx, input }) => verifyPassword(input, ctx));
+  .mutation((opts) => verifyPassword(opts.input, opts.ctx));

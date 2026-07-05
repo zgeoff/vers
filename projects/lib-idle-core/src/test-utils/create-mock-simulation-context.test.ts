@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import { createRNG } from '@vers/game-utils';
+import { expect, test } from 'vitest';
 import { createMockSimulationContext } from './create-mock-simulation-context';
 
 test('it creates a simulation context with expected properties', () => {

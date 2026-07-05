@@ -14,9 +14,7 @@ export function useFilteredGraph() {
   const graph = useAetherGraph();
   const selectedNode = useSelectedNode();
 
-  return useMemo(() => {
-    return filterDistanceGraph(selectedNode.object3D, graph);
-  }, [selectedNode, graph]);
+  return useMemo(() => filterDistanceGraph(selectedNode.object3D, graph), [selectedNode, graph]);
 }
 
 export function Scene() {

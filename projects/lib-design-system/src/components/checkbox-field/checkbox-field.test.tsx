@@ -1,16 +1,10 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { expect, test } from 'vitest';
 import { CheckboxField } from './checkbox-field';
 
 test('it renders a label and a checkbox input', () => {
-  render(
-    <CheckboxField
-      checkboxProps={{}}
-      errors={[]}
-      labelProps={{ children: 'Remember me' }}
-    />,
-  );
+  render(<CheckboxField checkboxProps={{}} errors={[]} labelProps={{ children: 'Remember me' }} />);
 
   const checkbox = screen.getByLabelText('Remember me');
 
@@ -46,8 +40,5 @@ test('it displays error messages', () => {
   );
 
   expect(screen.getByText('This field is required')).toBeInTheDocument();
-  expect(screen.getByLabelText('Remember me')).toHaveAttribute(
-    'aria-invalid',
-    'true',
-  );
+  expect(screen.getByLabelText('Remember me')).toHaveAttribute('aria-invalid', 'true');
 });

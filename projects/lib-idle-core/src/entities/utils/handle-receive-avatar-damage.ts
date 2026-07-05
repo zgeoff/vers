@@ -1,9 +1,7 @@
-import { type Avatar, EntityStatus } from '../../types';
+import { EntityStatus } from '../../types';
+import type { Avatar } from '../../types';
 
-export function handleReceiveAvatarDamage(
-  amount: number,
-  entity: Avatar,
-): void {
+export function handleReceiveAvatarDamage(amount: number, entity: Avatar): void {
   // prevent negative life
   const newLife = Math.max(entity.life - amount, 0);
 

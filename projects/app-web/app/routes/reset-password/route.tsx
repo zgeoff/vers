@@ -1,8 +1,8 @@
-import { data, Form, redirect, Link as RRLink } from 'react-router';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
 import { Brand, Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
+import { Form, Link as RRLink, data, redirect } from 'react-router';
 import { HoneypotInputs } from 'remix-utils/honeypot/react';
 import { z } from 'zod';
 import { FormErrorList } from '~/components/form-error-list/form-error-list';
@@ -28,17 +28,20 @@ const ResetPasswordFormSchema = z.intersection(
   ConfirmPasswordSchema,
 );
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: '',
-    title: 'vers | Reset Password',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: '',
+      title: 'vers | Reset Password',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAnonymous(args.request);
 
   const url = new URL(args.request.url);
+
   const resetToken = url.searchParams.get('token');
   const email = url.searchParams.get('email');
 
@@ -53,6 +56,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   await requireAnonymous(args.request);
 
   const url = new URL(args.request.url);
+
   const resetToken = url.searchParams.get('token');
   const email = url.searchParams.get('email');
 
@@ -75,24 +79,19 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     return data({ result }, { status });
   }
 
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
   // attach our transaction token incase 2FA was required for this reset
   const transactionToken = verifySession.get('resetPassword#transactionToken');
 
-  const result = await args.context.client.mutation(
-    FinishPasswordResetMutation,
-    {
-      input: {
-        email,
-        password: submission.value.password,
-        resetToken,
-        ...(transactionToken !== undefined && { transactionToken }),
-      },
+  const result = await args.context.client.mutation(FinishPasswordResetMutation, {
+    input: {
+      email,
+      password: submission.value.password,
+      resetToken,
+      ...(transactionToken !== undefined && { transactionToken }),
     },
-  );
+  });
 
   if (result.error) {
     handleGQLError(result.error);
@@ -145,15 +144,13 @@ export function ResetPassword(props: Route.ComponentProps) {
     },
     id: 'reset-password-form',
     lastResult: props.actionData?.result,
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: ResetPasswordFormSchema });
+    onValidate(opts) {
+      return parseWithZod(opts.formData, { schema: ResetPasswordFormSchema });
     },
     shouldRevalidate: 'onBlur',
   });
 
-  const submitButtonStatus = isFormPending
-    ? StatusButton.Status.Pending
-    : StatusButton.Status.Idle;
+  const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
   return (
     <>
@@ -170,9 +167,7 @@ export function ResetPassword(props: Route.ComponentProps) {
         <Field
           errors={fields.password.errors ?? []}
           inputProps={{
-            ...toKeylessProps(
-              getInputProps(fields.password, { type: 'password' }),
-            ),
+            ...toKeylessProps(getInputProps(fields.password, { type: 'password' })),
             autoComplete: 'new-password',
             placeholder: '********',
           }}
@@ -181,9 +176,7 @@ export function ResetPassword(props: Route.ComponentProps) {
         <Field
           errors={fields.confirmPassword.errors ?? []}
           inputProps={{
-            ...toKeylessProps(
-              getInputProps(fields.confirmPassword, { type: 'password' }),
-            ),
+            ...toKeylessProps(getInputProps(fields.confirmPassword, { type: 'password' })),
             autoComplete: 'new-password',
             placeholder: '********',
           }}

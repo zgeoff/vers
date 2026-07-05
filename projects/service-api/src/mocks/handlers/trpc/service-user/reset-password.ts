@@ -1,13 +1,13 @@
-import type { ResetPasswordPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
+import type { ResetPasswordPayload } from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const resetPassword = trpc.resetPassword.mutation(({ input }) => {
+export const resetPassword = trpc.resetPassword.mutation((opts) => {
   try {
     const user = db.user.findFirst({
       where: {
-        id: { equals: input.id },
+        id: { equals: opts.input.id },
       },
     });
 
@@ -18,7 +18,7 @@ export const resetPassword = trpc.resetPassword.mutation(({ input }) => {
       });
     }
 
-    const isTokenMismatch = user.passwordResetToken !== input.resetToken;
+    const isTokenMismatch = user.passwordResetToken !== opts.input.resetToken;
 
     if (isTokenMismatch) {
       throw new TRPCError({
@@ -28,8 +28,7 @@ export const resetPassword = trpc.resetPassword.mutation(({ input }) => {
     }
 
     const isTokenExpired =
-      user.passwordResetTokenExpiresAt &&
-      user.passwordResetTokenExpiresAt < new Date();
+      user.passwordResetTokenExpiresAt && user.passwordResetTokenExpiresAt < new Date();
 
     if (isTokenExpired) {
       throw new TRPCError({
@@ -40,7 +39,7 @@ export const resetPassword = trpc.resetPassword.mutation(({ input }) => {
 
     db.user.update({
       data: {
-        passwordHash: input.password,
+        passwordHash: opts.input.password,
         passwordResetToken: null,
         passwordResetTokenExpiresAt: null,
       },

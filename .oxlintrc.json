@@ -1,0 +1,326 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "react", "jsx-a11y"],
+  "jsPlugins": ["./oxlint-local-plugin.js", "@stylistic/eslint-plugin"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error",
+    "pedantic": "error",
+    "style": "error"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "settings": {
+    "react": {
+      "version": "19.0.0"
+    }
+  },
+  "rules": {
+    // repo-specific AST rules from oxlint-local-plugin.js
+    "local/no-top-level-arrow": "error",
+    "local/no-nested-function-declaration": "error",
+    "local/no-bare-named-exports": "error",
+    "local/no-inline-param-object-types": "error",
+    "local/no-destructured-params": "error",
+    "local/no-ternary-args": "error",
+    "local/no-await-args": "error",
+
+    // enforced comment style — line comments unless JSDoc or exclamation
+    "@stylistic/multiline-comment-style": [
+      "error",
+      "separate-lines",
+      { "checkJSDoc": false, "checkExclamation": false }
+    ],
+
+    // own-line comments get a blank line above so they don't crowd the
+    // previous statement; comments opening a block/object/class/etc are exempt
+    "@stylistic/lines-around-comment": [
+      "error",
+      {
+        "beforeLineComment": true,
+        "beforeBlockComment": true,
+        "allowBlockStart": true,
+        "allowObjectStart": true,
+        "allowArrayStart": true,
+        "allowClassStart": true,
+        "allowEnumStart": true,
+        "allowInterfaceStart": true,
+        "allowModuleStart": true,
+        "allowTypeStart": true
+      }
+    ],
+
+    // restriction-category cherry-picks
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "import/no-cycle": "error",
+
+    "no-shadow": "error",
+
+    // separate type-only imports from value imports
+    "typescript/consistent-type-imports": [
+      "error",
+      { "prefer": "type-imports", "fixStyle": "separate-type-imports" }
+    ],
+    // matches the array-type option the former eslint config carried —
+    // existing code already writes `Array<T>` throughout
+    "typescript/array-type": ["error", { "default": "generic" }],
+    "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }],
+    // oxfmt's sortImports owns import declaration order; lint only member order
+    "sort-imports": ["error", { "ignoreDeclarationSort": true }],
+
+    // allows destructuring for omitting properties; a leading underscore
+    // marks a deliberately unused binding (interface-mandated parameters,
+    // placeholder args)
+    "no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_", "ignoreRestSiblings": true, "varsIgnorePattern": "^_" }
+    ],
+
+    // destructuring reads well at declaration sites, but satisfying it on
+    // assignments forces the parenthesized `({ x } = y)` form — plain member
+    // assignment instead
+    "prefer-destructuring": [
+      "error",
+      {
+        "VariableDeclarator": { "array": true, "object": true },
+        "AssignmentExpression": { "array": false, "object": false }
+      }
+    ],
+
+    // consistent function syntax — declarations top level, arrows for inside
+    // blocks and callbacks
+    "func-style": ["error", "declaration", { "allowArrowFunctions": true }],
+    "no-inner-declarations": ["error", "functions"],
+    "prefer-arrow-callback": ["error", { "allowNamedFunctions": false, "allowUnboundThis": false }],
+
+    // stylistic
+    "curly": ["error", "all"],
+    "unicorn/prefer-ternary": ["error", "only-single-line"],
+    "unicorn/prefer-node-protocol": "error",
+    "unicorn/no-array-sort": "error",
+    "unicorn/no-nested-ternary": "off",
+    "unicorn/no-useless-undefined": ["error", { "checkArguments": false }],
+    "unicorn/no-null": "off",
+    "unicorn/number-literal-case": "off",
+    "unicorn/numeric-separators-style": ["error", { "hexadecimal": { "minimumDigits": 10 } }],
+    "unicorn/filename-case": "off",
+
+    // category-enabled rules that contradict this repo's style: inline named
+    // export declarations are the convention (group-exports demands the exact
+    // form no-bare-named-exports bans), keys group by meaning not alphabet,
+    // comments stay lowercase, short identifiers and literal numbers are fine
+    "import/prefer-default-export": "off",
+    "import/no-named-export": "off",
+    "import/exports-last": "off",
+    "import/group-exports": "off",
+    "sort-keys": "off",
+    "capitalized-comments": "off",
+    "id-length": "off",
+    "no-magic-numbers": "off",
+    // prefer-ternary (only-single-line, above) wants ternaries where they fit
+    // on one line; no-ternary would ban the same code
+    "no-ternary": "off",
+    // this repo runs node/bun on the server and bundles for the browser —
+    // node builtins are fine on the server side
+    "import/no-nodejs-modules": "off",
+
+    // preload-style modules (matcher registration, stylesheets) are
+    // side-effect imports by design
+    "import/no-unassigned-import": [
+      "error",
+      {
+        "allow": [
+          "jest-extended",
+          "@testing-library/jest-dom/vitest",
+          "**/augment-bun-test.ts",
+          "**/*.css"
+        ]
+      }
+    ],
+
+    // disable import rules that duplicate work TypeScript's compiler already
+    // does
+    "import/namespace": "off",
+    "import/named": "off",
+    "import/default": "off",
+    "import/no-named-as-default-member": "off",
+
+    // carried over from the former eslint config, off pending the type-aware
+    // lint pass in #217 (needs the TS7/tsgolint toolchain)
+    "typescript/no-unsafe-assignment": "off",
+    "typescript/only-throw-error": "off",
+
+    // vers-specific: rules oxlint's error-everywhere categories turn on that
+    // the former eslint config (built from targeted `recommended` presets,
+    // not blanket categories) never enabled, and that fight real patterns in
+    // this codebase rather than catch bugs
+    //
+    // React 19's automatic JSX runtime doesn't require React in scope
+    "react/react-in-jsx-scope": "off",
+    // schema/style/vendor modules are imported wholesale on purpose
+    // (`import * as schema from '@vers/postgres-schema'`, vanilla-extract
+    // `*.styles` modules, `jest-extended` matchers)
+    "import/no-namespace": "off",
+    // leading underscores mark closure-private state in factory functions
+    // (`create-simulation.ts`'s `_rng`, `_avatar`, ...) — not accidental
+    // globals
+    "no-underscore-dangle": "off",
+    // whole-prop forwarding (`<svg {...props} className={props.className}>`)
+    // is the idiomatic pattern here, more so with `no-destructured-params`
+    // in force
+    "react/jsx-props-no-spreading": "off",
+    // forcing the `/u` flag on every regex (including simple literals in
+    // assertions and matchers) is broader than this repo wants
+    "require-unicode-regexp": "off",
+    // arbitrary size/complexity caps this repo has never enforced —
+    // simulation and rendering code legitimately runs long
+    "max-statements": "off",
+    "max-lines-per-function": "off",
+    "max-lines": "off",
+    "max-params": "off",
+    "import/max-dependencies": "off",
+    // inline comments and `continue` are normal control flow here, not
+    // smells
+    "no-inline-comments": "off",
+    "no-continue": "off",
+    "init-declarations": "off",
+    // sequential awaits inside a loop are intentional in conformance-test
+    // iteration and simulation stepping
+    "no-await-in-loop": "off",
+    // low-level worker/message-port wrapping needs a bare `new Promise`
+    // executor with an early-return
+    "no-promise-executor-return": "off",
+    "promise/avoid-new": "off",
+    // false-positives on fluent builder call chains (oRPC's
+    // `os.getThing.handler(...)`)
+    "new-cap": "off",
+    // deeply nested JSX is normal for form/layout composition
+    "react/jsx-max-depth": "off",
+    // TODO/FIXME comments are tracked deliberately, not banned
+    "no-warning-comments": "off",
+    // every postMessage in this repo is MessagePort/SharedWorker, where the
+    // second parameter is a transfer list — the rule targets
+    // window.postMessage and its suggested targetOrigin argument doesn't
+    // typecheck here
+    "unicorn/require-post-message-target-origin": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      // vitest plugin only applies to `.test.ts(x)` files — scoping it here
+      // (rather than in the top-level `plugins` list) keeps its rules off
+      // ordinary source files, which the plugin would otherwise misjudge as
+      // tests
+      "plugins": ["vitest"],
+      // one co-located suite per module with inline test data: file length
+      // scales with coverage, not complexity
+      "rules": {
+        "max-lines": "off",
+        "typescript/no-non-null-assertion": "off",
+        "vitest/max-expects": "off",
+        "vitest/no-alias-methods": "error",
+        "vitest/no-conditional-in-test": "error",
+        "vitest/no-focused-tests": "off",
+        "vitest/no-hooks": ["error", { "allow": ["afterEach"] }],
+        "vitest/prefer-expect-assertions": "off",
+        "vitest/prefer-strict-equal": "error",
+        "vitest/require-top-level-describe": "off",
+        // tests import `test`/`expect`/`vi` from 'vitest' explicitly (see
+        // AGENTS.md testing conventions) instead of relying on injected
+        // globals
+        "vitest/no-importing-vitest-globals": "off",
+        // conflicts with the repo's no-shared-setup testing convention;
+        // only `afterEach` is an allowed hook (`vitest/no-hooks`, above)
+        "vitest/require-hook": "off",
+        // the repo deliberately uses two test-file suffixes: `.test.ts` for
+        // vitest and `.spec.ts` for Playwright — this rule only accounts
+        // for one
+        "vitest/consistent-test-filename": "off",
+        // `toHaveBeenCalledOnce()` is a preferred jest-extended matcher (see
+        // AGENTS.md's matcher list) — this rule demands the opposite,
+        // `toHaveBeenCalledTimes(1)`
+        "vitest/prefer-called-times": "off",
+        // `test.todo` is deliberate coverage tracking, same policy as
+        // no-warning-comments
+        "vitest/warn-todo": "off"
+      }
+    },
+    {
+      // ambient declaration files exist to augment or side-effect-import
+      // third-party module types (`declare module 'hono' { ... }`) — the
+      // bare import is how TypeScript merges the augmentation
+      "files": ["**/*.d.ts"],
+      "rules": {
+        "import/no-unassigned-import": "off"
+      }
+    },
+    {
+      // oxfmt pins comments in JSX attribute lists to the line above and
+      // strips any blank line the rule would demand — the formatter owns
+      // comment placement in JSX
+      "files": ["**/*.tsx"],
+      "rules": {
+        "@stylistic/lines-around-comment": "off"
+      }
+    },
+    {
+      "files": ["**/*.js", "**/*.cjs", "**/*.mjs"],
+      // untyped JS is `any` end to end, so the unsafe-* rules flag every
+      // expression
+      "rules": {
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off",
+        "typescript/no-unsafe-type-assertion": "off"
+      }
+    },
+    {
+      // react-three-fiber props aren't DOM attributes — same ignore list the
+      // eslint config carried for the r3f renderer
+      "files": ["**/projects/lib-aether-client/**/*.ts", "**/projects/lib-aether-client/**/*.tsx"],
+      "rules": {
+        "react/no-unknown-property": [
+          "error",
+          {
+            "ignore": [
+              "args",
+              "attach",
+              "position",
+              "rotation",
+              "scale",
+              "intensity",
+              "geometry",
+              "far",
+              "near",
+              "userData"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/.turbo/**",
+    "**/.nx/**",
+    ".worktrees/**",
+    ".claude/**",
+    "**/*.json",
+    "**/*timestamp*.mjs",
+    "**/mockServiceWorker.js",
+    "**/projects/app-web/app/gql/**",
+    "**/.react-router/**",
+    "**/styled-system/**",
+    "schema.graphql"
+  ]
+}

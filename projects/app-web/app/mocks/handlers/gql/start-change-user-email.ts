@@ -1,8 +1,5 @@
-import { graphql, HttpResponse } from 'msw';
-import type {
-  StartChangeUserEmailInput,
-  StartChangeUserEmailPayload,
-} from '~/gql/graphql';
+import { HttpResponse, graphql } from 'msw';
+import type { StartChangeUserEmailInput, StartChangeUserEmailPayload } from '~/gql/graphql';
 import { db } from '../../db';
 import { UNKNOWN_ERROR } from '../../errors';
 import { decodeMockJWT } from '../../utils/decode-mock-jwt';
@@ -18,8 +15,8 @@ interface StartChangeUserEmailResponse {
 export const StartChangeUserEmail = graphql.mutation<
   StartChangeUserEmailResponse,
   StartChangeUserEmailVariables
->('StartChangeUserEmail', ({ request, variables }) => {
-  const authHeader = request.headers.get('authorization');
+>('StartChangeUserEmail', (opts) => {
+  const authHeader = opts.request.headers.get('authorization');
 
   if (!authHeader) {
     return HttpResponse.json({
@@ -45,7 +42,7 @@ export const StartChangeUserEmail = graphql.mutation<
   }
 
   const existingUser = db.user.findFirst({
-    where: { email: { equals: variables.input.email } },
+    where: { email: { equals: opts.variables.input.email } },
   });
 
   if (existingUser) {
@@ -60,7 +57,7 @@ export const StartChangeUserEmail = graphql.mutation<
 
   // create a verification record for the new email
   db.verification.create({
-    target: variables.input.email,
+    target: opts.variables.input.email,
     type: 'change-email',
   });
 

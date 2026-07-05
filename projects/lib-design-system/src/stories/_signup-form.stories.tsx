@@ -21,12 +21,12 @@ const SignupFormSchema = z.object({
   username: z.string().min(4),
 });
 
-export const Default = () => {
+export function Default() {
   const [form, fields] = useForm({
     constraint: getZodConstraint(SignupFormSchema),
     id: 'signup-form',
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: SignupFormSchema });
+    onValidate(options) {
+      return parseWithZod(options.formData, { schema: SignupFormSchema });
     },
     shouldRevalidate: 'onBlur',
   });
@@ -34,27 +34,31 @@ export const Default = () => {
   const { key: _nameKey, ...nameInputProps } = getInputProps(fields.name, {
     type: 'text',
   });
+
   const { key: _emailKey, ...emailInputProps } = getInputProps(fields.email, {
     type: 'email',
   });
-  const { key: _usernameKey, ...usernameInputProps } = getInputProps(
-    fields.username,
-    { type: 'text' },
-  );
-  const { key: _passwordKey, ...passwordInputProps } = getInputProps(
-    fields.password,
+
+  const { key: _usernameKey, ...usernameInputProps } = getInputProps(fields.username, {
+    type: 'text',
+  });
+
+  const { key: _passwordKey, ...passwordInputProps } = getInputProps(fields.password, {
+    type: 'password',
+  });
+
+  const { key: _confirmPasswordKey, ...confirmPasswordInputProps } = getInputProps(
+    fields.confirmPassword,
     { type: 'password' },
   );
-  const { key: _confirmPasswordKey, ...confirmPasswordInputProps } =
-    getInputProps(fields.confirmPassword, { type: 'password' });
-  const { key: _rememberMeKey, ...rememberMeInputProps } = getInputProps(
-    fields.rememberMe,
-    { type: 'checkbox' },
-  );
-  const { key: _agreeToTermsKey, ...agreeToTermsInputProps } = getInputProps(
-    fields.agreeToTerms,
-    { type: 'checkbox' },
-  );
+
+  const { key: _rememberMeKey, ...rememberMeInputProps } = getInputProps(fields.rememberMe, {
+    type: 'checkbox',
+  });
+
+  const { key: _agreeToTermsKey, ...agreeToTermsInputProps } = getInputProps(fields.agreeToTerms, {
+    type: 'checkbox',
+  });
 
   return (
     <form {...getFormProps(form)}>
@@ -125,4 +129,4 @@ export const Default = () => {
       <Button type="submit">Submit</Button>
     </form>
   );
-};
+}

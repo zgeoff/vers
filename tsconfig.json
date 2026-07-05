@@ -1,5 +1,3 @@
 {
-  "extends": "./tsconfig.base.json",
-  "files": ["./eslint.config.ts"],
-  "include": ["types/**/*.ts"]
+  "extends": "./tsconfig.base.json"
 }

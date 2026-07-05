@@ -3,6 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "build": "bun ../../scripts/build-esbuild.ts",
+    "dev": "tsx watch src/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "dependencies": {
     "@graphql-tools/executor-http": "1.2.8",
     "@hono/node-server": "catalog:",
@@ -48,11 +54,5 @@
     "vite": "catalog:",
     "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
-  },
-  "scripts": {
-    "build": "bun ../../scripts/build-esbuild.ts",
-    "dev": "tsx watch src/main.ts",
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

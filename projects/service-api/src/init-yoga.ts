@@ -14,14 +14,14 @@ const tokenVerifierConfig = {
 const authMiddleware = createAuthMiddleware({ tokenVerifierConfig });
 
 export function initYoga() {
-  app.on(['GET', 'POST'], '/graphql', authMiddleware, async (honoCtx) => {
+  app.on(['GET', 'POST'], '/graphql', authMiddleware, (honoCtx) => {
     const yoga = createYoga({
       context: (yogaCtx) => createYogaContext(yogaCtx, honoCtx),
       graphiql: env.isDevelopment,
       graphqlEndpoint: '/graphql',
       logging: env.LOGGING,
       maskedErrors: env.isProduction,
-      schema: schema,
+      schema,
     });
 
     return yoga.fetch(honoCtx.req.raw, honoCtx.env);

@@ -2,13 +2,9 @@ import type { Activity, Avatar, EnemyAttackEvent } from '../types';
 import { createLogLabel } from '../utils/create-log-label';
 import { logger } from '../utils/logger';
 
-export function handleEnemyAttack(
-  event: EnemyAttackEvent,
-  avatar: Avatar,
-  activity: Activity,
-) {
+export function handleEnemyAttack(event: EnemyAttackEvent, avatar: Avatar, activity: Activity) {
   const enemy = activity.currentEnemyGroup?.enemies.find(
-    (enemy) => enemy.id === event.source,
+    (candidate) => candidate.id === event.source,
   );
 
   if (enemy?.isAlive && avatar.isAlive) {

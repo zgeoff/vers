@@ -3,8 +3,10 @@ import invariant from 'tiny-invariant';
 
 // we prefix these session keys with the operation they're attached to
 // to mitigate issues if the user has multiple operations in progress at once
+/* oxlint-disable @stylistic/lines-around-comment -- oxfmt pins the first union-member comment to the `=` line */
 export type SessionKey =
   // 2FA login
+  /* oxlint-enable @stylistic/lines-around-comment */
   | 'login2FA#sessionID'
   | 'login2FA#transactionID'
   | 'login2FA#transactionToken'
@@ -47,10 +49,7 @@ interface SessionFlashData {
 
 invariant(process.env['SESSION_SECRET'], '$SESSION_SECRET is required');
 
-export const verifySessionStorage = createCookieSessionStorage<
-  SessionData,
-  SessionFlashData
->({
+export const verifySessionStorage = createCookieSessionStorage<SessionData, SessionFlashData>({
   cookie: {
     domain: import.meta.env['VITE_DOMAIN'],
     httpOnly: true,

@@ -1,7 +1,7 @@
-import { expect, test } from 'vitest';
-import * as schema from '@vers/postgres-schema';
+import type * as schema from '@vers/postgres-schema';
 import { createTestDB, createTestUser } from '@vers/service-test-utils';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { expect, test } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 
@@ -36,12 +36,13 @@ test('it creates a password reset token for an existing user', async () => {
   });
 
   const updatedUser = await db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.id, user.id),
+    where: (users, operators) => operators.eq(users.id, user.id),
   });
 
   expect(updatedUser?.passwordResetToken).toBe(result.resetToken);
   expect(updatedUser?.passwordResetTokenExpiresAt).toBeDate();
   expect(updatedUser?.passwordResetTokenExpiresAt).toBeAfter(new Date());
+
   expect(updatedUser?.passwordResetTokenExpiresAt).toBeBefore(
     new Date(Date.now() + 11 * 60 * 1000),
   );
@@ -67,7 +68,7 @@ test('it updates the user record with the new reset token', async () => {
   expect(firstResult.resetToken).not.toBe(secondResult.resetToken);
 
   const updatedUser = await db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.id, user.id),
+    where: (users, operators) => operators.eq(users.id, user.id),
   });
 
   expect(updatedUser?.passwordResetToken).toBe(secondResult.resetToken);

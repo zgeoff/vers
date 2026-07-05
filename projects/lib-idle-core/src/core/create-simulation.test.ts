@@ -2,6 +2,7 @@ import { expect, test, vi } from 'vitest';
 import xxhash from 'xxhash-wasm';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
+import type { SimulationListener } from '../types';
 import { ActivityCheckpointType } from '../types';
 import { createSimulation } from './create-simulation';
 
@@ -34,13 +35,12 @@ test('it calls an event listener when starting an activity', () => {
 
   const simulation = createSimulation(hasher);
 
-  const listenerSpy = vi.fn();
+  const listenerSpy = vi.fn<SimulationListener>();
 
   simulation.addEventListener('started', listenerSpy);
   simulation.startActivity(avatarData, activityData);
 
-  expect(listenerSpy).toHaveBeenCalledOnce();
-  expect(listenerSpy).toHaveBeenCalledWith(simulation.state);
+  expect(listenerSpy).toHaveBeenCalledExactlyOnceWith(simulation.state);
 });
 
 test('it stops an activity', async () => {
@@ -62,15 +62,14 @@ test('it calls an event listener when stopping an activity', async () => {
 
   const simulation = createSimulation(hasher);
 
-  const listenerSpy = vi.fn();
+  const listenerSpy = vi.fn<SimulationListener>();
 
   simulation.addEventListener('stopped', listenerSpy);
   simulation.startActivity(avatarData, activityData);
 
   await simulation.stopActivity();
 
-  expect(listenerSpy).toHaveBeenCalledOnce();
-  expect(listenerSpy).toHaveBeenCalledWith(simulation.state);
+  expect(listenerSpy).toHaveBeenCalledExactlyOnceWith(simulation.state);
 });
 
 test('it restarts an activity', () => {
@@ -95,15 +94,14 @@ test('it calls an event listener when restarting an activity', () => {
 
   const simulation = createSimulation(hasher);
 
-  const listenerSpy = vi.fn();
+  const listenerSpy = vi.fn<SimulationListener>();
 
   simulation.addEventListener('restarted', listenerSpy);
   simulation.startActivity(avatarData, activityData);
 
   simulation.restartActivity();
 
-  expect(listenerSpy).toHaveBeenCalledOnce();
-  expect(listenerSpy).toHaveBeenCalledWith(simulation.state);
+  expect(listenerSpy).toHaveBeenCalledExactlyOnceWith(simulation.state);
 });
 
 test('it resets the avatar when restarting an activity', () => {
@@ -156,7 +154,7 @@ test('it calls an event listener when the state updates', async () => {
   const simulation = createSimulation(hasher);
   const activityData = createMockActivityData();
 
-  const listenerSpy = vi.fn();
+  const listenerSpy = vi.fn<SimulationListener>();
 
   simulation.addEventListener('updated', listenerSpy);
   simulation.startActivity(avatarData, activityData);
@@ -167,8 +165,7 @@ test('it calls an event listener when the state updates', async () => {
   // run long enough for an attack cycle to occur
   await simulation.run(5000);
 
-  expect(listenerSpy).toHaveBeenCalledOnce();
-  expect(listenerSpy).toHaveBeenCalledWith(simulation.state);
+  expect(listenerSpy).toHaveBeenCalledExactlyOnceWith(simulation.state);
 });
 
 test('it returns the expected simulation state for a client app', () => {

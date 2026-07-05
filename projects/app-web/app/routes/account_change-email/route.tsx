@@ -1,8 +1,8 @@
-import { data, Form, redirect } from 'react-router';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
 import { Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { UserEmailSchema } from '@vers/validation';
+import { Form, data, redirect } from 'react-router';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import { ContentContainer } from '~/components/content-container';
@@ -20,23 +20,23 @@ import { isMutationError } from '~/utils/is-mutation-error';
 import { requireAuth } from '~/utils/require-auth.server';
 import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
-import type { Route } from './+types/route';
 import { QueryParam } from '../verify-otp/types';
+import type { Route } from './+types/route';
 import * as styles from './route.styles';
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: 'Change your account email address',
-    title: 'vers | Change Email',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: 'Change your account email address',
+      title: 'vers | Change Email',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
 
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
   const transactionToken = verifySession.get('changeEmail#transactionToken');
 
@@ -82,13 +82,9 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
 
   invariant(result.data, 'if no error, there must be data');
 
-  verifySession.set(
-    'changeEmail#transactionID',
-    result.data.startStepUpAuth.transactionID,
-  );
+  verifySession.set('changeEmail#transactionID', result.data.startStepUpAuth.transactionID);
 
-  const setCookieHeader =
-    await verifySessionStorage.commitSession(verifySession);
+  const setCookieHeader = await verifySessionStorage.commitSession(verifySession);
 
   const verifySearchParams = new URLSearchParams({
     [QueryParam.Target]: user.email,
@@ -120,21 +116,16 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     return data({ result }, { status });
   }
 
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('Cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('Cookie'));
 
   const transactionToken = verifySession.get('changeEmail#transactionToken');
 
-  const result = await args.context.client.mutation(
-    StartChangeUserEmailMutation,
-    {
-      input: {
-        email: submission.value.email,
-        ...(transactionToken !== undefined && { transactionToken }),
-      },
+  const result = await args.context.client.mutation(StartChangeUserEmailMutation, {
+    input: {
+      email: submission.value.email,
+      ...(transactionToken !== undefined && { transactionToken }),
     },
-  );
+  });
 
   if (result.error) {
     handleGQLError(result.error);
@@ -157,13 +148,13 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   invariant(result.data, 'if no error, there must be data');
 
   verifySession.unset('changeEmail#transactionID');
+
   verifySession.set(
     'changeEmailConfirm#transactionID',
     result.data.startChangeUserEmail.transactionID,
   );
 
-  const setCookieHeader =
-    await verifySessionStorage.commitSession(verifySession);
+  const setCookieHeader = await verifySessionStorage.commitSession(verifySession);
 
   const verifySearchParams = new URLSearchParams({
     [QueryParam.Target]: submission.value.email,
@@ -182,29 +173,23 @@ export function AccountChangeUserEmail(props: Route.ComponentProps) {
     constraint: getZodConstraint(ChangeUserEmailFormSchema),
     id: 'change-email-form',
     lastResult: props.actionData?.result,
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: ChangeUserEmailFormSchema });
+    onValidate(opts) {
+      return parseWithZod(opts.formData, { schema: ChangeUserEmailFormSchema });
     },
     shouldRevalidate: 'onBlur',
   });
 
-  const submitButtonStatus = isFormPending
-    ? StatusButton.Status.Pending
-    : StatusButton.Status.Idle;
+  const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
   return (
     <ContentContainer>
       <div className={styles.container}>
         <Heading level={2}>Change your email address</Heading>
         <Text align="center">
-          Enter your new email address below. A verification link will be sent
-          to the new email address to confirm the change.
+          Enter your new email address below. A verification link will be sent to the new email
+          address to confirm the change.
         </Text>
-        <Form
-          method="POST"
-          {...getFormProps(form)}
-          className={styles.formStyles}
-        >
+        <Form method="POST" {...getFormProps(form)} className={styles.formStyles}>
           <Field
             errors={fields.email.errors ?? []}
             inputProps={{

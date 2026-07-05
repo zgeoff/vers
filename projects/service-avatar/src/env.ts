@@ -1,4 +1,4 @@
-import { addEnvUtils, LoggingSchema, NodeEnvSchema } from '@vers/service-utils';
+import { LoggingSchema, NodeEnvSchema, addEnvUtils } from '@vers/service-utils';
 import { z } from 'zod';
 
 export const envSchema = z

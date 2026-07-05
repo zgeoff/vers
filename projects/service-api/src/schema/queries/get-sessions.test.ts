@@ -1,6 +1,6 @@
-import { expect, test } from 'vitest';
 import { drop } from '@mswjs/data';
 import { createTestJWT } from '@vers/service-test-utils';
+import { expect, test } from 'vitest';
 import { env } from '~/env';
 import { db } from '~/mocks/db';
 import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
@@ -31,6 +31,7 @@ test('it returns all sessions for the authenticated user', async () => {
 
   expect(result).toBeArray();
   expect(result).toHaveLength(2);
+
   expect(result).toIncludeAllPartialMembers([
     {
       expiresAt: expect.any(Date),

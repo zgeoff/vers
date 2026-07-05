@@ -1,18 +1,17 @@
 #!/usr/bin/env node
 
-import { ServiceID } from '@vers/service-types';
+import type { ServiceID } from '@vers/service-types';
 import { Command } from 'commander';
 import { exec } from './stack/commands/exec';
 import { logs } from './stack/commands/logs';
 import { rm } from './stack/commands/rm';
-import { start, type StartOptions } from './stack/commands/start';
+import { start } from './stack/commands/start';
+import type { StartOptions } from './stack/commands/start';
 import { status } from './stack/commands/status';
 import { stop } from './stack/commands/stop';
 import { parseServiceArg } from './stack/utils/parse-service-arg';
 
-const program = new Command()
-  .name('stack')
-  .description('CLI to manage the development stack');
+const program = new Command().name('stack').description('CLI to manage the development stack');
 
 program
   .command('start')

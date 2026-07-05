@@ -1,9 +1,9 @@
-import { data, Form, redirect, Link as RRLink } from 'react-router';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
 import { Brand, Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { UserEmailSchema } from '@vers/validation';
+import { Form, Link as RRLink, data, redirect } from 'react-router';
 import { HoneypotInputs } from 'remix-utils/honeypot/react';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
@@ -27,12 +27,14 @@ const ForgotPasswordFormSchema = z.object({
   email: UserEmailSchema,
 });
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: '',
-    title: 'vers | Forgot Password',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: '',
+      title: 'vers | Forgot Password',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAnonymous(args.request);
@@ -58,14 +60,11 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     return data({ result }, { status });
   }
 
-  const result = await args.context.client.mutation(
-    StartPasswordResetMutation,
-    {
-      input: {
-        email: submission.value.email,
-      },
+  const result = await args.context.client.mutation(StartPasswordResetMutation, {
+    input: {
+      email: submission.value.email,
     },
-  );
+  });
 
   if (result.error) {
     handleGQLError(result.error);
@@ -88,14 +87,9 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   }
 
   if (isVerificationRequiredPayload(result.data.startPasswordReset)) {
-    const verifySession = await verifySessionStorage.getSession(
-      args.request.headers.get('cookie'),
-    );
+    const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
-    verifySession.set(
-      'resetPassword#transactionID',
-      result.data.startPasswordReset.transactionID,
-    );
+    verifySession.set('resetPassword#transactionID', result.data.startPasswordReset.transactionID);
 
     return redirect(Routes.ResetPasswordStarted, {
       headers: {
@@ -124,15 +118,13 @@ export function ForgotPassword(props: Route.ComponentProps) {
     constraint: getZodConstraint(ForgotPasswordFormSchema),
     id: 'forgot-password-form',
     lastResult: props.actionData?.result,
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: ForgotPasswordFormSchema });
+    onValidate(opts) {
+      return parseWithZod(opts.formData, { schema: ForgotPasswordFormSchema });
     },
     shouldRevalidate: 'onBlur',
   });
 
-  const submitButtonStatus = isFormPending
-    ? StatusButton.Status.Pending
-    : StatusButton.Status.Idle;
+  const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
   return (
     <>
@@ -141,10 +133,7 @@ export function ForgotPassword(props: Route.ComponentProps) {
           <Brand size="xl" />
         </RRLink>
         <Heading level={2}>Forgot your password?</Heading>
-        <Text>
-          No worries, we&apos;ll send you reset instructions to your email
-          address.
-        </Text>
+        <Text>No worries, we&apos;ll send you reset instructions to your email address.</Text>
       </section>
 
       <Form method="POST" {...getFormProps(form)} className={formStyles}>

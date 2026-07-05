@@ -34,18 +34,14 @@ interface TokenPayload {
   refreshToken: string;
 }
 
-export async function refreshAccessToken(
-  request: Request,
-  ctx: Context,
-): Promise<TokenPayload> {
+export async function refreshAccessToken(request: Request, ctx: Context): Promise<TokenPayload> {
   const result = await ctx.utils.mutate(RefreshAccessTokenMutation, {
     input: {
       refreshToken: ctx.refreshToken,
     },
   });
 
-  const isError =
-    !!result.error || isMutationError(result.data?.refreshAccessToken);
+  const isError = Boolean(result.error) || isMutationError(result.data?.refreshAccessToken);
 
   if (isError) {
     await logout(request, { redirectTo: getLoginPathWithRedirect(request) });

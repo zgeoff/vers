@@ -1,8 +1,5 @@
-import { graphql, HttpResponse } from 'msw';
-import type {
-  GetEnable2FaVerificationQueryVariables,
-  TwoFactorVerification,
-} from '~/gql/graphql';
+import { HttpResponse, graphql } from 'msw';
+import type { GetEnable2FaVerificationQueryVariables, TwoFactorVerification } from '~/gql/graphql';
 import { db } from '../../db';
 import { decodeMockJWT } from '../../utils/decode-mock-jwt';
 
@@ -15,8 +12,8 @@ interface GetEnable2FAVerificationResponse {
 export const GetEnable2FAVerification = graphql.query<
   GetEnable2FAVerificationResponse,
   GetEnable2FAVerificationVariables
->('GetEnable2FAVerification', ({ request }) => {
-  const authHeader = request.headers.get('authorization');
+>('GetEnable2FAVerification', (opts) => {
+  const authHeader = opts.request.headers.get('authorization');
 
   if (!authHeader) {
     return HttpResponse.json({

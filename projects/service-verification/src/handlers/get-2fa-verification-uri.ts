@@ -1,12 +1,12 @@
-import type { Get2FAVerificationURIPayload } from '@vers/service-types';
 import { getTOTPAuthUri } from '@epic-web/totp';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { Get2FAVerificationURIPayload } from '@vers/service-types';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import type { Context } from '../types';
 import { logger } from '../logger';
 import { t } from '../t';
+import type { Context } from '../types';
 
 export const Get2FAVerificationURIInputSchema = z.object({
   target: z.string(),
@@ -58,4 +58,4 @@ export async function get2FAVerificationURI(
 
 export const procedure = t.procedure
   .input(Get2FAVerificationURIInputSchema)
-  .query(async ({ ctx, input }) => get2FAVerificationURI(input, ctx));
+  .query((opts) => get2FAVerificationURI(opts.input, opts.ctx));

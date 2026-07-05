@@ -3,8 +3,7 @@ import { rateLimiter } from 'hono-rate-limiter';
 import { Routes } from '~/types';
 
 const IS_PROD = process.env['NODE_ENV'] === 'production';
-const maxMultiple =
-  !IS_PROD || process.env['PLAYWRIGHT_TEST_BASE_URL'] ? 10_000 : 1;
+const maxMultiple = !IS_PROD || process.env['PLAYWRIGHT_TEST_BASE_URL'] ? 10_000 : 1;
 
 type RateLimit = Parameters<typeof rateLimiter>[0];
 
@@ -41,9 +40,9 @@ const strictRoutes = [
   Routes.AccountChangePassword,
 ];
 
-export async function rateLimit(ctx: Context<object, string>, next: Next) {
+export function rateLimit(ctx: Context<object, string>, next: Next) {
   const path = ctx.req.url;
-  const method = ctx.req.method;
+  const { method } = ctx.req;
 
   const isStrictRoute = strictRoutes.some((p) => path.includes(p));
   const isSecureMethod = method !== 'GET' && method !== 'HEAD';

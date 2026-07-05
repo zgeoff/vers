@@ -7,6 +7,10 @@
     ".": "./src/index.ts",
     "./test-utils": "./src/test-utils/index.ts"
   },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "dependencies": {
     "@orpc/client": "1.14.6",
     "@orpc/contract": "1.14.6",
@@ -23,9 +27,5 @@
     "typescript": "catalog:",
     "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
-  },
-  "scripts": {
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

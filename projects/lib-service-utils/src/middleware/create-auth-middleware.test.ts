@@ -1,8 +1,8 @@
-import { afterEach, expect, test, vi } from 'vitest';
-import type { Context } from 'hono';
 import { createTestJWT } from '@vers/service-test-utils';
+import type { Context } from 'hono';
 import { Hono } from 'hono';
 import * as jose from 'jose';
+import { afterEach, expect, test, vi } from 'vitest';
 import { createAuthMiddleware } from './create-auth-middleware';
 
 const TEST_TOKEN_PAYLOAD = {
@@ -51,12 +51,14 @@ KQIDAQAB
 -----END PUBLIC KEY-----
 `;
 
-const testHandlerSpy = vi.fn(async (ctx: Context) => {
-  return ctx.json({
-    payload: ctx.get('jwtPayload'),
-    userID: ctx.get('userID'),
-  });
-});
+const testHandlerSpy = vi.fn<(ctx: Context) => Promise<Response>>((ctx: Context) =>
+  Promise.resolve(
+    ctx.json({
+      payload: ctx.get('jwtPayload'),
+      userID: ctx.get('userID'),
+    }),
+  ),
+);
 
 interface TestConfig {
   isAuthRequired?: boolean;
@@ -103,7 +105,7 @@ test('it authorizes a valid token and extracts the payload and user ID', async (
 
   const res = await app.request(req);
 
-  expect(testHandlerSpy).toHaveBeenCalledTimes(1);
+  expect(testHandlerSpy).toHaveBeenCalledOnce();
 
   await expect(res.json()).resolves.toStrictEqual({
     payload: TEST_TOKEN_PAYLOAD,
@@ -117,6 +119,7 @@ test('it returns a 401 if no token is provided', async () => {
   const { app } = await setupTest({ isAuthRequired: true });
 
   const req = new Request('http://localhost/test');
+
   const res = await app.request(req);
 
   expect(testHandlerSpy).not.toHaveBeenCalled();
@@ -140,6 +143,7 @@ test('it rejects an invalid authorization header', async () => {
   await expect(res.text()).resolves.toBe('Unauthorized');
 
   expect(res.status).toBe(401);
+
   expect(res.headers.get('www-authenticate')).toMatchInlineSnapshot(
     `"Bearer realm="http://localhost/test",error="invalid_request",error_description="invalid authorization header structure""`,
   );
@@ -159,6 +163,7 @@ test('it rejects an invalid token', async () => {
   await expect(res.text()).resolves.toBe('Unauthorized');
 
   expect(res.status).toBe(401);
+
   expect(res.headers.get('www-authenticate')).toMatchInlineSnapshot(
     `"Bearer realm="http://localhost/test",error="invalid_token",error_description="token verification failure""`,
   );
@@ -168,9 +173,10 @@ test('it allows requests without auth header when auth is optional', async () =>
   const { app } = await setupTest({ isAuthRequired: false });
 
   const req = new Request('http://localhost/test');
+
   const res = await app.request(req);
 
-  expect(testHandlerSpy).toHaveBeenCalledTimes(1);
+  expect(testHandlerSpy).toHaveBeenCalledOnce();
   expect(res.status).toBe(200);
 });
 
@@ -188,6 +194,7 @@ test('it validates token when provided even if auth is optional', async () => {
   await expect(res.text()).resolves.toBe('Unauthorized');
 
   expect(res.status).toBe(401);
+
   expect(res.headers.get('www-authenticate')).toMatchInlineSnapshot(
     `"Bearer realm="http://localhost/test",error="invalid_token",error_description="token verification failure""`,
   );
@@ -202,7 +209,7 @@ test('it processes valid token when auth is optional', async () => {
 
   const res = await app.request(req);
 
-  expect(testHandlerSpy).toHaveBeenCalledTimes(1);
+  expect(testHandlerSpy).toHaveBeenCalledOnce();
   expect(res.status).toBe(200);
 
   await expect(res.json()).resolves.toStrictEqual({
@@ -215,8 +222,9 @@ test('it defaults to optional auth when isAuthRequired is not provided', async (
   const { app } = await setupTest();
 
   const req = new Request('http://localhost/test');
+
   const res = await app.request(req);
 
-  expect(testHandlerSpy).toHaveBeenCalledTimes(1);
+  expect(testHandlerSpy).toHaveBeenCalledOnce();
   expect(res.status).toBe(200);
 });

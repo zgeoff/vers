@@ -1,6 +1,6 @@
-import { afterEach, expect, test } from 'vitest';
 import { drop } from '@mswjs/data';
 import { createTestJWT } from '@vers/service-test-utils';
+import { afterEach, expect, test } from 'vitest';
 import { env } from '~/env';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
@@ -14,6 +14,7 @@ afterEach(() => {
 
 test('it deletes an avatar when found', async () => {
   const user = db.user.create({});
+
   const avatar = db.avatar.create({
     userID: user.id,
   });
@@ -25,6 +26,7 @@ test('it deletes an avatar when found', async () => {
   });
 
   const ctx = createMockGQLContext({ accessToken, user });
+
   const args = {
     input: {
       id: avatar.id,
@@ -48,6 +50,7 @@ test('it deletes an avatar when found', async () => {
 
 test('it returns an unauthorized error when the user is not authenticated', async () => {
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       id: 'test_id',

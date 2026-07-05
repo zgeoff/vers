@@ -9,10 +9,7 @@
  * @param setCookieHeader - The Set-Cookie header to be added to the request.
  * @returns The combined cookie header.
  */
-export function combineCookies(
-  existingCookieHeader: null | string,
-  setCookieHeader: string,
-) {
+export function combineCookies(existingCookieHeader: null | string, setCookieHeader: string) {
   return existingCookieHeader
     ? `${existingCookieHeader}; ${setCookieHeader.split(';')[0]}`
     : setCookieHeader;

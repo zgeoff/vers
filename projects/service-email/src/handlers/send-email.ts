@@ -1,11 +1,11 @@
-import type { SendEmailPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
+import type { SendEmailPayload } from '@vers/service-types';
 import { Resend } from 'resend';
 import { z } from 'zod';
-import type { Context } from '../types';
 import { env } from '../env';
 import { logger } from '../logger';
 import { t } from '../t';
+import type { Context } from '../types';
 
 const resend = new Resend(env.RESEND_API_KEY);
 
@@ -58,4 +58,4 @@ export async function sendEmail(
 
 export const procedure = t.procedure
   .input(SendEmailInputSchema)
-  .mutation(async ({ ctx, input }) => sendEmail(input, ctx));
+  .mutation((opts) => sendEmail(opts.input, opts.ctx));

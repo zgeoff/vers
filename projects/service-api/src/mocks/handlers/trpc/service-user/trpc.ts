@@ -1,5 +1,5 @@
-import type { ServiceRouter } from '@vers/service-user';
 import { createTRPCMsw, httpLink } from '@vafanassieff/msw-trpc';
+import type { ServiceRouter } from '@vers/service-user';
 import superjson from 'superjson';
 import { env } from '~/env';
 

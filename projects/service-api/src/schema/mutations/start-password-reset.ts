@@ -1,7 +1,7 @@
 import { generateResetPasswordEmail } from '@vers/email-templates';
-import type { Context } from '~/types';
 import { env } from '~/env';
 import { logger } from '~/logger';
+import type { Context } from '~/types';
 import { SecureAction } from '~/types';
 import { createPendingTransaction } from '~/utils/create-pending-transaction';
 import { builder } from '../builder';
@@ -56,16 +56,14 @@ export async function startPasswordReset(
       return { success: true };
     }
 
-    const { resetToken } =
-      await ctx.services.user.createPasswordResetToken.mutate({
-        id: user.id,
-      });
+    const { resetToken } = await ctx.services.user.createPasswordResetToken.mutate({
+      id: user.id,
+    });
 
-    const twoFactorVerification =
-      await ctx.services.verification.getVerification.query({
-        target: args.input.email,
-        type: '2fa',
-      });
+    const twoFactorVerification = await ctx.services.verification.getVerification.query({
+      target: args.input.email,
+      type: '2fa',
+    });
 
     let resetURL: URL;
 
@@ -131,13 +129,10 @@ const StartPasswordResetInput = builder.inputType('StartPasswordResetInput', {
   }),
 });
 
-const StartPasswordResetPayload = builder.unionType(
-  'StartPasswordResetPayload',
-  {
-    resolveType: createPayloadResolver(MutationSuccess),
-    types: [MutationSuccess, VerificationRequiredPayload, MutationErrorPayload],
-  },
-);
+const StartPasswordResetPayload = builder.unionType('StartPasswordResetPayload', {
+  resolveType: createPayloadResolver(MutationSuccess),
+  types: [MutationSuccess, VerificationRequiredPayload, MutationErrorPayload],
+});
 
 export const resolve = startPasswordReset;
 

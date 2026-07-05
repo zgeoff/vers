@@ -1,8 +1,5 @@
-import { graphql, HttpResponse } from 'msw';
-import type {
-  FinishPasswordResetInput,
-  FinishPasswordResetPayload,
-} from '~/gql/graphql';
+import { HttpResponse, graphql } from 'msw';
+import type { FinishPasswordResetInput, FinishPasswordResetPayload } from '~/gql/graphql';
 import { db } from '../../db';
 import { isValidTransactionToken } from './utils/is-valid-transaction-token';
 
@@ -17,10 +14,10 @@ interface FinishPasswordResetResponse {
 export const FinishPasswordReset = graphql.mutation<
   FinishPasswordResetResponse,
   FinishPasswordResetVariables
->('FinishPasswordReset', ({ variables }) => {
+>('FinishPasswordReset', (opts) => {
   const user = db.user.findFirst({
     where: {
-      email: { equals: variables.input.email },
+      email: { equals: opts.variables.input.email },
     },
   });
 
@@ -37,14 +34,12 @@ export const FinishPasswordReset = graphql.mutation<
 
   const twoFactorVerification = db.verification.findFirst({
     where: {
-      target: { equals: variables.input.email },
+      target: { equals: opts.variables.input.email },
       type: { equals: '2fa' },
     },
   });
 
-  const isTransactionTokenValid = isValidTransactionToken(
-    variables.input.transactionToken,
-  );
+  const isTransactionTokenValid = isValidTransactionToken(opts.variables.input.transactionToken);
 
   // return a success response if we have 2FA but our transaction token isn't valid
   if (twoFactorVerification && !isTransactionTokenValid) {
@@ -59,7 +54,7 @@ export const FinishPasswordReset = graphql.mutation<
 
   db.user.update({
     data: {
-      password: variables.input.password,
+      password: opts.variables.input.password,
       updatedAt: new Date().toISOString(),
     },
     where: {

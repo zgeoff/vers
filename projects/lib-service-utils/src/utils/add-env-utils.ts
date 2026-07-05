@@ -17,10 +17,12 @@ interface Env {
  *   .transform(addEnvUtils);
  * ```
  */
-export const addEnvUtils = <T extends Env>(env: T) => ({
-  ...env,
-  isDevelopment: env.NODE_ENV === 'development',
-  isE2E: env.NODE_ENV === 'e2e',
-  isProduction: env.NODE_ENV === 'production',
-  isTest: env.NODE_ENV === 'test',
-});
+export function addEnvUtils<T extends Env>(env: T) {
+  return {
+    ...env,
+    isDevelopment: env.NODE_ENV === 'development',
+    isE2E: env.NODE_ENV === 'e2e',
+    isProduction: env.NODE_ENV === 'production',
+    isTest: env.NODE_ENV === 'test',
+  };
+}

@@ -6,11 +6,6 @@
     "baseUrl": "."
   },
   "files": [],
-  "include": [
-    "vitest.config.ts",
-    "vitest.global-setup.ts",
-    "vitest.setup.ts",
-    "src/**/*.ts"
-  ],
+  "include": ["vitest.config.ts", "vitest.global-setup.ts", "vitest.setup.ts", "src/**/*.ts"],
   "exclude": []
 }

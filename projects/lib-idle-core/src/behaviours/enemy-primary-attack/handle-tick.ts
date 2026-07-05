@@ -1,8 +1,4 @@
-import type {
-  CombatExecutor,
-  Enemy,
-  EnemyPrimaryAttackBehaviour,
-} from '../../types';
+import type { CombatExecutor, Enemy, EnemyPrimaryAttackBehaviour } from '../../types';
 import { createLogLabel } from '../../utils/create-log-label';
 import { logger } from '../../utils/logger';
 import { createEnemyAttackEvent } from './create-enemy-attack-event';

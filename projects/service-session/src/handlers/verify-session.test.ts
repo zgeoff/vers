@@ -1,12 +1,12 @@
-import { afterEach, expect, test, vi } from 'vitest';
 import * as schema from '@vers/postgres-schema';
 import { createTestDB, createTestUser } from '@vers/service-test-utils';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { afterEach, expect, test, vi } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 import { createJWT } from '../utils/create-jwt';
 
-vi.mock('../utils/create-jwt');
+vi.mock(import('../utils/create-jwt'));
 
 const createCaller = t.createCallerFactory(router);
 
@@ -38,6 +38,7 @@ test('it flags a session as verified and returns new tokens', async () => {
     .mockResolvedValueOnce('mock-access-token');
 
   const now = Date.now();
+
   const expiresAt = new Date(now + 1000 * 60 * 60);
 
   const session = {
@@ -62,18 +63,16 @@ test('it flags a session as verified and returns new tokens', async () => {
     refreshToken: 'mock-refresh-token',
   });
 
-  const refreshTokenCall = vi.mocked(createJWT).mock.calls[0]![0];
-  const accessTokenCall = vi.mocked(createJWT).mock.calls[1]![0];
+  const [refreshTokenCall] = vi.mocked(createJWT).mock.calls[0]!;
+  const [accessTokenCall] = vi.mocked(createJWT).mock.calls[1]!;
 
   const refreshTokenExpires = refreshTokenCall.expiresAt.getTime();
   const accessTokenExpires = accessTokenCall.expiresAt.getTime();
 
   expect(refreshTokenExpires).toBe(expiresAt.getTime());
+
   // measured against wall clock, so allow scheduler jitter on loaded CI runners
-  expect(accessTokenExpires - now).toBeWithin(
-    15 * 60 * 1000,
-    15 * 60 * 1000 + 5000,
-  );
+  expect(accessTokenExpires - now).toBeWithin(15 * 60 * 1000, 15 * 60 * 1000 + 5000);
 });
 
 test("it throws an error if the session doesn't exist", async () => {

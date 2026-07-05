@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { expect, test } from 'vitest';
 import { toggleDevCamera } from './toggle-dev-camera';
 import { useIsDevCameraActive } from './use-is-dev-camera-active';
 

@@ -1,10 +1,10 @@
-import * as React from 'react';
 import type { RecipeVariantProps } from '@vers/styled-system/css';
+import { cx } from '@vers/styled-system/css';
 import type {
   SlotRecipeRuntimeFn,
   SlotRecipeVariantRecord,
 } from '@vers/styled-system/types/recipe';
-import { cx } from '@vers/styled-system/css';
+import * as React from 'react';
 
 type StyleRecipe = SlotRecipeRuntimeFn<string, SlotRecipeVariantRecord<string>>;
 
@@ -23,10 +23,7 @@ type StyleSlot<R extends StyleRecipe> = keyof ReturnType<R>;
 export function createStyleContext<R extends StyleRecipe>(recipe: R) {
   const StyleContext = React.createContext<null | StyleSlotRecipe<R>>(null);
 
-  const withProvider = <T extends React.ElementType>(
-    Component: T,
-    slot?: StyleSlot<R>,
-  ) => {
+  const withProvider = <T extends React.ElementType>(Component: T, slot?: StyleSlot<R>) => {
     const ComponentWithStyles = React.forwardRef<
       React.ComponentRef<T>,
       React.ComponentPropsWithoutRef<T> & RecipeVariantProps<R>
@@ -55,10 +52,7 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
     return ComponentWithStyles;
   };
 
-  const withContext = <T extends React.ElementType>(
-    Component: T,
-    slot?: StyleSlot<R>,
-  ): T => {
+  const withContext = <T extends React.ElementType>(Component: T, slot?: StyleSlot<R>): T => {
     if (!slot) {
       return Component;
     }

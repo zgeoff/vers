@@ -1,5 +1,5 @@
-import { afterEach, expect, test } from 'vitest';
 import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { sentEmails } from '~/mocks/handlers/trpc/service-email/send-email';
 import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
@@ -13,6 +13,7 @@ afterEach(() => {
 
 test('it creates a verification code and sends an email to the user', async () => {
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       email: 'user@test.com',

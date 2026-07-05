@@ -7,4 +7,10 @@
  * is far more complicated and ugly, so we use this to make sure TypeScript knows
  * any following code should never be reached.
  */
-export class UnreachableCodeError extends Error {}
+export class UnreachableCodeError extends Error {
+  constructor(message?: string) {
+    super(message);
+
+    this.name = 'UnreachableCodeError';
+  }
+}

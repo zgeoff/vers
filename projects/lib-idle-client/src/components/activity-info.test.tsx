@@ -1,7 +1,7 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { ActivityAppState } from '@vers/idle-core';
 import { nodeHasText } from '@vers/client-test-utils';
+import type { ActivityAppState } from '@vers/idle-core';
+import { expect, test } from 'vitest';
 import { ActivityInfo } from './activity-info';
 
 test('it renders info about the provided activity', () => {
@@ -19,9 +19,7 @@ test('it renders info about the provided activity', () => {
 
   const activityName = screen.getByText('Test Activity');
   const enemiesRemaining = screen.getByText(nodeHasText('20 enemies remain'));
-  const enemyGroupsRemaining = screen.getByText(
-    nodeHasText('4 enemy groups remain'),
-  );
+  const enemyGroupsRemaining = screen.getByText(nodeHasText('4 enemy groups remain'));
 
   expect(activityName).toBeInTheDocument();
   expect(enemiesRemaining).toBeInTheDocument();

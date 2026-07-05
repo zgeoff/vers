@@ -1,6 +1,6 @@
-import { afterEach, expect, test } from 'vitest';
 import { drop } from '@mswjs/data';
 import { createTestJWT } from '@vers/service-test-utils';
+import { afterEach, expect, test } from 'vitest';
 import { env } from '~/env';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
@@ -14,6 +14,7 @@ afterEach(() => {
 
 test('it updates an avatar when found', async () => {
   const user = db.user.create({});
+
   const avatar = db.avatar.create({
     name: 'Original Name',
     userID: user.id,

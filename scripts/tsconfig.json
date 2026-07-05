@@ -1,11 +1,6 @@
 {
   "extends": "../tsconfig.base.json",
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "../projects/**/*.ts",
-    "../projects/**/*.tsx"
-  ],
+  "include": ["**/*.ts", "**/*.tsx", "../projects/**/*.ts", "../projects/**/*.tsx"],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
@@ -14,9 +9,7 @@
       "@vers/email-templates": ["../projects/lib-email-templates/src/index.ts"],
       "@vers/game-utils": ["../projects/lib-game-utils/src/index.ts"],
       "@vers/postgres-schema": ["../projects/lib-postgres-schema/src/index.ts"],
-      "@vers/service-test-utils": [
-        "../projects/lib-service-test-utils/src/index.ts"
-      ],
+      "@vers/service-test-utils": ["../projects/lib-service-test-utils/src/index.ts"],
       "@vers/service-types": ["../projects/lib-service-types/src/index.ts"],
       "@vers/service-utils": ["../projects/lib-service-utils/src/index.ts"]
     }

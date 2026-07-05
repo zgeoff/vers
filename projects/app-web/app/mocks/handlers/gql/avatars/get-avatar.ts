@@ -1,6 +1,6 @@
-import { graphql, HttpResponse } from 'msw';
-import type { Avatar, GetAvatarInput } from '~/gql/graphql';
+import { HttpResponse, graphql } from 'msw';
 import { resolveGQLEnumFromClass } from '~/data/utils/resolve-gql-enum-from-class';
+import type { Avatar, GetAvatarInput } from '~/gql/graphql';
 import { db } from '../../../db';
 import { decodeMockJWT } from '../../../utils/decode-mock-jwt';
 import { resolveUserByID } from '../utils/resolve-user-by-id';
@@ -15,8 +15,8 @@ interface GetAvatarResponse {
 
 export const GetAvatar = graphql.query<GetAvatarResponse, GetAvatarVariables>(
   'GetAvatar',
-  ({ request, variables }) => {
-    const authHeader = request.headers.get('authorization');
+  (opts) => {
+    const authHeader = opts.request.headers.get('authorization');
 
     if (!authHeader) {
       return HttpResponse.json({
@@ -29,7 +29,7 @@ export const GetAvatar = graphql.query<GetAvatarResponse, GetAvatarVariables>(
 
     const avatar = db.avatar.findFirst({
       where: {
-        id: { equals: variables.input.id },
+        id: { equals: opts.variables.input.id },
         userID: { equals: payload.sub },
       },
     });

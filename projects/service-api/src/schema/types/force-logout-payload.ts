@@ -5,8 +5,7 @@ interface ForceLogoutPayloadData {
   transactionToken: string;
 }
 
-export const ForceLogoutPayload =
-  builder.objectRef<ForceLogoutPayloadData>('ForceLogoutPayload');
+export const ForceLogoutPayload = builder.objectRef<ForceLogoutPayloadData>('ForceLogoutPayload');
 
 ForceLogoutPayload.implement({
   fields: (t) => ({

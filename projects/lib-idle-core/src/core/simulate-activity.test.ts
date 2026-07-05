@@ -5,13 +5,12 @@ import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
 import {
-  type ActivityCheckpoint,
   ActivityCheckpointType,
   ActivityFailureAction,
   ActivityType,
   EquipmentSlot,
-  type EquipmentWeapon,
 } from '../types';
+import type { EquipmentWeapon } from '../types';
 import { createActivity } from './create-activity';
 import { createCombatExecutor } from './create-combat-executor';
 import { simulateActivity } from './simulate-activity';
@@ -115,18 +114,13 @@ test('it generates a failed checkpoint when the avatar dies', async () => {
 
   const generator = simulateActivity(executor, activity, avatar, ctx);
 
-  let done = false;
-  let checkpoint: ActivityCheckpoint | null = null;
+  let result = await generator.next(1000);
 
-  while (!done) {
-    const next = await generator.next(1000);
-
-    done = next.done ?? false;
-
-    if (next.done) {
-      checkpoint = next.value;
-    }
+  while (!result.done) {
+    result = await generator.next(1000);
   }
+
+  const checkpoint = result.value;
 
   expect(checkpoint).toStrictEqual({
     hash: expect.any(String),
@@ -167,18 +161,13 @@ test('it returns a completed checkpoint when all enemies are defeated', async ()
 
   const generator = simulateActivity(executor, activity, avatar, ctx);
 
-  let done = false;
-  let checkpoint: ActivityCheckpoint | null = null;
+  let result = await generator.next(1000);
 
-  while (!done) {
-    const next = await generator.next(1000);
-
-    done = next.done ?? false;
-
-    if (next.done) {
-      checkpoint = next.value;
-    }
+  while (!result.done) {
+    result = await generator.next(1000);
   }
+
+  const checkpoint = result.value;
 
   expect(checkpoint).toStrictEqual({
     hash: expect.any(String),

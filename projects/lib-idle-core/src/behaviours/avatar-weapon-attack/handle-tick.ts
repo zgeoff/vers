@@ -1,8 +1,4 @@
-import type {
-  Avatar,
-  AvatarWeaponAttackBehaviour,
-  CombatExecutor,
-} from '../../types';
+import type { Avatar, AvatarWeaponAttackBehaviour, CombatExecutor } from '../../types';
 import { createLogLabel } from '../../utils/create-log-label';
 import { logger } from '../../utils/logger';
 import { createAvatarAttackEvent } from './create-avatar-attack-event';

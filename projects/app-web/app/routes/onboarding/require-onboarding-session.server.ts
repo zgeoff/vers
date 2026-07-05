@@ -8,13 +8,12 @@ export async function requireOnboardingSession(
 ): Promise<{ email: string; transactionToken: string }> {
   await requireAnonymous(request);
 
-  const verifySession = await verifySessionStorage.getSession(
-    request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(request.headers.get('cookie'));
 
   const email = verifySession.get('onboarding#email');
   const transactionToken = verifySession.get('onboarding#transactionToken');
   const isValidEmail = typeof email === 'string' && email.length > 0;
+
   const isValidTransactionToken =
     typeof transactionToken === 'string' && transactionToken.length > 0;
 

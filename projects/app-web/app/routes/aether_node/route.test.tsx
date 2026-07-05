@@ -1,9 +1,9 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
 import { Class } from '@vers/data';
+import { createRoutesStub } from 'react-router';
+import { afterEach, expect, test, vi } from 'vitest';
 import { db } from '~/mocks/db';
 import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
 import { withAppLoadContext } from '~/test-utils/with-app-load-context';
@@ -20,12 +20,12 @@ interface TestConfig {
 }
 
 // for now, stub out our idle simulation
-vi.mock('@vers/idle-client', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@vers/idle-client')>();
+vi.mock(import('@vers/idle-client'), async (importOriginal) => {
+  const original = await importOriginal();
 
   return {
     ...original,
-    AetherNode: () => 'AETHER_NODE_COMPONENT',
+    AetherNode: () => <>AETHER_NODE_COMPONENT</>,
   };
 });
 

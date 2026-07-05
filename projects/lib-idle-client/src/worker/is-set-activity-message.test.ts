@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import { createMockActivityData, createMockAvatarData } from '@vers/idle-core';
+import { expect, test } from 'vitest';
 import type { InitializeMessage, SetActivityMessage } from '../types';
 import { ClientMessageType } from '../types';
 import { isSetActivityMessage } from './is-set-activity-message';

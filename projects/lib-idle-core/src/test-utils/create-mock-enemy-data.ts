@@ -1,8 +1,6 @@
 import type { EnemyData } from '../types';
 
-export function createMockEnemyData(
-  overrides: Partial<EnemyData> = {},
-): EnemyData {
+export function createMockEnemyData(overrides: Partial<EnemyData> = {}): EnemyData {
   const enemy: EnemyData = {
     level: 1,
     life: 30,

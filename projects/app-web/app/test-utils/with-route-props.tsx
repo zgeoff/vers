@@ -13,8 +13,8 @@ type RouteProps = T.CreateComponentProps<{
   path: string;
 }>;
 
-export function withRouteProps<T extends RouteProps = RouteProps>(
-  WrappedComponent: React.ComponentType<T>,
+export function withRouteProps<TProps extends RouteProps = RouteProps>(
+  WrappedComponent: React.ComponentType<TProps>,
 ) {
   const displayName = WrappedComponent.displayName ?? WrappedComponent.name;
 
@@ -28,8 +28,9 @@ export function withRouteProps<T extends RouteProps = RouteProps>(
       loaderData,
       matches: [],
       params,
+
       // just cast it - typing it's a nightmare
-    } as unknown as T;
+    } as unknown as TProps;
 
     return <WrappedComponent {...routeProps} />;
   };

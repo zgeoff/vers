@@ -1,12 +1,12 @@
-import type { VerifyCodePayload } from '@vers/service-types';
 import { verifyTOTP } from '@epic-web/totp';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { VerifyCodePayload } from '@vers/service-types';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import type { Context } from '../types';
 import { logger } from '../logger';
 import { t } from '../t';
+import type { Context } from '../types';
 
 export const VerifyCodeInputSchema = z.object({
   code: z.string(),
@@ -22,10 +22,7 @@ export async function verifyCode(
     const { code, target, type } = input;
 
     const verification = await ctx.db.query.verifications.findFirst({
-      where: and(
-        eq(schema.verifications.type, type),
-        eq(schema.verifications.target, target),
-      ),
+      where: and(eq(schema.verifications.type, type), eq(schema.verifications.target, target)),
     });
 
     if (!verification) {
@@ -36,9 +33,7 @@ export async function verifyCode(
     }
 
     if (verification.expiresAt && verification.expiresAt < new Date()) {
-      await ctx.db
-        .delete(schema.verifications)
-        .where(eq(schema.verifications.id, verification.id));
+      await ctx.db.delete(schema.verifications).where(eq(schema.verifications.id, verification.id));
 
       throw new TRPCError({
         code: 'BAD_REQUEST',
@@ -58,13 +53,10 @@ export async function verifyCode(
       });
     }
 
-    const is2FAVerification =
-      verification.type === '2fa-setup' || verification.type === '2fa';
+    const is2FAVerification = verification.type === '2fa-setup' || verification.type === '2fa';
 
     if (!is2FAVerification) {
-      await ctx.db
-        .delete(schema.verifications)
-        .where(eq(schema.verifications.id, verification.id));
+      await ctx.db.delete(schema.verifications).where(eq(schema.verifications.id, verification.id));
     }
 
     return {
@@ -89,4 +81,4 @@ export async function verifyCode(
 
 export const procedure = t.procedure
   .input(VerifyCodeInputSchema)
-  .mutation(async ({ ctx, input }) => verifyCode(input, ctx));
+  .mutation((opts) => verifyCode(opts.input, opts.ctx));

@@ -9,13 +9,8 @@ import type { HandleVerificationContext } from './types';
  * This is the first step in the email change process, where we verify
  * the user's identity via 2FA before allowing them to change their email.
  */
-export async function handleChangeEmail(
-  ctx: HandleVerificationContext,
-): Promise<Response> {
-  invariant(
-    ctx.submission.status === 'success',
-    'submission should be successful by now',
-  );
+export async function handleChangeEmail(ctx: HandleVerificationContext): Promise<Response> {
+  invariant(ctx.submission.status === 'success', 'submission should be successful by now');
 
   const verifySession = await verifySessionStorage.getSession();
 

@@ -12,8 +12,7 @@ export const meta = {
     },
     {
       title: 'Review',
-      detail:
-        'opus reviews the diff; sonnet fixes blocking findings (max 2 rounds)',
+      detail: 'opus reviews the diff; sonnet fixes blocking findings (max 2 rounds)',
       model: 'opus',
     },
     {
@@ -70,8 +69,7 @@ const IMPLEMENT_SCHEMA = {
     },
     blockedReason: {
       type: 'string',
-      description:
-        'Only when status=blocked: what stopped progress and what is needed',
+      description: 'Only when status=blocked: what stopped progress and what is needed',
     },
   },
 };
@@ -106,8 +104,7 @@ const FIX_SCHEMA = {
     blockedReason: { type: 'string' },
     resolvedConflicts: {
       type: 'boolean',
-      description:
-        'True when the fix involved resolving merge/rebase conflicts by hand',
+      description: 'True when the fix involved resolving merge/rebase conflicts by hand',
     },
   },
 };
@@ -120,8 +117,7 @@ const PR_SCHEMA = {
     number: { type: 'integer' },
     resolvedConflicts: {
       type: 'boolean',
-      description:
-        'True when the rebase onto origin/main hit conflicts that were resolved by hand',
+      description: 'True when the rebase onto origin/main hit conflicts that were resolved by hand',
     },
   },
 };
@@ -216,9 +212,7 @@ if (!review)
 
 let blocking = review.findings.filter((f) => f.severity === 'blocking');
 for (let round = 1; blocking.length > 0 && round <= MAX_FIX_ROUNDS; round++) {
-  log(
-    `Review round ${round}: ${blocking.length} blocking finding(s), dispatching fixer`,
-  );
+  log(`Review round ${round}: ${blocking.length} blocking finding(s), dispatching fixer`);
   const fix = await agent(
     `A reviewer found blocking problems on the feature branch in the worktree at ${worktree}. Fix exactly these findings — no drive-by refactors:
 ${REPO_RULES}

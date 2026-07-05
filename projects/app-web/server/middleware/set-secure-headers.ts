@@ -1,5 +1,5 @@
-import type { Context, Next } from 'hono';
 import { isNonNullable } from '@vers/utils';
+import type { Context, Next } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
 import { env } from '../env';
 
@@ -26,10 +26,7 @@ const secureHeadersConfig = secureHeaders({
   referrerPolicy: 'same-origin',
 });
 
-export async function setSecureHeaders(
-  ctx: Context<object, string>,
-  next: Next,
-) {
+export async function setSecureHeaders(ctx: Context<object, string>, next: Next) {
   await next();
 
   // check if the response is HTML before applying the CSP headers

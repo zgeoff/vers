@@ -6,7 +6,7 @@ interface Config {
   resetURL: string;
 }
 
-export async function generateResetPasswordEmail(config: Config) {
+export function generateResetPasswordEmail(config: Config) {
   return generateEmail({
     component: (
       <E.Html dir="ltr" lang="en">

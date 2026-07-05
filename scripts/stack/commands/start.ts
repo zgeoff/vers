@@ -1,4 +1,4 @@
-import { ServiceID } from '@vers/service-types';
+import type { ServiceID } from '@vers/service-types';
 import { execa } from '../../utils/execa';
 import { DOCKER_COMPOSE_FILE } from '../consts';
 
@@ -7,10 +7,7 @@ export interface StartOptions {
   forceRecreate?: boolean;
 }
 
-export async function start(
-  service?: ServiceID,
-  options?: StartOptions,
-): Promise<void> {
+export async function start(service?: ServiceID, options?: StartOptions): Promise<void> {
   const args = [];
 
   if (options?.build) {

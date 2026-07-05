@@ -1,9 +1,0 @@
-/dist
-/coverage
-/.nx/cache
-/.nx/workspace-data
-/projects/app-web/app/gql
-schema.graphql
-# vendored from zgeoff/tools (must stay byte-identical) + generated output
-agents/shared.md
-AGENTS.md

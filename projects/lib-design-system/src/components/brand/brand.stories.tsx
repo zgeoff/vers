@@ -1,5 +1,5 @@
 import { Brand } from './brand';
 
-export const Default = () => {
+export function Default() {
   return <Brand />;
-};
+}

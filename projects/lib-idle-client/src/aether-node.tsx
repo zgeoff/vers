@@ -15,7 +15,7 @@ export function AetherNode() {
     return <Spinner />;
   }
 
-  const enemies = activity.currentEnemyGroup?.enemies.reverse() ?? [];
+  const enemies = activity.currentEnemyGroup?.enemies.toReversed() ?? [];
 
   return (
     <div className={styles.container}>

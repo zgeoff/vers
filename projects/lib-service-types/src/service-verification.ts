@@ -1,7 +1,6 @@
-import * as schema from '@vers/postgres-schema';
+import type * as schema from '@vers/postgres-schema';
 
-export type VerificationType =
-  (typeof schema.verifications.$inferSelect)['type'];
+export type VerificationType = (typeof schema.verifications.$inferSelect)['type'];
 
 interface VerificationData {
   id: string;

@@ -1,6 +1,6 @@
-import { Link as RRLink } from 'react-router';
 import { Brand, Heading, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
+import { Link as RRLink } from 'react-router';
 import { Link } from '~/components/link';
 import { RouteErrorBoundary } from '~/components/route-error-boundary';
 import { Routes } from '~/types';
@@ -8,12 +8,14 @@ import { requireAnonymous } from '~/utils/require-anonymous.server';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import type { Route } from './+types/route';
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: '',
-    title: 'vers | Reset Password',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: '',
+      title: 'vers | Reset Password',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAnonymous(args.request);
@@ -33,8 +35,8 @@ export function ResetPasswordStarted() {
         </RRLink>
         <Heading level={2}>Check your email</Heading>
         <Text>
-          If an account exists with that email address, we&apos;ve sent you
-          instructions on how to reset your password.
+          If an account exists with that email address, we&apos;ve sent you instructions on how to
+          reset your password.
         </Text>
       </section>
       <Text>

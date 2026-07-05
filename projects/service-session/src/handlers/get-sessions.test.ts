@@ -1,9 +1,9 @@
-import { expect, test } from 'vitest';
 import { createId } from '@paralleldrive/cuid2';
 import * as schema from '@vers/postgres-schema';
 import { createTestDB, createTestUser } from '@vers/service-test-utils';
 import { eq } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { expect, test } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 
@@ -29,6 +29,7 @@ test('it returns all sessions for the user', async () => {
   const { caller, user } = await setupTest({ db });
 
   const now = new Date();
+
   const sessionID1 = createId();
   const sessionID2 = createId();
 
@@ -60,6 +61,7 @@ test('it returns all sessions for the user', async () => {
   });
 
   expect(result).toHaveLength(2);
+
   expect(result).toStrictEqual([
     {
       createdAt: expect.any(Date),
@@ -107,6 +109,7 @@ test('it deletes expired sessions and doesnt return them', async () => {
   const { caller, user } = await setupTest({ db });
 
   const now = new Date();
+
   const sessionID = createId();
 
   await db.insert(schema.sessions).values({

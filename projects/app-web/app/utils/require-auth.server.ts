@@ -10,9 +10,7 @@ interface AuthResult {
 }
 
 export async function requireAuth(request: Request): Promise<AuthResult> {
-  const authSession = await authSessionStorage.getSession(
-    request.headers.get('cookie'),
-  );
+  const authSession = await authSessionStorage.getSession(request.headers.get('cookie'));
 
   const sessionID = authSession.get('sessionID');
   const accessToken = authSession.get('accessToken');

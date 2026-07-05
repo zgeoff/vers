@@ -82,8 +82,7 @@ async function resetDevDB() {
 
   const cleanupSpinnerConfig = {
     failText: () => `Database cleanup failed in ${Date.now() - cleanupStart}ms`,
-    successText: () =>
-      `Database cleanup completed in ${Date.now() - cleanupStart}ms`,
+    successText: () => `Database cleanup completed in ${Date.now() - cleanupStart}ms`,
     text: 'Cleaning up database...',
   };
 
@@ -92,10 +91,8 @@ async function resetDevDB() {
   const migrationStart = Date.now();
 
   const migrationSpinnerConfig = {
-    failText: () =>
-      `Database migration failed in ${Date.now() - migrationStart}ms`,
-    successText: () =>
-      `Database migration completed in ${Date.now() - migrationStart}ms`,
+    failText: () => `Database migration failed in ${Date.now() - migrationStart}ms`,
+    successText: () => `Database migration completed in ${Date.now() - migrationStart}ms`,
     text: 'Migrating database...',
   };
 

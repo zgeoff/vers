@@ -1,7 +1,7 @@
-import * as React from 'react';
 import { Field } from '@ark-ui/react/field';
 import { PinInput } from '@ark-ui/react/pin-input';
 import { cx, sva } from '@vers/styled-system/css';
+import * as React from 'react';
 
 interface Props {
   className?: string;
@@ -61,6 +61,10 @@ const otpFieldRecipe = sva({
     },
     separator: {
       backgroundColor: 'gray.800',
+
+      // preflight gives hr a 1px top border in text color — zero it so the
+      // separator renders as a plain dot
+      borderTopWidth: '0',
       height: '1',
       rounded: 'sm',
       width: '1',
@@ -70,22 +74,16 @@ const otpFieldRecipe = sva({
 });
 
 export function OTPField(props: Props) {
-  const { autoFocus, defaultValue, id, key, mode, name, ...hiddenInputProps } =
-    props.inputProps;
+  const { autoFocus, defaultValue, id, key, mode, name, ...hiddenInputProps } = props.inputProps;
   const [firstError] = props.errors;
   const styles = otpFieldRecipe();
 
   return (
-    <Field.Root
-      className={cx(styles.root, props.className)}
-      invalid={props.errors.length > 0}
-    >
+    <Field.Root className={cx(styles.root, props.className)} invalid={props.errors.length > 0}>
       <PinInput.Root
-        // eslint-disable-next-line jsx-a11y/no-autofocus -- opt-in per form; code entry is the page's sole action
+        // oxlint-disable-next-line jsx-a11y/no-autofocus -- opt-in per form; code entry is the page's sole action
         autoFocus={autoFocus}
-        defaultValue={
-          typeof defaultValue === 'string' ? [...defaultValue] : undefined
-        }
+        defaultValue={typeof defaultValue === 'string' ? [...defaultValue] : undefined}
         ids={id ? { hiddenInput: id } : undefined}
         invalid={props.errors.length > 0}
         name={name}
@@ -97,15 +95,11 @@ export function OTPField(props: Props) {
           <div className={styles.group}>
             {/* a multi-character change on this input is treated as a paste
                 and distributed across all six inputs, so e2e fills target it */}
-            <PinInput.Input
-              className={styles.input}
-              data-testid="otp-input"
-              index={0}
-            />
+            <PinInput.Input className={styles.input} data-testid="otp-input" index={0} />
             <PinInput.Input className={styles.input} index={1} />
             <PinInput.Input className={styles.input} index={2} />
           </div>
-          <div className={styles.separator} role="separator" />
+          <hr className={styles.separator} />
           <div className={styles.group}>
             <PinInput.Input className={styles.input} index={3} />
             <PinInput.Input className={styles.input} index={4} />
@@ -114,9 +108,7 @@ export function OTPField(props: Props) {
         </PinInput.Control>
         <PinInput.HiddenInput {...hiddenInputProps} key={key} />
       </PinInput.Root>
-      <Field.ErrorText className={styles.errorText}>
-        {firstError}
-      </Field.ErrorText>
+      <Field.ErrorText className={styles.errorText}>{firstError}</Field.ErrorText>
     </Field.Root>
   );
 }

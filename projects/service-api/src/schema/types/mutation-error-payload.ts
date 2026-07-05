@@ -5,9 +5,8 @@ interface MutationErrorPayloadData {
   error: typeof MutationError.$inferType;
 }
 
-export const MutationErrorPayload = builder.objectRef<MutationErrorPayloadData>(
-  'MutationErrorPayload',
-);
+export const MutationErrorPayload =
+  builder.objectRef<MutationErrorPayloadData>('MutationErrorPayload');
 
 MutationErrorPayload.implement({
   fields: (t) => ({

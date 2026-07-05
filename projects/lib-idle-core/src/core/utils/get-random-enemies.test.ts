@@ -26,6 +26,7 @@ test('it gets a random assortment of enemies', () => {
   const enemies = getRandomEnemies(activity, 3, ctx);
 
   expect(enemies).toHaveLength(3);
+
   expect(enemies).toIncludeAnyMembers([
     expect.objectContaining({ name: 'Enemy #1' }),
     expect.objectContaining({ name: 'Enemy #2' }),

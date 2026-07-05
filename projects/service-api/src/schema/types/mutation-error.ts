@@ -5,8 +5,7 @@ interface MutationErrorData {
   title: string;
 }
 
-export const MutationError =
-  builder.objectRef<MutationErrorData>('MutationError');
+export const MutationError = builder.objectRef<MutationErrorData>('MutationError');
 
 MutationError.implement({
   fields: (t) => ({

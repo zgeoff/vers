@@ -1,7 +1,7 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRoutesStub } from 'react-router';
+import { expect, test } from 'vitest';
 import { useNavigationVisible } from '~/state/use-navigation-visible';
 import { Header } from './header';
 

@@ -1,13 +1,13 @@
+import { createId } from '@paralleldrive/cuid2';
 import type { ServiceRouter as AvatarServiceRouter } from '@vers/service-avatar';
 import type { ServiceRouter as EmailServiceRouter } from '@vers/service-email';
 import type { ServiceRouter as SessionServiceRouter } from '@vers/service-session';
+import { ServiceID } from '@vers/service-types';
 import type { ServiceRouter as UserServiceRouter } from '@vers/service-user';
 import type { ServiceRouter as VerificationServiceRouter } from '@vers/service-verification';
-import { createId } from '@paralleldrive/cuid2';
-import { ServiceID } from '@vers/service-types';
 import { db } from '~/mocks/db';
-import type { AuthedContext, Context } from '../types';
 import { env } from '../env';
+import type { AuthedContext, Context } from '../types';
 import { createTRPCClient } from '../utils/create-trpc-client';
 
 interface MockContextConfig {
@@ -27,8 +27,7 @@ export function createMockGQLContext(config: MockContextConfig): Context {
 
   const requestID = config.requestID ?? createId();
 
-  const ipAddress =
-    config.session?.ipAddress ?? config.ipAddress ?? '127.0.0.1';
+  const ipAddress = config.session?.ipAddress ?? config.ipAddress ?? '127.0.0.1';
 
   const avatar = createTRPCClient<AvatarServiceRouter>({
     ...(config.accessToken !== undefined && {
@@ -96,11 +95,9 @@ export function createMockGQLContext(config: MockContextConfig): Context {
     };
   }
 
-  const authedUser =
-    config.user ?? db.user.create({ email: 'test@example.com' });
+  const authedUser = config.user ?? db.user.create({ email: 'test@example.com' });
 
-  const authedSession =
-    config.session ?? db.session.create({ userID: authedUser.id });
+  const authedSession = config.session ?? db.session.create({ userID: authedUser.id });
 
   if (!config.user) {
     return {

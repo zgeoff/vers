@@ -8,7 +8,7 @@ interface Config {
   verificationURL: string;
 }
 
-export async function generateChangeEmailVerificationEmail(config: Config) {
+export function generateChangeEmailVerificationEmail(config: Config) {
   return generateEmail({
     component: (
       <E.Html dir="ltr" lang="en">

@@ -1,7 +1,7 @@
 import { GraphQLError } from 'graphql';
 import invariant from 'tiny-invariant';
-import type { Context } from '~/types';
 import { logger } from '~/logger';
+import type { Context } from '~/types';
 import { builder } from '../builder';
 import { requireAuth } from '../utils/require-auth';
 
@@ -29,10 +29,9 @@ export async function getEnable2FAVerification(
   invariant(ctx.user, 'user is required in an authed resolver');
 
   try {
-    const { otpURI } =
-      await ctx.services.verification.get2FAVerificationURI.query({
-        target: ctx.user.email,
-      });
+    const { otpURI } = await ctx.services.verification.get2FAVerificationURI.query({
+      target: ctx.user.email,
+    });
 
     return { otpURI };
   } catch (error) {
@@ -48,9 +47,7 @@ export async function getEnable2FAVerification(
   }
 }
 
-const TwoFactorVerification = builder.objectRef<TwoFactorVerificationData>(
-  'TwoFactorVerification',
-);
+const TwoFactorVerification = builder.objectRef<TwoFactorVerificationData>('TwoFactorVerification');
 
 TwoFactorVerification.implement({
   fields: (t) => ({
@@ -68,7 +65,7 @@ builder.queryField('getEnable2FAVerification', (t) =>
         limit: 20,
       },
     },
-    resolve: resolve,
+    resolve,
     type: TwoFactorVerification,
   }),
 );

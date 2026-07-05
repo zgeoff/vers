@@ -10,7 +10,7 @@ export function getAetherEdgeMap(aetherNodes: AetherNodeMap): AetherEdgeMap {
         continue;
       }
 
-      const edgeKey = [node.id, connection].sort().join(':');
+      const edgeKey = [node.id, connection].toSorted().join(':');
       const connectedNode = aetherNodes[connection];
 
       invariant(connectedNode, 'Connected node not found');

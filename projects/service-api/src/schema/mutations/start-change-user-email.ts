@@ -1,7 +1,7 @@
 import { generateChangeEmailVerificationEmail } from '@vers/email-templates';
-import type { AuthedContext } from '~/types';
 import { env } from '~/env';
 import { logger } from '~/logger';
+import type { AuthedContext } from '~/types';
 import { SecureAction } from '~/types';
 import { createPendingTransaction } from '~/utils/create-pending-transaction';
 import { verifyTransactionToken } from '~/utils/verify-transaction-token';
@@ -50,11 +50,10 @@ export async function startChangeUserEmail(
   ctx: AuthedContext,
 ): Promise<typeof StartChangeUserEmailPayload.$inferType> {
   try {
-    const isTwoFactorEnabled =
-      await ctx.services.verification.getVerification.query({
-        target: ctx.user.email,
-        type: '2fa',
-      });
+    const isTwoFactorEnabled = await ctx.services.verification.getVerification.query({
+      target: ctx.user.email,
+      type: '2fa',
+    });
 
     if (isTwoFactorEnabled) {
       const isValidTransaction = await verifyTransactionToken(
@@ -80,22 +79,18 @@ export async function startChangeUserEmail(
       return { error: UNKNOWN_ERROR };
     }
 
-    const verification =
-      await ctx.services.verification.createVerification.mutate({
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes from now
-        period: 15 * 60, // 15 minutes
-        target: args.input.email,
-        type: 'change-email',
-      });
+    const verification = await ctx.services.verification.createVerification.mutate({
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes from now
+      period: 15 * 60, // 15 minutes
+      target: args.input.email,
+      type: 'change-email',
+    });
 
     const verificationURL = new URL(`${env.APP_WEB_URL}/verify-otp`);
 
     verificationURL.searchParams.set('target', args.input.email);
     verificationURL.searchParams.set('code', verification.otp);
-    verificationURL.searchParams.set(
-      'type',
-      VerificationType.CHANGE_EMAIL_CONFIRMATION,
-    );
+    verificationURL.searchParams.set('type', VerificationType.CHANGE_EMAIL_CONFIRMATION);
 
     const { html, plainText } = await generateChangeEmailVerificationEmail({
       newEmail: args.input.email,
@@ -129,23 +124,17 @@ export async function startChangeUserEmail(
   }
 }
 
-const StartChangeUserEmailInput = builder.inputType(
-  'StartChangeUserEmailInput',
-  {
-    fields: (t) => ({
-      email: t.string({ required: true }),
-      transactionToken: t.string({ required: false }),
-    }),
-  },
-);
+const StartChangeUserEmailInput = builder.inputType('StartChangeUserEmailInput', {
+  fields: (t) => ({
+    email: t.string({ required: true }),
+    transactionToken: t.string({ required: false }),
+  }),
+});
 
-const StartChangeUserEmailPayload = builder.unionType(
-  'StartChangeUserEmailPayload',
-  {
-    resolveType: createPayloadResolver(VerificationRequiredPayload),
-    types: [VerificationRequiredPayload, MutationErrorPayload],
-  },
-);
+const StartChangeUserEmailPayload = builder.unionType('StartChangeUserEmailPayload', {
+  resolveType: createPayloadResolver(VerificationRequiredPayload),
+  types: [VerificationRequiredPayload, MutationErrorPayload],
+});
 
 export const resolve = requireAuth(startChangeUserEmail);
 
@@ -160,7 +149,7 @@ builder.mutationField('startChangeUserEmail', (t) =>
         limit: 10,
       },
     },
-    resolve: resolve,
+    resolve,
     type: StartChangeUserEmailPayload,
   }),
 );

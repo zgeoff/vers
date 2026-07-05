@@ -1,6 +1,6 @@
-import { expect, test } from 'vitest';
 import type { AetherEdge, AetherGraph, AetherNode } from '@vers/aether-core';
 import { Object3D } from 'three';
+import { expect, test } from 'vitest';
 import { filterDistanceGraph } from './filter-distant-graph';
 
 // this data is carefully prepared in a way so that we have nodes and edges
@@ -64,11 +64,7 @@ function createTestNode(id: string, position: [number, number]): AetherNode {
   };
 }
 
-function createTestEdge(
-  id: string,
-  start: [number, number],
-  end: [number, number],
-): AetherEdge {
+function createTestEdge(id: string, start: [number, number], end: [number, number]): AetherEdge {
   return {
     end,
     id,

@@ -1,5 +1,5 @@
-import type { ReactElement } from 'react';
 import * as E from '@react-email/components';
+import type { ReactElement } from 'react';
 
 interface Props {
   verificationCode: string;
@@ -16,9 +16,8 @@ export function TwoFactorEmail(props: Props): ReactElement {
         <strong>{props.verificationCode}</strong>
       </E.Text>
       <E.Text>
-        If you did not attempt to sign in, someone else may know your password.
-        Please reset it immediately{' '}
-        <E.Link href="https://versidle.com/forgot-password">here</E.Link>.
+        If you did not attempt to sign in, someone else may know your password. Please reset it
+        immediately <E.Link href="https://versidle.com/forgot-password">here</E.Link>.
       </E.Text>
     </E.Container>
   );

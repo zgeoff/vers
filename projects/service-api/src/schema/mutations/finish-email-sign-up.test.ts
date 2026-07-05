@@ -1,5 +1,5 @@
-import { afterEach, expect, test } from 'vitest';
 import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
 import { SecureAction } from '~/types';
@@ -81,6 +81,7 @@ test('it completes the email signup process when transaction token is valid', as
 
 test('it returns an error if the transaction token is invalid', async () => {
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       email: 'user@test.com',

@@ -1,8 +1,8 @@
-import { expect, test } from 'vitest';
 import { Class } from '@vers/data';
-import * as schema from '@vers/postgres-schema';
+import type * as schema from '@vers/postgres-schema';
 import { createTestDB, createTestUser } from '@vers/service-test-utils';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { expect, test } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 
@@ -45,7 +45,7 @@ test('it creates an avatar with default values', async () => {
   });
 
   const avatar = await db.query.avatars.findFirst({
-    where: (avatar, { eq }) => eq(avatar.id, result.id),
+    where: (avatars, operators) => operators.eq(avatars.id, result.id),
   });
 
   expect(avatar).toStrictEqual(result);
@@ -91,8 +91,7 @@ test('it throws an error if the name is not alphabetic', async () => {
     cause: {
       issues: [
         {
-          message:
-            'Name must be alphabetic with no spaces or special characters',
+          message: 'Name must be alphabetic with no spaces or special characters',
           path: ['name'],
         },
       ],

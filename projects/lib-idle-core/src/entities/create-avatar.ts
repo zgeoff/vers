@@ -1,4 +1,5 @@
 import { produce } from 'immer';
+import { createAvatarWeaponAttackBehaviour } from '../behaviours/avatar-weapon-attack';
 import type {
   Avatar,
   AvatarAppState,
@@ -11,13 +12,7 @@ import type {
   SetEntityStateFn,
   SimulationContext,
 } from '../types';
-import { createAvatarWeaponAttackBehaviour } from '../behaviours/avatar-weapon-attack';
-import {
-  EntityStatus,
-  EntityType,
-  EquipmentSlot,
-  LifecycleEvent,
-} from '../types';
+import { EntityStatus, EntityType, EquipmentSlot, LifecycleEvent } from '../types';
 import { createLogLabel } from '../utils/create-log-label';
 import { logger } from '../utils/logger';
 import { calcAvatarAttackDamage } from './utils/calc-avatar-attack-damage';
@@ -132,14 +127,13 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     receiveDamage: (amount: number) => {
       handleReceiveAvatarDamage(amount, avatar);
 
-      logger.debug(
-        `${label} <-- ${amount} damage (${state.life} life remains)`,
-      );
+      logger.debug(`${label} <-- ${amount} damage (${state.life} life remains)`);
     },
     reset,
   };
 
   DEFAULT_BEHAVIOUR_FACTORIES
+
     // create behaviours & register them if they're applicable
     .map((createBehaviour) => createBehaviour(avatar))
     .filter((behaviour) => behaviour.predicate(avatar))

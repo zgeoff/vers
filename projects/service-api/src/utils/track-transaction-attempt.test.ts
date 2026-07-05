@@ -32,9 +32,7 @@ test('it increments the attempt count for a pending transaction', () => {
 test('it throws an error when transaction is not found', () => {
   setupTest();
 
-  expect(() => trackTransactionAttempt('non_existent')).toThrow(
-    'Pending transaction not found',
-  );
+  expect(() => trackTransactionAttempt('non_existent')).toThrow('Pending transaction not found');
 });
 
 test('it deletes the transaction when max attempts are reached', () => {

@@ -10,7 +10,5 @@ export async function removeTrailingSlash(ctx: Context, next: Next) {
     return ctx.redirect(newUrl, 302);
   }
 
-  await next();
-
-  return;
+  return await next();
 }

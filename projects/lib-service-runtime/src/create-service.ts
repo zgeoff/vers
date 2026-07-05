@@ -1,31 +1,31 @@
 import type { AnyContractRouter, OpenAPI } from '@orpc/contract';
-import type { AnyRouter } from '@orpc/server';
-import type { FetchHandler } from '@orpc/server/fetch';
-import type { CryptoKey } from 'jose';
-import type pino from 'pino';
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { OpenAPIHandler } from '@orpc/openapi/fetch';
+import type { AnyRouter } from '@orpc/server';
+import type { FetchHandler } from '@orpc/server/fetch';
 import { RPCHandler } from '@orpc/server/fetch';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
 import { Elysia } from 'elysia';
+import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
+import type pino from 'pino';
 import * as z from 'zod';
-import type { ServiceContext } from './types';
 import { BASE_ENV_SCHEMA } from './base-env-schema';
 import { createLogger } from './create-logger';
 import { parseServiceToken } from './parse-service-token';
 import { TOKEN_ALGORITHM } from './token-claims';
+import type { ServiceContext } from './types';
 
-type ServiceEnv<TEnvShape extends z.ZodRawShape> = z.infer<
-  typeof BASE_ENV_SCHEMA
-> &
+type ServiceEnv<TEnvShape extends z.ZodRawShape> = z.infer<typeof BASE_ENV_SCHEMA> &
   z.infer<z.ZodObject<TEnvShape>>;
 
+interface ServiceRuntime<TEnvShape extends z.ZodRawShape> {
+  env: ServiceEnv<TEnvShape>;
+  logger: pino.Logger;
+}
+
 export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
-  buildRouter: (runtime: {
-    env: ServiceEnv<TEnvShape>;
-    logger: pino.Logger;
-  }) => AnyRouter;
+  buildRouter: (runtime: ServiceRuntime<TEnvShape>) => AnyRouter;
   contract: AnyContractRouter;
   envShape: TEnvShape;
   name: string;
@@ -43,15 +43,12 @@ export interface Service<TEnvShape extends z.ZodRawShape> {
  * the oRPC handlers, health checks, request-id propagation, and optional Sentry/OTel wiring.
  * Nothing is started — call the returned `listen` to bind a port.
  */
-export async function createService<
-  TEnvShape extends z.ZodRawShape = Record<never, never>,
->(config: ServiceConfig<TEnvShape>): Promise<Service<TEnvShape>> {
+export async function createService<TEnvShape extends z.ZodRawShape = Record<never, never>>(
+  config: ServiceConfig<TEnvShape>,
+): Promise<Service<TEnvShape>> {
   const env = parseServiceEnv(config.envShape);
   const logger = createLogger({ level: env.LOG_LEVEL, name: config.name });
-  const publicKey = await jose.importSPKI(
-    env.SERVICE_AUTH_PUBLIC_KEY,
-    TOKEN_ALGORITHM,
-  );
+  const publicKey = await jose.importSPKI(env.SERVICE_AUTH_PUBLIC_KEY, TOKEN_ALGORITHM);
 
   if (env.SENTRY_DSN) {
     const sentry = await import('@sentry/bun');
@@ -61,6 +58,7 @@ export async function createService<
 
   const router = config.buildRouter({ env, logger });
   const document = await buildOpenAPIDocument(config.contract, config.name);
+
   const app = new Elysia();
 
   if (env.OTEL_EXPORTER_OTLP_ENDPOINT) {
@@ -79,14 +77,14 @@ export async function createService<
     );
   }
 
-  app.get('/health', ({ request, set }) => {
-    set.headers['x-request-id'] = getRequestId(request);
+  app.get('/health', (context) => {
+    context.set.headers['x-request-id'] = getRequestId(context.request);
 
     return { service: config.name, status: 'ok' };
   });
 
-  app.get('/spec.json', ({ request, set }) => {
-    set.headers['x-request-id'] = getRequestId(request);
+  app.get('/spec.json', (context) => {
+    context.set.headers['x-request-id'] = getRequestId(context.request);
 
     return document;
   });
@@ -96,6 +94,7 @@ export async function createService<
     publicKey,
     serviceName: config.name,
   });
+
   mountORPCHandler(app, '/api', new OpenAPIHandler(router), {
     logger,
     publicKey,
@@ -133,7 +132,7 @@ function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
 }
 
 /** Generates the service's OpenAPI document from its contract, never its implementation. */
-async function buildOpenAPIDocument(
+function buildOpenAPIDocument(
   contract: AnyContractRouter,
   name: string,
 ): Promise<OpenAPI.Document> {
@@ -156,33 +155,37 @@ function getRequestId(request: Request): string {
  * circuits with a plain 401 before the handler ever runs, per the auth/trust-boundary split in
  * docs/002-service-contracts.md.
  */
+interface MountORPCHandlerDeps {
+  logger: pino.Logger;
+  publicKey: CryptoKey;
+  serviceName: string;
+}
+
 function mountORPCHandler(
   app: Elysia,
   prefix: `/${string}`,
   handler: FetchHandler<ServiceContext>,
-  deps: { logger: pino.Logger; publicKey: CryptoKey; serviceName: string },
+  deps: MountORPCHandlerDeps,
 ): void {
   app.all(
     `${prefix}*` as `/${string}`,
-    async ({ request }) => {
-      const requestId = getRequestId(request);
-      const resolution = await parseServiceToken(request, {
+    async (context) => {
+      const requestId = getRequestId(context.request);
+
+      const resolution = await parseServiceToken(context.request, {
         audience: deps.serviceName,
         publicKey: deps.publicKey,
       });
 
       if ('failure' in resolution) {
-        const response = Response.json(
-          { error: resolution.failure },
-          { status: 401 },
-        );
+        const response = Response.json({ error: resolution.failure }, { status: 401 });
 
         response.headers.set('x-request-id', requestId);
 
         return response;
       }
 
-      const { matched, response } = await handler.handle(request, {
+      const { matched, response } = await handler.handle(context.request, {
         context: {
           actingUserId: resolution.actingUserId,
           logger: deps.logger.child({ requestId }),
@@ -190,9 +193,8 @@ function mountORPCHandler(
         },
         prefix,
       });
-      const finalResponse = matched
-        ? response
-        : new Response('not found', { status: 404 });
+
+      const finalResponse = matched ? response : new Response('not found', { status: 404 });
 
       finalResponse.headers.set('x-request-id', requestId);
 

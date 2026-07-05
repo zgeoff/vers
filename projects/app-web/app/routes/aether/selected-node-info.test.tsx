@@ -1,10 +1,10 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub } from 'react-router';
-import type { AetherNode } from '@vers/aether-core';
 import { setSelectedNode } from '@vers/aether-client';
+import type { AetherNode } from '@vers/aether-core';
 import { nodeHasText } from '@vers/client-test-utils';
+import { createRoutesStub } from 'react-router';
+import { expect, test } from 'vitest';
 import { Routes } from '~/types';
 import { SelectedNodeInfo } from './selected-node-info';
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '../button/button';
 import { StatusButton } from './status-button';
 
-export const Default = () => {
+export function Default() {
   const {
     handleSubmit: handleSubmitSuccess,
     resetStatus: resetStatusSuccess,
@@ -17,18 +17,10 @@ export const Default = () => {
 
   return (
     <>
-      <StatusButton
-        status={statusSuccess}
-        variant="primary"
-        onClick={handleSubmitSuccess}
-      >
+      <StatusButton status={statusSuccess} variant="primary" onClick={handleSubmitSuccess}>
         Success
       </StatusButton>
-      <StatusButton
-        status={statusError}
-        variant="primary"
-        onClick={handleSubmitError}
-      >
+      <StatusButton status={statusError} variant="primary" onClick={handleSubmitError}>
         Error
       </StatusButton>
       <Button
@@ -41,7 +33,7 @@ export const Default = () => {
       </Button>
     </>
   );
-};
+}
 
 interface EmulateSubmitConfig {
   success: boolean;
@@ -65,23 +57,21 @@ function useEmulateSubmit(config: EmulateSubmitConfig) {
   // when we start submitting set the status to pending, and after a
   // 2 second delay, set the status to success
   useEffect(() => {
-    if (submitting) {
-      setStatus(StatusButton.Status.Pending);
-
-      const timeout = setTimeout(() => {
-        setSubmitting(false);
-
-        const finalStatus = config.success
-          ? StatusButton.Status.Success
-          : StatusButton.Status.Error;
-
-        setStatus(finalStatus);
-      }, 2000);
-
-      return () => clearTimeout(timeout);
+    if (!submitting) {
+      return;
     }
 
-    return;
+    setStatus(StatusButton.Status.Pending);
+
+    const timeout = setTimeout(() => {
+      setSubmitting(false);
+
+      const finalStatus = config.success ? StatusButton.Status.Success : StatusButton.Status.Error;
+
+      setStatus(finalStatus);
+    }, 2000);
+
+    return () => clearTimeout(timeout);
   }, [submitting, setSubmitting, config.success]);
 
   return { handleSubmit, resetStatus, status };

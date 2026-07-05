@@ -1,12 +1,8 @@
-import { expect, test } from 'vitest';
 import * as schema from '@vers/postgres-schema';
-import {
-  createTestDB,
-  createTestUser,
-  createTestVerification,
-} from '@vers/service-test-utils';
+import { createTestDB, createTestUser, createTestVerification } from '@vers/service-test-utils';
 import { eq } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { expect, test } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 
@@ -50,9 +46,7 @@ test('it updates the provided user email', async () => {
     updatedAt: expect.any(Date),
   });
 
-  expect(updatedUser?.updatedAt.getTime()).toBeGreaterThan(
-    user.updatedAt.getTime(),
-  );
+  expect(updatedUser?.updatedAt.getTime()).toBeGreaterThan(user.updatedAt.getTime());
 });
 
 test('it updates a users 2FA verification', async () => {
@@ -61,6 +55,7 @@ test('it updates a users 2FA verification', async () => {
   const { db } = handle;
 
   const user = await createTestUser(db, { email: 'test@test.com' });
+
   const verification = await createTestVerification(db, {
     target: user.email,
     type: '2fa',
@@ -91,6 +86,7 @@ test('it updates a users 2FA setup verification', async () => {
   const { db } = handle;
 
   const user = await createTestUser(db, { email: 'test@test.com' });
+
   const verification = await createTestVerification(db, {
     target: user.email,
     type: '2fa-setup',

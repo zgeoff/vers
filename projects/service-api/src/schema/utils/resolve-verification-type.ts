@@ -1,4 +1,4 @@
-import { verifications } from '@vers/postgres-schema';
+import type { verifications } from '@vers/postgres-schema';
 import { VerificationType } from '../types/verification-type';
 
 /**
@@ -11,10 +11,7 @@ export function resolveVerificationType(
   return VERIFICATION_TYPE_MAP[type];
 }
 
-type VerificationTypeMap = Record<
-  VerificationType,
-  (typeof verifications.type.enumValues)[number]
->;
+type VerificationTypeMap = Record<VerificationType, (typeof verifications.type.enumValues)[number]>;
 
 /**
  * @description Maps GraphQL enum values to database enum values for verification types.

@@ -1,9 +1,7 @@
 import type { Context, Next } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import {
-  createTokenVerifier,
-  type TokenVerifierConfig,
-} from '../utils/create-token-verifier';
+import { createTokenVerifier } from '../utils/create-token-verifier';
+import type { TokenVerifierConfig } from '../utils/create-token-verifier';
 import { getTokenFromHeader } from '../utils/get-token-from-header';
 
 interface AuthMiddlewareConfig {

@@ -1,11 +1,11 @@
-import type { RefreshTokensPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
+import type { RefreshTokensPayload } from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const refreshTokens = trpc.refreshTokens.mutation(({ input }) => {
+export const refreshTokens = trpc.refreshTokens.mutation((opts) => {
   const session = db.session.findFirst({
-    where: { refreshToken: { equals: input.refreshToken } },
+    where: { refreshToken: { equals: opts.input.refreshToken } },
   });
 
   if (!session) {

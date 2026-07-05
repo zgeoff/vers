@@ -1,8 +1,8 @@
-import { expect, test } from 'vitest';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@vers/postgres-schema';
 import { createTestDB } from '@vers/service-test-utils';
 import { and, eq } from 'drizzle-orm';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { expect, test } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 
@@ -205,6 +205,7 @@ test('creates a verification with explicit expiry time', async () => {
   });
 
   expect(verification).toBeDefined();
+
   expect(verification).toStrictEqual({
     algorithm: 'SHA-256',
     charSet: 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789',

@@ -6,7 +6,7 @@ interface Config {
   email: string;
 }
 
-export async function generateExistingAccountEmail(config: Config) {
+export function generateExistingAccountEmail(config: Config) {
   return generateEmail({
     component: (
       <E.Html dir="ltr" lang="en">

@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { expect, test } from 'vitest';
 import { WelcomeEmail } from './welcome-email';
 
 test('it renders a welcome email with provided configuration', () => {
@@ -12,6 +12,7 @@ test('it renders a welcome email with provided configuration', () => {
 
   const welcomeMessage = screen.getByText('Welcome to vers');
   const verificationCode = screen.getByText('123456');
+
   const verificationLink = screen.getByRole('link', {
     name: 'Verify your account',
   });

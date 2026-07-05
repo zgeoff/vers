@@ -1,10 +1,10 @@
 import { expect, test } from 'vitest';
-import type { EquipmentWeapon } from '../types';
 import { createAvatar } from '../entities/create-avatar';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
+import type { EquipmentWeapon } from '../types';
 import { EquipmentSlot } from '../types';
 import { createActivity } from './create-activity';
 import { createCombatExecutor } from './create-combat-executor';
@@ -40,6 +40,7 @@ test('it processes events', () => {
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
+
   const activity = createActivity(activityData, ctx, {
     groupCount: 1,
     groupSize: 2,

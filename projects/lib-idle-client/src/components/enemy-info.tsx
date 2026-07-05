@@ -1,5 +1,5 @@
-import type { EnemyAppState } from '@vers/idle-core';
 import { Heading } from '@vers/design-system';
+import type { EnemyAppState } from '@vers/idle-core';
 import { css, cx } from '@vers/styled-system/css';
 import { AttackTimerBar } from './attack-timer-bar';
 import { LifeBar } from './life-bar';
@@ -34,8 +34,7 @@ interface EnemyInfoProps {
 }
 
 export function EnemyInfo(props: EnemyInfoProps) {
-  const lastAttackTime =
-    props.enemy.behaviours.enemyPrimaryAttack?.lastAttackTime ?? 0;
+  const lastAttackTime = props.enemy.behaviours.enemyPrimaryAttack?.lastAttackTime ?? 0;
   const attackSpeed = props.enemy.primaryAttack.speed;
   const nextAttackTime = lastAttackTime + 1000 / attackSpeed;
 

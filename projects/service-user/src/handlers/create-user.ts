@@ -1,23 +1,14 @@
-import type { CreateUserPayload } from '@vers/service-types';
 import { createId } from '@paralleldrive/cuid2';
 import { TRPCError } from '@trpc/server';
 import { createSeed } from '@vers/game-utils';
 import * as schema from '@vers/postgres-schema';
-import {
-  hashPassword,
-  isPGError,
-  isUniqueConstraintError,
-} from '@vers/service-utils';
-import {
-  NameSchema,
-  PasswordSchema,
-  UserEmailSchema,
-  UsernameSchema,
-} from '@vers/validation';
+import type { CreateUserPayload } from '@vers/service-types';
+import { hashPassword, isPGError, isUniqueConstraintError } from '@vers/service-utils';
+import { NameSchema, PasswordSchema, UserEmailSchema, UsernameSchema } from '@vers/validation';
 import { z } from 'zod';
 import { logger } from '~/logger';
-import type { Context } from '../types';
 import { t } from '../t';
+import type { Context } from '../types';
 
 const CreateUserInputSchema = z.object({
   email: UserEmailSchema,
@@ -94,4 +85,4 @@ async function createUser(
 
 export const procedure = t.procedure
   .input(CreateUserInputSchema)
-  .mutation(async ({ ctx, input }) => createUser(input, ctx));
+  .mutation((opts) => createUser(opts.input, opts.ctx));

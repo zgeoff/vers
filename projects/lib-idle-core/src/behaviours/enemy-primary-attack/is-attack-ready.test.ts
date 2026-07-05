@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import invariant from 'tiny-invariant';
+import { expect, test } from 'vitest';
 import { createActivity } from '../../core/create-activity';
 import { createCombatExecutor } from '../../core/create-combat-executor';
 import { createAvatar } from '../../entities/create-avatar';
@@ -11,6 +11,7 @@ import { isAttackReady } from './is-attack-ready';
 
 test('it returns true when elapsed time is equal or greater than the next attack time', () => {
   const avatarData = createMockAvatarData();
+
   const enemyData = createMockEnemyData({
     primaryAttack: {
       maxDamage: 10,
@@ -43,6 +44,7 @@ test('it returns true when elapsed time is equal or greater than the next attack
 
 test('it returns false when elapsed time is less than next attack time', () => {
   const avatarData = createMockAvatarData();
+
   const enemyData = createMockEnemyData({
     primaryAttack: {
       maxDamage: 10,
@@ -69,6 +71,7 @@ test('it returns false when elapsed time is less than next attack time', () => {
 
 test('it uses the last attacked time to calculate the next attack time', () => {
   const avatarData = createMockAvatarData();
+
   const enemyData = createMockEnemyData({
     primaryAttack: {
       maxDamage: 10,
@@ -103,6 +106,7 @@ test('it uses the last attacked time to calculate the next attack time', () => {
 
 test('it returns false when the enemy is dead', () => {
   const avatarData = createMockAvatarData();
+
   const enemyData = createMockEnemyData({
     life: 1,
     primaryAttack: {

@@ -1,6 +1,6 @@
-import { afterEach, expect, test } from 'vitest';
 import { drop } from '@mswjs/data';
 import { createTestJWT } from '@vers/service-test-utils';
+import { afterEach, expect, test } from 'vitest';
 import { env } from '~/env';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
@@ -51,6 +51,7 @@ test('it deletes a session when the user is authenticated', async () => {
 
 test('it returns an unauthorized error when the user is not authenticated', async () => {
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       id: 'test_id',

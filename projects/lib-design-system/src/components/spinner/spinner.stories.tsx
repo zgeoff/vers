@@ -1,5 +1,5 @@
 import { Spinner } from './spinner';
 
-export const Default = () => {
+export function Default() {
   return <Spinner />;
-};
+}

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
-import type { AetherNode } from './types';
 import { getCompressedAetherGraph } from './get-compressed-aether-graph';
+import type { AetherNode } from './types';
 
 test('it compresses an array of aether nodes', () => {
   const nodes: Array<AetherNode> = [

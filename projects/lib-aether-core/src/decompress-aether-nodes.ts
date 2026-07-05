@@ -1,10 +1,8 @@
-import type { AetherGraph, CompressedAetherNode } from './types';
 import { getAetherEdgeMap } from './get-aether-edge-map';
 import { getAetherNodeMap } from './get-aether-node-map';
+import type { AetherGraph, CompressedAetherNode } from './types';
 
-export function decompressAetherNodes(
-  data: Array<CompressedAetherNode>,
-): AetherGraph {
+export function decompressAetherNodes(data: Array<CompressedAetherNode>): AetherGraph {
   const nodes = getAetherNodeMap(data);
 
   return {

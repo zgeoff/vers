@@ -1,5 +1,5 @@
-import type { Context } from '~/types';
 import { logger } from '~/logger';
+import type { Context } from '~/types';
 import { SecureAction } from '~/types';
 import { verifyTransactionToken } from '~/utils/verify-transaction-token';
 import { builder } from '../builder';
@@ -43,24 +43,20 @@ export async function loginWithForcedLogout(
       userID: user.id,
     });
 
-    const session = sessions.find(
-      (session) => session.id === payload.session_id,
-    );
+    const session = sessions.find((candidate) => candidate.id === payload.session_id);
 
     if (!session) {
       return { error: UNKNOWN_ERROR };
     }
 
-    const previousSessions = sessions.filter(
-      (session) => session.id !== payload.session_id,
-    );
+    const previousSessions = sessions.filter((candidate) => candidate.id !== payload.session_id);
 
     // loop over our previous sessions and delete them. performance should be
     // acceptable here because we should only ever have 1-2 previous sessions
     await Promise.all(
-      previousSessions.map((session) =>
+      previousSessions.map((previousSession) =>
         ctx.services.session.deleteSession.mutate({
-          id: session.id,
+          id: previousSession.id,
           userID: user.id,
         }),
       ),
@@ -80,23 +76,17 @@ export async function loginWithForcedLogout(
   }
 }
 
-const LoginWithForcedLogoutInput = builder.inputType(
-  'LoginWithForcedLogoutInput',
-  {
-    fields: (t) => ({
-      target: t.string({ required: true }),
-      transactionToken: t.string({ required: true }),
-    }),
-  },
-);
+const LoginWithForcedLogoutInput = builder.inputType('LoginWithForcedLogoutInput', {
+  fields: (t) => ({
+    target: t.string({ required: true }),
+    transactionToken: t.string({ required: true }),
+  }),
+});
 
-const LoginWithForcedLogoutPayload = builder.unionType(
-  'LoginWithForcedLogoutPayload',
-  {
-    resolveType: createPayloadResolver(AuthPayload),
-    types: [AuthPayload, MutationErrorPayload],
-  },
-);
+const LoginWithForcedLogoutPayload = builder.unionType('LoginWithForcedLogoutPayload', {
+  resolveType: createPayloadResolver(AuthPayload),
+  types: [AuthPayload, MutationErrorPayload],
+});
 
 export const resolve = loginWithForcedLogout;
 

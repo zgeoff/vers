@@ -1,14 +1,14 @@
 import type { ServiceRouter as AvatarServiceRouter } from '@vers/service-avatar';
 import type { ServiceRouter as EmailServiceRouter } from '@vers/service-email';
 import type { ServiceRouter as SessionServiceRouter } from '@vers/service-session';
+import { ServiceID } from '@vers/service-types';
 import type { ServiceRouter as UserServiceRouter } from '@vers/service-user';
+import { getTokenFromHeader } from '@vers/service-utils';
 import type { ServiceRouter as VerificationServiceRouter } from '@vers/service-verification';
 import type { YogaInitialContext } from 'graphql-yoga';
 import type { Context as HonoContext } from 'hono';
-import { ServiceID } from '@vers/service-types';
-import { getTokenFromHeader } from '@vers/service-utils';
-import type { AuthedContext, Context, UnverifiedAuthContext } from './types';
 import { env } from './env';
+import type { AuthedContext, Context, UnverifiedAuthContext } from './types';
 import { createTRPCClient } from './utils/create-trpc-client';
 
 export async function createYogaContext(

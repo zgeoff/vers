@@ -1,7 +1,7 @@
-import * as React from 'react';
-import { Link as RRLink } from 'react-router';
 import type { PolymorphicComponentProps } from '@vers/design-system';
 import { css, cx } from '@vers/styled-system/css';
+import * as React from 'react';
+import { Link as RRLink } from 'react-router';
 
 export interface LinkProps<C extends React.ElementType = typeof RRLink> {
   as?: C;

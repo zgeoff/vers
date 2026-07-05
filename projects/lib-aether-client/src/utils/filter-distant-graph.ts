@@ -1,8 +1,4 @@
-import type {
-  AetherEdgeMap,
-  AetherGraph,
-  AetherNodeMap,
-} from '@vers/aether-core';
+import type { AetherEdgeMap, AetherGraph, AetherNodeMap } from '@vers/aether-core';
 import type { Object3D } from 'three';
 import { Vector3 } from 'three';
 import { getScenePosition } from './get-scene-position';
@@ -24,6 +20,7 @@ export function filterDistanceGraph(
 
   for (const [id, node] of Object.entries(graphData.nodes)) {
     const nodePosition = new Vector3(...getScenePosition(node.position));
+
     const distance = position.distanceTo(nodePosition);
 
     if (distance <= MAX_DISTANCE) {

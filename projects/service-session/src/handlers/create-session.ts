@@ -1,12 +1,12 @@
-import type { CreateSessionPayload } from '@vers/service-types';
 import { createId } from '@paralleldrive/cuid2';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { CreateSessionPayload } from '@vers/service-types';
 import { z } from 'zod';
-import type { Context } from '../types';
 import * as consts from '../consts';
 import { logger } from '../logger';
 import { t } from '../t';
+import type { Context } from '../types';
 
 export const CreateSessionInputSchema = z.object({
   expiresAt: z.date().optional(),
@@ -60,4 +60,4 @@ export async function createSession(
 
 export const procedure = t.procedure
   .input(CreateSessionInputSchema)
-  .mutation(async ({ ctx, input }) => createSession(input, ctx));
+  .mutation((opts) => createSession(opts.input, opts.ctx));

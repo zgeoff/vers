@@ -33,10 +33,7 @@ export interface IBehaviour<
   setState: (setStateFn: SetEntityStateFn<S>) => void;
 }
 
-export type LifecycleHandler<T extends Entity> = (
-  entity: T,
-  ctx: SimulationContext,
-) => void;
+export type LifecycleHandler<T extends Entity> = (entity: T, ctx: SimulationContext) => void;
 
 export type CombatLifecycleHandler<T extends Entity> = (
   entity: T,
@@ -61,8 +58,10 @@ export type AvatarWeaponAttackBehaviourState = BehaviourState<{
   readonly lastAttackTime: number;
 }>;
 
-export interface AvatarWeaponAttackBehaviour
-  extends IBehaviour<Avatar, AvatarWeaponAttackBehaviourState> {
+export interface AvatarWeaponAttackBehaviour extends IBehaviour<
+  Avatar,
+  AvatarWeaponAttackBehaviourState
+> {
   // meta
   readonly id: BehaviourID.AvatarWeaponAttack;
 
@@ -75,8 +74,10 @@ export type EnemyPrimaryAttackBehaviourState = BehaviourState<{
   readonly lastAttackTime: number;
 }>;
 
-export interface EnemyPrimaryAttackBehaviour
-  extends IBehaviour<Enemy, EnemyPrimaryAttackBehaviourState> {
+export interface EnemyPrimaryAttackBehaviour extends IBehaviour<
+  Enemy,
+  EnemyPrimaryAttackBehaviourState
+> {
   // meta
   readonly id: BehaviourID.EnemyPrimaryAttack;
 
@@ -85,8 +86,7 @@ export interface EnemyPrimaryAttackBehaviour
   get nextAttackTime(): number;
 }
 
-export interface AvatarTestBehaviour
-  extends IBehaviour<Avatar, Record<never, never>> {
+export interface AvatarTestBehaviour extends IBehaviour<Avatar, Record<never, never>> {
   readonly id: BehaviourID.Test;
 }
 

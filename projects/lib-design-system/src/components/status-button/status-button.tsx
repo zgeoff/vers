@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import { useDebouncedState } from '@react-hookz/web';
 import { css, cx } from '@vers/styled-system/css';
+import { useEffect, useState } from 'react';
 import type { Props as ButtonProps } from '../button/button';
 import { Button } from '../button/button';
 import { Icon } from '../icon/icon';
@@ -73,8 +73,9 @@ export function StatusButton(props: Props) {
     setIsIdle(restProps.status === StatusButtonStatus.Idle);
   }, [restProps.status, setIsIdle]);
 
-  const [lastNonIdleStatus, setLastNonIdleStatus] =
-    useState<StatusButtonStatus>(StatusButtonStatus.Pending);
+  const [lastNonIdleStatus, setLastNonIdleStatus] = useState<StatusButtonStatus>(
+    StatusButtonStatus.Pending,
+  );
 
   // keep track of our last non-idle status so we can make sure we're always
   // displaying an icon even when we return to idle
@@ -89,10 +90,7 @@ export function StatusButton(props: Props) {
   const isError = lastNonIdleStatus === StatusButtonStatus.Error;
 
   return (
-    <Button
-      {...restProps}
-      className={cx(isError && !isIdle && errorStatusButton, props.className)}
-    >
+    <Button {...restProps} className={cx(isError && !isIdle && errorStatusButton, props.className)}>
       <div
         className={cx(
           statusIconContainer,
@@ -102,9 +100,7 @@ export function StatusButton(props: Props) {
       >
         {statusIcon}
       </div>
-      <div className={cx(buttonContent, !isIdle && hideButtonContent)}>
-        {children}
-      </div>
+      <div className={cx(buttonContent, !isIdle && hideButtonContent)}>{children}</div>
     </Button>
   );
 }
@@ -122,6 +118,7 @@ function getStatusIcon(status: StatusButtonStatus) {
         aria-hidden="false"
         aria-label="Success"
         color="#fff"
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- inline SVG icon; role="img" + aria-label is the accessible-SVG pattern, an <img> tag needs a src
         role="img"
         size={24}
       />
@@ -134,6 +131,7 @@ function getStatusIcon(status: StatusButtonStatus) {
         aria-hidden="false"
         aria-label="Error"
         color="#fff"
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- inline SVG icon; role="img" + aria-label is the accessible-SVG pattern, an <img> tag needs a src
         role="img"
         size={32}
       />

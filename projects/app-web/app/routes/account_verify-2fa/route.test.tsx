@@ -1,8 +1,8 @@
-import { afterEach, expect, test } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
 import { verifySessionStorage } from '~/session/verify-session-storage.server';

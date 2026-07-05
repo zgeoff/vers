@@ -1,9 +1,9 @@
-import { expect, test } from 'vitest';
-import * as schema from '@vers/postgres-schema';
+import type * as schema from '@vers/postgres-schema';
 import { createTestDB, createTestUser } from '@vers/service-test-utils';
 import bcrypt from 'bcryptjs';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import invariant from 'tiny-invariant';
+import { expect, test } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 
@@ -40,17 +40,12 @@ test('it updates the password and clears the reset token for an existing user', 
   expect(result).toStrictEqual({});
 
   const updatedUser = await db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.id, user.id),
+    where: (users, operators) => operators.eq(users.id, user.id),
   });
 
-  invariant(
-    typeof updatedUser?.passwordHash === 'string',
-    'updated user password hash must set',
-  );
+  invariant(typeof updatedUser?.passwordHash === 'string', 'updated user password hash must set');
 
-  await expect(
-    bcrypt.compare('newpassword123', updatedUser.passwordHash),
-  ).resolves.toBeTrue();
+  await expect(bcrypt.compare('newpassword123', updatedUser.passwordHash)).resolves.toBeTrue();
 
   expect(updatedUser.passwordResetToken).toBeNull();
   expect(updatedUser.passwordResetTokenExpiresAt).toBeNull();

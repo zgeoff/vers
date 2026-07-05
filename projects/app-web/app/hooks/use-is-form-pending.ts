@@ -24,8 +24,7 @@ export function useIsFormPending(options: IsFormPendingOptions = {}) {
 
   const isPendingState = navigation.state !== 'idle';
   const isFormMethod = navigation.formMethod === finalOptions.formMethod;
-  const isFormAction =
-    navigation.formAction === (finalOptions.formAction ?? contextualFormAction);
+  const isFormAction = navigation.formAction === (finalOptions.formAction ?? contextualFormAction);
 
   return isPendingState && isFormAction && isFormMethod;
 }

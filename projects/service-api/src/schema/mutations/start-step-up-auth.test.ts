@@ -1,6 +1,6 @@
-import { afterEach, expect, test } from 'vitest';
 import { drop } from '@mswjs/data';
 import invariant from 'tiny-invariant';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
 import { SecureAction } from '~/types';

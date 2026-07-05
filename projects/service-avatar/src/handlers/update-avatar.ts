@@ -1,12 +1,12 @@
-import type { UpdateAvatarPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { UpdateAvatarPayload } from '@vers/service-types';
 import { AvatarNameSchema } from '@vers/validation';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { logger } from '~/logger';
-import type { Context } from '../types';
 import { t } from '../t';
+import type { Context } from '../types';
 
 const UpdateAvatarInputSchema = z.object({
   id: z.string(),
@@ -55,4 +55,4 @@ async function updateAvatar(
 
 export const procedure = t.procedure
   .input(UpdateAvatarInputSchema)
-  .mutation(async ({ ctx, input }) => updateAvatar(input, ctx));
+  .mutation((opts) => updateAvatar(opts.input, opts.ctx));

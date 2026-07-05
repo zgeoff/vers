@@ -1,9 +1,9 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { AvatarAppState } from '@vers/idle-core';
 import { nodeHasText } from '@vers/client-test-utils';
 import { Class } from '@vers/data';
+import type { AvatarAppState } from '@vers/idle-core';
 import { EntityStatus } from '@vers/idle-core';
+import { expect, test } from 'vitest';
 import { AvatarInfo } from './avatar-info';
 
 test('it renders avatar information', () => {

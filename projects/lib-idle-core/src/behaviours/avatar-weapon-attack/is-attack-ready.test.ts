@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import { createMockEnemyData } from 'src/test-utils/create-mock-enemy-data';
+import { expect, test } from 'vitest';
 import { createActivity } from '../../core/create-activity';
 import { createCombatExecutor } from '../../core/create-combat-executor';
 import { createAvatar } from '../../entities/create-avatar';
@@ -99,6 +99,7 @@ test('it uses the last attacked time to calculate the next attack time', () => {
 
 test('it returns false when the avatar is dead', () => {
   const avatarData = createMockAvatarData({ life: 1 });
+
   const enemyData = createMockEnemyData({
     primaryAttack: {
       maxDamage: 10,

@@ -1,5 +1,5 @@
-import { afterEach, expect, test } from 'vitest';
 import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
 import { resolve } from './get-enable-2fa-verification';

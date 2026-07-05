@@ -6,6 +6,12 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "build": "bun ../../scripts/build-esbuild.ts",
+    "dev": "tsx watch src/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "dependencies": {
     "@epic-web/totp": "4.0.1",
     "@hono/node-server": "catalog:",
@@ -32,11 +38,5 @@
     "vite": "catalog:",
     "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
-  },
-  "scripts": {
-    "build": "bun ../../scripts/build-esbuild.ts",
-    "dev": "tsx watch src/main.ts",
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

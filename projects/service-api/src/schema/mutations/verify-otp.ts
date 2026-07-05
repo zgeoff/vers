@@ -1,5 +1,5 @@
-import type { Context } from '~/types';
 import { logger } from '~/logger';
+import type { Context } from '~/types';
 import { SecureAction } from '~/types';
 import { createTransactionToken } from '~/utils/create-transaction-token';
 import { trackTransactionAttempt } from '~/utils/track-transaction-attempt';
@@ -56,13 +56,9 @@ export async function verifyOTP(
   }
 }
 
-const VERIFICATION_TYPE_TO_SECURE_ACTION: Record<
-  VerificationType,
-  SecureAction
-> = {
+const VERIFICATION_TYPE_TO_SECURE_ACTION: Record<VerificationType, SecureAction> = {
   [VerificationType.CHANGE_EMAIL]: SecureAction.ChangeEmail,
-  [VerificationType.CHANGE_EMAIL_CONFIRMATION]:
-    SecureAction.ChangeEmailConfirmation,
+  [VerificationType.CHANGE_EMAIL_CONFIRMATION]: SecureAction.ChangeEmailConfirmation,
   [VerificationType.CHANGE_PASSWORD]: SecureAction.ChangePassword,
   [VerificationType.ONBOARDING]: SecureAction.Onboarding,
   [VerificationType.RESET_PASSWORD]: SecureAction.ResetPassword,

@@ -2,13 +2,10 @@ import { redirect } from 'react-router';
 import { safeRedirect } from 'remix-utils/safe-redirect';
 import invariant from 'tiny-invariant';
 import { verifySessionStorage } from '~/session/verify-session-storage.server';
-import { type HandleVerificationContext } from './types';
+import type { HandleVerificationContext } from './types';
 
 export async function handleResetPassword(ctx: HandleVerificationContext) {
-  invariant(
-    ctx.submission.status === 'success',
-    'submission should be successful by now',
-  );
+  invariant(ctx.submission.status === 'success', 'submission should be successful by now');
 
   const verifySession = await verifySessionStorage.getSession();
 

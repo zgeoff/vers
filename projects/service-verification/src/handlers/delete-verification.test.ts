@@ -1,8 +1,8 @@
-import { expect, test } from 'vitest';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { createId } from '@paralleldrive/cuid2';
 import * as schema from '@vers/postgres-schema';
 import { createTestDB } from '@vers/service-test-utils';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { expect, test } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 
@@ -45,7 +45,7 @@ test('it deletes a verification record', async () => {
 
   // Verify the record was actually deleted
   const verification = await db.query.verifications.findFirst({
-    where: (verifications, { eq }) => eq(verifications.id, id),
+    where: (verifications, operators) => operators.eq(verifications.id, id),
   });
 
   expect(verification).toBeUndefined();
@@ -58,9 +58,7 @@ test('should throw an error if the verification is not found', async () => {
 
   const { caller } = setupTest({ db });
 
-  await expect(
-    caller.deleteVerification({ id: 'non-existent-id' }),
-  ).rejects.toMatchObject({
+  await expect(caller.deleteVerification({ id: 'non-existent-id' })).rejects.toMatchObject({
     code: 'NOT_FOUND',
     message: 'Verification not found',
   });

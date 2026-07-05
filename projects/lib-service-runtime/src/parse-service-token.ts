@@ -6,6 +6,11 @@ export type ServiceTokenResolution =
   | { actingUserId: null | string }
   | { failure: 'invalid-service-token' };
 
+interface ParseServiceTokenOptions {
+  audience: string;
+  publicKey: CryptoKey;
+}
+
 /**
  * Verifies the s2s token on a request and resolves the acting user it names. The token travels as
  * `Authorization: Bearer <jwt>`; a missing header, malformed header, bad signature, wrong
@@ -14,7 +19,7 @@ export type ServiceTokenResolution =
  */
 export async function parseServiceToken(
   request: Request,
-  options: { audience: string; publicKey: CryptoKey },
+  options: ParseServiceTokenOptions,
 ): Promise<ServiceTokenResolution> {
   const authorization = request.headers.get('authorization');
 

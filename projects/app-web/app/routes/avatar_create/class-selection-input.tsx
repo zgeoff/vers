@@ -1,5 +1,5 @@
-import { useId } from 'react';
 import { Class } from '@vers/data';
+import { useId } from 'react';
 import { ClassPreview } from './class-preview';
 import * as styles from './class-selection-input.styles';
 
@@ -18,24 +18,22 @@ export function ClassSelectionInput(props: Props) {
   const id = props.id ?? fallbackID;
 
   return (
-    <>
-      <div className={styles.container}>
-        <input {...restProps} id={id} />
-        <label className={styles.label} htmlFor={id}>
-          Choose Your Class
-        </label>
-        <div className={styles.classSelector}>
-          {sortedClasses.map((classID, index) => (
-            <ClassPreview
-              key={classID}
-              class={classID}
-              isSelected={selected === classID}
-              tabIndex={index}
-              onClick={onSelectClass}
-            />
-          ))}
-        </div>
+    <div className={styles.container}>
+      <input {...restProps} id={id} />
+      <label className={styles.label} htmlFor={id}>
+        Choose Your Class
+      </label>
+      <div className={styles.classSelector}>
+        {sortedClasses.map((classID, index) => (
+          <ClassPreview
+            key={classID}
+            class={classID}
+            isSelected={selected === classID}
+            tabIndex={index}
+            onClick={onSelectClass}
+          />
+        ))}
       </div>
-    </>
+    </div>
   );
 }

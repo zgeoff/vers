@@ -1,5 +1,5 @@
-import { afterEach, expect, test } from 'vitest';
 import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
 import { SecureAction } from '~/types';
@@ -193,6 +193,7 @@ test('it returns an error when the transaction token is invalid', async () => {
   });
 
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       rememberMe: true,

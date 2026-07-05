@@ -16,9 +16,9 @@ type AuthedResolver<TParent, TArgs, TReturn> = (
 export function requireAuth<TParent, TArgs, TReturn>(
   resolver: AuthedResolver<TParent, TArgs, TReturn>,
 ): Resolver<TParent, TArgs, TReturn> {
-  return async (parent, args, ctx) => {
+  return (parent, args, ctx) => {
     if (!isAuthed(ctx)) {
-      throw new Error('Unauthorized');
+      return Promise.reject(new Error('Unauthorized'));
     }
 
     return resolver(parent, args, ctx);

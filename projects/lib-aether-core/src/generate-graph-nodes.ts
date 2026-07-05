@@ -1,6 +1,6 @@
 import invariant from 'tiny-invariant';
-import type { AetherNode } from './types';
 import { createAetherNode } from './create-aether-node';
+import type { AetherNode } from './types';
 
 /**
  * Generates a graph of AetherNodes and returns them as an array.
@@ -34,10 +34,8 @@ export function generateGraphNodes(maxDifficulty: number): Array<AetherNode> {
     const nodesInNextLevel = nodesInCurrentLevel + 4;
 
     const startIndexOfCurrentLevel = i - node.index;
-    const startIndexOfPreviousLevel =
-      startIndexOfCurrentLevel - nodesInPreviousLevel;
-    const startIndexOfNextLevel =
-      startIndexOfCurrentLevel + nodesInCurrentLevel;
+    const startIndexOfPreviousLevel = startIndexOfCurrentLevel - nodesInPreviousLevel;
+    const startIndexOfNextLevel = startIndexOfCurrentLevel + nodesInCurrentLevel;
 
     // we'll manually attach our origin node at the end
     if (node.difficulty > 0) {

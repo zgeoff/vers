@@ -1,7 +1,7 @@
-import { redirect } from 'react-router';
 import { Client, fetchExchange } from '@urql/core';
 import { authExchange as createAuthExchange } from '@urql/exchange-auth';
 import { UnreachableCodeError } from '@vers/utils';
+import { redirect } from 'react-router';
 import { authSessionStorage } from '~/session/auth-session-storage.server';
 import { verifySessionStorage } from '~/session/verify-session-storage.server';
 import { Routes } from '~/types';
@@ -19,16 +19,12 @@ import { refreshAccessToken } from './refresh-access-token.server';
  * @returns An Apollo Client instance
  */
 export async function createGQLClient(request: Request): Promise<Client> {
-  const authSession = await authSessionStorage.getSession(
-    request.headers.get('cookie'),
-  );
+  const authSession = await authSessionStorage.getSession(request.headers.get('cookie'));
 
-  const verifySession = await verifySessionStorage.getSession(
-    request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(request.headers.get('cookie'));
 
-  const authExchange = createAuthExchange(async (utils) => {
-    return {
+  const authExchange = createAuthExchange((utils) =>
+    Promise.resolve({
       addAuthToOperation: (operation) => {
         const accessToken = authSession.get('accessToken');
         const sessionID = authSession.get('sessionID');
@@ -70,8 +66,7 @@ export async function createGQLClient(request: Request): Promise<Client> {
         authSession.set('accessToken', tokenPayload.accessToken);
         authSession.set('refreshToken', tokenPayload.refreshToken);
 
-        const setCookieHeader =
-          await authSessionStorage.commitSession(authSession);
+        const setCookieHeader = await authSessionStorage.commitSession(authSession);
 
         // because we're using the request from our app's entry point, it hasn't been
         // processed by react-router yet, so we need to manually remove .data from
@@ -85,8 +80,8 @@ export async function createGQLClient(request: Request): Promise<Client> {
           },
         });
       },
-    };
-  });
+    }),
+  );
 
   const client = new Client({
     exchanges: [authExchange, fetchExchange],

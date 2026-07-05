@@ -1,9 +1,10 @@
-import { data, Form, redirect } from 'react-router';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
-import { Class, type ClassID } from '@vers/data';
+import { Class } from '@vers/data';
+import type { ClassID } from '@vers/data';
 import { Field, Heading, StatusButton } from '@vers/design-system';
 import { AvatarNameSchema } from '@vers/validation';
+import { Form, data, redirect } from 'react-router';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import { FormErrorList } from '~/components/form-error-list/form-error-list';
@@ -21,12 +22,14 @@ import type { Route } from './+types/route';
 import { ClassSelectionInput } from './class-selection-input';
 import * as styles from './route.styles';
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: '',
-    title: 'vers | Create an Avatar',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: '',
+      title: 'vers | Create an Avatar',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
@@ -91,15 +94,13 @@ export function AvatarCreate(props: Route.ComponentProps) {
     defaultValue: {},
     id: 'avatar-create-form',
     lastResult: props.actionData?.result,
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: AvatarCreateFormSchema });
+    onValidate(opts) {
+      return parseWithZod(opts.formData, { schema: AvatarCreateFormSchema });
     },
     shouldRevalidate: 'onBlur',
   });
 
-  const submitButtonStatus = isFormPending
-    ? StatusButton.Status.Pending
-    : StatusButton.Status.Idle;
+  const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
   const handleSelectClass = (classID: ClassID) => {
     form.update({ name: 'class', value: classID });
@@ -125,11 +126,7 @@ export function AvatarCreate(props: Route.ComponentProps) {
           }}
           labelProps={{ children: 'Name' }}
         />
-        <StatusButton
-          status={submitButtonStatus}
-          type="submit"
-          variant="primary"
-        >
+        <StatusButton status={submitButtonStatus} type="submit" variant="primary">
           Create Avatar
         </StatusButton>
         <FormErrorList errors={form.errors ?? []} />

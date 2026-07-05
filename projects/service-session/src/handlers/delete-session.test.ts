@@ -1,7 +1,7 @@
-import { expect, test } from 'vitest';
 import * as schema from '@vers/postgres-schema';
 import { createTestDB, createTestUser } from '@vers/service-test-utils';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { expect, test } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 
@@ -46,7 +46,7 @@ test('it deletes a session', async () => {
   expect(result).toStrictEqual({});
 
   const deletedSession = await db.query.sessions.findFirst({
-    where: (sessions, { eq }) => eq(sessions.id, session.id),
+    where: (sessions, operators) => operators.eq(sessions.id, session.id),
   });
 
   expect(deletedSession).toBeUndefined();
@@ -80,7 +80,7 @@ test('it does not delete a session when userID does not match', async () => {
 
   // verify session was not deleted
   const existingSession = await db.query.sessions.findFirst({
-    where: (sessions, { eq }) => eq(sessions.id, session.id),
+    where: (sessions, operators) => operators.eq(sessions.id, session.id),
   });
 
   expect(existingSession).not.toBeNull();

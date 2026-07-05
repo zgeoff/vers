@@ -1,11 +1,11 @@
-import type { UpdateUserPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
+import type { UpdateUserPayload } from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const updateEmail = trpc.updateEmail.mutation(({ input }) => {
+export const updateEmail = trpc.updateEmail.mutation((opts) => {
   const user = db.user.findFirst({
-    where: { id: { equals: input.id } },
+    where: { id: { equals: opts.input.id } },
   });
 
   if (!user) {
@@ -17,14 +17,14 @@ export const updateEmail = trpc.updateEmail.mutation(({ input }) => {
 
   const twoFactorVerification = db.verification.findFirst({
     where: {
-      target: { equals: input.email },
+      target: { equals: opts.input.email },
       type: { in: ['2fa', '2fa-setup'] },
     },
   });
 
   const updatedUser = db.user.update({
-    data: { email: input.email },
-    where: { id: { equals: input.id } },
+    data: { email: opts.input.email },
+    where: { id: { equals: opts.input.id } },
   });
 
   if (!updatedUser) {
@@ -36,7 +36,7 @@ export const updateEmail = trpc.updateEmail.mutation(({ input }) => {
 
   if (twoFactorVerification) {
     db.verification.update({
-      data: { target: input.email },
+      data: { target: opts.input.email },
       where: { id: { equals: twoFactorVerification.id } },
     });
   }

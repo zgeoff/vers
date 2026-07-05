@@ -1,4 +1,4 @@
-import { graphql, HttpResponse } from 'msw';
+import { HttpResponse, graphql } from 'msw';
 import type { DeleteSessionInput, DeleteSessionPayload } from '~/gql/graphql';
 import { db } from '../../db';
 
@@ -10,23 +10,23 @@ interface DeleteSessionResponse {
   deleteSession: DeleteSessionPayload;
 }
 
-export const DeleteSession = graphql.mutation<
-  DeleteSessionResponse,
-  DeleteSessionVariables
->('DeleteSession', ({ variables }) => {
-  db.session.delete({
-    where: {
-      id: {
-        equals: variables.input.id,
+export const DeleteSession = graphql.mutation<DeleteSessionResponse, DeleteSessionVariables>(
+  'DeleteSession',
+  (opts) => {
+    db.session.delete({
+      where: {
+        id: {
+          equals: opts.variables.input.id,
+        },
       },
-    },
-  });
+    });
 
-  return HttpResponse.json({
-    data: {
-      deleteSession: {
-        success: true,
+    return HttpResponse.json({
+      data: {
+        deleteSession: {
+          success: true,
+        },
       },
-    },
-  });
-});
+    });
+  },
+);

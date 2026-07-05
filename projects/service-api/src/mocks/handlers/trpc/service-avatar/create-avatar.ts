@@ -2,10 +2,10 @@ import { TRPCError } from '@trpc/server';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const createAvatar = trpc.createAvatar.mutation(({ input }) => {
+export const createAvatar = trpc.createAvatar.mutation((opts) => {
   const existingAvatar = db.avatar.findFirst({
     where: {
-      name: { equals: input.name },
+      name: { equals: opts.input.name },
     },
   });
 
@@ -17,9 +17,9 @@ export const createAvatar = trpc.createAvatar.mutation(({ input }) => {
   }
 
   const avatar = db.avatar.create({
-    class: input.class,
-    name: input.name,
-    userID: input.userID,
+    class: opts.input.class,
+    name: opts.input.name,
+    userID: opts.input.userID,
   });
 
   return avatar;

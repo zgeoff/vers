@@ -1,12 +1,12 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRoutesStub } from 'react-router';
+import { expect, test } from 'vitest';
 import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
 import { withAppLoadContext } from '~/test-utils/with-app-load-context';
 import { withAuthedUser } from '~/test-utils/with-authed-user';
 import { Routes } from '~/types';
-import { loader, ResetPasswordStarted } from './route';
+import { ResetPasswordStarted, loader } from './route';
 
 interface TestConfig {
   isAuthed?: boolean;
@@ -54,6 +54,7 @@ test('it renders the reset password started page with a link to request another 
   setupTest();
 
   const title = await screen.findByText('Check your email');
+
   const resetLink = screen.getByRole('link', {
     name: 'try requesting another one',
   });

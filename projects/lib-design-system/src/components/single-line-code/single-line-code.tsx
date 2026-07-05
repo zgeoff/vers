@@ -1,5 +1,5 @@
-import * as React from 'react';
 import { css, cx } from '@vers/styled-system/css';
+import * as React from 'react';
 import { Icon } from '../icon/icon';
 
 export type Props = React.ComponentProps<'code'>;

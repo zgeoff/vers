@@ -13,5 +13,5 @@ test('it creates a valid JWT with the provided configuration', async () => {
   });
 
   expect(jwt).toBeDefined();
-  expect(typeof jwt).toBe('string');
+  expect(jwt).toBeTypeOf('string');
 });

@@ -7,20 +7,15 @@ import { handleChangePassword } from './handle-change-password.server';
 import { handleOnboarding } from './handle-onboarding.server';
 import { handleResetPassword } from './handle-reset-password.server';
 import { handleUnsupported } from './handle-unsupported.server';
-import { type HandleVerificationContext } from './types';
+import type { HandleVerificationContext } from './types';
 
-export async function handleVerification(
-  type: VerificationType,
-  context: HandleVerificationContext,
-) {
-  const handleVerification = HANDLE_VERIFICATION_TYPE_STRATEGY[type];
+export function handleVerification(type: VerificationType, context: HandleVerificationContext) {
+  const strategy = HANDLE_VERIFICATION_TYPE_STRATEGY[type];
 
-  return handleVerification(context);
+  return strategy(context);
 }
 
-type VerificationHandlerStrategy = (
-  ctx: HandleVerificationContext,
-) => Promise<Response>;
+type VerificationHandlerStrategy = (ctx: HandleVerificationContext) => Promise<Response>;
 
 type StrategyMap = Record<VerificationType, VerificationHandlerStrategy>;
 

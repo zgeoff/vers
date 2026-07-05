@@ -1,15 +1,15 @@
-import { afterEach, expect, test } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
 import { withAppLoadContext } from '~/test-utils/with-app-load-context';
 import { withAuthedUser } from '~/test-utils/with-authed-user';
 import { withRouteProps } from '~/test-utils/with-route-props';
 import { Routes } from '~/types';
-import { loader, Nexus } from './route';
+import { Nexus, loader } from './route';
 
 interface TestConfig {
   isAuthed: boolean;
@@ -60,7 +60,9 @@ afterEach(() => {
 test('it redirects to the login route when not authenticated', async () => {
   setupTest({ isAuthed: false });
 
-  await screen.findByText('LOGIN_ROUTE');
+  const loginRoute = await screen.findByText('LOGIN_ROUTE');
+
+  expect(loginRoute).toBeInTheDocument();
 });
 
 test('it renders the nexus when authenticated and a user has an avatar', async () => {

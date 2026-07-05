@@ -22,5 +22,5 @@
     "noEmit": true
   },
   "exclude": ["node_modules", "tmp"],
-  "include": ["types/**/*.ts", "eslint.config.ts"]
+  "include": ["types/**/*.ts"]
 }

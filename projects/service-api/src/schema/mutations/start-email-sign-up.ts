@@ -1,10 +1,7 @@
-import {
-  generateExistingAccountEmail,
-  generateWelcomeEmail,
-} from '@vers/email-templates';
-import type { Context } from '~/types';
+import { generateExistingAccountEmail, generateWelcomeEmail } from '@vers/email-templates';
 import { env } from '~/env';
 import { logger } from '~/logger';
+import type { Context } from '~/types';
 import { SecureAction } from '~/types';
 import { createPendingTransaction } from '~/utils/create-pending-transaction';
 import { builder } from '../builder';
@@ -54,13 +51,12 @@ export async function startEmailSignup(
       return { transactionID };
     }
 
-    const verification =
-      await ctx.services.verification.createVerification.mutate({
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes from now
-        period: 10 * 60, // 10 minutes
-        target: args.input.email,
-        type: 'onboarding',
-      });
+    const verification = await ctx.services.verification.createVerification.mutate({
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes from now
+      period: 10 * 60, // 10 minutes
+      target: args.input.email,
+      type: 'onboarding',
+    });
 
     const verificationURL = new URL(`${env.APP_WEB_URL}/verify-otp`);
 

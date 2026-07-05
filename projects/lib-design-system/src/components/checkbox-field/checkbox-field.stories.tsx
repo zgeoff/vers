@@ -1,6 +1,6 @@
 import { CheckboxField } from './checkbox-field';
 
-export const Default = () => {
+export function Default() {
   return (
     <CheckboxField
       checkboxProps={{
@@ -12,4 +12,4 @@ export const Default = () => {
       }}
     />
   );
-};
+}

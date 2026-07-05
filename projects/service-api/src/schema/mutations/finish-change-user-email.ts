@@ -1,6 +1,6 @@
 import { generateChangeEmailNotificationEmail } from '@vers/email-templates';
-import type { AuthedContext } from '~/types';
 import { logger } from '~/logger';
+import type { AuthedContext } from '~/types';
 import { SecureAction } from '~/types';
 import { verifyTransactionToken } from '~/utils/verify-transaction-token';
 import { builder } from '../builder';
@@ -81,23 +81,17 @@ export async function finishChangeUserEmail(
   }
 }
 
-const FinishChangeUserEmailInput = builder.inputType(
-  'FinishChangeUserEmailInput',
-  {
-    fields: (t) => ({
-      email: t.string({ required: true }),
-      transactionToken: t.string({ required: true }),
-    }),
-  },
-);
+const FinishChangeUserEmailInput = builder.inputType('FinishChangeUserEmailInput', {
+  fields: (t) => ({
+    email: t.string({ required: true }),
+    transactionToken: t.string({ required: true }),
+  }),
+});
 
-const FinishChangeUserEmailPayload = builder.unionType(
-  'FinishChangeUserEmailPayload',
-  {
-    resolveType: createPayloadResolver(MutationSuccess),
-    types: [MutationSuccess, MutationErrorPayload],
-  },
-);
+const FinishChangeUserEmailPayload = builder.unionType('FinishChangeUserEmailPayload', {
+  resolveType: createPayloadResolver(MutationSuccess),
+  types: [MutationSuccess, MutationErrorPayload],
+});
 
 export const resolve = requireAuth(finishChangeUserEmail);
 
@@ -112,7 +106,7 @@ builder.mutationField('finishChangeUserEmail', (t) =>
         limit: 10,
       },
     },
-    resolve: resolve,
+    resolve,
     type: FinishChangeUserEmailPayload,
   }),
 );

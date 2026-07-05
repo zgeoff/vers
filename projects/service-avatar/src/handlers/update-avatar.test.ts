@@ -1,9 +1,9 @@
-import { expect, test } from 'vitest';
 import { createId } from '@paralleldrive/cuid2';
 import { Class } from '@vers/data';
-import * as schema from '@vers/postgres-schema';
+import type * as schema from '@vers/postgres-schema';
 import { createTestDB, createTestUser } from '@vers/service-test-utils';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { expect, test } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 
@@ -43,7 +43,7 @@ test('it updates an avatar name', async () => {
   });
 
   const updated = await db.query.avatars.findFirst({
-    where: (avatar, { eq }) => eq(avatar.id, avatar.id),
+    where: (avatars, operators) => operators.eq(avatars.id, avatars.id),
   });
 
   expect(updated).toStrictEqual({

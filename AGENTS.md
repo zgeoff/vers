@@ -212,18 +212,18 @@ detection is `turbo run --affected`. See `docs/000-overview.md` for the project 
 ## Boundaries
 
 Projects are tagged `lib`, `service`, or `app` in their own `turbo.json`; the root `boundaries`
-block denies `lib` → `service`/`app` and `service` → `app` imports, transitively. `bun run
-boundaries` also flags imports of packages missing from the importer's `package.json`. It walks the
-filesystem, ignoring `.gitignore` — run it on a clean tree, or stale `dist/`/`build/`/
-`styled-system/` output reads as source. CI runs it straight after install, before codegen
-populates those directories.
+block denies `lib` → `service`/`app` and `service` → `app` imports, transitively.
+`bun run boundaries` also flags imports of packages missing from the importer's `package.json`. It
+walks the filesystem, ignoring `.gitignore` — run it on a clean tree, or stale `dist/`/`build/`/
+`styled-system/` output reads as source. CI runs it straight after install, before codegen populates
+those directories.
 
 ### Package naming
 
-Every importable workspace package lives in a `lib-`-prefixed folder. A package's name is its
-folder name minus the taxonomy prefix: `lib-` and `app-` strip (`lib-validation` →
-`@vers/validation`, `app-web` → `@vers/web`); `service-` and `db-` are part of the name and carry
-through (`@vers/service-user`, `@vers/db-postgres`).
+Every importable workspace package lives in a `lib-`-prefixed folder. A package's name is its folder
+name minus the taxonomy prefix: `lib-` and `app-` strip (`lib-validation` → `@vers/validation`,
+`app-web` → `@vers/web`); `service-` and `db-` are part of the name and carry through
+(`@vers/service-user`, `@vers/db-postgres`).
 
 ## Running things today
 
@@ -232,10 +232,15 @@ through (`@vers/service-user`, `@vers/db-postgres`).
   `--filter=@vers/<name>`.
 - `bun run test` — `turbo run test` (per-project `vitest run`); one project via `--filter`.
   Postgres-backed suites need `bun run pg:test-container:start` first.
-- `bun run lint` — `tsx scripts/lint.ts`, shells out to `eslint` over `projects/` and `scripts/`
-  (`--fix` supported). Run through `bun run` so `node_modules/.bin` is on `PATH`. Not a turbo task —
-  eslint's flat config covers the tree in one invocation.
-- `bun run format` / `bun run format --check` — `tsx scripts/format.ts`, shells out to `prettier`.
+- `bun run lint` / `bun run lint:fix` — `oxlint` over the whole tree (`.oxlintrc.json` at the root);
+  not a turbo task, oxlint covers everything in one fast invocation.
+- `bun run format` — `format-codemod` (blank-line padding, explicit source globs — the codemod has
+  no ignore file, so the glob list is what keeps it off committed codegen output like `app/gql`),
+  then `oxfmt .` (`.oxfmtrc.json` at the root). The formatter runs last and owns the final state: it
+  strips the codemod's padding after multiline imports, which its import sorter contradicts.
+- `bun run format:check` — `oxfmt --check .` only. The codemod has no check leg here: on an
+  oxfmt-final tree it always wants its import padding back, so a check would never be green. Its
+  other conventions still land on every `bun run format` and pre-commit run.
 - `bun run build` — `turbo run build`; one project via `--filter`.
 - `bun run e2e` — `turbo run e2e` (Playwright, `app-web-e2e`).
 - `bun run boundaries` — `turbo boundaries`.
@@ -255,10 +260,10 @@ Each deployable (`app-web`, `db-postgres`, the 6 services) has a multi-stage Doc
    bundle's own location — only a flat `node_modules` serves them all.
 5. **runtime** — `node:alpine` with the prod-deps `node_modules` and built output only.
 
-app-web's builder runs its `codegen`/`typegen`/`build` scripts directly instead of `turbo run
-build`, which would pull in `//#codegen:graphql` — that task reads service-api's schema, outside
-app-web's pruned graph. `app/gql/**` is committed so builds without service-api's source use it
-as-is.
+app-web's builder runs its `codegen`/`typegen`/`build` scripts directly instead of
+`turbo run build`, which would pull in `//#codegen:graphql` — that task reads service-api's schema,
+outside app-web's pruned graph. `app/gql/**` is committed so builds without service-api's source use
+it as-is.
 
 ## Tooling migration in progress
 
@@ -266,12 +271,19 @@ See #160 for the full phase plan (turborepo + bun, spike-gated; shared configs a
 `zgeoff/tools`). This repo is mid-migration — several claims in `agents/shared.md` above describe
 the _target_ state, not this repo yet:
 
-- **oxlint/oxfmt** — not adopted. Linting and formatting still run through eslint (`eslint.config.js`
-  family) and prettier, invoked via `scripts/lint.ts` / `scripts/format.ts`. Lands in #188.
-- **lefthook** — not adopted. Git hooks are still husky + lint-staged (`.husky/`), minimally
-  adapted to invoke bun. Lands in #189.
+- **lefthook** — not adopted. Git hooks are still husky + lint-staged (`.husky/`), minimally adapted
+  to invoke bun. Lands in #189.
 - **`bun test`** — not adopted. bun is the package manager and script runner only; all
-  unit/integration tests run under vitest on node. Deferred past #160 to the rebuild (#163) —
-  vitest stays until services move to the bun runtime.
+  unit/integration tests run under vitest on node. Deferred past #160 to the rebuild (#163) — vitest
+  stays until services move to the bun runtime.
+
+oxlint/oxfmt and `@zgeoff/format-codemod` landed in #188 (the codemod installs through a tracked
+`minimumReleaseAgeExcludes` entry in `bunfig.toml` — #219 removes it once 0.0.1 ages past the gate),
+but one piece of the tools-repo stack is deliberately still missing:
+
+- **Type-aware lint** (`oxlint --type-aware`/tsgolint) — not enabled. It needs the TS7 toolchain,
+  which is #217's scope; `.oxlintrc.json` carries the two rules this would otherwise cover
+  (`typescript/no-unsafe-assignment`, `typescript/only-throw-error`) explicitly `"off"` with a
+  comment pointing at #217.
 
 Don't "fix" these to match the shared partial mid-migration — follow the phase plan in #160 instead.

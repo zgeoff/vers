@@ -1,16 +1,9 @@
-import { data, Form, redirect, Link as RRLink } from 'react-router';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
-import {
-  Brand,
-  CheckboxField,
-  Field,
-  Heading,
-  StatusButton,
-  Text,
-} from '@vers/design-system';
+import { Brand, CheckboxField, Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { NameSchema, UsernameSchema } from '@vers/validation';
+import { Form, Link as RRLink, data, redirect } from 'react-router';
 import { HoneypotInputs } from 'remix-utils/honeypot/react';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
@@ -46,12 +39,14 @@ const OnboardingFormSchema = z
   })
   .and(ConfirmPasswordSchema);
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: '',
-    title: 'vers | Onboarding',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: '',
+      title: 'vers | Onboarding',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   const { email } = await requireOnboardingSession(args.request);
@@ -60,9 +55,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
 });
 
 export const action = withErrorHandling(async (args: Route.ActionArgs) => {
-  const { email, transactionToken } = await requireOnboardingSession(
-    args.request,
-  );
+  const { email, transactionToken } = await requireOnboardingSession(args.request);
 
   const formData = await args.request.formData();
 
@@ -108,9 +101,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     return data({ result: formResult }, { status: 400 });
   }
 
-  const authSession = await authSessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const authSession = await authSessionStorage.getSession(args.request.headers.get('cookie'));
 
   authSession.set('sessionID', result.data.finishEmailSignup.session.id);
   authSession.set('accessToken', result.data.finishEmailSignup.accessToken);
@@ -124,17 +115,15 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
 
   const headers = new Headers();
 
-  headers.append(
-    'set-cookie',
-    await authSessionStorage.commitSession(authSession, {
-      expires: new Date(result.data.finishEmailSignup.session.expiresAt),
-    }),
-  );
+  const authSetCookieHeader = await authSessionStorage.commitSession(authSession, {
+    expires: new Date(result.data.finishEmailSignup.session.expiresAt),
+  });
 
-  headers.append(
-    'set-cookie',
-    await verifySessionStorage.commitSession(verifySession),
-  );
+  headers.append('set-cookie', authSetCookieHeader);
+
+  const verifySetCookieHeader = await verifySessionStorage.commitSession(verifySession);
+
+  headers.append('set-cookie', verifySetCookieHeader);
 
   return redirect(Routes.Nexus, { headers });
 });
@@ -158,15 +147,13 @@ export function Onboarding(props: Route.ComponentProps) {
     constraint: getZodConstraint(OnboardingFormSchema),
     id: 'onboarding-form',
     lastResult: props.actionData?.result,
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: OnboardingFormSchema });
+    onValidate(opts) {
+      return parseWithZod(opts.formData, { schema: OnboardingFormSchema });
     },
     shouldRevalidate: 'onBlur',
   });
 
-  const submitButtonStatus = isFormPending
-    ? StatusButton.Status.Pending
-    : StatusButton.Status.Idle;
+  const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
   return (
     <>
@@ -201,9 +188,7 @@ export function Onboarding(props: Route.ComponentProps) {
         <Field
           errors={fields.password.errors ?? []}
           inputProps={{
-            ...toKeylessProps(
-              getInputProps(fields.password, { type: 'password' }),
-            ),
+            ...toKeylessProps(getInputProps(fields.password, { type: 'password' })),
             autoComplete: 'new-password',
             placeholder: '********',
           }}
@@ -212,9 +197,7 @@ export function Onboarding(props: Route.ComponentProps) {
         <Field
           errors={fields.confirmPassword.errors ?? []}
           inputProps={{
-            ...toKeylessProps(
-              getInputProps(fields.confirmPassword, { type: 'password' }),
-            ),
+            ...toKeylessProps(getInputProps(fields.confirmPassword, { type: 'password' })),
             autoComplete: 'new-password',
             placeholder: '********',
           }}

@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import * as jose from 'jose';
+import { expect, test } from 'vitest';
 import { env } from '../env';
 import { createJWT } from './create-jwt';
 
@@ -22,9 +22,11 @@ test('it creates a valid JWT with correct claims', async () => {
     alg: 'RS256',
   });
 
+  const expiresAtSeconds = data.expiresAt.getTime().toString().slice(0, 10);
+
   expect(payload).toStrictEqual({
     aud: env.API_IDENTIFIER,
-    exp: Number.parseInt(data.expiresAt.getTime().toString().slice(0, 10)),
+    exp: Math.trunc(Number(expiresAtSeconds)),
     iat: expect.any(Number),
     iss: env.API_IDENTIFIER,
     sub: data.userID,

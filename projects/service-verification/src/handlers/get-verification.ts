@@ -1,11 +1,11 @@
-import type { GetVerificationPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { GetVerificationPayload } from '@vers/service-types';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import type { Context } from '../types';
 import { logger } from '../logger';
 import { t } from '../t';
+import type { Context } from '../types';
 
 export const GetVerificationInputSchema = z.object({
   target: z.string(),
@@ -30,9 +30,7 @@ export async function getVerification(
 
     // if the verification has expired, delete it and return null
     if (verification.expiresAt && verification.expiresAt < new Date()) {
-      await ctx.db
-        .delete(schema.verifications)
-        .where(eq(schema.verifications.id, verification.id));
+      await ctx.db.delete(schema.verifications).where(eq(schema.verifications.id, verification.id));
 
       return null;
     }
@@ -59,4 +57,4 @@ export async function getVerification(
 
 export const procedure = t.procedure
   .input(GetVerificationInputSchema)
-  .query(async ({ ctx, input }) => getVerification(input, ctx));
+  .query((opts) => getVerification(opts.input, opts.ctx));

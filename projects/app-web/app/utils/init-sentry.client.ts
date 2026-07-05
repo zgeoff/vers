@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react';
 import React from 'react';
 import {
   createRoutesFromChildren,
@@ -5,7 +6,6 @@ import {
   useLocation,
   useNavigationType,
 } from 'react-router';
-import * as Sentry from '@sentry/react';
 
 export function initSentry() {
   Sentry.init({
@@ -14,8 +14,7 @@ export function initSentry() {
         const url = new URL(event.request.url);
 
         const isBrowserExtension =
-          url.protocol === 'chrome-extension:' ||
-          url.protocol === 'moz-extension:';
+          url.protocol === 'chrome-extension:' || url.protocol === 'moz-extension:';
 
         if (isBrowserExtension) {
           return null;

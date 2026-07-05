@@ -1,11 +1,11 @@
-import type { DeleteVerificationPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { DeleteVerificationPayload } from '@vers/service-types';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import type { Context } from '../types';
 import { logger } from '../logger';
 import { t } from '../t';
+import type { Context } from '../types';
 
 export const DeleteVerificationInputSchema = z.object({
   id: z.string(),
@@ -52,4 +52,4 @@ export async function deleteVerification(
 
 export const procedure = t.procedure
   .input(DeleteVerificationInputSchema)
-  .mutation(async ({ ctx, input }) => deleteVerification(input, ctx));
+  .mutation((opts) => deleteVerification(opts.input, opts.ctx));

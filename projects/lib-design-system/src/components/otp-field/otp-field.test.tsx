@@ -1,6 +1,6 @@
-import { expect, test } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { expect, test } from 'vitest';
 import { OTPField } from './otp-field';
 
 test('it renders six code inputs', () => {
@@ -35,6 +35,7 @@ test('it distributes a single fill across all inputs', async () => {
   await waitFor(() => {
     expect(inputs[5]).toHaveValue('9');
   });
+
   expect(document.querySelector('input[name="code"]')).toHaveValue('999999');
 });
 

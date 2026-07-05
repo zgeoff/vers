@@ -1,59 +1,57 @@
 import { expect, test } from '@playwright/test';
 
-test('it changes password for a user with 2FA', async ({ page }) => {
-  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
+test('it changes password for a user with 2FA', async (fixtures) => {
+  await fixtures.page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
 
-  await page.goto('/');
-  await page.getByRole('link', { name: 'Login' }).click();
+  await fixtures.page.goto('/');
+  await fixtures.page.getByRole('link', { name: 'Login' }).click();
 
-  await expect(page).toHaveURL(/localhost:4000\/login/);
+  await expect(fixtures.page).toHaveURL(/localhost:4000\/login/);
 
-  await page.getByLabel('Email').fill('e2e-change-password-2fa-user@test.com');
-  await page.getByLabel('Password').fill('password');
-  await page.getByRole('button', { exact: true, name: 'Login' }).click();
+  await fixtures.page.getByLabel('Email').fill('e2e-change-password-2fa-user@test.com');
+  await fixtures.page.getByLabel('Password').fill('password');
+  await fixtures.page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  await expect(page).toHaveURL(/localhost:4000\/verify-otp/);
+  await expect(fixtures.page).toHaveURL(/localhost:4000\/verify-otp/);
 
-  await page.getByTestId('otp-input').fill('999999');
-  await page.getByRole('button', { exact: true, name: 'Verify' }).click();
+  await fixtures.page.getByTestId('otp-input').fill('999999');
+  await fixtures.page.getByRole('button', { exact: true, name: 'Verify' }).click();
 
-  await expect(page).toHaveURL(/localhost:4000\/nexus/);
+  await expect(fixtures.page).toHaveURL(/localhost:4000\/nexus/);
 
-  await page.getByRole('link', { name: 'Account' }).click();
+  await fixtures.page.getByRole('link', { name: 'Account' }).click();
 
-  await expect(page).toHaveURL(/localhost:4000\/account/);
+  await expect(fixtures.page).toHaveURL(/localhost:4000\/account/);
 
-  await page
-    .getByRole('link', { exact: true, name: 'Change Password' })
-    .click();
+  await fixtures.page.getByRole('link', { exact: true, name: 'Change Password' }).click();
 
-  await expect(page).toHaveURL(/localhost:4000\/verify-otp/);
+  await expect(fixtures.page).toHaveURL(/localhost:4000\/verify-otp/);
 
-  await page.getByTestId('otp-input').fill('999999');
-  await page.getByRole('button', { exact: true, name: 'Verify' }).click();
+  await fixtures.page.getByTestId('otp-input').fill('999999');
+  await fixtures.page.getByRole('button', { exact: true, name: 'Verify' }).click();
 
-  await expect(page).toHaveURL(/localhost:4000\/account\/change-password/);
+  await expect(fixtures.page).toHaveURL(/localhost:4000\/account\/change-password/);
 
-  await page.getByLabel('Current Password').fill('password');
-  await page.getByLabel('New Password', { exact: true }).fill('newpassword123');
-  await page.getByLabel('Confirm New Password').fill('newpassword123');
-  await page.getByRole('button', { name: 'Change Password' }).click();
+  await fixtures.page.getByLabel('Current Password').fill('password');
+  await fixtures.page.getByLabel('New Password', { exact: true }).fill('newpassword123');
+  await fixtures.page.getByLabel('Confirm New Password').fill('newpassword123');
+  await fixtures.page.getByRole('button', { name: 'Change Password' }).click();
 
-  await expect(page).toHaveURL(/localhost:4000\/account$/);
+  await expect(fixtures.page).toHaveURL(/localhost:4000\/account$/);
 
-  await page.getByRole('button', { name: 'Logout' }).click();
+  await fixtures.page.getByRole('button', { name: 'Logout' }).click();
 
-  await expect(page).toHaveURL(/localhost:4000\//);
+  await expect(fixtures.page).toHaveURL(/localhost:4000\//);
 
-  await page.getByRole('link', { name: 'Login' }).click();
-  await page.getByLabel('Email').fill('e2e-change-password-2fa-user@test.com');
-  await page.getByLabel('Password').fill('newpassword123');
-  await page.getByRole('button', { exact: true, name: 'Login' }).click();
+  await fixtures.page.getByRole('link', { name: 'Login' }).click();
+  await fixtures.page.getByLabel('Email').fill('e2e-change-password-2fa-user@test.com');
+  await fixtures.page.getByLabel('Password').fill('newpassword123');
+  await fixtures.page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  await expect(page).toHaveURL(/localhost:4000\/verify-otp/);
+  await expect(fixtures.page).toHaveURL(/localhost:4000\/verify-otp/);
 
-  await page.getByTestId('otp-input').fill('999999');
-  await page.getByRole('button', { exact: true, name: 'Verify' }).click();
+  await fixtures.page.getByTestId('otp-input').fill('999999');
+  await fixtures.page.getByRole('button', { exact: true, name: 'Verify' }).click();
 
-  await expect(page).toHaveURL(/localhost:4000\/nexus/);
+  await expect(fixtures.page).toHaveURL(/localhost:4000\/nexus/);
 });

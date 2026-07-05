@@ -10,10 +10,7 @@ interface UserParts {
   password?: string;
 }
 
-export async function createAuthedUser(
-  userParts: UserParts,
-  sessionID?: string,
-) {
+export async function createAuthedUser(userParts: UserParts, sessionID?: string) {
   // an empty comparator matches any user, so only look up when an id is given
   const existingUser =
     userParts.id === undefined

@@ -1,6 +1,5 @@
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import * as schema from '@vers/postgres-schema';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
@@ -10,7 +9,7 @@ interface TestDBConfig {
   migrationsFolder?: string;
 }
 
-const packageDir = path.dirname(fileURLToPath(import.meta.url));
+const packageDir = import.meta.dirname;
 
 /**
  * Migrates the test template database.
@@ -25,8 +24,7 @@ export async function setupTestDB(
   const db = drizzle(client, { schema });
 
   const migrationsFolder =
-    config.migrationsFolder ??
-    path.join(packageDir, '../../db-postgres/migrations');
+    config.migrationsFolder ?? path.join(packageDir, '../../db-postgres/migrations');
 
   await migrate(db, { migrationsFolder });
 

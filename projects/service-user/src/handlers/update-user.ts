@@ -1,12 +1,12 @@
-import type { UpdateUserPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { UpdateUserPayload } from '@vers/service-types';
 import { NameSchema, UsernameSchema } from '@vers/validation';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { logger } from '~/logger';
-import type { Context } from '../types';
 import { t } from '../t';
+import type { Context } from '../types';
 
 export const UpdateUserInputSchema = z.object({
   id: z.string(),
@@ -38,6 +38,7 @@ export async function updateUser(
         message: 'User not found',
       });
     }
+
     return { updatedID: user.updatedID };
   } catch (error: unknown) {
     logger.error(error);
@@ -56,4 +57,4 @@ export async function updateUser(
 
 export const procedure = t.procedure
   .input(UpdateUserInputSchema)
-  .mutation(async ({ ctx, input }) => updateUser(input, ctx));
+  .mutation((opts) => updateUser(opts.input, opts.ctx));

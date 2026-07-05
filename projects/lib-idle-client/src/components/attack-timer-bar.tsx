@@ -36,9 +36,7 @@ export function AttackTimerBar(props: AttackTimerBarProps) {
   const elapsed = useCombatElapsed();
   const attackTime = props.nextAttackTime - props.lastAttackTime;
   const progressMS = elapsed - props.lastAttackTime;
-  const progress = props.isAlive
-    ? Math.round((progressMS / attackTime) * 100)
-    : 0;
+  const progress = props.isAlive ? Math.round((progressMS / attackTime) * 100) : 0;
 
   return (
     <div className={attackTimerBar}>

@@ -1,6 +1,6 @@
-import { data, redirect, Link as RRLink, useFetcher } from 'react-router';
 import { Brand, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
+import { Link as RRLink, data, redirect, useFetcher } from 'react-router';
 import invariant from 'tiny-invariant';
 import { FormErrorList } from '~/components/form-error-list/form-error-list';
 import { RouteErrorBoundary } from '~/components/route-error-boundary';
@@ -15,19 +15,19 @@ import { requireAnonymous } from '~/utils/require-anonymous.server';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import type { Route } from './+types/route';
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: '',
-    title: 'vers | Login',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: '',
+      title: 'vers | Login',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAnonymous(args.request);
 
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
   const email = verifySession.get('loginLogout#email');
   const transactionToken = verifySession.get('loginLogout#transactionToken');
@@ -63,9 +63,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
 });
 
 async function handleConfirm(args: Route.ActionArgs) {
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
   const target = verifySession.get('loginLogout#email');
   const transactionToken = verifySession.get('loginLogout#transactionToken');
@@ -83,15 +81,12 @@ async function handleConfirm(args: Route.ActionArgs) {
     });
   }
 
-  const result = await args.context.client.mutation(
-    LoginWithForcedLogoutMutation,
-    {
-      input: {
-        target,
-        transactionToken,
-      },
+  const result = await args.context.client.mutation(LoginWithForcedLogoutMutation, {
+    input: {
+      target,
+      transactionToken,
     },
-  );
+  });
 
   if (result.error) {
     handleGQLError(result.error);
@@ -102,10 +97,7 @@ async function handleConfirm(args: Route.ActionArgs) {
   invariant(result.data, 'if no error, there must be data');
 
   if (isMutationError(result.data.loginWithForcedLogout)) {
-    return data(
-      { error: result.data.loginWithForcedLogout.error.message },
-      { status: 400 },
-    );
+    return data({ error: result.data.loginWithForcedLogout.error.message }, { status: 400 });
   }
 
   // yeet the unverified session ID from our 2FA login data incase that's how we ended up here
@@ -114,38 +106,29 @@ async function handleConfirm(args: Route.ActionArgs) {
   verifySession.unset('loginLogout#email');
   verifySession.unset('loginLogout#transactionToken');
 
-  const authSession = await authSessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const authSession = await authSessionStorage.getSession(args.request.headers.get('cookie'));
 
   authSession.set('sessionID', result.data.loginWithForcedLogout.session.id);
   authSession.set('accessToken', result.data.loginWithForcedLogout.accessToken);
-  authSession.set(
-    'refreshToken',
-    result.data.loginWithForcedLogout.refreshToken,
-  );
+  authSession.set('refreshToken', result.data.loginWithForcedLogout.refreshToken);
 
   const headers = new Headers();
 
-  headers.append(
-    'set-cookie',
-    await authSessionStorage.commitSession(authSession, {
-      expires: new Date(result.data.loginWithForcedLogout.session.expiresAt),
-    }),
-  );
+  const authSetCookieHeader = await authSessionStorage.commitSession(authSession, {
+    expires: new Date(result.data.loginWithForcedLogout.session.expiresAt),
+  });
 
-  headers.append(
-    'set-cookie',
-    await verifySessionStorage.commitSession(verifySession),
-  );
+  headers.append('set-cookie', authSetCookieHeader);
+
+  const verifySetCookieHeader = await verifySessionStorage.commitSession(verifySession);
+
+  headers.append('set-cookie', verifySetCookieHeader);
 
   return redirect(Routes.Nexus, { headers });
 }
 
 async function handleCancel(args: Route.ActionArgs) {
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
   // our user was nice enough to cancel so we'll just clean up the session
   verifySession.unset('loginLogout#email');
@@ -181,9 +164,7 @@ export function LoginForceLogout() {
   const cancelFetcher = useFetcher<{ error: string }>();
   const isFormPending = useIsFormPending();
 
-  const submitButtonStatus = isFormPending
-    ? StatusButton.Status.Pending
-    : StatusButton.Status.Idle;
+  const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
   return (
     <>
@@ -193,9 +174,8 @@ export function LoginForceLogout() {
         </RRLink>
         <Heading level={2}>You are logged in elsewhere</Heading>
         <Text className={infoText}>
-          You are currently logged in somewhere else. To ensure your account can
-          be properly synchronized, we need to log you out there, before we can
-          log you in here.
+          You are currently logged in somewhere else. To ensure your account can be properly
+          synchronized, we need to log you out there, before we can log you in here.
         </Text>
         <Text>Would you like to logout your other sessions?</Text>
       </section>
@@ -228,9 +208,7 @@ export function LoginForceLogout() {
           </StatusButton>
         </cancelFetcher.Form>
       </div>
-      <FormErrorList
-        errors={[confirmFetcher.data?.error, cancelFetcher.data?.error]}
-      />
+      <FormErrorList errors={[confirmFetcher.data?.error, cancelFetcher.data?.error]} />
     </>
   );
 }

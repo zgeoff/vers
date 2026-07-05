@@ -1,14 +1,8 @@
-import { data, Form, redirect } from 'react-router';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
-import {
-  Heading,
-  OTPField,
-  SingleLineCode,
-  StatusButton,
-  Text,
-} from '@vers/design-system';
+import { Heading, OTPField, SingleLineCode, StatusButton, Text } from '@vers/design-system';
 import QRCode from 'qrcode';
+import { Form, data, redirect } from 'react-router';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import { ContentContainer } from '~/components/content-container';
@@ -35,20 +29,19 @@ const VerifyOTPFormSchema = z.object({
   target: z.string().min(1),
 });
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: '',
-    title: 'vers | Verify 2FA',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: '',
+      title: 'vers | Verify 2FA',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
 
-  const currentUserResult = await args.context.client.query(
-    GetCurrentUserQuery,
-    {},
-  );
+  const currentUserResult = await args.context.client.query(GetCurrentUserQuery, {});
 
   if (currentUserResult.error) {
     throw currentUserResult.error;
@@ -61,10 +54,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
     return redirect(Routes.Account);
   }
 
-  const twoFactorVerifyResult = await args.context.client.query(
-    GetEnable2FAVerificationQuery,
-    {},
-  );
+  const twoFactorVerifyResult = await args.context.client.query(GetEnable2FAVerificationQuery, {});
 
   if (twoFactorVerifyResult.error) {
     throw twoFactorVerifyResult.error;
@@ -72,9 +62,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
 
   invariant(twoFactorVerifyResult.data, 'if no error, there should be data');
 
-  const qrCode = await QRCode.toDataURL(
-    twoFactorVerifyResult.data.getEnable2FAVerification.otpURI,
-  );
+  const qrCode = await QRCode.toDataURL(twoFactorVerifyResult.data.getEnable2FAVerification.otpURI);
 
   return {
     otpURI: twoFactorVerifyResult.data.getEnable2FAVerification.otpURI,
@@ -97,9 +85,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     return data({ result }, { status });
   }
 
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
   const transactionID = verifySession.get('enable2FA#transactionID');
 
@@ -112,18 +98,15 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     return data({ result }, { status: 500 });
   }
 
-  const verifyOTPResult = await args.context.client.mutation(
-    VerifyOTPMutation,
-    {
-      input: {
-        code: submission.value.code,
-        sessionID,
-        target: submission.value.target,
-        transactionID,
-        type: VerificationType.TwoFactorAuthSetup,
-      },
+  const verifyOTPResult = await args.context.client.mutation(VerifyOTPMutation, {
+    input: {
+      code: submission.value.code,
+      sessionID,
+      target: submission.value.target,
+      transactionID,
+      type: VerificationType.TwoFactorAuthSetup,
     },
-  );
+  });
 
   if (verifyOTPResult.error) {
     captureGQLExceptions(verifyOTPResult.error);
@@ -145,14 +128,11 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     return data({ result }, { status: 400 });
   }
 
-  const finishEnable2FAResult = await args.context.client.mutation(
-    FinishEnable2FAMutation,
-    {
-      input: {
-        transactionToken: verifyOTPResult.data.verifyOTP.transactionToken,
-      },
+  const finishEnable2FAResult = await args.context.client.mutation(FinishEnable2FAMutation, {
+    input: {
+      transactionToken: verifyOTPResult.data.verifyOTP.transactionToken,
     },
-  );
+  });
 
   if (finishEnable2FAResult.error) {
     captureGQLExceptions(finishEnable2FAResult.error);
@@ -169,18 +149,14 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   // clean up our session data
   verifySession.unset('enable2FA#transactionID');
 
-  const setCookieHeader =
-    await verifySessionStorage.commitSession(verifySession);
+  const setCookieHeader = await verifySessionStorage.commitSession(verifySession);
 
   if (isMutationError(finishEnable2FAResult.data.finishEnable2FA)) {
     const result = submission.reply({
       formErrors: [finishEnable2FAResult.data.finishEnable2FA.error.message],
     });
 
-    return data(
-      { result },
-      { headers: { 'Set-Cookie': setCookieHeader }, status: 400 },
-    );
+    return data({ result }, { headers: { 'Set-Cookie': setCookieHeader }, status: 400 });
   }
 
   return redirect(Routes.Account, {
@@ -198,14 +174,12 @@ export function AccountVerify2FARoute(props: Route.ComponentProps) {
     },
     id: 'verify-2fa-form',
     lastResult: props.actionData?.result,
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: VerifyOTPFormSchema });
+    onValidate(opts) {
+      return parseWithZod(opts.formData, { schema: VerifyOTPFormSchema });
     },
   });
 
-  const submitButtonStatus = isFormPending
-    ? StatusButton.Status.Pending
-    : StatusButton.Status.Idle;
+  const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
   return (
     <ContentContainer>
@@ -214,36 +188,25 @@ export function AccountVerify2FARoute(props: Route.ComponentProps) {
         <section className={styles.section}>
           <Text bold>Scan this QR code with your authenticator app.</Text>
           <Text>
-            Once you enable 2FA, you will need to enter a code from your
-            authenticator app every time you log in or perform important
-            actions. Do not lose access to your authenticator app, or you will
-            lose access to your account.
+            Once you enable 2FA, you will need to enter a code from your authenticator app every
+            time you log in or perform important actions. Do not lose access to your authenticator
+            app, or you will lose access to your account.
           </Text>
-          <img
-            alt="QR code for 2FA"
-            className={styles.qrCode}
-            src={props.loaderData.qrCode}
-          />
+          <img alt="QR code for 2FA" className={styles.qrCode} src={props.loaderData.qrCode} />
         </section>
         <section className={styles.section}>
           <Text>
-            If you cannot scan the QR code, you can manually add this account to
-            your authenticator app using this code:
+            If you cannot scan the QR code, you can manually add this account to your authenticator
+            app using this code:
           </Text>
-          <SingleLineCode className={styles.otpCode}>
-            {props.loaderData.otpURI}
-          </SingleLineCode>
+          <SingleLineCode className={styles.otpCode}>{props.loaderData.otpURI}</SingleLineCode>
         </section>
         <section className={styles.section}>
           <Text>
-            Once you have added the account to your authenticator app, enter the
-            code from your authenticator app below.
+            Once you have added the account to your authenticator app, enter the code from your
+            authenticator app below.
           </Text>
-          <Form
-            method="POST"
-            {...getFormProps(form)}
-            className={styles.formStyles}
-          >
+          <Form method="POST" {...getFormProps(form)} className={styles.formStyles}>
             <OTPField
               className={styles.otpField}
               errors={fields.code.errors ?? []}
@@ -256,11 +219,7 @@ export function AccountVerify2FARoute(props: Route.ComponentProps) {
             />
             <input {...getInputProps(fields.target, { type: 'hidden' })} />
             <FormErrorList errors={form.errors ?? []} id={form.errorId} />
-            <StatusButton
-              status={submitButtonStatus}
-              type="submit"
-              variant="primary"
-            >
+            <StatusButton status={submitButtonStatus} type="submit" variant="primary">
               Submit
             </StatusButton>
           </Form>

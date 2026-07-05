@@ -2,13 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
-    "types": [
-      "@react-router/node",
-      "vitest",
-      "vitest/importMeta",
-      "vite/client",
-      "node"
-    ],
+    "types": ["@react-router/node", "vitest", "vitest/importMeta", "vite/client", "node"],
     "rootDirs": [".", "./.react-router/types"],
     "baseUrl": ".",
     "paths": {

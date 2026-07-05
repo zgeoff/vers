@@ -6,6 +6,7 @@ interface DataFnArgs {
   params: Record<string, string | undefined>;
   request: Request;
 }
+
 /**
  * Thin wrapper for our loader & action functions where we can do generic
  * error handling.
@@ -15,7 +16,7 @@ interface DataFnArgs {
  * @param dataFn - The loader or action function to wrap.
  */
 export function withErrorHandling<Args extends DataFnArgs, Data>(
-  dataFn: (args: Args) => Promise<Data>,
+  dataFn: (args: Args) => Data | Promise<Data>,
 ) {
   return async (args: Args): Promise<Data> => {
     try {

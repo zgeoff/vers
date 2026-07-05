@@ -1,15 +1,15 @@
-import { afterEach, expect, test, vi } from 'vitest';
 import { createId } from '@paralleldrive/cuid2';
 import * as schema from '@vers/postgres-schema';
 import { createTestDB, createTestUser } from '@vers/service-test-utils';
 import { eq } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { afterEach, expect, test, vi } from 'vitest';
 import * as consts from '../consts';
 import { router } from '../router';
 import { t } from '../t';
 import { createJWT } from '../utils/create-jwt';
 
-vi.mock('../utils/create-jwt');
+vi.mock(import('../utils/create-jwt'));
 
 const createCaller = t.createCallerFactory(router);
 
@@ -59,7 +59,7 @@ test('it refreshes tokens for a young session without rotating the refresh token
     refreshToken: session.refreshToken,
   });
 
-  expect(createJWT).toHaveBeenCalledTimes(1);
+  expect(createJWT).toHaveBeenCalledOnce();
 });
 
 test('it rotates the refresh token if the provided one is older than our short refresh duration', async () => {

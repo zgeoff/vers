@@ -1,8 +1,8 @@
-import { afterEach, expect, test } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
 import { withAppLoadContext } from '~/test-utils/with-app-load-context';
@@ -10,7 +10,7 @@ import { withAuthedUser } from '~/test-utils/with-authed-user';
 import { withRouteProps } from '~/test-utils/with-route-props';
 import { withSession } from '~/test-utils/with-session';
 import { Routes } from '~/types';
-import { action, loader, Onboarding } from './route';
+import { Onboarding, action, loader } from './route';
 
 interface TestConfig {
   email?: string;
@@ -22,13 +22,10 @@ interface TestConfig {
 function setupTest(config: TestConfig) {
   const user = userEvent.setup();
 
-  const email =
-    typeof config.email === 'string' ? config.email : 'user@test.com';
+  const email = typeof config.email === 'string' ? config.email : 'user@test.com';
 
   const transactionToken =
-    typeof config.transactionToken === 'string'
-      ? config.transactionToken
-      : '1234567890';
+    typeof config.transactionToken === 'string' ? config.transactionToken : '1234567890';
 
   const _loader = composeDataFnWrappers(
     loader,
@@ -119,6 +116,7 @@ test('it renders the onboarding form', async () => {
   const nameInput = screen.getByLabelText('Name');
   const passwordInput = screen.getByLabelText('Password');
   const confirmPasswordInput = screen.getByLabelText('Confirm Password');
+
   const agreeToTermsCheckbox = screen.getByRole('checkbox', {
     name: 'Agree to terms',
   });
@@ -152,6 +150,7 @@ test('it shows validation errors for missing required fields', async () => {
   const usernameError = await screen.findByText('Username is required');
   const nameError = screen.getByText('Name is required');
   const passwordErrors = screen.getAllByText('Password is required');
+
   const agreeToTermsError = screen.getByText(
     'You must agree to the terms of service and privacy policy',
   );
@@ -167,6 +166,7 @@ test('it shows validation error for mismatched passwords', async () => {
 
   const passwordInput = await screen.findByLabelText('Password');
   const confirmPasswordInput = screen.getByLabelText('Confirm Password');
+
   const createAccountButton = screen.getByRole('button', {
     name: 'Create an Account',
   });
@@ -187,9 +187,11 @@ test('it redirects to the nexus on successful account creation', async () => {
   const nameInput = screen.getByLabelText('Name');
   const passwordInput = screen.getByLabelText('Password');
   const confirmPasswordInput = screen.getByLabelText('Confirm Password');
+
   const createAccountButton = screen.getByRole('button', {
     name: 'Create an Account',
   });
+
   const agreeToTermsCheckbox = screen.getByRole('checkbox', {
     name: 'Agree to terms',
   });

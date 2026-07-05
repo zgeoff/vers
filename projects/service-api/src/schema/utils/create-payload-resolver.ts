@@ -3,9 +3,7 @@ import { VerificationRequiredPayload } from '../types/verification-required-payl
 
 export function createPayloadResolver<T>(
   type: T,
-): (
-  value: object,
-) => T | typeof MutationErrorPayload | typeof VerificationRequiredPayload {
+): (value: object) => T | typeof MutationErrorPayload | typeof VerificationRequiredPayload {
   return (value) => {
     if ('error' in value) {
       return MutationErrorPayload;

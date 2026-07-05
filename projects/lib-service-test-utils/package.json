@@ -6,6 +6,10 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "dependencies": {
     "@epic-web/totp": "4.0.1",
     "@paralleldrive/cuid2": "catalog:",
@@ -24,9 +28,5 @@
     "jest-extended": "catalog:",
     "typescript": "catalog:",
     "vite-tsconfig-paths": "catalog:"
-  },
-  "scripts": {
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

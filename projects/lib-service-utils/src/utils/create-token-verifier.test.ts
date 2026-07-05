@@ -1,6 +1,6 @@
-import { expect, test } from 'vitest';
 import { createTestJWT } from '@vers/service-test-utils';
 import * as jose from 'jose';
+import { expect, test } from 'vitest';
 import { createTokenVerifier } from './create-token-verifier';
 
 const TEST_TOKEN_PAYLOAD = {

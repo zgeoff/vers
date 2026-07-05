@@ -7,9 +7,7 @@ import type { HandleVerificationContext } from './types';
  * some cases i.e. initial enabling of 2FA.
  */
 
-export async function handleUnsupported(
-  ctx: HandleVerificationContext,
-): Promise<Response> {
+export function handleUnsupported(ctx: HandleVerificationContext): Promise<Response> {
   invariant(
     ctx.submission.status === 'success',
     'Attempted to handle unsupported verification type',

@@ -7,8 +7,6 @@ import { getSimulation } from './simulation';
 
 declare let self: SharedWorkerGlobalScope;
 
-export {};
-
 self.addEventListener('connect', handleConnect);
 
 // 20 updates per second = 50ms batches
@@ -23,15 +21,15 @@ console.log('-- worker initialized');
 function handleConnect(event: MessageEvent) {
   console.log('-- received connect event');
 
-  const port = event.ports[0];
+  const [port] = event.ports;
 
   invariant(port, 'port is required');
 
   connections.add(port);
   port.start();
 
-  port.addEventListener('message', (event: MessageEvent<ClientMessage>) => {
-    void handleClientMessage(event);
+  port.addEventListener('message', (messageEvent: MessageEvent<ClientMessage>) => {
+    void handleClientMessage(messageEvent);
   });
 
   // ensure we're only running one loop per worker
@@ -47,7 +45,7 @@ let accumulator = 0;
 
 // our main loop function uses a fixed timestep to ensure consistent updates as
 // we're not directly tied to UI updates nor do we have access to requestAnimationFrame
-const tick = async () => {
+async function tick() {
   const now = performance.now();
   const frameTime = now - lastFrameTime;
 
@@ -68,7 +66,7 @@ const tick = async () => {
   await delay(1);
 
   void tick();
-};
+}
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

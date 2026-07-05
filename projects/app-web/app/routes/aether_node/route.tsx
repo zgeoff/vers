@@ -1,5 +1,3 @@
-import { useEffect } from 'react';
-import { redirect } from 'react-router';
 import { classes } from '@vers/data';
 import { Spinner } from '@vers/design-system';
 import {
@@ -11,6 +9,8 @@ import {
   useSimulationWorker,
 } from '@vers/idle-client';
 import { EquipmentSlot } from '@vers/idle-core';
+import { useEffect } from 'react';
+import { redirect } from 'react-router';
 import invariant from 'tiny-invariant';
 import { ContentContainer } from '~/components/content-container';
 import { GetAvatarsQuery } from '~/data/queries/get-avatars';
@@ -37,7 +37,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
 
   invariant(result.data, 'if no error, there must be data');
 
-  const avatar = result.data.getAvatars[0];
+  const [avatar] = result.data.getAvatars;
 
   if (!avatar) {
     return redirect(Routes.AvatarCreate);
@@ -82,10 +82,7 @@ export function AetherNodeRoute(props: Route.ComponentProps) {
     }
 
     if (initialized) {
-      const message = createSetActivityMessage(
-        props.loaderData.activity,
-        props.loaderData.avatar,
-      );
+      const message = createSetActivityMessage(props.loaderData.activity, props.loaderData.avatar);
 
       worker.port.postMessage(message);
     }

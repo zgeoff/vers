@@ -5,8 +5,7 @@ interface MutationSuccessData {
 }
 
 // simple type for when we don't want to return a more complex object from a mutation
-export const MutationSuccess =
-  builder.objectRef<MutationSuccessData>('MutationSuccess');
+export const MutationSuccess = builder.objectRef<MutationSuccessData>('MutationSuccess');
 
 MutationSuccess.implement({
   fields: (t) => ({
