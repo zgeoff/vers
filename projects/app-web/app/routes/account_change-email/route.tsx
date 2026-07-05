@@ -17,8 +17,8 @@ import { verifySessionStorage } from '~/session/verify-session-storage.server';
 import { Routes } from '~/types';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
-import { omitKeyProp } from '~/utils/omit-key-prop';
 import { requireAuth } from '~/utils/require-auth.server';
+import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import type { Route } from './+types/route';
 import { QueryParam } from '../verify-otp/types';
@@ -208,7 +208,7 @@ export function AccountChangeUserEmail(props: Route.ComponentProps) {
           <Field
             errors={fields.email.errors ?? []}
             inputProps={{
-              ...omitKeyProp(getInputProps(fields.email, { type: 'email' })),
+              ...toKeylessProps(getInputProps(fields.email, { type: 'email' })),
               autoComplete: 'email',
               placeholder: 'your.new.email@example.com',
             }}

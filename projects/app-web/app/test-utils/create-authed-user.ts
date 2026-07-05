@@ -14,11 +14,11 @@ export async function createAuthedUser(
   userParts: UserParts,
   sessionID?: string,
 ) {
-  const existingUser = db.user.findFirst({
-    where: {
-      id: { ...(userParts.id !== undefined && { equals: userParts.id }) },
-    },
-  });
+  // an empty comparator matches any user, so only look up when an id is given
+  const existingUser =
+    userParts.id === undefined
+      ? undefined
+      : db.user.findFirst({ where: { id: { equals: userParts.id } } });
 
   const user = existingUser ?? db.user.create({ ...userParts });
 

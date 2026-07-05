@@ -9,7 +9,7 @@
  *
  * ref: https://github.com/edmundhung/conform/issues/620
  */
-export function omitKeyProp<T extends Record<string, unknown>>(
+export function toKeylessProps<T extends Record<string, unknown>>(
   props: T,
 ): Omit<T, 'key'> {
   const { key: _key, ...rest } = props;

@@ -24,7 +24,7 @@ import { Routes } from '~/types';
 import { checkHoneypot } from '~/utils/check-honeypot.server';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
-import { omitKeyProp } from '~/utils/omit-key-prop';
+import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import { ConfirmPasswordSchema } from '~/validation/confirm-password-schema';
 import { FormBooleanSchema } from '~/validation/form-boolean-schema';
@@ -182,7 +182,7 @@ export function Onboarding(props: Route.ComponentProps) {
         <Field
           errors={fields.username.errors ?? []}
           inputProps={{
-            ...omitKeyProp(getInputProps(fields.username, { type: 'text' })),
+            ...toKeylessProps(getInputProps(fields.username, { type: 'text' })),
             autoComplete: 'username',
             autoFocus: true,
             placeholder: 'john_smith13',
@@ -192,7 +192,7 @@ export function Onboarding(props: Route.ComponentProps) {
         <Field
           errors={fields.name.errors ?? []}
           inputProps={{
-            ...omitKeyProp(getInputProps(fields.name, { type: 'text' })),
+            ...toKeylessProps(getInputProps(fields.name, { type: 'text' })),
             autoComplete: 'name',
             placeholder: 'John Smith',
           }}
@@ -201,7 +201,7 @@ export function Onboarding(props: Route.ComponentProps) {
         <Field
           errors={fields.password.errors ?? []}
           inputProps={{
-            ...omitKeyProp(
+            ...toKeylessProps(
               getInputProps(fields.password, { type: 'password' }),
             ),
             autoComplete: 'new-password',
@@ -212,7 +212,7 @@ export function Onboarding(props: Route.ComponentProps) {
         <Field
           errors={fields.confirmPassword.errors ?? []}
           inputProps={{
-            ...omitKeyProp(
+            ...toKeylessProps(
               getInputProps(fields.confirmPassword, { type: 'password' }),
             ),
             autoComplete: 'new-password',
@@ -221,7 +221,7 @@ export function Onboarding(props: Route.ComponentProps) {
           labelProps={{ children: 'Confirm Password' }}
         />
         <CheckboxField
-          checkboxProps={omitKeyProp(
+          checkboxProps={toKeylessProps(
             getInputProps(fields.agreeToTerms, {
               type: 'checkbox',
             }),
@@ -230,7 +230,7 @@ export function Onboarding(props: Route.ComponentProps) {
           labelProps={{ children: 'Agree to terms' }}
         />
         <CheckboxField
-          checkboxProps={omitKeyProp(
+          checkboxProps={toKeylessProps(
             getInputProps(fields.rememberMe, {
               type: 'checkbox',
             }),

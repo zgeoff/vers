@@ -15,8 +15,8 @@ import { Routes } from '~/types';
 import { checkHoneypot } from '~/utils/check-honeypot.server';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
-import { omitKeyProp } from '~/utils/omit-key-prop';
 import { requireAnonymous } from '~/utils/require-anonymous.server';
+import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import { ConfirmPasswordSchema } from '~/validation/confirm-password-schema';
 import type { Route } from './+types/route';
@@ -170,7 +170,7 @@ export function ResetPassword(props: Route.ComponentProps) {
         <Field
           errors={fields.password.errors ?? []}
           inputProps={{
-            ...omitKeyProp(
+            ...toKeylessProps(
               getInputProps(fields.password, { type: 'password' }),
             ),
             autoComplete: 'new-password',
@@ -181,7 +181,7 @@ export function ResetPassword(props: Route.ComponentProps) {
         <Field
           errors={fields.confirmPassword.errors ?? []}
           inputProps={{
-            ...omitKeyProp(
+            ...toKeylessProps(
               getInputProps(fields.confirmPassword, { type: 'password' }),
             ),
             autoComplete: 'new-password',

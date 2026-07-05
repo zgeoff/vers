@@ -31,7 +31,7 @@ import { Routes } from '~/types';
 import { checkHoneypot } from '~/utils/check-honeypot.server';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
-import { omitKeyProp } from '~/utils/omit-key-prop';
+import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import type { Route } from './+types/route';
 import { handleVerification } from './handle-verification.server';
@@ -272,7 +272,7 @@ export function VerifyOTPRoute(props: Route.ComponentProps) {
           className={otpField}
           errors={fields[QueryParam.Code].errors ?? []}
           inputProps={{
-            ...omitKeyProp(
+            ...toKeylessProps(
               getInputProps(fields[QueryParam.Code], { type: 'text' }),
             ),
             autoComplete: 'one-time-code',
