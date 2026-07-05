@@ -252,7 +252,7 @@
       "devDependencies": {
         "@conform-to/react": "1.2.2",
         "@conform-to/zod": "1.2.2",
-        "@ladle/react": "5.0.1",
+        "@ladle/react": "5.1.1",
         "@pandacss/dev": "2.0.0-beta.8",
         "@testing-library/jest-dom": "catalog:",
         "@testing-library/react": "catalog:",
@@ -1093,7 +1093,7 @@
 
     "@js-sdsl/ordered-map": ["@js-sdsl/ordered-map@4.4.2", "", {}, "sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw=="],
 
-    "@ladle/react": ["@ladle/react@5.0.1", "", { "dependencies": { "@babel/code-frame": "^7.26.2", "@babel/core": "^7.26.0", "@babel/generator": "^7.26.3", "@babel/parser": "^7.26.3", "@babel/template": "^7.25.9", "@babel/traverse": "^7.26.4", "@babel/types": "^7.26.3", "@ladle/react-context": "^1.0.1", "@mdx-js/mdx": "^3.1.0", "@mdx-js/react": "^3.1.0", "@vitejs/plugin-react": "^4.3.4", "@vitejs/plugin-react-swc": "^3.7.2", "axe-core": "^4.10.2", "boxen": "^8.0.1", "chokidar": "^4.0.3", "classnames": "^2.5.1", "commander": "^12.1.0", "cross-spawn": "^7.0.6", "debug": "^4.4.0", "get-port": "^7.1.0", "globby": "^14.0.2", "history": "^5.3.0", "koa": "^2.15.3", "koa-connect": "^2.1.0", "lodash.merge": "^4.6.2", "msw": "^2.7.0", "open": "^10.1.0", "prism-react-renderer": "^2.4.1", "prop-types": "^15.8.1", "query-string": "^9.1.1", "react-hotkeys-hook": "^4.6.1", "react-inspector": "^6.0.2", "rehype-class-names": "^2.0.0", "rehype-raw": "^7.0.0", "remark-gfm": "^4.0.0", "source-map": "^0.7.4", "vfile": "^6.0.3", "vite": "^6.0.5", "vite-tsconfig-paths": "^5.1.4" }, "peerDependencies": { "react": ">=18.0.0", "react-dom": ">=18.0.0" }, "bin": { "ladle": "lib/cli/cli.js" } }, "sha512-i1eNwttR+Y1ISoQqlfLNC00k6x4tYQVcoKr/s6e/tYbJr8wUKnYUvH5YzlVTp53oUgNVRWOXP8d4MNM/oOqMdw=="],
+    "@ladle/react": ["@ladle/react@5.1.1", "", { "dependencies": { "@babel/code-frame": "^7.26.2", "@babel/core": "^7.26.0", "@babel/generator": "^7.26.3", "@babel/parser": "^7.26.3", "@babel/template": "^7.25.9", "@babel/traverse": "^7.26.4", "@babel/types": "^7.26.3", "@ladle/react-context": "^1.0.1", "@mdx-js/mdx": "^3.1.0", "@mdx-js/react": "^3.1.0", "@vitejs/plugin-react": "^4.3.4", "@vitejs/plugin-react-swc": "^3.7.2", "axe-core": "^4.10.2", "boxen": "^8.0.1", "chokidar": "^4.0.3", "classnames": "^2.5.1", "commander": "^12.1.0", "cross-spawn": "^7.0.6", "debug": "^4.4.0", "get-port": "^7.1.0", "globby": "^14.0.2", "history": "^5.3.0", "koa": "^2.15.4", "lodash.merge": "^4.6.2", "msw": "^2.7.0", "open": "^10.1.0", "prism-react-renderer": "^2.4.1", "prop-types": "^15.8.1", "query-string": "^9.1.1", "react-hotkeys-hook": "^4.6.1", "react-inspector": "^6.0.2", "rehype-class-names": "^2.0.0", "rehype-raw": "^7.0.0", "remark-gfm": "^4.0.0", "source-map": "^0.7.4", "vfile": "^6.0.3", "vite": "^6.0.5", "vite-tsconfig-paths": "^5.1.4" }, "peerDependencies": { "react": ">=18.0.0", "react-dom": ">=18.0.0" }, "bin": { "ladle": "lib/cli/cli.js" } }, "sha512-HA3djOTK/CRWTdXzQ7sCu/6tmeYGZpRKTNH5hTvVqXH/Qxsnrguscz5uALWiGxcG8b/GAoU1HKbYTo5f53tTBw=="],
 
     "@ladle/react-context": ["@ladle/react-context@1.0.1", "", { "peerDependencies": { "react": ">=16.14.0", "react-dom": ">=16.14.0" } }, "sha512-xVQ8siyOEQG6e4Knibes1uA3PTyXnqiMmfSmd5pIbkzeDty8NCBtYHhTXSlfmcDNEsw/G8OzNWo4VbyQAVDl2A=="],
 
@@ -2984,8 +2984,6 @@
     "koa": ["koa@2.16.4", "", { "dependencies": { "accepts": "^1.3.5", "cache-content-type": "^1.0.0", "content-disposition": "~0.5.2", "content-type": "^1.0.4", "cookies": "~0.9.0", "debug": "^4.3.2", "delegates": "^1.0.0", "depd": "^2.0.0", "destroy": "^1.0.4", "encodeurl": "^1.0.2", "escape-html": "^1.0.3", "fresh": "~0.5.2", "http-assert": "^1.3.0", "http-errors": "^1.6.3", "is-generator-function": "^1.0.7", "koa-compose": "^4.1.0", "koa-convert": "^2.0.0", "on-finished": "^2.3.0", "only": "~0.0.2", "parseurl": "^1.3.2", "statuses": "^1.5.0", "type-is": "^1.6.16", "vary": "^1.1.2" } }, "sha512-3An0GCLDSR34tsCO4H8Tef8Pp2ngtaZDAZnsWJYelqXUK5wyiHvGItgK/xcSkmHLSTn1Jcho1mRQs2ehRzvKKw=="],
 
     "koa-compose": ["koa-compose@4.1.0", "", {}, "sha512-8ODW8TrDuMYvXRwra/Kh7/rJo9BtOfPc6qO8eAfC80CnCvSjSl0bkRM24X6/XBBEyj0v1nRUQ1LyOy3dbqOWXw=="],
-
-    "koa-connect": ["koa-connect@2.1.1", "", {}, "sha512-ejvbGKYS6di4LUSS+6E+Z5ZVev9RqThLm3NfZjb9QHZMASLvnr4eDTImKcGlQXFrtVpMTyTovZ+Hcl6JbBuFNA=="],
 
     "koa-convert": ["koa-convert@2.0.0", "", { "dependencies": { "co": "^4.6.0", "koa-compose": "^4.1.0" } }, "sha512-asOvN6bFlSnxewce2e/DK3p4tltyfC4VM7ZwuTuepI7dEQVcvpyFuBcEARu1+Hxg8DIwytce2n7jrZtRlPrARA=="],
 

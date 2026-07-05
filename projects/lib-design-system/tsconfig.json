@@ -8,8 +8,6 @@
     "panda.config.ts",
     "vitest.config.ts",
     "vitest.setup.ts",
-    ".ladle/**/*.ts",
-    ".ladle/**/*.tsx",
     "src/**/*.ts",
     "src/**/*.tsx"
   ],
