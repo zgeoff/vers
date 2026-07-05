@@ -10,10 +10,8 @@ import { implement } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/fetch';
 import type { HttpHandler } from 'msw';
 import { http } from 'msw';
+import { RPC_PREFIX } from './rpc-prefix';
 import { toRPCHTTPPath } from './to-rpc-http-path';
-
-/** The RPC mount point every service exposes its contract under; see docs/002-service-contracts.md. */
-const RPC_PREFIX = '/rpc';
 
 /** Arguments passed to a mocked procedure's handler function. */
 export interface MockProcedureHandlerArgs<
@@ -41,7 +39,7 @@ export type MockProcedureHandler<
       args: MockProcedureHandlerArgs<TInput, TContext, TErrorMap>,
     ) => Promise<Response | TOutput> | Response | TOutput);
 
-/** The leaf a `mockService` proxy exposes at a contract procedure's path. */
+/** The leaf the proxy exposes at a contract procedure's path. */
 export interface MockProcedureProxy<
   TInput,
   TOutput,
@@ -94,10 +92,10 @@ export interface MockServiceOptions<
  * Builds a typed proxy mirroring a contract's procedure tree. Each leaf's `.handler(mock)` wraps a
  * single implemented procedure in its own `RPCHandler` and returns a narrow MSW handler matching
  * only that procedure's RPC URL — `server.use(mock.user.getCurrentUser.handler(...))` overrides
- * just that one call over a base backend registered by `buildMockService`, leaving every other
- * call to fall through to it.
+ * just that one call over a full-contract base backend, leaving every other call to fall through to
+ * it.
  */
-export function mockService<
+export function buildContractMock<
   TContract extends AnyContractRouter,
   TContext extends Record<string, unknown>,
 >(
@@ -167,11 +165,11 @@ function buildProcedureHandler(
     const context = await options.resolveContext(info.request);
     let rawResponse: Response | undefined;
 
-    const leaf = implementMockProcedure(options.contract, path, info.request, mock, (output) => {
+    const leaf = buildMockProcedure(options.contract, path, info.request, mock, (output) => {
       rawResponse = output;
     });
 
-    const router = nestProcedureAtPath(path, leaf);
+    const router = buildNestedRouter(path, leaf);
 
     const rpcHandler = new RPCHandler(router);
 
@@ -207,7 +205,7 @@ interface ProcedureImplementer {
  * captured via `onRawResponse` and the procedure rejects, since a raw `Response` can't itself
  * satisfy the procedure's output schema; the caller replaces the RPC response with it verbatim.
  */
-function implementMockProcedure(
+function buildMockProcedure(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- @orpc/contract's router type isn't declared readonly
   contract: AnyContractRouter,
   path: ReadonlyArray<string>,
@@ -235,7 +233,7 @@ function implementMockProcedure(
     if (output instanceof Response) {
       onRawResponse(output);
 
-      throw new Error('mockService: handler returned a raw Response');
+      throw new Error('buildContractMock: handler returned a raw Response');
     }
 
     return output;
@@ -243,7 +241,7 @@ function implementMockProcedure(
 }
 
 /** Rebuilds the nested router shape a single implemented procedure needs to sit at its path. */
-function nestProcedureAtPath(
+function buildNestedRouter(
   path: ReadonlyArray<string>,
   leaf: unknown,
 ): Router<AnyContractRouter, Record<string, unknown>> {

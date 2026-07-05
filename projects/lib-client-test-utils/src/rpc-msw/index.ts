@@ -7,6 +7,6 @@ export type {
   MockProcedureProxy,
   MockServiceOptions,
   MockServiceProxy,
-} from './mock-service';
+} from './build-contract-mock';
 
-export { mockService } from './mock-service';
+export { buildContractMock } from './build-contract-mock';

@@ -36,6 +36,11 @@ export const avatarContract = {
     .input(z.object({}))
     .output(z.array(AvatarDataSchema)),
 
+  /**
+   * `name` is the only user-editable field by design: `class` is immutable identity, and
+   * `level`/`xp` are server-owned progression. The input shape is frozen with #255 — do not widen
+   * it.
+   */
   updateAvatar: authedRoute
     .route({
       method: 'PATCH',

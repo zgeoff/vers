@@ -8,8 +8,8 @@ import { implement } from '@orpc/server';
 import { setupServer } from 'msw/node';
 import { afterEach, expect, test } from 'vitest';
 import * as z from 'zod';
+import { buildContractMock } from './build-contract-mock';
 import { buildMockService } from './build-mock-service';
-import { mockService } from './mock-service';
 
 type SecretContext = Record<string, unknown> & { actingUserId: string | null };
 
@@ -96,7 +96,7 @@ test('it resolves the actingUserId a client forwards via the Authorization heade
 test('it overrides only the mocked procedure, leaving the rest on the base backend', async () => {
   server.use(...buildBaseHandlers());
 
-  const mock = mockService({
+  const mock = buildContractMock({
     baseUrl: 'http://secret.test',
     contract: secretContract,
     resolveContext,
@@ -120,7 +120,7 @@ test('it overrides only the mocked procedure, leaving the rest on the base backe
 test('it surfaces a mock-thrown typed error as a defined ORPCError client-side', async () => {
   server.use(...buildBaseHandlers());
 
-  const mock = mockService({
+  const mock = buildContractMock({
     baseUrl: 'http://secret.test',
     contract: secretContract,
     resolveContext,
@@ -137,4 +137,109 @@ test('it surfaces a mock-thrown typed error as a defined ORPCError client-side',
   const error = await runRejectingCall(() => client.getSecret({}));
 
   expect(error.data).toStrictEqual({ reason: 'missing-session' });
+});
+
+test('it overrides a nested-namespace procedure while a sibling top-level call stays on the base backend', async () => {
+  const authContract = {
+    getStatus: oc
+      .route({ method: 'GET', path: '/status' })
+      .input(z.object({}))
+      .output(z.object({ status: z.string() })),
+
+    stepUp: {
+      getPendingTransaction: oc
+        .route({ method: 'GET', path: '/step-up/pending' })
+        .input(z.object({}))
+        .output(z.object({ transactionID: z.string() })),
+    },
+  };
+
+  const implementer = implement(authContract);
+
+  server.use(
+    ...buildMockService({
+      baseUrl: 'http://auth.test',
+      contract: authContract,
+      resolveContext: () => ({}),
+      router: {
+        getStatus: implementer.getStatus.handler(() => ({ status: 'base-status' })),
+        stepUp: {
+          getPendingTransaction: implementer.stepUp.getPendingTransaction.handler(() => ({
+            transactionID: 'base-txn',
+          })),
+        },
+      },
+    }),
+  );
+
+  const mock = buildContractMock({
+    baseUrl: 'http://auth.test',
+    contract: authContract,
+    resolveContext: () => ({}),
+  });
+
+  server.use(
+    mock.stepUp.getPendingTransaction.handler(() => ({ transactionID: 'overridden-txn' })),
+  );
+
+  const link = new RPCLink<Record<never, never>>({ url: 'http://auth.test/rpc' });
+
+  const client: ContractRouterClient<typeof authContract> = createORPCClient(link);
+
+  const pending = await client.stepUp.getPendingTransaction({});
+  const status = await client.getStatus({});
+
+  expect(pending).toStrictEqual({ transactionID: 'overridden-txn' });
+  expect(status).toStrictEqual({ status: 'base-status' });
+});
+
+test('it surfaces a raw Response returned by a mock handler verbatim to the client transport', async () => {
+  const rawContract = {
+    getSecret: oc
+      .route({ method: 'GET', path: '/secret' })
+      .input(z.object({}))
+      .output(z.object({ value: z.string() })),
+  };
+
+  const mock = buildContractMock({
+    baseUrl: 'http://raw.test',
+    contract: rawContract,
+    resolveContext: () => ({}),
+  });
+
+  server.use(
+    mock.getSecret.handler(
+      () =>
+        new Response('teapot', {
+          headers: { 'x-raw': 'yes' },
+          status: 418,
+        }),
+    ),
+  );
+
+  let transportResponse: Response | undefined;
+
+  const link = new RPCLink<Record<never, never>>({
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Request is a DOM built-in, not declared readonly
+    fetch: async (request: Request) => {
+      const response = await fetch(request);
+
+      transportResponse = response.clone();
+
+      return response;
+    },
+    url: 'http://raw.test/rpc',
+  });
+
+  const client: ContractRouterClient<typeof rawContract> = createORPCClient(link);
+
+  await expect(client.getSecret({})).toReject();
+
+  assert.ok(transportResponse, 'expected the transport to receive a response');
+
+  const body = await transportResponse.text();
+
+  expect(transportResponse.status).toBe(418);
+  expect(transportResponse.headers.get('x-raw')).toBe('yes');
+  expect(body).toBe('teapot');
 });

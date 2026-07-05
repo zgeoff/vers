@@ -3,9 +3,7 @@ import type { Router } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/fetch';
 import type { HttpHandler } from 'msw';
 import { http } from 'msw';
-
-/** The RPC mount point every service exposes its contract under; see docs/002-service-contracts.md. */
-const RPC_PREFIX = '/rpc';
+import { RPC_PREFIX } from './rpc-prefix';
 
 export interface BuildMockServiceOptions<
   TContract extends AnyContractRouter,
