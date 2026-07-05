@@ -24,6 +24,7 @@ interface TwoFactorVerificationData {
 export async function getEnable2FAVerification(
   _: object,
   __: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<TwoFactorVerificationData> {
   invariant(ctx.user, 'user is required in an authed resolver');

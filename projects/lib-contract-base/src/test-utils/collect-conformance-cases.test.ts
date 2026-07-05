@@ -63,6 +63,7 @@ function buildTestContract() {
 type TestContract = ReturnType<typeof buildTestContract>;
 
 /** Builds an app whose getThing handler enforces the acting-user check the contract declares. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function buildConformingApp(contract: TestContract): ConformanceCaseApp {
   const os = implement(contract).$context<{ actingUserId: null | string }>();
 
@@ -81,6 +82,7 @@ function buildConformingApp(contract: TestContract): ConformanceCaseApp {
 }
 
 /** Builds an app whose getThing handler skips the acting-user check, so anonymous calls succeed. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function buildBrokenApp(contract: TestContract): ConformanceCaseApp {
   const os = implement(contract).$context<{ actingUserId: null | string }>();
 
@@ -92,6 +94,7 @@ function buildBrokenApp(contract: TestContract): ConformanceCaseApp {
   return buildRPCApp(new RPCHandler(router));
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function buildRPCApp(handler: RPCHandler<{ actingUserId: null | string }>): ConformanceCaseApp {
   return new Elysia().all('/rpc*', async (context) => {
     const result = await handler.handle(context.request, {

@@ -34,12 +34,14 @@ test('it returns all sessions for the authenticated user', async () => {
 
   expect(result).toIncludeAllPartialMembers([
     {
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       expiresAt: expect.any(Date),
       id: session1.id,
       ipAddress: session1.ipAddress,
       userID: user.id,
     },
     {
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       expiresAt: expect.any(Date),
       id: session2.id,
       ipAddress: session2.ipAddress,

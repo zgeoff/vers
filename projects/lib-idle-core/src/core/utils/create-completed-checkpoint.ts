@@ -4,6 +4,7 @@ import { hashObject } from '../../utils/hash-object';
 
 export function createCompletedCheckpoint(
   elapsed: number,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,
 ): ActivityCompletedCheckpoint {
   const result: Omit<ActivityCompletedCheckpoint, 'hash'> = {

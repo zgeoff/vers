@@ -20,11 +20,13 @@ interface TestConfig {
   transactionToken?: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function setupTest(config: TestConfig) {
   const user = userEvent.setup();
 
   const verifySession = await verifySessionStorage.getSession();
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (config.transactionToken) {
     verifySession.set('resetPassword#transactionToken', config.transactionToken);
   }
@@ -35,12 +37,14 @@ async function setupTest(config: TestConfig) {
   const _action = withAppLoadContext(action);
 
   // wrap our loader that sets our cookie in the request
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const loaderWithCookie = (args: Route.LoaderArgs) => {
     args.request.headers.set('cookie', cookie);
 
     return _loader({ ...args, params: {} });
   };
 
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const actionWithCookie = (args: Route.ActionArgs) => {
     args.request.headers.set('cookie', cookie);
 

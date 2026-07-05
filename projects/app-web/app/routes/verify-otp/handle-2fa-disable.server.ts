@@ -6,6 +6,7 @@ import { Routes } from '../../types';
 import { handleGQLError } from '../../utils/handle-gql-error';
 import type { HandleVerificationContext } from './types';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function handle2FADisable(ctx: HandleVerificationContext) {
   invariant(ctx.submission.status === 'success', 'submission should be successful by now');
 

@@ -54,7 +54,9 @@ interface LinkData {
   route: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function renderLink(link: LinkData) {
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const navLinkClassName = (props: NavLinkRenderProps) =>
     styles.navLink({
       isActive: props.isActive,
@@ -66,6 +68,7 @@ function renderLink(link: LinkData) {
       <NavLink
         className={navLinkClassName}
         to={link.route}
+        // oxlint-disable-next-line typescript/no-confusing-void-expression -- baseline(#236)
         onClick={() => setNavigationVisible(false)}
       >
         <link.Icon className={styles.navLinkIcon} />

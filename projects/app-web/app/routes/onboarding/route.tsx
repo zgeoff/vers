@@ -48,12 +48,14 @@ export function meta(): ReturnType<Route.MetaFunction> {
   ];
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   const { email } = await requireOnboardingSession(args.request);
 
   return { email };
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   const { email, transactionToken } = await requireOnboardingSession(args.request);
 
@@ -140,6 +142,7 @@ const formStyles = css({
   width: '96',
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function Onboarding(props: Route.ComponentProps) {
   const isFormPending = useIsFormPending();
 

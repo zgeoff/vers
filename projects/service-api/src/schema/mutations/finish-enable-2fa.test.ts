@@ -66,11 +66,14 @@ test('it successfully completes 2FA setup', async () => {
   expect(updatedVerification).toMatchObject({
     algorithm: 'SHA-256',
     charSet: 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     digits: 6,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     expiresAt: expect.any(Date),
     id: verification.id,
     period: 300,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     secret: expect.any(String),
     target: user.email,
     type: '2fa',

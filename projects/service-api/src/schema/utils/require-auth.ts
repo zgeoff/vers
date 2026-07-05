@@ -4,12 +4,14 @@ import { isAuthed } from '../../utils/is-authed';
 type Resolver<TParent, TArgs, TReturn> = (
   parent: TParent,
   args: TArgs,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ) => Promise<TReturn>;
 
 type AuthedResolver<TParent, TArgs, TReturn> = (
   parent: TParent,
   args: TArgs,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: AuthedContext,
 ) => Promise<TReturn>;
 

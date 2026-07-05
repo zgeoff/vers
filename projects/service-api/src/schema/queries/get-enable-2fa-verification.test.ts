@@ -29,6 +29,7 @@ test('it retrieves the 2FA verification URI', async () => {
   const result = await resolve({}, {}, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     otpURI: expect.any(String),
   });
 

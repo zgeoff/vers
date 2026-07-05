@@ -20,6 +20,7 @@ interface Env {
  * case of an empty string. Otherwise we should ALWAYS have an IP address set in
  * development and production environments.
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function remoteAddressMiddleware(ctx: Context<Env>, next: Next) {
   const ipAddress =
     ctx.req.header('fly-client-ip') ??

@@ -15,16 +15,19 @@ interface LoaderArgs {
   request: Request;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function loader(args: LoaderArgs) {
   await requireAnonymous(args.request);
 
   return null;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig = {}) {
   const TestRoutesStub = createRoutesStub([
     {
       Component: () => 'TEST_ROUTE',
+      // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
       ...(config.isAuthed && { loader: withAuthedUser(loader) }),
       path: '/',
     },

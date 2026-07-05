@@ -10,6 +10,7 @@ export interface CombatExecutor {
   getAppState: () => CombatExecutorAppState;
   reset: () => void;
   run: (delta: number) => void;
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   scheduleEvent: (event: CombatEvent) => void;
 }
 

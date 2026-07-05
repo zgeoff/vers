@@ -24,6 +24,7 @@ export function meta(): ReturnType<Route.MetaFunction> {
   ];
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAnonymous(args.request);
 
@@ -32,6 +33,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   const email = verifySession.get('loginLogout#email');
   const transactionToken = verifySession.get('loginLogout#transactionToken');
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!email || !transactionToken) {
     return redirect(Routes.Login);
   }
@@ -44,6 +46,7 @@ enum ActionIntent {
   Confirm = 'confirm',
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   await requireAnonymous(args.request);
 
@@ -62,6 +65,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   return null;
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function handleConfirm(args: Route.ActionArgs) {
   const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
@@ -70,6 +74,7 @@ async function handleConfirm(args: Route.ActionArgs) {
 
   // if we're missing either of these we shouldn't be here, so ensure all related session
   // is cleaned up and bail out
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!target || !transactionToken) {
     verifySession.unset('loginLogout#email');
     verifySession.unset('loginLogout#transactionToken');
@@ -127,6 +132,7 @@ async function handleConfirm(args: Route.ActionArgs) {
   return redirect(Routes.Nexus, { headers });
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function handleCancel(args: Route.ActionArgs) {
   const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 

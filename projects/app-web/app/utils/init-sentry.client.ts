@@ -10,6 +10,7 @@ import {
 export function initSentry() {
   Sentry.init({
     beforeSend(event) {
+      // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
       if (event.request?.url) {
         const url = new URL(event.request.url);
 
@@ -23,6 +24,7 @@ export function initSentry() {
 
       return event;
     },
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     dsn: import.meta.env['SENTRY_DSN'],
     environment: import.meta.env.MODE,
     integrations: [

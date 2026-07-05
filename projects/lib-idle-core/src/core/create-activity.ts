@@ -13,8 +13,11 @@ interface ActivityConfig {
 }
 
 export function createActivity(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   data: ActivityData,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   config: ActivityConfig = {},
 ): Activity {
   let elapsed = 0;

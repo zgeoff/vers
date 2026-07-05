@@ -12,11 +12,14 @@ test('it creates a test verification with the expected data', async () => {
   expect(verification).toStrictEqual({
     algorithm: 'SHA-256',
     charSet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     digits: 6,
     expiresAt: null,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     period: 30,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     secret: expect.any(String),
     target: 'test@example.com',
     type: '2fa',

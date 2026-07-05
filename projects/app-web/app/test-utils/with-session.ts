@@ -26,6 +26,7 @@ export function withSession<Args extends DataFnArgs, Data>(
 
     for (const [key, value] of Object.entries(verifySessionData)) {
       if (value !== undefined) {
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
         verifySession.set(key as SessionKey, value);
       }
     }

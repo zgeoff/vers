@@ -1,6 +1,7 @@
 import { captureException } from '@sentry/react';
 import type { CombinedError } from '@urql/core';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function captureGQLExceptions(error: CombinedError) {
   if (error.networkError) {
     captureException(error.networkError);

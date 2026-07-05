@@ -37,10 +37,12 @@ test('it returns an avatar when found', async () => {
 
   expect(result).toStrictEqual({
     class: Class.Brute,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     id: avatar.id,
     level: 1,
     name: 'Test Avatar',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
     userID: user.id,
     xp: 0,

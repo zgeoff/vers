@@ -27,6 +27,7 @@ export const getVerification = trpc.getVerification.query((opts) => {
   const result: GetVerificationPayload = {
     id: verification.id,
     target: verification.target,
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
     type: verification.type as VerificationType,
   };
 

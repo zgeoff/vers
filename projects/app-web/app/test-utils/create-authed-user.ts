@@ -10,6 +10,7 @@ interface UserParts {
   password?: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function createAuthedUser(userParts: UserParts, sessionID?: string) {
   // an empty comparator matches any user, so only look up when an id is given
   const existingUser =
@@ -39,6 +40,7 @@ export async function createAuthedUser(userParts: UserParts, sessionID?: string)
     userID: user.id,
   });
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (userParts.is2FAEnabled) {
     db.verification.create({
       target: user.email,

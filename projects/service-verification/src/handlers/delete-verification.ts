@@ -13,6 +13,7 @@ export const DeleteVerificationInputSchema = z.object({
 
 export async function deleteVerification(
   input: z.infer<typeof DeleteVerificationInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<DeleteVerificationPayload> {
   try {

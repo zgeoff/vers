@@ -3,6 +3,7 @@ import { Class } from '@vers/data';
 import type { AvatarData } from '../types';
 import { EquipmentSlot } from '../types';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createMockAvatarData(overrides: Partial<AvatarData> = {}): AvatarData {
   const avatar: AvatarData = {
     class: Class.Brute,

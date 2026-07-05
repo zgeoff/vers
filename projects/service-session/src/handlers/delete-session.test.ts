@@ -11,6 +11,7 @@ interface TestConfig {
   db: PostgresJsDatabase<typeof schema>;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function setupTest(config: TestConfig) {
   const caller = createCaller({ db: config.db });
 

@@ -33,6 +33,7 @@ test('it immediately generates a started checkpoint', async () => {
   const { value: firstCheckpoint } = await generator.next();
 
   expect(firstCheckpoint).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     hash: expect.any(String),
     seed: 999_999_999,
     time: 0,
@@ -80,15 +81,21 @@ test('it generates enemy group killed checkpoints', async () => {
   await generator.next(1000);
 
   expect(secondCheckpoint).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     hash: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     nextSeed: expect.any(Number),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     time: expect.any(Number),
     type: ActivityCheckpointType.Progress,
   });
 
   expect(thirdCheckpoint).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     hash: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     nextSeed: expect.any(Number),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     time: expect.any(Number),
     type: ActivityCheckpointType.Progress,
   });
@@ -116,6 +123,7 @@ test('it generates a failed checkpoint when the avatar dies', async () => {
 
   let result = await generator.next(1000);
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   while (!result.done) {
     result = await generator.next(1000);
   }
@@ -123,8 +131,11 @@ test('it generates a failed checkpoint when the avatar dies', async () => {
   const checkpoint = result.value;
 
   expect(checkpoint).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     hash: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     nextSeed: expect.any(Number),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     time: expect.any(Number),
     type: ActivityCheckpointType.Failed,
   });
@@ -163,6 +174,7 @@ test('it returns a completed checkpoint when all enemies are defeated', async ()
 
   let result = await generator.next(1000);
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   while (!result.done) {
     result = await generator.next(1000);
   }
@@ -170,8 +182,11 @@ test('it returns a completed checkpoint when all enemies are defeated', async ()
   const checkpoint = result.value;
 
   expect(checkpoint).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     hash: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     nextSeed: expect.any(Number),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     time: expect.any(Number),
     type: ActivityCheckpointType.Completed,
   });

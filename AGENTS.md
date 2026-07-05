@@ -249,15 +249,18 @@ strings/numbers.
   `--filter=@vers/<name>`.
 - `bun run test` — `turbo run test` (per-project `vitest run`); one project via `--filter`.
   Postgres-backed suites need `bun run pg:test-container:start` first.
-- `bun run lint` / `bun run lint:fix` — `oxlint` over the whole tree (`.oxlintrc.json` at the root);
-  not a turbo task, oxlint covers everything in one fast invocation.
-- `bun run lint:type-aware` — `oxlint --type-aware --type-check` (oxlint-tsgolint underneath, needs
-  the TS7 toolchain). Runs after plain lint in CI. A handful of type-aware rules are off with a
-  comment in `.oxlintrc.json`: some for good (documented, permanent) reasons — app-web's
-  `only-throw-error` exception for react-router's throw-a-Response idiom — others because turning on
-  real type info for the first time surfaced a large pre-existing backlog unrelated to any one
-  change (`no-unsafe-assignment`, `prefer-readonly-parameter-types`, and others), left for a
-  dedicated follow-up rather than folded into whatever PR happened to flip the switch.
+- `bun run lint` / `bun run lint:fix` — `turbo run codegen typegen`, then
+  `oxlint --type-aware --type-check --report-unused-disable-directives-severity error` over the
+  whole tree (`.oxlintrc.json` at the root; oxlint-tsgolint underneath, needs the TS7 toolchain —
+  ~5s wall with warm caches). The codegen leg is load-bearing: without generated output (panda's
+  `styled-system`, react-router's `+types`) those imports degrade to `any` and the unsafe-\* rules
+  report hundreds of false violations. Every type-aware rule is on; `only-throw-error`'s app-web
+  override is the one permanent, documented exception. The pre-#236 backlog (~1,047 sites) is
+  baselined inline with `// oxlint-disable-next-line <rule> -- baseline(#236)` comments rather than
+  left off in config — the unused-directive check is the ratchet: fixing a baselined site makes its
+  comment stale and lint fails until the comment is deleted. `lib-idle-core`/`lib-aether-core`
+  tick/lifecycle handlers that mutate their entity parameter by design carry a real reason instead
+  of the baseline marker; those are permanent.
 - `bun run format` — `oxfmt .` (`.oxfmtrc.json` at the root), then `format-codemod` (blank-line
   padding) over the whole tree. The codemod has no ignore file, so its `--ignore` flags are what
   keep it off committed codegen output (`app/gql`, panda's `styled-system` dirs, react-router's

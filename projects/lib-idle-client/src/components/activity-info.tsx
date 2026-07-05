@@ -11,6 +11,7 @@ interface ActivityInfoProps {
   activity: ActivityAppState;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function ActivityInfo(props: ActivityInfoProps) {
   return (
     <section className={activityInfo}>

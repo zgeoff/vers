@@ -22,7 +22,9 @@ interface ServiceBuildConfig {
 const projectDir = process.cwd();
 const configPath = path.join(projectDir, 'esbuild.config.cjs');
 
+// oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
 const configModule = await import(configPath);
+// oxlint-disable-next-line typescript/no-unsafe-member-access, typescript/no-unsafe-type-assertion -- baseline(#236)
 const config = configModule.default as ServiceBuildConfig;
 
 const outdir = path.join(projectDir, 'dist');

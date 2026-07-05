@@ -11,6 +11,7 @@ interface TestConfig {
   db: PostgresJsDatabase<typeof schema>;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function setupTest(config: TestConfig) {
   const caller = createCaller({ db: config.db });
 
@@ -33,10 +34,14 @@ test('it creates a session with a short session duration', async () => {
   });
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     expiresAt: expect.any(Date),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     ipAddress: '127.0.0.1',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
     userID: user.id,
     verified: false,
@@ -57,10 +62,14 @@ test('it creates a session with a long session duration', async () => {
   });
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     expiresAt: expect.any(Date),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     ipAddress: '127.0.0.1',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
     userID: user.id,
     verified: false,

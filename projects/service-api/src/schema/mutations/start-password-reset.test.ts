@@ -73,6 +73,7 @@ test('it directs the user to verify an OTP when 2FA is enabled', async () => {
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionID: expect.any(String),
   });
 

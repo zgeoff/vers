@@ -38,6 +38,7 @@ export type Props = RecipeVariantProps<typeof wrapper> & {
   color?: string;
 };
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function Spinner(props: Props) {
   return (
     <output className={wrapper({ ...(props.size !== undefined && { size: props.size }) })}>

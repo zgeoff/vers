@@ -5,6 +5,7 @@ const EXPIRES_AT_OFFSET = 1000 * 60 * 60 * 24 * 1;
 const EXPIRES_AT_REMEMBER_ME_OFFSET = 1000 * 60 * 60 * 24 * 30;
 
 export const createSession = trpc.createSession.mutation((opts) => {
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   const expiryOffset = opts.input.rememberMe ? EXPIRES_AT_REMEMBER_ME_OFFSET : EXPIRES_AT_OFFSET;
 
   const expiresAt = opts.input.expiresAt

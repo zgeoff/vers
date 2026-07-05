@@ -3,11 +3,13 @@ import { rateLimiter } from 'hono-rate-limiter';
 import { Routes } from '../../app/types';
 
 const IS_PROD = process.env['NODE_ENV'] === 'production';
+// oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
 const maxMultiple = !IS_PROD || process.env['PLAYWRIGHT_TEST_BASE_URL'] ? 10_000 : 1;
 
 type RateLimit = Parameters<typeof rateLimiter>[0];
 
 const rateLimitDefault: RateLimit = {
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   keyGenerator: (ctx: Context) => ctx.get('ipAddress'),
   limit: 1000 * maxMultiple,
   windowMs: 60 * 1000, // 1 minute
@@ -40,6 +42,7 @@ const strictRoutes = [
   Routes.AccountChangePassword,
 ];
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function rateLimit(ctx: Context<object, string>, next: Next) {
   const path = ctx.req.url;
   const { method } = ctx.req;

@@ -24,7 +24,9 @@ const DeleteSessionPayload = builder.unionType('DeleteSessionPayload', {
 
 export async function deleteSession(
   _: unknown,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   args: Args,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: AuthedContext,
 ): Promise<typeof DeleteSessionPayload.$inferType> {
   try {

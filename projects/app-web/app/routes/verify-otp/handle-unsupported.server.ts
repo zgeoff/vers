@@ -7,6 +7,7 @@ import type { HandleVerificationContext } from './types';
  * some cases i.e. initial enabling of 2FA.
  */
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function handleUnsupported(ctx: HandleVerificationContext): Promise<Response> {
   invariant(
     ctx.submission.status === 'success',

@@ -14,6 +14,7 @@ test('it renders a label and an input', () => {
 });
 
 test('it handles input changes', async () => {
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const handleChange = vi.fn<(event: ChangeEvent<HTMLInputElement>) => void>();
   const user = userEvent.setup();
 
@@ -29,6 +30,7 @@ test('it handles input changes', async () => {
 
   expect(handleChange).toHaveBeenCalledWith(
     expect.objectContaining({
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       target: expect.objectContaining({
         value: 'test@example.com',
       }),

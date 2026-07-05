@@ -13,6 +13,7 @@ import { removeTrailingSlash } from './middleware/remove-trailing-slash';
 import { setCSPNonce } from './middleware/set-csp-nonce';
 import { setSecureHeaders } from './middleware/set-secure-headers';
 
+// oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
 if (env.isProduction && env.SENTRY_DSN) {
   // oxlint-disable-next-line unicorn/prefer-top-level-await -- sentry init is deliberately fire-and-forget so it never delays server startup
   void (async () => {

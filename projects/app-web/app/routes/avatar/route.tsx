@@ -21,6 +21,7 @@ export function meta(): ReturnType<Route.MetaFunction> {
   ];
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
 
@@ -50,6 +51,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   };
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function Avatar(props: Route.ComponentProps) {
   const { avatar } = props.loaderData;
 

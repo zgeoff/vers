@@ -9,9 +9,10 @@ interface Message {
   type: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function postMessageAndWaitForReply(worker: SharedWorker, message: Message) {
   return new Promise<MessageEvent<Message>>((resolve) => {
-    // oxlint-disable-next-line unicorn/prefer-add-event-listener -- assigning onmessage starts MessagePort delivery; addEventListener also needs an explicit port.start()
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types, unicorn/prefer-add-event-listener -- assigning onmessage starts MessagePort delivery; addEventListener also needs an explicit port.start(); baseline(#236)
     worker.port.onmessage = (event: MessageEvent<Message>) => {
       resolve(event);
     };

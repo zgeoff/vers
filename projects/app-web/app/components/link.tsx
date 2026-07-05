@@ -17,6 +17,7 @@ export const link = css({
 });
 
 export function Link<T extends React.ElementType = typeof RRLink>(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   props: PolymorphicComponentProps<T, LinkProps>,
 ) {
   const { as, className, ...restProps } = props;

@@ -16,6 +16,7 @@ export const UpdateUserInputSchema = z.object({
 
 export async function updateUser(
   input: z.infer<typeof UpdateUserInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<UpdateUserPayload> {
   try {

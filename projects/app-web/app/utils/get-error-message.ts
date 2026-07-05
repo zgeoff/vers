@@ -4,6 +4,7 @@ export function getErrorMessage(error: unknown) {
   }
 
   if (
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     error &&
     typeof error === 'object' &&
     'message' in error &&

@@ -11,6 +11,7 @@ import { Routes } from '../types';
 import { createGQLClient } from './create-gql-client.server';
 import { refreshAccessToken } from './refresh-access-token.server';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function loader(args: LoaderFunctionArgs) {
   const client = await createGQLClient(args.request);
 
@@ -18,6 +19,7 @@ async function loader(args: LoaderFunctionArgs) {
     refreshToken: 'valid-refresh-token',
     utils: {
       appendHeaders: (operation) => operation,
+      // oxlint-disable-next-line typescript/return-await -- baseline(#236)
       mutate: async (...operationArgs) => await client.mutation(...operationArgs),
     },
   });

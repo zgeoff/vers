@@ -17,6 +17,7 @@ export const ChangePasswordInputSchema = z.object({
 
 export async function changePassword(
   input: z.infer<typeof ChangePasswordInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<ChangePasswordPayload> {
   try {

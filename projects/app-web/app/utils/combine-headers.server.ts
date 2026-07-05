@@ -1,3 +1,4 @@
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function combineHeaders(...headers: Array<null | ResponseInit['headers'] | undefined>) {
   const combined = new Headers();
 

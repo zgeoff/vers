@@ -13,6 +13,7 @@ test('it refreshes access token with valid refresh token', async () => {
     userID: user.id,
   });
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   invariant(session.refreshToken);
 
   const ctx = createMockGQLContext({ user });
@@ -26,7 +27,9 @@ test('it refreshes access token with valid refresh token', async () => {
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     accessToken: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     refreshToken: expect.any(String),
   });
 

@@ -11,6 +11,7 @@ enum Token {
   Yellow = '\u001B[33m',
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function logger(ctx: Context, next: Next): Promise<void> {
   const start = performance.now();
   const { method } = ctx.req;
@@ -66,6 +67,7 @@ function getStatusLabel(status: number) {
   return `OTHER`;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function getURL(url: URL) {
   if (url.pathname === '/__manifest') {
     return url.pathname;

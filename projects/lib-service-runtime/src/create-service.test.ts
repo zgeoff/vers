@@ -18,6 +18,7 @@ function buildTestContract() {
   };
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
   const os = implement(contract).$context<ServiceContext>();
 
@@ -357,6 +358,7 @@ test('it serves /spec.json declaring the 401 response for the authed route', asy
 
   expect(response.status).toBe(200);
 
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
   const document = (await response.json()) as {
     paths: Record<string, { get?: { responses: Record<string, unknown> } }>;
   };

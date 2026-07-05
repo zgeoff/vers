@@ -62,6 +62,7 @@ const hideButtonContent = css({
   transitionTimingFunction: 'in-out',
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function StatusButton(props: Props) {
   const { children, ...restProps } = props;
 

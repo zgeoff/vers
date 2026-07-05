@@ -10,7 +10,9 @@ test('it creates a completed checkpoint', () => {
   const checkpoint = createCompletedCheckpoint(2500, ctx);
 
   expect(checkpoint).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     hash: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     nextSeed: expect.any(Number),
     time: 2500,
     type: ActivityCheckpointType.Completed,

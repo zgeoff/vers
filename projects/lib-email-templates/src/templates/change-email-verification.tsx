@@ -7,6 +7,7 @@ interface Props {
   verificationURL: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function ChangeEmailVerificationEmail(props: Props): ReactElement {
   return (
     <E.Container>

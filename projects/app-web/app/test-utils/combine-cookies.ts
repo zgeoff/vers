@@ -10,6 +10,7 @@
  * @returns The combined cookie header.
  */
 export function combineCookies(existingCookieHeader: null | string, setCookieHeader: string) {
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   return existingCookieHeader
     ? `${existingCookieHeader}; ${setCookieHeader.split(';')[0]}`
     : setCookieHeader;

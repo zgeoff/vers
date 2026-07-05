@@ -36,6 +36,7 @@ export interface Simulation {
   getAppState: () => SimulationAppState;
   restartActivity: () => void;
   run: (time: number) => Promise<ActivityCheckpoint | null>;
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   startActivity: (avatarData: AvatarData, activityData: ActivityData) => void;
   stopActivity: () => Promise<void>;
 }
@@ -46,4 +47,5 @@ export interface SimulationContext {
   rng: RNG;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export type SimulationListener = (state: SimulationState) => void;

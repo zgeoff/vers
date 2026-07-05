@@ -10,7 +10,9 @@ interface CreateServiceTokenOptions {
 }
 
 /** Signs a short-lived s2s token carrying the shared claim vocabulary, for tests to send as `Authorization: Bearer <token>`. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createServiceToken(options: CreateServiceTokenOptions): Promise<string> {
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   const claims = options.actingUserId ? { sub: options.actingUserId } : {};
 
   const jwt = new jose.SignJWT(claims)

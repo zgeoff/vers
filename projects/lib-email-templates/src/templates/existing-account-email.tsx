@@ -5,6 +5,7 @@ interface Props {
   email: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function ExistingAccountEmail(props: Props): ReactElement {
   return (
     <E.Container>

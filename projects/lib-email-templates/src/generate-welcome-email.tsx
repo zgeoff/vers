@@ -7,6 +7,7 @@ interface Config {
   verificationURL: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function generateWelcomeEmail(config: Config) {
   return generateEmail({
     component: (

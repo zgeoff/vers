@@ -18,6 +18,7 @@ import { refreshAccessToken } from './refresh-access-token.server';
  * @param request - The request object
  * @returns An Apollo Client instance
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function createGQLClient(request: Request): Promise<Client> {
   const authSession = await authSessionStorage.getSession(request.headers.get('cookie'));
 
@@ -32,12 +33,15 @@ export async function createGQLClient(request: Request): Promise<Client> {
 
         const headers: Record<string, string> = {};
 
+        // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
         if (accessToken) {
           headers['authorization'] = `Bearer ${accessToken}`;
         }
 
+        // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
         if (unverifiedSessionID) {
           headers['x-session-id'] = unverifiedSessionID;
+          // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
         } else if (sessionID) {
           headers['x-session-id'] = sessionID;
         }
@@ -52,6 +56,7 @@ export async function createGQLClient(request: Request): Promise<Client> {
 
         const refreshToken = authSession.get('refreshToken');
 
+        // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
         if (!refreshToken) {
           await logout(request, { redirectTo: Routes.Login });
 

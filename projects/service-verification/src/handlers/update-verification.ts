@@ -14,6 +14,7 @@ export const UpdateVerificationInputSchema = z.object({
 
 export async function updateVerification(
   input: z.infer<typeof UpdateVerificationInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<UpdateVerificationPayload> {
   try {

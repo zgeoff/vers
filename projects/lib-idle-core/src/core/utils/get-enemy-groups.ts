@@ -11,8 +11,11 @@ interface ActivityConfig {
 }
 
 export function getEnemyGroups(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   activity: ActivityData,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   config: ActivityConfig,
 ): Array<EnemyGroup> {
   const enemyGroupCount = config.groupCount ?? getRandomEnemyGroupCount(ctx);

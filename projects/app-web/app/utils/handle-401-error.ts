@@ -11,6 +11,7 @@ import { logout } from './logout.server';
  * @param request - The request object.
  * @param error - The error object.
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function handle401Error(request: Request, error: unknown) {
   if (isURQLFetchError(error) && error.response.status === 401) {
     const redirectTo = getLoginPathWithRedirect(request);

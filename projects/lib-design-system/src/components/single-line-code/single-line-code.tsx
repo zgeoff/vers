@@ -42,6 +42,7 @@ const copyButton = css({
   transitionTimingFunction: 'out',
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function SingleLineCode(props: Props) {
   const { className, ...rest } = props;
 

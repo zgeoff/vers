@@ -29,6 +29,7 @@ vi.mock(import('@vers/idle-client'), async (importOriginal) => {
   };
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig) {
   const user = userEvent.setup();
 
@@ -89,6 +90,7 @@ test('it renders the aether node when authenticated and avatar exists', async ()
 
   setupTest({ isAuthed: true, user: { id: 'user_id' } });
 
+  // oxlint-disable-next-line typescript/strict-void-return -- baseline(#236)
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
   const aetherNode = await screen.findByText('AETHER_NODE_COMPONENT');

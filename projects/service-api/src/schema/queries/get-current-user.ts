@@ -7,7 +7,9 @@ type Args = Record<PropertyKey, never>;
 
 export function getCurrentUser(
   _: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   __: Args,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: AuthedContext,
 ): Promise<typeof User.$inferType> {
   // we can return the user from the context directly as it was fetched when we instantiated our context

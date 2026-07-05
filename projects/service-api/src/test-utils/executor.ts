@@ -12,5 +12,6 @@ const yoga = createYoga({
 });
 
 export const executor = buildHTTPExecutor({
+  // oxlint-disable-next-line typescript/unbound-method -- baseline(#236)
   fetch: yoga.fetch,
 });

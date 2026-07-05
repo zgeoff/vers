@@ -12,6 +12,7 @@ interface TestConfig {
   db: PostgresJsDatabase<typeof schema>;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig) {
   const caller = createCaller({ db: config.db });
 
@@ -46,6 +47,7 @@ test('it updates the provided user', async () => {
   expect(updatedUser).toStrictEqual({
     ...user,
     name: 'Updated Name',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
     username: 'updated_username',
   });
@@ -80,6 +82,7 @@ test('it allows partial updating', async () => {
   expect(updatedUser).toStrictEqual({
     ...user,
     name: 'Updated Name',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
   });
 });

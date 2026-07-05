@@ -14,6 +14,7 @@ export interface CreateTRPCClientConfig {
 }
 
 export function createTRPCClient<Router extends AnyTRPCRouter>(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   config: CreateTRPCClientConfig,
 ): TRPCClient<Router> {
   const httpLink = trpc.httpLink({

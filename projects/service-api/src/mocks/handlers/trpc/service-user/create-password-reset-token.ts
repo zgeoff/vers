@@ -17,6 +17,7 @@ export const createPasswordResetToken = trpc.createPasswordResetToken.mutation((
     });
   }
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!user.passwordHash) {
     throw new TRPCError({
       code: 'BAD_REQUEST',

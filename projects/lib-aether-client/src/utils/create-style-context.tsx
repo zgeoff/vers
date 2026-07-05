@@ -26,6 +26,7 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
       React.ComponentPropsWithoutRef<T> & RecipeVariantProps<R>
     >((props, ref) => {
       const [variantProps, restProps] = recipe.splitVariantProps(props);
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
       const slotStyles = recipe(variantProps) as StyleSlotRecipe<R>;
 
       const className =
@@ -50,6 +51,7 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
   };
 
   const withContext = <T extends React.ElementType>(Component: T, slot?: StyleSlot<R>): T => {
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!slot) {
       return Component;
     }
@@ -74,14 +76,17 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
 
     StyledComponent.displayName = `Styled${getComponentName(Component)}`;
 
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
     return StyledComponent as unknown as T;
   };
 
   return { withContext, withProvider };
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function getComponentName(Component: React.ElementType) {
   return typeof Component === 'string'
     ? Component
-    : Component.displayName || Component.name || 'Component';
+    : // oxlint-disable-next-line typescript/prefer-nullish-coalescing, typescript/strict-boolean-expressions -- baseline(#236)
+      Component.displayName || Component.name || 'Component';
 }

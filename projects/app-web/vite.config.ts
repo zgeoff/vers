@@ -14,9 +14,12 @@ export default defineConfig({
       plugins: [pandacss, autoprefixer],
     },
   },
+  // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
   plugins: [
     reactRouterHonoServer({ serverEntryPoint: './server/index.ts' }),
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     !process.env['VITEST'] && reactRouter(),
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     process.env['SENTRY_AUTH_TOKEN']
       ? sentryVitePlugin({
           authToken: process.env['SENTRY_AUTH_TOKEN'],

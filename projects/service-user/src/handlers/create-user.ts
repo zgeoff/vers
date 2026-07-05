@@ -19,6 +19,7 @@ const CreateUserInputSchema = z.object({
 
 async function createUser(
   input: z.infer<typeof CreateUserInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<CreateUserPayload> {
   try {

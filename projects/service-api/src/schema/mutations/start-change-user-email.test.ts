@@ -34,6 +34,7 @@ test('it creates a verification record and sends an email to the new address', a
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionID: expect.any(String),
   });
 
@@ -99,6 +100,7 @@ test('it follows the usual flow and validates the transaction token when the use
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionID: expect.any(String),
   });
 

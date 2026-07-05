@@ -129,8 +129,10 @@ test('it stops at the specified seed if provided', async () => {
   const [finalCheckpoint] = result.checkpoints.slice(-1);
 
   expect(finalCheckpoint).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     hash: expect.any(String),
     nextSeed: config.stopAtSeed,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     time: expect.any(Number),
     type: ActivityCheckpointType.Completed,
   });
@@ -164,8 +166,11 @@ test('it aborts on failure if failure action is set to abort', async () => {
   const lastCheckpoint = result.checkpoints.at(-1);
 
   expect(lastCheckpoint).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     hash: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     nextSeed: expect.any(Number),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     time: expect.any(Number),
     type: ActivityCheckpointType.Failed,
   });

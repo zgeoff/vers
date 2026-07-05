@@ -42,10 +42,13 @@ interface VerifyTransactionTokenData {
  * @returns true if the token is valid or not provided, false otherwise.
  */
 export async function verifyTransactionToken(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   data: VerifyTransactionTokenData,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<null | z.infer<typeof JWTPayloadSchema>> {
   // if no token was provided, return true and let the caller handle the logic
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!data.token) {
     return null;
   }
@@ -108,6 +111,7 @@ export async function verifyTransactionToken(
       return payload;
     }
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!payload.session_id) {
       logger.debug(logCtx, 'Session ID is required for this action');
 

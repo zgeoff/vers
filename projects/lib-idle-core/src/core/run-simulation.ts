@@ -28,8 +28,11 @@ interface SimulationOutput {
 const SERVER_SIMULATION_INTERVAL = 100;
 
 export async function runSimulation(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   activity: ActivityData,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   avatar: AvatarData,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   config: SimulationConfig,
 ): Promise<SimulationOutput> {
   const hasher = await xxhash();

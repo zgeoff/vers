@@ -61,8 +61,10 @@ test('it validates a token with matching action, target, and IP', async () => {
   expect(result).toStrictEqual({
     action: 'Onboarding',
     amr: ['otp'],
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     auth_time: expect.any(Number),
     ip_address: '127.0.0.1',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     jti: expect.any(String),
     mfa_verified: true,
     session_id: null,
@@ -182,8 +184,10 @@ test('it returns null when token is reused', async () => {
   expect(firstResult).toStrictEqual({
     action: 'Onboarding',
     amr: ['otp'],
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     auth_time: expect.any(Number),
     ip_address: '127.0.0.1',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     jti: expect.any(String),
     mfa_verified: true,
     session_id: null,
@@ -242,8 +246,10 @@ test('it validates session for actions that require it', async () => {
   expect(result).toStrictEqual({
     action: 'ChangeEmail',
     amr: ['otp'],
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     auth_time: expect.any(Number),
     ip_address: '127.0.0.1',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     jti: expect.any(String),
     mfa_verified: true,
     session_id: session.id,

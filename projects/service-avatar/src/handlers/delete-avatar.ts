@@ -14,6 +14,7 @@ const DeleteAvatarInputSchema = z.object({
 
 async function deleteAvatar(
   input: z.infer<typeof DeleteAvatarInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<DeleteAvatarPayload> {
   try {

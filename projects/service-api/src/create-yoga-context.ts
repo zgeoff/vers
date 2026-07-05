@@ -12,7 +12,9 @@ import type { AuthedContext, Context, UnverifiedAuthContext } from './types';
 import { createTRPCClient } from './utils/create-trpc-client';
 
 export async function createYogaContext(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   yogaCtx: YogaInitialContext,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   honoCtx: HonoContext,
 ): Promise<Context> {
   const requestID = honoCtx.get('requestId');
@@ -71,6 +73,7 @@ export async function createYogaContext(
   };
 
   // if we're missing a user ID, attempt to return an unverified auth context
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (sessionID && !userID) {
     const activeSession = await session.getSession.query({ id: sessionID });
 
@@ -88,6 +91,7 @@ export async function createYogaContext(
   }
 
   // if we have both userID and sessionID, attempt to return an authed context
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (sessionID && userID) {
     const activeSession = await session.getSession.query({ id: sessionID });
     const activeUser = await user.getUser.query({ id: userID });

@@ -39,7 +39,9 @@ interface Args {
  */
 export async function changeUserPassword(
   _: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   args: Args,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: AuthedContext,
 ): Promise<typeof ChangeUserPasswordPayload.$inferType> {
   try {

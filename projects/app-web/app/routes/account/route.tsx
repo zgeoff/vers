@@ -34,6 +34,7 @@ export function meta(): ReturnType<Route.MetaFunction> {
   ];
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
 
@@ -55,6 +56,7 @@ enum ActionIntent {
   Enable2FA = 'enable-2fa',
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   await requireAuth(args.request);
 
@@ -73,6 +75,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   return null;
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function handleEnable2FA(args: Route.ActionArgs) {
   const result = await args.context.client.mutation(StartEnable2FAMutation, {
     input: {},
@@ -101,6 +104,7 @@ async function handleEnable2FA(args: Route.ActionArgs) {
   });
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function handleDisable2FA(args: Route.ActionArgs, formData: FormData) {
   const submission = parseWithZod(formData, {
     schema: TwoFactorDisableFormSchema,
@@ -144,6 +148,7 @@ async function handleDisable2FA(args: Route.ActionArgs, formData: FormData) {
   });
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function Account(props: Route.ComponentProps) {
   const twoFactorFetcher = useFetcher<{ error: string }>();
   const isFormPending = useIsFormPending();
@@ -198,6 +203,7 @@ export function Account(props: Route.ComponentProps) {
                 Disable 2FA
               </StatusButton>
             </twoFactorFetcher.Form>
+            {/* oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236) */}
             {twoFactorFetcher.data?.error && <p>{twoFactorFetcher.data.error}</p>}
           </>
         )}
@@ -225,6 +231,7 @@ export function Account(props: Route.ComponentProps) {
                 Enable 2FA
               </StatusButton>
             </twoFactorFetcher.Form>
+            {/* oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236) */}
             {twoFactorFetcher.data?.error && <p>{twoFactorFetcher.data.error}</p>}
           </>
         )}

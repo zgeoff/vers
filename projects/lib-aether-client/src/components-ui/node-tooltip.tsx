@@ -12,11 +12,13 @@ interface NodeTooltipProps {
 
 const TOOLTIP_OFFSET = 10;
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function NodeTooltip(props: NodeTooltipProps) {
   const element = useRef<HTMLDivElement | null>(null);
   const node = useHoveredNode();
   const document = useDocument();
 
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   useEventListener(document, 'mousemove', (e: MouseEvent) => {
     if (element.current) {
       const x = e.clientX + TOOLTIP_OFFSET;

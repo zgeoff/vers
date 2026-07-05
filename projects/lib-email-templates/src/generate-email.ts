@@ -9,6 +9,7 @@ interface EmailData {
   plainText: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function generateEmail(config: EmailConfig): Promise<EmailData> {
   const [html, plainText] = await Promise.all([
     render(config.component),

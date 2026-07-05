@@ -10,14 +10,19 @@ test('it creates a test user with the expected data', async () => {
   const user = await createTestUser(db);
 
   expect(user).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     email: 'user@test.com',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     name: 'Test User',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     passwordHash: expect.any(String),
     passwordResetToken: null,
     passwordResetTokenExpiresAt: null,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     seed: expect.any(Number),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
     username: 'test_user',
   });
@@ -46,14 +51,18 @@ test('it allows overriding the default user data', async () => {
   });
 
   expect(user).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     email: 'test@test.com',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     name: 'Test User',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     passwordHash: expect.any(String),
     passwordResetToken: null,
     passwordResetTokenExpiresAt: null,
     seed: 123,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
     username: 'test_user',
   });

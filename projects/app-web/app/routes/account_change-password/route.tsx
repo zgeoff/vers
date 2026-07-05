@@ -33,6 +33,7 @@ export function meta(): ReturnType<Route.MetaFunction> {
   ];
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
 
@@ -41,6 +42,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   const transactionToken = verifySession.get('changePassword#transactionToken');
 
   // if we have a transaction token, presumably we've already 2FA'd so we're good to go
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (transactionToken) {
     return {};
   }
@@ -106,6 +108,7 @@ const ChangeUserPasswordFormSchema = z
 // our logic can be the same here for both 2FA and non-2FA password change flows.
 // our loader should prevent us from ever seeing running this action unless we're
 // ready to execute.
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   await requireAuth(args.request);
 
@@ -163,6 +166,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   });
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function AccountChangeUserPassword(props: Route.ComponentProps) {
   const isFormPending = useIsFormPending();
 

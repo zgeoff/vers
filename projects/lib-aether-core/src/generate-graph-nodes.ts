@@ -27,6 +27,7 @@ export function generateGraphNodes(maxDifficulty: number): Array<AetherNode> {
 
   // set all our connections
   for (const [i, node] of graph.entries()) {
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     invariant(node, 'node is required');
 
     const nodesInCurrentLevel = 4 * node.difficulty;

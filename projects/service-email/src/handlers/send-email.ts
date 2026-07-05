@@ -18,6 +18,7 @@ export const SendEmailInputSchema = z.object({
 
 export async function sendEmail(
   input: z.infer<typeof SendEmailInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   _ctx: Context,
 ): Promise<SendEmailPayload> {
   try {

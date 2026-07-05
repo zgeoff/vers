@@ -24,6 +24,7 @@ export function useSimulationWorker() {
   return existingWorker;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
   if (isInitialStateMessage(event.data)) {
     setSimulationInitialized(true);
@@ -36,10 +37,12 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
   }
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function isInitialStateMessage(message: WorkerMessage): message is InitialStateMessage {
   return message.type === WorkerMessageType.InitialState;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function isUpdateMessage(message: WorkerMessage): message is SimulationUpdateMessage {
   return message.type === WorkerMessageType.SimulationUpdate;
 }

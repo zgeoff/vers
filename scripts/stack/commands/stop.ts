@@ -5,6 +5,7 @@ import { DOCKER_COMPOSE_FILE } from '../consts';
 export async function stop(service?: ServiceID): Promise<void> {
   const args = [];
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (service) {
     args.push(service);
   }

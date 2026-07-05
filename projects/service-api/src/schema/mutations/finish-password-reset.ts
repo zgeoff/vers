@@ -40,7 +40,9 @@ interface Args {
  */
 export async function finishPasswordReset(
   _: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   args: Args,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<typeof FinishPasswordResetPayload.$inferType> {
   try {

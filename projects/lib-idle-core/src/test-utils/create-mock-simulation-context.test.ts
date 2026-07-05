@@ -7,7 +7,9 @@ test('it creates a simulation context with expected properties', () => {
 
   expect(ctx).toStrictEqual({
     elapsed: 0,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     hasher: expect.any(Object),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     rng: expect.any(Object),
   });
 });
@@ -22,6 +24,7 @@ test('it creates a simulation context with custom properties', () => {
 
   expect(ctx).toStrictEqual({
     elapsed: 100,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     hasher: expect.any(Object),
     rng,
   });

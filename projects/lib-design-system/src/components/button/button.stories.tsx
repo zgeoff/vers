@@ -80,6 +80,7 @@ interface RowProps {
   children: React.ReactNode;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function Row(props: RowProps) {
   return (
     <Box display="flex" flexDirection="row" gap="2">

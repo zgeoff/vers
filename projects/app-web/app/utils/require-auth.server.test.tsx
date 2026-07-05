@@ -19,14 +19,17 @@ interface TestConfig {
 async function setupTest(config: Partial<TestConfig> = {}) {
   const session = await authSessionStorage.getSession();
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (config.sessionID) {
     session.set('sessionID', config.sessionID);
   }
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (config.accessToken) {
     session.set('accessToken', config.accessToken);
   }
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (config.refreshToken) {
     session.set('refreshToken', config.refreshToken);
   }

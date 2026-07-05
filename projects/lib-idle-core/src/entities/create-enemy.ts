@@ -21,6 +21,7 @@ import { handleReceiveEnemyDamage } from './utils/handle-receive-enemy-damage';
 
 const DEFAULT_BEHAVIOUR_FACTORIES = [createEnemyPrimaryAttackBehaviour];
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
   const id = createId();
   const label = createLogLabel('enemy', id);
@@ -53,6 +54,7 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
 
   let behaviours: Array<EnemyBehaviour> = [];
 
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const handleTick = (combatExecutor: CombatExecutor): void => {
     for (const behaviour of behaviours) {
       const handler = behaviour.handlers[LifecycleEvent.OnTick];
@@ -61,6 +63,7 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
     }
   };
 
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const addBehaviour = (behaviour: EnemyBehaviour): void => {
     behaviours.push(behaviour);
   };
@@ -111,11 +114,13 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
     // create behaviours & register them if they're applicable
     .map((createBehaviour) => createBehaviour(enemy))
     .filter((behaviour) => behaviour.predicate(enemy))
+    // oxlint-disable-next-line typescript/no-confusing-void-expression -- baseline(#236)
     .map((behaviour) => addBehaviour(behaviour));
 
   return enemy;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function getInitialState(data: EnemyData): EnemyState {
   return {
     life: data.life,
@@ -126,6 +131,7 @@ export function getInitialState(data: EnemyData): EnemyState {
 
 // type safe util for adding our behaviour state to our serializable state
 function addBehaviourState<K extends BehaviourID>(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   state: EnemyBehaviourAppState,
   id: K,
   value: EnemyBehaviourAppState[K],

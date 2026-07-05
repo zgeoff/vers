@@ -22,6 +22,7 @@ import { requireAuth } from '../../utils/require-auth.server';
 import { withErrorHandling } from '../../utils/with-error-handling';
 import type { Route } from './+types/route';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
 
@@ -65,6 +66,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   };
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function AetherNodeRoute(props: Route.ComponentProps) {
   const worker = useSimulationWorker();
   const initialized = useSimulationInitialized();

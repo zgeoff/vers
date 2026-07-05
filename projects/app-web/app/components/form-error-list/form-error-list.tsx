@@ -5,6 +5,7 @@ interface Props {
   id?: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function FormErrorList(props: Props) {
   const errors = props.errors?.filter(Boolean) ?? [];
 

@@ -12,6 +12,7 @@ interface TestConfig {
   db: PostgresJsDatabase<typeof schema>;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function setupTest(config: TestConfig) {
   const caller = createCaller({ db: config.db });
   const user = await createTestUser(config.db);
@@ -35,10 +36,13 @@ test('it creates an avatar with default values', async () => {
 
   expect(result).toStrictEqual({
     class: input.class,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     level: 1,
     name: input.name,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
     userID: input.userID,
     xp: 0,

@@ -16,6 +16,7 @@ export const ResetPasswordInputSchema = z.object({
 
 export async function resetPassword(
   input: z.infer<typeof ResetPasswordInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<ResetPasswordPayload> {
   try {
@@ -44,6 +45,7 @@ export async function resetPassword(
     const isTokenExpired =
       user.passwordResetTokenExpiresAt && user.passwordResetTokenExpiresAt < new Date();
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (isTokenExpired) {
       throw new TRPCError({
         code: 'BAD_REQUEST',

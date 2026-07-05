@@ -14,6 +14,7 @@ export const Get2FAVerificationURIInputSchema = z.object({
 
 export async function get2FAVerificationURI(
   input: z.infer<typeof Get2FAVerificationURIInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<Get2FAVerificationURIPayload> {
   try {

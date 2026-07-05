@@ -12,12 +12,14 @@ import { withErrorHandling } from '../../utils/with-error-handling';
 import type { Route } from './+types/authed-layout';
 import * as styles from './authed-layout.styles';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
 
   return {};
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function AuthedLayout(_props: Route.ComponentProps) {
   const worker = useSimulationWorker();
   const initialized = useSimulationInitialized();

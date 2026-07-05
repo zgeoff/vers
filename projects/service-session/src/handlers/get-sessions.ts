@@ -13,6 +13,7 @@ export const GetSessionsInputSchema = z.object({
 
 export async function getSessions(
   input: z.infer<typeof GetSessionsInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<GetSessionsPayload> {
   try {

@@ -9,6 +9,7 @@ import { logger } from '../logger';
 import { t } from '../t';
 import type { Context } from '../types';
 
+// oxlint-disable-next-line typescript/strict-void-return -- baseline(#236)
 const randomBytesAsync = promisify(randomBytes);
 
 export const CreatePasswordResetTokenInputSchema = z.object({
@@ -17,6 +18,7 @@ export const CreatePasswordResetTokenInputSchema = z.object({
 
 export async function createPasswordResetToken(
   input: z.infer<typeof CreatePasswordResetTokenInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<CreatePasswordResetTokenPayload> {
   try {
@@ -31,6 +33,7 @@ export async function createPasswordResetToken(
       });
     }
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!user.passwordHash) {
       throw new TRPCError({
         code: 'BAD_REQUEST',

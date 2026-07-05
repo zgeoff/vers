@@ -13,6 +13,7 @@ interface Data {
  *
  * @returns The pending transaction's ID.
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createPendingTransaction(data: Data, ctx: Context): string {
   if (pendingTransactionCache.has(ctx.requestID)) {
     throw new Error('Only one pending transaction is allowed per request');

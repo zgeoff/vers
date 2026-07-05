@@ -15,6 +15,7 @@ export const VerifySessionInputSchema = z.object({
 
 export async function verifySession(
   input: z.infer<typeof VerifySessionInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<VerifySessionPayload> {
   try {

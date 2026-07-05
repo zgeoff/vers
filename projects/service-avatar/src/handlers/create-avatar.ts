@@ -18,6 +18,7 @@ const CreateAvatarInputSchema = z.object({
 
 async function createAvatar(
   input: z.infer<typeof CreateAvatarInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<CreateAvatarPayload> {
   try {

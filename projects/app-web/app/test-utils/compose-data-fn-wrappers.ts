@@ -32,21 +32,25 @@ type DataFnWrapper<Args extends DataFnArgs, Data> = (
  */
 export function composeDataFnWrappers<Args extends DataFnArgs, Data>(
   dataFn: DataFn<Args, Data>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ...wrapperFns: Array<DataFnWrapper<Args, Data> | false | undefined>
 ) {
   return async (args: Args): Promise<Data> => {
     const [firstWrapperFn, ...restWrapperFns] = wrapperFns;
 
     // if we don't want to apply any wrappers, immediately return the result
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!firstWrapperFn && restWrapperFns.length === 0) {
       return dataFn(args);
     }
 
     // if we don't want to apply our first wrapper, set our result to our initial data fn
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     let result = firstWrapperFn ? await firstWrapperFn(dataFn) : dataFn;
 
     // apply our remaining wrappers
     for (const nextWrapperFn of restWrapperFns) {
+      // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
       if (nextWrapperFn) {
         result = await nextWrapperFn(result);
       }

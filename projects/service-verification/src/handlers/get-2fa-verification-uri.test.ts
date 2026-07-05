@@ -12,6 +12,7 @@ interface TestConfig {
   db: PostgresJsDatabase<typeof schema>;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig) {
   const caller = createCaller({ db: config.db });
 
@@ -45,6 +46,7 @@ test('it returns a TOTP auth URI for a valid 2FA verification record', async () 
   });
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     otpURI: expect.stringContaining('otpauth://totp/vers:test%40example.com'),
   });
 });

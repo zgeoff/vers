@@ -20,8 +20,10 @@ test('it creates activity data with expected properties', () => {
       },
     ],
     failureAction: ActivityFailureAction.Retry,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     name: 'Aether Node',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     seed: expect.any(Number),
     type: ActivityType.AetherNode,
   });

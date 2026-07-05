@@ -58,6 +58,7 @@ export const verifyCode = trpc.verifyCode.mutation(async (opts) => {
   const result: VerifyCodePayload = {
     id: verification.id,
     target: verification.target,
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
     type: verification.type as VerificationType,
   };
 

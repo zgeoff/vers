@@ -47,10 +47,12 @@ interface SessionFlashData {
   error: string;
 }
 
+// oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
 invariant(process.env['SESSION_SECRET'], '$SESSION_SECRET is required');
 
 export const verifySessionStorage = createCookieSessionStorage<SessionData, SessionFlashData>({
   cookie: {
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     domain: import.meta.env['VITE_DOMAIN'],
     httpOnly: true,
     maxAge: 60 * 10,

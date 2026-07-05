@@ -12,6 +12,7 @@ interface TestConfig {
   isAuthed: boolean;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig) {
   const user = userEvent.setup();
 

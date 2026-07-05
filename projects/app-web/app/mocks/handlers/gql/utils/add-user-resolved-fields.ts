@@ -15,6 +15,7 @@ interface DBUser {
  * @param user - The user to add the resolved fields to
  * @returns The user with the resolved fields
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function addUserResolvedFields(user: DBUser): User {
   const twoFactorAuthEnabled = db.verification.findFirst({
     where: {

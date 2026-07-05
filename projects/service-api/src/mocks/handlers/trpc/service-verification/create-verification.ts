@@ -32,6 +32,7 @@ export const createVerification = trpc.createVerification.mutation(async (opts) 
     id: verification.id,
     otp,
     target: verification.target,
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
     type: verification.type as VerificationType,
   };
 

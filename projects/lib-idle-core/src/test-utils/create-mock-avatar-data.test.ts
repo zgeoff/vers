@@ -8,12 +8,14 @@ test('it creates avatar data with expected properties', () => {
 
   expect(avatar).toStrictEqual({
     class: Class.Brute,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     level: 1,
     life: 200,
     name: 'Test Avatar',
     paperdoll: {
       [EquipmentSlot.MainHand]: {
+        // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
         id: expect.any(String),
         maxDamage: 20,
         minDamage: 10,

@@ -30,14 +30,20 @@ test('it returns tokens when credentials are valid, 2FA is not enabled, and no a
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     accessToken: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     refreshToken: expect.any(String),
     session: {
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       createdAt: expect.any(Date),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       expiresAt: expect.any(Date),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       id: expect.any(String),
       ipAddress: ctx.ipAddress,
       refreshToken: null,
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       updatedAt: expect.any(Date),
       userID: user.id,
       verified: false,
@@ -69,7 +75,9 @@ test('it returns a two factor login payload when 2FA is enabled', async () => {
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     sessionID: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionID: expect.any(String),
   });
 
@@ -110,7 +118,9 @@ test('it returns a force logout payload when 2FA is not enabled, but there are a
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     sessionID: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionToken: expect.any(String),
   });
 });

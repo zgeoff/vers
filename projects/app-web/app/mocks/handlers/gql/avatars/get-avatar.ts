@@ -18,6 +18,7 @@ export const GetAvatar = graphql.query<GetAvatarResponse, GetAvatarVariables>(
   (opts) => {
     const authHeader = opts.request.headers.get('authorization');
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!authHeader) {
       return HttpResponse.json({
         errors: [{ message: 'Unauthorized' }],

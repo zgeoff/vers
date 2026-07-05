@@ -42,7 +42,9 @@ interface Args {
  */
 export async function startStepUpAuth(
   _: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   args: Args,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: AuthedContext,
 ): Promise<typeof StartStepUpAuthPayload.$inferType> {
   try {

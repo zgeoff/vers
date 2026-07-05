@@ -16,6 +16,7 @@ const program = new Command()
   .name('email-preview')
   .description('CLI to render every email template to static preview files')
   .option('-o, --out <dir>', 'directory to write previews into', defaultOutDir)
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   .action(async (args: PreviewArgs) => {
     await writePreviews(args.out);
   });

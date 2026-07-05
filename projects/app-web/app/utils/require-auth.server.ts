@@ -9,6 +9,7 @@ interface AuthResult {
   sessionID: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function requireAuth(request: Request): Promise<AuthResult> {
   const authSession = await authSessionStorage.getSession(request.headers.get('cookie'));
 
@@ -16,6 +17,7 @@ export async function requireAuth(request: Request): Promise<AuthResult> {
   const accessToken = authSession.get('accessToken');
   const refreshToken = authSession.get('refreshToken');
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!sessionID || !accessToken || !refreshToken) {
     await logout(request, { redirectTo: getLoginPathWithRedirect(request) });
 
