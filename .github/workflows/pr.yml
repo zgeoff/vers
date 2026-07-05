@@ -1,0 +1,99 @@
+name: PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      TURBO_SCM_BASE: main
+      # CI never commits, but skip hook install/execution regardless
+      LEFTHOOK: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Dotenv
+        run: |
+          echo "${{ secrets.DOTENV_APP_WEB_DEV }}" > projects/app-web/.env.development.local
+          echo "${{ secrets.DOTENV_APP_WEB_E2E }}" > projects/app-web-e2e/.env
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24.18.0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check AGENTS.md Drift
+        run: |
+          bun run build:agents
+          git diff --exit-code AGENTS.md agents/ scripts/build-agents-md.sh
+
+      - name: Track main branch
+        run: git branch --track main origin/main
+
+      - name: Setup Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Boundaries
+        run: bun run boundaries
+
+      - name: Generate Types
+        run: bun run codegen:types
+
+      - name: Generate Styles
+        run: bun run codegen:styles
+
+      - name: Check Formatting
+        run: bun run format:check
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Type-Aware Lint
+        run: bun run lint:type-aware
+
+      - name: Unit Tests
+        run: |
+          bun run pg:test-container:start
+          bun run test
+
+      - name: Build
+        run: bunx turbo run build --affected
+
+      - name: Install E2E browsers
+        run: bun run playwright install --with-deps --only-shell chromium
+
+      - name: E2E Tests
+        # non-blocking until #212 stabilizes the suite
+        continue-on-error: true
+        run: bunx turbo run e2e --affected
+
+      - name: Upload Videos Of Failed E2E
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: playwright-results
+          include-hidden-files: true
+          path: projects/app-web-e2e/.test-results
