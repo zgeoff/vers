@@ -61,13 +61,13 @@ strings/numbers.
   real type info for the first time surfaced a large pre-existing backlog unrelated to any one
   change (`no-unsafe-assignment`, `prefer-readonly-parameter-types`, and others), left for a
   dedicated follow-up rather than folded into whatever PR happened to flip the switch.
-- `bun run format` — `format-codemod` (blank-line padding, explicit source globs — the codemod has
-  no ignore file, so the glob list is what keeps it off committed codegen output like `app/gql`),
-  then `oxfmt .` (`.oxfmtrc.json` at the root). The formatter runs last and owns the final state: it
-  strips the codemod's padding after multiline imports, which its import sorter contradicts.
-- `bun run format:check` — `oxfmt --check .` only. The codemod has no check leg here: on an
-  oxfmt-final tree it always wants its import padding back, so a check would never be green. Its
-  other conventions still land on every `bun run format` and pre-commit run.
+- `bun run format` — `oxfmt .` (`.oxfmtrc.json` at the root), then `format-codemod` (blank-line
+  padding) over the whole tree. The codemod has no ignore file, so its `--ignore` flags are what
+  keep it off committed codegen output (`app/gql`, panda's `styled-system` dirs, react-router's
+  typegen) and nested checkouts — oxfmt covers the same set through `.oxfmtrc.json` plus
+  `.gitignore`. The chain is idempotent: a second run is byte-identical.
+- `bun run format:check` — both tools' check legs (`oxfmt --check .`, then `format-codemod --check`
+  with the same ignores).
 - `bun run build` — `turbo run build`; one project via `--filter`.
 - `bun run e2e` — `turbo run e2e` (Playwright, `app-web-e2e`).
 - `bun run boundaries` — `turbo boundaries`.
@@ -105,7 +105,7 @@ the _target_ state, not this repo yet:
   stays until services move to the bun runtime.
 
 oxlint/oxfmt and `@zgeoff/format-codemod` landed in #188 (the codemod installs through a tracked
-`minimumReleaseAgeExcludes` entry in `bunfig.toml` — #219 removes it once 0.0.1 ages past the gate).
+`minimumReleaseAgeExcludes` entry in `bunfig.toml` — #219 removes it once 0.0.2 ages past the gate).
 Type-aware lint (`oxlint --type-aware`/tsgolint) landed in #217 once the TS7 toolchain it needs was
 in place — see the Running Things Today section above for what's still off and why.
 

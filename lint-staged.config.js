@@ -18,9 +18,8 @@ const config = {
   ],
 
   // format/lint fixes land via lint-staged's own staging of task
-  // modifications; the codemod runs before oxfmt so the formatter owns the
-  // final state — it strips the codemod's import padding, which its own
-  // import sorter contradicts
+  // modifications; oxfmt runs first, then the codemod owns the final state —
+  // its blank-line padding is stable under the formatter's import sorting
   'projects/**/*.{js,ts,jsx,tsx,json}': (files) => {
     // the design-reference export is served verbatim and sits on both tools'
     // ignore lists; oxlint exits non-zero when every file it's given is ignored
@@ -37,8 +36,8 @@ const config = {
     const lintFiles = ownFiles.filter((file) => !file.endsWith('.json'));
 
     return [
-      ...(tsFiles.length > 0 ? [`format-codemod --quiet ${quote(tsFiles)}`] : []),
       `oxfmt ${quote(ownFiles)}`,
+      ...(tsFiles.length > 0 ? [`format-codemod --quiet ${quote(tsFiles)}`] : []),
       ...(lintFiles.length > 0 ? [`oxlint --fix ${quote(lintFiles)}`] : []),
     ];
   },
