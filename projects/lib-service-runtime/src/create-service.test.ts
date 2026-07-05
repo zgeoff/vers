@@ -18,7 +18,7 @@ function buildTestContract() {
   };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the oRPC procedure builders returned by buildTestContract carry internal mutable state no local wrapper can mark readonly
 function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
   const os = implement(contract).$context<ServiceContext>();
 

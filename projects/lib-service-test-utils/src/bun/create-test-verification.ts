@@ -10,10 +10,9 @@ type TestVerificationData = Partial<Insertable<Verifications>>;
  * real TOTP secret/config so `@epic-web/totp` can verify codes against it.
  */
 export async function createTestVerification(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   db: Kysely<DB>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  data: TestVerificationData = {},
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- TestVerificationData's fields are derived through kysely's Insertable<> conditional mapped type, which this rule's type walker can't prove readonly even wrapped in Readonly<>
+  data: Readonly<TestVerificationData> = {},
 ): Promise<Selectable<Verifications>> {
   const now = new Date();
 

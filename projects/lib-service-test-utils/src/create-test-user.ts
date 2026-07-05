@@ -17,10 +17,9 @@ type TestUserData = Partial<
 >;
 
 export async function createTestUser(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   db: PostgresJsDatabase<typeof schema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  data: TestUserData = {},
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- TestUserData's fields are derived through drizzle's $inferSelect conditional column typing, which this rule's type walker can't prove readonly even wrapped in Readonly<>
+  data: Readonly<TestUserData> = {},
 ): Promise<typeof schema.users.$inferSelect> {
   const now = new Date();
 

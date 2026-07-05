@@ -176,7 +176,37 @@
     // entity parameter in place by design -- those sites carry a real reason
     // instead of a baseline marker (see the sim-core exception noted where
     // they occur)
-    "typescript/prefer-readonly-parameter-types": ["error", { "ignoreInferredTypes": true }],
+    "typescript/prefer-readonly-parameter-types": [
+      "error",
+      {
+        "ignoreInferredTypes": true,
+        "allow": [
+          { "from": "package", "name": "Kysely", "package": "kysely" },
+          { "from": "package", "name": "Elysia", "package": "elysia" },
+          { "from": "package", "name": "TestProject", "package": "vitest" },
+          {
+            "from": "package",
+            "name": "StartedPostgreSqlContainer",
+            "package": "@testcontainers/postgresql"
+          },
+          { "from": "package", "name": "PostgresJsDatabase", "package": "drizzle-orm" },
+          { "from": "package", "name": "CryptoKey", "package": "@types/node" },
+          { "from": "package", "name": "Logger", "package": "pino" },
+          { "from": "package", "name": "ReactElement", "package": "@types/react" },
+          {
+            "from": "package",
+            "name": ["AnyContractRouter", "AnyContractProcedure", "ContractRouterClient"],
+            "package": "@orpc/contract"
+          },
+          {
+            "from": "package",
+            "name": ["FetchHandler", "RPCHandler"],
+            "package": "@orpc/server"
+          },
+          { "from": "package", "name": ["Request", "Response"], "package": "bun-types" }
+        ]
+      }
+    ],
     "typescript/prefer-regexp-exec": "error",
     "typescript/require-await": "error",
     "typescript/return-await": "error",

@@ -20,16 +20,15 @@ type ServiceEnv<TEnvShape extends z.ZodRawShape> = z.infer<typeof BASE_ENV_SCHEM
   z.infer<z.ZodObject<TEnvShape>>;
 
 interface ServiceRuntime<TEnvShape extends z.ZodRawShape> {
-  env: ServiceEnv<TEnvShape>;
-  logger: pino.Logger;
+  readonly env: Readonly<ServiceEnv<TEnvShape>>;
+  readonly logger: pino.Logger;
 }
 
 export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  buildRouter: (runtime: ServiceRuntime<TEnvShape>) => AnyRouter;
-  contract: AnyContractRouter;
-  envShape: TEnvShape;
-  name: string;
+  readonly buildRouter: (runtime: Readonly<ServiceRuntime<TEnvShape>>) => AnyRouter;
+  readonly contract: AnyContractRouter;
+  readonly envShape: Readonly<TEnvShape>;
+  readonly name: string;
 }
 
 export interface Service<TEnvShape extends z.ZodRawShape> {
@@ -45,7 +44,6 @@ export interface Service<TEnvShape extends z.ZodRawShape> {
  * Nothing is started — call the returned `listen` to bind a port.
  */
 export async function createService<TEnvShape extends z.ZodRawShape = Record<never, never>>(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   config: ServiceConfig<TEnvShape>,
 ): Promise<Service<TEnvShape>> {
   const env = parseServiceEnv(config.envShape);
@@ -137,7 +135,6 @@ function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
 
 /** Generates the service's OpenAPI document from its contract, never its implementation. */
 function buildOpenAPIDocument(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   contract: AnyContractRouter,
   name: string,
 ): Promise<OpenAPI.Document> {
@@ -151,7 +148,6 @@ function buildOpenAPIDocument(
 }
 
 /** Reads the incoming request-id, or mints one when the caller didn't supply it. */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function getRequestId(request: Request): string {
   return request.headers.get('x-request-id') ?? crypto.randomUUID();
 }
@@ -162,18 +158,16 @@ function getRequestId(request: Request): string {
  * docs/002-service-contracts.md.
  */
 interface MountORPCHandlerDeps {
-  logger: pino.Logger;
-  publicKey: CryptoKey;
-  serviceName: string;
+  readonly logger: pino.Logger;
+  readonly publicKey: CryptoKey;
+  readonly serviceName: string;
 }
 
 function mountORPCHandler(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Elysia's default type parameters resolve to a concrete, mutable instance shape the allow-list entry doesn't reach
   app: Elysia,
   prefix: `/${string}`,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   handler: FetchHandler<ServiceContext>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   deps: MountORPCHandlerDeps,
 ): void {
   app.all(

@@ -3,12 +3,11 @@ import { generateEmail } from './generate-email';
 import { ChangeEmailVerificationEmail } from './templates/change-email-verification';
 
 interface Config {
-  newEmail: string;
-  verificationCode: string;
-  verificationURL: string;
+  readonly newEmail: string;
+  readonly verificationCode: string;
+  readonly verificationURL: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function generateChangeEmailVerificationEmail(config: Config) {
   return generateEmail({
     component: (

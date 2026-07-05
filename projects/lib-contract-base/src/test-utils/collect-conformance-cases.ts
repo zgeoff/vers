@@ -13,33 +13,31 @@ import { buildRPCTestClient } from './build-rpc-test-client';
 
 /** An Elysia app (or anything shaped like one) a conformance case can exercise. */
 export interface ConformanceCaseApp {
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  handle: (request: Request) => Promise<Response> | Response;
+  readonly handle: (request: Request) => Promise<Response> | Response;
 }
 
 /** One mechanical guarantee, checked against a real app via its `handle` function. */
 export interface ConformanceCase {
   /** Behavioural title, e.g. "it rejects malformed input on users.getCurrentUser". */
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  run: (app: ConformanceCaseApp) => Promise<void>;
-  title: string;
+  readonly run: (app: ConformanceCaseApp) => Promise<void>;
+  readonly title: string;
 }
 
 /** Header collection accepted wherever a conformance case needs to send headers. */
-type ConformanceHeaders = Record<string, string>;
+type ConformanceHeaders = Readonly<Record<string, string>>;
 
 interface CollectConformanceCasesOptions {
   /** Headers carrying a valid service token with no acting user. */
-  anonymousHeaders: ConformanceHeaders;
+  readonly anonymousHeaders: ConformanceHeaders;
 
   /**
    * Schema-valid sample inputs keyed by dot-path (e.g. "getCurrentUser"). Enables the
    * anonymous-call UNAUTHORIZED case for that procedure, which must reach the handler.
    */
-  authedSamples?: Record<string, unknown>;
+  readonly authedSamples?: Readonly<Record<string, unknown>>;
 
   /** RPC mount prefix of the app under test. Default '/rpc'. */
-  rpcPrefix?: string;
+  readonly rpcPrefix?: string;
 }
 
 /**
@@ -49,9 +47,7 @@ interface CollectConformanceCasesOptions {
  * apply to a given procedure (e.g. no input schema, or no sample input supplied).
  */
 export function collectConformanceCases(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   contract: AnyContractRouter,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   options: CollectConformanceCasesOptions,
 ): Array<ConformanceCase> {
   const rpcPrefix = options.rpcPrefix ?? '/rpc';
@@ -77,12 +73,11 @@ export function collectConformanceCases(
 }
 
 interface ContractProcedureEntry {
-  dotPath: string;
-  procedure: AnyContractProcedure;
+  readonly dotPath: string;
+  readonly procedure: AnyContractProcedure;
 }
 
 /** Gathers every leaf procedure in a contract router, paired with its dot-separated path. */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function collectContractProcedures(contract: AnyContractRouter): Array<ContractProcedureEntry> {
   const entries: Array<ContractProcedureEntry> = [];
 
@@ -97,10 +92,8 @@ function collectContractProcedures(contract: AnyContractRouter): Array<ContractP
 }
 
 function buildMalformedInputCase(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   entry: ContractProcedureEntry,
   rpcPrefix: string,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   anonymousHeaders: ConformanceHeaders,
 ): ConformanceCase | undefined {
   // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
@@ -131,7 +124,6 @@ function buildMalformedInputCase(
 }
 
 /** Reads a contract procedure's declared route, schemas, and error map through oRPC's internal definition property. */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function getProcedureDef(procedure: AnyContractProcedure) {
   return procedure['~orpc'];
 }
@@ -159,10 +151,8 @@ function findRejectingProbe(schema: AnySchema): unknown {
 
 /** Builds a typed oRPC client that exercises an app's real RPC wire protocol via its `handle` function. */
 function buildConformanceClient(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   app: ConformanceCaseApp,
   rpcPrefix: string,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   headers: ConformanceHeaders,
 ): ContractRouterClient<AnyContractRouter> {
   return buildRPCTestClient<AnyContractRouter>(app, {
@@ -173,7 +163,6 @@ function buildConformanceClient(
 
 /** Indexes a dot-path into a client object, returning the callable procedure at that path. */
 function getClientProcedure(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   client: ContractRouterClient<AnyContractRouter>,
   dotPath: string,
 ): (input: unknown) => Promise<unknown> {
@@ -202,10 +191,8 @@ async function runRejectingCall(call: () => Promise<unknown>): Promise<ORPCError
 }
 
 function buildAnonymousRejectionCase(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   entry: ContractProcedureEntry,
   rpcPrefix: string,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   options: CollectConformanceCasesOptions,
 ): ConformanceCase | undefined {
   const declaresUnauthorized = 'UNAUTHORIZED' in getProcedureDef(entry.procedure).errorMap;
@@ -229,7 +216,6 @@ function buildAnonymousRejectionCase(
   };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function buildOpenAPIGenerationCase(contract: AnyContractRouter): ConformanceCase {
   return {
     run: async () => {

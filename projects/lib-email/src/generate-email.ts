@@ -1,7 +1,7 @@
 import { render } from '@react-email/components';
 
 interface EmailConfig {
-  component: React.ReactElement;
+  readonly component: React.ReactElement;
 }
 
 interface EmailData {
@@ -9,7 +9,6 @@ interface EmailData {
   plainText: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function generateEmail(config: EmailConfig): Promise<EmailData> {
   const [html, plainText] = await Promise.all([
     render(config.component),

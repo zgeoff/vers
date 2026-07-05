@@ -3,10 +3,9 @@ import { generateEmail } from './generate-email';
 import { ResetPasswordEmail } from './templates/reset-password-email';
 
 interface Config {
-  resetURL: string;
+  readonly resetURL: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function generateResetPasswordEmail(config: Config) {
   return generateEmail({
     component: (
