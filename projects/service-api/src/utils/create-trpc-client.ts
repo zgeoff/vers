@@ -12,6 +12,7 @@ export interface CreateTRPCClientConfig {
   requestID: string;
   serviceID: ServiceID;
 }
+
 export function createTRPCClient<Router extends AnyTRPCRouter>(
   config: CreateTRPCClientConfig,
 ): TRPCClient<Router> {

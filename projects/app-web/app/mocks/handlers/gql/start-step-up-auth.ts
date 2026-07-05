@@ -11,6 +11,7 @@ interface StartStepUpAuthVariables {
 interface StartStepUpAuthResponse {
   startStepUpAuth: StartStepUpAuthPayload;
 }
+
 export const StartStepUpAuth = graphql.mutation<StartStepUpAuthResponse, StartStepUpAuthVariables>(
   'StartStepUpAuth',
   (opts) => {

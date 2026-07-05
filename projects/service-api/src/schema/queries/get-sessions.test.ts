@@ -31,6 +31,7 @@ test('it returns all sessions for the authenticated user', async () => {
 
   expect(result).toBeArray();
   expect(result).toHaveLength(2);
+
   expect(result).toIncludeAllPartialMembers([
     {
       expiresAt: expect.any(Date),

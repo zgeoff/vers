@@ -40,6 +40,7 @@ export async function createPasswordResetToken(
 
     const tokenBytes = await randomBytesAsync(32);
     const resetToken = tokenBytes.toString('hex');
+
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     // intentionally not updating our user record's `updatedAt` field

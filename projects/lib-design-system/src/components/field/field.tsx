@@ -65,6 +65,7 @@ export function Field(props: Props) {
     key,
     ...inputProps
   } = props.inputProps;
+
   const [firstError] = props.errors;
   const styles = fieldRecipe();
 

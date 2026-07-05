@@ -41,6 +41,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAnonymous(args.request);
 
   const url = new URL(args.request.url);
+
   const resetToken = url.searchParams.get('token');
   const email = url.searchParams.get('email');
 
@@ -55,6 +56,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   await requireAnonymous(args.request);
 
   const url = new URL(args.request.url);
+
   const resetToken = url.searchParams.get('token');
   const email = url.searchParams.get('email');
 

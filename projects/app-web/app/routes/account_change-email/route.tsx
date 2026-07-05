@@ -148,6 +148,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   invariant(result.data, 'if no error, there must be data');
 
   verifySession.unset('changeEmail#transactionID');
+
   verifySession.set(
     'changeEmailConfirm#transactionID',
     result.data.startChangeUserEmail.transactionID,

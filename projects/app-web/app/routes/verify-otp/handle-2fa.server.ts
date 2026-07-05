@@ -40,6 +40,7 @@ export async function handle2FA(ctx: HandleVerificationContext) {
   // if we need to force logout, set our session as needed then redirect
   if (isForceLogoutPayload(result.data.finishLoginWith2FA)) {
     verifySession.set('loginLogout#email', ctx.submission.value.target);
+
     verifySession.set(
       'loginLogout#transactionToken',
       result.data.finishLoginWith2FA.transactionToken,

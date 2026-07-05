@@ -4,6 +4,7 @@ import { focusCameraOnPosition } from './focus-camera-on-position';
 
 test('it updates camera position to focus on target', () => {
   const camera = new PerspectiveCamera();
+
   const updateProjectionMatrixSpy = vi.spyOn(camera, 'updateProjectionMatrix');
 
   focusCameraOnPosition(camera, [10, 20]);

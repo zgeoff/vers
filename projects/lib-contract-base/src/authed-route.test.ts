@@ -14,9 +14,11 @@ test('it declares UNAUTHORIZED and FORBIDDEN responses on a procedure built from
   const generator = new OpenAPIGenerator({
     schemaConverters: [new ZodToJsonSchemaConverter()],
   });
+
   const document = await generator.generate(contract, {
     info: { title: 'test', version: '0.0.0' },
   });
+
   const responses = document.paths?.['/thing']?.get?.responses;
 
   expect(responses).toContainKeys(['401', '403']);

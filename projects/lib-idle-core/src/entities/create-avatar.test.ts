@@ -41,6 +41,7 @@ test('it exposes a method for setting the avatar state', () => {
 
 test('it reduces life and updates status when killed', () => {
   const ctx = createMockSimulationContext();
+
   const data = createMockAvatarData({
     life: 100,
   });

@@ -58,6 +58,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
 
   const router = config.buildRouter({ env, logger });
   const document = await buildOpenAPIDocument(config.contract, config.name);
+
   const app = new Elysia();
 
   if (env.OTEL_EXPORTER_OTLP_ENDPOINT) {
@@ -93,6 +94,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
     publicKey,
     serviceName: config.name,
   });
+
   mountORPCHandler(app, '/api', new OpenAPIHandler(router), {
     logger,
     publicKey,
@@ -169,6 +171,7 @@ function mountORPCHandler(
     `${prefix}*` as `/${string}`,
     async (context) => {
       const requestId = getRequestId(context.request);
+
       const resolution = await parseServiceToken(context.request, {
         audience: deps.serviceName,
         publicKey: deps.publicKey,
@@ -190,6 +193,7 @@ function mountORPCHandler(
         },
         prefix,
       });
+
       const finalResponse = matched ? response : new Response('not found', { status: 404 });
 
       finalResponse.headers.set('x-request-id', requestId);

@@ -14,6 +14,7 @@ afterEach(() => {
 
 test('it deletes an avatar when found', async () => {
   const user = db.user.create({});
+
   const avatar = db.avatar.create({
     userID: user.id,
   });
@@ -25,6 +26,7 @@ test('it deletes an avatar when found', async () => {
   });
 
   const ctx = createMockGQLContext({ accessToken, user });
+
   const args = {
     input: {
       id: avatar.id,
@@ -48,6 +50,7 @@ test('it deletes an avatar when found', async () => {
 
 test('it returns an unauthorized error when the user is not authenticated', async () => {
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       id: 'test_id',

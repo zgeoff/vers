@@ -143,6 +143,7 @@ test('it returns an error when the password is incorrect', async () => {
   });
 
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       email: user.email,

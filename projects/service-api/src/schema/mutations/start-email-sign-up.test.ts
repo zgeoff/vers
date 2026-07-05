@@ -13,6 +13,7 @@ afterEach(() => {
 
 test('it creates a verification code and sends an email to the user', async () => {
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       email: 'user@test.com',

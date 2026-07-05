@@ -8,6 +8,7 @@ test('it renders the reset password email with all required elements', () => {
   const heading = screen.getByRole('heading', {
     name: 'Forgot your password?',
   });
+
   const resetLink = screen.getByRole('link', {
     name: 'https://example.com/reset-password',
   });

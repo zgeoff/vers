@@ -8,7 +8,9 @@ vi.mock(import('./create-id'), () => {
 
   const createID = vi.fn<() => string>(() => {
     const result = `id-${id}`;
+
     id++;
+
     return result;
   });
 

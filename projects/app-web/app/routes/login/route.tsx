@@ -121,6 +121,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
     verifySession.set('loginLogout#email', submission.value.email);
+
     verifySession.set(
       'loginLogout#transactionToken',
       result.data.loginWithPassword.transactionToken,

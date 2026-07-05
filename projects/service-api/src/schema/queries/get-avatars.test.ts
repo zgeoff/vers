@@ -42,6 +42,7 @@ test('it returns all avatars for the authenticated user', async () => {
 
   expect(result).toBeArray();
   expect(result).toHaveLength(2);
+
   expect(result).toIncludeAllPartialMembers([
     {
       createdAt: expect.any(Date),

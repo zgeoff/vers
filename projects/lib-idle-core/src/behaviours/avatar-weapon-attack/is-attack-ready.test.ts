@@ -99,6 +99,7 @@ test('it uses the last attacked time to calculate the next attack time', () => {
 
 test('it returns false when the avatar is dead', () => {
   const avatarData = createMockAvatarData({ life: 1 });
+
   const enemyData = createMockEnemyData({
     primaryAttack: {
       maxDamage: 10,

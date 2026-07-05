@@ -38,6 +38,7 @@ test('it flags a session as verified and returns new tokens', async () => {
     .mockResolvedValueOnce('mock-access-token');
 
   const now = Date.now();
+
   const expiresAt = new Date(now + 1000 * 60 * 60);
 
   const session = {

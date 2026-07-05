@@ -104,6 +104,7 @@ test('it renders the login form', async () => {
   const emailInput = await screen.findByLabelText('Email');
   const passwordInput = screen.getByLabelText('Password');
   const submitButton = screen.getByRole('button', { name: 'Login' });
+
   const rememberMeCheckbox = screen.getByRole('checkbox', {
     name: 'Remember me',
   });

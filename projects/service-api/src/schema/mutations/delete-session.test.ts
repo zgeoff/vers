@@ -51,6 +51,7 @@ test('it deletes a session when the user is authenticated', async () => {
 
 test('it returns an unauthorized error when the user is not authenticated', async () => {
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       id: 'test_id',

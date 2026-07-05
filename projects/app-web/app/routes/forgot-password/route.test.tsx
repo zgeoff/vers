@@ -34,6 +34,7 @@ function setupTest() {
       )),
       loader: (args) => {
         const url = new URL(args.request.url);
+
         const email = url.searchParams.get('email');
 
         return { email };
@@ -57,9 +58,11 @@ test('it renders the forgot password form with accessible elements', async () =>
   setupTest();
 
   const emailInput = await screen.findByRole('textbox', { name: 'Email' });
+
   const submitButton = screen.getByRole('button', {
     name: 'Reset Password',
   });
+
   const loginLink = screen.getByRole('link', { name: 'Login' });
 
   expect(emailInput).toBeInTheDocument();
@@ -71,6 +74,7 @@ test('it shows validation errors for invalid email', async () => {
   const { user } = setupTest();
 
   const emailInput = await screen.findByRole('textbox', { name: 'Email' });
+
   const submitButton = screen.getByRole('button', {
     name: 'Reset Password',
   });
@@ -87,6 +91,7 @@ test('it redirects to the reset password started route after submitting a valid 
   const { user } = setupTest();
 
   const emailInput = await screen.findByRole('textbox', { name: 'Email' });
+
   const submitButton = screen.getByRole('button', {
     name: 'Reset Password',
   });

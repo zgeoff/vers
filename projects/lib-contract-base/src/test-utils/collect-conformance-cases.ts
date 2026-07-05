@@ -216,11 +216,13 @@ function buildOpenAPIGenerationCase(contract: AnyContractRouter): ConformanceCas
       const generator = new OpenAPIGenerator({
         schemaConverters: [new ZodToJsonSchemaConverter()],
       });
+
       const document = await generator.generate(contract, {
         info: { title: 'conformance', version: '0.0.0' },
       });
 
       assert.ok(document.openapi, 'expected the generated document to declare an openapi version');
+
       assert.ok(
         Object.keys(document.paths ?? {}).length > 0,
         'expected the generated document to declare at least one path',

@@ -193,6 +193,7 @@ test('it returns an error when the transaction token is invalid', async () => {
   });
 
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       rememberMe: true,

@@ -27,6 +27,7 @@ test('it applies damage from the enemy to the avatar', () => {
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
+
   const activity = createActivity(activityData, ctx, {
     groupCount: 1,
     groupSize: 1,
@@ -64,6 +65,7 @@ test('it does nothing if the enemy is dead', () => {
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
+
   const activity = createActivity(activityData, ctx, {
     groupCount: 1,
     groupSize: 1,
@@ -107,6 +109,7 @@ test('it correctly resolves the correct event source', () => {
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
+
   const activity = createActivity(activityData, ctx, {
     groupCount: 1,
 

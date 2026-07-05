@@ -14,6 +14,7 @@ test('it renders a verification email with provided configuration', () => {
   const heading = screen.getByText('Verify your new email address');
   const emailText = screen.getByText(/new-email@example.com/);
   const codeText = screen.getByText(/123456/);
+
   const verifyLink = screen.getByRole('link', {
     name: 'Verify email address',
   });

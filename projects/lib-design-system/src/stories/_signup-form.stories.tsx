@@ -34,22 +34,28 @@ export function Default() {
   const { key: _nameKey, ...nameInputProps } = getInputProps(fields.name, {
     type: 'text',
   });
+
   const { key: _emailKey, ...emailInputProps } = getInputProps(fields.email, {
     type: 'email',
   });
+
   const { key: _usernameKey, ...usernameInputProps } = getInputProps(fields.username, {
     type: 'text',
   });
+
   const { key: _passwordKey, ...passwordInputProps } = getInputProps(fields.password, {
     type: 'password',
   });
+
   const { key: _confirmPasswordKey, ...confirmPasswordInputProps } = getInputProps(
     fields.confirmPassword,
     { type: 'password' },
   );
+
   const { key: _rememberMeKey, ...rememberMeInputProps } = getInputProps(fields.rememberMe, {
     type: 'checkbox',
   });
+
   const { key: _agreeToTermsKey, ...agreeToTermsInputProps } = getInputProps(fields.agreeToTerms, {
     type: 'checkbox',
   });

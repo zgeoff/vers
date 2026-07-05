@@ -14,6 +14,7 @@ afterEach(() => {
 
 test('it updates an avatar when found', async () => {
   const user = db.user.create({});
+
   const avatar = db.avatar.create({
     name: 'Original Name',
     userID: user.id,

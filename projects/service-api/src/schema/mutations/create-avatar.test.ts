@@ -23,6 +23,7 @@ test('it creates an avatar when the user has none', async () => {
   });
 
   const ctx = createMockGQLContext({ accessToken, user });
+
   const args = {
     input: {
       class: Class.Brute,
@@ -127,6 +128,7 @@ test('it returns an error when the avatar name is already taken', async () => {
 
 test('it returns an unauthorized error when the user is not authenticated', async () => {
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       class: Class.Brute,

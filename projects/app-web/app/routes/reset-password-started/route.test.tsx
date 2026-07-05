@@ -54,6 +54,7 @@ test('it renders the reset password started page with a link to request another 
   setupTest();
 
   const title = await screen.findByText('Check your email');
+
   const resetLink = screen.getByRole('link', {
     name: 'try requesting another one',
   });

@@ -8,6 +8,7 @@ test('it renders the existing account email with all required elements', () => {
   const heading = screen.getByRole('heading', {
     name: 'You already have an account',
   });
+
   const emailText = screen.getByText(/test@example\.com/i);
   const resetLink = screen.getByRole('link', { name: /reset password/i });
 

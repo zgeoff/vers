@@ -222,6 +222,7 @@ test('it handles a successful email change submission', async () => {
   await user.click(submitButton);
 
   const verifyOTPRoute = await screen.findByText('VERIFY_OTP_ROUTE');
+
   const searchParams = screen.getByText(
     `target=new-email%40example.com&type=${VerificationType.ChangeEmailConfirmation}`,
   );

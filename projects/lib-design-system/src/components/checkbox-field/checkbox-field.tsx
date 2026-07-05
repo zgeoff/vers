@@ -66,6 +66,7 @@ const checkboxFieldRecipe = sva({
 export function CheckboxField(props: Props) {
   const { checked, defaultChecked, disabled, form, id, name, onClick, required } =
     props.checkboxProps;
+
   const [firstError] = props.errors;
   const styles = checkboxFieldRecipe();
 

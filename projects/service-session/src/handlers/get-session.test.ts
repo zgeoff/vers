@@ -29,6 +29,7 @@ test('it returns the requested session', async () => {
   const { caller, user } = await setupTest({ db });
 
   const sessionID = createId();
+
   const now = new Date();
 
   await db.insert(schema.sessions).values({
@@ -78,6 +79,7 @@ test('it deletes expired sessions and returns null', async () => {
   const { caller, user } = await setupTest({ db });
 
   const sessionID = createId();
+
   const now = new Date();
 
   await db.insert(schema.sessions).values({

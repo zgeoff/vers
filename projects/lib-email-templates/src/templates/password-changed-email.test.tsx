@@ -8,7 +8,9 @@ test('it renders the password changed email with all required elements', () => {
   const heading = screen.getByRole('heading', {
     name: 'Your password has been changed',
   });
+
   const emailText = screen.getByText(/test@example\.com/);
+
   const resetLink = screen.getByRole('link', {
     name: 'here',
   });

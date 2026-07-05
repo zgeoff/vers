@@ -55,6 +55,7 @@ test('it updates a users 2FA verification', async () => {
   const { db } = handle;
 
   const user = await createTestUser(db, { email: 'test@test.com' });
+
   const verification = await createTestVerification(db, {
     target: user.email,
     type: '2fa',
@@ -85,6 +86,7 @@ test('it updates a users 2FA setup verification', async () => {
   const { db } = handle;
 
   const user = await createTestUser(db, { email: 'test@test.com' });
+
   const verification = await createTestVerification(db, {
     target: user.email,
     type: '2fa-setup',

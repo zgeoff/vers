@@ -38,6 +38,7 @@ export async function updateUser(
         message: 'User not found',
       });
     }
+
     return { updatedID: user.updatedID };
   } catch (error: unknown) {
     logger.error(error);

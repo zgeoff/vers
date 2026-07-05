@@ -205,6 +205,7 @@ test('creates a verification with explicit expiry time', async () => {
   });
 
   expect(verification).toBeDefined();
+
   expect(verification).toStrictEqual({
     algorithm: 'SHA-256',
     charSet: 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789',

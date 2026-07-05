@@ -81,6 +81,7 @@ test('it completes the email signup process when transaction token is valid', as
 
 test('it returns an error if the transaction token is invalid', async () => {
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       email: 'user@test.com',

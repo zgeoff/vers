@@ -42,6 +42,7 @@ test('it creates a password reset token for an existing user', async () => {
   expect(updatedUser?.passwordResetToken).toBe(result.resetToken);
   expect(updatedUser?.passwordResetTokenExpiresAt).toBeDate();
   expect(updatedUser?.passwordResetTokenExpiresAt).toBeAfter(new Date());
+
   expect(updatedUser?.passwordResetTokenExpiresAt).toBeBefore(
     new Date(Date.now() + 11 * 60 * 1000),
   );

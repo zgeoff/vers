@@ -20,6 +20,7 @@ export function filterDistanceGraph(
 
   for (const [id, node] of Object.entries(graphData.nodes)) {
     const nodePosition = new Vector3(...getScenePosition(node.position));
+
     const distance = position.distanceTo(nodePosition);
 
     if (distance <= MAX_DISTANCE) {

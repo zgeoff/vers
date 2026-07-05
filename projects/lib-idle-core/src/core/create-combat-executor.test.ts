@@ -40,6 +40,7 @@ test('it processes events', () => {
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
+
   const activity = createActivity(activityData, ctx, {
     groupCount: 1,
     groupSize: 2,

@@ -58,7 +58,9 @@ export function IsometricCamera() {
     }
 
     cameraRigRef.current.rotation.copy(ISOMETRIC_CAMERA_ROTATION);
+
     cameraRigRef.current.position.y = CAMERA_DISTANCE;
+
     camera.updateProjectionMatrix();
   });
 

@@ -14,6 +14,7 @@ User.implement({
           target: user.email,
           type: '2fa',
         });
+
         return Boolean(verification);
       },
     }),

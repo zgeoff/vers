@@ -12,6 +12,7 @@ test('it renders a welcome email with provided configuration', () => {
 
   const welcomeMessage = screen.getByText('Welcome to vers');
   const verificationCode = screen.getByText('123456');
+
   const verificationLink = screen.getByRole('link', {
     name: 'Verify your account',
   });

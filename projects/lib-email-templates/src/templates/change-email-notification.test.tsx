@@ -6,6 +6,7 @@ test('it renders a notification email with the correct content', () => {
   render(<ChangeEmailNotificationEmail />);
 
   const heading = screen.getByText('Your email address has been changed');
+
   const contactLink = screen.getByRole('link', {
     name: 'contact support',
   });

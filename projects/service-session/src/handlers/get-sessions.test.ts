@@ -29,6 +29,7 @@ test('it returns all sessions for the user', async () => {
   const { caller, user } = await setupTest({ db });
 
   const now = new Date();
+
   const sessionID1 = createId();
   const sessionID2 = createId();
 
@@ -60,6 +61,7 @@ test('it returns all sessions for the user', async () => {
   });
 
   expect(result).toHaveLength(2);
+
   expect(result).toStrictEqual([
     {
       createdAt: expect.any(Date),
@@ -107,6 +109,7 @@ test('it deletes expired sessions and doesnt return them', async () => {
   const { caller, user } = await setupTest({ db });
 
   const now = new Date();
+
   const sessionID = createId();
 
   await db.insert(schema.sessions).values({

@@ -55,6 +55,7 @@ function setupTest(config: TestConfig) {
     {
       action: async () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
+
         return null;
       },
       path: '/test',
@@ -62,6 +63,7 @@ function setupTest(config: TestConfig) {
     {
       action: async () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
+
         return null;
       },
       path: '/custom',

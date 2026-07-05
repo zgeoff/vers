@@ -42,6 +42,7 @@ test('it refreshes access token with valid refresh token', async () => {
 
 test('it fails to refresh with invalid refresh token', async () => {
   const ctx = createMockGQLContext({});
+
   const args = {
     input: {
       refreshToken: 'invalid_refresh_token',

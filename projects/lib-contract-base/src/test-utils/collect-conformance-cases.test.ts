@@ -15,6 +15,7 @@ test('it collects titles covering malformed-input, anonymous-UNAUTHORIZED, and o
     anonymousHeaders: {},
     authedSamples: { getThing: { id: 'sample-id' } },
   });
+
   const titles = cases.map((c) => c.title);
 
   expect(titles).toSatisfyAll((title: string) => title.startsWith('it '));
@@ -46,6 +47,7 @@ test('it fails the anonymous-UNAUTHORIZED case against a nonconforming app', asy
     anonymousHeaders: {},
     authedSamples: { getThing: { id: 'sample-id' } },
   });
+
   const anonymousCase = cases.find((c) => c.title.includes('UNAUTHORIZED'));
 
   await expect(anonymousCase?.run(app)).toReject();
@@ -63,6 +65,7 @@ type TestContract = ReturnType<typeof buildTestContract>;
 /** Builds an app whose getThing handler enforces the acting-user check the contract declares. */
 function buildConformingApp(contract: TestContract): ConformanceCaseApp {
   const os = implement(contract).$context<{ actingUserId: null | string }>();
+
   const router = {
     getThing: os.getThing.handler((opts) => {
       if (opts.context.actingUserId === null) {
@@ -80,6 +83,7 @@ function buildConformingApp(contract: TestContract): ConformanceCaseApp {
 /** Builds an app whose getThing handler skips the acting-user check, so anonymous calls succeed. */
 function buildBrokenApp(contract: TestContract): ConformanceCaseApp {
   const os = implement(contract).$context<{ actingUserId: null | string }>();
+
   const router = {
     getThing: os.getThing.handler((opts) => ({ id: opts.input.id })),
     ping: os.ping.handler(() => ({ pong: true })),

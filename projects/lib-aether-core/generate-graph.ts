@@ -9,6 +9,7 @@ const graph = generateGraphNodes(MAX_DIFFICULTY);
 const graphData = getCompressedAetherGraph(graph);
 
 const outFileURL = new URL('src/aether-graph.json', import.meta.url);
+
 const outFile = fileURLToPath(outFileURL);
 
 fs.writeFileSync(outFile, JSON.stringify(graphData, null, 2));
