@@ -45,6 +45,17 @@ aren't theme tokens need the bracket escape hatch (`cursor: '[pointer]'`, `borde
 2.0 tightened `SystemStyleObject`'s value types to stop silently accepting arbitrary
 strings/numbers.
 
+### Screens are functional-first until the final design language lands
+
+The current visual direction is round 1; a second Claude Design pass (#245) supersedes it once game
+design matures, and the design system gets rebuilt to that final language (#246). Until #246 closes,
+screens and routes are built workable-only: compose existing `lib-design-system` components and
+semantic tokens (`bg.*`, `text.*`, `border.*`, `accent.*`) — no bespoke visual styling beyond
+layout, no new one-off colors/fonts/animations, no polish passes. The semantic-token layer is the
+stable contract; the re-skin lands in #246 under unchanged token names, so screens that stick to it
+adapt for free. A screen needing a component that doesn't exist yet builds the minimal version in
+its own PR and promotes it into `lib-design-system` when a second consumer appears.
+
 ## Running things today
 
 - `bun install` — whole workspace (`--frozen-lockfile` in CI; `bun.lock` is committed).
