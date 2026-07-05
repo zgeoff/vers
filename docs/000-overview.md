@@ -37,8 +37,6 @@ Each service is its own Fly deployment, scale-to-zero, reachable only on the pri
 - `service-verifier` — queue-fed checkpoint-replay worker. Replaying a simulation is CPU-bound, so
   verification runs off the request path with its own scaling profile.
 
-Email is a library (`lib-email`, a Resend wrapper), not a service — services send directly.
-
 ## Data
 
 One database, two shapes. Both live in the same Postgres on Neon, which scales to zero when nobody
