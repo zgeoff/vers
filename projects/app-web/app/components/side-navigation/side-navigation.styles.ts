@@ -97,7 +97,7 @@ export const navSection = css({
 
 export const navSectionTitle = css({
   color: 'gray.400',
-  fontFamily: 'josefin',
+  fontFamily: 'display',
   fontSize: 'xs',
   marginX: '6',
   paddingY: '2',

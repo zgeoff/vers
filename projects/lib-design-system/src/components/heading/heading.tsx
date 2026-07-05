@@ -10,7 +10,7 @@ export interface Props {
 const heading = cva({
   base: {
     color: 'slate.200',
-    fontFamily: 'josefin',
+    fontFamily: 'display',
     fontWeight: 'semibold',
   },
   variants: {

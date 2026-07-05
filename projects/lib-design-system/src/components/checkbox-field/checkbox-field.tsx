@@ -46,7 +46,7 @@ const checkboxFieldRecipe = sva({
     },
     label: {
       color: 'slate.200',
-      fontFamily: 'karla',
+      fontFamily: 'body',
       fontSize: 'md',
       fontWeight: 'normal',
       lineHeight: 'normal',

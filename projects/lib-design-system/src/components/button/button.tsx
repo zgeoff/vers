@@ -23,7 +23,7 @@ const button = cva({
     alignItems: 'center',
     borderWidth: '[1px]',
     display: 'flex',
-    fontFamily: 'karla',
+    fontFamily: 'body',
     fontWeight: 'semibold',
     justifyContent: 'center',
     lineHeight: 'none',
@@ -127,16 +127,16 @@ const button = cva({
       tertiary: {
         _disabled: {
           _hover: {
-            background: 'twine.900',
+            background: 'gold.900',
           },
-          background: 'twine.900',
+          background: 'gold.900',
           borderColor: 'neutral.100/5',
           color: 'neutral.500',
         },
         _hover: {
-          background: 'twine.300',
+          background: 'gold.400',
         },
-        background: 'twine.400',
+        background: 'gold.500',
         borderColor: 'neutral.100/20',
         color: 'neutral.100',
       },

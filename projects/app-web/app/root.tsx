@@ -2,12 +2,14 @@ import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from '
 import { HoneypotProvider } from 'remix-utils/honeypot/react';
 import type { Route } from './+types/root';
 import stylesheet from './app.css?url';
+import fontsStylesheet from './fonts.css?url';
 import { honeypot } from './honeypot.server';
 import pandaStylesheet from './styled-system/styles.css?url';
 import { useNonce } from './utils/nonce-provider';
 
 export function links(): ReturnType<Route.LinksFunction> {
   return [
+    { href: fontsStylesheet, rel: 'stylesheet' },
     { href: stylesheet, rel: 'stylesheet' },
     { href: pandaStylesheet, rel: 'stylesheet' },
 

@@ -18,6 +18,9 @@
   "dependencies": {
     "@conform-to/react": "1.2.2",
     "@conform-to/zod": "1.2.2",
+    "@fontsource-variable/manrope": "5.2.8",
+    "@fontsource/chakra-petch": "5.2.7",
+    "@fontsource/ibm-plex-mono": "5.2.7",
     "@graphql-typed-document-node/core": "3.2.0",
     "@mswjs/data": "0.16.2",
     "@oslojs/crypto": "1.0.1",

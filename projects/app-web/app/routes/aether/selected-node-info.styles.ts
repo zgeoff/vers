@@ -58,7 +58,7 @@ export const content = css({
 
 export const name = css({
   color: 'sky.100',
-  fontFamily: 'josefin',
+  fontFamily: 'display',
   fontSize: 'lg',
   fontWeight: 'medium',
   marginBottom: '[-1px]',

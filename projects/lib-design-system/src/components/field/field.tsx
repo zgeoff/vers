@@ -38,7 +38,7 @@ const fieldRecipe = sva({
     },
     label: {
       color: 'slate.200',
-      fontFamily: 'karla',
+      fontFamily: 'body',
       fontSize: 'sm',
       fontWeight: 'semibold',
       lineHeight: 'normal',

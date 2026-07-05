@@ -131,7 +131,7 @@ export const preset = definePreset({
           },
         },
         fonts: {
-          body: { value: 'Manrope, sans-serif' },
+          body: { value: '"Manrope Variable", sans-serif' },
           display: { value: '"Chakra Petch", sans-serif' },
           mono: { value: '"IBM Plex Mono", monospace' },
         },

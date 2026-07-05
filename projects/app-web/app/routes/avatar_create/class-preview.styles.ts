@@ -113,7 +113,7 @@ export const flavourTextContainer = css({
 
 export const name = css({
   color: 'gray.100',
-  fontFamily: 'josefin',
+  fontFamily: 'display',
   fontSize: {
     base: 'lg',
     xl: 'xl',
@@ -127,7 +127,7 @@ export const flavourText = css({
     fontWeight: 'medium',
   },
   color: 'white',
-  fontFamily: 'karla',
+  fontFamily: 'body',
   fontSize: {
     base: 'xs',
     lg: 'sm',
@@ -141,6 +141,6 @@ export const flavourText = css({
 
 export const primaryAttributes = css({
   color: 'white',
-  fontFamily: 'josefin',
+  fontFamily: 'display',
   fontSize: 'sm',
 });
