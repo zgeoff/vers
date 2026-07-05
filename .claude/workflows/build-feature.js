@@ -29,13 +29,15 @@ export const meta = {
 
 const MAX_FIX_ROUNDS = 2;
 
-if (!args || !args.plan || !args.branch) {
+const parsedArgs = typeof args === 'string' ? JSON.parse(args) : args;
+
+if (!parsedArgs || !parsedArgs.plan || !parsedArgs.branch) {
   throw new Error(
     'build-feature requires args: { plan: string, branch: string, issue?: number, prNumber?: number, verifyCommands?: string[] }',
   );
 }
 
-const { plan, branch, issue, prNumber, verifyCommands } = args;
+const { plan, branch, issue, prNumber, verifyCommands } = parsedArgs;
 const worktree = `.worktrees/${branch}`;
 
 /**
@@ -48,7 +50,7 @@ Ground rules for working in this repo:
 - Read AGENTS.md at the repo root before writing any code; its conventions (module order, function-name prefixes, testing rules) are binding.
 - Work ONLY inside the worktree at ${worktree}. Never commit on main.
 - The worktree needs its own dependencies: run \`bun install\` inside it first (isolated linker — node_modules are not shared with the main checkout).
-- Pre-commit hooks (husky + lint-staged) run codegen, affected typecheck, changed tests, format, and lint on every commit. NEVER bypass them with --no-verify or by editing hook files. If a hook fails, fix the cause and re-commit.
+- Git hooks are lefthook: pre-commit runs codegen plus oxlint/oxfmt/format-codemod fixes on staged files; commit-msg runs commitlint; pre-push runs format:check, lint, lint:type-aware, and typecheck (tests are CI-owned). NEVER bypass them with --no-verify or by editing hook files. If a hook fails, fix the cause and re-commit.
 - If your changed tests touch Postgres, start the test container first: \`bun run pg:test-container:start\`.
 - Use Conventional Commits${issue ? `, referencing the issue in the scope, e.g. \`feat(#${issue}): …\`` : ''}.
 `;
