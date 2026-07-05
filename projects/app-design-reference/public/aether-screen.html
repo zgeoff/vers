@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<style>
+  /* standalone host: no claude-design chrome supplies the canvas, so pin it */
+  html { background:#05070f !important; }
+  html, body { height:auto !important; min-height:100% !important; margin:0 !important; }
+</style>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  @keyframes vpulse { 0%,100%{ opacity:.4 } 50%{ opacity:1 } }
+  @keyframes vring { 0%{ transform:scale(1); opacity:.7 } 100%{ transform:scale(1.7); opacity:0 } }
+  @keyframes vspin { to { transform:rotate(360deg) } }
+  .tt-pop{ opacity:0; visibility:hidden; transition:opacity .12s ease; pointer-events:none; }
+  .tt-host:hover .tt-pop{ opacity:1; visibility:visible; }
+  @keyframes dockEnemy { 0%{width:40%} 96%{width:8%} 100%{width:40%} }
+  @keyframes dockPlayer { 0%{width:78%} 30%{width:72%} 55%{width:80%} 100%{width:78%} }
+  @keyframes dockFloat { 0%{opacity:0; transform:translateY(0)} 14%{opacity:1} 100%{opacity:0; transform:translateY(-30px)} }
+</style>
+</helmet>
+
+<div style="width:1360px; height:860px; position:relative; overflow:hidden; border-radius:16px; font-family:'Manrope',sans-serif; color:#e8edf7; background:#05070f;">
+
+  <!-- background: aether well -->
+  <div style="position:absolute; inset:0; background-color:#06080f; background-image:radial-gradient(64% 56% at 40% 42%, rgba(45,212,191,0.15), transparent 62%), radial-gradient(52% 60% at 88% 96%, rgba(167,139,250,0.15), transparent 60%), radial-gradient(42% 44% at 80% 12%, rgba(205,158,110,0.06), transparent 70%);"></div>
+  <div style="position:absolute; inset:0; background:conic-gradient(from 210deg at 40% 50%, rgba(45,212,191,0.05), transparent 22%, rgba(96,165,250,0.045) 48%, transparent 72%, rgba(45,212,191,0.05)); opacity:0.85;"></div>
+  <svg viewBox="0 0 1360 860" preserveAspectRatio="xMidYMid slice" style="position:absolute; inset:0; width:100%; height:100%;">
+    <g fill="none" stroke="#5eead4" stroke-width="1.5" style="transform-box:fill-box; transform-origin:center; animation:vspin 300s linear infinite;">
+      <ellipse cx="-30" cy="60" rx="400" ry="356" transform="rotate(6 -30 60)" stroke-opacity="0.10"></ellipse>
+      <ellipse cx="-30" cy="60" rx="560" ry="508" transform="rotate(14 -30 60)" stroke-opacity="0.07"></ellipse>
+      <ellipse cx="-30" cy="60" rx="740" ry="676" transform="rotate(22 -30 60)" stroke-opacity="0.045"></ellipse>
+      <ellipse cx="-30" cy="60" rx="940" ry="864" transform="rotate(30 -30 60)" stroke-opacity="0.025"></ellipse>
+    </g>
+    <g fill="none" stroke="#a78bfa" stroke-width="1.5" style="transform-box:fill-box; transform-origin:center; animation:vspin 420s linear infinite reverse;">
+      <ellipse cx="1440" cy="960" rx="360" ry="316" transform="rotate(8 1440 960)" stroke-opacity="0.07"></ellipse>
+      <ellipse cx="1440" cy="960" rx="540" ry="486" transform="rotate(18 1440 960)" stroke-opacity="0.045"></ellipse>
+      <ellipse cx="1440" cy="960" rx="740" ry="676" transform="rotate(26 1440 960)" stroke-opacity="0.025"></ellipse>
+    </g>
+  </svg>
+  <!-- vignette -->
+  <div style="position:absolute; inset:0; background:radial-gradient(120% 100% at 50% 45%, transparent 55%, rgba(3,4,10,0.85)); pointer-events:none;"></div>
+
+  <!-- ===== TOP BAR ===== -->
+  <div style="position:absolute; top:0; left:0; right:0; height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 22px; border-bottom:1px solid rgba(94,234,212,0.12); background:linear-gradient(180deg, rgba(7,11,22,0.82), rgba(7,11,22,0.35)); backdrop-filter:blur(6px); z-index:5;">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <svg width="15" height="15" viewBox="0 0 15 15"><rect x="3" y="3" width="9" height="9" transform="rotate(45 7.5 7.5)" fill="none" stroke="#5eead4" stroke-width="1.5"></rect><circle cx="7.5" cy="7.5" r="1.6" fill="#5eead4"></circle></svg>
+      <span style="font:600 18px/1 'Chakra Petch',sans-serif; letter-spacing:0.22em; color:#eef2fa;">VERS</span>
+      <span style="width:1px; height:20px; background:rgba(255,255,255,0.12);"></span>
+      <span style="font:500 12px/1 'IBM Plex Mono',monospace; letter-spacing:0.12em; color:#5b6b8a;">AETHER <span style="color:#3a4a67;">&#9656;</span> <span style="color:#5eead4;">STRATUM VII</span></span>
+    </div>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <div style="display:flex; align-items:center; gap:8px; padding:7px 13px; border:1px solid rgba(94,234,212,0.2); border-radius:999px;"><svg width="11" height="11" viewBox="0 0 11 11"><rect x="2" y="2" width="7" height="7" transform="rotate(45 5.5 5.5)" fill="#5eead4"></rect></svg><span style="font:600 13px/1 'IBM Plex Mono',monospace; color:#e8edf7;">48,210</span></div>
+      <div style="display:flex; align-items:center; gap:8px; padding:7px 13px; border:1px solid rgba(167,139,250,0.25); border-radius:999px;"><span style="color:#a78bfa; font-size:12px;">&#9670;</span><span style="font:600 13px/1 'IBM Plex Mono',monospace; color:#e8edf7;">92</span></div>
+      <span style="width:1px; height:20px; background:rgba(255,255,255,0.12);"></span>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:30px; height:30px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #E9D8BF, #C1834E); box-shadow:0 0 12px rgba(205,158,110,0.45); border:1px solid rgba(233,216,191,0.5);"></div>
+        <div><div style="font:600 12px/1.1 'Chakra Petch',sans-serif; letter-spacing:0.06em; color:#f2e8d5;">VANGUARD</div><div style="font:500 10px/1.1 'IBM Plex Mono',monospace; color:#d8a56e;">LV 24 &middot; WARD</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LEFT RAIL ===== -->
+  <div style="position:absolute; top:60px; bottom:0; left:0; width:58px; display:flex; flex-direction:column; align-items:center; gap:6px; padding-top:18px; border-right:1px solid rgba(94,234,212,0.08); background:rgba(7,11,22,0.4); z-index:4;"><a href="aether-screen.html" title="Aether Map" style="text-decoration:none; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; background:rgba(94,234,212,0.12); border:1px solid rgba(94,234,212,0.4); box-shadow:0 0 16px rgba(45,212,191,0.25);"><svg width="18" height="18" viewBox="0 0 18 18"><rect x="4" y="4" width="10" height="10" transform="rotate(45 9 9)" fill="none" stroke="#5eead4" stroke-width="1.5"></rect></svg></a><a href="engagement-screen.html" title="Engagement" style="text-decoration:none; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 14 L13 5 M11 3 L15 3 L15 7 M12.5 8.5 L15 11 M11 12 L14 15" fill="none" stroke="#5b6b8a" stroke-width="1.5" stroke-linecap="round"></path></svg></a><a href="character-sheet.html" title="Character" style="text-decoration:none; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="6" r="3" fill="none" stroke="#5b6b8a" stroke-width="1.5"></circle><path d="M3 15 #5b6b8a3 11, 15 11, 15 15" fill="none" stroke="#5b6b8a" stroke-width="1.5"></path></svg></a><a href="stash.html" title="Stash" style="text-decoration:none; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18"><rect x="3" y="3" width="12" height="12" rx="2" fill="none" stroke="#5b6b8a" stroke-width="1.5"></rect><path d="M3 9 H15 M9 3 V15" stroke="#5b6b8a" stroke-width="1"></path></svg></a><a href="market.html" title="Market" style="text-decoration:none; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 5 H15 L14 13 H4 Z M6 5 V3.5 A3 3 0 0 1 12 3.5 V5" fill="none" stroke="#5b6b8a" stroke-width="1.4"></path></svg></a><a href="codex.html" title="Codex" style="text-decoration:none; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 3 H12 A2 2 0 0 1 14 5 V15 L9 12.5 L4 15 Z" fill="none" stroke="#5b6b8a" stroke-width="1.4"></path></svg></a><div style="flex:1;"></div><div style="width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; margin-bottom:16px;"><svg width="17" height="17" viewBox="0 0 18 18"><circle cx="9" cy="9" r="3" fill="none" stroke="#5b6b8a" stroke-width="1.5"></circle><path d="M9 1 V4 M9 14 V17 M1 9 H4 M14 9 H17" stroke="#5b6b8a" stroke-width="1.5"></path></svg></div></div>
+
+  <!-- ===== MAP AREA ===== -->
+  <div style="position:absolute; top:60px; left:58px; right:392px; bottom:158px; display:flex; align-items:center; justify-content:center;">
+    <span style="position:absolute; top:20px; left:24px; font:500 11px/1.5 'IBM Plex Mono',monospace; letter-spacing:0.1em; color:#3f5170;">AETHER WELL&nbsp;VII<br>resonance&nbsp;0.62</span>
+    <span style="position:absolute; bottom:20px; left:24px; font:600 44px/0.9 'Chakra Petch',sans-serif; letter-spacing:0.04em; color:rgba(94,234,212,0.06);">STRATUM VII</span>
+    <span style="position:absolute; top:20px; right:24px; text-align:right; font:500 11px/1.5 'IBM Plex Mono',monospace; letter-spacing:0.1em; color:#3f5170;">NODES 21 / 44<br>CLEARED 12</span>
+    <div style="position:relative; display:inline-block; width:min(100%,560px); line-height:0;">
+    <svg viewBox="0 0 420 420" style="width:100%; height:auto; display:block; overflow:visible;">
+      <circle cx="210" cy="210" r="78" fill="none" stroke="rgba(94,234,212,0.14)"></circle>
+      <circle cx="210" cy="210" r="150" fill="none" stroke="rgba(94,234,212,0.09)"></circle>
+      <circle cx="210" cy="210" r="196" fill="none" stroke="rgba(94,234,212,0.05)" stroke-dasharray="3 7"></circle>
+      <g stroke="rgba(96,165,250,0.28)" stroke-width="1">
+        <line x1="210" y1="210" x2="265" y2="155"></line><line x1="210" y1="210" x2="155" y2="155"></line><line x1="210" y1="210" x2="155" y2="265"></line><line x1="210" y1="210" x2="265" y2="265"></line>
+        <line x1="265" y1="155" x2="316" y2="104"></line><line x1="265" y1="155" x2="360" y2="210"></line><line x1="265" y1="155" x2="210" y2="60"></line>
+        <line x1="155" y1="155" x2="104" y2="104"></line><line x1="155" y1="155" x2="60" y2="210"></line><line x1="155" y1="155" x2="210" y2="60"></line>
+        <line x1="155" y1="265" x2="104" y2="316"></line><line x1="155" y1="265" x2="60" y2="210"></line><line x1="155" y1="265" x2="210" y2="360"></line>
+        <line x1="265" y1="265" x2="316" y2="316"></line><line x1="265" y1="265" x2="360" y2="210"></line><line x1="265" y1="265" x2="210" y2="360"></line>
+      </g>
+      <g stroke="rgba(94,234,212,0.14)" stroke-width="1">
+        <line x1="316" y1="104" x2="358" y2="70"></line><line x1="360" y1="210" x2="406" y2="210"></line><line x1="104" y1="104" x2="62" y2="70"></line><line x1="60" y1="210" x2="14" y2="210"></line><line x1="210" y1="360" x2="210" y2="406"></line>
+      </g>
+      <g fill="#60a5fa">
+        <circle cx="316" cy="104" r="3.5"></circle><circle cx="360" cy="210" r="3.5"></circle><circle cx="316" cy="316" r="3.5"></circle><circle cx="210" cy="360" r="3.5"></circle><circle cx="104" cy="316" r="3.5"></circle><circle cx="60" cy="210" r="3.5"></circle><circle cx="104" cy="104" r="3.5"></circle><circle cx="210" cy="60" r="3.5"></circle>
+      </g>
+      <g fill="#2a3550"><circle cx="358" cy="70" r="2.5"></circle><circle cx="406" cy="210" r="2.5"></circle><circle cx="62" cy="70" r="2.5"></circle><circle cx="14" cy="210" r="2.5"></circle><circle cx="210" cy="406" r="2.5"></circle></g>
+      <g>
+        <circle cx="155" cy="155" r="11" fill="#2dd4bf" opacity="0.18"></circle><circle cx="155" cy="155" r="4.5" fill="#5eead4"></circle>
+        <circle cx="155" cy="265" r="11" fill="#2dd4bf" opacity="0.18"></circle><circle cx="155" cy="265" r="4.5" fill="#5eead4"></circle>
+        <circle cx="265" cy="265" r="11" fill="#2dd4bf" opacity="0.18"></circle><circle cx="265" cy="265" r="4.5" fill="#5eead4"></circle>
+      </g>
+      <!-- selected node -->
+      <circle cx="265" cy="155" r="20" fill="none" stroke="#5eead4" stroke-width="1.5" style="transform-origin:265px 155px; animation:vring 2.4s ease-out infinite;"></circle>
+      <circle cx="265" cy="155" r="15" fill="none" stroke="rgba(94,234,212,0.5)" stroke-width="1"></circle>
+      <circle cx="265" cy="155" r="13" fill="#CD9E6E" opacity="0.28"></circle>
+      <circle cx="265" cy="155" r="6" fill="#E9D8BF"></circle>
+      <path d="M265 132 l5 9 h-10 z" fill="#E9D8BF"></path>
+      <line x1="278" y1="145" x2="330" y2="120" stroke="rgba(94,234,212,0.4)" stroke-width="1"></line>
+      <circle cx="210" cy="210" r="20" fill="#a78bfa" opacity="0.2" style="transform-origin:210px 210px; animation:vpulse 3.4s ease-in-out infinite;"></circle>
+      <circle cx="210" cy="210" r="8" fill="#c4b5fd"></circle><circle cx="210" cy="210" r="3" fill="#fff"></circle>
+    </svg>
+    <!-- hover hotspot over selected node (265,155 in 420 vb) -->
+    <div class="tt-host" style="position:absolute; left:63.1%; top:36.9%; width:40px; height:40px; margin:-20px 0 0 -20px; border-radius:50%; cursor:pointer;">
+      <div class="tt-pop" style="position:absolute; left:100%; top:50%; transform:translateY(-50%); margin-left:14px; width:250px; border-radius:12px; padding:14px 15px; background:linear-gradient(180deg, rgba(8,15,17,0.98), rgba(6,9,12,0.98)); border:1px solid rgba(94,234,212,0.45); box-shadow:0 20px 50px rgba(0,0,0,0.65), 0 0 30px rgba(45,212,191,0.14); z-index:20; line-height:normal; text-align:left;">
+        <span style="position:absolute; top:6px; left:6px; width:10px; height:10px; border-top:1.5px solid rgba(94,234,212,0.6); border-left:1.5px solid rgba(94,234,212,0.6);"></span>
+        <span style="position:absolute; top:6px; right:6px; width:10px; height:10px; border-top:1.5px solid rgba(94,234,212,0.6); border-right:1.5px solid rgba(94,234,212,0.6);"></span>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;"><span style="font:600 8px/1 'IBM Plex Mono',monospace; letter-spacing:0.1em; color:#0a0b10; background:#5eead4; padding:3px 7px; border-radius:5px;">TIER 07</span><span style="font:400 10px/1 'IBM Plex Mono',monospace; color:#5b6b8a;">ARC&ndash;4471</span></div>
+        <div style="font:600 16px/1.1 'Chakra Petch',sans-serif; color:#eef2fa; margin-bottom:10px;">The Sundered Vault</div>
+        <div style="display:flex; flex-direction:column; gap:5px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+          <div style="display:flex; justify-content:space-between; font:400 11.5px/1 'Manrope';"><span style="color:#8fa0c2;">Corrupted Sentinel</span><span style="color:#e8edf7; font-family:'IBM Plex Mono';">&times;3</span></div>
+          <div style="display:flex; justify-content:space-between; font:400 11.5px/1 'Manrope';"><span style="color:#8fa0c2;"><span style="border-bottom:1px dotted #a78bfa; color:#a78bfa;">Void Warden</span></span><span style="color:#e8edf7; font-family:'IBM Plex Mono';">&times;1</span></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;"><span style="font:400 11px/1 'Manrope'; color:#8fa0c2;">Yield</span><span style="font:600 12px/1 'IBM Plex Mono'; color:#d8a56e;">&asymp; 2.4K / min</span></div>
+        <div style="padding-top:10px; margin-top:10px; border-top:1px solid rgba(255,255,255,0.08); font:400 9px/1 'IBM Plex Mono',monospace; color:#4a5773;">CLICK TO DESCEND</div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- ===== RIGHT PANEL ===== -->
+  <div style="position:absolute; top:76px; right:16px; bottom:168px; width:360px; border-radius:16px; padding:22px; background:linear-gradient(180deg, rgba(13,18,32,0.92), rgba(7,11,22,0.85)); border:1px solid rgba(94,234,212,0.16); box-shadow:0 20px 60px rgba(0,0,0,0.5); display:flex; flex-direction:column; z-index:4;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:9px;"><svg width="11" height="11" viewBox="0 0 11 11"><rect x="2" y="2" width="7" height="7" transform="rotate(45 5.5 5.5)" fill="#5eead4"></rect></svg><span style="font:600 11px/1 'Chakra Petch',sans-serif; letter-spacing:0.2em; color:#5eead4;">SELECTED NODE</span></div>
+      <span style="font:500 11px/1 'IBM Plex Mono',monospace; color:#3f5170;">ARC&ndash;4471</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+      <span style="font:600 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.1em; color:#a78bfa; border:1px solid rgba(167,139,250,0.35); padding:5px 9px; border-radius:5px;">TIER 07</span>
+      <span style="font:500 11px/1 'IBM Plex Mono',monospace; color:#5b6b8a;">STRATUM VII</span>
+    </div>
+    <div style="font:600 27px/1.05 'Chakra Petch',sans-serif; letter-spacing:0.01em; background:linear-gradient(180deg,#eef2fa,#7dd3fc); -webkit-background-clip:text; background-clip:text; color:transparent;">The Sundered Vault</div>
+    <div style="height:1px; background:rgba(94,234,212,0.12); margin:18px 0;"></div>
+    <div style="font:600 10px/1 'Chakra Petch',sans-serif; letter-spacing:0.2em; color:#5b6b8a; margin-bottom:12px;">HOSTILES</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:9px;"><span style="width:6px; height:6px; border-radius:50%; background:#f472b6;"></span><span style="font:400 13px/1 'Manrope',sans-serif; color:#c3cee0;">Corrupted Sentinel</span></div><span style="font:500 12px/1 'IBM Plex Mono',monospace; color:#e8edf7;">&times;3</span></div>
+      <div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:9px;"><span style="width:6px; height:6px; border-radius:50%; background:#a78bfa;"></span><span style="font:400 13px/1 'Manrope',sans-serif; color:#c3cee0;">Void Warden</span></div><span style="font:500 12px/1 'IBM Plex Mono',monospace; color:#e8edf7;">&times;1</span></div>
+    </div>
+    <div style="height:1px; background:rgba(94,234,212,0.12); margin:18px 0;"></div>
+    <div style="display:flex; gap:10px;">
+      <div style="flex:1;"><div style="font:500 9px/1 'IBM Plex Mono',monospace; letter-spacing:0.12em; color:#5b6b8a; margin-bottom:7px;">DANGER</div><div style="height:4px; border-radius:2px; background:rgba(255,255,255,0.08);"><div style="width:80%; height:100%; border-radius:2px; background:#f472b6;"></div></div></div>
+      <div style="flex:1;"><div style="font:500 9px/1 'IBM Plex Mono',monospace; letter-spacing:0.12em; color:#5b6b8a; margin-bottom:7px;">STABILITY</div><div style="height:4px; border-radius:2px; background:rgba(255,255,255,0.08);"><div style="width:45%; height:100%; border-radius:2px; background:#5eead4;"></div></div></div>
+      <div style="flex:1;"><div style="font:500 9px/1 'IBM Plex Mono',monospace; letter-spacing:0.12em; color:#5b6b8a; margin-bottom:7px;">DEPTH</div><div style="height:4px; border-radius:2px; background:rgba(255,255,255,0.08);"><div style="width:70%; height:100%; border-radius:2px; background:#60a5fa;"></div></div></div>
+    </div>
+    <div style="flex:1;"></div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;"><span style="font:400 12px/1 'Manrope',sans-serif; color:#8fa0c2;">Projected yield</span><span style="font:600 13px/1 'IBM Plex Mono',monospace; color:#d8a56e;">&asymp; 2.4K aether/min</span></div>
+    <a href="engagement-screen.html" style="text-decoration:none; box-sizing:border-box; display:flex; align-items:center; justify-content:center; border:0; cursor:pointer; width:100%; font:600 15px/1 'Chakra Petch',sans-serif; letter-spacing:0.14em; color:#04060d; background:linear-gradient(180deg,#5eead4,#2dd4bf); padding:15px; border-radius:11px; box-shadow:0 0 28px rgba(45,212,191,0.4);">DESCEND</a>
+  </div>
+
+  <!-- ===== BOTTOM DOCK ===== -->
+  <div style="position:absolute; bottom:16px; left:72px; right:392px; height:126px; border-radius:16px; padding:18px 22px; background:linear-gradient(180deg, rgba(13,18,32,0.9), rgba(7,11,22,0.82)); border:1px solid rgba(94,234,212,0.14); display:flex; gap:26px; align-items:center; z-index:4;">
+    <div style="flex:1; display:flex; flex-direction:column; gap:0;">
+      <div style="display:flex; align-items:center; gap:9px; margin-bottom:14px;"><svg width="10" height="10" viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="6" height="6" transform="rotate(45 5 5)" fill="none" stroke="#5eead4" stroke-width="1.2"></rect></svg><span style="font:600 10px/1 'Chakra Petch',sans-serif; letter-spacing:0.2em; color:#5eead4;">ENGAGEMENT</span><span style="font:500 10px/1 'IBM Plex Mono',monospace; color:#3f5170; margin-left:auto;">SIMULATING &middot; 4&times;</span></div>
+      <div style="display:flex; justify-content:space-between; font:500 11px/1 'IBM Plex Mono',monospace; color:#b7c2d8; margin-bottom:6px;"><span style="color:#d8a56e;">VANGUARD</span><span style="color:#d8a56e;">1,842 / 2,360</span></div>
+      <div style="height:6px; border-radius:999px; background:rgba(255,255,255,0.08); overflow:hidden; margin-bottom:11px;"><div style="width:78%; height:100%; background:linear-gradient(90deg,#C1834E,#E9D8BF); animation:dockPlayer 6s ease-in-out infinite;"></div></div>
+      <div style="display:flex; justify-content:space-between; font:500 11px/1 'IBM Plex Mono',monospace; color:#8fa0c2; margin-bottom:6px;"><span>VOID WARDEN</span><span style="color:#f472b6;">612 / 1,800</span></div>
+      <div style="height:6px; border-radius:999px; background:rgba(255,255,255,0.08); overflow:hidden;"><div style="width:34%; height:100%; background:linear-gradient(90deg,#a78bfa,#f472b6); animation:dockEnemy 8s ease-in-out infinite;"></div></div>
+    </div>
+    <div style="width:1px; align-self:stretch; background:rgba(255,255,255,0.08);"></div>
+    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px; min-width:120px;">
+      <div style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.14em; color:#5b6b8a;">DPS</div>
+      <div style="position:relative; font:600 34px/1 'Chakra Petch',sans-serif; letter-spacing:0.02em; color:#d8a56e;">412<span style="position:absolute; right:-2px; top:-14px; font:700 12px/1 'Chakra Petch',sans-serif; color:#f472b6; animation:dockFloat 1.8s ease-out infinite;">-128</span></div>
+      <div style="font:500 11px/1 'IBM Plex Mono',monospace; color:#8fa0c2; margin-top:6px;">ELAPSED <span style="color:#e8edf7;">00:47</span></div>
+      <div style="font:400 10px/1.4 'IBM Plex Mono',monospace; color:#3f5170; text-align:right; margin-top:8px; max-width:200px;">&raquo; strike &mdash; 128 dmg &nbsp; &raquo; +240 aether</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1360, &quot;height&quot;: 860}}"></script>
+</body>
+</html>

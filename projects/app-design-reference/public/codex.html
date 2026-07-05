@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<style>
+  /* standalone host: no claude-design chrome supplies the canvas, so pin it */
+  html { background:#05070f !important; }
+  html, body { height:auto !important; min-height:100% !important; margin:0 !important; }
+</style>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  .tt-pop{ opacity:0; visibility:hidden; transition:opacity .12s ease; pointer-events:none; }
+  .tt-host:hover .tt-pop{ opacity:1; visibility:visible; }
+</style>
+</helmet>
+
+<div style="width:1360px; height:860px; position:relative; overflow:hidden; border-radius:16px; font-family:'Manrope',sans-serif; color:#e8edf7; background:#05070f;">
+
+  <!-- background -->
+  <div style="position:absolute; inset:0; background-color:#06080f; background-image:radial-gradient(60% 56% at 30% 30%, rgba(45,212,191,0.07), transparent 62%), radial-gradient(52% 60% at 90% 90%, rgba(167,139,250,0.08), transparent 60%);"></div>
+  <div style="position:absolute; inset:0; background:radial-gradient(120% 100% at 50% 45%, transparent 60%, rgba(3,4,10,0.8)); pointer-events:none;"></div>
+
+  <!-- ===== TOP BAR ===== -->
+  <div style="position:absolute; top:0; left:0; right:0; height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 22px; border-bottom:1px solid rgba(94,234,212,0.12); background:linear-gradient(180deg, rgba(7,11,22,0.82), rgba(7,11,22,0.35)); z-index:5;">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <svg width="15" height="15" viewBox="0 0 15 15"><rect x="3" y="3" width="9" height="9" transform="rotate(45 7.5 7.5)" fill="none" stroke="#5eead4" stroke-width="1.5"></rect><circle cx="7.5" cy="7.5" r="1.6" fill="#5eead4"></circle></svg>
+      <span style="font:600 18px/1 'Chakra Petch',sans-serif; letter-spacing:0.22em; color:#eef2fa;">VERS</span>
+      <span style="width:1px; height:20px; background:rgba(255,255,255,0.12);"></span>
+      <span style="font:500 12px/1 'IBM Plex Mono',monospace; letter-spacing:0.12em; color:#5b6b8a;">NEXUS <span style="color:#3a4a67;">&#9656;</span> <span style="color:#5eead4;">CODEX</span></span>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px; width:320px; height:38px; padding:0 15px; border-radius:11px; background:rgba(13,18,32,0.9); border:1px solid rgba(94,234,212,0.16);">
+      <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5" fill="none" stroke="#5b6b8a" stroke-width="1.4"></circle><path d="M9.5 9.5 L13 13" stroke="#5b6b8a" stroke-width="1.4" stroke-linecap="round"></path></svg>
+      <span style="font:400 13px/1 'Manrope',sans-serif; color:#5b6b8a;">Search the aether&hellip;</span>
+    </div>
+  </div>
+
+  <!-- ===== LEFT RAIL ===== -->
+  <div style="position:absolute; top:60px; bottom:0; left:0; width:58px; display:flex; flex-direction:column; align-items:center; gap:6px; padding-top:18px; border-right:1px solid rgba(94,234,212,0.08); background:rgba(7,11,22,0.4); z-index:4;"><a href="aether-screen.html" title="Aether Map" style="text-decoration:none; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18"><rect x="4" y="4" width="10" height="10" transform="rotate(45 9 9)" fill="none" stroke="#5b6b8a" stroke-width="1.5"></rect></svg></a><a href="engagement-screen.html" title="Engagement" style="text-decoration:none; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 14 L13 5 M11 3 L15 3 L15 7 M12.5 8.5 L15 11 M11 12 L14 15" fill="none" stroke="#5b6b8a" stroke-width="1.5" stroke-linecap="round"></path></svg></a><a href="character-sheet.html" title="Character" style="text-decoration:none; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="6" r="3" fill="none" stroke="#5b6b8a" stroke-width="1.5"></circle><path d="M3 15 #5b6b8a3 11, 15 11, 15 15" fill="none" stroke="#5b6b8a" stroke-width="1.5"></path></svg></a><a href="stash.html" title="Stash" style="text-decoration:none; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18"><rect x="3" y="3" width="12" height="12" rx="2" fill="none" stroke="#5b6b8a" stroke-width="1.5"></rect><path d="M3 9 H15 M9 3 V15" stroke="#5b6b8a" stroke-width="1"></path></svg></a><a href="market.html" title="Market" style="text-decoration:none; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 5 H15 L14 13 H4 Z M6 5 V3.5 A3 3 0 0 1 12 3.5 V5" fill="none" stroke="#5b6b8a" stroke-width="1.4"></path></svg></a><a href="codex.html" title="Codex" style="text-decoration:none; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; background:rgba(94,234,212,0.12); border:1px solid rgba(94,234,212,0.4); box-shadow:0 0 16px rgba(45,212,191,0.25);"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 3 H12 A2 2 0 0 1 14 5 V15 L9 12.5 L4 15 Z" fill="none" stroke="#5eead4" stroke-width="1.4"></path></svg></a><div style="flex:1;"></div><div style="width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; margin-bottom:16px;"><svg width="17" height="17" viewBox="0 0 18 18"><circle cx="9" cy="9" r="3" fill="none" stroke="#5b6b8a" stroke-width="1.5"></circle><path d="M9 1 V4 M9 14 V17 M1 9 H4 M14 9 H17" stroke="#5b6b8a" stroke-width="1.5"></path></svg></div></div>
+
+  <!-- ===== CATEGORY SIDEBAR ===== -->
+  <div style="position:absolute; top:76px; left:74px; width:250px; bottom:16px; box-sizing:border-box; border-radius:16px; padding:18px; background:linear-gradient(180deg, rgba(13,18,32,0.9), rgba(7,11,22,0.82)); border:1px solid rgba(94,234,212,0.14); z-index:3;">
+    <div style="display:flex; align-items:center; gap:9px; margin-bottom:16px;"><svg width="11" height="11" viewBox="0 0 11 11"><rect x="2" y="2" width="7" height="7" transform="rotate(45 5.5 5.5)" fill="#5eead4"></rect></svg><span style="font:600 11px/1 'Chakra Petch',sans-serif; letter-spacing:0.18em; color:#5eead4;">CATEGORIES</span></div>
+
+    <div style="display:flex; align-items:center; gap:8px; padding:9px 10px; border-radius:8px; background:rgba(45,212,191,0.06); margin-bottom:3px;"><span style="color:#5eead4; font-size:10px;">&#9662;</span><span style="font:600 12px/1 'Chakra Petch',sans-serif; color:#c3cee0;">Bestiary</span><span style="margin-left:auto; font:500 10px/1 'IBM Plex Mono',monospace; color:#5b6b8a;">84</span></div>
+    <div style="padding-left:14px; display:flex; flex-direction:column; gap:1px; margin-bottom:6px;">
+      <div style="padding:7px 10px; border-radius:7px; background:rgba(244,114,182,0.1); border:1px solid rgba(244,114,182,0.25); display:flex; align-items:center; gap:8px;"><span style="width:6px; height:6px; border-radius:50%; background:#f472b6;"></span><span style="font:500 12px/1 'Manrope',sans-serif; color:#f6a9d0;">Risen Goliath</span></div>
+      <div style="padding:7px 10px; display:flex; align-items:center; gap:8px;"><span style="width:6px; height:6px; border-radius:50%; background:#60a5fa;"></span><span style="font:400 12px/1 'Manrope',sans-serif; color:#8fa0c2;">Void Warden</span></div>
+      <div style="padding:7px 10px; display:flex; align-items:center; gap:8px;"><span style="width:6px; height:6px; border-radius:50%; background:#9fb0c9;"></span><span style="font:400 12px/1 'Manrope',sans-serif; color:#8fa0c2;">Rift Shade</span></div>
+      <div style="padding:7px 10px; display:flex; align-items:center; gap:8px;"><span style="width:6px; height:6px; border-radius:50%; background:#a78bfa;"></span><span style="font:400 12px/1 'Manrope',sans-serif; color:#8fa0c2;">Corrupted Sentinel</span></div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px; padding:9px 10px; border-radius:8px; margin-bottom:2px;"><span style="color:#5b6b8a; font-size:10px;">&#9656;</span><span style="font:600 12px/1 'Chakra Petch',sans-serif; color:#8fa0c2;">Items &amp; Affixes</span><span style="margin-left:auto; font:500 10px/1 'IBM Plex Mono',monospace; color:#5b6b8a;">312</span></div>
+    <div style="display:flex; align-items:center; gap:8px; padding:9px 10px; border-radius:8px; margin-bottom:2px;"><span style="color:#5b6b8a; font-size:10px;">&#9656;</span><span style="font:600 12px/1 'Chakra Petch',sans-serif; color:#8fa0c2;">Mechanics</span><span style="margin-left:auto; font:500 10px/1 'IBM Plex Mono',monospace; color:#5b6b8a;">46</span></div>
+    <div style="display:flex; align-items:center; gap:8px; padding:9px 10px; border-radius:8px; margin-bottom:2px;"><span style="color:#5b6b8a; font-size:10px;">&#9656;</span><span style="font:600 12px/1 'Chakra Petch',sans-serif; color:#8fa0c2;">The Aether</span><span style="margin-left:auto; font:500 10px/1 'IBM Plex Mono',monospace; color:#5b6b8a;">28</span></div>
+    <div style="display:flex; align-items:center; gap:8px; padding:9px 10px; border-radius:8px; margin-bottom:2px;"><span style="color:#5b6b8a; font-size:10px;">&#9656;</span><span style="font:600 12px/1 'Chakra Petch',sans-serif; color:#8fa0c2;">Disciplines</span><span style="margin-left:auto; font:500 10px/1 'IBM Plex Mono',monospace; color:#5b6b8a;">12</span></div>
+    <div style="display:flex; align-items:center; gap:8px; padding:9px 10px; border-radius:8px;"><span style="color:#5b6b8a; font-size:10px;">&#9656;</span><span style="font:600 12px/1 'Chakra Petch',sans-serif; color:#8fa0c2;">Lore &amp; Strata</span><span style="margin-left:auto; font:500 10px/1 'IBM Plex Mono',monospace; color:#5b6b8a;">19</span></div>
+  </div>
+
+  <!-- ===== ARTICLE ===== -->
+  <div style="position:absolute; top:76px; left:340px; right:16px; bottom:16px; box-sizing:border-box; border-radius:16px; padding:30px 34px; background:linear-gradient(180deg, rgba(13,18,32,0.9), rgba(7,11,22,0.82)); border:1px solid rgba(94,234,212,0.14); box-shadow:0 20px 60px rgba(0,0,0,0.4); z-index:3; overflow:hidden;">
+    <!-- breadcrumb -->
+    <div style="font:500 11px/1 'IBM Plex Mono',monospace; color:#5b6b8a; margin-bottom:16px;">Bestiary <span style="color:#3a4a67;">/</span> Colossus <span style="color:#3a4a67;">/</span> <span style="color:#8fa0c2;">Risen Goliath</span></div>
+
+    <!-- title row -->
+    <div style="display:flex; align-items:flex-start; gap:16px;">
+      <h1 style="margin:0; font:600 40px/1 'Chakra Petch',sans-serif; letter-spacing:0.01em; color:#f6e8f0;">Risen Goliath</h1>
+      <span style="font:600 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.12em; color:#1a0e16; background:#f472b6; padding:6px 11px; border-radius:6px; margin-top:8px;">BOSS</span>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:14px;">
+      <span style="font:400 11px/1 'Manrope',sans-serif; color:#c99ab8; border:1px solid rgba(244,114,182,0.3); padding:5px 11px; border-radius:999px;">Colossus type</span>
+      <span style="font:400 11px/1 'Manrope',sans-serif; color:#8fa0c2; border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:999px;">Stratum VII+</span>
+      <span style="font:400 11px/1 'Manrope',sans-serif; color:#8fa0c2; border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:999px;">Physical / Void</span>
+    </div>
+
+    <!-- infobox -->
+    <div style="position:absolute; right:34px; top:120px; width:230px; border-radius:14px; padding:18px; background:rgba(0,0,0,0.25); border:1px solid rgba(244,114,182,0.22);">
+      <div style="width:100%; height:120px; border-radius:10px; background:radial-gradient(circle at 50% 40%, rgba(244,114,182,0.12), rgba(13,18,32,0.9)); border:1px solid rgba(244,114,182,0.25); display:flex; align-items:center; justify-content:center; margin-bottom:14px;"><svg width="60" height="60" viewBox="0 0 60 60"><polygon points="30,5 52,18 52,42 30,55 8,42 8,18" fill="rgba(244,114,182,0.12)" stroke="#f472b6" stroke-width="1.6"></polygon><path d="M30 18 L40 30 L30 42 L20 30 Z" fill="rgba(244,114,182,0.35)" stroke="#f472b6" stroke-width="1.1"></path></svg></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dotted rgba(255,255,255,0.1);"><span style="font:400 11px/1 'Manrope'; color:#8fa0c2;">First seen</span><span style="font:600 11px/1 'IBM Plex Mono'; color:#e8edf7;">Stratum VII</span></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dotted rgba(255,255,255,0.1);"><span style="font:400 11px/1 'Manrope'; color:#8fa0c2;">Base HP</span><span style="font:600 11px/1 'IBM Plex Mono'; color:#f472b6;">61.0B</span></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dotted rgba(255,255,255,0.1);"><span style="font:400 11px/1 'Manrope'; color:#8fa0c2;">Resistances</span><span style="font:600 11px/1 'IBM Plex Mono'; color:#e8edf7;">Phys 40%</span></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0;"><span style="font:400 11px/1 'Manrope'; color:#8fa0c2;">Weakness</span><span style="font:600 11px/1 'IBM Plex Mono'; color:#5eead4;">Void</span></div>
+    </div>
+
+    <!-- body -->
+    <div style="margin-top:24px; max-width:660px;">
+      <p style="margin:0 0 16px; font:400 14px/1.7 'Manrope',sans-serif; color:#b7c2d8;">A hulking revenant reassembled from the wreckage of an earlier expedition, the Risen Goliath guards the approach to the Sundered Vault. Its plating is fused with raw aether, letting it shrug off physical blows while its core remains vulnerable to <span style="color:#5eead4;">Void</span> damage.</p>
+      <p style="margin:0 0 20px; font:400 14px/1.7 'Manrope',sans-serif; color:#b7c2d8;">During an engagement it channels <span style="color:#f472b6;">Crush</span> at low cadence &mdash; a heavy telegraphed strike that ignores a portion of Barrier. Attuning your barrier recharge before the cast lands is the difference between a clean pull and a reset.</p>
+
+      <div style="font:600 10px/1 'Chakra Petch',sans-serif; letter-spacing:0.16em; color:#8fa0c2; margin-bottom:12px;">ABILITIES</div>
+      <div style="display:flex; gap:10px; margin-bottom:22px;">
+        <div style="display:flex; align-items:center; gap:9px; padding:9px 13px; border-radius:9px; background:rgba(244,114,182,0.06); border:1px solid rgba(244,114,182,0.25);"><span style="width:7px; height:7px; border-radius:50%; background:#f472b6;"></span><span style="font:500 12px/1 'Manrope'; color:#f6a9d0;">Crush</span><span style="font:400 10px/1 'IBM Plex Mono'; color:#8fa0c2;">telegraphed</span></div>
+        <div style="display:flex; align-items:center; gap:9px; padding:9px 13px; border-radius:9px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1);"><span style="width:7px; height:7px; border-radius:50%; background:#a78bfa;"></span><span style="font:500 12px/1 'Manrope'; color:#c3cee0;">Sunder</span><span style="font:400 10px/1 'IBM Plex Mono'; color:#8fa0c2;">aoe</span></div>
+      </div>
+
+      <div style="font:600 10px/1 'Chakra Petch',sans-serif; letter-spacing:0.16em; color:#8fa0c2; margin-bottom:12px;">NOTABLE DROPS</div>
+      <div style="display:flex; gap:10px;">
+        <div style="display:flex; align-items:center; gap:9px; padding:9px 13px; border-radius:9px; background:rgba(244,114,182,0.06); border:1px solid rgba(244,114,182,0.25);"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 2 L9 5 L7 12 L5 5 Z" fill="#f472b6"></path></svg><span style="font:500 12px/1 'Manrope'; color:#f6a9d0;">Goliath Core</span><span style="font:400 10px/1 'IBM Plex Mono'; color:#8fa0c2;">unique</span></div>
+        <div class="tt-host" style="position:relative; display:flex; align-items:center; gap:9px; padding:9px 13px; border-radius:9px; background:rgba(167,139,250,0.06); border:1px solid rgba(167,139,250,0.25);"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="8" r="4" fill="none" stroke="#a78bfa" stroke-width="1.3"></circle></svg><span style="font:500 12px/1 'Manrope'; color:#c4b5fd;">Warded Band</span><span style="font:400 10px/1 'IBM Plex Mono'; color:#8fa0c2;">artisan</span>
+          <div class="tt-pop" style="position:absolute; left:0; bottom:100%; margin-bottom:10px; width:248px; border-radius:12px; padding:14px; background:linear-gradient(180deg, rgba(14,11,20,0.98), rgba(8,7,12,0.98)); border:1px solid rgba(167,139,250,0.5); box-shadow:0 20px 50px rgba(0,0,0,0.65), 0 0 30px rgba(167,139,250,0.14); z-index:40;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span style="font:600 8px/1 'IBM Plex Mono',monospace; letter-spacing:0.1em; color:#12101c; background:#a78bfa; padding:3px 7px; border-radius:5px;">ARTISAN</span><span style="font:400 10px/1 'IBM Plex Mono',monospace; color:#5b6b8a;">RING</span></div>
+            <div style="font:600 16px/1.1 'Chakra Petch',sans-serif; color:#c4b5fd;">Warded Band</div>
+            <div style="display:flex; flex-direction:column; gap:5px; margin-top:11px;">
+              <div style="font:500 12px/1.4 'Manrope'; color:#93b4e8;"><span style="color:#cfe0f8; font-weight:600;">+42</span> to Maximum <span style="border-bottom:1px dotted #7dd3fc; color:#7dd3fc;">Barrier</span></div>
+              <div style="font:500 12px/1.4 'Manrope'; color:#93b4e8;"><span style="color:#cfe0f8; font-weight:600;">+18%</span> <span style="border-bottom:1px dotted #a78bfa; color:#a78bfa;">Void Resistance</span></div>
+            </div>
+            <div style="padding-top:10px; margin-top:11px; border-top:1px solid rgba(255,255,255,0.08); font:400 9px/1 'IBM Plex Mono',monospace; color:#4a5773;">DROP &middot; CLICK FOR ENTRY</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- see also footer -->
+    <div style="position:absolute; left:34px; right:34px; bottom:24px; padding-top:16px; border-top:1px solid rgba(94,234,212,0.12); display:flex; align-items:center; gap:12px;">
+      <span style="font:600 10px/1 'Chakra Petch',sans-serif; letter-spacing:0.14em; color:#5b6b8a;">SEE ALSO</span>
+      <span style="font:400 11px/1 'Manrope',sans-serif; color:#5eead4; border-bottom:1px solid rgba(94,234,212,0.3);">Colossus type</span>
+      <span style="font:400 11px/1 'Manrope',sans-serif; color:#5eead4; border-bottom:1px solid rgba(94,234,212,0.3);">The Sundered Vault</span>
+      <span style="font:400 11px/1 'Manrope',sans-serif; color:#5eead4; border-bottom:1px solid rgba(94,234,212,0.3);">Barrier mechanics</span>
+      <span style="font:400 11px/1 'Manrope',sans-serif; color:#5eead4; border-bottom:1px solid rgba(94,234,212,0.3);">Void damage</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1360, &quot;height&quot;: 860}}"></script>
+</body>
+</html>

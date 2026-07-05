@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<style>
+  /* standalone host: no claude-design chrome supplies the canvas, so pin it */
+  html { background:#05070f !important; }
+  html, body { height:auto !important; min-height:100% !important; margin:0 !important; }
+</style>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body{ margin:0; background:#05070f; background-image:radial-gradient(60% 60% at 15% 4%, rgba(45,212,191,0.05), transparent 60%), radial-gradient(50% 50% at 92% 96%, rgba(167,139,250,0.06), transparent 60%); }
+  a{ color:inherit; }
+  @keyframes dsSpin { to { transform:rotate(360deg) } }
+  @keyframes dsPulse { 0%,100%{ opacity:.45 } 50%{ opacity:1 } }
+  @keyframes dsCast { 0%{ width:0% } 70%{ width:100% } 76%{ width:0% } 100%{ width:0% } }
+  @keyframes dsFloat { 0%{ opacity:0; transform:translate(-50%,0) } 14%{ opacity:1 } 100%{ opacity:0; transform:translate(-50%,-34px) } }
+  @keyframes dsShimmer { 0%{ background-position:0 0 } 100%{ background-position:200% 0 } }
+</style>
+</helmet>
+
+<section style="padding:60px 64px 100px; font-family:'Manrope',sans-serif; color:#e8edf7;">
+  <div style="max-width:1280px; margin:0 auto;">
+
+    <!-- ===== HEADER ===== -->
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px;">
+      <svg width="20" height="20" viewBox="0 0 15 15"><rect x="3" y="3" width="9" height="9" transform="rotate(45 7.5 7.5)" fill="none" stroke="#5eead4" stroke-width="1.5"></rect><circle cx="7.5" cy="7.5" r="1.6" fill="#5eead4"></circle></svg>
+      <span style="font:600 20px/1 'Chakra Petch',sans-serif; letter-spacing:0.22em; color:#eef2fa;">VERS</span>
+      <span style="font:600 12px/1 'IBM Plex Mono',monospace; letter-spacing:0.28em; color:#5b6b8a;">&nbsp;/&nbsp; AETHER DESIGN SYSTEM</span>
+    </div>
+    <h1 style="margin:0 0 14px; font:600 40px/1.05 'Chakra Petch',sans-serif; letter-spacing:0.01em; color:#eef2fa;">The system, not the screens</h1>
+    <p style="margin:0 0 12px; max-width:900px; font:400 16px/1.65 'Manrope',sans-serif; color:#9aa6bf;">The living reference for Vers&rsquo; visual language. Screens will change as the game is built &mdash; <strong style="color:#c3cee0; font-weight:600;">this holds the rules that shouldn&rsquo;t</strong>: colour roles, type, component patterns and motion. Copy values straight from here. The screens at the bottom are canonical <em>examples</em> of the system applied, not the source of truth.</p>
+    <p style="margin:0 0 44px; max-width:900px; font:400 13px/1.6 'Manrope',sans-serif; color:#66738c;">Deliberately excluded: a naming glossary. Terminology (aether / nexus / stratum / barrier&hellip;) is still in flux and will settle as the game design does &mdash; capturing it now would just create a stale reference to maintain.</p>
+
+    <!-- ===== 01 COLOUR ===== -->
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:22px;"><span style="font:600 12px/1 'IBM Plex Mono',monospace; color:#5eead4;">01</span><span style="font:600 16px/1 'Chakra Petch',sans-serif; letter-spacing:0.16em; color:#eef2fa;">COLOUR</span><span style="flex:1; height:1px; background:rgba(94,234,212,0.14);"></span></div>
+
+    <p style="margin:0 0 18px; font:400 14px/1.5 'Manrope'; color:#9aa6bf; max-width:760px;"><strong style="color:#c3cee0;">Colour is semantic, not decorative.</strong> Three roles carry meaning everywhere: <span style="color:#5eead4;">teal = the world / aether</span>, <span style="color:#d8a56e;">gold = you / your character</span>, <span style="color:#a78bfa;">violet = the enemy / arcane</span>. Everything else is a supporting accent or neutral.</p>
+
+    <!-- role columns -->
+    <div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:30px;">
+      <!-- WORLD -->
+      <div style="flex:1; min-width:300px; border-radius:14px; padding:20px; background:rgba(13,18,32,0.6); border:1px solid rgba(94,234,212,0.2);">
+        <div style="font:600 11px/1 'Chakra Petch'; letter-spacing:0.16em; color:#5eead4; margin-bottom:4px;">WORLD &middot; AETHER</div>
+        <div style="font:400 12px/1.5 'Manrope'; color:#8fa0c2; margin-bottom:14px;">Map, energy, your powers, yields, positive UI.</div>
+        <div style="display:flex; gap:8px;">
+          <div style="flex:1;"><div style="height:46px; border-radius:8px; background:#5eead4; box-shadow:0 0 16px rgba(94,234,212,0.35);"></div><div style="font:500 9px/1 'IBM Plex Mono'; color:#5b6b8a; margin-top:6px;">#5eead4</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:8px; background:#2dd4bf;"></div><div style="font:500 9px/1 'IBM Plex Mono'; color:#5b6b8a; margin-top:6px;">#2dd4bf</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:8px; background:#7dd3fc;"></div><div style="font:500 9px/1 'IBM Plex Mono'; color:#5b6b8a; margin-top:6px;">#7dd3fc</div></div>
+        </div>
+      </div>
+      <!-- SELF -->
+      <div style="flex:1; min-width:300px; border-radius:14px; padding:20px; background:rgba(26,20,16,0.5); border:1px solid rgba(216,165,110,0.25);">
+        <div style="font:600 11px/1 'Chakra Petch'; letter-spacing:0.16em; color:#d8a56e; margin-bottom:4px;">SELF &middot; YOU</div>
+        <div style="font:400 12px/1.5 'Manrope'; color:#a89372; margin-bottom:14px;">Avatar, life, output, position, rewards.</div>
+        <div style="display:flex; gap:8px;">
+          <div style="flex:1;"><div style="height:46px; border-radius:8px; background:#E9D8BF;"></div><div style="font:500 9px/1 'IBM Plex Mono'; color:#5b6b8a; margin-top:6px;">#E9D8BF</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:8px; background:#CD9E6E; box-shadow:0 0 16px rgba(205,158,110,0.35);"></div><div style="font:500 9px/1 'IBM Plex Mono'; color:#5b6b8a; margin-top:6px;">#CD9E6E</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:8px; background:#C1834E;"></div><div style="font:500 9px/1 'IBM Plex Mono'; color:#5b6b8a; margin-top:6px;">#C1834E</div></div>
+        </div>
+      </div>
+      <!-- ENEMY -->
+      <div style="flex:1; min-width:300px; border-radius:14px; padding:20px; background:rgba(20,16,32,0.5); border:1px solid rgba(167,139,250,0.25);">
+        <div style="font:600 11px/1 'Chakra Petch'; letter-spacing:0.16em; color:#a78bfa; margin-bottom:4px;">ENEMY &middot; ARCANE</div>
+        <div style="font:400 12px/1.5 'Manrope'; color:#a99ac8; margin-bottom:14px;">Hostiles, corruption, passive tree, threats.</div>
+        <div style="display:flex; gap:8px;">
+          <div style="flex:1;"><div style="height:46px; border-radius:8px; background:#a78bfa; box-shadow:0 0 16px rgba(167,139,250,0.35);"></div><div style="font:500 9px/1 'IBM Plex Mono'; color:#5b6b8a; margin-top:6px;">#a78bfa</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:8px; background:#c4b5fd;"></div><div style="font:500 9px/1 'IBM Plex Mono'; color:#5b6b8a; margin-top:6px;">#c4b5fd</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:8px; background:#f472b6; box-shadow:0 0 16px rgba(244,114,182,0.35);"></div><div style="font:500 9px/1 'IBM Plex Mono'; color:#5b6b8a; margin-top:6px;">#f472b6</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- rarity ladder -->
+    <div style="border-radius:14px; padding:22px; background:rgba(13,18,32,0.5); border:1px solid rgba(255,255,255,0.08); margin-bottom:18px;">
+      <div style="font:600 11px/1 'Chakra Petch'; letter-spacing:0.16em; color:#c3cee0; margin-bottom:4px;">RARITY LADDER</div>
+      <div style="font:400 12px/1.5 'Manrope'; color:#8fa0c2; margin-bottom:16px;">One colour ramp, two context names. Items and enemies share the ramp so tier reads instantly.</div>
+      <div style="display:flex; gap:14px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:180px; border-radius:10px; padding:14px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.02);"><div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span style="width:12px; height:12px; border-radius:3px; background:#9fb0c9;"></span><span style="font:600 13px/1 'Chakra Petch'; color:#dbe3ef;">NORMAL</span></div><div style="font:400 11px/1.5 'IBM Plex Mono'; color:#8fa0c2;">item: Normal<br>enemy: Normal<br>#9fb0c9</div></div>
+        <div style="flex:1; min-width:180px; border-radius:10px; padding:14px; border:1px solid rgba(96,165,250,0.4); background:rgba(96,165,250,0.05);"><div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span style="width:12px; height:12px; border-radius:3px; background:#60a5fa;"></span><span style="font:600 13px/1 'Chakra Petch'; color:#93c5fd;">EMPOWERED</span></div><div style="font:400 11px/1.5 'IBM Plex Mono'; color:#8fa0c2;">item: Empowered<br>enemy: Rare<br>#60a5fa</div></div>
+        <div style="flex:1; min-width:180px; border-radius:10px; padding:14px; border:1px solid rgba(167,139,250,0.4); background:rgba(167,139,250,0.05);"><div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span style="width:12px; height:12px; border-radius:3px; background:#a78bfa;"></span><span style="font:600 13px/1 'Chakra Petch'; color:#c4b5fd;">ARTISAN</span></div><div style="font:400 11px/1.5 'IBM Plex Mono'; color:#8fa0c2;">item: Artisan<br>enemy: Elite<br>#a78bfa</div></div>
+        <div style="flex:1; min-width:180px; border-radius:10px; padding:14px; border:1px solid rgba(244,114,182,0.4); background:rgba(244,114,182,0.05);"><div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span style="width:12px; height:12px; border-radius:3px; background:#f472b6;"></span><span style="font:600 13px/1 'Chakra Petch'; color:#f6a9d0;">UNIQUE</span></div><div style="font:400 11px/1.5 'IBM Plex Mono'; color:#8fa0c2;">item: Unique<br>enemy: Boss<br>#f472b6</div></div>
+      </div>
+    </div>
+
+    <!-- accents + neutrals -->
+    <div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:44px;">
+      <div style="flex:1; min-width:340px; border-radius:14px; padding:20px; background:rgba(13,18,32,0.5); border:1px solid rgba(255,255,255,0.08);">
+        <div style="font:600 11px/1 'Chakra Petch'; letter-spacing:0.16em; color:#c3cee0; margin-bottom:14px;">KEYWORD / DAMAGE ACCENTS</div>
+        <div style="display:flex; flex-direction:column; gap:9px; font:500 12px/1 'IBM Plex Mono';">
+          <div style="display:flex; justify-content:space-between;"><span style="color:#7dd3fc;">Barrier / Cold</span><span style="color:#5b6b8a;">#7dd3fc / #60a5fa</span></div>
+          <div style="display:flex; justify-content:space-between;"><span style="color:#fb7185;">Fire / Physical / debuff</span><span style="color:#5b6b8a;">#fb7185</span></div>
+          <div style="display:flex; justify-content:space-between;"><span style="color:#a78bfa;">Void / arcane</span><span style="color:#5b6b8a;">#a78bfa</span></div>
+          <div style="display:flex; justify-content:space-between;"><span style="color:#fbbf24;">Shock / alert</span><span style="color:#5b6b8a;">#fbbf24</span></div>
+          <div style="display:flex; justify-content:space-between;"><span style="color:#cfe0f8;">Mod magnitude (bright)</span><span style="color:#5b6b8a;">#cfe0f8</span></div>
+        </div>
+      </div>
+      <div style="flex:1; min-width:340px; border-radius:14px; padding:20px; background:rgba(13,18,32,0.5); border:1px solid rgba(255,255,255,0.08);">
+        <div style="font:600 11px/1 'Chakra Petch'; letter-spacing:0.16em; color:#c3cee0; margin-bottom:14px;">NEUTRALS &amp; SURFACES</div>
+        <div style="display:flex; gap:6px; margin-bottom:12px;">
+          <div style="flex:1; height:34px; border-radius:6px; background:#05070f; border:1px solid rgba(255,255,255,0.1);"></div>
+          <div style="flex:1; height:34px; border-radius:6px; background:#0d1220; border:1px solid rgba(255,255,255,0.08);"></div>
+          <div style="flex:1; height:34px; border-radius:6px; background:#1a2740;"></div>
+          <div style="flex:1; height:34px; border-radius:6px; background:#3f5170;"></div>
+          <div style="flex:1; height:34px; border-radius:6px; background:#8fa0c2;"></div>
+          <div style="flex:1; height:34px; border-radius:6px; background:#e8edf7;"></div>
+        </div>
+        <div style="font:400 11px/1.6 'IBM Plex Mono'; color:#8fa0c2;">bg #05070f &middot; panel rgba(13,18,32,.9) &middot; text #e8edf7 / #8fa0c2 / #5b6b8a &middot; hairline rgba(94,234,212,.14)</div>
+      </div>
+    </div>
+
+    <!-- ===== 02 TYPE ===== -->
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:22px;"><span style="font:600 12px/1 'IBM Plex Mono',monospace; color:#5eead4;">02</span><span style="font:600 16px/1 'Chakra Petch',sans-serif; letter-spacing:0.16em; color:#eef2fa;">TYPE</span><span style="flex:1; height:1px; background:rgba(94,234,212,0.14);"></span></div>
+    <div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:44px;">
+      <div style="flex:1; min-width:300px; border-radius:14px; padding:22px; background:rgba(13,18,32,0.5); border:1px solid rgba(255,255,255,0.08);">
+        <div style="font:600 32px/1 'Chakra Petch'; color:#eef2fa; margin-bottom:8px;">Chakra Petch</div>
+        <div style="font:400 12px/1.5 'Manrope'; color:#8fa0c2;">Display &middot; headings, names, big numbers, brand. Engineered, sci-fi. Weights 500/600.</div>
+      </div>
+      <div style="flex:1; min-width:300px; border-radius:14px; padding:22px; background:rgba(13,18,32,0.5); border:1px solid rgba(255,255,255,0.08);">
+        <div style="font:400 30px/1 'Manrope'; color:#eef2fa; margin-bottom:8px;">Manrope</div>
+        <div style="font:400 12px/1.5 'Manrope'; color:#8fa0c2;">Body &middot; reading copy, descriptions, mod lines. Humanist, calm. Weights 300&ndash;600.</div>
+      </div>
+      <div style="flex:1; min-width:300px; border-radius:14px; padding:22px; background:rgba(13,18,32,0.5); border:1px solid rgba(255,255,255,0.08);">
+        <div style="font:500 26px/1 'IBM Plex Mono'; color:#eef2fa; margin-bottom:8px;">IBM Plex Mono</div>
+        <div style="font:400 12px/1.5 'Manrope'; color:#8fa0c2;">Data &middot; labels, stats, values, HUD readouts. Often UPPERCASE + letter-spacing. 0123456789</div>
+      </div>
+    </div>
+
+    <!-- ===== 03 COMPONENTS ===== -->
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:22px;"><span style="font:600 12px/1 'IBM Plex Mono',monospace; color:#5eead4;">03</span><span style="font:600 16px/1 'Chakra Petch',sans-serif; letter-spacing:0.16em; color:#eef2fa;">COMPONENTS</span><span style="flex:1; height:1px; background:rgba(94,234,212,0.14);"></span></div>
+    <div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:44px; align-items:flex-start;">
+      <!-- panel -->
+      <div style="width:280px;">
+        <div style="font:500 10px/1 'IBM Plex Mono'; color:#66738c; margin-bottom:10px;">GLASS PANEL + SECTION LABEL</div>
+        <div style="border-radius:16px; padding:18px; background:linear-gradient(180deg, rgba(13,18,32,0.9), rgba(7,11,22,0.82)); border:1px solid rgba(94,234,212,0.14); box-shadow:0 20px 50px rgba(0,0,0,0.4);">
+          <div style="display:flex; align-items:center; gap:9px; margin-bottom:12px;"><svg width="11" height="11" viewBox="0 0 11 11"><rect x="2" y="2" width="7" height="7" transform="rotate(45 5.5 5.5)" fill="#5eead4"></rect></svg><span style="font:600 11px/1 'Chakra Petch'; letter-spacing:0.2em; color:#5eead4;">SECTION</span></div>
+          <div style="font:400 12px/1.6 'Manrope'; color:#8fa0c2;">Diamond glyph + Chakra Petch caps label. The base container for every screen region.</div>
+        </div>
+      </div>
+      <!-- tiles + bars -->
+      <div style="width:280px;">
+        <div style="font:500 10px/1 'IBM Plex Mono'; color:#66738c; margin-bottom:10px;">STAT TILE &middot; BARS</div>
+        <div style="border-radius:16px; padding:18px; background:linear-gradient(180deg, rgba(13,18,32,0.9), rgba(7,11,22,0.82)); border:1px solid rgba(94,234,212,0.14);">
+          <div style="display:flex; gap:8px; margin-bottom:14px;">
+            <div style="flex:1; border-radius:11px; padding:10px 0; text-align:center; background:rgba(216,165,110,0.08); border:1px solid rgba(216,165,110,0.3);"><div style="font:600 20px/1 'Chakra Petch'; color:#f2e8d5;">120</div><div style="font:500 8px/1 'IBM Plex Mono'; color:#d8a56e; margin-top:4px;">FOCUS</div></div>
+            <div style="flex:1; border-radius:11px; padding:10px 0; text-align:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.09);"><div style="font:600 20px/1 'Chakra Petch'; color:#dbe3ef;">880</div><div style="font:500 8px/1 'IBM Plex Mono'; color:#8fa0c2; margin-top:4px;">EVASION</div></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font:500 9px/1 'IBM Plex Mono'; margin-bottom:5px;"><span style="color:#c9b89b;">LIFE</span><span style="color:#E9D8BF;">2,360</span></div>
+          <div style="height:9px; border-radius:999px; background:rgba(255,255,255,0.07); overflow:hidden; margin-bottom:9px;"><div style="width:100%; height:100%; background:linear-gradient(90deg,#C1834E,#E9D8BF,#C1834E); background-size:200% 100%; animation:dsShimmer 5s linear infinite;"></div></div>
+          <div style="display:flex; justify-content:space-between; font:500 9px/1 'IBM Plex Mono'; margin-bottom:5px;"><span style="color:#9fd8cf;">BARRIER</span><span style="color:#7dd3fc;">640</span></div>
+          <div style="height:7px; border-radius:999px; background:rgba(255,255,255,0.06); overflow:hidden;"><div style="width:100%; height:100%; background:linear-gradient(90deg,#2dd4bf,#7dd3fc,#2dd4bf); background-size:200% 100%; animation:dsShimmer 3.5s linear infinite;"></div></div>
+        </div>
+      </div>
+      <!-- rarity slot + button -->
+      <div style="width:280px;">
+        <div style="font:500 10px/1 'IBM Plex Mono'; color:#66738c; margin-bottom:10px;">RARITY SLOT &middot; BUTTONS</div>
+        <div style="border-radius:16px; padding:18px; background:linear-gradient(180deg, rgba(13,18,32,0.9), rgba(7,11,22,0.82)); border:1px solid rgba(94,234,212,0.14);">
+          <div style="display:flex; gap:8px; margin-bottom:16px;">
+            <div style="width:44px; height:44px; border-radius:9px; border:2px solid #f472b6; background:radial-gradient(circle at 50% 35%, rgba(244,114,182,0.18), rgba(13,18,32,0.9));"></div>
+            <div style="width:44px; height:44px; border-radius:9px; border:2px solid #a78bfa; background:radial-gradient(circle at 50% 35%, rgba(167,139,250,0.16), rgba(13,18,32,0.9));"></div>
+            <div style="width:44px; height:44px; border-radius:9px; border:2px solid #60a5fa; background:radial-gradient(circle at 50% 35%, rgba(96,165,250,0.14), rgba(13,18,32,0.9));"></div>
+            <div style="width:44px; height:44px; border-radius:9px; border:1.5px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.02);"></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <button style="border:0; cursor:pointer; font:600 12px/1 'Chakra Petch'; letter-spacing:0.12em; color:#04060d; background:linear-gradient(180deg,#5eead4,#2dd4bf); padding:11px; border-radius:9px;">PRIMARY (WORLD)</button>
+            <button style="border:1px solid rgba(216,165,110,0.5); cursor:pointer; font:600 12px/1 'Chakra Petch'; letter-spacing:0.12em; color:#d8a56e; background:rgba(216,165,110,0.08); padding:10px; border-radius:9px;">OUTLINE (SELF)</button>
+          </div>
+        </div>
+      </div>
+      <!-- tooltip shell -->
+      <div style="width:280px;">
+        <div style="font:500 10px/1 'IBM Plex Mono'; color:#66738c; margin-bottom:10px;">SIGNAL TOOLTIP SHELL</div>
+        <div style="position:relative; border-radius:12px; padding:14px; background:linear-gradient(180deg, rgba(16,9,14,0.98), rgba(8,6,10,0.98)); border:1px solid rgba(244,114,182,0.5); box-shadow:0 20px 50px rgba(0,0,0,0.6);">
+          <span style="position:absolute; top:6px; left:6px; width:10px; height:10px; border-top:1.5px solid rgba(244,114,182,0.6); border-left:1.5px solid rgba(244,114,182,0.6);"></span>
+          <span style="position:absolute; top:6px; right:6px; width:10px; height:10px; border-top:1.5px solid rgba(244,114,182,0.6); border-right:1.5px solid rgba(244,114,182,0.6);"></span>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span style="font:600 8px/1 'IBM Plex Mono'; letter-spacing:0.1em; color:#1a0e16; background:#f472b6; padding:3px 7px; border-radius:5px;">RARITY TAG</span><span style="font:400 9px/1 'IBM Plex Mono'; color:#5b6b8a;">iLv 72</span></div>
+          <div style="font:600 15px/1.1 'Chakra Petch'; color:#f6a9d0; margin-bottom:9px;">Name</div>
+          <div style="font:500 12px/1.4 'Manrope'; color:#93b4e8;"><span style="color:#cfe0f8; font-weight:600;">+42</span> to Maximum <span style="border-bottom:1px dotted #7dd3fc; color:#7dd3fc;">Barrier</span></div>
+          <div style="padding-top:9px; margin-top:10px; border-top:1px solid rgba(255,255,255,0.08); font:400 8px/1 'IBM Plex Mono'; color:#4a5773;">CORNER TICKS &middot; KEYWORD UNDERLINE &middot; FOOTER HINTS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 04 MOTION ===== -->
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:22px;"><span style="font:600 12px/1 'IBM Plex Mono',monospace; color:#5eead4;">04</span><span style="font:600 16px/1 'Chakra Petch',sans-serif; letter-spacing:0.16em; color:#eef2fa;">MOTION</span><span style="flex:1; height:1px; background:rgba(94,234,212,0.14);"></span></div>
+    <p style="margin:0 0 18px; font:400 14px/1.5 'Manrope'; color:#9aa6bf; max-width:760px;">A small vocabulary of named, looping behaviours. Combat surfaces animate a single &ldquo;turn&rdquo; on repeat so they read as alive at rest; everything else is subtle ambient drift.</p>
+    <div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:44px;">
+      <div style="flex:1; min-width:220px; border-radius:14px; padding:18px; background:rgba(13,18,32,0.5); border:1px solid rgba(255,255,255,0.08);">
+        <div style="position:relative; height:44px; border-radius:8px; background:rgba(0,0,0,0.3); overflow:hidden; margin-bottom:12px; display:flex; align-items:center; padding:0 10px;"><div style="width:100%; height:6px; border-radius:999px; background:rgba(255,255,255,0.08); overflow:hidden;"><div style="height:100%; background:#f472b6; animation:dsCast 3s ease-in-out infinite;"></div></div></div>
+        <div style="font:600 12px/1 'Chakra Petch'; color:#eef2fa; margin-bottom:4px;">Cast loop</div>
+        <div style="font:400 11px/1.5 'Manrope'; color:#8fa0c2;">Ability/cast bars fill then fire. Staggered timings per actor.</div>
+      </div>
+      <div style="flex:1; min-width:220px; border-radius:14px; padding:18px; background:rgba(13,18,32,0.5); border:1px solid rgba(255,255,255,0.08);">
+        <div style="position:relative; height:44px; border-radius:8px; background:rgba(0,0,0,0.3); overflow:hidden; margin-bottom:12px; display:flex; align-items:center; justify-content:center;"><span style="position:absolute; left:50%; font:700 14px/1 'Chakra Petch'; color:#ffd7ea; animation:dsFloat 2s ease-out infinite;">-412M</span></div>
+        <div style="font:600 12px/1 'Chakra Petch'; color:#eef2fa; margin-bottom:4px;">Floating damage</div>
+        <div style="font:400 11px/1.5 'Manrope'; color:#8fa0c2;">Numbers rise + fade over targets. Colour by damage type.</div>
+      </div>
+      <div style="flex:1; min-width:220px; border-radius:14px; padding:18px; background:rgba(13,18,32,0.5); border:1px solid rgba(255,255,255,0.08);">
+        <div style="height:44px; border-radius:8px; background:rgba(0,0,0,0.3); overflow:hidden; margin-bottom:12px; display:flex; align-items:center; padding:0 10px;"><div style="width:100%; height:7px; border-radius:999px; background:linear-gradient(90deg,#2dd4bf,#7dd3fc,#2dd4bf); background-size:200% 100%; animation:dsShimmer 3s linear infinite;"></div></div>
+        <div style="font:600 12px/1 'Chakra Petch'; color:#eef2fa; margin-bottom:4px;">Bar shimmer</div>
+        <div style="font:400 11px/1.5 'Manrope'; color:#8fa0c2;">Vitals flow gently so they feel live, not static.</div>
+      </div>
+      <div style="flex:1; min-width:220px; border-radius:14px; padding:18px; background:rgba(13,18,32,0.5); border:1px solid rgba(255,255,255,0.08);">
+        <div style="height:44px; border-radius:8px; background:rgba(0,0,0,0.3); overflow:hidden; margin-bottom:12px; display:flex; align-items:center; justify-content:center;"><svg width="34" height="34" viewBox="0 0 34 34" style="animation:dsSpin 12s linear infinite;"><ellipse cx="17" cy="17" rx="14" ry="11" transform="rotate(20 17 17)" fill="none" stroke="#5eead4" stroke-opacity="0.5" stroke-width="1"></ellipse><ellipse cx="17" cy="17" rx="9" ry="7" transform="rotate(20 17 17)" fill="none" stroke="#5eead4" stroke-opacity="0.3" stroke-width="1"></ellipse></svg></div>
+        <div style="font:600 12px/1 'Chakra Petch'; color:#eef2fa; margin-bottom:4px;">Aether-well drift</div>
+        <div style="font:400 11px/1.5 'Manrope'; color:#8fa0c2;">Off-centre rings slowly rotate behind every screen.</div>
+      </div>
+      <div style="flex:1; min-width:220px; border-radius:14px; padding:18px; background:rgba(13,18,32,0.5); border:1px solid rgba(255,255,255,0.08);">
+        <div style="height:44px; border-radius:8px; background:rgba(0,0,0,0.3); overflow:hidden; margin-bottom:12px; display:flex; align-items:center; justify-content:center;"><span style="width:12px; height:12px; border-radius:50%; background:#5eead4; box-shadow:0 0 12px #5eead4; animation:dsPulse 1.6s ease-in-out infinite;"></span></div>
+        <div style="font:600 12px/1 'Chakra Petch'; color:#eef2fa; margin-bottom:4px;">Live pulse</div>
+        <div style="font:400 11px/1.5 'Manrope'; color:#8fa0c2;">Active/channelling indicators breathe on a slow cycle.</div>
+      </div>
+    </div>
+
+    <!-- ===== 05 SCREENS ===== -->
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:10px;"><span style="font:600 12px/1 'IBM Plex Mono',monospace; color:#5eead4;">05</span><span style="font:600 16px/1 'Chakra Petch',sans-serif; letter-spacing:0.16em; color:#eef2fa;">SCREENS &mdash; THE SYSTEM APPLIED</span><span style="flex:1; height:1px; background:rgba(94,234,212,0.14);"></span></div>
+    <p style="margin:0 0 22px; font:400 13px/1.5 'Manrope'; color:#66738c; max-width:760px;">Canonical examples, not the source of truth. Each opens full-screen; hover elements to see the inspect layer, combat screens loop on their own.</p>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <a href="aether-screen.html" style="text-decoration:none; display:flex; align-items:center; gap:16px; border-radius:11px; padding:15px 18px; background:rgba(13,18,32,0.6); border:1px solid rgba(255,255,255,0.07);"><span style="width:4px; height:34px; border-radius:2px; background:#5eead4; flex:0 0 auto;"></span><span style="font:600 15px/1 'Chakra Petch'; color:#eef2fa; width:170px; flex:0 0 auto;">Aether Map</span><span style="font:400 12px/1.4 'Manrope'; color:#8fa0c2; flex:1;">Node graph + engagement dock. Animated combat.</span><span style="font:400 14px/1 'Manrope'; color:#5b6b8a;">&rsaquo;</span></a>
+      <a href="engagement-screen.html" style="text-decoration:none; display:flex; align-items:center; gap:16px; border-radius:11px; padding:15px 18px; background:rgba(13,18,32,0.6); border:1px solid rgba(255,255,255,0.07);"><span style="width:4px; height:34px; border-radius:2px; background:#5eead4; flex:0 0 auto;"></span><span style="font:600 15px/1 'Chakra Petch'; color:#eef2fa; width:170px; flex:0 0 auto;">Engagement</span><span style="font:400 12px/1.4 'Manrope'; color:#8fa0c2; flex:1;">The idle loop &mdash; enemies, loot, abilities. Fully animated.</span><span style="font:400 14px/1 'Manrope'; color:#5b6b8a;">&rsaquo;</span></a>
+      <a href="character-sheet.html" style="text-decoration:none; display:flex; align-items:center; gap:16px; border-radius:11px; padding:15px 18px; background:rgba(13,18,32,0.6); border:1px solid rgba(255,255,255,0.07);"><span style="width:4px; height:34px; border-radius:2px; background:#d8a56e; flex:0 0 auto;"></span><span style="font:600 15px/1 'Chakra Petch'; color:#f2e8d5; width:170px; flex:0 0 auto;">Character</span><span style="font:400 12px/1.4 'Manrope'; color:#a89372; flex:1;">Paperdoll, stats, skill + support abilities.</span><span style="font:400 14px/1 'Manrope'; color:#5b6b8a;">&rsaquo;</span></a>
+      <a href="passive-tree.html" style="text-decoration:none; display:flex; align-items:center; gap:16px; border-radius:11px; padding:15px 18px; background:rgba(13,18,32,0.6); border:1px solid rgba(255,255,255,0.07);"><span style="width:4px; height:34px; border-radius:2px; background:#a78bfa; flex:0 0 auto;"></span><span style="font:600 15px/1 'Chakra Petch'; color:#c4b5fd; width:170px; flex:0 0 auto;">Passive Tree</span><span style="font:400 12px/1.4 'Manrope'; color:#a99ac8; flex:1;">Node canvas, allocation, keystones.</span><span style="font:400 14px/1 'Manrope'; color:#5b6b8a;">&rsaquo;</span></a>
+      <a href="stash.html" style="text-decoration:none; display:flex; align-items:center; gap:16px; border-radius:11px; padding:15px 18px; background:rgba(13,18,32,0.6); border:1px solid rgba(255,255,255,0.07);"><span style="width:4px; height:34px; border-radius:2px; background:#5eead4; flex:0 0 auto;"></span><span style="font:600 15px/1 'Chakra Petch'; color:#eef2fa; width:170px; flex:0 0 auto;">Stash</span><span style="font:400 12px/1.4 'Manrope'; color:#8fa0c2; flex:1;">Tabs, item grid, pinnable tooltips.</span><span style="font:400 14px/1 'Manrope'; color:#5b6b8a;">&rsaquo;</span></a>
+      <a href="market.html" style="text-decoration:none; display:flex; align-items:center; gap:16px; border-radius:11px; padding:15px 18px; background:rgba(13,18,32,0.6); border:1px solid rgba(255,255,255,0.07);"><span style="width:4px; height:34px; border-radius:2px; background:#d8a56e; flex:0 0 auto;"></span><span style="font:600 15px/1 'Chakra Petch'; color:#f2e8d5; width:170px; flex:0 0 auto;">Market</span><span style="font:400 12px/1.4 'Manrope'; color:#a89372; flex:1;">Deep configurable filters, stat search, listings.</span><span style="font:400 14px/1 'Manrope'; color:#5b6b8a;">&rsaquo;</span></a>
+      <a href="codex.html" style="text-decoration:none; display:flex; align-items:center; gap:16px; border-radius:11px; padding:15px 18px; background:rgba(13,18,32,0.6); border:1px solid rgba(255,255,255,0.07);"><span style="width:4px; height:34px; border-radius:2px; background:#5eead4; flex:0 0 auto;"></span><span style="font:600 15px/1 'Chakra Petch'; color:#eef2fa; width:170px; flex:0 0 auto;">Codex</span><span style="font:400 12px/1.4 'Manrope'; color:#8fa0c2; flex:1;">Bestiary, articles, cross-links.</span><span style="font:400 14px/1 'Manrope'; color:#5b6b8a;">&rsaquo;</span></a>
+      <div style="height:1px; background:rgba(255,255,255,0.06); margin:6px 0;"></div>
+      <a href="tooltips.html" style="text-decoration:none; display:flex; align-items:center; gap:16px; border-radius:11px; padding:15px 18px; background:rgba(13,18,32,0.6); border:1px solid rgba(255,255,255,0.07);"><span style="width:4px; height:34px; border-radius:2px; background:linear-gradient(180deg,#5eead4,#a78bfa,#f472b6); flex:0 0 auto;"></span><span style="font:600 15px/1 'Chakra Petch'; color:#eef2fa; width:170px; flex:0 0 auto;">Tooltip System</span><span style="font:400 12px/1.4 'Manrope'; color:#8fa0c2; flex:1;">The full Signal inspect-layer set &mdash; items, skills, stats, nodes.</span><span style="font:400 14px/1 'Manrope'; color:#5b6b8a;">&rsaquo;</span></a>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

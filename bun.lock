@@ -44,6 +44,10 @@
         "vitest": "catalog:",
       },
     },
+    "projects/app-design-reference": {
+      "name": "@vers/design-reference",
+      "version": "0.0.0",
+    },
     "projects/app-web": {
       "name": "@vers/web",
       "version": "0.0.0",
@@ -1916,6 +1920,8 @@
     "@vers/data": ["@vers/data@workspace:projects/lib-data"],
 
     "@vers/db-postgres": ["@vers/db-postgres@workspace:projects/db-postgres"],
+
+    "@vers/design-reference": ["@vers/design-reference@workspace:projects/app-design-reference"],
 
     "@vers/design-system": ["@vers/design-system@workspace:projects/lib-design-system"],
 

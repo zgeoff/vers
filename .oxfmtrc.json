@@ -2,6 +2,7 @@
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "ignorePatterns": [
     "bun.lock",
+    "projects/app-design-reference/public/**",
     "projects/app-web/app/gql/**",
     "projects/app-web/public/mockServiceWorker.js",
     "schema.graphql",
