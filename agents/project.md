@@ -64,7 +64,11 @@ strings/numbers.
   left off in config — the unused-directive check is the ratchet: fixing a baselined site makes its
   comment stale and lint fails until the comment is deleted. `lib-idle-core`/`lib-aether-core`
   tick/lifecycle handlers that mutate their entity parameter by design carry a real reason instead
-  of the baseline marker; those are permanent.
+  of the baseline marker; those are permanent. `typescript/prefer-readonly-parameter-types` exempts
+  framework-handle params (`Kysely`, `Elysia`, oRPC's contract/handler types, `Request`/`Response`,
+  …) through the rule's own `allow` list in `.oxlintrc.json` rather than inline markers — new code
+  never mints `baseline(#236)` for this rule; a param the allow list can't reach carries a real
+  reason instead.
 - `bun run format` — `oxfmt .` (`.oxfmtrc.json` at the root), then `format-codemod` (blank-line
   padding) over the whole tree. The codemod has no ignore file, so its `--ignore` flags are what
   keep it off committed codegen output (`app/gql`, panda's `styled-system` dirs, react-router's
