@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { AvatarClassSchema } from './avatar-class-schema';
 
 test('it accepts every class value from @vers/data', () => {

@@ -1,3 +1,4 @@
+import { afterAll, afterEach, expect, test } from 'bun:test';
 import { factory, primaryKey } from '@mswjs/data';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
@@ -5,7 +6,6 @@ import type { ContractRouterClient } from '@orpc/contract';
 import { oc } from '@orpc/contract';
 import { implement } from '@orpc/server';
 import { setupServer } from 'msw/node';
-import { afterEach, expect, test } from 'vitest';
 import * as z from 'zod';
 import { buildMockService } from './build-mock-service';
 
@@ -41,6 +41,10 @@ server.listen({ onUnhandledRequest: 'error' });
 
 afterEach(() => {
   server.resetHandlers();
+});
+
+afterAll(() => {
+  server.close();
 });
 
 test('it serves a stateful value from an @mswjs/data-backed router', async () => {

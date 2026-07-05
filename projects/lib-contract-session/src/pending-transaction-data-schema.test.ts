@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { PendingTransactionDataSchema } from './pending-transaction-data-schema';
 
 test('it accepts a well-formed pending transaction with a null sessionID', () => {

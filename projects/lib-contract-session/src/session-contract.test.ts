@@ -1,6 +1,6 @@
+import { expect, test } from 'bun:test';
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
-import { expect, test } from 'vitest';
 import { sessionContract } from './session-contract';
 
 test('it declares TRANSACTION_MISMATCH on stepUp.consumePendingTransaction', () => {

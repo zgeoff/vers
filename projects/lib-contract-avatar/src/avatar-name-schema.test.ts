@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { AvatarNameSchema } from './avatar-name-schema';
 
 test('it accepts an alphabetic name within the length bounds', () => {

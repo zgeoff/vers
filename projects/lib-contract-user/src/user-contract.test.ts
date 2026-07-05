@@ -1,6 +1,6 @@
+import { expect, test } from 'bun:test';
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
-import { expect, test } from 'vitest';
 import { userContract } from './user-contract';
 
 test('it declares the CONFLICT error with a field discriminator on createUser', () => {

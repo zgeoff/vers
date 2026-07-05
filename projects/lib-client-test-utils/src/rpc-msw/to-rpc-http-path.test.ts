@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { toRPCHTTPPath } from './to-rpc-http-path';
 
 test('it joins path segments with slashes', () => {

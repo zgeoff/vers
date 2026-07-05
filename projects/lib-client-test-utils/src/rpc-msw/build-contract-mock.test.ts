@@ -1,3 +1,4 @@
+import { afterAll, afterEach, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import type { ORPCError } from '@orpc/client';
 import { createORPCClient, isDefinedError } from '@orpc/client';
@@ -6,7 +7,6 @@ import type { ContractRouterClient } from '@orpc/contract';
 import { oc } from '@orpc/contract';
 import { implement } from '@orpc/server';
 import { setupServer } from 'msw/node';
-import { afterEach, expect, test } from 'vitest';
 import * as z from 'zod';
 import { buildContractMock } from './build-contract-mock';
 import { buildMockService } from './build-mock-service';
@@ -81,6 +81,10 @@ server.listen({ onUnhandledRequest: 'error' });
 
 afterEach(() => {
   server.resetHandlers();
+});
+
+afterAll(() => {
+  server.close();
 });
 
 test('it resolves the actingUserId a client forwards via the Authorization header', async () => {

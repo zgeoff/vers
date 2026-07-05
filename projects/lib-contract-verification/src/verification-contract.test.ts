@@ -1,6 +1,6 @@
+import { expect, test } from 'bun:test';
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
-import { expect, test } from 'vitest';
 import { verificationContract } from './verification-contract';
 
 test('it declares verifyCode returning VerificationData with typed errors, not a nullable', () => {

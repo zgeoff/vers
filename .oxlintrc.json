@@ -241,20 +241,36 @@
   "overrides": [
     {
       "files": ["**/*.test.ts", "**/*.test.tsx"],
-      // bun-test suites (under a package's `src/bun/**`) aren't vitest —
-      // the plugin would misjudge `bun:test`'s `test`/`expect` globals as
-      // vitest's own
-      "excludeFiles": ["**/src/bun/**"],
+      // ergonomics for every co-located suite, whichever runner it targets: one
+      // suite per module with inline test data means file length scales with
+      // coverage, not complexity, and non-null assertions on known-shaped
+      // fixtures are fine
+      "rules": {
+        "max-lines": "off",
+        "typescript/no-non-null-assertion": "off"
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      // bun-test files (born on `bun test`, not vitest) import `test`/
+      // `expect`/hooks from 'bun:test' — the vitest plugin would misjudge those
+      // as vitest's own injected globals. Both the per-package `src/bun/**`
+      // suites and the fully converted packages are excluded until the
+      // vitest→bun-test sweep (#266) retires the plugin entirely.
+      "excludeFiles": [
+        "**/src/bun/**",
+        "projects/lib-contract-user/**",
+        "projects/lib-contract-session/**",
+        "projects/lib-contract-verification/**",
+        "projects/lib-contract-avatar/**",
+        "projects/lib-client-test-utils/**"
+      ],
       // vitest plugin only applies to `.test.ts(x)` files — scoping it here
       // (rather than in the top-level `plugins` list) keeps its rules off
       // ordinary source files, which the plugin would otherwise misjudge as
       // tests
       "plugins": ["vitest"],
-      // one co-located suite per module with inline test data: file length
-      // scales with coverage, not complexity
       "rules": {
-        "max-lines": "off",
-        "typescript/no-non-null-assertion": "off",
         "vitest/max-expects": "off",
         "vitest/no-alias-methods": "error",
         "vitest/no-conditional-in-test": "error",

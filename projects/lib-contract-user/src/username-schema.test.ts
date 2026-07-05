@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { UsernameSchema } from './username-schema';
 
 test('it lowercases a well-formed username', () => {

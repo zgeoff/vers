@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { SecureActionSchema } from './secure-action-schema';
 
 test('it accepts every declared secure action', () => {

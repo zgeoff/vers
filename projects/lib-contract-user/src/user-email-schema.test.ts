@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { UserEmailSchema } from './user-email-schema';
 
 test('it lowercases a well-formed email', () => {

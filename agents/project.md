@@ -104,10 +104,17 @@ See #160 for the full phase plan (turborepo + bun, spike-gated; shared configs a
 `zgeoff/tools`). This repo is mid-migration — several claims in `agents/shared.md` above describe
 the _target_ state, not this repo yet:
 
-- **`bun test`** — adopted for the new-stack (#164) services via `@zgeoff/bun-test-extended`
-  (jest-extended matchers for bun's runner). Vitest remains for pre-rebuild packages (app-web, the
-  game/idle/aether libs, service-avatar, …) and for `lib-email` (happy-dom template tests) — mixed
-  runners are fine per-project. `vitest.workspace.ts` targets each package's `vitest.config.ts` (or
-  app-web's `vite.config.ts`) explicitly so it never sweeps up `bun:test` files.
+- **`bun test` is the target runner for the entire repo, vitest included.** The vision is one runner
+  everywhere — services, shared libs, and the rebuilt web all test under `bun test` via
+  `@zgeoff/bun-test-extended` (jest-extended matchers), with DOM-bearing packages bootstrapping
+  happy-dom through `@happy-dom/global-registrator` in a package-local `bunfig.toml` preload (bunfig
+  is read from cwd, not merged up). Vitest is **transitional, not a permanent parallel** — it
+  survives only in not-yet-rebuilt packages (app-web, the game/idle/aether libs, service-avatar,
+  lib-email/lib-email-templates) until each is swept. New-stack packages are born on `bun test`;
+  never add vitest to anything new (the #165 rebuild starts the pattern — contracts + client-test-
+  utils in #264). While both runners coexist, `vitest.workspace.ts` globs each vitest package's
+  `vitest.config.ts` explicitly, so deleting that file drops the package from the vitest run. The
+  remaining vitest→bun-test sweep is tracked in #266.
 
-Don't "fix" these to match the shared partial mid-migration — follow the phase plan in #160 instead.
+Don't re-add vitest to converted or new packages to "match" a pre-rebuild neighbour — the direction
+is one runner; follow #266 and the #160 phase plan.

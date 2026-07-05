@@ -1,6 +1,6 @@
+import { expect, test } from 'bun:test';
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
-import { expect, test } from 'vitest';
 import { avatarContract } from './avatar-contract';
 
 test('it declares UNAUTHORIZED and FORBIDDEN on every owner-scoped procedure', () => {

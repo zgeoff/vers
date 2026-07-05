@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { PasswordSchema } from './password-schema';
 
 test('it accepts a password of 8 or more characters', () => {

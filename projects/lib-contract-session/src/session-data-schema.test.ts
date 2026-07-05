@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { SessionDataSchema } from './session-data-schema';
 
 test('it accepts a well-formed session', () => {
