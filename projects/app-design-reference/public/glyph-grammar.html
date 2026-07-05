@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VERS — Projectile Glyph Grammar</title>
+<style>
+  :root {
+    --bg: #07070d;
+    --panel: #0d0f17;
+    --tile: #10121c;
+    --line: #1e2233;
+    --line-soft: #171a28;
+    --text: #e8eaf2;
+    --dim: #8b93a7;
+    --faint: #565d73;
+    --aether: #2ee6c3;
+    --storm: #f5c542;
+    --void: #a78bfa;
+    --fire: #fb8b4b;
+    --cold: #4db8ff;
+    --rift: #f4538a;
+    --slate: #8b93a7;
+    --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, "Segoe UI", Roboto, sans-serif;
+  }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    padding: 48px 24px 80px;
+    background:
+      radial-gradient(1100px 500px at 15% -5%, rgba(46, 230, 195, 0.05), transparent 60%),
+      radial-gradient(900px 500px at 95% 10%, rgba(167, 139, 250, 0.05), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  .crumb {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    color: var(--faint);
+    margin-bottom: 14px;
+  }
+  .crumb b { color: var(--aether); font-weight: 600; }
+  h1 {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin: 0 0 10px;
+  }
+  .lede { color: var(--dim); max-width: 62ch; margin: 0 0 8px; }
+  .lede em { color: var(--text); font-style: normal; }
+
+  section { margin-top: 56px; }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .sec-head h2 {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    margin: 0;
+    color: var(--text);
+  }
+  .sec-head h2::before { content: "◆ "; color: var(--aether); }
+  .sec-head .why {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--faint);
+  }
+  .sec-note { color: var(--dim); font-size: 13.5px; max-width: 68ch; margin: 0 0 20px; }
+  .sec-note strong { color: var(--text); font-weight: 600; }
+
+  /* ---- skeleton / rules ---- */
+  .rules {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 20px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  @media (max-width: 640px) { .rules { grid-template-columns: 1fr; } }
+  .axis-tile {
+    background: var(--tile);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    position: relative;
+  }
+  .axis-tile svg { width: 78%; height: 78%; }
+  .axis-tile .cap {
+    position: absolute;
+    bottom: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--faint);
+  }
+  .rule-chips { display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; }
+  .chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--dim);
+    border: 1px solid var(--line);
+    background: var(--tile);
+    border-radius: 999px;
+    padding: 5px 12px;
+  }
+  .chip b { color: var(--text); font-weight: 600; }
+  .rule-chips .law {
+    flex-basis: 100%;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: var(--dim);
+    border-left: 2px solid var(--aether);
+    padding: 2px 0 2px 12px;
+    margin-top: 6px;
+  }
+  .rule-chips .law b { color: var(--aether); font-weight: 600; }
+  .rule-chips .law.m2 b { color: var(--void); }
+  .rule-chips .law.m2 { border-left-color: var(--void); }
+  .rule-chips .law.m3 b { color: var(--rift); }
+  .rule-chips .law.m3 { border-left-color: var(--rift); }
+
+  /* ---- the eight ---- */
+  .skills {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .skills.cols7 { grid-template-columns: repeat(7, 1fr); }
+  .skills.cols3 { grid-template-columns: repeat(3, 1fr); max-width: 680px; }
+  @media (max-width: 900px) { .skills, .skills.cols7, .skills.cols3 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .skills, .skills.cols7, .skills.cols3 { grid-template-columns: 1fr; } }
+  @media (min-width: 901px) and (max-width: 1040px) { .skills.cols7 { grid-template-columns: repeat(4, 1fr); } }
+  .skill {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .slot {
+    width: 72px;
+    height: 72px;
+    border-radius: 14px;
+    border: 1.5px solid var(--el);
+    background: color-mix(in srgb, var(--el) 7%, var(--tile));
+    box-shadow: 0 0 18px color-mix(in srgb, var(--el) 18%, transparent);
+    display: grid;
+    place-items: center;
+    color: var(--el);
+  }
+  .slot svg { width: 44px; height: 44px; }
+  .skill .name {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+  .skill .tags { display: flex; gap: 6px; }
+  .tag {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--dim);
+  }
+  .tag.el { color: var(--el); border-color: color-mix(in srgb, var(--el) 45%, transparent); }
+  .tag.rec { color: var(--aether); border-color: color-mix(in srgb, var(--aether) 45%, transparent); }
+  .tag.fail { color: var(--rift); border-color: color-mix(in srgb, var(--rift) 45%, transparent); }
+  .skill .read {
+    font-size: 11.5px;
+    color: var(--faint);
+    text-align: center;
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  /* ---- decompose ---- */
+  .decompose {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .piece { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .piece .box {
+    width: 84px;
+    height: 84px;
+    border-radius: 12px;
+    border: 1px dashed var(--line);
+    background: var(--tile);
+    display: grid;
+    place-items: center;
+    color: var(--dim);
+  }
+  .piece .box.final {
+    border-style: solid;
+    border-color: var(--cold);
+    color: var(--cold);
+    background: color-mix(in srgb, var(--cold) 7%, var(--tile));
+    box-shadow: 0 0 18px rgba(77, 184, 255, 0.18);
+  }
+  .piece .box svg { width: 52px; height: 52px; }
+  .piece .lbl {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--faint);
+  }
+  .op {
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--faint);
+    padding-bottom: 24px;
+  }
+  .lab { gap: 18px; }
+  .lab .box { width: 112px; height: 112px; }
+  .lab .box svg { width: 84px; height: 84px; }
+  .lab .piece { gap: 9px; }
+
+  /* ---- mono strip ---- */
+  .strip {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 20px;
+  }
+  .strip .cell {
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: var(--tile);
+    display: grid;
+    place-items: center;
+    color: var(--slate);
+  }
+  .strip .cell svg { width: 20px; height: 20px; }
+  .strip .verdict {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--faint);
+  }
+
+  /* ---- scale test ---- */
+  .scales {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .scale-row {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+  .scale-row + .scale-row { border-top: 1px solid var(--line-soft); }
+  .scale-row .ctx { display: flex; flex-direction: column; gap: 2px; }
+  .scale-row .ctx b {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+  }
+  .scale-row .ctx span { font-family: var(--mono); font-size: 10px; color: var(--faint); letter-spacing: 0.08em; }
+  .scale-row .cells { display: flex; gap: 8px; flex-wrap: wrap; overflow-x: auto; }
+  .s-slot {
+    border: 1.5px solid var(--el);
+    background: color-mix(in srgb, var(--el) 7%, var(--tile));
+    color: var(--el);
+    display: grid;
+    place-items: center;
+  }
+  .sz48 { width: 48px; height: 48px; border-radius: 11px; }
+  .sz48 svg { width: 28px; height: 28px; }
+  .sz32 { width: 36px; height: 36px; border-radius: 9px; }
+  .sz32 svg { width: 22px; height: 22px; }
+  .sz20 { width: 24px; height: 24px; border-radius: 7px; border-width: 1px; }
+  .sz20 svg { width: 15px; height: 15px; }
+  .sz14 { width: 24px; height: 24px; border-radius: 50%; border-width: 1px; }
+  .sz14 svg { width: 14px; height: 14px; }
+
+  /* ---- recolor ---- */
+  .recolor {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .re { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .re .lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; color: var(--faint); }
+
+  /* ---- archetype trio ---- */
+  .archs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 720px) { .archs { grid-template-columns: 1fr; } }
+  .arch {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .arch .slot { width: 104px; height: 104px; border-radius: 18px; }
+  .arch .slot svg { width: 72px; height: 72px; }
+  .arch .name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--el);
+  }
+  .arch .vocab {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--dim);
+    text-align: center;
+    line-height: 1.9;
+  }
+  .arch .read { font-size: 12px; color: var(--faint); text-align: center; margin: 0; line-height: 1.5; }
+
+  /* ---- tier line ---- */
+  .tiers {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 16px 16px;
+  }
+  .tier {
+    flex: 1 0 92px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+  }
+  .tier .box {
+    width: 84px;
+    height: 84px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--tile);
+    display: grid;
+    place-items: center;
+    color: var(--slate);
+  }
+  .tiers.base-line .tier:last-child .box {
+    border-color: color-mix(in srgb, var(--storm) 55%, transparent);
+    color: var(--storm);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--storm) 16%, transparent);
+  }
+  .tiers.tinted .tier .box { color: var(--el); border-color: color-mix(in srgb, var(--el) 22%, var(--line)); }
+  .tiers.tinted .tier:last-child .box {
+    border-color: color-mix(in srgb, var(--el) 55%, transparent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--el) 16%, transparent);
+  }
+  .line-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 22px 0 10px;
+  }
+  .line-head:first-of-type { margin-top: 0; }
+  .line-head .t {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--el2);
+  }
+  .line-head .s { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--faint); }
+  .tier .box svg { width: 62px; height: 62px; }
+  .tier .lv {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--dim);
+  }
+  .tier .nm {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    color: var(--faint);
+    text-align: center;
+  }
+
+  /* ---- contract ---- */
+  .contract {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 4px 20px 18px;
+    overflow-x: auto;
+  }
+  .contract pre {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--dim);
+    margin: 14px 0 0;
+  }
+  .contract pre b { color: var(--text); font-weight: 600; }
+  .contract pre i { color: var(--aether); font-style: normal; }
+
+  .ledger {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 14px;
+  }
+  @media (max-width: 640px) { .ledger { grid-template-columns: 1fr; } }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .stat .n {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--aether);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .d { font-size: 12.5px; color: var(--dim); margin-top: 2px; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--faint);
+    line-height: 1.8;
+  }
+  footer b { color: var(--dim); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- ═══════════ glyph symbol defs — the ONLY hand-authored art on this page ═══════════ -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <!-- skeleton: shared travel axis -->
+      <symbol id="g-axis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.5 19.5 L19.5 4.5" stroke-dasharray="1 3.4" opacity="0.9"/>
+        <path d="M2 22 h20 M2 22 v-20" stroke-width="1" opacity="0.25"/>
+      </symbol>
+
+      <!-- 1 · aether lance — LINEAR: one clean line, swept barbs -->
+      <symbol id="g-lance" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.5 19.5 L19.5 4.5"/>
+        <path d="M19.5 4.5 L14 6 M19.5 4.5 L18 10"/>
+      </symbol>
+
+      <!-- 2 · storm bolt — ERRATIC: path kinks, no head needed -->
+      <symbol id="g-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.5 19.5 L11 13 L8.5 10.5 L15.5 3.5"/>
+      </symbol>
+
+      <!-- 3 · void orb — HEAVY: mass up front, momentum trail behind -->
+      <symbol id="g-orb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="15.5" cy="8.5" r="3.5"/>
+        <path d="M4.5 19.5 L7 17 M9 15 L11 13"/>
+      </symbol>
+
+      <!-- 4 · ember volley — FAN ×3: lance ray, repeated and splayed -->
+      <symbol id="g-volley" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 19 L19 10.5 M5 19 L17 7 M5 19 L10.5 5"/>
+      </symbol>
+
+      <!-- 5 · frost pierce — PIERCING: lance passes THROUGH a ring -->
+      <symbol id="g-pierce" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3.75"/>
+        <path d="M4.5 19.5 L8.6 15.4 M15.4 8.6 L19.5 4.5"/>
+        <path d="M19.5 4.5 L15 5.5 M19.5 4.5 L18.5 9"/>
+      </symbol>
+
+      <!-- 6 · chain surge — CHAINS: nodes are targets, path bounces between -->
+      <symbol id="g-chain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="5" cy="19" r="1.6"/>
+        <circle cx="14" cy="14" r="1.6"/>
+        <circle cx="10" cy="9" r="1.6"/>
+        <path d="M6.9 17.9 L12.1 15.1 M12.75 12.45 L11.25 10.55 M11.8 8 L19 4"/>
+      </symbol>
+
+      <!-- 7 · rift seeker — HOMING: the only curve in the family -->
+      <symbol id="g-seeker" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.5 19.5 C 10.5 17.5, 6.5 12, 11.5 10 C 15.5 8.4, 13.5 7, 18 5"/>
+        <circle cx="18.6" cy="4.7" r="1.4" fill="currentColor" stroke="none"/>
+      </symbol>
+
+      <!-- 8 · nova burst — IMPACT AOE: travel ends in detonation -->
+      <symbol id="g-burst" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.5 19.5 L11.8 12.2"/>
+        <path d="M14 7.8 L14 3.8 M16.2 10 L20.2 10 M15.6 8.4 L18.4 5.6 M12.4 8.4 L9.6 5.6 M15.6 11.6 L18.4 14.4"/>
+      </symbol>
+
+      <!-- decompose pieces -->
+      <symbol id="p-shaft" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M4.5 19.5 L19.5 4.5"/>
+      </symbol>
+      <symbol id="p-barbs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M19.5 4.5 L14 6 M19.5 4.5 L18 10"/>
+      </symbol>
+      <symbol id="p-ring" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="3.75"/>
+      </symbol>
+
+      <!-- armour base line — one outline, nine additive stroke groups -->
+      <symbol id="a-l1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 4 L16 4 L18 7 L18 15 L12 20 L6 15 L6 7 Z"/>
+      </symbol>
+      <symbol id="a-l2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 4 L12 6 L14 4"/>
+      </symbol>
+      <symbol id="a-l3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 6.5 V7.5"/>
+      </symbol>
+      <symbol id="a-l4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8.5 9 H15.5"/>
+      </symbol>
+      <symbol id="a-l5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 11 L13.3 12.3 L12 13.6 L10.7 12.3 Z"/>
+      </symbol>
+      <symbol id="a-l6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.3 15.2 L12 16.6 L13.7 15.2"/>
+      </symbol>
+      <symbol id="a-l7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 6.5 L5.5 5 M20 6.5 L18.5 5"/>
+      </symbol>
+      <symbol id="a-l8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8.5 10.8 V13.2 M15.5 10.8 V13.2"/>
+      </symbol>
+      <symbol id="a-l9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 4 V2.5 M15 4 V2.5"/>
+      </symbol>
+      <symbol id="a-l10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3.5 10 V14 M20.5 10 V14"/>
+      </symbol>
+
+      <!-- area family — no travel axis; anchored radial (self) or ground (ellipse) -->
+      <symbol id="g-area-axis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <circle cx="12" cy="9.5" r="5.5" stroke-dasharray="1 3.2" opacity="0.9"/>
+        <ellipse cx="12" cy="18.5" rx="7.5" ry="2.6" stroke-dasharray="1 3.2" opacity="0.9"/>
+      </symbol>
+      <symbol id="g-nova" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+        <path d="M12 7.5 V3.5 M12 16.5 V20.5 M16.5 12 H20.5 M7.5 12 H3.5"/>
+        <path d="M15.2 8.8 L18 6 M8.8 8.8 L6 6 M15.2 15.2 L18 18 M8.8 15.2 L6 18"/>
+      </symbol>
+      <symbol id="g-meteor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3.5 V12.5 M12 12.5 L9.2 9.7 M12 12.5 L14.8 9.7"/>
+        <path d="M8.5 5 V8 M15.5 5 V8"/>
+        <ellipse cx="12" cy="17.5" rx="6.5" ry="2.4"/>
+      </symbol>
+      <symbol id="g-pool" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <ellipse cx="12" cy="16.5" rx="7" ry="2.8"/>
+        <circle cx="9.5" cy="11.5" r="1.3"/>
+        <circle cx="14.5" cy="9.5" r="1.6"/>
+        <circle cx="11.5" cy="5.8" r="0.9"/>
+      </symbol>
+      <symbol id="g-storm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M5.5 7.5 Q12 3 18.5 7.5"/>
+        <path d="M8 10.5 L7 13.5 M12 11 L11 14 M16 10.5 L15 13.5"/>
+        <path d="M9.5 16.5 L8.7 19 M13.5 17 L12.7 19.5 M17.5 16.5 L16.7 19"/>
+      </symbol>
+      <symbol id="g-fissure" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19 H20"/>
+        <path d="M7 19 L9.3 13 L11.6 19 L14.5 10.5 L17.4 19"/>
+      </symbol>
+      <symbol id="g-sanct" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <ellipse cx="12" cy="16.5" rx="7" ry="2.8"/>
+        <path d="M12 4.5 L15 8 L12 11.5 L9 8 Z"/>
+      </symbol>
+
+      <!-- gear suite — heavy archetype · closed silhouettes, vertical symmetry -->
+      <symbol id="e-helm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 20 V10 A5 5 0 0 1 17 10 V20 Z"/>
+        <path d="M9.5 13.5 H14.5 M12 17 V20"/>
+      </symbol>
+      <symbol id="e-gaunt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 4.5 H16 L16.8 8 H7.2 Z"/>
+        <path d="M8.5 8 V13.5 A3.5 3.5 0 0 0 15.5 13.5 V8"/>
+        <path d="M8.5 11.5 H15.5"/>
+      </symbol>
+      <symbol id="e-greaves" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 4.5 H14 V12.5 L18.5 15 V19.5 H9 Z"/>
+        <path d="M11.5 4.5 V11"/>
+      </symbol>
+      <symbol id="e-belt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.5 10 H19.5 V14 H4.5 Z"/>
+        <path d="M10 8.5 V15.5 H14 V8.5 Z"/>
+        <circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/>
+      </symbol>
+      <symbol id="e-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 4.5 H17 V13 L12 20 L7 13 Z"/>
+        <circle cx="12" cy="10.5" r="1.8"/>
+        <path d="M12 12.9 V16.5"/>
+      </symbol>
+      <symbol id="e-amulet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 5 Q12 9.5 17.5 5"/>
+        <path d="M12 7.3 V9.5"/>
+        <path d="M12 9.5 L14.8 13 L12 16.5 L9.2 13 Z"/>
+      </symbol>
+      <symbol id="e-ring" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="14" r="5.5"/>
+        <path d="M12 4 L14.3 6.5 L12 9 L9.7 6.5 Z"/>
+      </symbol>
+
+      <!-- helmet × archetype — same slot, three form languages -->
+      <symbol id="h-jugg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 20 V8.5 L9.5 5 H14.5 L17.5 8.5 V20 Z"/>
+        <path d="M9 11 H15"/>
+        <path d="M9.5 16.5 V18.7 M12 16.5 V18.7 M14.5 16.5 V18.7"/>
+      </symbol>
+      <symbol id="h-psy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 14 A5.5 5.5 0 0 1 17.5 14"/>
+        <path d="M12 8.2 L13.6 10 L12 11.8 L10.4 10 Z"/>
+        <path d="M8.5 4.8 A4.5 4.5 0 0 1 15.5 4.8"/>
+        <circle cx="4.2" cy="11" r="1.1" fill="currentColor" stroke="none"/>
+        <circle cx="19.8" cy="11" r="1.1" fill="currentColor" stroke="none"/>
+      </symbol>
+      <symbol id="h-scnd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 11.5 H17.5 V13.8 H6.5 Z"/>
+        <path d="M6.5 9 H17.5"/>
+        <path d="M17.5 12.65 H19 M19 11.4 V14 M19 11.4 L20.8 9.2"/>
+      </symbol>
+      <symbol id="sc-b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 9.5 A5 5 0 0 1 17 9.5 Z"/>
+        <circle cx="9.7" cy="12.5" r="1.9"/>
+        <circle cx="14.3" cy="12.5" r="1.9"/>
+        <path d="M5.5 12.5 H7.8 M16.2 12.5 H18.5 M11.6 12.5 H12.4"/>
+        <path d="M18.5 12.5 L21 11 M18.5 12.5 L21 13.8"/>
+      </symbol>
+
+      <!-- base lab — helm variants -->
+      <symbol id="hv1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 4.5 H17 L17.5 8 V20 H6.5 V8 Z"/>
+        <path d="M12 9 V13.5 M9 11.25 H15"/>
+      </symbol>
+      <symbol id="hv2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7.5 20 V11 A4.5 4.5 0 0 1 16.5 11 V20 Z"/>
+        <path d="M7.5 13.5 H16.5"/>
+      </symbol>
+      <symbol id="hv3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 20 V10.5 A5 5 0 0 1 17 10.5 V20 Z"/>
+        <path d="M12 8.5 V13.5 M9.5 13.5 H14.5"/>
+        <path d="M12 5.5 V2.5"/>
+      </symbol>
+
+      <!-- base lab — gauntlet variants -->
+      <symbol id="gv1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 4.5 H16 V13.5 A4 4 0 0 1 8 13.5 Z"/>
+        <path d="M8 8 H16"/>
+      </symbol>
+      <symbol id="gv2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7.5 8.5 H16.5 V14 A4.5 4.5 0 0 1 7.5 14 Z"/>
+        <path d="M9.2 5.5 V8.5 M12 5 V8.5 M14.8 5.5 V8.5"/>
+      </symbol>
+      <symbol id="gv3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 4.5 H17.5 L15.5 9.5 H8.5 Z"/>
+        <circle cx="12" cy="15.2" r="3.8"/>
+        <path d="M9.5 14.6 H14.5"/>
+      </symbol>
+
+      <!-- base lab — greave variants -->
+      <symbol id="bv1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8.5 4.5 H13 V12 L18.5 14.5 V19.5 H8.5 Z"/>
+        <path d="M8.5 7 H13"/>
+        <path d="M8.5 17 H18.5"/>
+      </symbol>
+      <symbol id="bv2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8.5 4 H15.5 L16.5 8 V15 L12 19.5 L7.5 15 V8 Z"/>
+        <path d="M12 7.5 V12"/>
+      </symbol>
+      <symbol id="bv3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 4.5 H13.5 V12.5 L18.5 15 V17.5 H6.5 V16.5 L9 15.5 Z"/>
+        <path d="M9 17.5 V19 M13 17.5 V19 M17 17.5 V19"/>
+      </symbol>
+
+      <!-- gauntlet line — mitt, silhouette-first -->
+      <symbol id="gl1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 4.5 H16 V13.5 A4 4 0 0 1 8 13.5 Z"/>
+      </symbol>
+      <symbol id="gl2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 8 H16"/>
+      </symbol>
+      <symbol id="gl3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 11.3 L12 10 L14 11.3"/>
+      </symbol>
+      <symbol id="gl4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.4 14.4 L12 13.3 L13.6 14.4"/>
+      </symbol>
+      <symbol id="gl5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 4.5 L6.3 3 M16 4.5 L17.7 3"/>
+      </symbol>
+      <symbol id="gl6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5.5 7 V12 M18.5 7 V12"/>
+      </symbol>
+
+      <!-- boot line — profile boot, silhouette-first -->
+      <symbol id="bl1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 4.5 H13 V13 L18.5 15.5 V19.5 H8 Z"/>
+      </symbol>
+      <symbol id="bl2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 17 H18.5"/>
+      </symbol>
+      <symbol id="bl3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 7 H13"/>
+      </symbol>
+      <symbol id="bl4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 10 L13 11.5"/>
+      </symbol>
+      <symbol id="bl5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15.5 14.2 V17"/>
+      </symbol>
+      <symbol id="bl6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 15.5 H6.4 M8 18.2 H6.4"/>
+      </symbol>
+
+      <!-- boot base candidates (bl1 = standard, also a candidate) -->
+      <symbol id="bc2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7.5 4.5 H13.5 V11.5 H16.5 L18.5 14 V19.5 H7.5 Z"/>
+      </symbol>
+      <symbol id="bc3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9.5 4.5 H12.5 V13.5 L18.5 16 V19.5 H9.5 Z"/>
+      </symbol>
+      <symbol id="bc4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8.5 4 H14 V14.5 L18.5 16.5 V19.5 H8.5 Z"/>
+      </symbol>
+
+      <!-- belt line -->
+      <symbol id="wl1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.5 10 H19.5 V14 H4.5 Z"/>
+      </symbol>
+      <symbol id="wl2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 8.5 H14 V15.5 H10 Z"/>
+      </symbol>
+      <symbol id="wl3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/>
+      </symbol>
+      <symbol id="wl4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 15.5 V18"/>
+      </symbol>
+      <symbol id="wl5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5.5 18 H18.5"/>
+      </symbol>
+      <symbol id="wl6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.5 12 H2.9 M19.5 12 H21.1"/>
+      </symbol>
+
+      <!-- shield line -->
+      <symbol id="sl1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 4.5 H17 V13 L12 20 L7 13 Z"/>
+      </symbol>
+      <symbol id="sl2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="11" r="1.8"/>
+      </symbol>
+      <symbol id="sl3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 13.4 V16.6"/>
+      </symbol>
+      <symbol id="sl4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 7 H17"/>
+      </symbol>
+      <symbol id="sl5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 10 H5 M17 10 H19"/>
+      </symbol>
+      <symbol id="sl6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 4.5 L5.5 3 M17 4.5 L18.5 3"/>
+      </symbol>
+
+      <!-- amulet line -->
+      <symbol id="am1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 5 Q12 9.5 17.5 5"/>
+        <path d="M12 7.3 L14.8 10.8 L12 14.3 L9.2 10.8 Z"/>
+      </symbol>
+      <symbol id="am2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="10.8" r="0.9" fill="currentColor" stroke="none"/>
+      </symbol>
+      <symbol id="am3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 5 L5.3 3.8 M17.5 5 L18.7 3.8"/>
+      </symbol>
+      <symbol id="am4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8.7 6.4 V8.6 M15.3 6.4 V8.6"/>
+      </symbol>
+      <symbol id="am5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 14.3 V16.8"/>
+      </symbol>
+      <symbol id="am6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="5.3" cy="3.8" r="0.9" fill="currentColor" stroke="none"/>
+        <circle cx="18.7" cy="3.8" r="0.9" fill="currentColor" stroke="none"/>
+      </symbol>
+
+      <!-- ring line -->
+      <symbol id="rl1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="14" r="5.5"/>
+      </symbol>
+      <symbol id="rl2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 4 L14.3 6.5 L12 9 L9.7 6.5 Z"/>
+      </symbol>
+      <symbol id="rl3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M4.75 10.62 A8 8 0 0 0 8.62 21.25"/>
+        <path d="M19.25 10.62 A8 8 0 0 1 15.38 21.25"/>
+      </symbol>
+      <symbol id="rl4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 4 V2.8"/>
+      </symbol>
+      <symbol id="rl5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8.1 10.1 L6.7 8.7 M15.9 10.1 L17.3 8.7"/>
+      </symbol>
+      <symbol id="rl6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 19.5 V21"/>
+      </symbol>
+
+      <!-- register lab — schematic gear (adopted) -->
+      <symbol id="r-schem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 19.5 V9.5 L9.5 5.5 H14.5 L17 9.5 V19.5 Z"/>
+        <path d="M7 12 H17 M7 14.5 H17"/>
+      </symbol>
+      <symbol id="r-sigil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 4 L18.9 8 V16 L12 20 L5.1 16 V8 Z"/>
+        <path d="M9 11.5 H15"/>
+      </symbol>
+      <symbol id="e-gaunt2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 4.5 H16 L17 19.5 H7 Z"/>
+        <path d="M9.8 10.4 L12 8.8 L14.2 10.4 M9.8 14.4 L12 12.8 L14.2 14.4"/>
+      </symbol>
+      <symbol id="e-boot2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 4.5 H15 L16 14 H8 Z"/>
+        <path d="M6.5 16.5 H17.5 V19.5 H6.5 Z"/>
+        <path d="M12 14 V16.5"/>
+      </symbol>
+
+      <!-- scoundrel base candidates -->
+      <symbol id="sc-a" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3 L16.8 7.5 L16.4 13.5 L12 19.5 L7.6 13.5 L7.2 7.5 Z"/>
+        <path d="M9.9 10.7 H14.1 V12.3 H9.9 Z"/>
+      </symbol>
+      <symbol id="sc-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.5 10.5 Q12 13 19.5 10.5"/>
+        <path d="M8.5 10.8 L9.8 4.5 H14.2 L15.5 10.8"/>
+        <path d="M8.8 14.5 H13.6"/>
+      </symbol>
+
+      <!-- juggernaut helm line — layers -->
+      <symbol id="jl1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 20 V8.5 L9.5 5 H14.5 L17.5 8.5 V20 Z"/>
+        <path d="M9 11 H15"/>
+      </symbol>
+      <symbol id="jl2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 16.5 V18.7"/>
+      </symbol>
+      <symbol id="jl3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9.5 16.5 V18.7 M14.5 16.5 V18.7"/>
+      </symbol>
+      <symbol id="jl4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 8.5 H15"/>
+      </symbol>
+      <symbol id="jl5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 10 V14.5 M20 10 V14.5"/>
+      </symbol>
+      <symbol id="jl6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 5 V2.4 M9.8 5 V3.6 M14.2 5 V3.6"/>
+      </symbol>
+
+      <!-- psycaster helm line — layers -->
+      <symbol id="pl1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 14 A5.5 5.5 0 0 1 17.5 14"/>
+      </symbol>
+      <symbol id="pl2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8.2 L13.6 10 L12 11.8 L10.4 10 Z"/>
+      </symbol>
+      <symbol id="pl3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8.5 4.8 A4.5 4.5 0 0 1 15.5 4.8"/>
+      </symbol>
+      <symbol id="pl4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="4.2" cy="11" r="1.1" fill="currentColor" stroke="none"/>
+        <circle cx="19.8" cy="11" r="1.1" fill="currentColor" stroke="none"/>
+      </symbol>
+      <symbol id="pl5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 15.5 V18.5 M17.5 15.5 V18.5"/>
+      </symbol>
+      <symbol id="pl6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5.3 6.3 L3.9 4.9 M18.7 6.3 L20.1 4.9"/>
+      </symbol>
+
+      <!-- scoundrel helm line — layers (netrunner · visor-first) -->
+      <symbol id="scl1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 11.5 H17.5 V13.8 H6.5 Z"/>
+      </symbol>
+      <symbol id="scl2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 9 H17.5"/>
+      </symbol>
+      <symbol id="scl3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17.5 12.65 H19 M19 11.4 V14 M19 11.4 L20.8 9.2"/>
+      </symbol>
+      <symbol id="scl4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 16 L12 17.5 L15 16"/>
+      </symbol>
+      <symbol id="scl5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 14 Q20.2 16 18.6 18.2"/>
+      </symbol>
+      <symbol id="scl6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3.4 11.9 H4.9 M3.4 13.4 H4.9"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <div class="crumb"><b>VERS</b> · DESIGN LAB · ASSET GRAMMAR · V0</div>
+  <h1>Projectile Family — 8 skills, 1 skeleton</h1>
+  <p class="lede">Every glyph below shares one rule set, so coherence is structural, not curated.
+  Each glyph's silhouette draws its <em>mechanic</em> — pierce looks like piercing, chain looks like
+  bouncing — so distinguishability is semantic, never arbitrary.</p>
+
+  <!-- ═══════════ 01 · skeleton ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>THE SKELETON</h2><span class="why">what makes 8 glyphs read as one family</span></div>
+    <p class="sec-note">One shared travel axis: everything launches bottom-left and lands top-right.
+    Plus a fixed grid and stroke. That's the entire coherence budget — no shared shapes required.</p>
+    <div class="rules">
+      <div class="axis-tile">
+        <svg><use href="#g-axis"/></svg>
+        <span class="cap">TRAVEL AXIS ↗</span>
+      </div>
+      <div class="rule-chips">
+        <span class="chip">grid <b>24×24</b></span>
+        <span class="chip">live area <b>20×20</b> (2px padding)</span>
+        <span class="chip">stroke <b>1.5</b></span>
+        <span class="chip">caps + joins <b>round</b></span>
+        <span class="chip">fills <b>none</b> (dots ≤ r1.6 exempt)</span>
+        <span class="chip">color <b>currentColor</b> only</span>
+        <span class="law">silhouette encodes <b>MECHANIC</b> — linear, fan, pierce, chain, homing…</span>
+        <span class="law m2">color encodes <b>ELEMENT</b> — applied by the slot, never baked into the path</span>
+        <span class="law m3">container encodes <b>RARITY / STATE</b> — border, glow, shape of the slot</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 02 · the eight ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>THE EIGHT</h2><span class="why">silhouette = mechanic</span></div>
+    <p class="sec-note">Two pairs deliberately <strong>share an element</strong> (storm ×2, fire ×2) to prove
+    color isn't carrying the identity — cover the names and each shape still tells you what the skill does.</p>
+    <div class="skills">
+      <div class="skill" style="--el: var(--aether)">
+        <div class="slot"><svg><use href="#g-lance"/></svg></div>
+        <div class="name">Aether Lance</div>
+        <div class="tags"><span class="tag el">AETHER</span><span class="tag">LINEAR</span></div>
+        <p class="read">one clean line — the family's base ray</p>
+      </div>
+      <div class="skill" style="--el: var(--storm)">
+        <div class="slot"><svg><use href="#g-bolt"/></svg></div>
+        <div class="name">Storm Bolt</div>
+        <div class="tags"><span class="tag el">STORM</span><span class="tag">ERRATIC</span></div>
+        <p class="read">the path kinks — unstable trajectory</p>
+      </div>
+      <div class="skill" style="--el: var(--void)">
+        <div class="slot"><svg><use href="#g-orb"/></svg></div>
+        <div class="name">Void Orb</div>
+        <div class="tags"><span class="tag el">VOID</span><span class="tag">HEAVY</span></div>
+        <p class="read">mass up front, momentum trail behind</p>
+      </div>
+      <div class="skill" style="--el: var(--fire)">
+        <div class="slot"><svg><use href="#g-volley"/></svg></div>
+        <div class="name">Ember Volley</div>
+        <div class="tags"><span class="tag el">FIRE</span><span class="tag">FAN ×3</span></div>
+        <p class="read">the base ray, repeated and splayed</p>
+      </div>
+      <div class="skill" style="--el: var(--cold)">
+        <div class="slot"><svg><use href="#g-pierce"/></svg></div>
+        <div class="name">Frost Pierce</div>
+        <div class="tags"><span class="tag el">COLD</span><span class="tag">PIERCING</span></div>
+        <p class="read">the ray passes <em>through</em> a target ring</p>
+      </div>
+      <div class="skill" style="--el: var(--storm)">
+        <div class="slot"><svg><use href="#g-chain"/></svg></div>
+        <div class="name">Chain Surge</div>
+        <div class="tags"><span class="tag el">STORM</span><span class="tag">CHAINS</span></div>
+        <p class="read">nodes are targets; the path bounces</p>
+      </div>
+      <div class="skill" style="--el: var(--rift)">
+        <div class="slot"><svg><use href="#g-seeker"/></svg></div>
+        <div class="name">Rift Seeker</div>
+        <div class="tags"><span class="tag el">RIFT</span><span class="tag">HOMING</span></div>
+        <p class="read">the only curve in the family</p>
+      </div>
+      <div class="skill" style="--el: var(--fire)">
+        <div class="slot"><svg><use href="#g-burst"/></svg></div>
+        <div class="name">Nova Burst</div>
+        <div class="tags"><span class="tag el">FIRE</span><span class="tag">IMPACT AOE</span></div>
+        <p class="read">travel ends in a detonation</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 03 · composition ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>GLYPHS ARE COMPOSED, NOT DRAWN</h2><span class="why">frost pierce, decomposed</span></div>
+    <p class="sec-note">New glyphs come from recombining primitives you already own. Pierce is the lance's
+    shaft and barbs plus one ring. Volley is the shaft three times. Burst is the shaft plus radial ticks.
+    The marginal cost of skill #9 is one or two new primitives — often zero.</p>
+    <div class="decompose">
+      <div class="piece"><div class="box"><svg><use href="#p-shaft"/></svg></div><span class="lbl">SHAFT</span></div>
+      <span class="op">+</span>
+      <div class="piece"><div class="box"><svg><use href="#p-barbs"/></svg></div><span class="lbl">BARBS</span></div>
+      <span class="op">+</span>
+      <div class="piece"><div class="box"><svg><use href="#p-ring"/></svg></div><span class="lbl">RING</span></div>
+      <span class="op">=</span>
+      <div class="piece"><div class="box final"><svg><use href="#g-pierce"/></svg></div><span class="lbl">FROST PIERCE</span></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 04 · mono floor ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>SILHOUETTE FLOOR</h2><span class="why">20px, one color — the colorblind / squint test</span></div>
+    <p class="sec-note">Strip every channel except shape. If two glyphs blur together here, the pair fails
+    and one gets redrawn — color is never allowed to rescue a weak silhouette.</p>
+    <div class="strip">
+      <div class="cell"><svg><use href="#g-lance"/></svg></div>
+      <div class="cell"><svg><use href="#g-bolt"/></svg></div>
+      <div class="cell"><svg><use href="#g-orb"/></svg></div>
+      <div class="cell"><svg><use href="#g-volley"/></svg></div>
+      <div class="cell"><svg><use href="#g-pierce"/></svg></div>
+      <div class="cell"><svg><use href="#g-chain"/></svg></div>
+      <div class="cell"><svg><use href="#g-seeker"/></svg></div>
+      <div class="cell"><svg><use href="#g-burst"/></svg></div>
+      <span class="verdict">8 / 8 DISTINCT MONO</span>
+    </div>
+  </section>
+
+  <!-- ═══════════ 05 · scale test ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>EVERY SURFACE, ONE ASSET</h2><span class="why">same symbol, four render contexts from the mockups</span></div>
+    <div class="scales">
+      <div class="scale-row">
+        <div class="ctx"><b>SKILL BAR</b><span>48px slot</span></div>
+        <div class="cells">
+          <div class="s-slot sz48" style="--el: var(--aether)"><svg><use href="#g-lance"/></svg></div>
+          <div class="s-slot sz48" style="--el: var(--storm)"><svg><use href="#g-bolt"/></svg></div>
+          <div class="s-slot sz48" style="--el: var(--void)"><svg><use href="#g-orb"/></svg></div>
+          <div class="s-slot sz48" style="--el: var(--fire)"><svg><use href="#g-volley"/></svg></div>
+          <div class="s-slot sz48" style="--el: var(--cold)"><svg><use href="#g-pierce"/></svg></div>
+          <div class="s-slot sz48" style="--el: var(--storm)"><svg><use href="#g-chain"/></svg></div>
+          <div class="s-slot sz48" style="--el: var(--rift)"><svg><use href="#g-seeker"/></svg></div>
+          <div class="s-slot sz48" style="--el: var(--fire)"><svg><use href="#g-burst"/></svg></div>
+        </div>
+      </div>
+      <div class="scale-row">
+        <div class="ctx"><b>ABILITY CARD</b><span>36px</span></div>
+        <div class="cells">
+          <div class="s-slot sz32" style="--el: var(--aether)"><svg><use href="#g-lance"/></svg></div>
+          <div class="s-slot sz32" style="--el: var(--storm)"><svg><use href="#g-bolt"/></svg></div>
+          <div class="s-slot sz32" style="--el: var(--void)"><svg><use href="#g-orb"/></svg></div>
+          <div class="s-slot sz32" style="--el: var(--fire)"><svg><use href="#g-volley"/></svg></div>
+          <div class="s-slot sz32" style="--el: var(--cold)"><svg><use href="#g-pierce"/></svg></div>
+          <div class="s-slot sz32" style="--el: var(--storm)"><svg><use href="#g-chain"/></svg></div>
+          <div class="s-slot sz32" style="--el: var(--rift)"><svg><use href="#g-seeker"/></svg></div>
+          <div class="s-slot sz32" style="--el: var(--fire)"><svg><use href="#g-burst"/></svg></div>
+        </div>
+      </div>
+      <div class="scale-row">
+        <div class="ctx"><b>LOOT GRID</b><span>24px</span></div>
+        <div class="cells">
+          <div class="s-slot sz20" style="--el: var(--aether)"><svg><use href="#g-lance"/></svg></div>
+          <div class="s-slot sz20" style="--el: var(--storm)"><svg><use href="#g-bolt"/></svg></div>
+          <div class="s-slot sz20" style="--el: var(--void)"><svg><use href="#g-orb"/></svg></div>
+          <div class="s-slot sz20" style="--el: var(--fire)"><svg><use href="#g-volley"/></svg></div>
+          <div class="s-slot sz20" style="--el: var(--cold)"><svg><use href="#g-pierce"/></svg></div>
+          <div class="s-slot sz20" style="--el: var(--storm)"><svg><use href="#g-chain"/></svg></div>
+          <div class="s-slot sz20" style="--el: var(--rift)"><svg><use href="#g-seeker"/></svg></div>
+          <div class="s-slot sz20" style="--el: var(--fire)"><svg><use href="#g-burst"/></svg></div>
+        </div>
+      </div>
+      <div class="scale-row">
+        <div class="ctx"><b>SUPPORT LINK BEAD</b><span>24px bead · 14px glyph — the floor</span></div>
+        <div class="cells">
+          <div class="s-slot sz14" style="--el: var(--aether)"><svg><use href="#g-lance"/></svg></div>
+          <div class="s-slot sz14" style="--el: var(--storm)"><svg><use href="#g-bolt"/></svg></div>
+          <div class="s-slot sz14" style="--el: var(--void)"><svg><use href="#g-orb"/></svg></div>
+          <div class="s-slot sz14" style="--el: var(--fire)"><svg><use href="#g-volley"/></svg></div>
+          <div class="s-slot sz14" style="--el: var(--cold)"><svg><use href="#g-pierce"/></svg></div>
+          <div class="s-slot sz14" style="--el: var(--storm)"><svg><use href="#g-chain"/></svg></div>
+          <div class="s-slot sz14" style="--el: var(--rift)"><svg><use href="#g-seeker"/></svg></div>
+          <div class="s-slot sz14" style="--el: var(--fire)"><svg><use href="#g-burst"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 06 · element channel ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>ELEMENT IS A FREE CHANNEL</h2><span class="why">one path · six tints — zero new art</span></div>
+    <p class="sec-note">Because color lives in the slot (<strong>currentColor</strong>), any skill reskins to any
+    element with a CSS variable. Elemental variants, rarity tiers, buff states — none of them touch the path data.</p>
+    <div class="recolor">
+      <div class="re" style="--el: var(--aether)"><div class="s-slot sz48"><svg><use href="#g-orb"/></svg></div><span class="lbl">AETHER</span></div>
+      <div class="re" style="--el: var(--storm)"><div class="s-slot sz48"><svg><use href="#g-orb"/></svg></div><span class="lbl">STORM</span></div>
+      <div class="re" style="--el: var(--void)"><div class="s-slot sz48"><svg><use href="#g-orb"/></svg></div><span class="lbl">VOID</span></div>
+      <div class="re" style="--el: var(--fire)"><div class="s-slot sz48"><svg><use href="#g-orb"/></svg></div><span class="lbl">FIRE</span></div>
+      <div class="re" style="--el: var(--cold)"><div class="s-slot sz48"><svg><use href="#g-orb"/></svg></div><span class="lbl">COLD</span></div>
+      <div class="re" style="--el: var(--rift)"><div class="s-slot sz48"><svg><use href="#g-orb"/></svg></div><span class="lbl">RIFT</span></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 07 · tier progression ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>TIER IS AN ADDITIVE CHANNEL</h2><span class="why">armour base line · lv 1 → 91 · one outline + nine stroke groups</span></div>
+    <p class="sec-note">Base-type progression for a different family (body armour, pure-armour paradigm).
+    Rule: <strong>tier N is tier N−1 plus exactly one stroke group — the outline never changes.</strong>
+    Constant silhouette keeps the item class readable at a glance; ornament count <em>is</em> the level read.
+    Ten bases cost one drawing plus nine one-line additions.</p>
+    <div class="tiers base-line">
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#a-l1"/></svg></div><span class="lv">LV 1</span><span class="nm">WORN</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#a-l1"/><use href="#a-l2"/></svg></div><span class="lv">LV 11</span><span class="nm">BANDED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#a-l1"/><use href="#a-l2"/><use href="#a-l3"/></svg></div><span class="lv">LV 21</span><span class="nm">RIVETED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#a-l1"/><use href="#a-l2"/><use href="#a-l3"/><use href="#a-l4"/></svg></div><span class="lv">LV 31</span><span class="nm">FORGED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#a-l1"/><use href="#a-l2"/><use href="#a-l3"/><use href="#a-l4"/><use href="#a-l5"/></svg></div><span class="lv">LV 41</span><span class="nm">EMBLAZONED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#a-l1"/><use href="#a-l2"/><use href="#a-l3"/><use href="#a-l4"/><use href="#a-l5"/><use href="#a-l6"/></svg></div><span class="lv">LV 51</span><span class="nm">TEMPERED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#a-l1"/><use href="#a-l2"/><use href="#a-l3"/><use href="#a-l4"/><use href="#a-l5"/><use href="#a-l6"/><use href="#a-l7"/></svg></div><span class="lv">LV 61</span><span class="nm">BASTION</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#a-l1"/><use href="#a-l2"/><use href="#a-l3"/><use href="#a-l4"/><use href="#a-l5"/><use href="#a-l6"/><use href="#a-l7"/><use href="#a-l8"/></svg></div><span class="lv">LV 71</span><span class="nm">COLOSSAL</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#a-l1"/><use href="#a-l2"/><use href="#a-l3"/><use href="#a-l4"/><use href="#a-l5"/><use href="#a-l6"/><use href="#a-l7"/><use href="#a-l8"/><use href="#a-l9"/></svg></div><span class="lv">LV 81</span><span class="nm">ROYAL</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#a-l1"/><use href="#a-l2"/><use href="#a-l3"/><use href="#a-l4"/><use href="#a-l5"/><use href="#a-l6"/><use href="#a-l7"/><use href="#a-l8"/><use href="#a-l9"/><use href="#a-l10"/></svg></div><span class="lv">LV 91</span><span class="nm">TITAN</span></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 07b · density lab ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>DENSITY LAB</h2><span class="why">why tier 10 got muddy, and the rule that fixes it</span></div>
+    <p class="sec-note">The old waist chevron sat ~1.8 units from the shell — at stroke 1.5 that leaves
+    ~0.3 units of ink gap. It was spacing, not weight. Four candidate fixes below at tier 10;
+    the strip above already runs on the adopted rule.</p>
+    <div class="decompose lab">
+      <div class="piece">
+        <div class="box" style="color: var(--rift); border-color: color-mix(in srgb, var(--rift) 40%, var(--line))">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 4 L16 4 L18 7 L18 15 L12 20 L6 15 L6 7 Z"/>
+            <path d="M10 4 L12 6 L14 4"/>
+            <path d="M12 6.5 V9.5"/>
+            <path d="M8.5 10 H15.5"/>
+            <path d="M12 11.4 L13.6 13 L12 14.6 L10.4 13 Z"/>
+            <path d="M9 15.5 L12 18 L15 15.5"/>
+            <path d="M4 6.5 L5.5 5 M20 6.5 L18.5 5"/>
+            <path d="M8.5 8 V13 M15.5 8 V13"/>
+            <path d="M9 4 V2.5 M15 4 V2.5"/>
+            <path d="M3.5 10 V14 M20.5 10 V14"/>
+          </svg>
+        </div>
+        <span class="lbl">ORIGINAL</span>
+        <span class="tag fail">CHEVRON HUGS SHELL</span>
+      </div>
+      <div class="piece">
+        <div class="box">
+          <svg viewBox="0 0 24 24"><use href="#a-l1"/><use href="#a-l2"/><use href="#a-l3"/><use href="#a-l4"/><use href="#a-l5"/><use href="#a-l6"/><use href="#a-l7"/><use href="#a-l8"/><use href="#a-l9"/><use href="#a-l10"/></svg>
+        </div>
+        <span class="lbl">A · RESPACE</span>
+        <span class="tag rec">ADOPTED</span>
+      </div>
+      <div class="piece">
+        <div class="box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 4 L16 4 L18 7 L18 15 L12 20 L6 15 L6 7 Z" stroke-width="1.5"/>
+            <path d="M10 4 L12 6 L14 4"/>
+            <path d="M12 6.5 V9.5"/>
+            <path d="M8.5 10 H15.5"/>
+            <path d="M12 11.4 L13.6 13 L12 14.6 L10.4 13 Z"/>
+            <path d="M9 15.5 L12 18 L15 15.5"/>
+            <path d="M4 6.5 L5.5 5 M20 6.5 L18.5 5"/>
+            <path d="M8.5 8 V13 M15.5 8 V13"/>
+            <path d="M9 4 V2.5 M15 4 V2.5"/>
+            <path d="M3.5 10 V14 M20.5 10 V14"/>
+          </svg>
+        </div>
+        <span class="lbl">B · THIN ORNAMENT</span>
+        <span class="tag fail">REJECTED</span>
+      </div>
+      <div class="piece">
+        <div class="box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <use href="#a-l1"/><use href="#a-l2"/><use href="#a-l3"/><use href="#a-l4"/><use href="#a-l5"/><use href="#a-l7"/><use href="#a-l9"/><use href="#a-l10"/>
+            <path d="M4.2 17.2 L5.8 15.8 M19.8 17.2 L18.2 15.8"/>
+          </svg>
+        </div>
+        <span class="lbl">C · GROW OUTWARD</span>
+        <span class="tag rec">ADOPTED</span>
+      </div>
+    </div>
+    <p class="sec-note" style="margin-top: 16px">
+    <strong>The codified rule (A + C):</strong> parallel runs keep ≥2.5 units centre-to-centre ·
+    point or diagonal approaches keep ≥2.0 · perpendicular ticks either join fully or stop ≥1.5 short — never hover closer ·
+    the interior caps at <strong>4 ornament groups</strong>, and every tier past the cap grows outward
+    (pauldrons, spikes, aura). B is rejected <em>as a density fix</em> — spacing must be solved by
+    geometry. Weight-as-hierarchy is a separate question, tested properly in the Stroke Weight Lab below.</p>
+  </section>
+
+  <!-- ═══════════ 08 · area family ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>SECOND FAMILY — AREA</h2><span class="why">new skeleton, same gates · everything else carries over</span></div>
+    <p class="sec-note">Area skills drop the travel axis and pick one of two <strong>anchors</strong>:
+    radial around the self, or standing on a ground ellipse. That single skeleton swap is the entire
+    per-family design decision — grid, stroke, gates, element channel and container channel are untouched.</p>
+    <div class="skills cols7">
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot" style="border-style: dashed; box-shadow: none"><svg><use href="#g-area-axis"/></svg></div>
+        <div class="name">SKELETON</div>
+        <div class="tags"><span class="tag">RADIAL · GROUND</span></div>
+        <p class="read">anchor replaces axis</p>
+      </div>
+      <div class="skill" style="--el: var(--aether)">
+        <div class="slot"><svg><use href="#g-nova"/></svg></div>
+        <div class="name">Nova</div>
+        <div class="tags"><span class="tag el">AETHER</span><span class="tag">SELF BURST</span></div>
+        <p class="read">radial ticks from the self</p>
+      </div>
+      <div class="skill" style="--el: var(--fire)">
+        <div class="slot"><svg><use href="#g-meteor"/></svg></div>
+        <div class="name">Meteorfall</div>
+        <div class="tags"><span class="tag el">FIRE</span><span class="tag">IMPACT ZONE</span></div>
+        <p class="read">vertical drop into ground ring</p>
+      </div>
+      <div class="skill" style="--el: var(--void)">
+        <div class="slot"><svg><use href="#g-pool"/></svg></div>
+        <div class="name">Void Miasma</div>
+        <div class="tags"><span class="tag el">VOID</span><span class="tag">GROUND DOT</span></div>
+        <p class="read">pool + rising motes = lingering</p>
+      </div>
+      <div class="skill" style="--el: var(--storm)">
+        <div class="slot"><svg><use href="#g-storm"/></svg></div>
+        <div class="name">Tempest</div>
+        <div class="tags"><span class="tag el">STORM</span><span class="tag">PERSISTENT</span></div>
+        <p class="read">canopy above, fall below</p>
+      </div>
+      <div class="skill" style="--el: var(--cold)">
+        <div class="slot"><svg><use href="#g-fissure"/></svg></div>
+        <div class="name">Shatterline</div>
+        <div class="tags"><span class="tag el">COLD</span><span class="tag">GROUND SPIKES</span></div>
+        <p class="read">eruption along the ground line</p>
+      </div>
+      <div class="skill" style="--el: var(--rift)">
+        <div class="slot"><svg><use href="#g-sanct"/></svg></div>
+        <div class="name">Sanctum</div>
+        <div class="tags"><span class="tag el">RIFT</span><span class="tag">BUFF ZONE</span></div>
+        <p class="read">sigil floating over claimed ground</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 09 · gear suite ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>GEAR SUITE — HEAVY ARCHETYPE</h2><span class="why">8 slots · slot identity = silhouette</span></div>
+    <p class="sec-note">Third family: equipment. Skeleton is <strong>closed silhouette, vertical symmetry</strong>
+    (profile slots like boots exempt). Each slot owns a silhouette the way each mechanic did — and the body
+    piece is literally the tier strip's outline reused. Tier layers, rarity containers and element tints
+    all stack on top of these eight drawings. Helm, gauntlets and greaves now run in the
+    <strong>schematic register</strong> — the Register Lab below explains the change.</p>
+    <div class="skills">
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#r-schem"/></svg></div>
+        <div class="name">Helm</div>
+        <div class="tags"><span class="tag">SHELL + VISOR BAND</span></div>
+        <p class="read">chamfered shell, wraparound visor</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#a-l1"/><use href="#a-l2"/><use href="#a-l3"/><use href="#a-l4"/></svg></div>
+        <div class="name">Body</div>
+        <div class="tags"><span class="tag">TIER-STRIP REUSE</span></div>
+        <p class="read">same outline as the base line</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#gl1"/><use href="#gl2"/></svg></div>
+        <div class="name">Gauntlets</div>
+        <div class="tags"><span class="tag">MITT + CUFF</span></div>
+        <p class="read">mitt silhouette won — cuff is tier 2, not base</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#bl1"/><use href="#bl2"/></svg></div>
+        <div class="name">Boots</div>
+        <div class="tags"><span class="tag">PROFILE + SOLE</span></div>
+        <p class="read">boot profile won — the shin/tread split read as nothing</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#e-belt"/></svg></div>
+        <div class="name">Belt</div>
+        <div class="tags"><span class="tag">BAND + BUCKLE</span></div>
+        <p class="read">only horizontal-dominant slot</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#e-shield"/></svg></div>
+        <div class="name">Shield</div>
+        <div class="tags"><span class="tag">KITE + BOSS</span></div>
+        <p class="read">point-down = defence, not loot diamond</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#e-amulet"/></svg></div>
+        <div class="name">Amulet</div>
+        <div class="tags"><span class="tag">DRAPE + DROP</span></div>
+        <p class="read">chain curve distinguishes from ring</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#e-ring"/></svg></div>
+        <div class="name">Ring</div>
+        <div class="tags"><span class="tag">BAND + SEAT</span></div>
+        <p class="read">gem seated on the band</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 09a · register lab ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>REGISTER LAB</h2><span class="why">why the gear felt off — same helm, three registers</span></div>
+    <p class="sec-note">The psycaster helm works because it's drawn as a <strong>sigil</strong> — abstract
+    geometry, same language as the UI's hexes and diamonds. The old gear was drawn as
+    <strong>pictograms</strong> — tiny literal pictures of medieval objects — which is why it read as
+    generic-RPG and fought the interface. The adopted register is the middle one: <strong>schematic</strong> —
+    a geometric shell plus one function line, like a mech loadout screen.</p>
+    <div class="skills cols3">
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#hv2"/></svg></div>
+        <div class="name">Pictogram</div>
+        <div class="tags"><span class="tag fail">REJECTED</span></div>
+        <p class="read">a drawing of a bascinet — medieval noun, generic-RPG read</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#r-schem"/></svg></div>
+        <div class="name">Schematic</div>
+        <div class="tags"><span class="tag rec">ADOPTED</span></div>
+        <p class="read">geometric shell + visor band — slot-recognizable, era-correct</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#r-sigil"/></svg></div>
+        <div class="name">Sigil</div>
+        <div class="tags"><span class="tag fail">TOO FAR</span></div>
+        <p class="read">reads as UI, not item — and collides with the hexes enemies already own</p>
+      </div>
+    </div>
+    <p class="sec-note" style="margin-top: 16px"><strong>Era rule joins the contract:</strong> forms come
+    from this world's tech — visors, plating, treads, antennae, projections — never the medieval armoury.
+    Skills stay symbolic (they're verbs); gear goes schematic (they're objects); psycaster gear is the
+    licensed exception that leans sigil, because that <em>is</em> its fiction.</p>
+  </section>
+
+  <!-- ═══════════ 09b · base lab ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>BASE LAB — CONTESTED SLOTS</h2><span class="why">pictogram-era candidates · kept for the record</span></div>
+    <p class="sec-note">First-round candidates, all drawn before the register finding — they're
+    pictograms, and that's why none of them ever felt right. Selection criteria still hold
+    (<strong>≤3 stroke groups</strong>, interior whitespace = tier budget); the winning silhouettes were
+    redrawn schematic and now sit in the gear suite above.</p>
+    <div class="skills">
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#hv1"/></svg></div>
+        <div class="name">Helm · Greathelm</div>
+        <div class="tags"><span class="tag">FLAT TOP + CROSS SLIT</span></div>
+        <p class="read">slab language, huge interior — 6+ tiers of room</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#hv2"/></svg></div>
+        <div class="name">Helm · Bascinet</div>
+        <div class="tags"><span class="tag">DOME + VISOR BAND</span></div>
+        <p class="read">2 groups, max whitespace — the softest read</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#hv3"/></svg></div>
+        <div class="name">Helm · Barbute</div>
+        <div class="tags"><span class="tag">T-SLOT + CREST</span></div>
+        <p class="read">crest tick anticipates exterior growth</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#gv1"/></svg></div>
+        <div class="name">Gauntlet · Mitt</div>
+        <div class="tags"><span class="tag">SQUARE TOP + CUFF LINE</span></div>
+        <p class="read">one silhouette, one line — 7 tiers of room</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#gv2"/></svg></div>
+        <div class="name">Gauntlet · Fingered</div>
+        <div class="tags"><span class="tag">FINGER STUBS</span></div>
+        <p class="read">more literal; stubs eat top clearance early</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#gv3"/></svg></div>
+        <div class="name">Gauntlet · Cone + Orb</div>
+        <div class="tags"><span class="tag">FLARED CUFF</span></div>
+        <p class="read">strongest silhouette, least interior room</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#bv1"/></svg></div>
+        <div class="name">Greave · Sabaton</div>
+        <div class="tags"><span class="tag">PROFILE + SOLE LINE</span></div>
+        <p class="read">sole line grounds it; shin takes the tiers</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#bv2"/></svg></div>
+        <div class="name">Greave · Front-on</div>
+        <div class="tags"><span class="tag">SYMMETRIC SHIN</span></div>
+        <p class="read">keeps symmetry but flirts with the body silhouette</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#bv3"/></svg></div>
+        <div class="name">Greave · Cleated</div>
+        <div class="tags"><span class="tag">HEEL + STUDS</span></div>
+        <p class="read">studs read great — better as a tier layer than a base</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 09c · gear lines ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>GEAR LINES — SILHOUETTE FIRST</h2><span class="why">all 7 non-body slots at 6 tiers · body runs the 10-tier strip above</span></div>
+    <p class="sec-note">The lv-1 bases were overdressed — the fix is a rule, not taste:
+    <strong>tier 1 is the silhouette alone; the first ornament arrives at tier 2.</strong> Interior fills
+    to the cap, then growth goes exterior, and every addition attaches to the silhouette. One licensed
+    exception below: the amulet's base is two paths, because cord + drop is the smallest thing that
+    reads "amulet" — a lone diamond is loot currency.</p>
+
+    <div class="line-head" style="--el2: var(--slate)"><span class="t">GAUNTLET LINE — MITT</span><span class="s">cuff → ridge → second ridge → cuff flares → side plates</span></div>
+    <div class="tiers tinted" style="--el: var(--slate)">
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#gl1"/></svg></div><span class="lv">LV 1</span><span class="nm">SHELL</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#gl1"/><use href="#gl2"/></svg></div><span class="lv">LV 16</span><span class="nm">CUFFED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#gl1"/><use href="#gl2"/><use href="#gl3"/></svg></div><span class="lv">LV 31</span><span class="nm">RIDGED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#gl1"/><use href="#gl2"/><use href="#gl3"/><use href="#gl4"/></svg></div><span class="lv">LV 46</span><span class="nm">LAYERED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#gl1"/><use href="#gl2"/><use href="#gl3"/><use href="#gl4"/><use href="#gl5"/></svg></div><span class="lv">LV 61</span><span class="nm">FLARED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#gl1"/><use href="#gl2"/><use href="#gl3"/><use href="#gl4"/><use href="#gl5"/><use href="#gl6"/></svg></div><span class="lv">LV 76</span><span class="nm">PLATED</span></div>
+    </div>
+
+    <div class="line-head" style="--el2: var(--slate)"><span class="t">BOOT BASE — CANDIDATES</span><span class="s">silhouette only, per the rule · knobs are shaft height, toe length, instep angle</span></div>
+    <div class="skills">
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#bl1"/></svg></div>
+        <div class="name">Standard</div>
+        <div class="tags"><span class="tag rec">REC</span><span class="tag">BALANCED L</span></div>
+        <p class="read">even shaft-to-toe ratio — the most room for tiers</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#bc2"/></svg></div>
+        <div class="name">Block Step</div>
+        <div class="tags"><span class="tag">ANGULAR INSTEP</span></div>
+        <p class="read">stepped instep — most mecha, borrows juggernaut slabs</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#bc3"/></svg></div>
+        <div class="name">Sleek Low</div>
+        <div class="tags"><span class="tag">NARROW SHAFT</span></div>
+        <p class="read">long low toe — fast read, thin shaft starves the tiers</p>
+      </div>
+      <div class="skill" style="--el: var(--slate)">
+        <div class="slot"><svg><use href="#bc4"/></svg></div>
+        <div class="name">High Shaft</div>
+        <div class="tags"><span class="tag">TALL + STEEP</span></div>
+        <p class="read">reads greave-like — the heavy option if Standard feels light</p>
+      </div>
+    </div>
+
+    <div class="line-head" style="--el2: var(--slate)"><span class="t">BOOT LINE — STANDARD</span><span class="s">sole → cuff → strap → toe cap → welded heel exhausts (attached, not floating — floating is psycaster's channel)</span></div>
+    <div class="tiers tinted" style="--el: var(--slate)">
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#bl1"/></svg></div><span class="lv">LV 1</span><span class="nm">SHELL</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#bl1"/><use href="#bl2"/></svg></div><span class="lv">LV 16</span><span class="nm">SOLED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#bl1"/><use href="#bl2"/><use href="#bl3"/></svg></div><span class="lv">LV 31</span><span class="nm">CUFFED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#bl1"/><use href="#bl2"/><use href="#bl3"/><use href="#bl4"/></svg></div><span class="lv">LV 46</span><span class="nm">STRAPPED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#bl1"/><use href="#bl2"/><use href="#bl3"/><use href="#bl4"/><use href="#bl5"/></svg></div><span class="lv">LV 61</span><span class="nm">CAPPED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#bl1"/><use href="#bl2"/><use href="#bl3"/><use href="#bl4"/><use href="#bl5"/><use href="#bl6"/></svg></div><span class="lv">LV 76</span><span class="nm">THRUSTERS</span></div>
+    </div>
+
+    <div class="line-head" style="--el2: var(--slate)"><span class="t">BELT LINE</span><span class="s">buckle → prong → drop strap → second band → clasp pins</span></div>
+    <div class="tiers tinted" style="--el: var(--slate)">
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#wl1"/></svg></div><span class="lv">LV 1</span><span class="nm">BAND</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#wl1"/><use href="#wl2"/></svg></div><span class="lv">LV 16</span><span class="nm">BUCKLED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#wl1"/><use href="#wl2"/><use href="#wl3"/></svg></div><span class="lv">LV 31</span><span class="nm">PRONGED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#wl1"/><use href="#wl2"/><use href="#wl3"/><use href="#wl4"/></svg></div><span class="lv">LV 46</span><span class="nm">HARNESSED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#wl1"/><use href="#wl2"/><use href="#wl3"/><use href="#wl4"/><use href="#wl5"/></svg></div><span class="lv">LV 61</span><span class="nm">RIGGED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#wl1"/><use href="#wl2"/><use href="#wl3"/><use href="#wl4"/><use href="#wl5"/><use href="#wl6"/></svg></div><span class="lv">LV 76</span><span class="nm">PINNED</span></div>
+    </div>
+
+    <div class="line-head" style="--el2: var(--slate)"><span class="t">SHIELD LINE</span><span class="s">emitter core → ridge → top rail → wing stubs → corner horns</span></div>
+    <div class="tiers tinted" style="--el: var(--slate)">
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#sl1"/></svg></div><span class="lv">LV 1</span><span class="nm">SHELL</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#sl1"/><use href="#sl2"/></svg></div><span class="lv">LV 16</span><span class="nm">CORED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#sl1"/><use href="#sl2"/><use href="#sl3"/></svg></div><span class="lv">LV 31</span><span class="nm">RIDGED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#sl1"/><use href="#sl2"/><use href="#sl3"/><use href="#sl4"/></svg></div><span class="lv">LV 46</span><span class="nm">RAILED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#sl1"/><use href="#sl2"/><use href="#sl3"/><use href="#sl4"/><use href="#sl5"/></svg></div><span class="lv">LV 61</span><span class="nm">STABILIZED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#sl1"/><use href="#sl2"/><use href="#sl3"/><use href="#sl4"/><use href="#sl5"/><use href="#sl6"/></svg></div><span class="lv">LV 76</span><span class="nm">HORNED</span></div>
+    </div>
+
+    <div class="line-head" style="--el2: var(--slate)"><span class="t">AMULET LINE</span><span class="s">two-path silhouette — cord + drop IS the gestalt · core → clasps → fringe → point → beads</span></div>
+    <div class="tiers tinted" style="--el: var(--slate)">
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#am1"/></svg></div><span class="lv">LV 1</span><span class="nm">PENDANT</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#am1"/><use href="#am2"/></svg></div><span class="lv">LV 16</span><span class="nm">CORED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#am1"/><use href="#am2"/><use href="#am3"/></svg></div><span class="lv">LV 31</span><span class="nm">CLASPED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#am1"/><use href="#am2"/><use href="#am3"/><use href="#am4"/></svg></div><span class="lv">LV 46</span><span class="nm">FRINGED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#am1"/><use href="#am2"/><use href="#am3"/><use href="#am4"/><use href="#am5"/></svg></div><span class="lv">LV 61</span><span class="nm">POINTED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#am1"/><use href="#am2"/><use href="#am3"/><use href="#am4"/><use href="#am5"/><use href="#am6"/></svg></div><span class="lv">LV 76</span><span class="nm">BEADED</span></div>
+    </div>
+
+    <div class="line-head" style="--el2: var(--slate)"><span class="t">RING LINE</span><span class="s">gem seat → shoulder flares → crown spike → keel → orbit arcs close the composition at max tier</span></div>
+    <div class="tiers tinted" style="--el: var(--slate)">
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#rl1"/></svg></div><span class="lv">LV 1</span><span class="nm">BAND</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#rl1"/><use href="#rl2"/></svg></div><span class="lv">LV 16</span><span class="nm">SEATED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#rl1"/><use href="#rl2"/><use href="#rl5"/></svg></div><span class="lv">LV 31</span><span class="nm">FLARED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#rl1"/><use href="#rl2"/><use href="#rl5"/><use href="#rl4"/></svg></div><span class="lv">LV 46</span><span class="nm">CROWNED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#rl1"/><use href="#rl2"/><use href="#rl5"/><use href="#rl4"/><use href="#rl6"/></svg></div><span class="lv">LV 61</span><span class="nm">KEELED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#rl1"/><use href="#rl2"/><use href="#rl5"/><use href="#rl4"/><use href="#rl6"/><use href="#rl3"/></svg></div><span class="lv">LV 76</span><span class="nm">ORBITAL</span></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 09d · stroke weight lab ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>STROKE WEIGHT LAB</h2><span class="why">thick shell + fine detail — tier-6 gauntlet, three systems, each at 24px</span></div>
+    <p class="sec-note">Hypothesis: a heavier base silhouette makes room for finer ornament. Tested on the
+    densest glyph we have. The small chip under each is the 24px loot-grid render — the survival test
+    that decides it.</p>
+    <div class="decompose lab">
+      <div class="piece">
+        <div class="box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 4.5 H16 V13.5 A4 4 0 0 1 8 13.5 Z"/>
+            <path d="M8 8 H16 M10 11.3 L12 10 L14 11.3 M10.4 14.4 L12 13.3 L13.6 14.4 M8 4.5 L6.3 3 M16 4.5 L17.7 3 M5.5 7 V12 M18.5 7 V12"/>
+          </svg>
+        </div>
+        <div class="cell" style="width:28px;height:28px;border:1px solid var(--line);border-radius:7px;display:grid;place-items:center">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 4.5 H16 V13.5 A4 4 0 0 1 8 13.5 Z M8 8 H16 M10 11.3 L12 10 L14 11.3 M10.4 14.4 L12 13.3 L13.6 14.4 M8 4.5 L6.3 3 M16 4.5 L17.7 3 M5.5 7 V12 M18.5 7 V12"/>
+          </svg>
+        </div>
+        <span class="lbl">UNIFORM 1.5</span>
+        <span class="tag">FLAT HIERARCHY</span>
+      </div>
+      <div class="piece">
+        <div class="box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 4.5 H16 V13.5 A4 4 0 0 1 8 13.5 Z" stroke-width="2"/>
+            <path d="M8 8 H16 M10 11.3 L12 10 L14 11.3 M10.4 14.4 L12 13.3 L13.6 14.4 M8 4.5 L6.3 3 M16 4.5 L17.7 3 M5.5 7 V12 M18.5 7 V12" stroke-width="1.4"/>
+          </svg>
+        </div>
+        <div class="cell" style="width:28px;height:28px;border:1px solid var(--line);border-radius:7px;display:grid;place-items:center">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 4.5 H16 V13.5 A4 4 0 0 1 8 13.5 Z" stroke-width="2"/>
+            <path d="M8 8 H16 M10 11.3 L12 10 L14 11.3 M10.4 14.4 L12 13.3 L13.6 14.4 M8 4.5 L6.3 3 M16 4.5 L17.7 3 M5.5 7 V12 M18.5 7 V12" stroke-width="1.4"/>
+          </svg>
+        </div>
+        <span class="lbl">SHELL 2 · DETAIL 1.4</span>
+        <span class="tag rec">ADOPTED — GEAR ONLY</span>
+      </div>
+      <div class="piece">
+        <div class="box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 4.5 H16 V13.5 A4 4 0 0 1 8 13.5 Z" stroke-width="2.2"/>
+            <path d="M8 8 H16 M10 11.3 L12 10 L14 11.3 M10.4 14.4 L12 13.3 L13.6 14.4 M8 4.5 L6.3 3 M16 4.5 L17.7 3 M5.5 7 V12 M18.5 7 V12" stroke-width="1"/>
+          </svg>
+        </div>
+        <div class="cell" style="width:28px;height:28px;border:1px solid var(--line);border-radius:7px;display:grid;place-items:center">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 4.5 H16 V13.5 A4 4 0 0 1 8 13.5 Z" stroke-width="2.2"/>
+            <path d="M8 8 H16 M10 11.3 L12 10 L14 11.3 M10.4 14.4 L12 13.3 L13.6 14.4 M8 4.5 L6.3 3 M16 4.5 L17.7 3 M5.5 7 V12 M18.5 7 V12" stroke-width="1"/>
+          </svg>
+        </div>
+        <span class="lbl">SHELL 2.2 · DETAIL 1</span>
+        <span class="tag fail">DETAIL DIES AT 24PX</span>
+      </div>
+    </div>
+    <p class="sec-note" style="margin-top: 16px"><strong>Verdict:</strong> the hypothesis holds — with one
+    boundary. Two weights give gear real object-hierarchy (silhouette pops, ornament recedes) and buy
+    back density headroom. But detail below ~1.4 evaporates at loot-grid scale, so the ratio is capped:
+    <strong>shell 2 / detail 1.4, gear register only.</strong> Skills stay uniform 1.5 — they're UI
+    symbols, render down to 14px beads, and a bold/fine split there reads as inconsistency, not
+    hierarchy. Spacing is still solved by geometry — weight is hierarchy, never a density fix.</p>
+  </section>
+
+  <!-- ═══════════ 10 · helmet × archetype ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>ONE SLOT, THREE FORM LANGUAGES</h2><span class="why">helmet × archetype — the fifth channel</span></div>
+    <p class="sec-note">Archetype doesn't get new slots or new gates — it gets a <strong>form vocabulary</strong>
+    that every glyph of that archetype is drawn in. Because the vocabulary applies across all eight gear slots,
+    a mixed build reads as visually mixed for free, and a full set reads as a uniform.</p>
+    <div class="archs">
+      <div class="arch" style="--el: var(--fire)">
+        <div class="slot"><svg><use href="#h-jugg"/></svg></div>
+        <div class="name">JUGGERNAUT</div>
+        <div class="vocab">SLABS · CHAMFERS · VENTS<br>MAXIMUM CLOSED AREA</div>
+        <p class="read">mecha read: flat planes, 45° cuts, everything welded shut</p>
+      </div>
+      <div class="arch" style="--el: var(--void)">
+        <div class="slot"><svg><use href="#h-psy"/></svg></div>
+        <div class="name">PSYCASTER</div>
+        <div class="vocab">ARCS · FLOATING ELEMENTS<br>NEGATIVE SPACE</div>
+        <p class="read">nothing touches: circlet, detached halo, orbiting motes — levitation as a drawing rule</p>
+      </div>
+      <div class="arch" style="--el: var(--aether)">
+        <div class="slot"><svg><use href="#h-scnd"/></svg></div>
+        <div class="name">SCOUNDREL</div>
+        <div class="vocab">OPTICS · UPLINKS<br>ASYMMETRY RIGHTWARD</div>
+        <p class="read">v4 netrunner: flat visor + frame bar, no shell — the head is implied, only the instruments are drawn; uplink leans right for motion</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 10b · archetype helm lines ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>ARCHETYPE HELM LINES</h2><span class="why">6 tiers per theme · lv 1 → 76 · additive rule + density rule together</span></div>
+    <p class="sec-note">Scoundrel base went through three rounds — goggles parked as desert-nomad, then
+    the skull cap dropped: the head is implied and only the instruments are drawn. All three archetypes
+    run as 6-tier lines (100 levels / 15 ≈ 6 bases). Watch each theme's vocabulary drive
+    <em>what kind of thing gets added</em>: juggernaut accretes plate, psycaster accretes floating
+    elements, scoundrel accretes instruments.</p>
+
+    <div class="line-head" style="--el2: var(--aether)"><span class="t">SCOUNDREL BASE — CANDIDATES</span></div>
+    <div class="skills">
+      <div class="skill" style="--el: var(--aether)">
+        <div class="slot"><svg><use href="#sc-a"/></svg></div>
+        <div class="name">Drifter Hood</div>
+        <div class="tags"><span class="tag">HOOD + VISOR SLAB</span></div>
+        <p class="read">sharp and anonymous — but straight lines drift toward juggernaut's vocabulary</p>
+      </div>
+      <div class="skill" style="--el: var(--aether)">
+        <div class="slot"><svg><use href="#scl1"/><use href="#scl2"/><use href="#scl3"/></svg></div>
+        <div class="name">Frame Bar</div>
+        <div class="tags"><span class="tag rec">REC</span><span class="tag">NO SHELL</span></div>
+        <p class="read">skull cap dropped — one framing bar above the flat visor; headwear implied, never drawn</p>
+      </div>
+      <div class="skill" style="--el: var(--aether)">
+        <div class="slot"><svg><use href="#scl1"/><use href="#scl2"/><use href="#scl3"/><path d="M6.5 16.3 H17.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        <div class="name">Frame ×2</div>
+        <div class="tags"><span class="tag">BARS BOTH SIDES</span></div>
+        <p class="read">bottom bar too — more mask-like, but it spends the slot where the chin-guard tier wants to live</p>
+      </div>
+      <div class="skill" style="--el: var(--aether)">
+        <div class="slot"><svg><use href="#sc-b"/></svg></div>
+        <div class="name">Operative</div>
+        <div class="tags"><span class="tag fail">TOO DUNE</span></div>
+        <p class="read">round lenses + straps read desert-nomad — parked for the record</p>
+      </div>
+    </div>
+
+    <div class="line-head" style="--el2: var(--fire)"><span class="t">JUGGERNAUT MID-TIER CANDIDATES</span><span class="s">each shown on the slit shell — studs rejected: two dots read as eyes</span></div>
+    <div class="skills">
+      <div class="skill" style="--el: var(--fire)">
+        <div class="slot"><svg><use href="#jl1"/><use href="#jl2"/></svg></div>
+        <div class="name">Vent ×1</div>
+        <div class="tags"><span class="tag rec">TIER 2</span></div>
+        <p class="read">single exhaust — smallest possible step</p>
+      </div>
+      <div class="skill" style="--el: var(--fire)">
+        <div class="slot"><svg><use href="#jl1"/><use href="#jl2"/><use href="#jl3"/></svg></div>
+        <div class="name">Vent ×3</div>
+        <div class="tags"><span class="tag rec">TIER 3</span></div>
+        <p class="read">flanking pair joins — one motif, two tiers of growth</p>
+      </div>
+      <div class="skill" style="--el: var(--fire)">
+        <div class="slot"><svg><use href="#jl1"/><use href="#jl4"/></svg></div>
+        <div class="name">Brow</div>
+        <div class="tags"><span class="tag rec">TIER 4</span></div>
+        <p class="read">reinforcement line above the slit</p>
+      </div>
+      <div class="skill" style="--el: var(--fire)">
+        <div class="slot"><svg><use href="#jl1"/><path d="M9 12.8 V15.2 M15 12.8 V15.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        <div class="name">Cheek Plates</div>
+        <div class="tags"><span class="tag">SPARE</span></div>
+        <p class="read">vertical seams under the slit ends — bench for tier 7+</p>
+      </div>
+      <div class="skill" style="--el: var(--fire)">
+        <div class="slot"><svg><use href="#jl1"/><circle cx="8.6" cy="13.5" r="0.9" fill="currentColor"/><circle cx="15.4" cy="13.5" r="0.9" fill="currentColor"/></svg></div>
+        <div class="name">Studs</div>
+        <div class="tags"><span class="tag fail">REJECTED</span></div>
+        <p class="read">two dots read as googly eyes — paired dots banned on face zones</p>
+      </div>
+    </div>
+
+    <div class="line-head" style="--el2: var(--fire)"><span class="t">JUGGERNAUT LINE</span><span class="s">slit lives in the base — vent → tri-vent → brow → side plates → crest</span></div>
+    <div class="tiers tinted" style="--el: var(--fire)">
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#jl1"/></svg></div><span class="lv">LV 1</span><span class="nm">SHELL</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#jl1"/><use href="#jl2"/></svg></div><span class="lv">LV 16</span><span class="nm">VENTED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#jl1"/><use href="#jl2"/><use href="#jl3"/></svg></div><span class="lv">LV 31</span><span class="nm">TRI-VENT</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#jl1"/><use href="#jl2"/><use href="#jl3"/><use href="#jl4"/></svg></div><span class="lv">LV 46</span><span class="nm">BROWED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#jl1"/><use href="#jl2"/><use href="#jl3"/><use href="#jl4"/><use href="#jl5"/></svg></div><span class="lv">LV 61</span><span class="nm">PLATED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#jl1"/><use href="#jl2"/><use href="#jl3"/><use href="#jl4"/><use href="#jl5"/><use href="#jl6"/></svg></div><span class="lv">LV 76</span><span class="nm">CRESTED</span></div>
+    </div>
+
+    <div class="line-head" style="--el2: var(--void)"><span class="t">PSYCASTER LINE</span><span class="s">nothing ever touches: gem → halo → motes → veils → radiance</span></div>
+    <div class="tiers tinted" style="--el: var(--void)">
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#pl1"/></svg></div><span class="lv">LV 1</span><span class="nm">CIRCLET</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#pl1"/><use href="#pl2"/></svg></div><span class="lv">LV 16</span><span class="nm">THIRD EYE</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#pl1"/><use href="#pl2"/><use href="#pl3"/></svg></div><span class="lv">LV 31</span><span class="nm">HALOED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#pl1"/><use href="#pl2"/><use href="#pl3"/><use href="#pl4"/></svg></div><span class="lv">LV 46</span><span class="nm">ORBITED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#pl1"/><use href="#pl2"/><use href="#pl3"/><use href="#pl4"/><use href="#pl5"/></svg></div><span class="lv">LV 61</span><span class="nm">VEILED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#pl1"/><use href="#pl2"/><use href="#pl3"/><use href="#pl4"/><use href="#pl5"/><use href="#pl6"/></svg></div><span class="lv">LV 76</span><span class="nm">ASCENDANT</span></div>
+    </div>
+
+    <div class="line-head" style="--el2: var(--aether)"><span class="t">SCOUNDREL LINE — NETRUNNER</span><span class="s">visor IS the identity, so it goes first: frame bar → uplink → chin guard → cable → HUD projection</span></div>
+    <div class="tiers tinted" style="--el: var(--aether)">
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#scl1"/></svg></div><span class="lv">LV 1</span><span class="nm">VISOR</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#scl1"/><use href="#scl2"/></svg></div><span class="lv">LV 16</span><span class="nm">FRAMED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#scl1"/><use href="#scl2"/><use href="#scl3"/></svg></div><span class="lv">LV 31</span><span class="nm">LINKED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#scl1"/><use href="#scl2"/><use href="#scl3"/><use href="#scl4"/></svg></div><span class="lv">LV 46</span><span class="nm">GUARDED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#scl1"/><use href="#scl2"/><use href="#scl3"/><use href="#scl4"/><use href="#scl5"/></svg></div><span class="lv">LV 61</span><span class="nm">WIRED</span></div>
+      <div class="tier"><div class="box"><svg viewBox="0 0 24 24"><use href="#scl1"/><use href="#scl2"/><use href="#scl3"/><use href="#scl4"/><use href="#scl5"/><use href="#scl6"/></svg></div><span class="lv">LV 76</span><span class="nm">PROJECTED</span></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 11 · contract + ledger ═══════════ -->
+  <section>
+    <div class="sec-head"><h2>THE CONTRACT</h2><span class="why">this text block IS the tooling — it prompts every future batch</span></div>
+    <div class="contract">
+<pre>
+<i># vers glyph contract · v0</i>
+<b>grid</b>        24×24 · live area 20×20 (2px padding all sides)
+<b>stroke</b>      skills: uniform 1.5 · gear: shell 2 / detail 1.4 (detail never below 1.4 — dies at 24px)
+            round caps · round joins · no fills (dots ≤ r1.8 exempt; paired dots banned on face zones)
+<b>color</b>       single currentColor per glyph — tint belongs to the slot, never the path
+<b>gate</b>        a glyph ships only if it survives: 14px render · monochrome · a one-word description
+<b>density</b>     parallel runs ≥2.5 apart · point approaches ≥2.0 · perpendicular ticks join or stop ≥1.5 short
+            interior caps at 4 ornament groups — tiers past the cap grow outward
+            spacing is solved by geometry, never by thinning strokes — weight is hierarchy, not a density fix
+
+<b>register</b>    skills are SYMBOLS (verbs) · gear is SCHEMATIC — geometric shell + one function line, never a pictogram
+<b>era</b>         forms come from this world's tech: visors, plating, treads, antennae, projections — no medieval nouns
+
+<i># channels — each fact of the game owns exactly one visual variable</i>
+<b>silhouette</b>  MECHANIC or SLOT (pierce / chain / fan · helm / belt / ring)
+<b>ornament</b>    TIER — tier 1 is the naked silhouette · tier N = tier N−1 + one stroke group, outline frozen
+<b>element</b>     COLOR only · <b>rarity / state</b> owns the container (border, glow, slot shape)
+<b>archetype</b>   FORM LANGUAGE — juggernaut: slabs + vents · psycaster: arcs + floating · scoundrel: asymmetry + optics
+            floating elements belong to psycaster ALONE — all other ornament attaches to the silhouette
+            exception: jewelry (ring / amulet) may orbit — arcs must leave gaps where later tiers land
+
+<i># family skeletons — the only per-family decision</i>
+<b>projectile</b>  travel axis ↗ 45°, whole family
+<b>area</b>        no axis — anchor: radial (self) or ground ellipse
+<b>gear</b>        closed silhouette · vertical symmetry (profile slots exempt)
+</pre>
+    </div>
+    <div class="ledger">
+      <div class="stat"><div class="n">102</div><div class="d">authored units on this page — 8 projectiles, armour tier line, 6 area skills, gear suite, register + weight labs, candidate rounds, 9 gear/helm lines × 6 tiers</div></div>
+      <div class="stat"><div class="n">×∞</div><div class="d">variants for free: 6 elements × any rarity × any size × any state, all via CSS variables on the slot</div></div>
+      <div class="stat"><div class="n">1</div><div class="d">contract file — paste it into any design session and batch-generate candidates for the next family</div></div>
+    </div>
+  </section>
+
+  <footer>
+    <b>REMAINING FAMILIES</b> — <b>melee</b>: arc sweeps, left-anchored · <b>defensive / auras</b>: closed shapes around a core ·
+    <b>summons</b>: paired shapes · <b>currency / crafting</b>: pure geometry, count-based tiers ·
+    <b>map nodes</b>: containers only. Each costs one skeleton decision + a batch of primitives against the contract above.
+  </footer>
+
+</div>
+
+</body>
+</html>

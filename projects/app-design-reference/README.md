@@ -23,6 +23,9 @@ Layout:
 - `public/index.html` is a hand-written index over the exported pages.
 - `public/support.js` is the export's bundled runtime; the `.html` pages are self-contained canvases
   that load it relatively.
+- `public/glyph-grammar.html` is not a Claude Design export — it's the hand-authored SVG asset
+  system (glyph families, gear tier lines, archetype form languages). Its embedded contract block
+  governs how new glyphs are generated; it needs no `support.js` and inlines everything.
 - Deployed to Fly as `vers-design-reference` (`fly deploy` from this directory). Machines auto-stop
   and scale to zero when idle.
 
