@@ -4,16 +4,25 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./rpc-msw": "./src/rpc-msw/index.ts"
   },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "dependencies": {
+    "@orpc/contract": "1.14.6",
+    "@orpc/server": "1.14.6",
+    "msw": "2.7.3"
+  },
   "devDependencies": {
+    "@mswjs/data": "0.16.2",
+    "@orpc/client": "1.14.6",
     "@types/node": "22.13.10",
     "jest-extended": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }
