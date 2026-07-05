@@ -2,6 +2,7 @@ import { CamelCasePlugin } from 'kysely';
 import { defineConfig } from 'kysely-ctl';
 import { PostgresJSDialect } from 'kysely-postgres-js';
 import postgres from 'postgres';
+import { migrationsFolder } from './src/migrate-to-latest';
 
 const databaseURL = process.env['DATABASE_URL'];
 
@@ -20,7 +21,7 @@ export default defineConfig({
     postgres: postgres(databaseURL, { max: 1, onnotice: () => {} }),
   }),
   migrations: {
-    migrationFolder: 'migrations',
+    migrationFolder: migrationsFolder,
   },
   plugins: [new CamelCasePlugin()],
   seeds: {
