@@ -1,6 +1,6 @@
 ## Monorepo layout
 
-28 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
+27 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
 `package.json` named `@vers/<name>`: internal deps use the `workspace:*` protocol, and versions
 shared by 5+ projects live in the root manifest's `workspaces.catalog` (referenced as `catalog:`).
 Libraries are consumed as TypeScript source (`exports` → `./src/index.ts`); there are no per-library
@@ -78,7 +78,7 @@ strings/numbers.
 
 ## Docker
 
-Each deployable (`app-web`, `db-postgres`, the 5 services) has a multi-stage Dockerfile around
+Each deployable (`app-web`, `db-postgres`, the 4 services) has a multi-stage Dockerfile around
 `turbo prune <pkg> --docker`:
 
 1. **pruner** — a standalone `turbo` binary prunes to the target's dependency graph: `out/json`
