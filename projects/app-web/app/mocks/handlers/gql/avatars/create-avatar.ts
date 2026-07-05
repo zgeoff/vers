@@ -1,7 +1,7 @@
 import { HttpResponse, graphql } from 'msw';
-import { resolveClassFromGQLEnum } from '~/data/utils/resolve-class-from-gql-enum';
-import { resolveGQLEnumFromClass } from '~/data/utils/resolve-gql-enum-from-class';
-import type { CreateAvatarInput, CreateAvatarPayload } from '~/gql/graphql';
+import { resolveClassFromGQLEnum } from '../../../../data/utils/resolve-class-from-gql-enum';
+import { resolveGQLEnumFromClass } from '../../../../data/utils/resolve-gql-enum-from-class';
+import type { CreateAvatarInput, CreateAvatarPayload } from '../../../../gql/graphql';
 import { db } from '../../../db';
 import { AVATAR_LIMIT_REACHED_ERROR, AVATAR_NAME_EXISTS_ERROR } from '../../../errors';
 import { decodeMockJWT } from '../../../utils/decode-mock-jwt';

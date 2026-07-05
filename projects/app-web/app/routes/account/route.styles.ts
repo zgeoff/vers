@@ -2,7 +2,7 @@ import { css } from '@vers/styled-system/css';
 
 export const profileSection = css({
   alignSelf: 'flex-start',
-  borderBottomWidth: '1',
+  borderBottomWidth: '[1px]',
   borderColor: 'gray.700',
   display: 'flex',
   flexDirection: 'column',

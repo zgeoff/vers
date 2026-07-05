@@ -150,10 +150,34 @@
     "import/default": "off",
     "import/no-named-as-default-member": "off",
 
-    // carried over from the former eslint config, off pending the type-aware
-    // lint pass in #217 (needs the TS7/tsgolint toolchain)
+    // these type-aware rules were nominally "on" via the categories above all
+    // along, but oxlint's non-type-aware engine can't evaluate them without a
+    // type checker, so they were silently never checked. #217 wires up
+    // `lint:type-aware` (oxlint + tsgolint) for the first time, which surfaces
+    // real type info and lights all of these up at once -- a large pre-existing
+    // backlog unrelated to the TS7/panda2/node toolchain migration itself.
+    // tracked for a dedicated follow-up rather than folded into #217
+    // (`no-unsafe-assignment` is the other rule #217's original seam named;
+    // it stays off here for the same reason, its backlog is large enough to
+    // warrant its own pass)
+    "typescript/consistent-return": "off",
+    "typescript/consistent-type-exports": "off",
+    "typescript/no-confusing-void-expression": "off",
+    "typescript/no-deprecated": "off",
+    "typescript/no-misused-promises": "off",
+    "typescript/no-misused-spread": "off",
+    "typescript/no-unsafe-argument": "off",
     "typescript/no-unsafe-assignment": "off",
-    "typescript/only-throw-error": "off",
+    "typescript/no-unsafe-member-access": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/prefer-nullish-coalescing": "off",
+    "typescript/prefer-readonly-parameter-types": "off",
+    "typescript/prefer-regexp-exec": "off",
+    "typescript/require-await": "off",
+    "typescript/return-await": "off",
+    "typescript/strict-boolean-expressions": "off",
+    "typescript/strict-void-return": "off",
+    "typescript/unbound-method": "off",
 
     // vers-specific: rules oxlint's error-everywhere categories turn on that
     // the former eslint config (built from targeted `recommended` presets,
@@ -282,6 +306,16 @@
       }
     },
     {
+      // react-router's loader/action contract is to throw Response (directly,
+      // or via its `redirect()` helper) for redirects and error pages — not an
+      // Error instance. all 9 violations `lint:type-aware` found here are that
+      // idiom, not a bug
+      "files": ["**/projects/app-web/**/*.ts", "**/projects/app-web/**/*.tsx"],
+      "rules": {
+        "typescript/only-throw-error": "off"
+      }
+    },
+    {
       // react-three-fiber props aren't DOM attributes — same ignore list the
       // eslint config carried for the r3f renderer
       "files": ["**/projects/lib-aether-client/**/*.ts", "**/projects/lib-aether-client/**/*.tsx"],
@@ -322,6 +356,7 @@
     "**/projects/app-web/app/gql/**",
     "**/.react-router/**",
     "**/styled-system/**",
-    "schema.graphql"
+    "schema.graphql",
+    "**/.ladle/**"
   ]
 }

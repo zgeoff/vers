@@ -6,7 +6,7 @@ import type { CreateUserPayload } from '@vers/service-types';
 import { hashPassword, isPGError, isUniqueConstraintError } from '@vers/service-utils';
 import { NameSchema, PasswordSchema, UserEmailSchema, UsernameSchema } from '@vers/validation';
 import { z } from 'zod';
-import { logger } from '~/logger';
+import { logger } from '../logger';
 import { t } from '../t';
 import type { Context } from '../types';
 

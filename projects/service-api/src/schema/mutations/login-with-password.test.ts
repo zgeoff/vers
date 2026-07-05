@@ -1,10 +1,10 @@
 import { drop } from '@mswjs/data';
 import invariant from 'tiny-invariant';
 import { afterEach, expect, test } from 'vitest';
-import { db } from '~/mocks/db';
-import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
-import { SecureAction } from '~/types';
-import { pendingTransactionCache } from '~/utils/pending-transaction-cache';
+import { db } from '../../mocks/db';
+import { createMockGQLContext } from '../../test-utils/create-mock-gql-context';
+import { SecureAction } from '../../types';
+import { pendingTransactionCache } from '../../utils/pending-transaction-cache';
 import { resolve } from './login-with-password';
 
 afterEach(() => {

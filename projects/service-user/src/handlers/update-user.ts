@@ -4,7 +4,7 @@ import type { UpdateUserPayload } from '@vers/service-types';
 import { NameSchema, UsernameSchema } from '@vers/validation';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { logger } from '~/logger';
+import { logger } from '../logger';
 import { t } from '../t';
 import type { Context } from '../types';
 

@@ -1,5 +1,5 @@
 import { UnreachableCodeError } from '@vers/utils';
-import { authSessionStorage } from '~/session/auth-session-storage.server';
+import { authSessionStorage } from '../session/auth-session-storage.server';
 import { getLoginPathWithRedirect } from './get-login-path-with-redirect.server';
 import { logout } from './logout.server';
 

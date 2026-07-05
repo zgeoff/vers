@@ -26,11 +26,11 @@ const container = css({
 });
 
 const circle = css({
-  opacity: 0.4,
+  opacity: '[0.4]',
 });
 
 const spinner = css({
-  opacity: 1,
+  opacity: '[1]',
 });
 
 export type Props = RecipeVariantProps<typeof wrapper> & {
@@ -40,7 +40,7 @@ export type Props = RecipeVariantProps<typeof wrapper> & {
 
 export function Spinner(props: Props) {
   return (
-    <output className={wrapper({ size: props.size })}>
+    <output className={wrapper({ ...(props.size !== undefined && { size: props.size }) })}>
       <svg className={container} fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <circle className={circle} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
         <path

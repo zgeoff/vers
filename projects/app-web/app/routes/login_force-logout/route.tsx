@@ -2,17 +2,17 @@ import { Brand, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { Link as RRLink, data, redirect, useFetcher } from 'react-router';
 import invariant from 'tiny-invariant';
-import { FormErrorList } from '~/components/form-error-list/form-error-list';
-import { RouteErrorBoundary } from '~/components/route-error-boundary';
-import { LoginWithForcedLogoutMutation } from '~/data/mutations/login-with-forced-logout';
-import { useIsFormPending } from '~/hooks/use-is-form-pending';
-import { authSessionStorage } from '~/session/auth-session-storage.server';
-import { verifySessionStorage } from '~/session/verify-session-storage.server';
-import { Routes } from '~/types';
-import { handleGQLError } from '~/utils/handle-gql-error';
-import { isMutationError } from '~/utils/is-mutation-error';
-import { requireAnonymous } from '~/utils/require-anonymous.server';
-import { withErrorHandling } from '~/utils/with-error-handling';
+import { FormErrorList } from '../../components/form-error-list/form-error-list';
+import { RouteErrorBoundary } from '../../components/route-error-boundary';
+import { LoginWithForcedLogoutMutation } from '../../data/mutations/login-with-forced-logout';
+import { useIsFormPending } from '../../hooks/use-is-form-pending';
+import { authSessionStorage } from '../../session/auth-session-storage.server';
+import { verifySessionStorage } from '../../session/verify-session-storage.server';
+import { Routes } from '../../types';
+import { handleGQLError } from '../../utils/handle-gql-error';
+import { isMutationError } from '../../utils/is-mutation-error';
+import { requireAnonymous } from '../../utils/require-anonymous.server';
+import { withErrorHandling } from '../../utils/with-error-handling';
 import type { Route } from './+types/route';
 
 export function meta(): ReturnType<Route.MetaFunction> {

@@ -1,6 +1,6 @@
 import type { AppLoadContext } from 'react-router';
-import { verifySessionStorage } from '~/session/verify-session-storage.server';
-import type { SessionData, SessionKey } from '~/session/verify-session-storage.server';
+import { verifySessionStorage } from '../session/verify-session-storage.server';
+import type { SessionData, SessionKey } from '../session/verify-session-storage.server';
 import { combineCookies } from './combine-cookies';
 
 interface DataFnArgs {

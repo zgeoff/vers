@@ -1,7 +1,7 @@
 import SchemaBuilder from '@pothos/core';
 import DirectivePlugin from '@pothos/plugin-directives';
 import { DateResolver, DateTimeResolver } from 'graphql-scalars';
-import type { Context } from '~/types';
+import type { Context } from '../types';
 
 interface SchemaConfig {
   Context: Context;

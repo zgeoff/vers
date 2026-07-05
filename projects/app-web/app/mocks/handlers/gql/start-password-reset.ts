@@ -1,5 +1,5 @@
 import { HttpResponse, graphql } from 'msw';
-import type { StartPasswordResetInput, StartPasswordResetPayload } from '~/gql/graphql';
+import type { StartPasswordResetInput, StartPasswordResetPayload } from '../../../gql/graphql';
 import { db } from '../../db';
 
 interface StartPasswordResetVariables {

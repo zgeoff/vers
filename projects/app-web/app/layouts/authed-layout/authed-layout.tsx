@@ -5,10 +5,10 @@ import {
 } from '@vers/idle-client';
 import { useEffect } from 'react';
 import { Outlet } from 'react-router';
-import { Header } from '~/components/header';
-import { SideNavigation } from '~/components/side-navigation';
-import { requireAuth } from '~/utils/require-auth.server';
-import { withErrorHandling } from '~/utils/with-error-handling';
+import { Header } from '../../components/header';
+import { SideNavigation } from '../../components/side-navigation';
+import { requireAuth } from '../../utils/require-auth.server';
+import { withErrorHandling } from '../../utils/with-error-handling';
 import type { Route } from './+types/authed-layout';
 import * as styles from './authed-layout.styles';
 

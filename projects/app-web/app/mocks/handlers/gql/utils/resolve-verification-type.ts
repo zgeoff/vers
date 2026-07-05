@@ -1,5 +1,5 @@
 import type { verifications } from '@vers/postgres-schema';
-import { VerificationType } from '~/gql/graphql';
+import { VerificationType } from '../../../../gql/graphql';
 
 /**
  * Maps GraphQL enum values to database enum values for verification types

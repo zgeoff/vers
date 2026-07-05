@@ -1,5 +1,5 @@
 import { HttpResponse, graphql } from 'msw';
-import type { StartEnable2FaInput, StartEnable2FaPayload } from '~/gql/graphql';
+import type { StartEnable2FaInput, StartEnable2FaPayload } from '../../../gql/graphql';
 import { db } from '../../db';
 import { TWO_FACTOR_ALREADY_ENABLED_ERROR, UNKNOWN_ERROR } from '../../errors';
 import { decodeMockJWT } from '../../utils/decode-mock-jwt';

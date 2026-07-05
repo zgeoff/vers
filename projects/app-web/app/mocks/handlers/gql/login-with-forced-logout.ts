@@ -1,6 +1,9 @@
 import { HttpResponse, graphql } from 'msw';
 import invariant from 'tiny-invariant';
-import type { LoginWithForcedLogoutInput, LoginWithForcedLogoutPayload } from '~/gql/graphql';
+import type {
+  LoginWithForcedLogoutInput,
+  LoginWithForcedLogoutPayload,
+} from '../../../gql/graphql';
 import { db } from '../../db';
 import { UNKNOWN_ERROR } from '../../errors';
 import { encodeMockJWT } from '../../utils/encode-mock-jwt';

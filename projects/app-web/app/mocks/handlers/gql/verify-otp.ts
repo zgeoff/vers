@@ -1,5 +1,5 @@
 import { HttpResponse, graphql } from 'msw';
-import type { VerifyOtpInput, VerifyOtpPayload } from '~/gql/graphql';
+import type { VerifyOtpInput, VerifyOtpPayload } from '../../../gql/graphql';
 import { db } from '../../db';
 import { INVALID_OTP_ERROR } from '../../errors';
 import { resolveVerificationType } from './utils/resolve-verification-type';

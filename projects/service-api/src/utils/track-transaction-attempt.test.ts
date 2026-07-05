@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { SecureAction } from '~/types';
+import { SecureAction } from '../types';
 import { pendingTransactionCache } from './pending-transaction-cache';
 import { trackTransactionAttempt } from './track-transaction-attempt';
 

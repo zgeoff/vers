@@ -1,8 +1,8 @@
 import { generatePasswordChangedEmail } from '@vers/email-templates';
-import { logger } from '~/logger';
-import type { AuthedContext } from '~/types';
-import { SecureAction } from '~/types';
-import { verifyTransactionToken } from '~/utils/verify-transaction-token';
+import { logger } from '../../logger';
+import type { AuthedContext } from '../../types';
+import { SecureAction } from '../../types';
+import { verifyTransactionToken } from '../../utils/verify-transaction-token';
 import { builder } from '../builder';
 import { INVALID_PASSWORD_ERROR, UNKNOWN_ERROR } from '../errors';
 import { MutationErrorPayload } from '../types/mutation-error-payload';

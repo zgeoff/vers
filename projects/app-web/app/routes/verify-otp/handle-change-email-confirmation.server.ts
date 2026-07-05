@@ -1,10 +1,10 @@
 import { redirect } from 'react-router';
 import invariant from 'tiny-invariant';
-import { FinishChangeUserEmailMutation } from '~/data/mutations/finish-change-user-email';
-import { verifySessionStorage } from '~/session/verify-session-storage.server';
-import { Routes } from '~/types';
-import { handleGQLError } from '~/utils/handle-gql-error';
-import { isMutationError } from '~/utils/is-mutation-error';
+import { FinishChangeUserEmailMutation } from '../../data/mutations/finish-change-user-email';
+import { verifySessionStorage } from '../../session/verify-session-storage.server';
+import { Routes } from '../../types';
+import { handleGQLError } from '../../utils/handle-gql-error';
+import { isMutationError } from '../../utils/is-mutation-error';
 import type { HandleVerificationContext } from './types';
 
 /**

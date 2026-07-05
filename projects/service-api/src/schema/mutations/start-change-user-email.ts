@@ -1,10 +1,10 @@
 import { generateChangeEmailVerificationEmail } from '@vers/email-templates';
-import { env } from '~/env';
-import { logger } from '~/logger';
-import type { AuthedContext } from '~/types';
-import { SecureAction } from '~/types';
-import { createPendingTransaction } from '~/utils/create-pending-transaction';
-import { verifyTransactionToken } from '~/utils/verify-transaction-token';
+import { env } from '../../env';
+import { logger } from '../../logger';
+import type { AuthedContext } from '../../types';
+import { SecureAction } from '../../types';
+import { createPendingTransaction } from '../../utils/create-pending-transaction';
+import { verifyTransactionToken } from '../../utils/verify-transaction-token';
 import { builder } from '../builder';
 import { UNKNOWN_ERROR } from '../errors';
 import { MutationErrorPayload } from '../types/mutation-error-payload';

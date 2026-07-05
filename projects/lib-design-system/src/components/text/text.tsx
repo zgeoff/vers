@@ -40,5 +40,13 @@ export function Text<C extends React.ElementType = 'p'>(
 
   const Element = as ?? 'p';
 
-  return <Element {...restProps} className={cx(text({ align, bold }), className)} />;
+  return (
+    <Element
+      {...restProps}
+      className={cx(
+        text({ ...(align !== undefined && { align }), ...(bold !== undefined && { bold }) }),
+        className,
+      )}
+    />
+  );
 }

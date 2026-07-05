@@ -1,4 +1,4 @@
-import { graphql } from '~/gql';
+import { graphql } from '../../gql';
 
 export const GetAvatarsQuery = graphql(/* GraphQL */ `
   query GetAvatars($input: GetAvatarsInput!) {

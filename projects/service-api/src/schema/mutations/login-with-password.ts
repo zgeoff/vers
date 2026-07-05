@@ -1,8 +1,8 @@
-import { logger } from '~/logger';
-import type { Context } from '~/types';
-import { SecureAction } from '~/types';
-import { createPendingTransaction } from '~/utils/create-pending-transaction';
-import { createTransactionToken } from '~/utils/create-transaction-token';
+import { logger } from '../../logger';
+import type { Context } from '../../types';
+import { SecureAction } from '../../types';
+import { createPendingTransaction } from '../../utils/create-pending-transaction';
+import { createTransactionToken } from '../../utils/create-transaction-token';
 import { builder } from '../builder';
 import { INVALID_CREDENTIALS_ERROR, UNKNOWN_ERROR } from '../errors';
 import { AuthPayload } from '../types/auth-payload';

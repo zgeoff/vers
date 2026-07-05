@@ -1,7 +1,7 @@
 import type { AppLoadContext } from 'react-router';
-import { authSessionStorage } from '~/session/auth-session-storage.server';
-import { createAuthedUser } from '~/test-utils/create-authed-user';
+import { authSessionStorage } from '../session/auth-session-storage.server';
 import { combineCookies } from './combine-cookies';
+import { createAuthedUser } from './create-authed-user';
 
 interface Config {
   sessionID?: string | undefined;

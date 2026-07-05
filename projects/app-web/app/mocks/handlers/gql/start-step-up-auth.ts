@@ -1,5 +1,5 @@
 import { HttpResponse, graphql } from 'msw';
-import type { StartStepUpAuthInput, StartStepUpAuthPayload } from '~/gql/graphql';
+import type { StartStepUpAuthInput, StartStepUpAuthPayload } from '../../../gql/graphql';
 import { db } from '../../db';
 import { TWO_FACTOR_NOT_ENABLED_ERROR, UNKNOWN_ERROR } from '../../errors';
 import { decodeMockJWT } from '../../utils/decode-mock-jwt';

@@ -2,9 +2,9 @@ import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import { createRoutesStub } from 'react-router';
 import { afterEach, expect, test } from 'vitest';
-import { db } from '~/mocks/db';
-import { withAuthedUser } from '~/test-utils/with-authed-user';
-import { Routes } from '~/types';
+import { db } from '../mocks/db';
+import { withAuthedUser } from '../test-utils/with-authed-user';
+import { Routes } from '../types';
 import { requireAnonymous } from './require-anonymous.server';
 
 interface TestConfig {

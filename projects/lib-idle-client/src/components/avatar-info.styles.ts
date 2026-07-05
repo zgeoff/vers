@@ -3,7 +3,7 @@ import { css } from '@vers/styled-system/css';
 export const avatarInfo = css({
   backgroundColor: 'gray.900',
   borderColor: 'gray.700',
-  borderWidth: '1',
+  borderWidth: '[1px]',
   boxShadow: 'md',
   overflow: 'hidden',
   padding: '2',
@@ -15,7 +15,7 @@ export const avatarName = css({
   marginBottom: '0',
   position: 'relative',
   textAlign: 'right',
-  zIndex: '1',
+  zIndex: '[1]',
 });
 
 export const avatarImage = css({

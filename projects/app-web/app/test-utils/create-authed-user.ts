@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { db } from '~/mocks/db';
+import { db } from '../mocks/db';
 import { createJWT } from './create-jwt';
 
 interface UserParts {

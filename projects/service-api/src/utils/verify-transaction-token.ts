@@ -1,9 +1,9 @@
 import * as jose from 'jose';
 import { z } from 'zod';
-import { env } from '~/env';
-import { logger } from '~/logger';
-import { SecureAction } from '~/types';
-import type { Context } from '~/types';
+import { env } from '../env';
+import { logger } from '../logger';
+import { SecureAction } from '../types';
+import type { Context } from '../types';
 import { transactionJTIBlocklist } from './transaction-jti-blocklist';
 
 const JWTPayloadSchema = z.object({

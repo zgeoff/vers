@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import type { ServiceID } from '@vers/service-types';
 import { Command } from 'commander';
+import type { ServiceID } from '../projects/lib-service-types/src/index';
 import { exec } from './stack/commands/exec';
 import { logs } from './stack/commands/logs';
 import { rm } from './stack/commands/rm';

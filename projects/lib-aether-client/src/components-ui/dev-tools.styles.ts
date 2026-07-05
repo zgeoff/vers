@@ -7,7 +7,7 @@ export const container = css({
   right: '2',
   rounded: 'md',
   top: '2',
-  zIndex: 2,
+  zIndex: '[2]',
 });
 
 export const button = css({

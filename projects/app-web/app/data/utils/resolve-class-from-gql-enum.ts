@@ -1,5 +1,5 @@
 import { Class } from '@vers/data';
-import { AvatarClass as GQLEnumClass } from '~/gql/graphql';
+import { AvatarClass as GQLEnumClass } from '../../gql/graphql';
 
 export function resolveClassFromGQLEnum(type: GQLEnumClass): (typeof Class)[keyof typeof Class] {
   return CLASS_ENUM_MAP[type];

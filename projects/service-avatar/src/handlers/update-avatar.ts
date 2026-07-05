@@ -4,7 +4,7 @@ import type { UpdateAvatarPayload } from '@vers/service-types';
 import { AvatarNameSchema } from '@vers/validation';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { logger } from '~/logger';
+import { logger } from '../logger';
 import { t } from '../t';
 import type { Context } from '../types';
 

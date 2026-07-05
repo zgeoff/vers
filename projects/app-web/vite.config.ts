@@ -4,7 +4,6 @@ import { sentryVitePlugin } from '@sentry/vite-plugin';
 import autoprefixer from 'autoprefixer';
 import { reactRouterHonoServer } from 'react-router-hono-server/dev';
 import { defineConfig, loadEnv, searchForWorkspaceRoot } from 'vite';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
   build: {
@@ -12,14 +11,12 @@ export default defineConfig({
   },
   css: {
     postcss: {
-      // @ts-expect-error - pandacss types are bogus
       plugins: [pandacss, autoprefixer],
     },
   },
   plugins: [
     reactRouterHonoServer({ serverEntryPoint: './server/index.ts' }),
     !process.env['VITEST'] && reactRouter(),
-    tsconfigPaths(),
     process.env['SENTRY_AUTH_TOKEN']
       ? sentryVitePlugin({
           authToken: process.env['SENTRY_AUTH_TOKEN'],
@@ -75,6 +72,6 @@ export default defineConfig({
     watch: false,
   },
   worker: {
-    plugins: () => [tsconfigPaths()],
+    plugins: () => [],
   },
 });

@@ -1,7 +1,7 @@
 import type { AuthUtilities } from '@urql/exchange-auth';
 import { UnreachableCodeError } from '@vers/utils';
 import invariant from 'tiny-invariant';
-import { graphql } from '~/gql';
+import { graphql } from '../gql';
 import { getLoginPathWithRedirect } from './get-login-path-with-redirect.server';
 import { isMutationError } from './is-mutation-error';
 import { logout } from './logout.server';

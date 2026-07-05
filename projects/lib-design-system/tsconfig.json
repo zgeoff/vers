@@ -1,16 +1,13 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "baseUrl": "."
+    "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
   "files": [],
   "include": [
     "panda.config.ts",
     "vitest.config.ts",
     "vitest.setup.ts",
-    ".ladle/**/*.ts",
-    ".ladle/**/*.tsx",
     "src/**/*.ts",
     "src/**/*.tsx"
   ],

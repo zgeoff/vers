@@ -1,5 +1,5 @@
 import { HttpResponse, graphql } from 'msw';
-import type { DeleteAvatarInput, DeleteAvatarPayload } from '~/gql/graphql';
+import type { DeleteAvatarInput, DeleteAvatarPayload } from '../../../../gql/graphql';
 import { db } from '../../../db';
 import { decodeMockJWT } from '../../../utils/decode-mock-jwt';
 

@@ -18,7 +18,6 @@
     "jsx": "react-jsx",
     "allowJs": true,
     "skipDefaultLibCheck": true,
-    "baseUrl": ".",
     "noEmit": true
   },
   "exclude": ["node_modules", "tmp"],

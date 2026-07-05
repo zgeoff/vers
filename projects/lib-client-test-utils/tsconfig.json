@@ -2,8 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": ["node"],
-    "baseUrl": "."
+    "types": ["node"]
   },
   "files": [],
   "include": ["vitest.config.ts", "vitest.global-setup.ts", "vitest.setup.ts", "src/**/*.ts"],

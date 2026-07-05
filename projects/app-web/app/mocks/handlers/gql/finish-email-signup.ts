@@ -1,5 +1,5 @@
 import { HttpResponse, graphql } from 'msw';
-import type { FinishEmailSignupInput, FinishEmailSignupPayload } from '~/gql/graphql';
+import type { FinishEmailSignupInput, FinishEmailSignupPayload } from '../../../gql/graphql';
 import { db } from '../../db';
 import { UNKNOWN_ERROR } from '../../errors';
 import { encodeMockJWT } from '../../utils/encode-mock-jwt';

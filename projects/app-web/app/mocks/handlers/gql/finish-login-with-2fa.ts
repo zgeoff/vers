@@ -1,6 +1,6 @@
 import { HttpResponse, graphql } from 'msw';
 import invariant from 'tiny-invariant';
-import type { FinishLoginWith2FaInput, FinishLoginWith2FaPayload } from '~/gql/graphql';
+import type { FinishLoginWith2FaInput, FinishLoginWith2FaPayload } from '../../../gql/graphql';
 import { db } from '../../db';
 import { UNKNOWN_ERROR } from '../../errors';
 import { encodeMockJWT } from '../../utils/encode-mock-jwt';

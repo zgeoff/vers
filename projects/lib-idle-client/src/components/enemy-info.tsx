@@ -10,7 +10,7 @@ const enemyInfo = css({
   },
   backgroundColor: 'gray.900',
   borderColor: 'gray.700',
-  borderWidth: '1',
+  borderWidth: '[1px]',
   boxShadow: 'md',
   padding: '2',
   rounded: 'md',
@@ -21,7 +21,7 @@ const enemyInfo = css({
 });
 
 const deadEnemyInfo = css({
-  opacity: 0.5,
+  opacity: '[0.5]',
 });
 
 const enemyName = css({

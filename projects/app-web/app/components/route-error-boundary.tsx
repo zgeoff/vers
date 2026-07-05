@@ -3,9 +3,9 @@ import { Brand, Button, Heading, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { useEffect } from 'react';
 import { Form, isRouteErrorResponse, useRouteError } from 'react-router';
-import { Link } from '~/components/link';
-import { Routes } from '~/types';
-import { getErrorMessage } from '~/utils/get-error-message';
+import { Routes } from '../types';
+import { getErrorMessage } from '../utils/get-error-message';
+import { Link } from './link';
 
 export function RouteErrorBoundary() {
   const error = useRouteError();

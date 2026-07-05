@@ -24,7 +24,7 @@ const checkboxFieldRecipe = sva({
       },
       '&[data-state=unchecked]': {
         borderColor: 'neutral.200',
-        borderWidth: '1',
+        borderWidth: '[1px]',
       },
       alignItems: 'center',
       display: 'flex',

@@ -1,9 +1,9 @@
 import { captureException } from '@sentry/react';
 import { redirect } from 'react-router';
 import { safeRedirect } from 'remix-utils/safe-redirect';
-import { DeleteSessionMutation } from '~/data/mutations/delete-session';
-import { authSessionStorage } from '~/session/auth-session-storage.server';
-import { Routes } from '~/types';
+import { DeleteSessionMutation } from '../data/mutations/delete-session';
+import { authSessionStorage } from '../session/auth-session-storage.server';
+import { Routes } from '../types';
 import { combineHeaders } from './combine-headers.server';
 
 interface LogoutOptions {

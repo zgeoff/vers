@@ -1,4 +1,4 @@
-import { graphql } from '~/gql';
+import { graphql } from '../../gql';
 
 export const LoginWithPasswordMutation = graphql(/* GraphQL */ `
   mutation LoginWithPassword($input: LoginWithPasswordInput!) {

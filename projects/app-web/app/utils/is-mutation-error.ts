@@ -1,4 +1,4 @@
-import type { MutationErrorPayload } from '~/gql/graphql';
+import type { MutationErrorPayload } from '../gql/graphql';
 
 export function isMutationError(
   payload?: MutationErrorPayload | object,

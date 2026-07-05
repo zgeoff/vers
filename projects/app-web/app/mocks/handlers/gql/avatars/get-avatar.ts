@@ -1,6 +1,6 @@
 import { HttpResponse, graphql } from 'msw';
-import { resolveGQLEnumFromClass } from '~/data/utils/resolve-gql-enum-from-class';
-import type { Avatar, GetAvatarInput } from '~/gql/graphql';
+import { resolveGQLEnumFromClass } from '../../../../data/utils/resolve-gql-enum-from-class';
+import type { Avatar, GetAvatarInput } from '../../../../gql/graphql';
 import { db } from '../../../db';
 import { decodeMockJWT } from '../../../utils/decode-mock-jwt';
 import { resolveUserByID } from '../utils/resolve-user-by-id';

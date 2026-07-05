@@ -1,9 +1,9 @@
 import { renderHook } from '@testing-library/react';
 import { postMessageAndWaitForReply } from '@vers/client-test-utils';
 import { createMockActivityData, createMockAvatarData } from '@vers/idle-core';
-import { setSimulationWorker } from 'src/state/set-simulation-worker';
 import invariant from 'tiny-invariant';
 import { afterEach, expect, test } from 'vitest';
+import { setSimulationWorker } from '../state/set-simulation-worker';
 import type { InitializeMessage, SetActivityMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { useSimulationWorker } from './use-simulation-worker';

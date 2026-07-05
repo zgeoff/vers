@@ -1,11 +1,11 @@
 import { drop } from '@mswjs/data';
 import invariant from 'tiny-invariant';
 import { afterEach, expect, test } from 'vitest';
-import { db } from '~/mocks/db';
-import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
-import { SecureAction } from '~/types';
-import { createPendingTransaction } from '~/utils/create-pending-transaction';
-import { createTransactionToken } from '~/utils/create-transaction-token';
+import { db } from '../../mocks/db';
+import { createMockGQLContext } from '../../test-utils/create-mock-gql-context';
+import { SecureAction } from '../../types';
+import { createPendingTransaction } from '../../utils/create-pending-transaction';
+import { createTransactionToken } from '../../utils/create-transaction-token';
 import { resolve } from './finish-enable-2fa';
 
 afterEach(() => {

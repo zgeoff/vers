@@ -23,7 +23,6 @@
     "happy-dom": "catalog:",
     "jest-extended": "catalog:",
     "typescript": "catalog:",
-    "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
   }
 }

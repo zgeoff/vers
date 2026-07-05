@@ -1,13 +1,13 @@
 import { drop } from '@mswjs/data';
 import { TRPCError } from '@trpc/server';
 import { afterEach, expect, test, vi } from 'vitest';
-import { db } from '~/mocks/db';
-import { trpc } from '~/mocks/handlers/trpc/service-user/trpc';
-import { server } from '~/mocks/node';
-import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
-import { SecureAction } from '~/types';
-import { createPendingTransaction } from '~/utils/create-pending-transaction';
-import { createTransactionToken } from '~/utils/create-transaction-token';
+import { db } from '../../mocks/db';
+import { trpc } from '../../mocks/handlers/trpc/service-user/trpc';
+import { server } from '../../mocks/node';
+import { createMockGQLContext } from '../../test-utils/create-mock-gql-context';
+import { SecureAction } from '../../types';
+import { createPendingTransaction } from '../../utils/create-pending-transaction';
+import { createTransactionToken } from '../../utils/create-transaction-token';
 import { resolve } from './finish-password-reset';
 
 afterEach(() => {

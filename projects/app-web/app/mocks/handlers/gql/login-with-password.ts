@@ -1,5 +1,5 @@
 import { HttpResponse, graphql } from 'msw';
-import type { LoginWithPasswordInput, LoginWithPasswordPayload } from '~/gql/graphql';
+import type { LoginWithPasswordInput, LoginWithPasswordPayload } from '../../../gql/graphql';
 import { db } from '../../db';
 import { INVALID_CREDENTIALS_ERROR } from '../../errors';
 import { encodeMockJWT } from '../../utils/encode-mock-jwt';

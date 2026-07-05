@@ -25,7 +25,6 @@
     "elysia": "1.4.29",
     "jest-extended": "catalog:",
     "typescript": "catalog:",
-    "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
   }
 }

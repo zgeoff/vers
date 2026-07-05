@@ -4,13 +4,13 @@ import { useCombatElapsed } from '../state/use-combat-elapsed';
 const attackTimerBar = css({
   backgroundColor: 'gray.700',
   borderColor: 'gray.800',
-  borderWidth: '1',
+  borderWidth: '[1px]',
   height: '2',
   overflow: 'hidden',
   position: 'relative',
   rounded: 'xs',
   width: 'full',
-  zIndex: '1',
+  zIndex: '[1]',
 });
 
 const attackTimerBarFill = css({

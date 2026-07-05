@@ -15,7 +15,7 @@ export const navOverlay = cva({
     backgroundColor: 'neutral.950/50',
     bottom: '0',
     left: '0',
-    opacity: 0,
+    opacity: '[0]',
     pointerEvents: 'none',
     position: 'fixed',
     right: '0',
@@ -26,17 +26,17 @@ export const navOverlay = cva({
     },
     transitionDuration: 'normal',
     transitionTimingFunction: 'in-out',
-    zIndex: 4,
+    zIndex: '[4]',
   },
   variants: {
     isVisible: {
       true: {
         base: {
-          opacity: 1,
+          opacity: '[1]',
           pointerEvents: 'all',
         },
         md: {
-          opacity: 0,
+          opacity: '[0]',
           pointerEvents: 'none',
         },
       },
@@ -80,7 +80,7 @@ export const nav = css({
   transitionDuration: 'normal',
   transitionTimingFunction: 'in-out',
   width: '1/5',
-  zIndex: 5,
+  zIndex: '[5]',
 });
 
 export const navHidden = css({
@@ -148,8 +148,8 @@ export const navLink = cva({
     },
     isDisabled: {
       true: {
-        cursor: 'default',
-        opacity: 0.3,
+        cursor: '[default]',
+        opacity: '[0.3]',
         pointerEvents: 'none',
       },
     },

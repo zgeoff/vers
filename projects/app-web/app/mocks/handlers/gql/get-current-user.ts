@@ -1,5 +1,5 @@
 import { HttpResponse, graphql } from 'msw';
-import type { GetCurrentUserQueryVariables, User } from '~/gql/graphql';
+import type { GetCurrentUserQueryVariables, User } from '../../../gql/graphql';
 import { db } from '../../db';
 import { decodeMockJWT } from '../../utils/decode-mock-jwt';
 import { addUserResolvedFields } from './utils/add-user-resolved-fields';

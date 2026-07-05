@@ -1,9 +1,9 @@
 import { drop } from '@mswjs/data';
 import { createTestJWT } from '@vers/service-test-utils';
 import { expect, test } from 'vitest';
-import { env } from '~/env';
-import { db } from '~/mocks/db';
-import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
+import { env } from '../../env';
+import { db } from '../../mocks/db';
+import { createMockGQLContext } from '../../test-utils/create-mock-gql-context';
 import { resolve } from './get-sessions';
 
 test('it returns all sessions for the authenticated user', async () => {

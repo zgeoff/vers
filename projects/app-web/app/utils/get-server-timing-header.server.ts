@@ -1,4 +1,4 @@
-import type { Timings } from '~/types';
+import type { Timings } from '../types';
 
 /**
  * Returns a Server-Timing header string for the given timings.

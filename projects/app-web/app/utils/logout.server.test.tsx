@@ -4,10 +4,10 @@ import { createRoutesStub } from 'react-router';
 import type { LoaderFunctionArgs } from 'react-router';
 import invariant from 'tiny-invariant';
 import { afterEach, expect, test, vi } from 'vitest';
-import { db } from '~/mocks/db';
-import { authSessionStorage } from '~/session/auth-session-storage.server';
-import { withAuthedUser } from '~/test-utils/with-authed-user';
-import { Routes } from '~/types';
+import { db } from '../mocks/db';
+import { authSessionStorage } from '../session/auth-session-storage.server';
+import { withAuthedUser } from '../test-utils/with-authed-user';
+import { Routes } from '../types';
 import { logout } from './logout.server';
 
 interface TestConfig {

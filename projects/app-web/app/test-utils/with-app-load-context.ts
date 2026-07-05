@@ -1,5 +1,5 @@
 import type { AppLoadContext } from 'react-router';
-import { createGQLClient } from '~/utils/create-gql-client.server';
+import { createGQLClient } from '../utils/create-gql-client.server';
 
 interface DataFnArgs {
   context: AppLoadContext;

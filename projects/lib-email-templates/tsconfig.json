@@ -1,8 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "baseUrl": "."
+    "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
   "files": [],
   "include": ["vitest.config.ts", "vitest.setup.ts", "src/**/*.ts", "src/**/*.tsx"],

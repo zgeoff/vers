@@ -1,12 +1,9 @@
 import type { RecipeVariantProps } from '@vers/styled-system/css';
 import { cx } from '@vers/styled-system/css';
-import type {
-  SlotRecipeRuntimeFn,
-  SlotRecipeVariantRecord,
-} from '@vers/styled-system/types/recipe';
+import type { SlotRecipeRuntimeFn } from '@vers/styled-system/types/recipe';
 import * as React from 'react';
 
-type StyleRecipe = SlotRecipeRuntimeFn<string, SlotRecipeVariantRecord<string>>;
+type StyleRecipe = SlotRecipeRuntimeFn<string, Record<string, unknown>>;
 
 type StyleSlotRecipe<R extends StyleRecipe> = ReturnType<R>;
 
@@ -32,8 +29,8 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
       const slotStyles = recipe(variantProps) as StyleSlotRecipe<R>;
 
       const className =
-        'className' in restProps && typeof restProps.className === 'string'
-          ? cx(slotStyles[slot ?? ''], restProps.className)
+        'className' in restProps && typeof restProps['className'] === 'string'
+          ? cx(slotStyles[slot ?? ''], restProps['className'])
           : slotStyles[slot ?? ''];
 
       return (

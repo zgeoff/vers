@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'vitest';
-import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
-import { SecureAction } from '~/types';
+import { createMockGQLContext } from '../test-utils/create-mock-gql-context';
+import { SecureAction } from '../types';
 import { createPendingTransaction } from './create-pending-transaction';
 import { pendingTransactionCache } from './pending-transaction-cache';
 

@@ -2,8 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
-    "types": ["node", "vite/client"],
-    "baseUrl": "."
+    "types": ["node", "vite/client"]
   },
   "files": [],
   "include": [

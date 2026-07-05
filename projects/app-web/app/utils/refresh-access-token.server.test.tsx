@@ -4,10 +4,10 @@ import { HttpResponse, graphql } from 'msw';
 import { createRoutesStub } from 'react-router';
 import type { LoaderFunctionArgs } from 'react-router';
 import { afterEach, expect, test } from 'vitest';
-import { db } from '~/mocks/db';
-import { server } from '~/mocks/node';
-import { withRouteProps } from '~/test-utils/with-route-props';
-import { Routes } from '~/types';
+import { db } from '../mocks/db';
+import { server } from '../mocks/node';
+import { withRouteProps } from '../test-utils/with-route-props';
+import { Routes } from '../types';
 import { createGQLClient } from './create-gql-client.server';
 import { refreshAccessToken } from './refresh-access-token.server';
 

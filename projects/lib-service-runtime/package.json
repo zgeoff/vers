@@ -30,7 +30,6 @@
     "@vers/contract-base": "workspace:*",
     "jest-extended": "catalog:",
     "typescript": "catalog:",
-    "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
   }
 }

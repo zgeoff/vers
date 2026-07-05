@@ -1,7 +1,7 @@
 import { HttpResponse, http } from 'msw';
 import { afterEach, expect, test } from 'vitest';
-import { ENDPOINT_URL as RESEND_EMAIL_ENDPOINT_URL } from '~/mocks/handlers/http/resend-emails';
-import { server } from '~/mocks/node';
+import { ENDPOINT_URL as RESEND_EMAIL_ENDPOINT_URL } from '../mocks/handlers/http/resend-emails';
+import { server } from '../mocks/node';
 import { router } from '../router';
 import { t } from '../t';
 
