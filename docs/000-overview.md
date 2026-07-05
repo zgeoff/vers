@@ -137,6 +137,7 @@ Libraries:
 - `lib-contract-<service>` - one per service: that service's oRPC API declaration
 - `lib-contract-base` - shared contract error taxonomy, base builders, and conformance-test helper
 - `lib-data` - core static game data
+- `lib-db` - kysely connection helper, post-drizzle migrations, and generated database types
 - `lib-design-system` - ui component library (Ark UI primitives + Panda recipes)
 - `lib-email` - Resend wrapper and react-email template factories
 - `lib-game-utils` - shared game logic (encounter derivation, rewards)

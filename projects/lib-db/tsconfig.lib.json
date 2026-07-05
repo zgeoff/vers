@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "files": [],
+  "exclude": ["src/**/*.test.ts"],
+  "include": ["kysely.config.ts", "src/**/*.ts", "migrations/**/*.ts", "seeds/**/*.ts"]
+}
