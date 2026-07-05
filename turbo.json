@@ -23,14 +23,6 @@
     }
   },
   "tasks": {
-    "//#codegen:graphql": {
-      "inputs": [
-        "codegen.ts",
-        "projects/service-api/src/schema/**/*.ts",
-        "projects/app-web/app/data/**/*.ts"
-      ],
-      "outputs": ["projects/app-web/app/gql/**", "schema.graphql"]
-    },
     "//#format": {
       "cache": false
     },
@@ -41,9 +33,6 @@
       "dependsOn": ["^build", "codegen", "typegen"],
       "inputs": ["$TURBO_DEFAULT$", "esbuild.config.cjs"],
       "outputs": ["dist/**", "build/**", ".react-router/**"]
-    },
-    "@vers/web#build": {
-      "dependsOn": ["^build", "codegen", "typegen", "//#codegen:graphql"]
     },
     "codegen": {
       "dependsOn": ["^codegen"],
@@ -57,18 +46,12 @@
       "dependsOn": ["^typecheck", "codegen", "typegen"],
       "outputs": []
     },
-    "@vers/web#typecheck": {
-      "dependsOn": ["^typecheck", "codegen", "typegen", "//#codegen:graphql"]
-    },
     "test": {
       "dependsOn": ["codegen", "typegen"],
       "outputs": []
     },
-    "@vers/web#test": {
-      "dependsOn": ["codegen", "typegen", "//#codegen:graphql"]
-    },
     "e2e": {
-      "dependsOn": ["@vers/web#codegen", "@vers/web#typegen", "//#codegen:graphql"],
+      "dependsOn": ["@vers/web#codegen", "@vers/web#typegen"],
       "cache": false
     },
     "dev": {

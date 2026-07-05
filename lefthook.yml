@@ -22,9 +22,6 @@ pre-commit:
         '**/.react-router/**' --ignore '**/dist/**' --ignore '**/build/**' --ignore '**/coverage/**'
         --ignore '.worktrees/**' --ignore '.claude/**' {staged_files}
       stage_fixed: true
-    - name: codegen:graphql
-      glob: 'projects/{app-web,service-api}/**/*.{ts,tsx}'
-      run: bun run codegen:graphql && git add projects/app-web/app/gql schema.graphql
     - name: codegen:styles
       glob: 'projects/**/*.{ts,tsx}'
       run: bun run codegen:styles
