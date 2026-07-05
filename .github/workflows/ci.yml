@@ -83,6 +83,9 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Type-Aware Lint
+        run: bun run lint:type-aware
+
       - name: Unit Tests
         run: |
           bun run pg:test-container:start
