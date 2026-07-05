@@ -23,8 +23,11 @@ export default tseslint.config(
   eslint.configs.recommended,
   prettierConfig,
   unicornPlugin.configs.recommended,
-  reactPlugin.configs.flat.recommended,
-  reactPlugin.configs.flat['jsx-runtime'],
+  // eslint-plugin-react types `configs.flat` as a bare `Record<string, ...>`,
+  // so these known-present keys read as possibly undefined under
+  // `noUncheckedIndexedAccess`
+  reactPlugin.configs.flat['recommended']!,
+  reactPlugin.configs.flat['jsx-runtime']!,
   ...compat.extends('plugin:react-hooks/recommended'),
   jsxA11yPlugin.flatConfigs.recommended,
   perfectionist.configs['recommended-natural'],
@@ -61,7 +64,9 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
+          argsIgnorePattern: '^_',
           ignoreRestSiblings: true,
+          varsIgnorePattern: '^_',
         },
       ],
       '@typescript-eslint/only-throw-error': 'off',

@@ -1,6 +1,6 @@
+import type { UpdateEmailPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
-import { UpdateEmailPayload } from '@vers/service-types';
 import { UserEmailSchema } from '@vers/validation';
 import { and, eq, or } from 'drizzle-orm';
 import { z } from 'zod';

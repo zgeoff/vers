@@ -33,6 +33,7 @@ import { Routes } from '~/types';
 import { checkHoneypot } from '~/utils/check-honeypot.server';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
+import { omitKeyProp } from '~/utils/omit-key-prop';
 import { requireAnonymous } from '~/utils/require-anonymous.server';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import { FormBooleanSchema } from '~/validation/form-boolean-schema';
@@ -218,7 +219,7 @@ export function Login(props: Route.ComponentProps) {
         <Field
           errors={fields.email.errors ?? []}
           inputProps={{
-            ...getInputProps(fields.email, { type: 'email' }),
+            ...omitKeyProp(getInputProps(fields.email, { type: 'email' })),
             autoComplete: 'email',
             placeholder: 'your.email@example.com',
           }}
@@ -227,7 +228,9 @@ export function Login(props: Route.ComponentProps) {
         <Field
           errors={fields.password.errors ?? []}
           inputProps={{
-            ...getInputProps(fields.password, { type: 'password' }),
+            ...omitKeyProp(
+              getInputProps(fields.password, { type: 'password' }),
+            ),
             autoComplete: 'current-password',
             placeholder: '********',
           }}
@@ -235,7 +238,9 @@ export function Login(props: Route.ComponentProps) {
         />
         <input {...getInputProps(fields.redirect, { type: 'hidden' })} />
         <CheckboxField
-          checkboxProps={getInputProps(fields.rememberMe, { type: 'checkbox' })}
+          checkboxProps={omitKeyProp(
+            getInputProps(fields.rememberMe, { type: 'checkbox' }),
+          )}
           errors={fields.rememberMe.errors ?? []}
           labelProps={{ children: 'Remember me' }}
         />

@@ -113,7 +113,7 @@ async function handleDisable2FA(args: Route.ActionArgs, formData: FormData) {
   });
 
   if (submission.status !== 'success') {
-    return data({ error: submission.error?.message }, { status: 400 });
+    return data({ error: submission.error?.['message'] }, { status: 400 });
   }
 
   const result = await args.context.client.mutation(StartStepUpAuthMutation, {

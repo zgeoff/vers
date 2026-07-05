@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [tsconfigPaths()],
   server: {
-    ws: process.env.VITEST === 'true' ? false : undefined,
+    ...(process.env['VITEST'] === 'true' && { ws: false }),
   },
   test: {
     coverage: {

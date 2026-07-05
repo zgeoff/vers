@@ -1,4 +1,4 @@
-import { Avatar, EntityStatus } from '../../types';
+import { type Avatar, EntityStatus } from '../../types';
 
 export function handleReceiveAvatarDamage(
   amount: number,

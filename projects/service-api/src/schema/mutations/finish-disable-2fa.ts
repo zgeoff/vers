@@ -1,5 +1,5 @@
+import type { AuthedContext } from '~/types';
 import { logger } from '~/logger';
-import { AuthedContext } from '~/types';
 import { SecureAction } from '~/types';
 import { verifyTransactionToken } from '~/utils/verify-transaction-token';
 import { builder } from '../builder';

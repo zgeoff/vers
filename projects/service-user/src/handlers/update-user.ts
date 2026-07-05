@@ -1,6 +1,6 @@
+import type { UpdateUserPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
-import { UpdateUserPayload } from '@vers/service-types';
 import { NameSchema, UsernameSchema } from '@vers/validation';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';

@@ -1,8 +1,8 @@
-import { Context, Next } from 'hono';
+import type { Context, Next } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import {
   createTokenVerifier,
-  TokenVerifierConfig,
+  type TokenVerifierConfig,
 } from '../utils/create-token-verifier';
 import { getTokenFromHeader } from '../utils/get-token-from-header';
 
@@ -95,6 +95,6 @@ function createUnauthorizedResponse(error: ErrorParts) {
       'WWW-Authenticate': `Bearer realm="${error.ctx.req.url}",error="${error.error}",error_description="${error.description}"`,
     },
     status: 401,
-    statusText: error.statusText,
+    ...(error.statusText !== undefined && { statusText: error.statusText }),
   });
 }

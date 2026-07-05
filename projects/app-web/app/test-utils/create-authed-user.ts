@@ -15,7 +15,9 @@ export async function createAuthedUser(
   sessionID?: string,
 ) {
   const existingUser = db.user.findFirst({
-    where: { id: { equals: userParts.id } },
+    where: {
+      id: { ...(userParts.id !== undefined && { equals: userParts.id }) },
+    },
   });
 
   const user = existingUser ?? db.user.create({ ...userParts });

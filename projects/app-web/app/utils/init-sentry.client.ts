@@ -24,7 +24,7 @@ export function initSentry() {
 
       return event;
     },
-    dsn: import.meta.env.SENTRY_DSN,
+    dsn: import.meta.env['SENTRY_DSN'],
     environment: import.meta.env.MODE,
     integrations: [
       Sentry.replayIntegration(),

@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 export default defineConfig({
   plugins: [tsconfigPaths()],
   server: {
-    ws: process.env.VITEST === 'true' ? false : undefined,
+    ...(process.env['VITEST'] === 'true' && { ws: false }),
   },
   test: {
     coverage: {

@@ -3,7 +3,7 @@ import { createLogLabel } from '../utils/create-log-label';
 import { logger } from '../utils/logger';
 
 export function handleAvatarAttack(
-  event: AvatarAttackEvent,
+  _event: AvatarAttackEvent,
   avatar: Avatar,
   activity: Activity,
 ) {

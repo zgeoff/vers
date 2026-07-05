@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { createRoutesStub, ErrorResponse } from 'react-router';
+import { createRoutesStub, type ErrorResponse } from 'react-router';
 import { RouteErrorBoundary } from './route-error-boundary';
 
 interface TestConfig {

@@ -1,5 +1,5 @@
+import type { HttpBindings } from '@hono/node-server';
 import type { Context, Next } from 'hono';
-import { HttpBindings } from '@hono/node-server';
 
 interface Env {
   Bindings: {

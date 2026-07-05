@@ -13,7 +13,7 @@ export default defineConfig({
   },
   plugins: [tsconfigPaths(), react()],
   server: {
-    ws: process.env.VITEST === 'true' ? false : undefined,
+    ...(process.env['VITEST'] === 'true' && { ws: false }),
   },
   test: {
     coverage: {

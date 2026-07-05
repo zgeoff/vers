@@ -1,17 +1,19 @@
-import { AppLoadContext } from 'react-router';
+import type { AppLoadContext } from 'react-router';
 import { authSessionStorage } from '~/session/auth-session-storage.server';
 import { createAuthedUser } from '~/test-utils/create-authed-user';
 import { combineCookies } from './combine-cookies';
 
 interface Config {
-  sessionID?: string;
-  user?: {
-    email?: string;
-    id?: string;
-    is2FAEnabled?: boolean;
-    name?: string;
-    password?: string;
-  };
+  sessionID?: string | undefined;
+  user?:
+    | {
+        email?: string;
+        id?: string;
+        is2FAEnabled?: boolean;
+        name?: string;
+        password?: string;
+      }
+    | undefined;
 }
 
 interface DataFnArgs {

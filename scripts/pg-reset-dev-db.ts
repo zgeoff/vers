@@ -2,8 +2,8 @@
 
 import * as schema from '@vers/postgres-schema';
 import { sql } from 'drizzle-orm';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { oraPromise } from 'ora';
 import { pg } from './postgres/pg';
 

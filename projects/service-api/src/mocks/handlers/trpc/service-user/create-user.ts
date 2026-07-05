@@ -1,4 +1,4 @@
-import { CreateUserPayload } from '@vers/service-types';
+import type { CreateUserPayload } from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 

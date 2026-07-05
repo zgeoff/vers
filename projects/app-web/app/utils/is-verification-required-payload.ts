@@ -1,4 +1,4 @@
-import { VerificationRequiredPayload } from '~/gql/graphql';
+import type { VerificationRequiredPayload } from '~/gql/graphql';
 
 export function isVerificationRequiredPayload(
   payload: object | VerificationRequiredPayload,

@@ -9,7 +9,10 @@ import { env } from './env';
 import { logger } from './logger';
 import { router } from './router';
 
-app.use('*', sentry({ dsn: env.SENTRY_DSN }));
+app.use(
+  '*',
+  sentry(env.SENTRY_DSN === undefined ? undefined : { dsn: env.SENTRY_DSN }),
+);
 app.use('*', requestId());
 app.use('*', createLoggerMiddleware(logger));
 

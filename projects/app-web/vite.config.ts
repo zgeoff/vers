@@ -24,16 +24,18 @@ export default defineConfig({
   },
   plugins: [
     reactRouterHonoServer({ serverEntryPoint: './server/index.ts' }),
-    !process.env.VITEST && reactRouter(),
+    !process.env['VITEST'] && reactRouter(),
     tsconfigPaths(),
-    process.env.SENTRY_AUTH_TOKEN
+    process.env['SENTRY_AUTH_TOKEN']
       ? sentryVitePlugin({
-          authToken: process.env.SENTRY_AUTH_TOKEN,
-          disable: process.env.NODE_ENV !== 'production',
+          authToken: process.env['SENTRY_AUTH_TOKEN'],
+          disable: process.env['NODE_ENV'] !== 'production',
           org: 'vers-idle',
           project: 'app-web',
           release: {
-            name: process.env.COMMIT_SHA,
+            ...(process.env['COMMIT_SHA'] !== undefined && {
+              name: process.env['COMMIT_SHA'],
+            }),
             setCommits: {
               auto: true,
             },
@@ -61,7 +63,7 @@ export default defineConfig({
     },
     host: 'localhost',
     port: 4000,
-    ws: process.env.VITEST === 'true' ? false : undefined,
+    ...(process.env['VITEST'] === 'true' && { ws: false }),
   },
   test: {
     coverage: {

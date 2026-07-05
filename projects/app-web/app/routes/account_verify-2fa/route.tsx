@@ -24,6 +24,7 @@ import { verifySessionStorage } from '~/session/verify-session-storage.server';
 import { Routes } from '~/types';
 import { captureGQLExceptions } from '~/utils/capture-gql-exceptions.server';
 import { isMutationError } from '~/utils/is-mutation-error';
+import { omitKeyProp } from '~/utils/omit-key-prop';
 import { requireAuth } from '~/utils/require-auth.server';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import type { Route } from './+types/route';
@@ -247,7 +248,7 @@ export function AccountVerify2FARoute(props: Route.ComponentProps) {
               className={styles.otpField}
               errors={fields.code.errors ?? []}
               inputProps={{
-                ...getInputProps(fields.code, { type: 'text' }),
+                ...omitKeyProp(getInputProps(fields.code, { type: 'text' })),
                 autoComplete: 'one-time-code',
                 autoFocus: true,
                 mode: 'numeric',

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { RecipeVariantProps, Styles } from '@vers/styled-system/css';
 import { cva, cx } from '@vers/styled-system/css';
-import { PolymorphicComponentProps } from '../../types';
+import type { PolymorphicComponentProps } from '../../types';
 
 const button = cva({
   base: {

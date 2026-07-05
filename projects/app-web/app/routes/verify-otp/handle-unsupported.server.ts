@@ -1,5 +1,5 @@
 import invariant from 'tiny-invariant';
-import { HandleVerificationContext } from './types';
+import type { HandleVerificationContext } from './types';
 
 /**
  * This is a fallback handler for verification types that are not supported

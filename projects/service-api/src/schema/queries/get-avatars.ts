@@ -31,7 +31,7 @@ interface Args {
  */
 export async function getAvatars(
   _: object,
-  args: Args,
+  _args: Args,
   ctx: AuthedContext,
 ): Promise<Array<typeof Avatar.$inferType>> {
   try {

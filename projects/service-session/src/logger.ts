@@ -4,5 +4,5 @@ import { env } from './env';
 export const logger = createLogger({
   level: env.LOGGING,
   pretty: true,
-  sentryDSN: env.SENTRY_DSN,
+  ...(env.SENTRY_DSN !== undefined && { sentryDSN: env.SENTRY_DSN }),
 });

@@ -1,6 +1,6 @@
+import type { GetUserPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
-import { GetUserPayload } from '@vers/service-types';
 import { eq, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { logger } from '~/logger';

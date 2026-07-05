@@ -27,6 +27,8 @@ const ISOMETRIC_CAMERA_ROTATION = new Euler(
   'YXZ',
 );
 
+const AnimatedGroup = animated['group'];
+
 /**
  * this component is a lie. it used to be an orthographic camera configured
  * for an isometric view, but now it's just a perspective camera with the same fixed
@@ -74,7 +76,7 @@ export function IsometricCamera() {
 
   return (
     // @ts-expect-error - can't make ref types work with useHelper for the life of me
-    <animated.group
+    <AnimatedGroup
       position={spring.position}
       rotation={ISOMETRIC_CAMERA_ROTATION}
     >
@@ -83,7 +85,7 @@ export function IsometricCamera() {
         // args={[75, aspect, 0.1, 1000]}
         makeDefault={!isDevCameraActive}
       />
-    </animated.group>
+    </AnimatedGroup>
   );
 }
 

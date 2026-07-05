@@ -1,5 +1,5 @@
+import type { UpdateVerificationPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
-import { UpdateVerificationPayload } from '@vers/service-types';
 import { omitNullish } from '~/utils/omit-nullish';
 import { db } from '../../../db';
 import { trpc } from './trpc';

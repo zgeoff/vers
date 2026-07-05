@@ -1,4 +1,4 @@
-import { DeleteSessionPayload } from '@vers/service-types';
+import type { DeleteSessionPayload } from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 

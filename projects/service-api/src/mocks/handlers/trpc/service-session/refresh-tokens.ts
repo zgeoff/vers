@@ -1,5 +1,5 @@
+import type { RefreshTokensPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
-import { RefreshTokensPayload } from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 

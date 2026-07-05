@@ -52,7 +52,7 @@ export async function createVerification(
     const { otp, ...verificationConfig } = await generateTOTP({
       algorithm: 'SHA-256',
       charSet: VERIFICATION_TYPE_TO_CHARSET[type],
-      period,
+      ...(period !== undefined && { period }),
     });
 
     const verification: typeof schema.verifications.$inferSelect = {

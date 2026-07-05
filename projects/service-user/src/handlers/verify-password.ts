@@ -1,6 +1,6 @@
+import type { VerifyPasswordPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
-import { VerifyPasswordPayload } from '@vers/service-types';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';

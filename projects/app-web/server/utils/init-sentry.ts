@@ -22,7 +22,7 @@ export function initSentry() {
       /\/favicon.ico/,
       /\/site\.webmanifest/,
     ],
-    dsn: env.SENTRY_DSN,
+    ...(env.SENTRY_DSN !== undefined && { dsn: env.SENTRY_DSN }),
     environment: env.NODE_ENV,
     integrations: [Sentry.httpIntegration(), nodeProfilingIntegration()],
     tracesSampleRate: env.isProduction ? 1 : 0,

@@ -11,4 +11,6 @@ export async function removeTrailingSlash(ctx: Context, next: Next) {
   }
 
   await next();
+
+  return;
 }

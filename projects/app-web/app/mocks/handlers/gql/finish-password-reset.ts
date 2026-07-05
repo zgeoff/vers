@@ -1,5 +1,5 @@
 import { graphql, HttpResponse } from 'msw';
-import {
+import type {
   FinishPasswordResetInput,
   FinishPasswordResetPayload,
 } from '~/gql/graphql';

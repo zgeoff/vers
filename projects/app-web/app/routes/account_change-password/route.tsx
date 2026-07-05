@@ -16,6 +16,7 @@ import { verifySessionStorage } from '~/session/verify-session-storage.server';
 import { Routes } from '~/types';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
+import { omitKeyProp } from '~/utils/omit-key-prop';
 import { requireAuth } from '~/utils/require-auth.server';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import { ConfirmPasswordSchema } from '~/validation/confirm-password-schema';
@@ -137,7 +138,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
       input: {
         currentPassword: submission.value.currentPassword,
         newPassword: submission.value.password,
-        transactionToken,
+        ...(transactionToken !== undefined && { transactionToken }),
       },
     },
   );
@@ -205,7 +206,9 @@ export function AccountChangeUserPassword(props: Route.ComponentProps) {
           <Field
             errors={fields.currentPassword.errors ?? []}
             inputProps={{
-              ...getInputProps(fields.currentPassword, { type: 'password' }),
+              ...omitKeyProp(
+                getInputProps(fields.currentPassword, { type: 'password' }),
+              ),
               autoComplete: 'current-password',
               autoFocus: true,
               placeholder: '********',
@@ -215,7 +218,9 @@ export function AccountChangeUserPassword(props: Route.ComponentProps) {
           <Field
             errors={fields.password.errors ?? []}
             inputProps={{
-              ...getInputProps(fields.password, { type: 'password' }),
+              ...omitKeyProp(
+                getInputProps(fields.password, { type: 'password' }),
+              ),
               autoComplete: 'new-password',
               placeholder: '********',
             }}
@@ -224,7 +229,9 @@ export function AccountChangeUserPassword(props: Route.ComponentProps) {
           <Field
             errors={fields.confirmPassword.errors ?? []}
             inputProps={{
-              ...getInputProps(fields.confirmPassword, { type: 'password' }),
+              ...omitKeyProp(
+                getInputProps(fields.confirmPassword, { type: 'password' }),
+              ),
               autoComplete: 'new-password',
               placeholder: '********',
             }}

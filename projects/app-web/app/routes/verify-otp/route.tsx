@@ -31,8 +31,9 @@ import { Routes } from '~/types';
 import { checkHoneypot } from '~/utils/check-honeypot.server';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
+import { omitKeyProp } from '~/utils/omit-key-prop';
 import { withErrorHandling } from '~/utils/with-error-handling';
-import { Route } from './+types/route';
+import type { Route } from './+types/route';
 import { handleVerification } from './handle-verification.server';
 import { QueryParam } from './types';
 
@@ -122,7 +123,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   const result = await args.context.client.mutation(VerifyOTPMutation, {
     input: {
       code: submission.value.code,
-      sessionID,
+      ...(sessionID !== undefined && { sessionID }),
       target: submission.value.target,
       transactionID,
       type: submission.value.type,
@@ -271,7 +272,9 @@ export function VerifyOTPRoute(props: Route.ComponentProps) {
           className={otpField}
           errors={fields[QueryParam.Code].errors ?? []}
           inputProps={{
-            ...getInputProps(fields[QueryParam.Code], { type: 'text' }),
+            ...omitKeyProp(
+              getInputProps(fields[QueryParam.Code], { type: 'text' }),
+            ),
             autoComplete: 'one-time-code',
             autoFocus: true,
             mode: otpInputMode,

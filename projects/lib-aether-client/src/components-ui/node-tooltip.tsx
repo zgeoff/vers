@@ -31,7 +31,11 @@ export function NodeTooltip(props: NodeTooltipProps) {
   }
 
   return createPortal(
-    <Tooltip ref={element} className={props.className} variant="default">
+    <Tooltip
+      ref={element}
+      {...(props.className !== undefined && { className: props.className })}
+      variant="default"
+    >
       <Tooltip.Header>
         <Text className={styles.name}>Test Aether Node ({node?.id})</Text>
       </Tooltip.Header>

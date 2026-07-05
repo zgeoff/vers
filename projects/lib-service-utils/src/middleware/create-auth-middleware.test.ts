@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest';
+import type { Context } from 'hono';
 import { createTestJWT } from '@vers/service-test-utils';
-import { Context, Hono } from 'hono';
+import { Hono } from 'hono';
 import * as jose from 'jose';
 import { createAuthMiddleware } from './create-auth-middleware';
 
@@ -65,7 +66,9 @@ async function setupTest(config: TestConfig = {}) {
   const app = new Hono();
 
   const authMiddleware = createAuthMiddleware({
-    isAuthRequired: config.isAuthRequired,
+    ...(config.isAuthRequired !== undefined && {
+      isAuthRequired: config.isAuthRequired,
+    }),
     tokenVerifierConfig: {
       audience: 'test.com',
       issuer: 'https://test.com/',

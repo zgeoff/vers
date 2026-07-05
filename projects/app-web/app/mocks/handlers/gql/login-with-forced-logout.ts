@@ -1,6 +1,6 @@
 import { graphql, HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
-import {
+import type {
   LoginWithForcedLogoutInput,
   LoginWithForcedLogoutPayload,
 } from '~/gql/graphql';

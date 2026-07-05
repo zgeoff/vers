@@ -1,4 +1,7 @@
-import { GetVerificationPayload, VerificationType } from '@vers/service-types';
+import type {
+  GetVerificationPayload,
+  VerificationType,
+} from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 

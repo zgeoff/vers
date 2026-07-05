@@ -1,4 +1,4 @@
-import { User } from '~/gql/graphql';
+import type { User } from '~/gql/graphql';
 import { db } from '../../../db';
 
 interface DBUser {

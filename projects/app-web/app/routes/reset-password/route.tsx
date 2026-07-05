@@ -15,6 +15,7 @@ import { Routes } from '~/types';
 import { checkHoneypot } from '~/utils/check-honeypot.server';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
+import { omitKeyProp } from '~/utils/omit-key-prop';
 import { requireAnonymous } from '~/utils/require-anonymous.server';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import { ConfirmPasswordSchema } from '~/validation/confirm-password-schema';
@@ -88,7 +89,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
         email,
         password: submission.value.password,
         resetToken,
-        transactionToken,
+        ...(transactionToken !== undefined && { transactionToken }),
       },
     },
   );
@@ -169,7 +170,9 @@ export function ResetPassword(props: Route.ComponentProps) {
         <Field
           errors={fields.password.errors ?? []}
           inputProps={{
-            ...getInputProps(fields.password, { type: 'password' }),
+            ...omitKeyProp(
+              getInputProps(fields.password, { type: 'password' }),
+            ),
             autoComplete: 'new-password',
             placeholder: '********',
           }}
@@ -178,7 +181,9 @@ export function ResetPassword(props: Route.ComponentProps) {
         <Field
           errors={fields.confirmPassword.errors ?? []}
           inputProps={{
-            ...getInputProps(fields.confirmPassword, { type: 'password' }),
+            ...omitKeyProp(
+              getInputProps(fields.confirmPassword, { type: 'password' }),
+            ),
             autoComplete: 'new-password',
             placeholder: '********',
           }}

@@ -45,20 +45,20 @@ interface SessionFlashData {
   error: string;
 }
 
-invariant(process.env.SESSION_SECRET, '$SESSION_SECRET is required');
+invariant(process.env['SESSION_SECRET'], '$SESSION_SECRET is required');
 
 export const verifySessionStorage = createCookieSessionStorage<
   SessionData,
   SessionFlashData
 >({
   cookie: {
-    domain: import.meta.env.VITE_DOMAIN,
+    domain: import.meta.env['VITE_DOMAIN'],
     httpOnly: true,
     maxAge: 60 * 10,
     name: 'en_verification',
     path: '/',
     sameSite: 'lax',
-    secrets: [process.env.SESSION_SECRET],
+    secrets: [process.env['SESSION_SECRET']],
 
     // only use secure cookies in prod because Safari doesn't allow setting secure cookies
     // for HTTP requests i.e. localhost which breaks our e2e

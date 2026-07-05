@@ -17,6 +17,7 @@ import { verifySessionStorage } from '~/session/verify-session-storage.server';
 import { Routes } from '~/types';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
+import { omitKeyProp } from '~/utils/omit-key-prop';
 import { requireAuth } from '~/utils/require-auth.server';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import type { Route } from './+types/route';
@@ -130,7 +131,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     {
       input: {
         email: submission.value.email,
-        transactionToken: transactionToken,
+        ...(transactionToken !== undefined && { transactionToken }),
       },
     },
   );
@@ -207,7 +208,7 @@ export function AccountChangeUserEmail(props: Route.ComponentProps) {
           <Field
             errors={fields.email.errors ?? []}
             inputProps={{
-              ...getInputProps(fields.email, { type: 'email' }),
+              ...omitKeyProp(getInputProps(fields.email, { type: 'email' })),
               autoComplete: 'email',
               placeholder: 'your.new.email@example.com',
             }}

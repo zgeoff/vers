@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import type { ActivityAppState } from '@vers/idle-core';
 import { nodeHasText } from '@vers/client-test-utils';
-import { ActivityAppState } from '@vers/idle-core';
 import { ActivityInfo } from './activity-info';
 
 test('it renders info about the provided activity', () => {

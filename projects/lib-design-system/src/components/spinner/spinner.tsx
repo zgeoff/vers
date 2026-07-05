@@ -1,4 +1,4 @@
-import { css, cva, RecipeVariantProps } from '@vers/styled-system/css';
+import { css, cva, type RecipeVariantProps } from '@vers/styled-system/css';
 
 const wrapper = cva({
   defaultVariants: {

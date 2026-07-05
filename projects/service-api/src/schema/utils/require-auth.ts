@@ -1,4 +1,4 @@
-import { AuthedContext, Context } from '~/types';
+import type { AuthedContext, Context } from '~/types';
 import { isAuthed } from '~/utils/is-authed';
 
 type Resolver<TParent, TArgs, TReturn> = (

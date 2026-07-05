@@ -14,7 +14,7 @@ Avatar.implement({
     level: t.exposeInt('level'),
     name: t.exposeString('name'),
     user: t.field({
-      resolve: async (parent, args, ctx) => {
+      resolve: async (parent, _args, ctx) => {
         const user = await ctx.services.user.getUser.query({
           id: parent.userID,
         });

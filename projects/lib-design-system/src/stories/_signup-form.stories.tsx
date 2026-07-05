@@ -31,12 +31,37 @@ export const Default = () => {
     shouldRevalidate: 'onBlur',
   });
 
+  const { key: _nameKey, ...nameInputProps } = getInputProps(fields.name, {
+    type: 'text',
+  });
+  const { key: _emailKey, ...emailInputProps } = getInputProps(fields.email, {
+    type: 'email',
+  });
+  const { key: _usernameKey, ...usernameInputProps } = getInputProps(
+    fields.username,
+    { type: 'text' },
+  );
+  const { key: _passwordKey, ...passwordInputProps } = getInputProps(
+    fields.password,
+    { type: 'password' },
+  );
+  const { key: _confirmPasswordKey, ...confirmPasswordInputProps } =
+    getInputProps(fields.confirmPassword, { type: 'password' });
+  const { key: _rememberMeKey, ...rememberMeInputProps } = getInputProps(
+    fields.rememberMe,
+    { type: 'checkbox' },
+  );
+  const { key: _agreeToTermsKey, ...agreeToTermsInputProps } = getInputProps(
+    fields.agreeToTerms,
+    { type: 'checkbox' },
+  );
+
   return (
     <form {...getFormProps(form)}>
       <Field
         errors={fields.name.errors ?? []}
         inputProps={{
-          ...getInputProps(fields.name, { type: 'text' }),
+          ...nameInputProps,
           placeholder: 'John Smith',
         }}
         labelProps={{
@@ -46,7 +71,7 @@ export const Default = () => {
       <Field
         errors={fields.email.errors ?? []}
         inputProps={{
-          ...getInputProps(fields.email, { type: 'email' }),
+          ...emailInputProps,
           placeholder: 'your.email@example.com',
         }}
         labelProps={{
@@ -56,7 +81,7 @@ export const Default = () => {
       <Field
         errors={fields.username.errors ?? []}
         inputProps={{
-          ...getInputProps(fields.username, { type: 'text' }),
+          ...usernameInputProps,
           placeholder: 'johnsmith_123',
         }}
         labelProps={{
@@ -66,7 +91,7 @@ export const Default = () => {
       <Field
         errors={fields.password.errors ?? []}
         inputProps={{
-          ...getInputProps(fields.password, { type: 'password' }),
+          ...passwordInputProps,
           placeholder: 'Enter your password',
         }}
         labelProps={{
@@ -76,7 +101,7 @@ export const Default = () => {
       <Field
         errors={fields.confirmPassword.errors ?? []}
         inputProps={{
-          ...getInputProps(fields.confirmPassword, { type: 'password' }),
+          ...confirmPasswordInputProps,
           placeholder: 'Confirm your password',
         }}
         labelProps={{
@@ -85,14 +110,14 @@ export const Default = () => {
       />
       <CheckboxField
         checkboxProps={{
-          ...getInputProps(fields.rememberMe, { type: 'checkbox' }),
+          ...rememberMeInputProps,
         }}
         errors={fields.rememberMe.errors ?? []}
         labelProps={{ children: 'Remember me' }}
       />
       <CheckboxField
         checkboxProps={{
-          ...getInputProps(fields.agreeToTerms, { type: 'checkbox' }),
+          ...agreeToTermsInputProps,
         }}
         errors={fields.agreeToTerms.errors ?? []}
         labelProps={{ children: 'Agree to terms and services' }}

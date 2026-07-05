@@ -68,9 +68,9 @@ test('it randomizes the position of the nodes', () => {
 
   const result = getAetherNodeMap(compressedNodes);
 
-  expect(result.node1?.position).not.toStrictEqual([1, 1]);
-  expect(result.node1?.position[0]).not.toBeGreaterThan(1.2);
-  expect(result.node1?.position[0]).not.toBeLessThan(0.8);
-  expect(result.node1?.position[1]).not.toBeGreaterThan(1.2);
-  expect(result.node1?.position[1]).not.toBeLessThan(0.8);
+  expect(result['node1']?.position).not.toStrictEqual([1, 1]);
+  expect(result['node1']?.position[0]).not.toBeGreaterThan(1.2);
+  expect(result['node1']?.position[0]).not.toBeLessThan(0.8);
+  expect(result['node1']?.position[1]).not.toBeGreaterThan(1.2);
+  expect(result['node1']?.position[1]).not.toBeLessThan(0.8);
 });

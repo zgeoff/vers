@@ -1,6 +1,6 @@
 import invariant from 'tiny-invariant';
+import type { AetherNode } from './types';
 import { createAetherNode } from './create-aether-node';
-import { AetherNode } from './types';
 
 /**
  * Generates a graph of AetherNodes and returns them as an array.

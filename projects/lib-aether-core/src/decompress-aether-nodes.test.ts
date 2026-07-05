@@ -140,9 +140,9 @@ test('it randomizes the position of the nodes', () => {
 
   const graph = decompressAetherNodes(compressedNodes);
 
-  expect(graph.nodes.origin?.position).not.toStrictEqual([1, 1]);
-  expect(graph.nodes.origin?.position[0]).not.toBeGreaterThan(1.2);
-  expect(graph.nodes.origin?.position[0]).not.toBeLessThan(0.8);
-  expect(graph.nodes.origin?.position[1]).not.toBeGreaterThan(1.2);
-  expect(graph.nodes.origin?.position[1]).not.toBeLessThan(0.8);
+  expect(graph.nodes['origin']?.position).not.toStrictEqual([1, 1]);
+  expect(graph.nodes['origin']?.position[0]).not.toBeGreaterThan(1.2);
+  expect(graph.nodes['origin']?.position[0]).not.toBeLessThan(0.8);
+  expect(graph.nodes['origin']?.position[1]).not.toBeGreaterThan(1.2);
+  expect(graph.nodes['origin']?.position[1]).not.toBeLessThan(0.8);
 });
