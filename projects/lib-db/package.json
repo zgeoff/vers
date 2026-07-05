@@ -1,0 +1,37 @@
+{
+  "name": "@vers/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "db:codegen": "kysely-codegen --camel-case --exclude-pattern 'drizzle.*' --out-file src/schema.generated.ts",
+    "db:migrate": "kysely migrate:latest",
+    "db:migrate:make": "kysely migrate:make",
+    "db:rollback": "kysely migrate:down",
+    "db:seed": "kysely seed run",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "kysely": "0.29.2",
+    "kysely-postgres-js": "3.0.0",
+    "postgres": "catalog:"
+  },
+  "devDependencies": {
+    "@paralleldrive/cuid2": "catalog:",
+    "@testcontainers/postgresql": "10.18.0",
+    "@types/node": "22.13.10",
+    "@types/pg": "8.20.0",
+    "@vers/postgres-schema": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "jest-extended": "catalog:",
+    "kysely-codegen": "0.20.0",
+    "kysely-ctl": "0.21.0",
+    "pg": "8.22.0",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

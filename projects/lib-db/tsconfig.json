@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "files": [],
+  "include": [
+    "vitest.config.ts",
+    "vitest.global-setup.ts",
+    "vitest.setup.ts",
+    "kysely.config.ts",
+    "src/**/*.ts",
+    "migrations/**/*.ts",
+    "seeds/**/*.ts"
+  ],
+  "exclude": []
+}
