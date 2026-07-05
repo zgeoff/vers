@@ -13,11 +13,11 @@ on the contract, neither on each other.
 
 ## The packages
 
-| Package                    | Folder                            | Contains                                                                                                                        | Depended on by                  |
-| -------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `@vers/contract-<service>` | `projects/lib-contract-<service>` | one service's API declaration                                                                                                   | that service, gateway, web      |
-| `@vers/contract-base`      | `projects/lib-contract-base`      | standard error taxonomy, base builders, conformance-test helper                                                                 | contract packages, gateway, web |
-| `@vers/service-runtime`    | `projects/lib-service-runtime`    | Elysia plugins every service composes: s2s token verification, health checks, OpenTelemetry, Sentry, request-id, env validation | services only                   |
+| Package                    | Folder                            | Contains                                                                                                                        | Depended on by                    |
+| -------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `@vers/contract-<service>` | `projects/lib-contract-<service>` | one service's API declaration                                                                                                   | that service and the web app      |
+| `@vers/contract-base`      | `projects/lib-contract-base`      | standard error taxonomy, base builders, conformance-test helper                                                                 | contract packages and the web app |
+| `@vers/service-runtime`    | `projects/lib-service-runtime`    | Elysia plugins every service composes: s2s token verification, health checks, OpenTelemetry, Sentry, request-id, env validation | services only                     |
 
 Why one contract package per service rather than a single `@vers/contracts` with subpath exports:
 
@@ -33,7 +33,7 @@ Why one contract package per service rather than a single `@vers/contracts` with
 The per-package boilerplate this creates is exactly what the service scaffold template amortizes.
 
 Folder and package naming, repo-wide: `lib-` prefixes every importable workspace package — contracts
-included, since service, gateway, and web all import them. **A package's name is its folder name
+included, since services and the web app all import them. **A package's name is its folder name
 minus the taxonomy prefix**: `lib-` and `app-` strip (`lib-contract-user` → `@vers/contract-user`,
 `app-web` → `@vers/web`) because they group folders without naming the thing; `service-` and `db-`
 are part of the name and carry through (`@vers/service-user`, `@vers/db-postgres`).
@@ -124,7 +124,7 @@ Authentication has two distinct failure classes, kept deliberately separate (#14
    token minted at the edge, naming the acting user. If that token fails verification, something is
    misconfigured or someone is probing — never something a browser user can fix. This is _not_ a
    contract error: middleware in `@vers/service-runtime` rejects it with a plain 401 before any
-   handler runs, and the gateway surfaces it as a 5xx plus alerting.
+   handler runs, and the edge surfaces it as a 5xx plus alerting.
 
 Because the edge validates sessions and mints the token, services never see cookies. The handler
 context is simply:
@@ -136,7 +136,7 @@ interface ServiceContext {
 ```
 
 A subtlety worth stating: the contract describes what the **caller** can receive, not what the
-service emits. When a session expires, the gateway itself replies with the contract-shaped
+service emits. When a session expires, the edge itself replies with the contract-shaped
 `UNAUTHORIZED { reason: 'expired-session' }` without calling the service at all; services themselves
 only ever throw `missing-session` (defense in depth, when an authed procedure is reached without an
 acting user). The shared enum is caller-facing vocabulary, not an inventory of who throws what.
