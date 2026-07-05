@@ -123,17 +123,6 @@ jobs:
           tags: vers/db-postgres:latest
           push: false
 
-      - name: Build API Service Image
-        if:
-          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
-          '<@vers/service-api>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: projects/service-api/Dockerfile
-          tags: vers/service-api:latest
-          push: false
-
       - name: Build Avatar Service Image
         if:
           ${{ contains(steps.record-affected-projects.outputs.affected-projects,
