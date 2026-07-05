@@ -8,6 +8,7 @@
   },
   "scripts": {
     "codegen": "panda cssgen",
+    "dev": "ladle serve",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
