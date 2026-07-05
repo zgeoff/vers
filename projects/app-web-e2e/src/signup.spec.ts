@@ -22,9 +22,8 @@ test('it signs the user up and displays the nexus', async ({ page }) => {
   await page.getByLabel('Name', { exact: true }).fill('John Smith');
   await page.getByLabel('Password', { exact: true }).fill('password123!');
   await page.getByLabel('Confirm password').fill('password123!');
-  // the checkbox input is visually hidden behind a styled control, so a
-  // label-targeted click never passes the visibility actionability check —
-  // clicking the visible label text toggles it through the same code path
+  // the real checkbox input is visually hidden, so a label-targeted click
+  // never becomes actionable — click the visible label text instead
   await page.getByText('Agree to terms').click();
   await expect(page.getByLabel('Agree to terms')).toBeChecked();
   await page.getByRole('button', { name: 'Create an account' }).click();

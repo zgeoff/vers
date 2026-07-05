@@ -96,8 +96,7 @@ jobs:
         run: bun run playwright install --with-deps --only-shell chromium
 
       - name: E2E Tests
-        # non-blocking until #212 stabilizes the suite (pin-input fill race +
-        # missing per-test session isolation make logged-in specs flaky)
+        # non-blocking until #212 stabilizes the suite
         continue-on-error: true
         run: bunx turbo run e2e --affected
 
@@ -113,7 +112,7 @@ jobs:
         id: record-affected-projects
         if: ${{ github.ref_name == 'main' }}
         run: |
-          # each name is wrapped in <> so the contains() gates below can't substring-match (e.g. @vers/web vs @vers/web-e2e)
+          # names are <>-wrapped so the contains() gates can't substring-match
           affected="$(bunx turbo run build --affected --dry=json | jq -r '.packages[] | "<\(.)>"')"
           echo "${affected}"
           delimiter="$(openssl rand -hex 8)"

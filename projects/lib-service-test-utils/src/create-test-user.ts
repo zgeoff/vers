@@ -4,10 +4,9 @@ import bcrypt from 'bcryptjs';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 /**
- * Matches the cost factor `@vers/service-utils`'s `hashPassword` uses —
- * seeded test users must hash the same way production login does. Inlined
- * rather than imported to avoid a package dependency cycle: `service-utils`
- * itself depends on this package in its own tests.
+ * Matches the cost factor the production password hasher uses — seeded test
+ * users must verify against real logins. Kept inline: importing it would
+ * create a package cycle, since service-utils depends on this package.
  */
 const PASSWORD_HASH_COST_FACTOR = 12;
 

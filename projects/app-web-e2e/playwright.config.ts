@@ -35,9 +35,8 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  // vite's dev-server dependency optimizer can still force a full page
-  // reload the first time a code-split route loads a dependency the warmup
-  // pass didn't reach; one retry absorbs that without masking real failures
+  // one retry absorbs the full page reload vite forces when a code-split
+  // route pulls in a dependency the warmup pass didn't reach
   retries: process.env.CI ? 1 : 0,
   timeout: 30 * 1000,
   use: {

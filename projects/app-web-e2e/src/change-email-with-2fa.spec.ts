@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-// the 2fa gate before the change-email form intermittently drops the pin
-// input's filled value (the form submits empty and shows "Required"), and a
-// retry then lands on the logged-in-elsewhere interstitial because the first
-// attempt's session persists in the mock db — needs the pin-fill race fixed
-// in the app (or a deterministic fill pattern) plus per-test session cleanup
+// quarantined by #212: the 2fa gate intermittently drops the pin input's
+// filled value, and retries hit the logged-in-elsewhere interstitial because
+// mock-db sessions persist across attempts
 test.fixme('it changes email for a user with 2FA', async ({ page }) => {
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
 
