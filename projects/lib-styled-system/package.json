@@ -12,7 +12,8 @@
     }
   },
   "dependencies": {
-    "@vers/panda-preset": "workspace:*"
+    "@vers/panda-preset": "workspace:*",
+    "react": "catalog:"
   },
   "devDependencies": {
     "@pandacss/dev": "1.11.4",
