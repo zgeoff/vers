@@ -22,12 +22,24 @@ const config = {
   // final state — it strips the codemod's import padding, which its own
   // import sorter contradicts
   'projects/**/*.{js,ts,jsx,tsx,json}': (files) => {
-    const tsFiles = files.filter((file) => /\.tsx?$/.test(file));
+    // the design-reference export is served verbatim and sits on both tools'
+    // ignore lists; oxlint exits non-zero when every file it's given is ignored
+    const ownFiles = files.filter((file) => !file.includes('app-design-reference/public/'));
+
+    if (ownFiles.length === 0) {
+      return [];
+    }
+
+    const tsFiles = ownFiles.filter((file) => /\.tsx?$/.test(file));
+
+    // oxlint ignores all json (it only formats via oxfmt) and exits non-zero
+    // when every file it's given is ignored
+    const lintFiles = ownFiles.filter((file) => !file.endsWith('.json'));
 
     return [
       ...(tsFiles.length > 0 ? [`format-codemod --quiet ${quote(tsFiles)}`] : []),
-      `oxfmt ${quote(files)}`,
-      `oxlint --fix ${quote(files)}`,
+      `oxfmt ${quote(ownFiles)}`,
+      ...(lintFiles.length > 0 ? [`oxlint --fix ${quote(lintFiles)}`] : []),
     ];
   },
 

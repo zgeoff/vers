@@ -1,0 +1,11 @@
+{
+  "name": "@vers/design-reference",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Static host for the visual-direction design pages (#198) — exported from Claude Design, served as-is for review and future reference",
+  "license": "",
+  "type": "module",
+  "scripts": {
+    "dev": "bunx serve public"
+  }
+}
