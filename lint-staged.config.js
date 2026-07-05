@@ -1,3 +1,7 @@
+function quote(files) {
+  return files.map((file) => `"${file}"`).join(' ');
+}
+
 const config = {
   'projects/{app-web,service-api}/**/*.{ts,tsx}': () => [
     `bun run codegen:graphql`,
@@ -13,18 +17,19 @@ const config = {
     'bunx vitest run --changed',
   ],
 
-  // format/lint fixes land via lint-staged's own staging of task modifications
-  'projects/**/*.{js,ts,jsx,tsx,json}': (files) => [
-    `oxfmt ${files.map((file) => `"${file}"`).join(' ')}`,
-    `oxlint --fix ${files.map((file) => `"${file}"`).join(' ')}`,
-  ],
+  // format/lint fixes land via lint-staged's own staging of task
+  // modifications; the codemod runs before oxfmt so the formatter owns the
+  // final state — it strips the codemod's import padding, which its own
+  // import sorter contradicts
+  'projects/**/*.{js,ts,jsx,tsx,json}': (files) => {
+    const tsFiles = files.filter((file) => /\.tsx?$/.test(file));
 
-  // blank-line padding runs after oxfmt so its splices land on formatted
-  // code; the glob spells {tsx,ts} because it matches the same files as the
-  // codegen/typecheck entry above and object keys must stay distinct
-  'projects/**/*.{tsx,ts}': (files) => [
-    `format-codemod --quiet ${files.map((file) => `"${file}"`).join(' ')}`,
-  ],
+    return [
+      ...(tsFiles.length > 0 ? [`format-codemod --quiet ${quote(tsFiles)}`] : []),
+      `oxfmt ${quote(files)}`,
+      `oxlint --fix ${quote(files)}`,
+    ];
+  },
 
   'projects/lib-postgres-schema/**/*.ts': () => [
     'bun run pg:migrations-generate',

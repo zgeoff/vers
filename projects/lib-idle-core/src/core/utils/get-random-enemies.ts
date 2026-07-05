@@ -7,11 +7,10 @@ export function getRandomEnemies(
   ctx: SimulationContext,
 ): Array<Enemy> {
   if (activity.enemies.length === 1) {
-    return Array.from({ length: count }, () =>
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- guarded by the length === 1 check above
+    const makeOnlyEnemy = () => createEnemy(activity.enemies[0]!, ctx);
 
-      // oxlint-disable-next-line typescript/no-non-null-assertion -- guarded by the length === 1 check above
-      createEnemy(activity.enemies[0]!, ctx),
-    );
+    return Array.from({ length: count }, makeOnlyEnemy);
   }
 
   return (

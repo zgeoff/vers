@@ -234,9 +234,13 @@ name minus the taxonomy prefix: `lib-` and `app-` strip (`lib-validation` → `@
   Postgres-backed suites need `bun run pg:test-container:start` first.
 - `bun run lint` / `bun run lint:fix` — `oxlint` over the whole tree (`.oxlintrc.json` at the root);
   not a turbo task, oxlint covers everything in one fast invocation.
-- `bun run format` / `bun run format:check` — `oxfmt` (`.oxfmtrc.json` at the root), then
-  `format-codemod` for blank-line padding over explicit source globs (generated output like
-  `app/gql` is excluded by the glob list, not an ignore file — the codemod has none).
+- `bun run format` — `format-codemod` (blank-line padding, explicit source globs — the codemod has
+  no ignore file, so the glob list is what keeps it off committed codegen output like `app/gql`),
+  then `oxfmt .` (`.oxfmtrc.json` at the root). The formatter runs last and owns the final state: it
+  strips the codemod's padding after multiline imports, which its import sorter contradicts.
+- `bun run format:check` — `oxfmt --check .` only. The codemod has no check leg here: on an
+  oxfmt-final tree it always wants its import padding back, so a check would never be green. Its
+  other conventions still land on every `bun run format` and pre-commit run.
 - `bun run build` — `turbo run build`; one project via `--filter`.
 - `bun run e2e` — `turbo run e2e` (Playwright, `app-web-e2e`).
 - `bun run boundaries` — `turbo boundaries`.
