@@ -6,11 +6,10 @@ import type {
 } from '@orpc/contract';
 import assert from 'node:assert/strict';
 import { ORPCError } from '@orpc/client';
-import { createORPCClient } from '@orpc/client';
-import { RPCLink } from '@orpc/client/fetch';
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { traverseContractProcedures } from '@orpc/server';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
+import { buildRPCTestClient } from './build-rpc-test-client';
 
 /** An Elysia app (or anything shaped like one) a conformance case can exercise. */
 export interface ConformanceCaseApp {
@@ -25,7 +24,7 @@ export interface ConformanceCase {
 }
 
 /** Header collection accepted wherever a conformance case needs to send headers. */
-type ConformanceHeaders = Headers | Record<string, string>;
+type ConformanceHeaders = Record<string, string>;
 
 interface CollectConformanceCasesOptions {
   /** Headers carrying a valid service token with no acting user. */
@@ -167,13 +166,10 @@ function buildConformanceClient(
   rpcPrefix: string,
   headers: ConformanceHeaders,
 ): ContractRouterClient<AnyContractRouter> {
-  const link = new RPCLink<Record<never, never>>({
-    fetch: (request) => Promise.resolve(app.handle(request)),
+  return buildRPCTestClient<AnyContractRouter>(app, {
     headers,
     url: `http://conformance.test${rpcPrefix}`,
   });
-
-  return createORPCClient(link);
 }
 
 /** Indexes a dot-path into a client object, returning the callable procedure at that path. */

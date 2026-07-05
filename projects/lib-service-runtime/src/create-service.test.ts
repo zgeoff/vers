@@ -1,10 +1,10 @@
 import { expect, expectTypeOf, test, vi } from 'vitest';
-import type { ContractRouterClient } from '@orpc/contract';
-import { createORPCClient } from '@orpc/client';
-import { RPCLink } from '@orpc/client/fetch';
 import { implement } from '@orpc/server';
 import { authedRoute, publicRoute } from '@vers/contract-base';
-import { collectConformanceCases } from '@vers/contract-base/test-utils';
+import {
+  buildRPCTestClient,
+  collectConformanceCases,
+} from '@vers/contract-base/test-utils';
 import * as z from 'zod';
 import type { ServiceContext } from './types';
 import { createService } from './create-service';
@@ -238,7 +238,9 @@ test('it returns data from an authed procedure given a valid token naming an act
     audience: 'test-service',
     privateKey,
   });
-  const client = buildRPCClient(app, { authorization: `Bearer ${token}` });
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
 
   await expect(client.getThing({ id: 'thing-1' })).resolves.toStrictEqual({
     id: 'thing-1',
@@ -261,7 +263,9 @@ test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a v
     audience: 'test-service',
     privateKey,
   });
-  const client = buildRPCClient(app, { authorization: `Bearer ${token}` });
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
 
   await expect(client.getThing({ id: 'thing-1' })).rejects.toMatchObject({
     code: 'UNAUTHORIZED',
@@ -394,16 +398,3 @@ test('it passes every conformance case collected from its own contract', async (
     await expect(conformanceCase.run(app)).toResolve();
   }
 });
-
-function buildRPCClient(
-  app: { handle: (request: Request) => Promise<Response> | Response },
-  headers: Record<string, string>,
-): ContractRouterClient<ReturnType<typeof buildTestContract>> {
-  const link = new RPCLink<Record<never, never>>({
-    fetch: (request) => Promise.resolve(app.handle(request)),
-    headers,
-    url: 'http://test.local/rpc',
-  });
-
-  return createORPCClient(link);
-}
