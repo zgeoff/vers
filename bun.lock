@@ -271,13 +271,14 @@
         "zod": "catalog:",
       },
     },
-    "projects/lib-email-templates": {
-      "name": "@vers/email-templates",
+    "projects/lib-email": {
+      "name": "@vers/email",
       "version": "0.0.0",
       "dependencies": {
         "@react-email/components": "0.0.33",
         "react": "catalog:",
         "react-dom": "19.0.0",
+        "resend": "4.1.2",
       },
       "devDependencies": {
         "@testing-library/jest-dom": "catalog:",
@@ -286,6 +287,7 @@
         "@types/react": "19.0.12",
         "happy-dom": "catalog:",
         "jest-extended": "catalog:",
+        "msw": "2.7.3",
         "typescript": "catalog:",
         "vitest": "catalog:",
       },
@@ -519,31 +521,6 @@
         "@sentry/esbuild-plugin": "catalog:",
         "@types/node": "22.13.10",
         "jest-extended": "catalog:",
-        "typescript": "catalog:",
-        "vite": "catalog:",
-        "vitest": "catalog:",
-      },
-    },
-    "projects/service-email": {
-      "name": "@vers/service-email",
-      "version": "0.0.0",
-      "dependencies": {
-        "@hono/node-server": "catalog:",
-        "@hono/sentry": "catalog:",
-        "@hono/trpc-server": "catalog:",
-        "@trpc/server": "catalog:",
-        "@vers/service-types": "workspace:*",
-        "@vers/service-utils": "workspace:*",
-        "hono": "catalog:",
-        "resend": "4.1.2",
-        "superjson": "catalog:",
-        "zod": "catalog:",
-      },
-      "devDependencies": {
-        "@sentry/esbuild-plugin": "catalog:",
-        "@types/node": "22.13.10",
-        "jest-extended": "catalog:",
-        "msw": "2.7.3",
         "typescript": "catalog:",
         "vite": "catalog:",
         "vitest": "catalog:",
@@ -1818,7 +1795,7 @@
 
     "@vers/design-system": ["@vers/design-system@workspace:projects/lib-design-system"],
 
-    "@vers/email-templates": ["@vers/email-templates@workspace:projects/lib-email-templates"],
+    "@vers/email": ["@vers/email@workspace:projects/lib-email"],
 
     "@vers/game-utils": ["@vers/game-utils@workspace:projects/lib-game-utils"],
 
@@ -1831,8 +1808,6 @@
     "@vers/postgres-schema": ["@vers/postgres-schema@workspace:projects/lib-postgres-schema"],
 
     "@vers/service-avatar": ["@vers/service-avatar@workspace:projects/service-avatar"],
-
-    "@vers/service-email": ["@vers/service-email@workspace:projects/service-email"],
 
     "@vers/service-runtime": ["@vers/service-runtime@workspace:projects/lib-service-runtime"],
 

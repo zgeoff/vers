@@ -1,5 +1,5 @@
 {
-  "name": "@vers/email-templates",
+  "name": "@vers/email",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,13 +7,15 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "preview": "bun run scripts/preview.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@react-email/components": "0.0.33",
     "react": "catalog:",
-    "react-dom": "19.0.0"
+    "react-dom": "19.0.0",
+    "resend": "4.1.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "catalog:",
@@ -22,6 +24,7 @@
     "@types/react": "19.0.12",
     "happy-dom": "catalog:",
     "jest-extended": "catalog:",
+    "msw": "2.7.3",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

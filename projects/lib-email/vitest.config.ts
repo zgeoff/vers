@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'v8',
-      reportsDirectory: '../../coverage/apps/lib-email-templates',
+      reportsDirectory: '../../coverage/apps/lib-email',
     },
     environment: 'happy-dom',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
