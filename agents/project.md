@@ -7,10 +7,9 @@ Libraries are consumed as TypeScript source (`exports` → `./src/index.ts`); th
 build steps. `bun install` uses the isolated linker (pnpm-style symlinks, no phantom deps) with
 exact pins and a 7-day `minimumReleaseAge` — see `bunfig.toml`. Turborepo drives the task graph:
 root `turbo.json` declares the `build`/`typecheck`/`test`/`codegen`/`typegen`/`e2e` pipelines
-(ordering inferred from each project's `workspace:*` deps) plus a root `//#codegen:graphql` task for
-the one codegen step that reads across packages (service-api's schema, app-web's documents).
-Per-project `turbo.json` files exist only to declare `boundaries` tags. CI's changed-project
-detection is `turbo run --affected`. See `docs/000-overview.md` for the project list.
+(ordering inferred from each project's `workspace:*` deps). Per-project `turbo.json` files exist
+only to declare `boundaries` tags. CI's changed-project detection is `turbo run --affected`. See
+`docs/000-overview.md` for the project list.
 
 TypeScript is 7.0.1-rc (catalog), which dropped `baseUrl` and the classic Compiler API entirely —
 every project's tsconfig lost its `baseUrl`/`paths` block and every former `~/*` import is a
@@ -79,7 +78,7 @@ strings/numbers.
 
 ## Docker
 
-Each deployable (`app-web`, `db-postgres`, the 6 services) has a multi-stage Dockerfile around
+Each deployable (`app-web`, `db-postgres`, the 5 services) has a multi-stage Dockerfile around
 `turbo prune <pkg> --docker`:
 
 1. **pruner** — a standalone `turbo` binary prunes to the target's dependency graph: `out/json`
@@ -93,9 +92,8 @@ Each deployable (`app-web`, `db-postgres`, the 6 services) has a multi-stage Doc
 5. **runtime** — `node:24.18.0-alpine` with the prod-deps `node_modules` and built output only.
 
 app-web's builder runs its `codegen`/`typegen`/`build` scripts directly instead of
-`turbo run build`, which would pull in `//#codegen:graphql` — that task reads service-api's schema,
-outside app-web's pruned graph. `app/gql/**` is committed so builds without service-api's source use
-it as-is.
+`turbo run build`. `app/gql/**` and root `schema.graphql` are frozen, committed artifacts — the
+GraphQL gateway that used to generate them is deleted, and both die with #165's web-shell rebuild.
 
 ## Tooling migration in progress
 

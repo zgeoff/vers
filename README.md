@@ -77,7 +77,7 @@ fly pg attach vers-pg --database-name=vers
 fly secrets set SESSION_SECRET=$(openssl rand -hex 32) HONEYPOT_SECRET=$(openssl rand -hex 32)
 
 # setting jwt signing secrets
-fly secrets set --app=vers-service-api JWT_SIGNING_PRIVKEY=- < privkey.pem
+fly secrets set --app=vers-<project-name> JWT_SIGNING_PRIVKEY=- < privkey.pem
 ```
 
 ## development with agents
