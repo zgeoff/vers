@@ -4,12 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { graphql } from 'msw';
 import { Form, createRoutesStub } from 'react-router';
 import { afterEach, expect, test } from 'vitest';
-import { db } from '~/mocks/db';
-import { server } from '~/mocks/node';
-import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
-import { withAppLoadContext } from '~/test-utils/with-app-load-context';
-import { withAuthedUser } from '~/test-utils/with-authed-user';
-import { Routes } from '~/types';
+import { db } from '../../mocks/db';
+import { server } from '../../mocks/node';
+import { composeDataFnWrappers } from '../../test-utils/compose-data-fn-wrappers';
+import { withAppLoadContext } from '../../test-utils/with-app-load-context';
+import { withAuthedUser } from '../../test-utils/with-authed-user';
+import { Routes } from '../../types';
 import { action, loader } from './route';
 
 interface TestConfig {

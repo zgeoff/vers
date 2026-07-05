@@ -6,8 +6,8 @@ import type { SessionData, UserData } from '@vers/service-types';
 import type { ServiceRouter as UserServiceRouter } from '@vers/service-user';
 import type { ServiceRouter as VerificationServiceRouter } from '@vers/service-verification';
 import type { z } from 'zod';
-import type { MutationErrorPayload } from '~/schema/types/mutation-error-payload';
 import type { envSchema } from './env';
+import type { MutationErrorPayload } from './schema/types/mutation-error-payload';
 
 export type Env = z.infer<typeof envSchema>;
 

@@ -1,4 +1,4 @@
-import { VerificationType } from '~/gql/graphql';
+import { VerificationType } from '../../gql/graphql';
 import { handle2FADisable } from './handle-2fa-disable.server';
 import { handle2FA } from './handle-2fa.server';
 import { handleChangeEmailConfirmation } from './handle-change-email-confirmation.server';

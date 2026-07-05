@@ -3,15 +3,15 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRoutesStub } from 'react-router';
 import { afterEach, expect, test } from 'vitest';
-import { db } from '~/mocks/db';
-import { server } from '~/mocks/node';
-import { verifySessionStorage } from '~/session/verify-session-storage.server';
-import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
-import { withAppLoadContext } from '~/test-utils/with-app-load-context';
-import { withAuthedUser } from '~/test-utils/with-authed-user';
-import { withRouteProps } from '~/test-utils/with-route-props';
-import { withSession } from '~/test-utils/with-session';
-import { Routes } from '~/types';
+import { db } from '../../mocks/db';
+import { server } from '../../mocks/node';
+import { verifySessionStorage } from '../../session/verify-session-storage.server';
+import { composeDataFnWrappers } from '../../test-utils/compose-data-fn-wrappers';
+import { withAppLoadContext } from '../../test-utils/with-app-load-context';
+import { withAuthedUser } from '../../test-utils/with-authed-user';
+import { withRouteProps } from '../../test-utils/with-route-props';
+import { withSession } from '../../test-utils/with-session';
+import { Routes } from '../../types';
 import { AccountVerify2FARoute, action, loader } from './route';
 
 interface TestConfig {

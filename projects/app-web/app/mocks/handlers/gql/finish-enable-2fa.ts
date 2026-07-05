@@ -1,5 +1,5 @@
 import { HttpResponse, graphql } from 'msw';
-import type { FinishEnable2FaInput, FinishEnable2FaPayload } from '~/gql/graphql';
+import type { FinishEnable2FaInput, FinishEnable2FaPayload } from '../../../gql/graphql';
 import { db } from '../../db';
 import { UNKNOWN_ERROR } from '../../errors';
 import { decodeMockJWT } from '../../utils/decode-mock-jwt';

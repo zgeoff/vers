@@ -1,13 +1,13 @@
 import { Heading, Text } from '@vers/design-system';
 import invariant from 'tiny-invariant';
-import { ContentContainer } from '~/components/content-container';
-import { Link } from '~/components/link';
-import { RouteErrorBoundary } from '~/components/route-error-boundary';
-import { GetAvatarsQuery } from '~/data/queries/get-avatars';
-import { Routes } from '~/types';
-import { handleGQLError } from '~/utils/handle-gql-error';
-import { requireAuth } from '~/utils/require-auth.server';
-import { withErrorHandling } from '~/utils/with-error-handling';
+import { ContentContainer } from '../../components/content-container';
+import { Link } from '../../components/link';
+import { RouteErrorBoundary } from '../../components/route-error-boundary';
+import { GetAvatarsQuery } from '../../data/queries/get-avatars';
+import { Routes } from '../../types';
+import { handleGQLError } from '../../utils/handle-gql-error';
+import { requireAuth } from '../../utils/require-auth.server';
+import { withErrorHandling } from '../../utils/with-error-handling';
 import type { Route } from './+types/route';
 import * as styles from './route.styles';
 

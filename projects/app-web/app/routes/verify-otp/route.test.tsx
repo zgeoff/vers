@@ -5,17 +5,17 @@ import { GraphQLError } from 'graphql';
 import { graphql } from 'msw';
 import { createRoutesStub } from 'react-router';
 import { afterEach, expect, test, vi } from 'vitest';
-import { VerificationType } from '~/gql/graphql';
-import { db } from '~/mocks/db';
-import { server } from '~/mocks/node';
-import type { SessionData } from '~/session/verify-session-storage.server';
-import { verifySessionStorage } from '~/session/verify-session-storage.server';
-import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
-import { withAppLoadContext } from '~/test-utils/with-app-load-context';
-import { withAuthedUser } from '~/test-utils/with-authed-user';
-import { withRouteProps } from '~/test-utils/with-route-props';
-import { withSession } from '~/test-utils/with-session';
-import { Routes } from '~/types';
+import { VerificationType } from '../../gql/graphql';
+import { db } from '../../mocks/db';
+import { server } from '../../mocks/node';
+import type { SessionData } from '../../session/verify-session-storage.server';
+import { verifySessionStorage } from '../../session/verify-session-storage.server';
+import { composeDataFnWrappers } from '../../test-utils/compose-data-fn-wrappers';
+import { withAppLoadContext } from '../../test-utils/with-app-load-context';
+import { withAuthedUser } from '../../test-utils/with-authed-user';
+import { withRouteProps } from '../../test-utils/with-route-props';
+import { withSession } from '../../test-utils/with-session';
+import { Routes } from '../../types';
 import { VerifyOTPRoute, action, loader } from './route';
 
 interface TestConfig {

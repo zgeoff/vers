@@ -1,7 +1,7 @@
-import { logger } from '~/logger';
-import type { AuthedContext } from '~/types';
-import { SecureAction } from '~/types';
-import { createPendingTransaction } from '~/utils/create-pending-transaction';
+import { logger } from '../../logger';
+import type { AuthedContext } from '../../types';
+import { SecureAction } from '../../types';
+import { createPendingTransaction } from '../../utils/create-pending-transaction';
 import { builder } from '../builder';
 import { TWO_FACTOR_ALREADY_ENABLED_ERROR, UNKNOWN_ERROR } from '../errors';
 import { MutationErrorPayload } from '../types/mutation-error-payload';

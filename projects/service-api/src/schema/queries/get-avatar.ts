@@ -1,6 +1,6 @@
 import { GraphQLError } from 'graphql';
-import { logger } from '~/logger';
-import type { AuthedContext } from '~/types';
+import { logger } from '../../logger';
+import type { AuthedContext } from '../../types';
 import { builder } from '../builder';
 import { Avatar } from '../types/avatar';
 import { requireAuth } from '../utils/require-auth';

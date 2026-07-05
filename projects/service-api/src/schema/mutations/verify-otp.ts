@@ -1,8 +1,8 @@
-import { logger } from '~/logger';
-import type { Context } from '~/types';
-import { SecureAction } from '~/types';
-import { createTransactionToken } from '~/utils/create-transaction-token';
-import { trackTransactionAttempt } from '~/utils/track-transaction-attempt';
+import { logger } from '../../logger';
+import type { Context } from '../../types';
+import { SecureAction } from '../../types';
+import { createTransactionToken } from '../../utils/create-transaction-token';
+import { trackTransactionAttempt } from '../../utils/track-transaction-attempt';
 import { builder } from '../builder';
 import { INVALID_OTP_ERROR, UNKNOWN_ERROR } from '../errors';
 import { MutationErrorPayload } from '../types/mutation-error-payload';

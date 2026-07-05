@@ -1,8 +1,8 @@
 import { drop } from '@mswjs/data';
 import invariant from 'tiny-invariant';
 import { expect, test } from 'vitest';
-import { db } from '~/mocks/db';
-import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
+import { db } from '../../mocks/db';
+import { createMockGQLContext } from '../../test-utils/create-mock-gql-context';
 import { resolve } from './refresh-access-token';
 
 test('it refreshes access token with valid refresh token', async () => {

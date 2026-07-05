@@ -1,4 +1,4 @@
-import { graphql } from '~/gql';
+import { graphql } from '../../gql';
 
 export const DeleteSessionMutation = graphql(/* GraphQL */ `
   mutation DeleteSession($input: DeleteSessionInput!) {

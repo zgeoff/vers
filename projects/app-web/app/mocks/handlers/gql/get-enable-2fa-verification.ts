@@ -1,5 +1,8 @@
 import { HttpResponse, graphql } from 'msw';
-import type { GetEnable2FaVerificationQueryVariables, TwoFactorVerification } from '~/gql/graphql';
+import type {
+  GetEnable2FaVerificationQueryVariables,
+  TwoFactorVerification,
+} from '../../../gql/graphql';
 import { db } from '../../db';
 import { decodeMockJWT } from '../../utils/decode-mock-jwt';
 

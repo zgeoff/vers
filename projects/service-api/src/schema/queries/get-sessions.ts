@@ -1,7 +1,7 @@
 import { GraphQLError } from 'graphql';
 import invariant from 'tiny-invariant';
-import { logger } from '~/logger';
-import type { Context } from '~/types';
+import { logger } from '../../logger';
+import type { Context } from '../../types';
 import { builder } from '../builder';
 import { Session } from '../types/session';
 import { requireAuth } from '../utils/require-auth';

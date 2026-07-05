@@ -1,5 +1,5 @@
-import type { ClientMessage } from 'src/types';
 import invariant from 'tiny-invariant';
+import type { ClientMessage } from '../types';
 import { connections } from './connections';
 import { handleClientMessage } from './handle-client-message';
 import { runSimulation } from './run-simulation';

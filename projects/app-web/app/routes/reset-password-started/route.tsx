@@ -1,11 +1,11 @@
 import { Brand, Heading, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { Link as RRLink } from 'react-router';
-import { Link } from '~/components/link';
-import { RouteErrorBoundary } from '~/components/route-error-boundary';
-import { Routes } from '~/types';
-import { requireAnonymous } from '~/utils/require-anonymous.server';
-import { withErrorHandling } from '~/utils/with-error-handling';
+import { Link } from '../../components/link';
+import { RouteErrorBoundary } from '../../components/route-error-boundary';
+import { Routes } from '../../types';
+import { requireAnonymous } from '../../utils/require-anonymous.server';
+import { withErrorHandling } from '../../utils/with-error-handling';
 import type { Route } from './+types/route';
 
 export function meta(): ReturnType<Route.MetaFunction> {

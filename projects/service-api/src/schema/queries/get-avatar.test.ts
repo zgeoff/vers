@@ -2,10 +2,10 @@ import { drop } from '@mswjs/data';
 import { Class } from '@vers/data';
 import { createTestJWT } from '@vers/service-test-utils';
 import { afterEach, expect, test } from 'vitest';
-import { env } from '~/env';
-import { db } from '~/mocks/db';
-import { server } from '~/mocks/node';
-import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
+import { env } from '../../env';
+import { db } from '../../mocks/db';
+import { server } from '../../mocks/node';
+import { createMockGQLContext } from '../../test-utils/create-mock-gql-context';
 import { resolve } from './get-avatar';
 
 afterEach(() => {

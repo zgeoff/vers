@@ -1,4 +1,4 @@
-import { RouteErrorBoundary } from '~/components/route-error-boundary';
+import { RouteErrorBoundary } from '../../components/route-error-boundary';
 
 // when the user hits a URL that doesn't exist, we want to throw a 404 error
 // this route will be matched to a "splat" route that can be used as a catch all

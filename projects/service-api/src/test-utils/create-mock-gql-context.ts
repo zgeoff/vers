@@ -5,8 +5,8 @@ import type { ServiceRouter as SessionServiceRouter } from '@vers/service-sessio
 import { ServiceID } from '@vers/service-types';
 import type { ServiceRouter as UserServiceRouter } from '@vers/service-user';
 import type { ServiceRouter as VerificationServiceRouter } from '@vers/service-verification';
-import { db } from '~/mocks/db';
 import { env } from '../env';
+import { db } from '../mocks/db';
 import type { AuthedContext, Context } from '../types';
 import { createTRPCClient } from '../utils/create-trpc-client';
 

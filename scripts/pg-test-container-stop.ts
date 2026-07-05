@@ -1,4 +1,4 @@
-import { createPostgresContainer } from '@vers/service-test-utils';
+import { createPostgresContainer } from '../projects/lib-service-test-utils/src/index';
 
 // if the container is running, this does nothing except create a reference to it
 // so we can stop it

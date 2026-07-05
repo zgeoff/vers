@@ -1,7 +1,7 @@
-import type { EnemyGroup } from 'src/types';
 import { expect, test } from 'vitest';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
 import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
+import type { EnemyGroup } from '../types';
 import { createActivity } from './create-activity';
 
 test('it creates an activity with a fixed amount of groups', () => {

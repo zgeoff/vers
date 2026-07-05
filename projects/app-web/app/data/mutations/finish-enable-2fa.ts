@@ -1,4 +1,4 @@
-import { graphql } from '~/gql';
+import { graphql } from '../../gql';
 
 export const FinishEnable2FAMutation = graphql(/* GraphQL */ `
   mutation FinishEnable2FA($input: FinishEnable2FAInput!) {

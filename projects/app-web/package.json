@@ -82,7 +82,6 @@
     "jest-extended": "catalog:",
     "jose": "catalog:",
     "typescript": "catalog:",
-    "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
   },
   "engines": {

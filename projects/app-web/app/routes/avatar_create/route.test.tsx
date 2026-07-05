@@ -6,14 +6,14 @@ import { GraphQLError } from 'graphql';
 import { HttpResponse, graphql } from 'msw';
 import { createRoutesStub } from 'react-router';
 import { afterEach, expect, test } from 'vitest';
-import { db } from '~/mocks/db';
-import { AVATAR_NAME_EXISTS_ERROR } from '~/mocks/errors';
-import { server } from '~/mocks/node';
-import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
-import { withAppLoadContext } from '~/test-utils/with-app-load-context';
-import { withAuthedUser } from '~/test-utils/with-authed-user';
-import { withRouteProps } from '~/test-utils/with-route-props';
-import { Routes } from '~/types';
+import { db } from '../../mocks/db';
+import { AVATAR_NAME_EXISTS_ERROR } from '../../mocks/errors';
+import { server } from '../../mocks/node';
+import { composeDataFnWrappers } from '../../test-utils/compose-data-fn-wrappers';
+import { withAppLoadContext } from '../../test-utils/with-app-load-context';
+import { withAuthedUser } from '../../test-utils/with-authed-user';
+import { withRouteProps } from '../../test-utils/with-route-props';
+import { Routes } from '../../types';
 import { AvatarCreate, action, loader } from './route';
 
 interface TestConfig {

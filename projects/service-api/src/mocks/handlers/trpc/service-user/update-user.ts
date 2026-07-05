@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import type { UpdateUserPayload } from '@vers/service-types';
-import { omitNullish } from '~/utils/omit-nullish';
+import { omitNullish } from '../../../../utils/omit-nullish';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 

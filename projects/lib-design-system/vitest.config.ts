@@ -1,7 +1,6 @@
 import pandacss from '@pandacss/dev/postcss';
 import react from '@vitejs/plugin-react';
 import autoprefixer from 'autoprefixer';
-import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -11,7 +10,7 @@ export default defineConfig({
       plugins: [pandacss, autoprefixer],
     },
   },
-  plugins: [tsconfigPaths(), react()],
+  plugins: [react()],
   server: {
     ...(process.env['VITEST'] === 'true' && { ws: false }),
   },

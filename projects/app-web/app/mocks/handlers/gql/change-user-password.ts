@@ -2,7 +2,7 @@ import { HttpResponse, graphql } from 'msw';
 import type {
   ChangeUserPasswordMutation,
   ChangeUserPasswordMutationVariables,
-} from '~/gql/graphql';
+} from '../../../gql/graphql';
 import { db } from '../../db';
 import { INVALID_PASSWORD_ERROR } from '../../errors';
 import { decodeMockJWT } from '../../utils/decode-mock-jwt';

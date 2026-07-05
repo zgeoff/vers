@@ -5,15 +5,15 @@ import { GraphQLError } from 'graphql';
 import { graphql } from 'msw';
 import { createRoutesStub, useSearchParams } from 'react-router';
 import { afterEach, expect, test, vi } from 'vitest';
-import { db } from '~/mocks/db';
-import { server } from '~/mocks/node';
-import { verifySessionStorage } from '~/session/verify-session-storage.server';
-import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
-import { withAppLoadContext } from '~/test-utils/with-app-load-context';
-import { withAuthedUser } from '~/test-utils/with-authed-user';
-import { withRouteProps } from '~/test-utils/with-route-props';
-import { withSession } from '~/test-utils/with-session';
-import { Routes } from '~/types';
+import { db } from '../../mocks/db';
+import { server } from '../../mocks/node';
+import { verifySessionStorage } from '../../session/verify-session-storage.server';
+import { composeDataFnWrappers } from '../../test-utils/compose-data-fn-wrappers';
+import { withAppLoadContext } from '../../test-utils/with-app-load-context';
+import { withAuthedUser } from '../../test-utils/with-authed-user';
+import { withRouteProps } from '../../test-utils/with-route-props';
+import { withSession } from '../../test-utils/with-session';
+import { Routes } from '../../types';
 import { AccountChangeUserPassword, action, loader } from './route';
 
 interface TestConfig {

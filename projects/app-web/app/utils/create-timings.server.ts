@@ -1,4 +1,4 @@
-import type { Timings } from '~/types';
+import type { Timings } from '../types';
 
 /**
  * Creates a new Timings object including the given metric for the given type and description.

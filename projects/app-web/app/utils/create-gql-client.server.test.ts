@@ -1,10 +1,10 @@
 import { gql } from '@urql/core';
 import { HttpResponse, graphql, http } from 'msw';
 import { expect, test, vi } from 'vitest';
-import { db } from '~/mocks/db';
-import { server } from '~/mocks/node';
-import { authSessionStorage } from '~/session/auth-session-storage.server';
-import { verifySessionStorage } from '~/session/verify-session-storage.server';
+import { db } from '../mocks/db';
+import { server } from '../mocks/node';
+import { authSessionStorage } from '../session/auth-session-storage.server';
+import { verifySessionStorage } from '../session/verify-session-storage.server';
 import { createGQLClient } from './create-gql-client.server';
 
 let setCookieHeader: null | string = null;

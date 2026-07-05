@@ -1,7 +1,7 @@
 import { redirect } from 'react-router';
-import { RouteErrorBoundary } from '~/components/route-error-boundary';
-import { Routes } from '~/types';
-import { logout } from '~/utils/logout.server';
+import { RouteErrorBoundary } from '../../components/route-error-boundary';
+import { Routes } from '../../types';
+import { logout } from '../../utils/logout.server';
 import type { Route } from './+types/route';
 
 export function loader() {

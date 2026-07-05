@@ -1,4 +1,4 @@
-import { createPostgresContainer, setupTestDB } from '@vers/service-test-utils';
+import { createPostgresContainer, setupTestDB } from '../projects/lib-service-test-utils/src/index';
 
 const container = await createPostgresContainer();
 

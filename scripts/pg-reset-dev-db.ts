@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import * as schema from '@vers/postgres-schema';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { oraPromise } from 'ora';
+import * as schema from '../projects/lib-postgres-schema/src/index';
 import { pg } from './postgres/pg';
 
 export const db = drizzle(pg, { schema });

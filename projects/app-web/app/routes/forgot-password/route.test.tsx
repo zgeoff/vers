@@ -5,11 +5,11 @@ import { GraphQLError } from 'graphql';
 import { graphql } from 'msw';
 import { createRoutesStub } from 'react-router';
 import { afterEach, expect, test } from 'vitest';
-import { db } from '~/mocks/db';
-import { server } from '~/mocks/node';
-import { withAppLoadContext } from '~/test-utils/with-app-load-context';
-import { withRouteProps } from '~/test-utils/with-route-props';
-import { Routes } from '~/types';
+import { db } from '../../mocks/db';
+import { server } from '../../mocks/node';
+import { withAppLoadContext } from '../../test-utils/with-app-load-context';
+import { withRouteProps } from '../../test-utils/with-route-props';
+import { Routes } from '../../types';
 import { ForgotPassword, action, loader } from './route';
 
 function setupTest() {

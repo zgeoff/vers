@@ -1,12 +1,12 @@
 import { drop } from '@mswjs/data';
 import invariant from 'tiny-invariant';
 import { afterEach, expect, test } from 'vitest';
-import { db } from '~/mocks/db';
-import { sentEmails } from '~/mocks/handlers/trpc/service-email/send-email';
-import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
-import { SecureAction } from '~/types';
-import { createPendingTransaction } from '~/utils/create-pending-transaction';
-import { createTransactionToken } from '~/utils/create-transaction-token';
+import { db } from '../../mocks/db';
+import { sentEmails } from '../../mocks/handlers/trpc/service-email/send-email';
+import { createMockGQLContext } from '../../test-utils/create-mock-gql-context';
+import { SecureAction } from '../../types';
+import { createPendingTransaction } from '../../utils/create-pending-transaction';
+import { createTransactionToken } from '../../utils/create-transaction-token';
 import { resolve } from './change-user-password';
 
 afterEach(() => {

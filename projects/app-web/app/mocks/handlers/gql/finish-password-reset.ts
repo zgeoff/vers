@@ -1,5 +1,5 @@
 import { HttpResponse, graphql } from 'msw';
-import type { FinishPasswordResetInput, FinishPasswordResetPayload } from '~/gql/graphql';
+import type { FinishPasswordResetInput, FinishPasswordResetPayload } from '../../../gql/graphql';
 import { db } from '../../db';
 import { isValidTransactionToken } from './utils/is-valid-transaction-token';
 

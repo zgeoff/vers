@@ -12,14 +12,14 @@ import { EquipmentSlot } from '@vers/idle-core';
 import { useEffect } from 'react';
 import { redirect } from 'react-router';
 import invariant from 'tiny-invariant';
-import { ContentContainer } from '~/components/content-container';
-import { GetAvatarsQuery } from '~/data/queries/get-avatars';
-import { resolveClassFromGQLEnum } from '~/data/utils/resolve-class-from-gql-enum';
-import { activityData } from '~/dummy-data';
-import { Routes } from '~/types';
-import { handleGQLError } from '~/utils/handle-gql-error';
-import { requireAuth } from '~/utils/require-auth.server';
-import { withErrorHandling } from '~/utils/with-error-handling';
+import { ContentContainer } from '../../components/content-container';
+import { GetAvatarsQuery } from '../../data/queries/get-avatars';
+import { resolveClassFromGQLEnum } from '../../data/utils/resolve-class-from-gql-enum';
+import { activityData } from '../../dummy-data';
+import { Routes } from '../../types';
+import { handleGQLError } from '../../utils/handle-gql-error';
+import { requireAuth } from '../../utils/require-auth.server';
+import { withErrorHandling } from '../../utils/with-error-handling';
 import type { Route } from './+types/route';
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {

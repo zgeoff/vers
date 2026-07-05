@@ -1,5 +1,5 @@
-import type { AuthedContext, Context } from '~/types';
-import { isAuthed } from '~/utils/is-authed';
+import type { AuthedContext, Context } from '../../types';
+import { isAuthed } from '../../utils/is-authed';
 
 type Resolver<TParent, TArgs, TReturn> = (
   parent: TParent,

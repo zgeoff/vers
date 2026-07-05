@@ -1,7 +1,7 @@
 import type { GraphQLResolveInfo } from 'graphql';
 import type { RateLimitArgs } from 'graphql-rate-limit-directive';
 import { defaultKeyGenerator } from 'graphql-rate-limit-directive';
-import type { Context } from '~/types';
+import type { Context } from '../../types';
 
 export function getRateLimitKey(
   directive: RateLimitArgs,

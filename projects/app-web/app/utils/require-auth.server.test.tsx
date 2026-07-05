@@ -3,9 +3,9 @@ import { render, screen } from '@testing-library/react';
 import { createRoutesStub, useSearchParams } from 'react-router';
 import type { LoaderFunction } from 'react-router';
 import { afterEach, expect, test } from 'vitest';
-import { db } from '~/mocks/db';
-import { authSessionStorage } from '~/session/auth-session-storage.server';
-import { Routes } from '~/types';
+import { db } from '../mocks/db';
+import { authSessionStorage } from '../session/auth-session-storage.server';
+import { Routes } from '../types';
 import { requireAuth } from './require-auth.server';
 
 interface TestConfig {

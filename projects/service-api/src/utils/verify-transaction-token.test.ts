@@ -1,8 +1,8 @@
 import { drop } from '@mswjs/data';
 import { afterEach, expect, test, vi } from 'vitest';
-import { db } from '~/mocks/db';
-import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
-import { SecureAction } from '~/types';
+import { db } from '../mocks/db';
+import { createMockGQLContext } from '../test-utils/create-mock-gql-context';
+import { SecureAction } from '../types';
 import { createPendingTransaction } from './create-pending-transaction';
 import { createTransactionToken } from './create-transaction-token';
 import { verifyTransactionToken } from './verify-transaction-token';

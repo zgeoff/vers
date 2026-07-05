@@ -6,7 +6,7 @@ import type { CreateAvatarPayload } from '@vers/service-types';
 import { isPGError, isUniqueConstraintError } from '@vers/service-utils';
 import { AvatarNameSchema } from '@vers/validation';
 import { z } from 'zod';
-import { logger } from '~/logger';
+import { logger } from '../logger';
 import { t } from '../t';
 import type { Context } from '../types';
 

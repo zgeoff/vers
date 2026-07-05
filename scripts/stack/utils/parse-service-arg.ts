@@ -1,4 +1,4 @@
-import { ServiceID } from '@vers/service-types';
+import { ServiceID } from '../../../projects/lib-service-types/src/index';
 
 const SERVICE_IDS = Object.values(ServiceID);
 

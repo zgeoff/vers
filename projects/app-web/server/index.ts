@@ -3,7 +3,7 @@ import { compress } from 'hono/compress';
 import { poweredBy } from 'hono/powered-by';
 import { Hono } from 'hono/quick';
 import { createHonoServer } from 'react-router-hono-server/node';
-import { createGQLClient } from '~/utils/create-gql-client.server';
+import { createGQLClient } from '../app/utils/create-gql-client.server';
 import { env } from './env';
 import { logger as appLogger } from './logger';
 import { enforceHTTPS } from './middleware/enforce-https';

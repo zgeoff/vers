@@ -1,5 +1,5 @@
 import { HttpResponse, graphql } from 'msw';
-import type { UpdateAvatarInput, UpdateAvatarPayload } from '~/gql/graphql';
+import type { UpdateAvatarInput, UpdateAvatarPayload } from '../../../../gql/graphql';
 import { db } from '../../../db';
 import { AVATAR_NAME_EXISTS_ERROR } from '../../../errors';
 import { decodeMockJWT } from '../../../utils/decode-mock-jwt';

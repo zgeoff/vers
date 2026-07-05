@@ -1,4 +1,4 @@
-import type { ServiceID } from '@vers/service-types';
+import type { ServiceID } from '../../../projects/lib-service-types/src/index';
 import { execa } from '../../utils/execa';
 import { DOCKER_COMPOSE_FILE } from '../consts';
 

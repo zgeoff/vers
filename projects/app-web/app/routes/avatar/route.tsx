@@ -2,14 +2,14 @@ import { classes } from '@vers/data';
 import { Heading, Text } from '@vers/design-system';
 import { redirect } from 'react-router';
 import invariant from 'tiny-invariant';
-import { ContentContainer } from '~/components/content-container';
-import { RouteErrorBoundary } from '~/components/route-error-boundary';
-import { GetAvatarsQuery } from '~/data/queries/get-avatars';
-import { resolveClassFromGQLEnum } from '~/data/utils/resolve-class-from-gql-enum';
-import { Routes } from '~/types';
-import { handleGQLError } from '~/utils/handle-gql-error';
-import { requireAuth } from '~/utils/require-auth.server';
-import { withErrorHandling } from '~/utils/with-error-handling';
+import { ContentContainer } from '../../components/content-container';
+import { RouteErrorBoundary } from '../../components/route-error-boundary';
+import { GetAvatarsQuery } from '../../data/queries/get-avatars';
+import { resolveClassFromGQLEnum } from '../../data/utils/resolve-class-from-gql-enum';
+import { Routes } from '../../types';
+import { handleGQLError } from '../../utils/handle-gql-error';
+import { requireAuth } from '../../utils/require-auth.server';
+import { withErrorHandling } from '../../utils/with-error-handling';
 import type { Route } from './+types/route';
 
 export function meta(): ReturnType<Route.MetaFunction> {

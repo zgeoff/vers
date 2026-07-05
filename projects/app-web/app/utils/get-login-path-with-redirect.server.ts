@@ -1,4 +1,4 @@
-import { Routes } from '~/types';
+import { Routes } from '../types';
 
 /**
  * Returns the login route path with the redirect query param set to the current URL.

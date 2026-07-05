@@ -1,4 +1,4 @@
-import { graphql } from '~/gql';
+import { graphql } from '../../gql';
 
 export const StartChangeUserEmailMutation = graphql(/* GraphQL */ `
   mutation StartChangeUserEmail($input: StartChangeUserEmailInput!) {
