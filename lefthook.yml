@@ -1,0 +1,56 @@
+# Git hooks. pre-commit fixes and codegens staged files only (fast); pre-push
+# gates the whole tree so config drift affecting unstaged files is caught
+# before CI. pre-push tests cover changed files only — the full suite (incl.
+# the pg-testcontainer-backed projects when untouched) is CI's job.
+
+pre-commit:
+  piped: true
+  jobs:
+    - name: oxlint --fix
+      glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}'
+      run: bunx oxlint --fix --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+    - name: oxfmt
+      glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,jsonc,md,css,yml,yaml,html}'
+      run: bunx oxfmt --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+    - name: format-codemod
+      glob: '*.{ts,tsx}'
+      run:
+        bunx format-codemod --quiet --ignore 'projects/app-web/app/gql/**' --ignore
+        'projects/app-design-reference/public/**' --ignore '**/styled-system/**' --ignore
+        '**/.react-router/**' --ignore '**/dist/**' --ignore '**/build/**' --ignore '**/coverage/**'
+        --ignore '.worktrees/**' --ignore '.claude/**' {staged_files}
+      stage_fixed: true
+    - name: codegen:graphql
+      glob: 'projects/{app-web,service-api}/**/*.{ts,tsx}'
+      run: bun run codegen:graphql && git add projects/app-web/app/gql schema.graphql
+    - name: codegen:styles
+      glob: 'projects/**/*.{ts,tsx}'
+      run: bun run codegen:styles
+    - name: pg:migrations-generate
+      glob: 'projects/lib-postgres-schema/**/*.ts'
+      run: bun run pg:migrations-generate && git add projects/db-postgres/migrations
+    - name: graphql-format
+      glob: '**/*.graphql'
+      run: bun run format
+      stage_fixed: true
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: bunx commitlint --edit {1}
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: format:check
+      run: bun run format:check
+    - name: lint
+      run: bun run lint
+    - name: lint:type-aware
+      run: bun run lint:type-aware
+    - name: typecheck
+      run: bunx turbo run typecheck
+    - name: test (changed)
+      run: bunx vitest run --changed origin/main

@@ -5,9 +5,6 @@ FROM oven/bun:${BUN_VERSION}-slim AS base
 
 WORKDIR /app
 
-# no .git in the build context, so the husky postinstall must be skipped
-ENV HUSKY=0
-
 # --- prune the workspace down to what @vers/service-email needs ---
 FROM base AS pruner
 
