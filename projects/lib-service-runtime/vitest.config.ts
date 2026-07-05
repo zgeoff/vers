@@ -22,6 +22,7 @@ export default defineConfig({
     },
     setupFiles: ['./vitest.setup.ts'],
     testTimeout: 30 * 1000,
+    unstubEnvs: true,
     watch: false,
   },
 });
