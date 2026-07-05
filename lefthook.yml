@@ -48,8 +48,6 @@ pre-push:
       run: bun run format:check
     - name: lint
       run: bun run lint
-    - name: lint:type-aware
-      run: bun run lint:type-aware
     - name: typecheck
       run: bunx turbo run typecheck
     - name: test (changed)

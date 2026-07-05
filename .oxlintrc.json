@@ -151,22 +151,16 @@
     "import/default": "off",
     "import/no-named-as-default-member": "off",
 
-    // these type-aware rules were nominally "on" via the categories above all
-    // along, but oxlint's non-type-aware engine can't evaluate them without a
-    // type checker, so they were silently never checked. #217 wired up
-    // `lint:type-aware` (oxlint + tsgolint) for the first time, which surfaced
-    // real type info and lit all of these up at once -- a large pre-existing
-    // backlog unrelated to the TS7/panda2/node toolchain migration itself.
-    // #236 turns every one of them on: the existing backlog is baselined
-    // inline at each violation site with an `oxlint-disable-next-line <rule>
-    // -- baseline(#236)` comment rather than left off in config. The ratchet
-    // is `lint:type-aware`'s `--report-unused-disable-directives-severity
-    // error`: fixing a baselined site makes its directive stale and that
-    // command fails until the comment is deleted, so debt only shrinks from
-    // here. Plain `lint` runs without that flag -- it has no type info, so it
-    // can't tell a stale directive from a live one and would flag all of
-    // these as unused; `lint:type-aware` is the superset run that actually
-    // judges them. New and refactored code is fully enforced from day one.
+    // these type-aware rules need real type info (oxlint + tsgolint via
+    // `--type-aware --type-check`) -- the non-type-aware engine skips them
+    // silently. All of them are on. The pre-existing backlog (#236) is
+    // baselined inline at each violation site with an
+    // `oxlint-disable-next-line <rule> -- baseline(#236)` comment rather than
+    // left off in config. The ratchet is
+    // `--report-unused-disable-directives-severity error`: fixing a baselined
+    // site makes its directive stale and lint fails until the comment is
+    // deleted, so debt only shrinks from here. New and refactored code is
+    // fully enforced from day one.
     "typescript/consistent-return": "error",
     "typescript/consistent-type-exports": "error",
     "typescript/no-confusing-void-expression": "error",
