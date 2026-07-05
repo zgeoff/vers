@@ -75,7 +75,7 @@ export const tooltip = sva({
           },
           borderGradient: 'sky.500',
           color: 'sky.100',
-          fontFamily: 'karla',
+          fontFamily: 'body',
           fontWeight: 'medium',
           gradientFrom: 'sky.700',
           gradientTo: 'transparent',

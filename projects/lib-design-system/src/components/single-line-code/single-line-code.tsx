@@ -24,7 +24,7 @@ const code = css({
   backgroundColor: 'transparent',
   border: 'none',
   color: 'neutral.50',
-  fontFamily: 'fira',
+  fontFamily: 'mono',
 });
 
 const copyButton = css({

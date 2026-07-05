@@ -8,6 +8,7 @@
   },
   "scripts": {
     "codegen": "panda cssgen",
+    "dev": "ladle serve",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -22,6 +23,9 @@
   "devDependencies": {
     "@conform-to/react": "1.2.2",
     "@conform-to/zod": "1.2.2",
+    "@fontsource-variable/manrope": "5.2.8",
+    "@fontsource/chakra-petch": "5.2.7",
+    "@fontsource/ibm-plex-mono": "5.2.7",
     "@ladle/react": "5.1.1",
     "@pandacss/dev": "2.0.0-beta.8",
     "@testing-library/jest-dom": "catalog:",

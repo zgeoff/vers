@@ -2,7 +2,7 @@ import { css } from '@vers/styled-system/css';
 
 export const name = css({
   color: 'sky.100',
-  fontFamily: 'josefin',
+  fontFamily: 'display',
   fontSize: 'sm',
   fontWeight: 'medium',
   lineHeight: 'none',
@@ -11,7 +11,7 @@ export const name = css({
 
 export const difficulty = css({
   color: 'sky.200',
-  fontFamily: 'karla',
+  fontFamily: 'body',
   fontSize: 'sm',
   fontWeight: 'light',
 });
