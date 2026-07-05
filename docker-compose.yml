@@ -12,23 +12,6 @@ services:
       - '5433'
     ports:
       - '5433:5433'
-  service-api:
-    build:
-      context: .
-      dockerfile: projects/service-api/Dockerfile
-      args:
-        BUILD_MODE: development
-    env_file:
-      - projects/service-api/.env.development
-    environment:
-      - EMAILS_SERVICE_URL=http://service-email:3001/
-      - SESSIONS_SERVICE_URL=http://service-session:3002/
-      - USERS_SERVICE_URL=http://service-user:3003/
-      - VERIFICATIONS_SERVICE_URL=http://service-verification:3004/
-    expose:
-      - '3000'
-    ports:
-      - '3000:3000'
   service-avatar:
     build:
       context: .
