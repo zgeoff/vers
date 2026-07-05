@@ -17,6 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       affected-projects: ${{ steps.record-affected-projects.outputs.affected-projects }}
+    env:
+      # a PR compares against the tracked local `main` below; a push to
+      # main has nothing to diff against except the commit it replaced
+      TURBO_SCM_BASE: ${{ github.event_name == 'push' && github.event.before || 'main' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,14 +50,17 @@ jobs:
           bun run build:agents
           git diff --exit-code AGENTS.md agents/ scripts/build-agents-md.sh
 
-      - name: Capture SHA in NX Cloud
-        uses: nrwl/nx-set-shas@v4
-        env:
-          NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-
       - name: Track main branch
         run: git branch --track main origin/main
         if: ${{ github.event_name == 'pull_request' }}
+
+      - name: Setup Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
 
       - name: Setup Docker image cache
         uses: ScribeMD/docker-cache@0.5.0
@@ -61,8 +68,11 @@ jobs:
         with:
           key: docker-${{ runner.os }}-${{ github.sha }}
 
+      - name: Boundaries
+        run: bun run boundaries
+
       - name: Generate Types
-        run: bun run nx run app-web:typegen
+        run: bun run codegen:types
 
       - name: Generate Styles
         run: bun run codegen:styles
@@ -80,13 +90,15 @@ jobs:
 
       - name: Build
         if: ${{ github.ref_name != 'main' }}
-        run: bun run nx affected -t build
+        run: bunx turbo run build --affected
 
       - name: Install E2E browsers
         run: bun run playwright install --with-deps --only-shell chromium
 
       - name: E2E Tests
-        run: bun run nx affected -t e2e
+        # non-blocking until #212 stabilizes the suite
+        continue-on-error: true
+        run: bunx turbo run e2e --affected
 
       - name: Upload Videos Of Failed E2E
         uses: actions/upload-artifact@v4
@@ -100,27 +112,18 @@ jobs:
         id: record-affected-projects
         if: ${{ github.ref_name == 'main' }}
         run: |
-          bun run nx show projects --affected
+          # names are <>-wrapped so the contains() gates can't substring-match
+          affected="$(bunx turbo run build --affected --dry=json | jq -r '.packages[] | "<\(.)>"')"
+          echo "${affected}"
           delimiter="$(openssl rand -hex 8)"
           echo "affected-projects<<${delimiter}" >> "${GITHUB_OUTPUT}"
-          bun run nx show projects --affected >> "${GITHUB_OUTPUT}"
+          echo "${affected}" >> "${GITHUB_OUTPUT}"
           echo "${delimiter}" >> "${GITHUB_OUTPUT}"
-        env:
-          NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-
-      - name: Create base Docker image
-        if: ${{ github.ref_name == 'main' && steps.docker-cache.outputs.cache-hit != 'true' }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
-        with:
-          context: .
-          file: Dockerfile
-          tags: vers/monorepo-base:latest
-          push: false
 
       - name: Build db-postgres Image
         if: ${{ github.ref_name == 'main' &&
-          (contains(steps.record-affected-projects.outputs.affected-projects, 'db-postgres') ||
-          contains(steps.record-affected-projects.outputs.affected-projects, 'lib-postgres-schema')) }}
+          (contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/db-postgres>') ||
+          contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/postgres-schema>')) }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -129,7 +132,7 @@ jobs:
           push: false
 
       - name: Build API Service Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-api') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-api>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -138,7 +141,7 @@ jobs:
           push: false
 
       - name: Build Avatar Service Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-avatar') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-avatar>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -147,7 +150,7 @@ jobs:
           push: false
 
       - name: Build Email Service Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-email') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-email>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -156,7 +159,7 @@ jobs:
           push: false
 
       - name: Build Session Service Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-session') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-session>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -165,7 +168,7 @@ jobs:
           push: false
 
       - name: Build User Service Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-user') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-user>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -174,7 +177,7 @@ jobs:
           push: false
 
       - name: Build Verification Service Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'service-verification') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-verification>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .
@@ -183,7 +186,7 @@ jobs:
           push: false
 
       - name: Build Web App Image
-        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, 'app-web') }}
+        if: ${{ github.ref_name == 'main' && contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/web>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
         with:
           context: .

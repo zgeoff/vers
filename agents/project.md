@@ -5,27 +5,56 @@
 shared by 5+ projects live in the root manifest's `workspaces.catalog` (referenced as `catalog:`).
 Libraries are consumed as TypeScript source (`exports` → `./src/index.ts`); there are no per-library
 build steps. `bun install` uses the isolated linker (pnpm-style symlinks, no phantom deps) with
-exact pins and a 7-day `minimumReleaseAge` — see `bunfig.toml`. nx still drives the task graph —
-`nx run-many` for build/typecheck/e2e/codegen, `nx affected` in CI for changed-project detection,
-`nx.json` wiring the `@nx/vite` plugin and per-target caching. See `docs/000-overview.md` for the
-project list and what each one is.
+exact pins and a 7-day `minimumReleaseAge` — see `bunfig.toml`. Turborepo drives the task graph:
+root `turbo.json` declares the `build`/`typecheck`/`test`/`codegen`/`typegen`/`e2e` pipelines
+(ordering inferred from each project's `workspace:*` deps) plus a root `//#codegen:graphql` task for
+the one codegen step that reads across packages (service-api's schema, app-web's documents).
+Per-project `turbo.json` files exist only to declare `boundaries` tags. CI's changed-project
+detection is `turbo run --affected`. See `docs/000-overview.md` for the project list.
+
+## Boundaries
+
+Projects are tagged `lib`, `service`, or `app` in their own `turbo.json`; the root `boundaries`
+block denies `lib` → `service`/`app` and `service` → `app` imports, transitively. `bun run
+boundaries` also flags imports of packages missing from the importer's `package.json`. It walks the
+filesystem, ignoring `.gitignore` — run it on a clean tree, or stale `dist/`/`build/`/
+`styled-system/` output reads as source. CI runs it straight after install, before codegen
+populates those directories.
 
 ## Running things today
 
-- `bun install` — installs the whole workspace (`--frozen-lockfile` in CI; `bun.lock` is
-  committed).
-- `bun run typecheck` — `nx run-many -t typecheck` (per-project `tsc --noEmit`); a single project
-  via `bun run typecheck:<project>`.
-- `bun run test` — `vitest` from the repo root (project-scoped via `bun run test:<project>`;
-  vitest project names are the package names, e.g. `vitest --project @vers/service-api`).
+- `bun install` — whole workspace (`--frozen-lockfile` in CI; `bun.lock` is committed).
+- `bun run typecheck` — `turbo run typecheck` (per-project `tsc --noEmit`); one project via
+  `--filter=@vers/<name>`.
+- `bun run test` — `turbo run test` (per-project `vitest run`); one project via `--filter`.
   Postgres-backed suites need `bun run pg:test-container:start` first.
-- `bun run lint` — `tsx scripts/lint.ts`, a wrapper that shells out to `eslint` over `projects/`
-  and `scripts/` (`--fix` via `bun run lint --fix`). Run through `bun run` (not raw `tsx`) so
-  `node_modules/.bin` is on `PATH`.
-- `bun run format` / `bun run format --check` — `tsx scripts/format.ts`, a wrapper that shells out
-  to `prettier`.
-- `bun run build` — `nx run-many -t build`; `bun run build:<project>` for a single one.
-- `bun run e2e` — `nx run-many -t e2e` (Playwright, `app-web-e2e`).
+- `bun run lint` — `tsx scripts/lint.ts`, shells out to `eslint` over `projects/` and `scripts/`
+  (`--fix` supported). Run through `bun run` so `node_modules/.bin` is on `PATH`. Not a turbo task —
+  eslint's flat config covers the tree in one invocation.
+- `bun run format` / `bun run format --check` — `tsx scripts/format.ts`, shells out to `prettier`.
+- `bun run build` — `turbo run build`; one project via `--filter`.
+- `bun run e2e` — `turbo run e2e` (Playwright, `app-web-e2e`).
+- `bun run boundaries` — `turbo boundaries`.
+
+## Docker
+
+Each deployable (`app-web`, `db-postgres`, the 6 services) has a multi-stage Dockerfile around
+`turbo prune <pkg> --docker`:
+
+1. **pruner** — a standalone `turbo` binary prunes to the target's dependency graph: `out/json`
+   (manifests only, for layer caching), `out/full` (source), a pruned `out/bun.lock`.
+2. **installer** — full `bun install` against `out/json` for build-time tooling.
+3. **builder** — copies `out/full` plus `scripts/build-esbuild.ts` and `tsconfig.base.json` (outside
+   any package, so prune doesn't carry them), then runs the project's `build` script.
+4. **prod-deps** — `bun install --production --linker=hoisted`. Hoisting is load-bearing: a bundle
+   inlines source from several packages, and its external imports (`pino`, …) must resolve from the
+   bundle's own location — only a flat `node_modules` serves them all.
+5. **runtime** — `node:alpine` with the prod-deps `node_modules` and built output only.
+
+app-web's builder runs its `codegen`/`typegen`/`build` scripts directly instead of `turbo run
+build`, which would pull in `//#codegen:graphql` — that task reads service-api's schema, outside
+app-web's pruned graph. `app/gql/**` is committed so builds without service-api's source use it
+as-is.
 
 ## Tooling migration in progress
 
@@ -40,8 +69,5 @@ the _target_ state, not this repo yet:
 - **`bun test`** — not adopted. bun is the package manager and script runner only; all
   unit/integration tests run under vitest on node. Deferred past #160 to the rebuild (#163) —
   vitest stays until services move to the bun runtime.
-- **nx** — still in place for the task graph (re-enabled deliberately for affected-project
-  detection); turborepo replaces it in #186, after which the Dockerfiles also move to `turbo prune`
-  instead of building from the whole-repo base image.
 
 Don't "fix" these to match the shared partial mid-migration — follow the phase plan in #160 instead.

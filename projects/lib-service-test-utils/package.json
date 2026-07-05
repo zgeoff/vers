@@ -12,16 +12,21 @@
     "@testcontainers/postgresql": "10.18.0",
     "@vers/game-utils": "workspace:*",
     "@vers/postgres-schema": "workspace:*",
-    "@vers/service-utils": "workspace:*",
+    "bcryptjs": "3.0.2",
     "drizzle-orm": "catalog:",
     "jose": "catalog:",
     "postgres": "catalog:",
     "vitest": "catalog:"
   },
   "devDependencies": {
+    "@types/bcryptjs": "2.4.6",
     "@types/node": "22.13.10",
     "jest-extended": "catalog:",
     "typescript": "catalog:",
     "vite-tsconfig-paths": "catalog:"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

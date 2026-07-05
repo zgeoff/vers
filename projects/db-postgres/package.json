@@ -16,5 +16,9 @@
     "@types/node": "22.13.10",
     "drizzle-kit": "0.30.5",
     "typescript": "catalog:"
+  },
+  "scripts": {
+    "build": "bun ../../scripts/build-esbuild.ts",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit"
   }
 }

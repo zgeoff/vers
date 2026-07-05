@@ -1,5 +1,6 @@
-import * as pg from 'postgres';
+// PostgresError hangs off the default export — the ESM entry has no named exports
+import postgres from 'postgres';
 
-export function isPGError(error: unknown): error is pg.PostgresError {
-  return error instanceof pg.PostgresError;
+export function isPGError(error: unknown): error is postgres.PostgresError {
+  return error instanceof postgres.PostgresError;
 }

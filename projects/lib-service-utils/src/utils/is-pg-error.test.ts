@@ -1,9 +1,9 @@
 import { expect, test } from 'vitest';
-import * as pg from 'postgres';
+import postgres from 'postgres';
 import { isPGError } from './is-pg-error';
 
 test('it returns true for postgres errors', () => {
-  const error = new pg.PostgresError(
+  const error = new postgres.PostgresError(
     'duplicate key value violates unique constraint "users_email_unique"',
   );
 

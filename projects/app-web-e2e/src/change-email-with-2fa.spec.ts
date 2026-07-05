@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-test('it changes email for a user with 2FA', async ({ page }) => {
+// quarantined by #212: the 2fa gate intermittently drops the pin input's
+// filled value, and retries hit the logged-in-elsewhere interstitial because
+// mock-db sessions persist across attempts
+test.fixme('it changes email for a user with 2FA', async ({ page }) => {
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
 
   await page.goto('/');

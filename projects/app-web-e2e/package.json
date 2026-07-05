@@ -12,5 +12,9 @@
     "@types/node": "22.13.10",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "scripts": {
+    "e2e": "playwright test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

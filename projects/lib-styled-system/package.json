@@ -17,5 +17,9 @@
   "devDependencies": {
     "@pandacss/dev": "1.11.3",
     "typescript": "catalog:"
+  },
+  "scripts": {
+    "codegen": "panda",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

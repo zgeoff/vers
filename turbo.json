@@ -1,0 +1,87 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "envMode": "loose",
+  "ui": "stream",
+  "boundaries": {
+    "tags": {
+      "app": {
+        "dependencies": {},
+        "dependents": {
+          "deny": ["lib", "service"]
+        }
+      },
+      "lib": {
+        "dependencies": {
+          "deny": ["app", "service"]
+        }
+      },
+      "service": {
+        "dependencies": {
+          "deny": ["app"]
+        }
+      }
+    }
+  },
+  "tasks": {
+    "//#codegen:graphql": {
+      "inputs": [
+        "codegen.ts",
+        "projects/service-api/src/schema/**/*.ts",
+        "projects/app-web/app/data/**/*.ts"
+      ],
+      "outputs": ["projects/app-web/app/gql/**", "schema.graphql"]
+    },
+    "//#format": {
+      "cache": false
+    },
+    "//#lint": {
+      "cache": false
+    },
+    "build": {
+      "dependsOn": ["^build", "codegen", "typegen"],
+      "inputs": ["$TURBO_DEFAULT$", "esbuild.config.cjs"],
+      "outputs": ["dist/**", "build/**", ".react-router/**"]
+    },
+    "@vers/web#build": {
+      "dependsOn": ["^build", "codegen", "typegen", "//#codegen:graphql"]
+    },
+    "codegen": {
+      "dependsOn": ["^codegen"],
+      "inputs": ["$TURBO_DEFAULT$", "panda.config.ts"],
+      "outputs": [
+        "styled-system/**",
+        "src/styled-system/**",
+        "app/styled-system/**"
+      ]
+    },
+    "typegen": {
+      "outputs": [".react-router/types/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck", "codegen", "typegen"],
+      "outputs": []
+    },
+    "@vers/web#typecheck": {
+      "dependsOn": ["^typecheck", "codegen", "typegen", "//#codegen:graphql"]
+    },
+    "test": {
+      "dependsOn": ["codegen", "typegen"],
+      "outputs": []
+    },
+    "@vers/web#test": {
+      "dependsOn": ["codegen", "typegen", "//#codegen:graphql"]
+    },
+    "e2e": {
+      "dependsOn": [
+        "@vers/web#codegen",
+        "@vers/web#typegen",
+        "//#codegen:graphql"
+      ],
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

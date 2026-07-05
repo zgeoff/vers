@@ -1,30 +1,67 @@
+ARG BUN_VERSION=1.3.10
 ARG NODE_VERSION=20.18.3
 
-FROM vers/monorepo-base:latest AS build
+FROM oven/bun:${BUN_VERSION}-slim AS base
 
-ENV NODE_ENV="production"
+WORKDIR /app
+
+# no .git in the build context, so the husky postinstall must be skipped
+ENV HUSKY=0
+
+# --- prune the workspace down to what @vers/web needs ---
+FROM base AS pruner
+
+# a standalone turbo binary — no workspace install needed to run prune
+RUN bun add --global turbo@2.10.0
+
+COPY . .
+
+RUN turbo prune @vers/web --docker
+
+# --- full install (with devDependencies) to run the vite/react-router build ---
+FROM base AS installer
+
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/bun.lock ./bun.lock
+
+RUN bun install --frozen-lockfile
+
+# --- build the client + SSR server bundle ---
+FROM installer AS builder
+
+COPY --from=pruner /app/out/full/ .
+# turbo prune only copies workspace packages — the tsconfig every
+# project's tsconfig.json extends lives outside any package, so it comes
+# straight from the build context
+COPY tsconfig.base.json tsconfig.base.json
+
+ARG SENTRY_AUTH_TOKEN
+ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
+
+WORKDIR /app/projects/app-web
 
 RUN \
-  # without removing dev/test env files, vite loads the wrong one in our prod bundle.
-  # issue does not exist outside of docker - cannot be bothered spending any more time working out why.
-  rm -f projects/app-web/.env.development && \
-  rm -f projects/app-web/.env.test && \
-  # build application
-  bun run build:app-web --mode production && \
-  # clean up msw
-  rm -f projects/app-web/build/client/mockServiceWorker.js && \
-  # make app-web's manifest standalone for the npm install below: drop
-  # workspace deps (bundled into the build) and inline catalog versions
-  bun scripts/write-standalone-manifest.ts projects/app-web/package.json && \
-  # remove our root package.json so no workspace shenanigans
-  rm -f package.json && \
-  # drop the bun-linked node_modules trees - npm follows their symlinks into
-  # the isolated store and chokes running lifecycle scripts there
-  rm -rf node_modules projects/app-web/node_modules && \
-  # install our minimum required dependencies to run our server
-  cd projects/app-web && \
-  npm install --omit=dev --legacy-peer-deps
+  # without removing dev/test env files, vite loads the wrong one in our prod
+  # bundle — doesn't reproduce outside docker, not worth chasing further
+  rm -f .env.development .env.test && \
+  # the graphql client (app/gql/**) is committed rather than build-time
+  # generated here — turbo prune only carries @vers/web's own dependency
+  # graph, not service-api's schema that the root codegen:graphql task reads
+  bun run codegen && \
+  bun run typegen && \
+  bun run build --mode production && \
+  rm -f build/client/mockServiceWorker.js
 
+# --- production-only deps, hoisted so the SSR bundle can resolve every
+# runtime import from one flat node_modules regardless of directory depth ---
+FROM base AS prod-deps
+
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/bun.lock ./bun.lock
+
+RUN bun install --frozen-lockfile --production --linker=hoisted --ignore-scripts
+
+# --- runtime ---
 FROM node:${NODE_VERSION}-alpine
 
 LABEL fly_launch_runtime="Node.js"
@@ -33,9 +70,10 @@ WORKDIR /app
 
 ENV NODE_ENV="production"
 
-COPY --from=build /app/projects/app-web/package.json /app/projects/app-web/server.mjs /app/
-COPY --from=build /app/projects/app-web/node_modules /app/node_modules
-COPY --from=build /app/projects/app-web/build /app/build
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=builder /app/projects/app-web/package.json ./package.json
+COPY --from=builder /app/projects/app-web/server.mjs ./server.mjs
+COPY --from=builder /app/projects/app-web/build ./build
 
 EXPOSE 3000
-CMD [ "npm", "run", "start" ]
+CMD [ "server.mjs" ]

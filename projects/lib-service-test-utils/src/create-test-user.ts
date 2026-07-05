@@ -1,7 +1,14 @@
 import { createSeed } from '@vers/game-utils';
 import * as schema from '@vers/postgres-schema';
-import { hashPassword } from '@vers/service-utils';
+import bcrypt from 'bcryptjs';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+
+/**
+ * Matches the cost factor the production password hasher uses — seeded test
+ * users must verify against real logins. Kept inline: importing it would
+ * create a package cycle, since service-utils depends on this package.
+ */
+const PASSWORD_HASH_COST_FACTOR = 12;
 
 type TestUserData = Partial<
   Omit<typeof schema.users.$inferSelect, 'passwordHash'> & {
@@ -18,7 +25,10 @@ export async function createTestUser(
   let passwordHash = null;
 
   if (data.password !== null) {
-    passwordHash = await hashPassword(data.password ?? 'password123');
+    passwordHash = await bcrypt.hash(
+      data.password ?? 'password123',
+      PASSWORD_HASH_COST_FACTOR,
+    );
   }
 
   const user = {
