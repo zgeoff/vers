@@ -1,5 +1,4 @@
 import { Resend } from 'resend';
-import type { CreateEmailResponseSuccess } from 'resend';
 
 const DEFAULT_FROM = 'noreply@transactional.versidle.com';
 
@@ -15,8 +14,12 @@ export interface SendEmailInput {
   to: string;
 }
 
+export interface SentEmail {
+  id: string;
+}
+
 export interface EmailClient {
-  sendEmail: (input: Readonly<SendEmailInput>) => Promise<CreateEmailResponseSuccess>;
+  sendEmail: (input: Readonly<SendEmailInput>) => Promise<SentEmail>;
 }
 
 /**
@@ -42,7 +45,7 @@ export function createEmailClient(config: Readonly<CreateEmailClientConfig>): Em
         throw new Error('resend returned no data and no error');
       }
 
-      return result.data;
+      return { id: result.data.id };
     },
   };
 }
