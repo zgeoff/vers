@@ -8,6 +8,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "react-router build",
+    "build:e2e": "react-router build --mode e2e",
     "codegen": "panda cssgen",
     "dev": "react-router dev --config=vite.config.ts",
     "start": "NODE_ENV=production node ./server.mjs",

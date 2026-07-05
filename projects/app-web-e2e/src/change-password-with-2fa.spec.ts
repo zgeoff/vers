@@ -1,57 +1,60 @@
 import { expect, test } from '@playwright/test';
 
-test('it changes password for a user with 2FA', async (fixtures) => {
-  await fixtures.page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
+test('it changes password for a user with 2FA', async ({ page }) => {
+  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
 
-  await fixtures.page.goto('/');
-  await fixtures.page.getByRole('link', { name: 'Login' }).click();
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Login' }).click();
 
-  await expect(fixtures.page).toHaveURL(/localhost:4000\/login/);
+  await expect(page).toHaveURL(/localhost:4000\/login/);
 
-  await fixtures.page.getByLabel('Email').fill('e2e-change-password-2fa-user@test.com');
-  await fixtures.page.getByLabel('Password').fill('password');
-  await fixtures.page.getByRole('button', { exact: true, name: 'Login' }).click();
+  await page.getByLabel('Email').fill('e2e-change-password-2fa-user@test.com');
+  await page.getByLabel('Password').fill('password');
+  await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  await expect(fixtures.page).toHaveURL(/localhost:4000\/verify-otp/);
+  await expect(page).toHaveURL(/localhost:4000\/verify-otp/);
 
-  await fixtures.page.getByTestId('otp-input').fill('999999');
-  await fixtures.page.getByRole('button', { exact: true, name: 'Verify' }).click();
+  // typed per digit — a multi-character fill races the pin input's paste handling (#212)
+  await page.getByTestId('otp-input').pressSequentially('999999', { delay: 50 });
+  await page.getByRole('button', { exact: true, name: 'Verify' }).click();
 
-  await expect(fixtures.page).toHaveURL(/localhost:4000\/nexus/);
+  await expect(page).toHaveURL(/localhost:4000\/nexus/);
 
-  await fixtures.page.getByRole('link', { name: 'Account' }).click();
+  await page.getByRole('link', { name: 'Account' }).click();
 
-  await expect(fixtures.page).toHaveURL(/localhost:4000\/account/);
+  await expect(page).toHaveURL(/localhost:4000\/account/);
 
-  await fixtures.page.getByRole('link', { exact: true, name: 'Change Password' }).click();
+  await page.getByRole('link', { exact: true, name: 'Change Password' }).click();
 
-  await expect(fixtures.page).toHaveURL(/localhost:4000\/verify-otp/);
+  await expect(page).toHaveURL(/localhost:4000\/verify-otp/);
 
-  await fixtures.page.getByTestId('otp-input').fill('999999');
-  await fixtures.page.getByRole('button', { exact: true, name: 'Verify' }).click();
+  // typed per digit — a multi-character fill races the pin input's paste handling (#212)
+  await page.getByTestId('otp-input').pressSequentially('999999', { delay: 50 });
+  await page.getByRole('button', { exact: true, name: 'Verify' }).click();
 
-  await expect(fixtures.page).toHaveURL(/localhost:4000\/account\/change-password/);
+  await expect(page).toHaveURL(/localhost:4000\/account\/change-password/);
 
-  await fixtures.page.getByLabel('Current Password').fill('password');
-  await fixtures.page.getByLabel('New Password', { exact: true }).fill('newpassword123');
-  await fixtures.page.getByLabel('Confirm New Password').fill('newpassword123');
-  await fixtures.page.getByRole('button', { name: 'Change Password' }).click();
+  await page.getByLabel('Current Password').fill('password');
+  await page.getByLabel('New Password', { exact: true }).fill('newpassword123');
+  await page.getByLabel('Confirm New Password').fill('newpassword123');
+  await page.getByRole('button', { name: 'Change Password' }).click();
 
-  await expect(fixtures.page).toHaveURL(/localhost:4000\/account$/);
+  await expect(page).toHaveURL(/localhost:4000\/account$/);
 
-  await fixtures.page.getByRole('button', { name: 'Logout' }).click();
+  await page.getByRole('button', { name: 'Logout' }).click();
 
-  await expect(fixtures.page).toHaveURL(/localhost:4000\//);
+  await expect(page).toHaveURL(/localhost:4000\//);
 
-  await fixtures.page.getByRole('link', { name: 'Login' }).click();
-  await fixtures.page.getByLabel('Email').fill('e2e-change-password-2fa-user@test.com');
-  await fixtures.page.getByLabel('Password').fill('newpassword123');
-  await fixtures.page.getByRole('button', { exact: true, name: 'Login' }).click();
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByLabel('Email').fill('e2e-change-password-2fa-user@test.com');
+  await page.getByLabel('Password').fill('newpassword123');
+  await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  await expect(fixtures.page).toHaveURL(/localhost:4000\/verify-otp/);
+  await expect(page).toHaveURL(/localhost:4000\/verify-otp/);
 
-  await fixtures.page.getByTestId('otp-input').fill('999999');
-  await fixtures.page.getByRole('button', { exact: true, name: 'Verify' }).click();
+  // typed per digit — a multi-character fill races the pin input's paste handling (#212)
+  await page.getByTestId('otp-input').pressSequentially('999999', { delay: 50 });
+  await page.getByRole('button', { exact: true, name: 'Verify' }).click();
 
-  await expect(fixtures.page).toHaveURL(/localhost:4000\/nexus/);
+  await expect(page).toHaveURL(/localhost:4000\/nexus/);
 });
