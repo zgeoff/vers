@@ -19,6 +19,7 @@ program
   .argument('[service]', 'service to start', parseServiceArg)
   .option('-b, --build', 'build images before starting', false)
   .option('-f, --force-recreate', 'force recreation of containers', false)
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   .action(async (service?: ServiceID, options?: StartOptions) => {
     await start(service, options);
   });
@@ -59,6 +60,7 @@ program
   .description('Execute a command in a service container')
   .argument('<service>', 'service to execute command in', parseServiceArg)
   .argument('<command...>', 'command to execute')
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   .action(async (service: ServiceID, command: Array<string>) => {
     await exec(service, command);
   });

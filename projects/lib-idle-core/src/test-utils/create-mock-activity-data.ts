@@ -3,6 +3,7 @@ import type { ActivityData } from '../types';
 import { ActivityFailureAction, ActivityType } from '../types';
 import { createMockEnemyData } from './create-mock-enemy-data';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createMockActivityData(overrides: Partial<ActivityData> = {}): ActivityData {
   const activity: ActivityData = {
     enemies: [createMockEnemyData()],

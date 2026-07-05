@@ -44,10 +44,12 @@ export function meta(): ReturnType<Route.MetaFunction> {
   ];
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAnonymous(args.request);
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   await requireAnonymous(args.request);
 
@@ -105,6 +107,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
       [QueryParam.Type]: VerificationType.TwoFactorAuth,
     });
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (submission.value.redirect) {
       searchParams.set(QueryParam.RedirectTo, submission.value.redirect);
     }
@@ -151,15 +154,18 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
 });
 
 function is2FALoginPayload(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   payload: object | TwoFactorLoginPayload,
 ): payload is TwoFactorLoginPayload {
   return 'transactionID' in payload;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function isForceLogoutPayload(payload: ForceLogoutPayload | object): payload is ForceLogoutPayload {
   return 'transactionToken' in payload;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function Login(props: Route.ComponentProps) {
   const [searchParams] = useSearchParams();
   const isFormPending = useIsFormPending();

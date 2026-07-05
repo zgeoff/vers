@@ -127,7 +127,9 @@ export const preset = definePreset({
         className: 'mx',
         transform(value) {
           return {
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             marginLeft: value,
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             marginRight: value,
           };
         },
@@ -137,7 +139,9 @@ export const preset = definePreset({
         className: 'my',
         transform(value) {
           return {
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             marginBottom: value,
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             marginTop: value,
           };
         },
@@ -147,7 +151,9 @@ export const preset = definePreset({
         className: 'px',
         transform(value) {
           return {
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             paddingLeft: value,
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             paddingRight: value,
           };
         },
@@ -157,7 +163,9 @@ export const preset = definePreset({
         className: 'py',
         transform(value) {
           return {
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             paddingBottom: value,
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             paddingTop: value,
           };
         },
@@ -167,6 +175,7 @@ export const preset = definePreset({
         className: 'rounded',
         transform(value) {
           return {
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             borderRadius: value,
           };
         },
@@ -176,7 +185,9 @@ export const preset = definePreset({
         className: 'rounded-b',
         transform(value) {
           return {
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             borderBottomLeftRadius: value,
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             borderBottomRightRadius: value,
           };
         },
@@ -186,7 +197,9 @@ export const preset = definePreset({
         className: 'rounded-t',
         transform(value) {
           return {
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             borderTopLeftRadius: value,
+            // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
             borderTopRightRadius: value,
           };
         },

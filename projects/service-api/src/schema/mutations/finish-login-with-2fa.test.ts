@@ -60,14 +60,21 @@ test('it returns tokens when the transaction token is valid and there are no pre
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     accessToken: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     refreshToken: expect.any(String),
     session: {
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       createdAt: expect.any(Date),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       expiresAt: expect.any(Date),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       id: expect.any(String),
       ipAddress: ctx.ipAddress,
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       refreshToken: expect.any(String),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       updatedAt: expect.any(Date),
       userID: user.id,
       verified: false,
@@ -128,6 +135,7 @@ test('it returns a force logout payload when the transaction token is valid and 
 
   expect(result).toStrictEqual({
     sessionID: session.id,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionToken: expect.any(String),
   });
 });

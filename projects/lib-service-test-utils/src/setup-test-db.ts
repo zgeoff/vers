@@ -17,7 +17,9 @@ const packageDir = import.meta.dirname;
  * @param container - The testcontainers postgres container.
  */
 export async function setupTestDB(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   container: StartedPostgreSqlContainer,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   config: TestDBConfig = {},
 ) {
   const client = postgres(container.getConnectionUri());

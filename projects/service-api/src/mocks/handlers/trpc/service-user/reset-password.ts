@@ -30,6 +30,7 @@ export const resetPassword = trpc.resetPassword.mutation((opts) => {
     const isTokenExpired =
       user.passwordResetTokenExpiresAt && user.passwordResetTokenExpiresAt < new Date();
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (isTokenExpired) {
       throw new TRPCError({
         code: 'BAD_REQUEST',

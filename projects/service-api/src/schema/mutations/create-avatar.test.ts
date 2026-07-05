@@ -35,10 +35,13 @@ test('it creates an avatar when the user has none', async () => {
 
   expect(result).toStrictEqual({
     class: Class.Brute,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     level: 1,
     name: 'Test Avatar',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
     userID: user.id,
     xp: 0,
@@ -52,10 +55,13 @@ test('it creates an avatar when the user has none', async () => {
 
   expect(avatar).toMatchObject({
     class: Class.Brute,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     level: 1,
     name: 'Test Avatar',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
     userID: user.id,
     xp: 0,

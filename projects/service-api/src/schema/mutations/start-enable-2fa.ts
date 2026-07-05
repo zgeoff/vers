@@ -33,6 +33,7 @@ import { requireAuth } from '../utils/require-auth';
 export async function startEnable2FA(
   _: object,
   __: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: AuthedContext,
 ): Promise<typeof StartEnable2FAPayload.$inferType> {
   try {

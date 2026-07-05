@@ -30,7 +30,9 @@ export const CreateVerificationInputSchema = z.object({
 });
 
 export async function createVerification(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   input: z.infer<typeof CreateVerificationInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<CreateVerificationPayload> {
   try {

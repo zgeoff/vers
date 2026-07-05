@@ -12,12 +12,18 @@ import { createFailedCheckpoint } from './utils/create-failed-checkpoint';
 import { createProgressCheckpoint } from './utils/create-progress-checkpoint';
 import { createStartedCheckpoint } from './utils/create-started-checkpoint';
 
+// oxlint-disable-next-line typescript/require-await -- baseline(#236)
 export async function* simulateActivity(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- executor is mutated in place via run/reset during the tick loop
   executor: CombatExecutor,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- activity is mutated in place via moveToNextEnemyGroup during the tick loop
   activity: Activity,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   avatar: Avatar,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,
 ): ActivityCheckpointGenerator {
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   invariant(activity, 'activity is required');
 
   const timestep = yield createStartedCheckpoint(ctx);

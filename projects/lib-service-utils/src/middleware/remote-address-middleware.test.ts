@@ -3,7 +3,9 @@ import { Hono } from 'hono';
 import { expect, test, vi } from 'vitest';
 import { remoteAddressMiddleware } from './remote-address-middleware';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 const testHandlerSpy = vi.fn<(ctx: Context) => Promise<Response>>((ctx: Context) =>
+  // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
   Promise.resolve(ctx.json({ ipAddress: ctx.get('ipAddress') })),
 );
 

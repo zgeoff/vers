@@ -36,7 +36,9 @@ interface Args {
  */
 export async function finishEnable2FA(
   _: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   args: Args,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: AuthedContext,
 ): Promise<typeof FinishEnable2FAPayload.$inferType> {
   try {

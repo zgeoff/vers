@@ -24,14 +24,17 @@ interface TransactionData {
  * @param ctx - The context of the request.
  * @returns The transaction token.
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function createTransactionToken(data: TransactionData, ctx: Context): Promise<string> {
   // if the transaction is not verified, we need to check that a pending
   // transaction exists and that it matches the data provided
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!data.isVerified) {
     checkPendingTransaction(data);
   }
 
   // if the sessionID is provided, we need to check that the session exists
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (data.sessionID) {
     const session = await ctx.services.session.getSession.query({
       id: data.sessionID,
@@ -50,6 +53,7 @@ export async function createTransactionToken(data: TransactionData, ctx: Context
     mfa_verified: true,
     session_id: data.sessionID,
     sub: data.target,
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     transaction_id: data.isVerified ? ctx.requestID : data.transactionID,
   };
 
@@ -69,6 +73,7 @@ export async function createTransactionToken(data: TransactionData, ctx: Context
     .sign(privateKey);
 
   // we can safely remove our pending transaction if it exists now that we've created a token
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (data.transactionID) {
     pendingTransactionCache.delete(data.transactionID);
   }
@@ -80,7 +85,9 @@ export async function createTransactionToken(data: TransactionData, ctx: Context
  * Checks that a pending transaction exists and that it matches the data
  * provided.
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function checkPendingTransaction(data: TransactionData) {
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!data.transactionID) {
     throw new Error('Pending transaction ID is required');
   }

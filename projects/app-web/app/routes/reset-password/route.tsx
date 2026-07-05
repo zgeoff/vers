@@ -37,6 +37,7 @@ export function meta(): ReturnType<Route.MetaFunction> {
   ];
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAnonymous(args.request);
 
@@ -45,6 +46,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   const resetToken = url.searchParams.get('token');
   const email = url.searchParams.get('email');
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!resetToken || !email) {
     return redirect(Routes.Login);
   }
@@ -52,6 +54,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   return { email };
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   await requireAnonymous(args.request);
 
@@ -60,6 +63,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   const resetToken = url.searchParams.get('token');
   const email = url.searchParams.get('email');
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!resetToken || !email) {
     return redirect(Routes.Login);
   }
@@ -134,6 +138,7 @@ const formStyles = css({
   width: '96',
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function ResetPassword(props: Route.ComponentProps) {
   const isFormPending = useIsFormPending();
 

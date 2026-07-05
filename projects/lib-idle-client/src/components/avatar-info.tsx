@@ -9,6 +9,7 @@ interface AvatarInfoProps {
   avatar: AvatarAppState;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function AvatarInfo(props: AvatarInfoProps) {
   const classData = classes[props.avatar.class];
 

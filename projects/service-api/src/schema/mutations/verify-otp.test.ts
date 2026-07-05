@@ -50,6 +50,7 @@ test('it verifies a valid onboarding otp and returns a valid transaction token',
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionToken: expect.any(String),
   });
 
@@ -67,8 +68,10 @@ test('it verifies a valid onboarding otp and returns a valid transaction token',
   expect(isValid).toStrictEqual({
     action: SecureAction.Onboarding,
     amr: ['otp'],
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     auth_time: expect.any(Number),
     ip_address: ctx.ipAddress,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     jti: expect.any(String),
     mfa_verified: true,
     session_id: null,
@@ -115,6 +118,7 @@ test('it verifies a valid change email otp and returns a valid transaction token
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionToken: expect.any(String),
   });
 
@@ -132,8 +136,10 @@ test('it verifies a valid change email otp and returns a valid transaction token
   expect(isValid).toStrictEqual({
     action: SecureAction.ChangeEmail,
     amr: ['otp'],
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     auth_time: expect.any(Number),
     ip_address: ctx.ipAddress,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     jti: expect.any(String),
     mfa_verified: true,
     session_id: session.id,
@@ -180,6 +186,7 @@ test('it verifies a valid change password otp and returns a valid transaction to
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionToken: expect.any(String),
   });
 
@@ -197,8 +204,10 @@ test('it verifies a valid change password otp and returns a valid transaction to
   expect(isValid).toStrictEqual({
     action: SecureAction.ChangePassword,
     amr: ['otp'],
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     auth_time: expect.any(Number),
     ip_address: ctx.ipAddress,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     jti: expect.any(String),
     mfa_verified: true,
     session_id: session.id,
@@ -242,6 +251,7 @@ test('it verifies a valid reset password otp and returns a valid transaction tok
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionToken: expect.any(String),
   });
 
@@ -259,8 +269,10 @@ test('it verifies a valid reset password otp and returns a valid transaction tok
   expect(isValid).toStrictEqual({
     action: SecureAction.ResetPassword,
     amr: ['otp'],
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     auth_time: expect.any(Number),
     ip_address: ctx.ipAddress,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     jti: expect.any(String),
     mfa_verified: true,
     session_id: null,
@@ -308,6 +320,7 @@ test('it verifies a valid change email confirmation otp and returns a valid tran
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionToken: expect.any(String),
   });
 
@@ -325,8 +338,10 @@ test('it verifies a valid change email confirmation otp and returns a valid tran
   expect(isValid).toStrictEqual({
     action: SecureAction.ChangeEmailConfirmation,
     amr: ['otp'],
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     auth_time: expect.any(Number),
     ip_address: ctx.ipAddress,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     jti: expect.any(String),
     mfa_verified: true,
     session_id: session.id,

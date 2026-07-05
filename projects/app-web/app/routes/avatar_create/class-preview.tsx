@@ -11,6 +11,7 @@ interface Props {
   tabIndex: number;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function ClassPreview(props: Props) {
   const classData = classes[props.class];
 
@@ -18,6 +19,7 @@ export function ClassPreview(props: Props) {
     props.onClick(props.class);
   };
 
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter') {
       props.onClick(props.class);

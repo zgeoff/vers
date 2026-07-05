@@ -4,6 +4,7 @@ import sourceMapSupport from 'source-map-support';
 sourceMapSupport.install({
   retrieveSourceMap(source) {
     // get source file without the `file://` prefix or `?t=...` suffix
+    // oxlint-disable-next-line typescript/prefer-regexp-exec -- baseline(#236)
     const match = source.match(/^file:\/\/(?<sourcePath>.*)\?t=[.\d]+$/);
 
     if (match) {

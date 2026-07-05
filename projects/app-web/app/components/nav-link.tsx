@@ -5,6 +5,7 @@ import { NavLink as RRNavLink } from 'react-router';
 
 export interface NavLinkProps {
   children: React.ReactNode;
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   className?: ((navLinkProps: NavLinkRenderProps) => string) | string;
   onClick?: () => void;
   to: string;
@@ -16,12 +17,14 @@ export const link = css({
   },
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function NavLink(props: NavLinkProps) {
   const { className, to, ...restProps } = props;
 
   const finalClassName =
     typeof className === 'function'
-      ? (navLinkProps: NavLinkRenderProps) => cx(link, className(navLinkProps))
+      ? // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
+        (navLinkProps: NavLinkRenderProps) => cx(link, className(navLinkProps))
       : cx(link, className);
 
   return <RRNavLink {...restProps} className={finalClassName} to={to} />;

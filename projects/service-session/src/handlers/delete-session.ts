@@ -14,6 +14,7 @@ export const DeleteSessionInputSchema = z.object({
 
 export async function deleteSession(
   input: z.infer<typeof DeleteSessionInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<DeleteSessionPayload> {
   try {

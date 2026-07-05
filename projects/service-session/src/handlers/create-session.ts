@@ -16,12 +16,15 @@ export const CreateSessionInputSchema = z.object({
 });
 
 export async function createSession(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   input: z.infer<typeof CreateSessionInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<CreateSessionPayload> {
   try {
     const { expiresAt, ipAddress, rememberMe, userID } = input;
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     const sessionDuration = rememberMe
       ? consts.SESSION_DURATION_LONG
       : consts.SESSION_DURATION_SHORT;

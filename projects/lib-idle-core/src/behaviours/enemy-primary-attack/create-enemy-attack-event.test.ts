@@ -14,6 +14,7 @@ test('it creates an enemy attack event', () => {
   const event = createEnemyAttackEvent(enemy, time);
 
   expect(event).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     source: enemy.id,
     time,

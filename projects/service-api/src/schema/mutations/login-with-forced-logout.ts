@@ -14,7 +14,9 @@ interface Args {
 
 export async function loginWithForcedLogout(
   _: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   args: Args,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<typeof LoginWithForcedLogoutPayload.$inferType> {
   try {
@@ -27,6 +29,7 @@ export async function loginWithForcedLogout(
       ctx,
     );
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!payload?.session_id) {
       return { error: UNKNOWN_ERROR };
     }

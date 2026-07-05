@@ -15,7 +15,9 @@ interface Args {
 
 export async function finishLoginWith2FA(
   _: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   args: Args,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<typeof FinishLoginWith2FAPayload.$inferType> {
   try {
@@ -45,6 +47,7 @@ export async function finishLoginWith2FA(
       ctx,
     );
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!payload?.session_id) {
       return { error: UNKNOWN_ERROR };
     }

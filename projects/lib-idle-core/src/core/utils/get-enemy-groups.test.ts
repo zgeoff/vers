@@ -10,6 +10,7 @@ test('it returns groups of the specified size', () => {
 
   const groups = getEnemyGroups(activity, ctx, { groupSize: 3 });
 
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   expect(groups).toSatisfyAll((group: EnemyGroup) => group.enemies.length === 3);
 });
 

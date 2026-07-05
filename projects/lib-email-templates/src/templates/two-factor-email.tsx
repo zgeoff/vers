@@ -5,6 +5,7 @@ interface Props {
   verificationCode: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function TwoFactorEmail(props: Props): ReactElement {
   return (
     <E.Container>

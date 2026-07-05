@@ -31,7 +31,9 @@ interface Args {
  */
 export async function getAvatars(
   _: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   _args: Args,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: AuthedContext,
 ): Promise<Array<typeof Avatar.$inferType>> {
   try {

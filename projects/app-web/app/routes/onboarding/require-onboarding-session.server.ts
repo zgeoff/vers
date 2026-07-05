@@ -4,6 +4,7 @@ import { Routes } from '../../types';
 import { requireAnonymous } from '../../utils/require-anonymous.server';
 
 export async function requireOnboardingSession(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   request: Request,
 ): Promise<{ email: string; transactionToken: string }> {
   await requireAnonymous(request);

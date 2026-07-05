@@ -6,7 +6,9 @@ import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 type TestVerificationData = Partial<typeof schema.verifications.$inferSelect>;
 
 export async function createTestVerification(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   db: PostgresJsDatabase<typeof schema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   data: TestVerificationData = {},
 ): Promise<typeof schema.verifications.$inferSelect> {
   const now = new Date();

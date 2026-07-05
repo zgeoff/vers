@@ -13,6 +13,7 @@ import type { HandleVerificationContext } from './types';
  * the user's ownership of the new email address and complete the change.
  */
 export async function handleChangeEmailConfirmation(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: HandleVerificationContext,
 ): Promise<Response> {
   invariant(ctx.submission.status === 'success', 'submission should be successful by now');

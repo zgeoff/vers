@@ -7,6 +7,7 @@ interface TestTokenConfig {
   sub: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function createTestJWT(config: TestTokenConfig): Promise<string> {
   const signingKey = config.pkcs8Key ?? new TextEncoder().encode('secret');
 

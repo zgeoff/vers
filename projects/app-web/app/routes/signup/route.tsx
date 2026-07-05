@@ -37,12 +37,14 @@ export function meta(): ReturnType<Route.MetaFunction> {
   ];
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAnonymous(args.request);
 
   return {};
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   await requireAnonymous(args.request);
 
@@ -111,6 +113,7 @@ const formStyles = css({
   width: '96',
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function Signup(props: Route.ComponentProps) {
   const isFormPending = useIsFormPending();
 

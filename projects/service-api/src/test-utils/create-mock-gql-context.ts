@@ -18,9 +18,11 @@ interface MockContextConfig {
   user?: AuthedContext['user'];
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createMockGQLContext(config: MockContextConfig): Context {
   const request = new Request('https://test.com/');
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (config.accessToken) {
     request.headers.set('authorization', `Bearer ${config.accessToken}`);
   }

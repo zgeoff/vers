@@ -2,6 +2,7 @@ import { StrictMode, startTransition } from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { HydratedRouter } from 'react-router/dom';
 
+// oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
 if (import.meta.env.PROD && import.meta.env['SENTRY_DSN']) {
   // oxlint-disable-next-line unicorn/prefer-top-level-await -- sentry init is deliberately fire-and-forget so it never delays hydration
   void (async () => {

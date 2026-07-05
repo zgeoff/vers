@@ -32,6 +32,7 @@ test('it increments the attempt count for a pending transaction', () => {
 test('it throws an error when transaction is not found', () => {
   setupTest();
 
+  // oxlint-disable-next-line typescript/no-confusing-void-expression -- baseline(#236)
   expect(() => trackTransactionAttempt('non_existent')).toThrow('Pending transaction not found');
 });
 

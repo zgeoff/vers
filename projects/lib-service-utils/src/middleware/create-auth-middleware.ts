@@ -11,6 +11,7 @@ interface AuthMiddlewareConfig {
 
 // this is adapted from the generic jwt middleware for hono
 // ref: https://github.com/honojs/hono/blob/d091c6a180887d69715abcd84ea88a123c876305/src/middleware/jwt/index.test.ts
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createAuthMiddleware(config: AuthMiddlewareConfig) {
   const verifyToken = createTokenVerifier({
     audience: config.tokenVerifierConfig.audience,
@@ -18,17 +19,20 @@ export function createAuthMiddleware(config: AuthMiddlewareConfig) {
     spkiKey: config.tokenVerifierConfig.spkiKey,
   });
 
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   return async (ctx: Context, next: Next) => {
     const authHeader = ctx.req.raw.headers.get('Authorization');
 
     // if we don't explicitly require auth then we're safe to pass through
     // when no auth header is present
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!authHeader && !config.isAuthRequired) {
       await next();
 
       return;
     }
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!authHeader) {
       const errorDescription = 'no authorization included in request';
 
@@ -44,6 +48,7 @@ export function createAuthMiddleware(config: AuthMiddlewareConfig) {
 
     const token = getTokenFromHeader(authHeader);
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!token) {
       const errorDescription = 'invalid authorization header structure';
 
@@ -87,6 +92,7 @@ interface ErrorParts {
   statusText?: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function createUnauthorizedResponse(error: ErrorParts) {
   return new Response('Unauthorized', {
     headers: {

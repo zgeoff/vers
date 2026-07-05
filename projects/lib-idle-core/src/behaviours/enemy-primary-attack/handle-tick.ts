@@ -6,8 +6,11 @@ import { getNextAttackTime } from './get-next-attack-time';
 import { isAttackReady } from './is-attack-ready';
 
 export function handleTick(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   entity: Enemy,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- this behaviour's state is mutated in place via setState during the tick loop
   behaviour: EnemyPrimaryAttackBehaviour,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   executor: CombatExecutor,
 ): void {
   const label = createLogLabel('enemy', entity.id);

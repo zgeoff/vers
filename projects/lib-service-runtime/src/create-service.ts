@@ -25,6 +25,7 @@ interface ServiceRuntime<TEnvShape extends z.ZodRawShape> {
 }
 
 export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   buildRouter: (runtime: ServiceRuntime<TEnvShape>) => AnyRouter;
   contract: AnyContractRouter;
   envShape: TEnvShape;
@@ -44,12 +45,14 @@ export interface Service<TEnvShape extends z.ZodRawShape> {
  * Nothing is started — call the returned `listen` to bind a port.
  */
 export async function createService<TEnvShape extends z.ZodRawShape = Record<never, never>>(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   config: ServiceConfig<TEnvShape>,
 ): Promise<Service<TEnvShape>> {
   const env = parseServiceEnv(config.envShape);
   const logger = createLogger({ level: env.LOG_LEVEL, name: config.name });
   const publicKey = await jose.importSPKI(env.SERVICE_AUTH_PUBLIC_KEY, TOKEN_ALGORITHM);
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (env.SENTRY_DSN) {
     const sentry = await import('@sentry/bun');
 
@@ -61,6 +64,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
 
   const app = new Elysia();
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (env.OTEL_EXPORTER_OTLP_ENDPOINT) {
     const [{ opentelemetry }, { OTLPTraceExporter }] = await Promise.all([
       import('@elysiajs/opentelemetry'),
@@ -133,6 +137,7 @@ function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
 
 /** Generates the service's OpenAPI document from its contract, never its implementation. */
 function buildOpenAPIDocument(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   contract: AnyContractRouter,
   name: string,
 ): Promise<OpenAPI.Document> {
@@ -146,6 +151,7 @@ function buildOpenAPIDocument(
 }
 
 /** Reads the incoming request-id, or mints one when the caller didn't supply it. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function getRequestId(request: Request): string {
   return request.headers.get('x-request-id') ?? crypto.randomUUID();
 }
@@ -162,9 +168,12 @@ interface MountORPCHandlerDeps {
 }
 
 function mountORPCHandler(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   app: Elysia,
   prefix: `/${string}`,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   handler: FetchHandler<ServiceContext>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   deps: MountORPCHandlerDeps,
 ): void {
   app.all(

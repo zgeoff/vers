@@ -57,11 +57,15 @@ test('it creates a valid transaction token with required data', async () => {
     action: data.action,
     amr: ['otp'],
     aud: env.API_IDENTIFIER,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     auth_time: expect.any(Number),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     exp: expect.any(Number),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     iat: expect.any(Number),
     ip_address: data.ipAddress,
     iss: env.API_IDENTIFIER,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     jti: expect.any(String),
     mfa_verified: true,
     session_id: null,
@@ -118,11 +122,15 @@ test('it creates a valid transaction token with session data', async () => {
     action: data.action,
     amr: ['otp'],
     aud: env.API_IDENTIFIER,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     auth_time: expect.any(Number),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     exp: expect.any(Number),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     iat: expect.any(Number),
     ip_address: data.ipAddress,
     iss: env.API_IDENTIFIER,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     jti: expect.any(String),
     mfa_verified: true,
     session_id: session.id,
@@ -225,7 +233,9 @@ test.each([
       ],
     });
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     invariant(verifiedToken.payload.exp, 'Expiration time is required');
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     invariant(verifiedToken.payload.iat, 'Issued time is required');
 
     const expirationTime = verifiedToken.payload.exp * 1000; // Convert to milliseconds
@@ -298,11 +308,15 @@ test('it allows a verified transaction to be created without a pending transacti
     action: data.action,
     amr: ['otp'],
     aud: env.API_IDENTIFIER,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     auth_time: expect.any(Number),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     exp: expect.any(Number),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     iat: expect.any(Number),
     ip_address: data.ipAddress,
     iss: env.API_IDENTIFIER,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     jti: expect.any(String),
     mfa_verified: true,
     session_id: null,

@@ -13,6 +13,7 @@ export const ChangeUserPassword = graphql.mutation<
 >('ChangeUserPassword', (opts) => {
   const authHeader = opts.request.headers.get('authorization');
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!authHeader) {
     return HttpResponse.json({
       errors: [{ message: 'Unauthorized' }],

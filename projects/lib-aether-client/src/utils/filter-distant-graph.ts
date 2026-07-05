@@ -11,7 +11,9 @@ const MAX_DISTANCE = 160;
  * our scene size.
  */
 export function filterDistanceGraph(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   selectedNode: null | Object3D,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   graphData: AetherGraph,
 ): AetherGraph {
   const position = selectedNode?.position ?? new Vector3();

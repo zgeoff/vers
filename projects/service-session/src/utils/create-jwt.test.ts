@@ -27,6 +27,7 @@ test('it creates a valid JWT with correct claims', async () => {
   expect(payload).toStrictEqual({
     aud: env.API_IDENTIFIER,
     exp: Math.trunc(Number(expiresAtSeconds)),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     iat: expect.any(Number),
     iss: env.API_IDENTIFIER,
     sub: data.userID,

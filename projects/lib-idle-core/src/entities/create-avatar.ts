@@ -24,6 +24,7 @@ interface ResetConfig {
   soft?: boolean;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
   const label = createLogLabel('avatar', data.id);
 
@@ -67,6 +68,7 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
 
   let behaviours: Array<AvatarBehaviour> = [];
 
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const handleTick = (combatExecutor: CombatExecutor): void => {
     for (const behaviour of behaviours) {
       const handler = behaviour.handlers[LifecycleEvent.OnTick];
@@ -75,6 +77,7 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     }
   };
 
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const addBehaviour = (behaviour: AvatarBehaviour): void => {
     behaviours.push(behaviour);
   };
@@ -83,7 +86,9 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     behaviours = behaviours.filter((behaviour) => behaviour.id !== id);
   };
 
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const reset = (config: ResetConfig = {}): void => {
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!config.soft) {
       state = getInitialState(data);
     }
@@ -137,11 +142,13 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     // create behaviours & register them if they're applicable
     .map((createBehaviour) => createBehaviour(avatar))
     .filter((behaviour) => behaviour.predicate(avatar))
+    // oxlint-disable-next-line typescript/no-confusing-void-expression -- baseline(#236)
     .map((behaviour) => addBehaviour(behaviour));
 
   return avatar;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function getInitialState(data: AvatarData): AvatarState {
   return {
     life: data.life,
@@ -152,6 +159,7 @@ export function getInitialState(data: AvatarData): AvatarState {
 
 // type safe util for adding our behaviour state to our serializable state
 function addBehaviourState<K extends BehaviourID>(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   state: AvatarBehaviourAppState,
   id: K,
   value: AvatarBehaviourAppState[K],

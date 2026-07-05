@@ -16,6 +16,7 @@ const defaultOptions: IsFormPendingOptions = {
 // the default `formAction` will include query params, but `navigation.formAction`
 // will not, so don't use the default `formAction` if you want to know if a form is
 // submitting without specific query params.
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function useIsFormPending(options: IsFormPendingOptions = {}) {
   const finalOptions = { ...defaultOptions, ...options };
 

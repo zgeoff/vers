@@ -42,6 +42,7 @@ test('it creates a pending transaction for CHANGE_EMAIL when user has 2FA enable
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionID: expect.any(String),
   });
 
@@ -86,6 +87,7 @@ test('it creates a pending transaction for CHANGE_PASSWORD when user has 2FA ena
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionID: expect.any(String),
   });
 
@@ -127,6 +129,7 @@ test('it creates a pending transaction for DISABLE_2FA when user has 2FA enabled
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionID: expect.any(String),
   });
 

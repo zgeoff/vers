@@ -73,6 +73,7 @@ const otpFieldRecipe = sva({
   slots: ['root', 'control', 'group', 'input', 'separator', 'errorText'],
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function OTPField(props: Props) {
   const { autoFocus, defaultValue, id, key, mode, name, ...hiddenInputProps } = props.inputProps;
   const [firstError] = props.errors;
@@ -83,7 +84,9 @@ export function OTPField(props: Props) {
       <PinInput.Root
         // oxlint-disable-next-line jsx-a11y/no-autofocus -- opt-in per form; code entry is the page's sole action
         autoFocus={autoFocus}
+        // oxlint-disable-next-line typescript/no-misused-spread -- baseline(#236)
         defaultValue={typeof defaultValue === 'string' ? [...defaultValue] : undefined}
+        // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
         ids={id ? { hiddenInput: id } : undefined}
         invalid={props.errors.length > 0}
         name={name}

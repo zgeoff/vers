@@ -24,6 +24,7 @@ const _Response = globalThis.Response;
 // stub the global Response object so we can capture the cookie header
 vi.stubGlobal(
   'Response',
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   vi.fn((body?: BodyInit | null, init?: ResponseInit) => {
     if (init?.headers instanceof Headers) {
       setCookieHeader = init.headers.get('set-cookie');
@@ -33,7 +34,9 @@ vi.stubGlobal(
   }),
 );
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig = {}) {
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const loader = (args: LoaderFunctionArgs) =>
     logout(args.request, {
       deleteSession: config.deleteSession,
@@ -91,6 +94,7 @@ test('it clears the auth session', async () => {
 
   await screen.findByText('INDEX_ROUTE');
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   invariant(setCookieHeader, 'cookie header must be set');
 
   const authSession = await authSessionStorage.getSession(setCookieHeader);
@@ -129,6 +133,7 @@ test('it continues logout flow even if session deletion fails', async () => {
 
   expect(indexRoute).toBeInTheDocument();
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   invariant(setCookieHeader, 'cookie header must be set');
 
   const authSession = await authSessionStorage.getSession(setCookieHeader);

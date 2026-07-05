@@ -12,6 +12,7 @@ interface RelevantJWTPayload {
   sub: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createTokenVerifier(config: TokenVerifierConfig) {
   return async (token: string): Promise<RelevantJWTPayload> => {
     const publicKey = await jose.importSPKI(config.spkiKey, 'RS256');

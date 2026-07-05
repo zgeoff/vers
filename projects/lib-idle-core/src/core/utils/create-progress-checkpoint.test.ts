@@ -16,7 +16,9 @@ test('it creates a progress checkpoint', () => {
   const checkpoint = createProgressCheckpoint(activity, ctx);
 
   expect(checkpoint).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     hash: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     nextSeed: expect.any(Number),
     time: 2500,
     type: ActivityCheckpointType.Progress,

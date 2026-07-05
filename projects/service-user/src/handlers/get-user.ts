@@ -18,11 +18,14 @@ export const GetUserInputSchema = z
 
 export async function getUser(
   input: z.infer<typeof GetUserInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<GetUserPayload> {
   try {
     const where = [
+      // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
       input.email ? eq(schema.users.email, input.email) : undefined,
+      // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
       input.id ? eq(schema.users.id, input.id) : undefined,
     ].filter(Boolean);
 

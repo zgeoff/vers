@@ -45,19 +45,23 @@ test('it returns all avatars for the authenticated user', async () => {
 
   expect(result).toIncludeAllPartialMembers([
     {
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       createdAt: expect.any(Date),
       id: avatar.id,
       level: avatar.level,
       name: avatar.name,
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       updatedAt: expect.any(Date),
       userID: user.id,
       xp: avatar.xp,
     },
     {
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       createdAt: expect.any(Date),
       id: avatar2.id,
       level: avatar2.level,
       name: avatar2.name,
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       updatedAt: expect.any(Date),
       userID: user.id,
       xp: avatar2.xp,

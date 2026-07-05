@@ -34,6 +34,7 @@ interface TokenPayload {
   refreshToken: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function refreshAccessToken(request: Request, ctx: Context): Promise<TokenPayload> {
   const result = await ctx.utils.mutate(RefreshAccessTokenMutation, {
     input: {

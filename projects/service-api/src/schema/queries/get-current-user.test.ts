@@ -24,10 +24,12 @@ test('it returns the current user', async () => {
   const result = await resolve({}, {}, ctx);
 
   expect(result).toMatchObject({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     email: user.email,
     id: user.id,
     name: user.name,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
     username: user.username,
   });

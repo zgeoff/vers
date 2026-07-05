@@ -16,6 +16,7 @@ export const VerifyCodeInputSchema = z.object({
 
 export async function verifyCode(
   input: z.infer<typeof VerifyCodeInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<VerifyCodePayload> {
   try {

@@ -41,12 +41,17 @@ declare module 'react-router' {
 }
 
 export default function handleRequest(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   request: Request,
   responseStatusCode: number,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   responseHeaders: Headers,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   reactRouterContext: EntryContext,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   loadContext: AppLoadContext,
 ) {
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (process.env['NODE_ENV'] === 'production' && process.env['SENTRY_DSN']) {
     responseHeaders.append('Document-Policy', 'js-profiling');
   }
@@ -85,6 +90,7 @@ export default function handleRequest(
           didError = true;
         },
         onShellError: (err: unknown) => {
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
           reject(err as Error);
         },
       },
@@ -94,6 +100,7 @@ export default function handleRequest(
   });
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function handleError(error: unknown, args: ActionFunctionArgs | LoaderFunctionArgs) {
   // Skip capturing if the request is aborted as Remix docs suggest
   // Ref: https://remix.run/docs/en/main/file-conventions/entry.server#handleerror

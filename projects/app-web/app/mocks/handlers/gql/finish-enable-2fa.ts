@@ -18,6 +18,7 @@ export const FinishEnable2FA = graphql.mutation<FinishEnable2FAResponse, FinishE
   (opts) => {
     const authHeader = opts.request.headers.get('authorization');
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!authHeader) {
       return HttpResponse.json({
         errors: [{ message: 'Unauthorized' }],

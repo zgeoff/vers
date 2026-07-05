@@ -14,6 +14,7 @@ interface TestConfig {
   db: PostgresJsDatabase<typeof schema>;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig) {
   const caller = createCaller({ db: config.db });
 
@@ -40,6 +41,7 @@ test('it verifies a valid code', async () => {
   });
 
   expect(verifyResult).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     target: 'test@example.com',
     type: 'onboarding',

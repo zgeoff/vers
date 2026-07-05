@@ -9,12 +9,14 @@ import { handleResetPassword } from './handle-reset-password.server';
 import { handleUnsupported } from './handle-unsupported.server';
 import type { HandleVerificationContext } from './types';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function handleVerification(type: VerificationType, context: HandleVerificationContext) {
   const strategy = HANDLE_VERIFICATION_TYPE_STRATEGY[type];
 
   return strategy(context);
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 type VerificationHandlerStrategy = (ctx: HandleVerificationContext) => Promise<Response>;
 
 type StrategyMap = Record<VerificationType, VerificationHandlerStrategy>;

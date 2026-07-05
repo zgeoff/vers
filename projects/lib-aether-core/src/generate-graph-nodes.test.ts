@@ -42,6 +42,7 @@ test('it generates a central origin node', () => {
   const nodes = generateGraphNodes(1);
 
   expect(nodes[0]).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     connections: expect.arrayContaining([
       expect.any(String),
       expect.any(String),
@@ -49,9 +50,11 @@ test('it generates a central origin node', () => {
       expect.any(String),
     ]),
     difficulty: 0,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     index: 0,
     position: [0, 0],
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     seed: expect.any(Number),
   });
 });

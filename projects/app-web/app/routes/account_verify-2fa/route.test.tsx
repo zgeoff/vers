@@ -24,11 +24,13 @@ interface TestConfig {
   };
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function setupTest(config: TestConfig = {}) {
   const user = userEvent.setup();
 
   const verifySession = await verifySessionStorage.getSession();
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (config.transactionID) {
     verifySession.set('enable2FA#transactionID', config.transactionID);
   }
@@ -36,12 +38,14 @@ async function setupTest(config: TestConfig = {}) {
   const _loader = composeDataFnWrappers(
     loader,
     withAppLoadContext,
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     config.isAuthed && ((_) => withAuthedUser(_, { user: config.user })),
   );
 
   const _action = composeDataFnWrappers(
     action,
     withAppLoadContext,
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     config.isAuthed && ((_) => withAuthedUser(_, { user: config.user })),
     (_) => withSession(_, { 'enable2FA#transactionID': config.transactionID }),
   );

@@ -5,6 +5,7 @@ import type { Timings } from '../types';
  * @param timings - The Timings object to include in the header.
  * @returns The Server-Timing header string.
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function getServerTimingHeader(timings?: Timings) {
   if (!timings) {
     return '';

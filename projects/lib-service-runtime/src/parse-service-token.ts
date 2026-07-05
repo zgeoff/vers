@@ -18,11 +18,14 @@ interface ParseServiceTokenOptions {
  * these are a caller's problem to fix, so no detail beyond the failure itself is surfaced.
  */
 export async function parseServiceToken(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   request: Request,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   options: ParseServiceTokenOptions,
 ): Promise<ServiceTokenResolution> {
   const authorization = request.headers.get('authorization');
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!authorization?.startsWith('Bearer ')) {
     return { failure: 'invalid-service-token' };
   }

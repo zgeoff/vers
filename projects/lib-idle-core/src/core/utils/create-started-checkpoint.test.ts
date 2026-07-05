@@ -9,6 +9,7 @@ test('it creates a started checkpoint', () => {
   const checkpoint = createStartedCheckpoint(ctx);
 
   expect(checkpoint).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     hash: expect.any(String),
     seed: ctx.rng.seed,
     time: 0,

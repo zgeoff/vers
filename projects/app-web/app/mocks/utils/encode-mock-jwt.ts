@@ -8,6 +8,7 @@ interface MockJWTPayload {
  * @param payload - The payload to encode
  * @returns The encoded JWT
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function encodeMockJWT(payload: MockJWTPayload): string {
   const header = {
     alg: 'HS256',

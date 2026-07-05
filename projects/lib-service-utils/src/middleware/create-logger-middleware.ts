@@ -6,8 +6,10 @@ interface ContextVariables {
   requestId: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createLoggerMiddleware(logger: Logger): MiddlewareHandler {
   return async function loggerMiddleware(
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
     ctx: Context<{ Variables: ContextVariables }>,
     next: Next,
   ) {

@@ -14,7 +14,9 @@ interface Args {
 
 export async function getSessions(
   _: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   _args: Args,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<Array<typeof Session.$inferType>> {
   invariant(ctx.user, 'user is required in an authed resolver');

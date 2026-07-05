@@ -27,6 +27,7 @@ export interface EnemyData {
   primaryAttack: AttackData;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export type HandleTickFn = (combatExecutor: CombatExecutor) => void;
 
 interface IEntity<State extends object, EntityAppState extends object> {
@@ -41,9 +42,10 @@ interface IEntity<State extends object, EntityAppState extends object> {
   get status(): EntityStatus;
 
   // core
-  // oxlint-disable-next-line typescript/method-signature-style -- subtypes narrow the behaviour param; method syntax keeps the bivariant check that permits it
+  // oxlint-disable-next-line typescript/method-signature-style, typescript/prefer-readonly-parameter-types -- subtypes narrow the behaviour param; method syntax keeps the bivariant check that permits it; baseline(#236)
   addBehaviour(behaviour: Behaviour): void;
   getAppState: () => EntityAppState;
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   handleTick: (combatExecutor: CombatExecutor, ctx: SimulationContext) => void;
   removeBehaviour: (id: BehaviourID) => void;
   setState: (setStateFn: SetEntityStateFn<State>) => void;
@@ -89,11 +91,12 @@ export interface Avatar extends IEntity<AvatarState, AvatarAppState> {
   get mainHandEquipment(): EquipmentWeapon | null;
 
   // core
-  // oxlint-disable-next-line typescript/method-signature-style -- narrows the behaviour param; method syntax keeps the bivariant check that permits it
+  // oxlint-disable-next-line typescript/method-signature-style, typescript/prefer-readonly-parameter-types -- narrows the behaviour param; method syntax keeps the bivariant check that permits it; baseline(#236)
   addBehaviour(behaviour: AvatarBehaviour): void;
 
   // utils
   calcAttackDamage: () => number;
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   reset: (config?: ResetConfig) => void;
 }
 
@@ -128,7 +131,7 @@ export interface Enemy extends IEntity<EnemyState, EnemyAppState> {
   get primaryAttack(): AttackData;
 
   // core
-  // oxlint-disable-next-line typescript/method-signature-style -- narrows the behaviour param; method syntax keeps the bivariant check that permits it
+  // oxlint-disable-next-line typescript/method-signature-style, typescript/prefer-readonly-parameter-types -- narrows the behaviour param; method syntax keeps the bivariant check that permits it; baseline(#236)
   addBehaviour(behaviour: EnemyBehaviour): void;
 
   // utils

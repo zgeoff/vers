@@ -31,12 +31,14 @@ export function meta(): ReturnType<Route.MetaFunction> {
   ];
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
 
   return {};
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   const formData = await args.request.formData();
 
@@ -86,6 +88,7 @@ const AvatarCreateFormSchema = z.object({
   name: AvatarNameSchema,
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function AvatarCreate(props: Route.ComponentProps) {
   const isFormPending = useIsFormPending();
 
@@ -112,6 +115,7 @@ export function AvatarCreate(props: Route.ComponentProps) {
       <Form method="POST" {...getFormProps(form)} className={styles.formStyles}>
         <ClassSelectionInput
           {...toKeylessProps(getInputProps(fields.class, { type: 'hidden' }))}
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
           selected={fields.class.value as ClassID | undefined}
           onSelectClass={handleSelectClass}
         />
@@ -144,6 +148,7 @@ export default AvatarCreate;
 /**
  * forces the user to only input letters and backspace in our name field
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function handleNameInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
   const isBackspace = event.key === 'Backspace';
   const isLetter = /^[a-zA-Z]+$/.test(event.key);

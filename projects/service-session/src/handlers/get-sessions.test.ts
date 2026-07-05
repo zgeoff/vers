@@ -13,6 +13,7 @@ interface TestConfig {
   db: PostgresJsDatabase<typeof schema>;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function setupTest(config: TestConfig) {
   const caller = createCaller({ db: config.db });
 
@@ -64,21 +65,27 @@ test('it returns all sessions for the user', async () => {
 
   expect(result).toStrictEqual([
     {
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       createdAt: expect.any(Date),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       expiresAt: expect.any(Date),
       id: sessionID1,
       ipAddress: '127.0.0.1',
       refreshToken: 'refresh-token-1',
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       updatedAt: expect.any(Date),
       userID: user.id,
       verified: false,
     },
     {
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       createdAt: expect.any(Date),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       expiresAt: expect.any(Date),
       id: sessionID2,
       ipAddress: '127.0.0.2',
       refreshToken: 'refresh-token-2',
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       updatedAt: expect.any(Date),
       userID: user.id,
       verified: false,

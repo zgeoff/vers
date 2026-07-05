@@ -12,12 +12,14 @@ interface TestConfig {
   isAuthed?: boolean;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig = {}) {
   const user = userEvent.setup();
 
   const _loader = composeDataFnWrappers(
     loader,
     withAppLoadContext,
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     config.isAuthed && withAuthedUser,
   );
 

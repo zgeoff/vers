@@ -50,7 +50,9 @@ const MAX_AVATARS = 2;
  */
 export async function createAvatar(
   _: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   args: Args,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: AuthedContext,
 ): Promise<typeof CreateAvatarPayload.$inferType> {
   try {
@@ -74,6 +76,7 @@ export async function createAvatar(
       logger.error(error);
     }
 
+    // oxlint-disable-next-line typescript/no-unsafe-member-access -- baseline(#236)
     if (error instanceof TRPCClientError && error.data.code === 'CONFLICT') {
       return { error: AVATAR_NAME_EXISTS_ERROR };
     }

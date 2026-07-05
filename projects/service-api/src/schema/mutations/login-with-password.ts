@@ -16,7 +16,9 @@ interface Args {
 
 export async function loginWithPassword(
   _: object,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   args: Args,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<typeof LoginWithPasswordPayload.$inferType> {
   try {

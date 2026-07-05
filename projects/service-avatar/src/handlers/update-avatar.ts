@@ -16,6 +16,7 @@ const UpdateAvatarInputSchema = z.object({
 
 async function updateAvatar(
   input: z.infer<typeof UpdateAvatarInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<UpdateAvatarPayload> {
   try {

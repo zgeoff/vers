@@ -15,6 +15,7 @@ export const VerifyPasswordInputSchema = z.object({
 
 export async function verifyPassword(
   input: z.infer<typeof VerifyPasswordInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<VerifyPasswordPayload> {
   try {
@@ -29,6 +30,7 @@ export async function verifyPassword(
       });
     }
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!user.passwordHash) {
       throw new TRPCError({
         code: 'BAD_REQUEST',

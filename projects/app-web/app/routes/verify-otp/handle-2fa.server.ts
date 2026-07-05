@@ -10,6 +10,7 @@ import { handleGQLError } from '../../utils/handle-gql-error';
 import { isMutationError } from '../../utils/is-mutation-error';
 import type { HandleVerificationContext } from './types';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function handle2FA(ctx: HandleVerificationContext) {
   invariant(ctx.submission.status === 'success', 'submission should be successful by now');
 
@@ -81,6 +82,7 @@ export async function handle2FA(ctx: HandleVerificationContext) {
   return redirect(safeRedirect(redirectTo), { headers });
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function isForceLogoutPayload(payload: ForceLogoutPayload | object): payload is ForceLogoutPayload {
   return 'transactionToken' in payload;
 }

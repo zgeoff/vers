@@ -60,6 +60,7 @@ const container = css({
   textAlign: 'center',
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function ErrorBoundaryContainer(props: Props) {
   return (
     <div className={container}>

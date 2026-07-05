@@ -43,6 +43,7 @@ export function meta(): ReturnType<Route.MetaFunction> {
   ];
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling((args: Route.LoaderArgs) => {
   const url = new URL(args.request.url);
 
@@ -71,6 +72,7 @@ const transactionIDKeys: Record<VerificationType, SessionKey> = {
   [VerificationType.TwoFactorAuthSetup]: 'enable2FA#transactionID',
 } as const;
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   const formData = await args.request.formData();
 
@@ -94,6 +96,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   const sessionID = verifySession.get('login2FA#sessionID') ?? authSession.get('sessionID');
 
   // if we don't have a transaction ID then we really shouldn't be here.
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!transactionID) {
     const result = submission.reply({
       formErrors: ['Something went wrong.'],
@@ -132,6 +135,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     return data({ result: formResult }, { status: 400 });
   }
 
+  // oxlint-disable-next-line typescript/return-await -- baseline(#236)
   return await handleVerification(submission.value.type, {
     body: formData,
     client: args.context.client,
@@ -198,6 +202,7 @@ const otpField = css({
   marginBottom: '6',
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function VerifyOTPRoute(props: Route.ComponentProps) {
   const [searchParams] = useSearchParams();
   const isFormPending = useIsFormPending();
@@ -225,9 +230,12 @@ export function VerifyOTPRoute(props: Route.ComponentProps) {
 
   // if a user gets here without a type, there's an issue, but rather than throwing
   // an error, just show them a (useless) generic verification form
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   const headingText = type ? HEADING_BY_TYPE[type] : 'Verify your code';
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   const instructionText = type ? INSTRUCTION_BY_TYPE[type] : 'Please enter your verification code';
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   const otpInputMode = type ? OTP_INPUT_MODE_BY_TYPE[type] : 'numeric';
 
   return (

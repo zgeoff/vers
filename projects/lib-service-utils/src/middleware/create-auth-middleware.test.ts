@@ -51,10 +51,13 @@ KQIDAQAB
 -----END PUBLIC KEY-----
 `;
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 const testHandlerSpy = vi.fn<(ctx: Context) => Promise<Response>>((ctx: Context) =>
   Promise.resolve(
     ctx.json({
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       payload: ctx.get('jwtPayload'),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       userID: ctx.get('userID'),
     }),
   ),
@@ -64,6 +67,7 @@ interface TestConfig {
   isAuthRequired?: boolean;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function setupTest(config: TestConfig = {}) {
   const app = new Hono();
 

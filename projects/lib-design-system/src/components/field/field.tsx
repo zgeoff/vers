@@ -54,6 +54,7 @@ const fieldRecipe = sva({
   slots: ['root', 'label', 'input', 'errorText'],
 });
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function Field(props: Props) {
   // the field context owns error wiring; callers' aria attributes are dropped
   // so they can't point at error elements that render elsewhere.
@@ -72,6 +73,7 @@ export function Field(props: Props) {
   return (
     <ArkField.Root
       className={cx(styles.root, props.className)}
+      // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
       ids={id ? { control: id } : undefined}
       invalid={props.errors.length > 0}
     >

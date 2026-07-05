@@ -14,9 +14,11 @@ interface Props {
   isPendingMethod: HTMLFormMethod;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function TestForm(props: Props) {
   const isPending = useIsFormPending({
     formAction: props.isPendingAction,
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
     formMethod: props.isPendingMethod.toUpperCase() as FormMethod,
   });
 
@@ -37,6 +39,7 @@ interface TestConfig {
   isPendingMethod: HTMLFormMethod;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig) {
   const user = userEvent.setup();
 
@@ -54,6 +57,7 @@ function setupTest(config: TestConfig) {
     },
     {
       action: async () => {
+        // oxlint-disable-next-line typescript/strict-void-return -- baseline(#236)
         await new Promise((resolve) => setTimeout(resolve, 0));
 
         return null;
@@ -62,6 +66,7 @@ function setupTest(config: TestConfig) {
     },
     {
       action: async () => {
+        // oxlint-disable-next-line typescript/strict-void-return -- baseline(#236)
         await new Promise((resolve) => setTimeout(resolve, 0));
 
         return null;

@@ -24,6 +24,7 @@ interface DataFnArgs {
 
 export function withAuthedUser<Args extends DataFnArgs, Data>(
   dataFn: (args: Args) => Promise<Data>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   config: Config = {},
 ) {
   return async (args: Args): Promise<Data> => {

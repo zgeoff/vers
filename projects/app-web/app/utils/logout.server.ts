@@ -19,6 +19,7 @@ interface LogoutOptions {
  * @param ctx - Context containing optional redirect path and response init
  * @throws Redirect to the specified path or home page
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function logout(request: Request, options: LogoutOptions = {}): Promise<never> {
   // the gql client module imports this one for its 401 handling, so a static
   // import here completes a cycle — deferring the import breaks it
@@ -30,6 +31,7 @@ export async function logout(request: Request, options: LogoutOptions = {}): Pro
 
   const sessionID = authSession.get('sessionID');
 
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (sessionID && options.deleteSession) {
     // if we fail our server side session cleanup, ignore error's and continue.
     try {

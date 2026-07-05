@@ -38,6 +38,7 @@ export default defineConfig({
 
   // one retry absorbs the full page reload vite forces when a code-split
   // route pulls in a dependency the warmup pass didn't reach
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   retries: process.env['CI'] ? 1 : 0,
   timeout: 30 * 1000,
   use: {
@@ -48,11 +49,13 @@ export default defineConfig({
   webServer: {
     command: 'bun run dev:app-web',
     cwd: workspaceRoot,
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     reuseExistingServer: !process.env['CI'],
     stderr: 'pipe',
     stdout: 'pipe',
     timeout: 60 * 1000,
     url: 'http://localhost:4000',
   },
+  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   ...(process.env['CI'] && { workers: 1 }),
 });

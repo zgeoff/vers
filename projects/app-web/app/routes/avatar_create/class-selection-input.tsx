@@ -11,6 +11,7 @@ interface Props {
   selected?: (typeof Class)[keyof typeof Class] | undefined;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function ClassSelectionInput(props: Props) {
   const { onSelectClass, selected, ...restProps } = props;
 

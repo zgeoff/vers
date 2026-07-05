@@ -16,6 +16,7 @@ export const RefreshTokensInputSchema = z.object({
 
 export async function refreshTokens(
   input: z.infer<typeof RefreshTokensInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<RefreshTokensPayload> {
   try {
@@ -26,6 +27,7 @@ export async function refreshTokens(
       ),
     });
 
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!existingSession?.refreshToken) {
       throw new TRPCError({
         code: 'NOT_FOUND',

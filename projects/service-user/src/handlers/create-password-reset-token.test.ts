@@ -12,6 +12,7 @@ interface TestConfig {
   user?: Partial<typeof schema.users.$inferInsert>;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig) {
   const caller = createCaller({ db: config.db });
 
@@ -32,6 +33,7 @@ test('it creates a password reset token for an existing user', async () => {
   });
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     resetToken: expect.any(String),
   });
 

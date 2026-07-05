@@ -12,6 +12,7 @@ interface TestConfig {
   db: PostgresJsDatabase<typeof schema>;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig) {
   const caller = createCaller({ db: config.db });
 
@@ -32,7 +33,9 @@ test('creates a verification code and stores a record of it', async () => {
   });
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     otp: expect.any(String),
     target: 'test@example.com',
     type: 'onboarding',
@@ -48,11 +51,14 @@ test('creates a verification code and stores a record of it', async () => {
   expect(verification).toStrictEqual({
     algorithm: 'SHA-256',
     charSet: 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     digits: 6,
     expiresAt: null,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     period: 300,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     secret: expect.any(String),
     target: 'test@example.com',
     type: 'onboarding',
@@ -72,7 +78,9 @@ test('it uses a simple charset for 2FA verification codes', async () => {
   });
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     otp: expect.any(String),
     target: 'test@example.com',
     type: '2fa',
@@ -88,11 +96,14 @@ test('it uses a simple charset for 2FA verification codes', async () => {
   expect(verification).toStrictEqual({
     algorithm: 'SHA-256',
     charSet: '0123456789',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     digits: 6,
     expiresAt: null,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     period: 30,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     secret: expect.any(String),
     target: 'test@example.com',
     type: '2fa',
@@ -112,7 +123,9 @@ test('it uses a simple charset for 2FA setup verification codes', async () => {
   });
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     otp: expect.any(String),
     target: 'test@example.com',
     type: '2fa-setup',
@@ -128,11 +141,14 @@ test('it uses a simple charset for 2FA setup verification codes', async () => {
   expect(verification).toStrictEqual({
     algorithm: 'SHA-256',
     charSet: '0123456789',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     digits: 6,
     expiresAt: null,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     period: 30,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     secret: expect.any(String),
     target: 'test@example.com',
     type: '2fa-setup',
@@ -159,7 +175,9 @@ test('replaces existing verification for same target and type', async () => {
   });
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     otp: expect.any(String),
     target: 'test@example.com',
     type: 'onboarding',
@@ -191,7 +209,9 @@ test('creates a verification with explicit expiry time', async () => {
   });
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     otp: expect.any(String),
     target: 'test@example.com',
     type: 'onboarding',
@@ -209,11 +229,14 @@ test('creates a verification with explicit expiry time', async () => {
   expect(verification).toStrictEqual({
     algorithm: 'SHA-256',
     charSet: 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     digits: 6,
     expiresAt: new Date(now + 10 * 60 * 1000),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     period: 30,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     secret: expect.any(String),
     target: 'test@example.com',
     type: 'onboarding',

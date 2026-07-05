@@ -136,6 +136,7 @@ test('it returns the expected enemy state for a client app', () => {
   expect(state).toStrictEqual({
     behaviours: {
       enemyPrimaryAttack: {
+        // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
         lastAttackTime: expect.any(Number),
       },
     },
@@ -146,8 +147,11 @@ test('it returns the expected enemy state for a client app', () => {
     maxLife: enemy.life,
     name: enemy.name,
     primaryAttack: {
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       maxDamage: expect.any(Number),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       minDamage: expect.any(Number),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       speed: expect.any(Number),
     },
     status: EntityStatus.Alive,

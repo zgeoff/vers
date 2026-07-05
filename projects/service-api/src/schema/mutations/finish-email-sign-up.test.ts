@@ -48,15 +48,22 @@ test('it completes the email signup process when transaction token is valid', as
   const result = await resolve({}, args, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     accessToken: expect.any(String),
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     refreshToken: expect.any(String),
     session: {
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       createdAt: expect.any(Date),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       expiresAt: expect.any(Date),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       id: expect.any(String),
       ipAddress: ctx.ipAddress,
       refreshToken: null,
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       updatedAt: expect.any(Date),
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
       userID: expect.any(String),
       verified: false,
     },
@@ -67,13 +74,16 @@ test('it completes the email signup process when transaction token is valid', as
   });
 
   expect(user).toMatchObject({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     email: args.input.email,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     name: args.input.name,
     passwordHash: null,
     passwordResetToken: null,
     passwordResetTokenExpiresAt: null,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
     username: args.input.username,
   });

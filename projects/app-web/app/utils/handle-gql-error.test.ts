@@ -8,7 +8,9 @@ test('it rethrows redirects', () => {
     networkError: new Response('Redirect', { status: 302 }),
   });
 
+  // oxlint-disable-next-line typescript/no-confusing-void-expression -- baseline(#236)
   expect(() => handleGQLError(error)).toThrow(
+    // oxlint-disable-next-line typescript/no-unsafe-argument -- baseline(#236)
     expect.objectContaining({
       status: 302,
     }),
@@ -20,5 +22,6 @@ test('it does nothing if the network error is not a redirect', () => {
     networkError: new Error('Not found'),
   });
 
+  // oxlint-disable-next-line typescript/no-confusing-void-expression -- baseline(#236)
   expect(() => handleGQLError(error)).not.toThrow();
 });

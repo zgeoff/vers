@@ -4,6 +4,7 @@ import type { AnyContractRouter, ContractRouterClient } from '@orpc/contract';
 
 /** An Elysia app (or anything shaped like one) an RPC test client can call in-process. */
 interface RPCTestClientApp {
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   handle: (request: Request) => Promise<Response> | Response;
 }
 
@@ -19,7 +20,9 @@ interface BuildRPCTestClientOptions {
  * the link's fetch straight through `app.handle` instead of the network.
  */
 export function buildRPCTestClient<TContract extends AnyContractRouter>(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   app: RPCTestClientApp,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   options?: BuildRPCTestClientOptions,
 ): ContractRouterClient<TContract> {
   const link = new RPCLink<Record<never, never>>({

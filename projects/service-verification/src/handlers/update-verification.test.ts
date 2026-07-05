@@ -13,6 +13,7 @@ interface TestConfig {
   db: PostgresJsDatabase<typeof schema>;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig) {
   const caller = createCaller({ db: config.db });
 
@@ -56,6 +57,7 @@ test('should update a verification record', async () => {
   expect(updatedVerification).toStrictEqual({
     algorithm: 'SHA-256',
     charSet: 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     digits: 6,
     expiresAt: null,

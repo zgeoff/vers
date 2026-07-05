@@ -14,6 +14,7 @@ interface SendEmailProcedureArgs {
 
 export const sentEmails = new Map<string, Array<SendEmailInput>>();
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const sendEmailHandler = vi.fn((args: SendEmailProcedureArgs) => {
   const emails = sentEmails.get(args.input.to) ?? [];
 

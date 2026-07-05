@@ -15,6 +15,7 @@ export const UpdateEmailInputSchema = z.object({
 
 export async function updateEmail(
   input: z.infer<typeof UpdateEmailInputSchema>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: Context,
 ): Promise<UpdateEmailPayload> {
   try {

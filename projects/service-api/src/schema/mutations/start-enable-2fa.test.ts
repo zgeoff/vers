@@ -21,6 +21,7 @@ test('it creates a verification record for 2FA setup with a pending transaction'
   const result = await resolve({}, {}, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionID: expect.any(String),
   });
 
@@ -36,11 +37,14 @@ test('it creates a verification record for 2FA setup with a pending transaction'
   expect(verification).toMatchObject({
     algorithm: 'SHA-256',
     charSet: 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     digits: 6,
     expiresAt: null,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     id: expect.any(String),
     period: 300,
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     secret: expect.any(String),
     target: user.email,
     type: '2fa-setup',
@@ -96,6 +100,7 @@ test('it replaces an existing 2FA setup verification record', async () => {
   const result = await resolve({}, {}, ctx);
 
   expect(result).toStrictEqual({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     transactionID: expect.any(String),
   });
 

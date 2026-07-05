@@ -12,6 +12,7 @@ import { getNextAttackTime } from './get-next-attack-time';
 import { handleTick } from './handle-tick';
 import { predicate } from './predicate';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function create(entity: Enemy): EnemyPrimaryAttackBehaviour {
   let state = getInitialState();
 
@@ -42,8 +43,11 @@ export function create(entity: Enemy): EnemyPrimaryAttackBehaviour {
 
     // handlers
     handlers: {
+      // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
       [LifecycleEvent.OnTick]: (tickEntity: Enemy, executor: CombatExecutor) =>
+        // oxlint-disable-next-line typescript/no-confusing-void-expression -- baseline(#236)
         handleTick(tickEntity, behaviour, executor),
+      // oxlint-disable-next-line typescript/no-confusing-void-expression -- baseline(#236)
       [LifecycleEvent.Reset]: () => handleReset(),
     },
     predicate,

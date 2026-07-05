@@ -46,10 +46,12 @@ test('it updates an avatar when found', async () => {
   });
 
   expect(updatedAvatar).toMatchObject({
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     createdAt: expect.any(Date),
     id: avatar.id,
     level: avatar.level,
     name: 'Updated Name',
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
     updatedAt: expect.any(Date),
     userID: user.id,
     xp: avatar.xp,

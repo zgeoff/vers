@@ -6,6 +6,7 @@ import { aetherNodes } from '@vers/data';
 import * as styles from './route.styles';
 import { SelectedNodeInfo } from './selected-node-info';
 
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
 const aetherGraph = decompressAetherNodes(aetherNodes as Array<CompressedAetherNode>);
 
 // oxlint-disable-next-line typescript/no-non-null-assertion -- the aether graph ships with at least one node

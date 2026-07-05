@@ -1,5 +1,6 @@
 import type { Context, Next } from 'hono';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function removeTrailingSlash(ctx: Context, next: Next) {
   const url = new URL(ctx.req.url);
 
@@ -10,5 +11,6 @@ export async function removeTrailingSlash(ctx: Context, next: Next) {
     return ctx.redirect(newUrl, 302);
   }
 
+  // oxlint-disable-next-line typescript/no-confusing-void-expression, typescript/return-await -- baseline(#236)
   return await next();
 }

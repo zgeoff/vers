@@ -22,6 +22,7 @@ const _Response = globalThis.Response;
 // stub the global Response object so we can capture the cookie header
 vi.stubGlobal(
   'Response',
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   vi.fn((body?: BodyInit | null, init?: ResponseInit) => {
     if (init?.headers instanceof Headers) {
       cookieHeader = init.headers.get('set-cookie');
@@ -35,6 +36,7 @@ interface TestConfig {
   isAuthed: boolean;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function setupTest(config: TestConfig) {
   const user = userEvent.setup();
 

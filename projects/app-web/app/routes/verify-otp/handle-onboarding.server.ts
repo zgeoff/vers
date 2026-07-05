@@ -4,6 +4,7 @@ import { verifySessionStorage } from '../../session/verify-session-storage.serve
 import { Routes } from '../../types';
 import type { HandleVerificationContext } from './types';
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function handleOnboarding(ctx: HandleVerificationContext) {
   invariant(ctx.submission.status === 'success', 'submission should be successful by now');
 

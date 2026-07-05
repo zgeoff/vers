@@ -6,6 +6,7 @@ interface TooltipHeaderProps {
   className?: string;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function TooltipHeader(props: TooltipHeaderProps) {
   const { children, className, ...restProps } = props;
 
