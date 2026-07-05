@@ -3,7 +3,7 @@ import { css } from '@vers/styled-system/css';
 export const container = css({
   backgroundColor: 'neutral.950',
   borderColor: 'gray.700',
-  borderWidth: '1',
+  borderWidth: '[1px]',
   boxShadow: 'md',
   minWidth: '96',
   rounded: 'sm',
@@ -12,10 +12,10 @@ export const container = css({
 
 export const header = css({
   _before: {
-    borderBottomWidth: '1',
+    borderBottomWidth: '[1px]',
     borderGradient: 'sky.500',
-    borderRightWidth: '1',
-    borderTopWidth: '1',
+    borderRightWidth: '[1px]',
+    borderTopWidth: '[1px]',
     bottom: 'hairline',
     content: '""',
     left: '0',
@@ -24,11 +24,11 @@ export const header = css({
     roundedBottom: 'sm',
     top: 'hairline',
     userSelect: 'none',
-    zIndex: '1',
+    zIndex: '[1]',
   },
   backgroundGradient: 'to-r',
   borderGradient: 'sky.500',
-  borderTopWidth: '1',
+  borderTopWidth: '[1px]',
   gradientFrom: 'sky.700',
   gradientTo: 'transparent',
   gradientToPosition: '80%',
@@ -37,16 +37,16 @@ export const header = css({
   paddingY: '3',
   position: 'relative',
   roundedTop: 'sm',
-  zIndex: '1',
+  zIndex: '[1]',
 });
 
 export const headerBackground = css({
   left: '0',
-  opacity: '0.1',
+  opacity: '[0.1]',
   position: 'absolute',
   stroke: 'sky.100',
   top: '0',
-  zIndex: '0',
+  zIndex: '[0]',
 });
 
 export const content = css({

@@ -28,7 +28,7 @@ const fieldRecipe = sva({
       },
       backgroundColor: 'gray.900',
       borderColor: 'gray.700',
-      borderWidth: '1',
+      borderWidth: '[1px]',
       color: 'gray.300',
       outline: 'none',
       paddingX: '3',

@@ -58,7 +58,7 @@ function renderLink(link: LinkData) {
   const navLinkClassName = (props: NavLinkRenderProps) =>
     styles.navLink({
       isActive: props.isActive,
-      isDisabled: link.notImplemented,
+      ...(link.notImplemented !== undefined && { isDisabled: link.notImplemented }),
     });
 
   return (

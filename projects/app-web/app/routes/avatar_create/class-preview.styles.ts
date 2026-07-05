@@ -6,17 +6,17 @@ export const container = css({
   },
   _before: {
     borderGradient: 'sky.500',
-    borderWidth: '1',
+    borderWidth: '[1px]',
     content: '""',
     inset: '0',
-    opacity: '0',
+    opacity: '[0]',
     pointerEvents: 'none',
     position: 'absolute',
     rounded: 'md',
     transition: 'opacity',
     transitionDuration: 'fast',
     transitionTimingFunction: 'in-out',
-    zIndex: '3',
+    zIndex: '[3]',
   },
   _hover: {
     filter: '[grayscale(0)]',
@@ -24,7 +24,7 @@ export const container = css({
   backgroundColor: 'gray.900',
   backgroundGradient: 'to-b',
   borderColor: 'gray.700',
-  borderWidth: '1',
+  borderWidth: '[1px]',
   boxShadow: 'lg',
   filter: '[grayscale(0.8)]',
   flex: '1',
@@ -42,7 +42,7 @@ export const container = css({
 
 export const selected = css({
   _before: {
-    opacity: '1',
+    opacity: '[1]',
   },
   filter: '[grayscale(0)]',
 });
@@ -50,16 +50,16 @@ export const selected = css({
 export const backgroundPattern = css({
   height: 'full',
   inset: '0',
-  opacity: '0.2',
+  opacity: '[0.2]',
   position: 'absolute',
   stroke: 'gray.800',
-  zIndex: '0',
+  zIndex: '[0]',
 });
 
 export const image = css({
   pointerEvents: 'none',
   position: 'relative',
-  zIndex: '1',
+  zIndex: '[1]',
 });
 
 export const contentContainer = css({
@@ -76,14 +76,14 @@ export const contentContainer = css({
   position: 'absolute',
   roundedBottom: 'md',
   width: 'full',
-  zIndex: '2',
+  zIndex: '[2]',
 });
 
 export const header = css({
   backgroundGradient: 'to-r',
-  borderBottomWidth: '1',
+  borderBottomWidth: '[1px]',
   borderGradient: 'sky.500',
-  borderTopWidth: '1',
+  borderTopWidth: '[1px]',
   gradientFrom: 'sky.700',
   gradientTo: 'transparent',
   gradientToPosition: '80%',
@@ -95,11 +95,11 @@ export const header = css({
 
 export const headerBackgroundPattern = css({
   left: '0',
-  opacity: '0.1',
+  opacity: '[0.1]',
   position: 'absolute',
   stroke: 'sky.500',
   top: '0',
-  zIndex: '5',
+  zIndex: '[5]',
 });
 
 export const flavourTextContainer = css({

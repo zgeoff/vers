@@ -32,7 +32,7 @@ const otpFieldRecipe = sva({
     },
     input: {
       _disabled: {
-        cursor: 'not-allowed',
+        cursor: '[not-allowed]',
       },
       _focusVisible: {
         borderColor: 'gray.500',
@@ -41,7 +41,7 @@ const otpFieldRecipe = sva({
       },
       backgroundColor: 'gray.900',
       borderColor: 'gray.700',
-      borderWidth: '1',
+      borderWidth: '[1px]',
       color: 'gray.300',
       fontSize: 'md',
       height: '11',
@@ -64,7 +64,7 @@ const otpFieldRecipe = sva({
 
       // preflight gives hr a 1px top border in text color — zero it so the
       // separator renders as a plain dot
-      borderTopWidth: '0',
+      borderTopWidth: '[0]',
       height: '1',
       rounded: 'sm',
       width: '1',

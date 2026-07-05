@@ -13,15 +13,15 @@ const button = cva({
         transform: 'none',
       },
       _hover: {
-        cursor: 'not-allowed',
+        cursor: '[not-allowed]',
       },
-      cursor: 'not-allowed',
+      cursor: '[not-allowed]',
     },
     _hover: {
-      cursor: 'pointer',
+      cursor: '[pointer]',
     },
     alignItems: 'center',
-    borderWidth: '1',
+    borderWidth: '[1px]',
     display: 'flex',
     fontFamily: 'karla',
     fontWeight: 'semibold',
@@ -87,7 +87,7 @@ const button = cva({
         _hover: {
           textDecoration: 'underline',
         },
-        borderWidth: '0',
+        borderWidth: '[0]',
         color: 'sky.500',
         fontWeight: 'normal',
         padding: '0',
@@ -145,7 +145,7 @@ const button = cva({
           background: 'transparent',
         },
         background: 'transparent',
-        borderWidth: '0',
+        borderWidth: '[0]',
       },
     },
   },
@@ -169,5 +169,17 @@ export function Button<C extends React.ElementType>(props: Props<C>) {
 
   const Element = as ?? 'button';
 
-  return <Element {...restProps} className={cx(button({ fullWidth, size, variant }), className)} />;
+  return (
+    <Element
+      {...restProps}
+      className={cx(
+        button({
+          ...(fullWidth !== undefined && { fullWidth }),
+          ...(size !== undefined && { size }),
+          ...(variant !== undefined && { variant }),
+        }),
+        className,
+      )}
+    />
+  );
 }

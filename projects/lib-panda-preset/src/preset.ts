@@ -1,5 +1,6 @@
 import { definePreset } from '@pandacss/dev';
-import defaultPreset from '@pandacss/dev/presets';
+import presetBase from '@pandacss/preset-base';
+import presetPanda from '@pandacss/preset-panda';
 
 export const preset = definePreset({
   conditions: {
@@ -70,9 +71,11 @@ export const preset = definePreset({
   },
   name: 'vers-preset',
   presets: [
+    presetBase,
+
     // @ts-expect-error - pandacss's bundled default preset doesn't satisfy its own
     // Preset type under exactOptionalPropertyTypes
-    defaultPreset,
+    presetPanda,
   ],
   theme: {
     extend: {

@@ -30,7 +30,7 @@ const code = css({
 const copyButton = css({
   _hover: {
     color: 'neutral.200',
-    cursor: 'pointer',
+    cursor: '[pointer]',
   },
   color: 'neutral.700',
   height: 'full',

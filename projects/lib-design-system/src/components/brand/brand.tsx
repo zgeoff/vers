@@ -34,5 +34,14 @@ const brand = cva({
 });
 
 export function Brand(props: Props) {
-  return <h1 className={cx(brand({ size: props.size }), props.className)}>vers</h1>;
+  return (
+    <h1
+      className={cx(
+        brand({ ...(props.size !== undefined && { size: props.size }) }),
+        props.className,
+      )}
+    >
+      vers
+    </h1>
+  );
 }

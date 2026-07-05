@@ -9,5 +9,27 @@ exact = true
 minimumReleaseAge = 604800
 
 # 0.0.1 ages past the gate ~2026-07-11 — remove this exclude then (#219)
-minimumReleaseAgeExcludes = ["@zgeoff/format-codemod"]
+# panda 2.0 is still in beta with no stable ETA published — remove these excludes
+# once @pandacss/dev goes stable (#222)
+minimumReleaseAgeExcludes = [
+  "@zgeoff/format-codemod",
+  "@pandacss/dev",
+  "@pandacss/preset-base",
+  "@pandacss/preset-panda",
+  "@pandacss/cli",
+  "@pandacss/compiler",
+  "@pandacss/config",
+  "@pandacss/postcss",
+  "@pandacss/types",
+  "@pandacss/compiler-shared",
+  "@pandacss/compiler-darwin-arm64",
+  "@pandacss/compiler-darwin-x64",
+  "@pandacss/compiler-linux-x64-gnu",
+  "@pandacss/compiler-linux-arm64-gnu",
+  "@pandacss/compiler-linux-x64-musl",
+  "@pandacss/compiler-linux-arm64-musl",
+  "@pandacss/compiler-win32-x64-msvc",
+  "@pandacss/compiler-win32-arm64-msvc",
+  "@pandacss/compiler-wasm32-wasi",
+]
 

@@ -6,7 +6,6 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   css: {
     postcss: {
-      // @ts-expect-error - pandacss types are bogus
       plugins: [pandacss, autoprefixer],
     },
   },
