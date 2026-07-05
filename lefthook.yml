@@ -48,4 +48,4 @@ pre-push:
     - name: typecheck
       run: bunx turbo run typecheck
     - name: test (changed)
-      run: bunx vitest run --changed origin/main
+      run: bunx turbo run test --affected
