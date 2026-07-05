@@ -71,8 +71,8 @@ strings/numbers.
 - `bun run build` — `turbo run build`; one project via `--filter`.
 - `bun run e2e` — `turbo run e2e` (Playwright, `app-web-e2e`).
 - `bun run boundaries` — `turbo boundaries`.
-- Git hooks: lefthook (`lefthook.yml`, installed by `prepare`). Pre-push runs no tests — CI owns
-  them. `LEFTHOOK=0` skips all hooks.
+- Git hooks: lefthook (`lefthook.yml`, installed by `prepare`). Pre-push tests changed files only
+  (`vitest --changed`) — the full suite is CI's. `LEFTHOOK=0` skips all hooks.
 
 ## Docker
 

@@ -1,7 +1,7 @@
 # Git hooks. pre-commit fixes and codegens staged files only (fast); pre-push
 # gates the whole tree so config drift affecting unstaged files is caught
-# before CI. Tests are deliberately absent from both: pg-testcontainer-backed
-# suites make push hooks flaky, so CI owns tests.
+# before CI. pre-push tests cover changed files only — the full suite (incl.
+# the pg-testcontainer-backed projects when untouched) is CI's job.
 
 pre-commit:
   piped: true
@@ -52,3 +52,5 @@ pre-push:
       run: bun run lint:type-aware
     - name: typecheck
       run: bunx turbo run typecheck
+    - name: test (changed)
+      run: bunx vitest run --changed origin/main
