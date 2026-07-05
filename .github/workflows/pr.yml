@@ -86,13 +86,15 @@ jobs:
         run: bun run playwright install --with-deps --only-shell chromium
 
       - name: E2E Tests
+        id: e2e
         # non-blocking until #212 stabilizes the suite
         continue-on-error: true
         run: bunx turbo run e2e --affected
 
       - name: Upload Videos Of Failed E2E
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: failure()
+        # continue-on-error hides the e2e outcome from failure(), so gate on the step directly
+        if: ${{ steps.e2e.outcome == 'failure' }}
         with:
           name: playwright-results
           include-hidden-files: true

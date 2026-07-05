@@ -88,13 +88,15 @@ jobs:
         run: bun run playwright install --with-deps --only-shell chromium
 
       - name: E2E Tests
+        id: e2e
         # non-blocking until #212 stabilizes the suite
         continue-on-error: true
         run: bunx turbo run e2e --affected
 
       - name: Upload Videos Of Failed E2E
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: failure()
+        # continue-on-error hides the e2e outcome from failure(), so gate on the step directly
+        if: ${{ steps.e2e.outcome == 'failure' }}
         with:
           name: playwright-results
           include-hidden-files: true
@@ -117,7 +119,7 @@ jobs:
           '<@vers/db-postgres>') ||
           contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/postgres-schema>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/db-postgres/Dockerfile
@@ -128,7 +130,7 @@ jobs:
         if:
           ${{ contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-api>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/service-api/Dockerfile
@@ -139,7 +141,7 @@ jobs:
         if:
           ${{ contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-avatar>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/service-avatar/Dockerfile
@@ -150,7 +152,7 @@ jobs:
         if:
           ${{ contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-email>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/service-email/Dockerfile
@@ -161,7 +163,7 @@ jobs:
         if:
           ${{ contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-session>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/service-session/Dockerfile
@@ -172,7 +174,7 @@ jobs:
         if:
           ${{ contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-user>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/service-user/Dockerfile
@@ -183,7 +185,7 @@ jobs:
         if:
           ${{ contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-verification>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/service-verification/Dockerfile
@@ -192,7 +194,7 @@ jobs:
 
       - name: Build Web App Image
         if: ${{ contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/web>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/app-web/Dockerfile
