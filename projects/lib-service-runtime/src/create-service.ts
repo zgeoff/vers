@@ -27,7 +27,7 @@ export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
     logger: pino.Logger;
   }) => AnyRouter;
   contract: AnyContractRouter;
-  envShape?: TEnvShape;
+  envShape: TEnvShape;
   name: string;
 }
 
@@ -115,18 +115,21 @@ export async function createService<
 
 /** Parses the base + service-specific environment shape against `process.env`, failing fast. */
 function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
-  envShape: TEnvShape | undefined,
+  envShape: TEnvShape,
 ): ServiceEnv<TEnvShape> {
-  const schema = BASE_ENV_SCHEMA.extend(envShape ?? {});
-  const result = schema.safeParse(process.env);
+  const base = BASE_ENV_SCHEMA.safeParse(process.env);
+  const extra = z.object(envShape).safeParse(process.env);
 
-  if (!result.success) {
+  if (!base.success || !extra.success) {
+    const baseIssues = base.success ? [] : base.error.issues;
+    const extraIssues = extra.success ? [] : extra.error.issues;
+
     throw new Error(
-      `invalid service environment:\n${z.prettifyError(result.error)}`,
+      `invalid service environment:\n${z.prettifyError(new z.ZodError([...baseIssues, ...extraIssues]))}`,
     );
   }
 
-  return result.data as ServiceEnv<TEnvShape>;
+  return { ...base.data, ...extra.data };
 }
 
 /** Generates the service's OpenAPI document from its contract, never its implementation. */

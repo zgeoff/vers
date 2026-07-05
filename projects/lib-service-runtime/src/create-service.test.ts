@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, expectTypeOf, test } from 'vitest';
 import type { ContractRouterClient } from '@orpc/contract';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
@@ -71,6 +71,7 @@ test('it throws at boot when SERVICE_AUTH_PUBLIC_KEY is missing', async () => {
       createService({
         buildRouter: () => buildTestRouter(contract),
         contract,
+        envShape: {},
         name: 'test-service',
       }),
     ).rejects.toThrowWithMessage(Error, /SERVICE_AUTH_PUBLIC_KEY/);
@@ -91,6 +92,7 @@ test('it applies default PORT and LOG_LEVEL when unset', async () => {
       const { env } = await createService({
         buildRouter: () => buildTestRouter(contract),
         contract,
+        envShape: {},
         name: 'test-service',
       });
 
@@ -114,6 +116,8 @@ test('it parses a service-specific envShape variable onto env', async () => {
         name: 'test-service',
       });
 
+      expectTypeOf(env.PORT).toEqualTypeOf<number>();
+      expectTypeOf(env.CUSTOM_GREETING).toEqualTypeOf<string>();
       expect(env.CUSTOM_GREETING).toBe('hi there');
     },
   );
@@ -134,6 +138,7 @@ test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugi
         createService({
           buildRouter: () => buildTestRouter(contract),
           contract,
+          envShape: {},
           name: 'test-service',
         }),
       ).toResolve();
@@ -149,6 +154,7 @@ test('it rejects an /rpc call with no Authorization header with a plain 401', as
     const { app } = await createService({
       buildRouter: () => buildTestRouter(contract),
       contract,
+      envShape: {},
       name: 'test-service',
     });
 
@@ -175,6 +181,7 @@ test('it rejects an /rpc call with a garbage token with a plain 401', async () =
     const { app } = await createService({
       buildRouter: () => buildTestRouter(contract),
       contract,
+      envShape: {},
       name: 'test-service',
     });
 
@@ -200,6 +207,7 @@ test('it rejects an /rpc call with an expired token with a plain 401', async () 
     const { app } = await createService({
       buildRouter: () => buildTestRouter(contract),
       contract,
+      envShape: {},
       name: 'test-service',
     });
     const token = await createServiceToken({
@@ -229,6 +237,7 @@ test('it rejects an /rpc call with a wrong-audience token with a plain 401', asy
     const { app } = await createService({
       buildRouter: () => buildTestRouter(contract),
       contract,
+      envShape: {},
       name: 'test-service',
     });
     const token = await createServiceToken({
@@ -257,6 +266,7 @@ test('it returns data from an authed procedure given a valid token naming an act
     const { app } = await createService({
       buildRouter: () => buildTestRouter(contract),
       contract,
+      envShape: {},
       name: 'test-service',
     });
     const token = await createServiceToken({
@@ -280,6 +290,7 @@ test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a v
     const { app } = await createService({
       buildRouter: () => buildTestRouter(contract),
       contract,
+      envShape: {},
       name: 'test-service',
     });
     const token = await createServiceToken({
@@ -303,6 +314,7 @@ test('it serves /health without any token', async () => {
     const { app } = await createService({
       buildRouter: () => buildTestRouter(contract),
       contract,
+      envShape: {},
       name: 'test-service',
     });
     const response = await app.handle(new Request('http://test.local/health'));
@@ -323,6 +335,7 @@ test('it echoes a supplied x-request-id and mints one when absent', async () => 
     const { app } = await createService({
       buildRouter: () => buildTestRouter(contract),
       contract,
+      envShape: {},
       name: 'test-service',
     });
 
@@ -350,6 +363,7 @@ test('it serves /spec.json declaring the 401 response for the authed route', asy
     const { app } = await createService({
       buildRouter: () => buildTestRouter(contract),
       contract,
+      envShape: {},
       name: 'test-service',
     });
     const response = await app.handle(
@@ -374,6 +388,7 @@ test('it serves the authed route over /api given a valid token', async () => {
     const { app } = await createService({
       buildRouter: () => buildTestRouter(contract),
       contract,
+      envShape: {},
       name: 'test-service',
     });
     const token = await createServiceToken({
@@ -401,6 +416,7 @@ test('it passes every conformance case collected from its own contract', async (
     const { app } = await createService({
       buildRouter: () => buildTestRouter(contract),
       contract,
+      envShape: {},
       name: 'test-service',
     });
     const anonymousToken = await createServiceToken({
