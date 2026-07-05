@@ -19,6 +19,13 @@ const config = {
     `oxlint --fix ${files.map((file) => `"${file}"`).join(' ')}`,
   ],
 
+  // blank-line padding runs after oxfmt so its splices land on formatted
+  // code; the glob spells {tsx,ts} because it matches the same files as the
+  // codegen/typecheck entry above and object keys must stay distinct
+  'projects/**/*.{tsx,ts}': (files) => [
+    `format-codemod --quiet ${files.map((file) => `"${file}"`).join(' ')}`,
+  ],
+
   'projects/lib-postgres-schema/**/*.ts': () => [
     'bun run pg:migrations-generate',
     'git add projects/db-postgres/migrations',

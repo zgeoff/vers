@@ -234,7 +234,9 @@ name minus the taxonomy prefix: `lib-` and `app-` strip (`lib-validation` → `@
   Postgres-backed suites need `bun run pg:test-container:start` first.
 - `bun run lint` / `bun run lint:fix` — `oxlint` over the whole tree (`.oxlintrc.json` at the root);
   not a turbo task, oxlint covers everything in one fast invocation.
-- `bun run format` / `bun run format:check` — `oxfmt` (`.oxfmtrc.json` at the root).
+- `bun run format` / `bun run format:check` — `oxfmt` (`.oxfmtrc.json` at the root), then
+  `format-codemod` for blank-line padding over explicit source globs (generated output like
+  `app/gql` is excluded by the glob list, not an ignore file — the codemod has none).
 - `bun run build` — `turbo run build`; one project via `--filter`.
 - `bun run e2e` — `turbo run e2e` (Playwright, `app-web-e2e`).
 - `bun run boundaries` — `turbo boundaries`.
@@ -271,11 +273,10 @@ the _target_ state, not this repo yet:
   unit/integration tests run under vitest on node. Deferred past #160 to the rebuild (#163) — vitest
   stays until services move to the bun runtime.
 
-oxlint/oxfmt landed in #188, but two pieces of the tools-repo stack are deliberately still missing:
+oxlint/oxfmt and `@zgeoff/format-codemod` landed in #188 (the codemod installs through a tracked
+`minimumReleaseAgeExcludes` entry in `bunfig.toml` — #219 removes it once 0.0.1 ages past the gate),
+but one piece of the tools-repo stack is deliberately still missing:
 
-- **`@zgeoff/format-codemod`** — not wired in. Every version published so far falls inside bun's
-  7-day `minimumReleaseAge` gate at the time #188 landed; `bun run format` is oxfmt alone until a
-  release clears the gate.
 - **Type-aware lint** (`oxlint --type-aware`/tsgolint) — not enabled. It needs the TS7 toolchain,
   which is #217's scope; `.oxlintrc.json` carries the two rules this would otherwise cover
   (`typescript/no-unsafe-assignment`, `typescript/only-throw-error`) explicitly `"off"` with a

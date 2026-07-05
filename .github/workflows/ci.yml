@@ -78,7 +78,7 @@ jobs:
         run: bun run codegen:styles
 
       - name: Check Formatting
-        run: bun run format --check
+        run: bun run format:check
 
       - name: Lint
         run: bun run lint
