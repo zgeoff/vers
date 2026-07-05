@@ -239,7 +239,8 @@ lib-design-system, app-web) — no stable release exists yet, so the packages ar
 lib-panda-preset composes `presets: [presetBase, presetPanda]` from `@pandacss/preset-base` and
 `@pandacss/preset-panda` (2.0 dropped the bundled `@pandacss/dev/presets` default). CSS values that
 aren't theme tokens need the bracket escape hatch (`cursor: '[pointer]'`, `borderWidth: '[1px]'`) —
-2.0 tightened `SystemStyleObject`'s value types to stop silently accepting arbitrary strings/numbers.
+2.0 tightened `SystemStyleObject`'s value types to stop silently accepting arbitrary
+strings/numbers.
 
 ## Running things today
 
@@ -253,8 +254,8 @@ aren't theme tokens need the bracket escape hatch (`cursor: '[pointer]'`, `borde
 - `bun run lint:type-aware` — `oxlint --type-aware --type-check` (oxlint-tsgolint underneath, needs
   the TS7 toolchain). Runs after plain lint in CI. A handful of type-aware rules are off with a
   comment in `.oxlintrc.json`: some for good (documented, permanent) reasons — app-web's
-  `only-throw-error` exception for react-router's throw-a-Response idiom — others because turning
-  on real type info for the first time surfaced a large pre-existing backlog unrelated to any one
+  `only-throw-error` exception for react-router's throw-a-Response idiom — others because turning on
+  real type info for the first time surfaced a large pre-existing backlog unrelated to any one
   change (`no-unsafe-assignment`, `prefer-readonly-parameter-types`, and others), left for a
   dedicated follow-up rather than folded into whatever PR happened to flip the switch.
 - `bun run format` — `format-codemod` (blank-line padding, explicit source globs — the codemod has
