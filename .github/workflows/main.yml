@@ -135,17 +135,6 @@ jobs:
           tags: vers/service-avatar:latest
           push: false
 
-      - name: Build Email Service Image
-        if:
-          ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
-          '<@vers/service-email>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: projects/service-email/Dockerfile
-          tags: vers/service-email:latest
-          push: false
-
       - name: Build Session Service Image
         if:
           ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,

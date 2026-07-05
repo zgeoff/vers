@@ -26,21 +26,6 @@ services:
       - '3005:3005'
     depends_on:
       - postgres
-  service-email:
-    build:
-      context: .
-      dockerfile: projects/service-email/Dockerfile
-      args:
-        BUILD_MODE: development
-    env_file:
-      - projects/service-email/.env.development
-      - projects/service-email/.env.development.local
-    environment:
-      - DATABASE_URL=postgresql://admin:password@postgres:5433/vers
-    ports:
-      - '3001:3001'
-    depends_on:
-      - postgres
   service-session:
     build:
       context: .

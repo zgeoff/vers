@@ -3,13 +3,15 @@ import * as generators from './index';
 import { previews } from './previews';
 
 test('it has a preview entry for every template generator', () => {
-  const expectedNames = Object.keys(generators).map((exportName) =>
-    exportName
-      .replace(/^generate/, '')
-      .replace(/Email$/, '')
-      .replaceAll(/(?<=[a-z])(?=[A-Z])/g, '-')
-      .toLowerCase(),
-  );
+  const expectedNames = Object.keys(generators)
+    .filter((exportName) => exportName.startsWith('generate'))
+    .map((exportName) =>
+      exportName
+        .replace(/^generate/, '')
+        .replace(/Email$/, '')
+        .replaceAll(/(?<=[a-z])(?=[A-Z])/g, '-')
+        .toLowerCase(),
+    );
 
   expect(previews.map((preview) => preview.name).toSorted()).toStrictEqual(
     expectedNames.toSorted(),
