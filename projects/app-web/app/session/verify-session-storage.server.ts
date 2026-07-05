@@ -61,8 +61,9 @@ export const verifySessionStorage = createCookieSessionStorage<SessionData, Sess
     sameSite: 'lax',
     secrets: [process.env['SESSION_SECRET']],
 
-    // only use secure cookies in prod because Safari doesn't allow setting secure cookies
-    // for HTTP requests i.e. localhost which breaks our e2e
+    // secure cookies only transmit over https — except on localhost, which
+    // browsers treat as a secure context, so the http e2e run against the
+    // production build still sends them
     secure: import.meta.env.PROD,
   },
 });

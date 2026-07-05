@@ -99,6 +99,9 @@ jobs:
 
       - name: Record Affected Projects
         id: record-affected-projects
+        # runs even when e2e fails so a flaky suite can't skip the image builds
+        # below (which validate every affected Dockerfile)
+        if: ${{ !cancelled() }}
         run: |
           # names are <>-wrapped so the contains() gates can't substring-match
           affected="$(bunx turbo run build --affected --dry=json | jq -r '.packages[] | "<\(.)>"')"
@@ -110,10 +113,10 @@ jobs:
 
       - name: Build db-postgres Image
         if:
-          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
+          ${{ !cancelled() && (contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/db-postgres>') ||
           contains(steps.record-affected-projects.outputs.affected-projects,
-          '<@vers/postgres-schema>') }}
+          '<@vers/postgres-schema>')) }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
@@ -123,7 +126,7 @@ jobs:
 
       - name: Build Avatar Service Image
         if:
-          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
+          ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-avatar>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
@@ -134,7 +137,7 @@ jobs:
 
       - name: Build Email Service Image
         if:
-          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
+          ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-email>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
@@ -145,7 +148,7 @@ jobs:
 
       - name: Build Session Service Image
         if:
-          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
+          ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-session>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
@@ -156,7 +159,7 @@ jobs:
 
       - name: Build User Service Image
         if:
-          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
+          ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-user>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
@@ -167,7 +170,7 @@ jobs:
 
       - name: Build Verification Service Image
         if:
-          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
+          ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-verification>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
@@ -177,7 +180,9 @@ jobs:
           push: false
 
       - name: Build Web App Image
-        if: ${{ contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/web>') }}
+        if:
+          ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
+          '<@vers/web>') }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
