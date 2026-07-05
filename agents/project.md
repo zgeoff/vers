@@ -49,8 +49,10 @@ strings/numbers.
 - `bun install` — whole workspace (`--frozen-lockfile` in CI; `bun.lock` is committed).
 - `bun run typecheck` — `turbo run typecheck` (per-project `tsc --noEmit`); one project via
   `--filter=@vers/<name>`.
-- `bun run test` — `turbo run test` (per-project `vitest run`); one project via `--filter`.
-  Postgres-backed suites need `bun run pg:test-container:start` first.
+- `bun run test` — `turbo run test` (per-project `vitest run` or `bun test`, per package); one
+  project via `--filter`. Postgres-backed suites need `bun run pg:test-container:start` first.
+  bun-test packages each carry their own `bunfig.toml` (bunfig is read from cwd, not merged up) —
+  root-invoked `bun test <file>` still resolves jest-extended matchers from the root preload.
 - `bun run lint` / `bun run lint:fix` — `turbo run codegen typegen`, then
   `oxlint --type-aware --type-check --report-unused-disable-directives-severity error` over the
   whole tree (`.oxlintrc.json` at the root; oxlint-tsgolint underneath, needs the TS7 toolchain —
@@ -74,7 +76,8 @@ strings/numbers.
 - `bun run e2e` — `turbo run e2e` (Playwright, `app-web-e2e`).
 - `bun run boundaries` — `turbo boundaries`.
 - Git hooks: lefthook (`lefthook.yml`, installed by `prepare`). Pre-push tests changed files only
-  (`vitest --changed`) — the full suite is CI's. `LEFTHOOK=0` skips all hooks.
+  (`turbo run test --affected`, so each affected project's own runner is used) — the full suite is
+  CI's. `LEFTHOOK=0` skips all hooks.
 
 ## Docker
 
@@ -101,8 +104,10 @@ See #160 for the full phase plan (turborepo + bun, spike-gated; shared configs a
 `zgeoff/tools`). This repo is mid-migration — several claims in `agents/shared.md` above describe
 the _target_ state, not this repo yet:
 
-- **`bun test`** — not adopted. bun is the package manager and script runner only; all
-  unit/integration tests run under vitest on node. Deferred past #160 to the rebuild (#163) — vitest
-  stays until services move to the bun runtime.
+- **`bun test`** — adopted for the new-stack (#164) services via `@zgeoff/bun-test-extended`
+  (jest-extended matchers for bun's runner). Vitest remains for pre-rebuild packages (app-web, the
+  game/idle/aether libs, service-avatar, …) and for `lib-email` (happy-dom template tests) — mixed
+  runners are fine per-project. `vitest.workspace.ts` targets each package's `vitest.config.ts` (or
+  app-web's `vite.config.ts`) explicitly so it never sweeps up `bun:test` files.
 
 Don't "fix" these to match the shared partial mid-migration — follow the phase plan in #160 instead.
