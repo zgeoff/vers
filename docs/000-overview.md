@@ -74,8 +74,8 @@ The star map (`lib-aether-*`) generates the world graph — concentric difficult
   carries a short-lived signed service token minted at the edge with the acting user's ID; the
   runtime plugin in `lib-service-runtime` verifies it before any handler runs.
 - **Contracts** — each service's API is declared in its own `@vers/contract-*` package, oRPC
-  contract-first with Zod schemas from `lib-validation`. Mechanics, error taxonomy, and change
-  discipline: [service contracts](./002-service-contracts.md).
+  contract-first with Zod schemas owned by the contract that declares them. Mechanics, error
+  taxonomy, and change discipline: [service contracts](./002-service-contracts.md).
 - **Atomic release** — contracts are unversioned workspace source packages; the repo deploys as one
   unit from one SHA. Turborepo re-typechecks every consumer on any contract change, so divergence
   cannot land on `main`. There is no version matrix — the monorepo is the compatibility mechanism.
