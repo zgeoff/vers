@@ -50,6 +50,7 @@ function isTestContainerReachable(): Promise<boolean> {
     });
 
     socket.once('error', () => {
+      socket.destroy();
       resolve(false);
     });
   });
