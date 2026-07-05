@@ -1,6 +1,6 @@
-import { afterEach, expect, test, vi } from 'vitest';
 import { drop } from '@mswjs/data';
 import { TRPCError } from '@trpc/server';
+import { afterEach, expect, test, vi } from 'vitest';
 import { db } from '~/mocks/db';
 import { trpc } from '~/mocks/handlers/trpc/service-user/trpc';
 import { server } from '~/mocks/node';
@@ -182,7 +182,7 @@ test('it returns a success response for any errors returned from the change pass
 
   const ctx = createMockGQLContext({});
 
-  const resetPasswordHandler = vi.fn(() => {
+  const resetPasswordHandler = vi.fn<() => never>(() => {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
       message: 'Failed to change password',
@@ -201,6 +201,6 @@ test('it returns a success response for any errors returned from the change pass
 
   const result = await resolve({}, args, ctx);
 
-  expect(resetPasswordHandler).toHaveBeenCalledTimes(1);
+  expect(resetPasswordHandler).toHaveBeenCalledOnce();
   expect(result).toStrictEqual({ success: true });
 });

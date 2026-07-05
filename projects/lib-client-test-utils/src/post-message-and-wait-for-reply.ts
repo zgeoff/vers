@@ -8,10 +8,7 @@
 interface Message {
   type: string;
 }
-export async function postMessageAndWaitForReply(
-  worker: SharedWorker,
-  message: Message,
-) {
+export function postMessageAndWaitForReply(worker: SharedWorker, message: Message) {
   return new Promise<MessageEvent<Message>>((resolve) => {
     // eslint-disable-next-line unicorn/prefer-add-event-listener
     worker.port.onmessage = (event: MessageEvent<Message>) => {

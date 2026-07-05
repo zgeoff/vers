@@ -1,9 +1,9 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { expect, test } from 'vitest';
 import { ExistingAccountEmail } from './existing-account-email';
 
 test('it renders the existing account email with all required elements', () => {
-  render(<ExistingAccountEmail email={'test@example.com'} />);
+  render(<ExistingAccountEmail email="test@example.com" />);
 
   const heading = screen.getByRole('heading', {
     name: 'You already have an account',
@@ -14,8 +14,5 @@ test('it renders the existing account email with all required elements', () => {
   expect(heading).toBeInTheDocument();
   expect(emailText).toBeInTheDocument();
   expect(resetLink).toBeInTheDocument();
-  expect(resetLink).toHaveAttribute(
-    'href',
-    'https://versidle.com/forgot-password',
-  );
+  expect(resetLink).toHaveAttribute('href', 'https://versidle.com/forgot-password');
 });

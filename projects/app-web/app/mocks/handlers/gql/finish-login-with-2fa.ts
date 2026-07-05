@@ -1,9 +1,6 @@
-import { graphql, HttpResponse } from 'msw';
+import { HttpResponse, graphql } from 'msw';
 import invariant from 'tiny-invariant';
-import type {
-  FinishLoginWith2FaInput,
-  FinishLoginWith2FaPayload,
-} from '~/gql/graphql';
+import type { FinishLoginWith2FaInput, FinishLoginWith2FaPayload } from '~/gql/graphql';
 import { db } from '../../db';
 import { UNKNOWN_ERROR } from '../../errors';
 import { encodeMockJWT } from '../../utils/encode-mock-jwt';
@@ -23,8 +20,8 @@ const EXPIRATION_IN_MS = 1000 * 60 * 60 * 24; // 24 hours
 export const FinishLoginWith2FA = graphql.mutation<
   FinishLoginWith2FAResponse,
   FinishLoginWith2FAVariables
->('FinishLoginWith2FA', ({ variables }) => {
-  const { target, transactionToken } = variables.input;
+>('FinishLoginWith2FA', (opts) => {
+  const { target, transactionToken } = opts.variables.input;
 
   const user = db.user.findFirst({
     where: {
@@ -83,10 +80,10 @@ export const FinishLoginWith2FA = graphql.mutation<
     });
   }
 
+  const expSeconds = (Date.now() + EXPIRATION_IN_MS).toString().slice(0, 10);
+
   const accessToken = encodeMockJWT({
-    exp: Number.parseInt(
-      (Date.now() + EXPIRATION_IN_MS).toString().slice(0, 10),
-    ),
+    exp: Number(expSeconds),
     sub: user.id,
   });
 

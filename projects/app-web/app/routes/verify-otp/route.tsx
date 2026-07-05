@@ -1,31 +1,19 @@
-import {
-  data,
-  Form,
-  redirect,
-  Link as RRLink,
-  useSearchParams,
-} from 'react-router';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
 import { captureException } from '@sentry/react';
-import {
-  Brand,
-  Heading,
-  OTPField,
-  StatusButton,
-  Text,
-} from '@vers/design-system';
+import { Brand, Heading, OTPField, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
+import { Form, Link as RRLink, data, redirect, useSearchParams } from 'react-router';
 import { HoneypotInputs } from 'remix-utils/honeypot/react';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
-import type { SessionKey } from '~/session/verify-session-storage.server';
 import { FormErrorList } from '~/components/form-error-list/form-error-list';
 import { RouteErrorBoundary } from '~/components/route-error-boundary';
 import { VerifyOTPMutation } from '~/data/mutations/verify-otp';
 import { VerificationType } from '~/gql/graphql';
 import { useIsFormPending } from '~/hooks/use-is-form-pending';
 import { authSessionStorage } from '~/session/auth-session-storage.server';
+import type { SessionKey } from '~/session/verify-session-storage.server';
 import { verifySessionStorage } from '~/session/verify-session-storage.server';
 import { Routes } from '~/types';
 import { checkHoneypot } from '~/utils/check-honeypot.server';
@@ -46,14 +34,16 @@ export const VerifyOTPFormSchema = z.object({
   [QueryParam.Type]: VerificationTypeSchema,
 });
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: '',
-    title: 'vers | Verify OTP',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: '',
+      title: 'vers | Verify OTP',
+    },
+  ];
+}
 
-export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
+export const loader = withErrorHandling((args: Route.LoaderArgs) => {
   const url = new URL(args.request.url);
 
   const typeParam = url.searchParams.get(QueryParam.Type);
@@ -72,8 +62,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
 
 const transactionIDKeys: Record<VerificationType, SessionKey> = {
   [VerificationType.ChangeEmail]: 'changeEmail#transactionID',
-  [VerificationType.ChangeEmailConfirmation]:
-    'changeEmailConfirm#transactionID',
+  [VerificationType.ChangeEmailConfirmation]: 'changeEmailConfirm#transactionID',
   [VerificationType.ChangePassword]: 'changePassword#transactionID',
   [VerificationType.Onboarding]: 'onboarding#transactionID',
   [VerificationType.ResetPassword]: 'resetPassword#transactionID',
@@ -96,20 +85,13 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     return data({ result }, { status });
   }
 
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
-  const authSession = await authSessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const authSession = await authSessionStorage.getSession(args.request.headers.get('cookie'));
 
-  const transactionID = verifySession.get(
-    transactionIDKeys[submission.value.type],
-  );
+  const transactionID = verifySession.get(transactionIDKeys[submission.value.type]);
 
-  const sessionID =
-    verifySession.get('login2FA#sessionID') ?? authSession.get('sessionID');
+  const sessionID = verifySession.get('login2FA#sessionID') ?? authSession.get('sessionID');
 
   // if we don't have a transaction ID then we really shouldn't be here.
   if (!transactionID) {
@@ -189,10 +171,7 @@ const INSTRUCTION_BY_TYPE: Record<VerificationType, string> = {
     'To enable two-factor authentication, please enter your six digit code from your authenticator app',
 };
 
-const OTP_INPUT_MODE_BY_TYPE: Record<
-  VerificationType,
-  'alphanumeric' | 'numeric'
-> = {
+const OTP_INPUT_MODE_BY_TYPE: Record<VerificationType, 'alphanumeric' | 'numeric'> = {
   [VerificationType.ChangeEmail]: 'numeric',
   [VerificationType.ChangeEmailConfirmation]: 'alphanumeric',
   [VerificationType.ChangePassword]: 'numeric',
@@ -223,9 +202,7 @@ export function VerifyOTPRoute(props: Route.ComponentProps) {
   const [searchParams] = useSearchParams();
   const isFormPending = useIsFormPending();
 
-  const typeParsedWithZod = VerificationTypeSchema.safeParse(
-    searchParams.get(QueryParam.Type),
-  );
+  const typeParsedWithZod = VerificationTypeSchema.safeParse(searchParams.get(QueryParam.Type));
 
   const type = typeParsedWithZod.success ? typeParsedWithZod.data : null;
 
@@ -239,21 +216,17 @@ export function VerifyOTPRoute(props: Route.ComponentProps) {
     },
     id: 'verify-otp-form',
     lastResult: props.actionData?.result,
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: VerifyOTPFormSchema });
+    onValidate(opts) {
+      return parseWithZod(opts.formData, { schema: VerifyOTPFormSchema });
     },
   });
 
-  const submitButtonStatus = isFormPending
-    ? StatusButton.Status.Pending
-    : StatusButton.Status.Idle;
+  const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
   // if a user gets here without a type, there's an issue, but rather than throwing
   // an error, just show them a (useless) generic verification form
   const headingText = type ? HEADING_BY_TYPE[type] : 'Verify your code';
-  const instructionText = type
-    ? INSTRUCTION_BY_TYPE[type]
-    : 'Please enter your verification code';
+  const instructionText = type ? INSTRUCTION_BY_TYPE[type] : 'Please enter your verification code';
 
   const otpInputMode = type ? OTP_INPUT_MODE_BY_TYPE[type] : 'numeric';
 
@@ -272,23 +245,15 @@ export function VerifyOTPRoute(props: Route.ComponentProps) {
           className={otpField}
           errors={fields[QueryParam.Code].errors ?? []}
           inputProps={{
-            ...toKeylessProps(
-              getInputProps(fields[QueryParam.Code], { type: 'text' }),
-            ),
+            ...toKeylessProps(getInputProps(fields[QueryParam.Code], { type: 'text' })),
             autoComplete: 'one-time-code',
             autoFocus: true,
             mode: otpInputMode,
           }}
         />
-        <input
-          {...getInputProps(fields[QueryParam.Type], { type: 'hidden' })}
-        />
-        <input
-          {...getInputProps(fields[QueryParam.Target], { type: 'hidden' })}
-        />
-        <input
-          {...getInputProps(fields[QueryParam.RedirectTo], { type: 'hidden' })}
-        />
+        <input {...getInputProps(fields[QueryParam.Type], { type: 'hidden' })} />
+        <input {...getInputProps(fields[QueryParam.Target], { type: 'hidden' })} />
+        <input {...getInputProps(fields[QueryParam.RedirectTo], { type: 'hidden' })} />
         <StatusButton
           disabled={isFormPending}
           status={submitButtonStatus}

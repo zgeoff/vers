@@ -1,11 +1,11 @@
-import { expect, test, vi } from 'vitest';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
+import { expect, test, vi } from 'vitest';
 import { remoteAddressMiddleware } from './remote-address-middleware';
 
-const testHandlerSpy = vi.fn(async (ctx: Context) => {
-  return ctx.json({ ipAddress: ctx.get('ipAddress') });
-});
+const testHandlerSpy = vi.fn<(ctx: Context) => Promise<Response>>((ctx: Context) =>
+  Promise.resolve(ctx.json({ ipAddress: ctx.get('ipAddress') })),
+);
 
 function setupTest() {
   const app = new Hono();

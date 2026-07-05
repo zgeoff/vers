@@ -7,7 +7,7 @@ interface Config {
   verificationURL: string;
 }
 
-export async function generateWelcomeEmail(config: Config) {
+export function generateWelcomeEmail(config: Config) {
   return generateEmail({
     component: (
       <E.Html dir="ltr" lang="en">

@@ -1,6 +1,6 @@
-import { redirect } from 'react-router';
 import { classes } from '@vers/data';
 import { Heading, Text } from '@vers/design-system';
+import { redirect } from 'react-router';
 import invariant from 'tiny-invariant';
 import { ContentContainer } from '~/components/content-container';
 import { RouteErrorBoundary } from '~/components/route-error-boundary';
@@ -12,12 +12,14 @@ import { requireAuth } from '~/utils/require-auth.server';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import type { Route } from './+types/route';
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: '',
-    title: 'vers | Avatar',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: '',
+      title: 'vers | Avatar',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
@@ -34,7 +36,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
 
   invariant(result.data, 'if no error, there must be data');
 
-  const avatar = result.data.getAvatars[0];
+  const [avatar] = result.data.getAvatars;
 
   if (!avatar) {
     return redirect(Routes.AvatarCreate);

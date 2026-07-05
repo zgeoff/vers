@@ -1,16 +1,16 @@
-import { afterEach, expect, test } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
 import { GraphQLError } from 'graphql';
 import { graphql } from 'msw';
+import { createRoutesStub } from 'react-router';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
 import { withAppLoadContext } from '~/test-utils/with-app-load-context';
 import { withRouteProps } from '~/test-utils/with-route-props';
 import { Routes } from '~/types';
-import { action, ForgotPassword, loader } from './route';
+import { ForgotPassword, action, loader } from './route';
 
 function setupTest() {
   const user = userEvent.setup();
@@ -26,16 +26,14 @@ function setupTest() {
       path: '/',
     },
     {
-      Component: withRouteProps((props) => {
-        return (
-          <div>
-            <h1>RESET_PASSWORD_STARTED_ROUTE</h1>
-            <span>{JSON.stringify(props)}</span>
-          </div>
-        );
-      }),
-      loader: ({ request }) => {
-        const url = new URL(request.url);
+      Component: withRouteProps((props) => (
+        <div>
+          <h1>RESET_PASSWORD_STARTED_ROUTE</h1>
+          <span>{JSON.stringify(props)}</span>
+        </div>
+      )),
+      loader: (args) => {
+        const url = new URL(args.request.url);
         const email = url.searchParams.get('email');
 
         return { email };
@@ -96,9 +94,7 @@ test('it redirects to the reset password started route after submitting a valid 
   await user.type(emailInput, 'test@example.com');
   await user.click(submitButton);
 
-  const resetPasswordStartedRoute = await screen.findByText(
-    'RESET_PASSWORD_STARTED_ROUTE',
-  );
+  const resetPasswordStartedRoute = await screen.findByText('RESET_PASSWORD_STARTED_ROUTE');
 
   expect(resetPasswordStartedRoute).toBeInTheDocument();
 });

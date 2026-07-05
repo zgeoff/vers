@@ -1,8 +1,8 @@
-import { afterEach, expect, test } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import { createRoutesStub, useSearchParams } from 'react-router';
 import type { LoaderFunction } from 'react-router';
-import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { authSessionStorage } from '~/session/auth-session-storage.server';
 import { Routes } from '~/types';
@@ -33,10 +33,10 @@ async function setupTest(config: Partial<TestConfig> = {}) {
 
   const cookieHeader = await authSessionStorage.commitSession(session);
 
-  const loader: LoaderFunction = async ({ request }) => {
-    request.headers.set('cookie', cookieHeader);
+  const loader: LoaderFunction = async (args) => {
+    args.request.headers.set('cookie', cookieHeader);
 
-    await requireAuth(request);
+    await requireAuth(args.request);
   };
 
   const TestRoutesStub = createRoutesStub([

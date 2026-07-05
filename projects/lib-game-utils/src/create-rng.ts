@@ -12,9 +12,7 @@ export function createRNG(initialSeed: number): RNG {
   let seed = initialSeed;
   let rng = prand.xoroshiro128plus(seed);
 
-  const getInt = (min: number, max: number) => {
-    return prand.unsafeUniformIntDistribution(min, max, rng);
-  };
+  const getInt = (min: number, max: number) => prand.unsafeUniformIntDistribution(min, max, rng);
 
   const generateNewSeed = () => {
     seed = getInt(0, 0x100000000);
@@ -24,9 +22,8 @@ export function createRNG(initialSeed: number): RNG {
     return seed;
   };
 
-  const getSeries = (min: number, max: number, count: number) => {
-    return Array.from({ length: count }, () => getInt(min, max));
-  };
+  const getSeries = (min: number, max: number, count: number) =>
+    Array.from({ length: count }, () => getInt(min, max));
 
   return {
     generateNewSeed,

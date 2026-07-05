@@ -17,9 +17,7 @@ export function create(entity: Enemy): EnemyPrimaryAttackBehaviour {
 
   const getState = (): EnemyPrimaryAttackBehaviourState => state;
 
-  const setState = (
-    setStateFn: SetEntityStateFn<EnemyPrimaryAttackBehaviourState>,
-  ): void => {
+  const setState = (setStateFn: SetEntityStateFn<EnemyPrimaryAttackBehaviourState>): void => {
     state = produce(state, setStateFn);
   };
 
@@ -44,8 +42,8 @@ export function create(entity: Enemy): EnemyPrimaryAttackBehaviour {
 
     // handlers
     handlers: {
-      [LifecycleEvent.OnTick]: (entity: Enemy, executor: CombatExecutor) =>
-        handleTick(entity, behaviour, executor),
+      [LifecycleEvent.OnTick]: (tickEntity: Enemy, executor: CombatExecutor) =>
+        handleTick(tickEntity, behaviour, executor),
       [LifecycleEvent.Reset]: () => handleReset(),
     },
     predicate,

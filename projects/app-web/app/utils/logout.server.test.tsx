@@ -1,8 +1,9 @@
-import { afterEach, expect, test, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { createRoutesStub, type LoaderFunctionArgs } from 'react-router';
 import { drop } from '@mswjs/data';
+import { render, screen } from '@testing-library/react';
+import { createRoutesStub } from 'react-router';
+import type { LoaderFunctionArgs } from 'react-router';
 import invariant from 'tiny-invariant';
+import { afterEach, expect, test, vi } from 'vitest';
 import { db } from '~/mocks/db';
 import { authSessionStorage } from '~/session/auth-session-storage.server';
 import { withAuthedUser } from '~/test-utils/with-authed-user';
@@ -33,12 +34,11 @@ vi.stubGlobal(
 );
 
 function setupTest(config: TestConfig = {}) {
-  const loader = async ({ request }: LoaderFunctionArgs) => {
-    return logout(request, {
+  const loader = (args: LoaderFunctionArgs) =>
+    logout(args.request, {
       deleteSession: config.deleteSession,
       redirectTo: config.redirectTo,
     });
-  };
 
   const TestRoutesStub = createRoutesStub([
     {

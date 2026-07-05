@@ -1,5 +1,5 @@
 import TTLCache from '@isaacs/ttlcache';
-import { SecureAction } from '~/types';
+import type { SecureAction } from '~/types';
 
 interface TransactionData {
   action: SecureAction;

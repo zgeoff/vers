@@ -1,16 +1,11 @@
-import { expect, test, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ChangeEvent } from 'react';
+import { expect, test, vi } from 'vitest';
 import { Field } from './field';
 
 test('it renders a label and an input', () => {
-  render(
-    <Field
-      errors={[]}
-      inputProps={{ type: 'email' }}
-      labelProps={{ children: 'Email' }}
-    />,
-  );
+  render(<Field errors={[]} inputProps={{ type: 'email' }} labelProps={{ children: 'Email' }} />);
 
   const input = screen.getByLabelText('Email');
 
@@ -19,7 +14,7 @@ test('it renders a label and an input', () => {
 });
 
 test('it handles input changes', async () => {
-  const handleChange = vi.fn();
+  const handleChange = vi.fn<(event: ChangeEvent<HTMLInputElement>) => void>();
   const user = userEvent.setup();
 
   render(

@@ -8,7 +8,7 @@ export function loader() {
   return redirect(Routes.Index);
 }
 
-export async function action(args: Route.ActionArgs) {
+export function action(args: Route.ActionArgs) {
   return logout(args.request, { deleteSession: true });
 }
 

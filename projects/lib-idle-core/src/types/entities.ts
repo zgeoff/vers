@@ -1,10 +1,5 @@
 import type { ClassID } from '@vers/data';
-import type {
-  AvatarBehaviour,
-  Behaviour,
-  BehaviourID,
-  EnemyBehaviour,
-} from './behaviour';
+import type { AvatarBehaviour, Behaviour, BehaviourID, EnemyBehaviour } from './behaviour';
 import type { CombatExecutor } from './combat';
 import type { SetEntityStateFn } from './core';
 import type { EquipmentSlot, EquipmentWeapon } from './equipment';
@@ -16,9 +11,11 @@ export interface AvatarData {
   level: number;
   life: number;
   name: string;
+
   // TODO: implement this as a map? type? where we use a record to enforce equipment type e.g. 1h/2h weapons = weapons, etc
   paperdoll: {
     [EquipmentSlot.MainHand]: EquipmentWeapon | null;
+
     // [EquipmentSlot.OffHand]: EquipmentWeapon;
   };
 }
@@ -44,14 +41,15 @@ interface IEntity<State extends object, EntityAppState extends object> {
   get status(): EntityStatus;
 
   // core
+  // oxlint-disable-next-line typescript/method-signature-style -- subtypes narrow the behaviour param; method syntax keeps the bivariant check that permits it
   addBehaviour(behaviour: Behaviour): void;
-  getAppState(): EntityAppState;
-  handleTick(combatExecutor: CombatExecutor, ctx: SimulationContext): void;
-  removeBehaviour(id: BehaviourID): void;
-  setState(setStateFn: SetEntityStateFn<State>): void;
+  getAppState: () => EntityAppState;
+  handleTick: (combatExecutor: CombatExecutor, ctx: SimulationContext) => void;
+  removeBehaviour: (id: BehaviourID) => void;
+  setState: (setStateFn: SetEntityStateFn<State>) => void;
 
   // utils
-  receiveDamage(amount: number): void;
+  receiveDamage: (amount: number) => void;
 }
 
 export type Entity = Avatar | Enemy;
@@ -67,9 +65,7 @@ export interface AvatarState {
 }
 
 export type AvatarBehaviourAppState = {
-  [K in BehaviourID]?: ReturnType<
-    Extract<AvatarBehaviour, { id: K }>['getState']
-  >;
+  [K in BehaviourID]?: ReturnType<Extract<AvatarBehaviour, { id: K }>['getState']>;
 };
 
 export interface AvatarAppState {
@@ -93,11 +89,12 @@ export interface Avatar extends IEntity<AvatarState, AvatarAppState> {
   get mainHandEquipment(): EquipmentWeapon | null;
 
   // core
+  // oxlint-disable-next-line typescript/method-signature-style -- narrows the behaviour param; method syntax keeps the bivariant check that permits it
   addBehaviour(behaviour: AvatarBehaviour): void;
 
   // utils
-  calcAttackDamage(): number;
-  reset(config?: ResetConfig): void;
+  calcAttackDamage: () => number;
+  reset: (config?: ResetConfig) => void;
 }
 
 export interface EnemyState {
@@ -107,9 +104,7 @@ export interface EnemyState {
 }
 
 export type EnemyBehaviourAppState = {
-  [K in BehaviourID]?: ReturnType<
-    Extract<EnemyBehaviour, { id: K }>['getState']
-  >;
+  [K in BehaviourID]?: ReturnType<Extract<EnemyBehaviour, { id: K }>['getState']>;
 };
 
 export interface EnemyAppState {
@@ -133,10 +128,11 @@ export interface Enemy extends IEntity<EnemyState, EnemyAppState> {
   get primaryAttack(): AttackData;
 
   // core
+  // oxlint-disable-next-line typescript/method-signature-style -- narrows the behaviour param; method syntax keeps the bivariant check that permits it
   addBehaviour(behaviour: EnemyBehaviour): void;
 
   // utils
-  calcAttackDamage(): number;
+  calcAttackDamage: () => number;
 }
 
 export enum EntityStatus {
@@ -170,5 +166,5 @@ export interface EnemyGroup {
   get remaining(): number;
 
   // utils
-  getAppState(): EnemyGroupAppState;
+  getAppState: () => EnemyGroupAppState;
 }

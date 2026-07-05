@@ -1,10 +1,10 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
 import { GraphQLError } from 'graphql';
 import { graphql } from 'msw';
+import { createRoutesStub } from 'react-router';
+import { afterEach, expect, test, vi } from 'vitest';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
 import { verifySessionStorage } from '~/session/verify-session-storage.server';
@@ -13,7 +13,7 @@ import { withAppLoadContext } from '~/test-utils/with-app-load-context';
 import { withAuthedUser } from '~/test-utils/with-authed-user';
 import { withRouteProps } from '~/test-utils/with-route-props';
 import { Routes } from '~/types';
-import { action, loader, Signup } from './route';
+import { Signup, action, loader } from './route';
 
 let cookieHeader: null | string = null;
 
@@ -129,9 +129,7 @@ test('it redirects to verify OTP page on successful signup', async () => {
 
   const verifySession = await verifySessionStorage.getSession(cookieHeader);
 
-  expect(verifySession.get('onboarding#transactionID')).toBe(
-    'valid-transaction-id',
-  );
+  expect(verifySession.get('onboarding#transactionID')).toBe('valid-transaction-id');
 });
 
 test('it shows a generic error if the mutation fails', async () => {

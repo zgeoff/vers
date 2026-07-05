@@ -1,12 +1,12 @@
-import type { UpdateEmailPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { UpdateEmailPayload } from '@vers/service-types';
 import { UserEmailSchema } from '@vers/validation';
 import { and, eq, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { logger } from '~/logger';
-import type { Context } from '../types';
 import { t } from '../t';
+import type { Context } from '../types';
 
 export const UpdateEmailInputSchema = z.object({
   email: UserEmailSchema,
@@ -48,14 +48,13 @@ export async function updateEmail(
         });
       }
 
+      const twoFactorTypeCondition = or(
+        eq(schema.verifications.type, '2fa'),
+        eq(schema.verifications.type, '2fa-setup'),
+      );
+
       const twoFactorAuth = await tx.query.verifications.findFirst({
-        where: and(
-          eq(schema.verifications.target, user.email),
-          or(
-            eq(schema.verifications.type, '2fa'),
-            eq(schema.verifications.type, '2fa-setup'),
-          ),
-        ),
+        where: and(eq(schema.verifications.target, user.email), twoFactorTypeCondition),
       });
 
       // if we have 2FA enabled or setup in progress, we need to update the
@@ -88,4 +87,4 @@ export async function updateEmail(
 
 export const procedure = t.procedure
   .input(UpdateEmailInputSchema)
-  .mutation(async ({ ctx, input }) => updateEmail(input, ctx));
+  .mutation((opts) => updateEmail(opts.input, opts.ctx));

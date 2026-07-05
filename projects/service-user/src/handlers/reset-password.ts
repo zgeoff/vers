@@ -1,12 +1,12 @@
-import type { ResetPasswordPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { ResetPasswordPayload } from '@vers/service-types';
 import { hashPassword } from '@vers/service-utils';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { logger } from '~/logger';
-import type { Context } from '../types';
 import { t } from '../t';
+import type { Context } from '../types';
 
 export const ResetPasswordInputSchema = z.object({
   id: z.string(),
@@ -42,8 +42,7 @@ export async function resetPassword(
     }
 
     const isTokenExpired =
-      user.passwordResetTokenExpiresAt &&
-      user.passwordResetTokenExpiresAt < new Date();
+      user.passwordResetTokenExpiresAt && user.passwordResetTokenExpiresAt < new Date();
 
     if (isTokenExpired) {
       throw new TRPCError({
@@ -91,4 +90,4 @@ export async function resetPassword(
 
 export const procedure = t.procedure
   .input(ResetPasswordInputSchema)
-  .mutation(async ({ ctx, input }) => resetPassword(input, ctx));
+  .mutation((opts) => resetPassword(opts.input, opts.ctx));

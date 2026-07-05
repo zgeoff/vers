@@ -1,4 +1,4 @@
-import { verifications } from '@vers/postgres-schema';
+import type { verifications } from '@vers/postgres-schema';
 import { VerificationType } from '~/gql/graphql';
 
 /**
@@ -12,10 +12,7 @@ export function resolveVerificationType(
   return VERIFICATION_TYPE_MAP[type];
 }
 
-type VerificationTypeMap = Record<
-  VerificationType,
-  (typeof verifications.type.enumValues)[number]
->;
+type VerificationTypeMap = Record<VerificationType, (typeof verifications.type.enumValues)[number]>;
 
 const VERIFICATION_TYPE_MAP: VerificationTypeMap = {
   [VerificationType.ChangeEmail]: '2fa',

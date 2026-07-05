@@ -1,6 +1,6 @@
-import { expect, test, vi } from 'vitest';
 import { gql } from '@urql/core';
-import { graphql, http, HttpResponse } from 'msw';
+import { HttpResponse, graphql, http } from 'msw';
+import { expect, test, vi } from 'vitest';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
 import { authSessionStorage } from '~/session/auth-session-storage.server';
@@ -25,9 +25,9 @@ vi.stubGlobal(
 
 test('it attaches the session ID and the access token to the request', async () => {
   server.use(
-    graphql.query('TestQuery', ({ request }) => {
-      const sessionID = request.headers.get('x-session-id');
-      const authHeader = request.headers.get('authorization');
+    graphql.query('TestQuery', (opts) => {
+      const sessionID = opts.request.headers.get('x-session-id');
+      const authHeader = opts.request.headers.get('authorization');
       const accessToken = authHeader?.split(' ')[1];
 
       return HttpResponse.json({
@@ -52,7 +52,7 @@ test('it attaches the session ID and the access token to the request', async () 
 
   request.headers.set('cookie', cookieHeader);
 
-  const TestQuery = gql/* GraphQL */ `
+  const TestQuery = gql /* GraphQL */ `
     query TestQuery {
       test {
         accessToken
@@ -75,8 +75,8 @@ test('it attaches the session ID and the access token to the request', async () 
 
 test('it attaches the unverified session ID to the request if the session ID is not set', async () => {
   server.use(
-    graphql.query('TestQuery', ({ request }) => {
-      const sessionID = request.headers.get('x-session-id');
+    graphql.query('TestQuery', (opts) => {
+      const sessionID = opts.request.headers.get('x-session-id');
 
       return HttpResponse.json({
         data: {
@@ -96,7 +96,7 @@ test('it attaches the unverified session ID to the request if the session ID is 
 
   request.headers.set('cookie', cookieHeader);
 
-  const TestQuery = gql/* GraphQL */ `
+  const TestQuery = gql /* GraphQL */ `
     query TestQuery {
       test {
         sessionID
@@ -125,9 +125,7 @@ test('it refreshes the access token when receiving a 401 error and redirects to 
   // setup a one time handler we can use to trigger our 401 error refresh flow
   const unauthorizedHandler = http.post(
     'https://test.com/graphql',
-    () => {
-      return HttpResponse.json({}, { status: 401 });
-    },
+    () => HttpResponse.json({}, { status: 401 }),
     { once: true },
   );
 
@@ -149,7 +147,7 @@ test('it refreshes the access token when receiving a 401 error and redirects to 
 
   const client = await createGQLClient(request);
 
-  const TestQuery = gql/* GraphQL */ `
+  const TestQuery = gql /* GraphQL */ `
     query TestQuery {
       test
     }
@@ -167,8 +165,7 @@ test('it refreshes the access token when receiving a 401 error and redirects to 
     }),
   });
 
-  const refreshedAuthSession =
-    await authSessionStorage.getSession(setCookieHeader);
+  const refreshedAuthSession = await authSessionStorage.getSession(setCookieHeader);
 
   const refreshedAccessToken = refreshedAuthSession.get('accessToken');
 
@@ -179,9 +176,7 @@ test('it logs the user out and redirects them to the login page if they get a 40
   // setup a one time handler we can use to trigger our 401 error refresh flow
   const unauthorizedHandler = http.post(
     'https://test.com/graphql',
-    () => {
-      return HttpResponse.json({}, { status: 401 });
-    },
+    () => HttpResponse.json({}, { status: 401 }),
     { once: true },
   );
 
@@ -191,7 +186,7 @@ test('it logs the user out and redirects them to the login page if they get a 40
 
   const client = await createGQLClient(request);
 
-  const TestQuery = gql/* GraphQL */ `
+  const TestQuery = gql /* GraphQL */ `
     query TestQuery {
       test
     }

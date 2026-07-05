@@ -2,9 +2,9 @@ import { TRPCError } from '@trpc/server';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const verifyPassword = trpc.verifyPassword.mutation(({ input }) => {
+export const verifyPassword = trpc.verifyPassword.mutation((opts) => {
   const user = db.user.findFirst({
-    where: { email: { equals: input.email } },
+    where: { email: { equals: opts.input.email } },
   });
 
   if (!user) {
@@ -22,7 +22,7 @@ export const verifyPassword = trpc.verifyPassword.mutation(({ input }) => {
   }
 
   // for the sake of our msw mocks we just store the raw password instead of the hash
-  if (input.password !== user.passwordHash) {
+  if (opts.input.password !== user.passwordHash) {
     return { success: false };
   }
 

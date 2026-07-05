@@ -1,8 +1,8 @@
-import { afterEach, test } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
 import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
@@ -55,5 +55,7 @@ afterEach(() => {
 test('it redirects to the login route when not authenticated', async () => {
   setupTest({ isAuthed: false });
 
-  await screen.findByText('LOGIN_ROUTE');
+  const loginRoute = await screen.findByText('LOGIN_ROUTE');
+
+  expect(loginRoute).toBeInTheDocument();
 });

@@ -1,9 +1,9 @@
-import { afterEach, expect, test } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub, Form } from 'react-router';
-import { drop } from '@mswjs/data';
 import { graphql } from 'msw';
+import { Form, createRoutesStub } from 'react-router';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
 import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';

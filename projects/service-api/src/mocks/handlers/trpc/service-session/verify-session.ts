@@ -1,11 +1,11 @@
-import type { VerifySessionPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
+import type { VerifySessionPayload } from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const verifySession = trpc.verifySession.mutation(({ input }) => {
+export const verifySession = trpc.verifySession.mutation((opts) => {
   const session = db.session.findFirst({
-    where: { id: { equals: input.id } },
+    where: { id: { equals: opts.input.id } },
   });
 
   if (!session) {

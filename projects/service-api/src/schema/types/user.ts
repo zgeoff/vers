@@ -10,12 +10,11 @@ User.implement({
     id: t.exposeID('id'),
     is2FAEnabled: t.boolean({
       resolve: async (user, _, ctx) => {
-        const verification =
-          await ctx.services.verification.getVerification.query({
-            target: user.email,
-            type: '2fa',
-          });
-        return !!verification;
+        const verification = await ctx.services.verification.getVerification.query({
+          target: user.email,
+          type: '2fa',
+        });
+        return Boolean(verification);
       },
     }),
     name: t.exposeString('name'),

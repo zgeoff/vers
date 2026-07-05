@@ -1,10 +1,10 @@
 import { expect, test } from 'vitest';
-import type { EnemyAttackEvent } from '../types';
 import { createAvatar } from '../entities/create-avatar';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
+import type { EnemyAttackEvent } from '../types';
 import { CombatEventType } from '../types';
 import { createActivity } from './create-activity';
 import { handleEnemyAttack } from './handle-enemy-attack';
@@ -109,6 +109,7 @@ test('it correctly resolves the correct event source', () => {
   const avatar = createAvatar(avatarData, ctx);
   const activity = createActivity(activityData, ctx, {
     groupCount: 1,
+
     // it's important we have more than 1 enemy so we can ensure event source
     // resolution works
     groupSize: 2,

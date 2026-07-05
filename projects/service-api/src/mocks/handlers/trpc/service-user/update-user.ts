@@ -1,11 +1,11 @@
-import type { UpdateUserPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
+import type { UpdateUserPayload } from '@vers/service-types';
 import { omitNullish } from '~/utils/omit-nullish';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const updateUser = trpc.updateUser.mutation(({ input }) => {
-  const { id, ...update } = input;
+export const updateUser = trpc.updateUser.mutation((opts) => {
+  const { id, ...update } = opts.input;
 
   const user = db.user.findFirst({
     where: { id: { equals: id } },

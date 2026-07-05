@@ -1,15 +1,12 @@
-import { expect, expectTypeOf, test, vi } from 'vitest';
 import { implement } from '@orpc/server';
 import { authedRoute, publicRoute } from '@vers/contract-base';
-import {
-  buildRPCTestClient,
-  collectConformanceCases,
-} from '@vers/contract-base/test-utils';
+import { buildRPCTestClient, collectConformanceCases } from '@vers/contract-base/test-utils';
+import { expect, expectTypeOf, test, vi } from 'vitest';
 import * as z from 'zod';
-import type { ServiceContext } from './types';
 import { createService } from './create-service';
 import { createServiceKeyPair } from './test-utils/create-service-key-pair';
 import { createServiceToken } from './test-utils/create-service-token';
+import type { ServiceContext } from './types';
 
 function buildTestContract() {
   return {
@@ -25,19 +22,18 @@ function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
   const os = implement(contract).$context<ServiceContext>();
 
   return {
-    getThing: os.getThing.handler(({ context, errors, input }) => {
-      if (context.actingUserId === null) {
-        throw errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+    getThing: os.getThing.handler((opts) => {
+      if (opts.context.actingUserId === null) {
+        throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
       }
 
-      return { id: input.id };
+      return { id: opts.input.id };
     }),
     ping: os.ping.handler(() => ({ pong: true })),
   };
 }
 
 test('it throws at boot when SERVICE_AUTH_PUBLIC_KEY is missing', async () => {
-  // eslint-disable-next-line unicorn/no-useless-undefined -- vi.stubEnv requires the second argument to unset a variable
   vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', undefined);
   const contract = buildTestContract();
 
@@ -54,9 +50,7 @@ test('it throws at boot when SERVICE_AUTH_PUBLIC_KEY is missing', async () => {
 test('it applies default PORT and LOG_LEVEL when unset', async () => {
   const { publicKeyPEM } = await createServiceKeyPair();
 
-  // eslint-disable-next-line unicorn/no-useless-undefined -- vi.stubEnv requires the second argument to unset a variable
   vi.stubEnv('LOG_LEVEL', undefined);
-  // eslint-disable-next-line unicorn/no-useless-undefined -- vi.stubEnv requires the second argument to unset a variable
   vi.stubEnv('PORT', undefined);
   vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
 
@@ -307,9 +301,7 @@ test('it echoes a supplied x-request-id and mints one when absent', async () => 
     name: 'test-service',
   });
 
-  const withoutHeader = await app.handle(
-    new Request('http://test.local/health'),
-  );
+  const withoutHeader = await app.handle(new Request('http://test.local/health'));
 
   expect(withoutHeader.headers.get('x-request-id')).toBeString();
 

@@ -1,14 +1,14 @@
-import type { ChangePasswordPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { ChangePasswordPayload } from '@vers/service-types';
 import { hashPassword } from '@vers/service-utils';
 import { PasswordSchema } from '@vers/validation';
 import { eq } from 'drizzle-orm';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import { logger } from '~/logger';
-import type { Context } from '../types';
 import { t } from '../t';
+import type { Context } from '../types';
 
 export const ChangePasswordInputSchema = z.object({
   id: z.string(),
@@ -66,4 +66,4 @@ export async function changePassword(
 
 export const procedure = t.procedure
   .input(ChangePasswordInputSchema)
-  .mutation(async ({ ctx, input }) => changePassword(input, ctx));
+  .mutation((opts) => changePassword(opts.input, opts.ctx));

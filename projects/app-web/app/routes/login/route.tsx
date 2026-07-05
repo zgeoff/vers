@@ -1,30 +1,17 @@
-import {
-  data,
-  Form,
-  redirect,
-  Link as RRLink,
-  useSearchParams,
-} from 'react-router';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
-import {
-  Brand,
-  CheckboxField,
-  Field,
-  Heading,
-  StatusButton,
-  Text,
-} from '@vers/design-system';
+import { Brand, CheckboxField, Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { PasswordSchema, UserEmailSchema } from '@vers/validation';
+import { Form, Link as RRLink, data, redirect, useSearchParams } from 'react-router';
 import { HoneypotInputs } from 'remix-utils/honeypot/react';
 import { safeRedirect } from 'remix-utils/safe-redirect';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
-import type { ForceLogoutPayload, TwoFactorLoginPayload } from '~/gql/graphql';
 import { FormErrorList } from '~/components/form-error-list/form-error-list';
 import { Link } from '~/components/link';
 import { RouteErrorBoundary } from '~/components/route-error-boundary';
 import { LoginWithPasswordMutation } from '~/data/mutations/login-with-password';
+import type { ForceLogoutPayload, TwoFactorLoginPayload } from '~/gql/graphql';
 import { VerificationType } from '~/gql/graphql';
 import { useIsFormPending } from '~/hooks/use-is-form-pending';
 import { authSessionStorage } from '~/session/auth-session-storage.server';
@@ -37,8 +24,8 @@ import { requireAnonymous } from '~/utils/require-anonymous.server';
 import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import { FormBooleanSchema } from '~/validation/form-boolean-schema';
-import type { Route } from './+types/route';
 import { QueryParam } from '../verify-otp/types';
+import type { Route } from './+types/route';
 import * as styles from './route.styles';
 
 const LoginFormSchema = z.object({
@@ -48,12 +35,14 @@ const LoginFormSchema = z.object({
   rememberMe: FormBooleanSchema.default('off'),
 });
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: '',
-    title: 'vers | Login',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: '',
+      title: 'vers | Login',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAnonymous(args.request);
@@ -105,19 +94,11 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
 
   // if we need to 2FA login, set our session as needed then redirect
   if (is2FALoginPayload(result.data.loginWithPassword)) {
-    const verifySession = await verifySessionStorage.getSession(
-      args.request.headers.get('cookie'),
-    );
+    const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
-    verifySession.set(
-      'login2FA#sessionID',
-      result.data.loginWithPassword.sessionID,
-    );
+    verifySession.set('login2FA#sessionID', result.data.loginWithPassword.sessionID);
 
-    verifySession.set(
-      'login2FA#transactionID',
-      result.data.loginWithPassword.transactionID,
-    );
+    verifySession.set('login2FA#transactionID', result.data.loginWithPassword.transactionID);
 
     const searchParams = new URLSearchParams({
       [QueryParam.Target]: submission.value.email,
@@ -137,9 +118,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
 
   // if we need to force logout, set our session as needed then redirect
   if (isForceLogoutPayload(result.data.loginWithPassword)) {
-    const verifySession = await verifySessionStorage.getSession(
-      args.request.headers.get('cookie'),
-    );
+    const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
     verifySession.set('loginLogout#email', submission.value.email);
     verifySession.set(
@@ -155,9 +134,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   }
 
   // if we're here, we've received our tokens and we can set the auth session
-  const authSession = await authSessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const authSession = await authSessionStorage.getSession(args.request.headers.get('cookie'));
 
   authSession.set('sessionID', result.data.loginWithPassword.session.id);
   authSession.set('accessToken', result.data.loginWithPassword.accessToken);
@@ -178,9 +155,7 @@ function is2FALoginPayload(
   return 'transactionID' in payload;
 }
 
-function isForceLogoutPayload(
-  payload: ForceLogoutPayload | object,
-): payload is ForceLogoutPayload {
+function isForceLogoutPayload(payload: ForceLogoutPayload | object): payload is ForceLogoutPayload {
   return 'transactionToken' in payload;
 }
 
@@ -195,15 +170,13 @@ export function Login(props: Route.ComponentProps) {
     },
     id: 'login-form',
     lastResult: props.actionData?.result,
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: LoginFormSchema });
+    onValidate(opts) {
+      return parseWithZod(opts.formData, { schema: LoginFormSchema });
     },
     shouldRevalidate: 'onBlur',
   });
 
-  const submitButtonStatus = isFormPending
-    ? StatusButton.Status.Pending
-    : StatusButton.Status.Idle;
+  const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
   return (
     <>
@@ -228,9 +201,7 @@ export function Login(props: Route.ComponentProps) {
         <Field
           errors={fields.password.errors ?? []}
           inputProps={{
-            ...toKeylessProps(
-              getInputProps(fields.password, { type: 'password' }),
-            ),
+            ...toKeylessProps(getInputProps(fields.password, { type: 'password' })),
             autoComplete: 'current-password',
             placeholder: '********',
           }}
@@ -238,9 +209,7 @@ export function Login(props: Route.ComponentProps) {
         />
         <input {...getInputProps(fields.redirect, { type: 'hidden' })} />
         <CheckboxField
-          checkboxProps={toKeylessProps(
-            getInputProps(fields.rememberMe, { type: 'checkbox' }),
-          )}
+          checkboxProps={toKeylessProps(getInputProps(fields.rememberMe, { type: 'checkbox' }))}
           errors={fields.rememberMe.errors ?? []}
           labelProps={{ children: 'Remember me' }}
         />

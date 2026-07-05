@@ -1,8 +1,5 @@
-import { graphql, HttpResponse } from 'msw';
-import type {
-  FinishDisable2FaInput,
-  FinishDisable2FaPayload,
-} from '~/gql/graphql';
+import { HttpResponse, graphql } from 'msw';
+import type { FinishDisable2FaInput, FinishDisable2FaPayload } from '~/gql/graphql';
 import { db } from '../../db';
 import { TWO_FACTOR_NOT_ENABLED_ERROR, UNKNOWN_ERROR } from '../../errors';
 import { decodeMockJWT } from '../../utils/decode-mock-jwt';
@@ -19,8 +16,8 @@ interface FinishDisable2FAResponse {
 export const FinishDisable2FA = graphql.mutation<
   FinishDisable2FAResponse,
   FinishDisable2FAVariables
->('FinishDisable2FA', ({ request, variables }) => {
-  const authHeader = request.headers.get('authorization');
+>('FinishDisable2FA', (opts) => {
+  const authHeader = opts.request.headers.get('authorization');
 
   if (!authHeader) {
     return HttpResponse.json({
@@ -45,7 +42,7 @@ export const FinishDisable2FA = graphql.mutation<
     });
   }
 
-  if (!isValidTransactionToken(variables.input.transactionToken)) {
+  if (!isValidTransactionToken(opts.variables.input.transactionToken)) {
     return HttpResponse.json({
       data: {
         finishDisable2FA: {

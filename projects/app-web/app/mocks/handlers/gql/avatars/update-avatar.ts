@@ -1,4 +1,4 @@
-import { graphql, HttpResponse } from 'msw';
+import { HttpResponse, graphql } from 'msw';
 import type { UpdateAvatarInput, UpdateAvatarPayload } from '~/gql/graphql';
 import { db } from '../../../db';
 import { AVATAR_NAME_EXISTS_ERROR } from '../../../errors';
@@ -12,62 +12,62 @@ interface UpdateAvatarResponse {
   updateAvatar: UpdateAvatarPayload;
 }
 
-export const UpdateAvatar = graphql.mutation<
-  UpdateAvatarResponse,
-  UpdateAvatarVariables
->('UpdateAvatar', ({ request, variables }) => {
-  const authHeader = request.headers.get('authorization');
+export const UpdateAvatar = graphql.mutation<UpdateAvatarResponse, UpdateAvatarVariables>(
+  'UpdateAvatar',
+  (opts) => {
+    const authHeader = opts.request.headers.get('authorization');
 
-  if (!authHeader) {
-    return HttpResponse.json({
-      errors: [{ message: 'Unauthorized' }],
+    if (!authHeader) {
+      return HttpResponse.json({
+        errors: [{ message: 'Unauthorized' }],
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const payload = decodeMockJWT(token);
+
+    const avatar = db.avatar.findFirst({
+      where: { id: { equals: opts.variables.input.id } },
     });
-  }
 
-  const token = authHeader.replace('Bearer ', '');
-  const payload = decodeMockJWT(token);
+    if (!avatar || avatar.userID !== payload.sub) {
+      return HttpResponse.json({
+        data: {
+          updateAvatar: {
+            success: false,
+          },
+        },
+      });
+    }
 
-  const avatar = db.avatar.findFirst({
-    where: { id: { equals: variables.input.id } },
-  });
+    const existingAvatarWithName = db.avatar.findFirst({
+      where: {
+        id: { notEquals: opts.variables.input.id },
+        name: { equals: opts.variables.input.name },
+      },
+    });
 
-  if (!avatar || avatar.userID !== payload.sub) {
+    if (existingAvatarWithName) {
+      return HttpResponse.json({
+        data: {
+          updateAvatar: {
+            error: AVATAR_NAME_EXISTS_ERROR,
+          },
+        },
+      });
+    }
+
+    db.avatar.update({
+      data: { name: opts.variables.input.name },
+      where: { id: { equals: opts.variables.input.id } },
+    });
+
     return HttpResponse.json({
       data: {
         updateAvatar: {
-          success: false,
+          success: true,
         },
       },
     });
-  }
-
-  const existingAvatarWithName = db.avatar.findFirst({
-    where: {
-      id: { notEquals: variables.input.id },
-      name: { equals: variables.input.name },
-    },
-  });
-
-  if (existingAvatarWithName) {
-    return HttpResponse.json({
-      data: {
-        updateAvatar: {
-          error: AVATAR_NAME_EXISTS_ERROR,
-        },
-      },
-    });
-  }
-
-  db.avatar.update({
-    data: { name: variables.input.name },
-    where: { id: { equals: variables.input.id } },
-  });
-
-  return HttpResponse.json({
-    data: {
-      updateAvatar: {
-        success: true,
-      },
-    },
-  });
-});
+  },
+);

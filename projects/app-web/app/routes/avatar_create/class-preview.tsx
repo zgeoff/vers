@@ -1,4 +1,5 @@
-import { Class, classes } from '@vers/data';
+import type { Class } from '@vers/data';
+import { classes } from '@vers/data';
 import { BackgroundPattern, Text } from '@vers/design-system';
 import { cx } from '@vers/styled-system/css';
 import * as styles from './class-preview.styles';
@@ -27,6 +28,8 @@ export function ClassPreview(props: Props) {
     <div
       aria-checked={props.isSelected}
       className={cx(styles.container, props.isSelected && styles.selected)}
+
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- styled card acting as one option in a custom radio group; a native <input type="radio"> can't carry this layout
       role="radio"
       tabIndex={props.tabIndex}
       onClick={handleClick}
@@ -45,11 +48,7 @@ export function ClassPreview(props: Props) {
           ))}
         </div>
       </div>
-      <img
-        alt={classData.name}
-        className={styles.image}
-        src={classData.images.full}
-      />
+      <img alt={classData.name} className={styles.image} src={classData.images.full} />
       <BackgroundPattern className={styles.backgroundPattern} />
     </div>
   );

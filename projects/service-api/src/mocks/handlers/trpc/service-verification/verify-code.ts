@@ -1,14 +1,14 @@
-import type { VerificationType, VerifyCodePayload } from '@vers/service-types';
 import { verifyTOTP } from '@epic-web/totp';
 import { TRPCError } from '@trpc/server';
+import type { VerificationType, VerifyCodePayload } from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const verifyCode = trpc.verifyCode.mutation(async ({ input }) => {
+export const verifyCode = trpc.verifyCode.mutation(async (opts) => {
   const verification = db.verification.findFirst({
     where: {
-      target: { equals: input.target },
-      type: { equals: input.type },
+      target: { equals: opts.input.target },
+      type: { equals: opts.input.type },
     },
   });
 
@@ -36,7 +36,7 @@ export const verifyCode = trpc.verifyCode.mutation(async ({ input }) => {
     algorithm: verification.algorithm,
     charSet: verification.charSet,
     digits: verification.digits,
-    otp: input.code,
+    otp: opts.input.code,
     period: verification.period,
     secret: verification.secret,
   });

@@ -47,9 +47,9 @@ export interface Activity {
   get isEnemyGroupsRemaining(): boolean;
 
   // utils
-  elapseTime(time: number): void;
-  getAppState(): ActivityAppState;
-  moveToNextEnemyGroup(): void;
+  elapseTime: (time: number) => void;
+  getAppState: () => ActivityAppState;
+  moveToNextEnemyGroup: () => void;
 }
 
 export type ActivityCheckpointGenerator = AsyncGenerator<

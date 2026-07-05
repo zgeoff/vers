@@ -1,12 +1,8 @@
-import { useCallback, useRef } from 'react';
-import type {
-  Object3D,
-  PerspectiveCamera as PerspectiveCameraImpl,
-} from 'three';
-import type { Group } from 'three';
 import { animated, config, useSpring } from '@react-spring/three';
 import { PerspectiveCamera, useHelper } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
+import { useCallback, useRef } from 'react';
+import type { Group, Object3D, PerspectiveCamera as PerspectiveCameraImpl } from 'three';
 import { CameraHelper, Euler } from 'three';
 import {
   CAMERA_DISTANCE,
@@ -20,12 +16,7 @@ import { useCamera } from '../state/use-camera';
 import { useIsDevCameraActive } from '../state/use-is-dev-camera-active';
 import { useSelectedNode } from '../state/use-selected-node';
 
-const ISOMETRIC_CAMERA_ROTATION = new Euler(
-  CAMERA_ROTATION_X,
-  CAMERA_ROTATION_Y,
-  0,
-  'YXZ',
-);
+const ISOMETRIC_CAMERA_ROTATION = new Euler(CAMERA_ROTATION_X, CAMERA_ROTATION_Y, 0, 'YXZ');
 
 const AnimatedGroup = animated['group'];
 
@@ -49,16 +40,13 @@ export function IsometricCamera() {
     position: getNodeCameraPosition(object3D),
   });
 
-  const setCameraRef = useCallback(
-    (cameraInstance: null | PerspectiveCameraImpl) => {
-      if (!cameraInstance) {
-        return;
-      }
+  const setCameraRef = useCallback((cameraInstance: null | PerspectiveCameraImpl) => {
+    if (!cameraInstance) {
+      return;
+    }
 
-      setCamera(cameraInstance);
-    },
-    [],
-  );
+    setCamera(cameraInstance);
+  }, []);
 
   // @ts-expect-error - can't make ref types work with useHelper for the life of me
   useHelper(import.meta.env.DEV && camera, CameraHelper);
@@ -75,13 +63,12 @@ export function IsometricCamera() {
   });
 
   return (
+
     // @ts-expect-error - can't make ref types work with useHelper for the life of me
-    <AnimatedGroup
-      position={spring.position}
-      rotation={ISOMETRIC_CAMERA_ROTATION}
-    >
+    <AnimatedGroup position={spring.position} rotation={ISOMETRIC_CAMERA_ROTATION}>
       <PerspectiveCamera
         ref={setCameraRef}
+
         // args={[75, aspect, 0.1, 1000]}
         makeDefault={!isDevCameraActive}
       />

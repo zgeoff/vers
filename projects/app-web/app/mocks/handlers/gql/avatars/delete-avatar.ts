@@ -1,4 +1,4 @@
-import { graphql, HttpResponse } from 'msw';
+import { HttpResponse, graphql } from 'msw';
 import type { DeleteAvatarInput, DeleteAvatarPayload } from '~/gql/graphql';
 import { db } from '../../../db';
 import { decodeMockJWT } from '../../../utils/decode-mock-jwt';
@@ -11,33 +11,33 @@ interface DeleteAvatarResponse {
   deleteAvatar: DeleteAvatarPayload;
 }
 
-export const DeleteAvatar = graphql.mutation<
-  DeleteAvatarResponse,
-  DeleteAvatarVariables
->('DeleteAvatar', ({ request, variables }) => {
-  const authHeader = request.headers.get('authorization');
+export const DeleteAvatar = graphql.mutation<DeleteAvatarResponse, DeleteAvatarVariables>(
+  'DeleteAvatar',
+  (opts) => {
+    const authHeader = opts.request.headers.get('authorization');
 
-  if (!authHeader) {
-    return HttpResponse.json({
-      errors: [{ message: 'Unauthorized' }],
-    });
-  }
+    if (!authHeader) {
+      return HttpResponse.json({
+        errors: [{ message: 'Unauthorized' }],
+      });
+    }
 
-  const token = authHeader.replace('Bearer ', '');
-  const payload = decodeMockJWT(token);
+    const token = authHeader.replace('Bearer ', '');
+    const payload = decodeMockJWT(token);
 
-  db.avatar.delete({
-    where: {
-      id: { equals: variables.input.id },
-      userID: { equals: payload.sub },
-    },
-  });
-
-  return HttpResponse.json({
-    data: {
-      deleteAvatar: {
-        success: true,
+    db.avatar.delete({
+      where: {
+        id: { equals: opts.variables.input.id },
+        userID: { equals: payload.sub },
       },
-    },
-  });
-});
+    });
+
+    return HttpResponse.json({
+      data: {
+        deleteAvatar: {
+          success: true,
+        },
+      },
+    });
+  },
+);

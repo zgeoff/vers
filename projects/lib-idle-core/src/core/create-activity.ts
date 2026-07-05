@@ -22,9 +22,7 @@ export function createActivity(
 
   const enemyGroups: Array<EnemyGroup> = getEnemyGroups(data, ctx, config);
 
-  const isEnemyGroupsRemaining = () => {
-    return enemyGroups.some((group) => group.remaining > 0);
-  };
+  const isEnemyGroupsRemaining = () => enemyGroups.some((group) => group.remaining > 0);
 
   const moveToNextEnemyGroup = () => {
     currentEnemyGroupIdx++;
@@ -35,17 +33,11 @@ export function createActivity(
   };
 
   const getAppState = (): ActivityAppState => {
-    const currentEnemyGroup =
-      enemyGroups[currentEnemyGroupIdx]?.getAppState() ?? null;
+    const currentEnemyGroup = enemyGroups[currentEnemyGroupIdx]?.getAppState() ?? null;
 
-    const enemiesRemaining = enemyGroups.reduce(
-      (acc, group) => acc + group.remaining,
-      0,
-    );
+    const enemiesRemaining = enemyGroups.reduce((acc, group) => acc + group.remaining, 0);
 
-    const enemyGroupsRemaining = enemyGroups.filter(
-      (group) => group.remaining > 0,
-    ).length;
+    const enemyGroupsRemaining = enemyGroups.filter((group) => group.remaining > 0).length;
 
     return {
       currentEnemyGroup,

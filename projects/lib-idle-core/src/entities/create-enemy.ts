@@ -1,5 +1,6 @@
 import { createId } from '@paralleldrive/cuid2';
 import { produce } from 'immer';
+import { createEnemyPrimaryAttackBehaviour } from '../behaviours/enemy-primary-attack';
 import type {
   BehaviourID,
   CombatExecutor,
@@ -12,7 +13,6 @@ import type {
   SetEntityStateFn,
   SimulationContext,
 } from '../types';
-import { createEnemyPrimaryAttackBehaviour } from '../behaviours/enemy-primary-attack';
 import { EntityStatus, EntityType, LifecycleEvent } from '../types';
 import { createLogLabel } from '../utils/create-log-label';
 import { logger } from '../utils/logger';
@@ -65,8 +65,8 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
     behaviours.push(behaviour);
   };
 
-  const removeBehaviour = (id: BehaviourID): void => {
-    behaviours = behaviours.filter((behaviour) => behaviour.id !== id);
+  const removeBehaviour = (behaviourID: BehaviourID): void => {
+    behaviours = behaviours.filter((behaviour) => behaviour.id !== behaviourID);
   };
 
   const enemy: Enemy = {
@@ -102,13 +102,12 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
     receiveDamage: (amount: number) => {
       handleReceiveEnemyDamage(amount, enemy);
 
-      logger.debug(
-        `${label} <-- ${amount} damage (${state.life} life remains)`,
-      );
+      logger.debug(`${label} <-- ${amount} damage (${state.life} life remains)`);
     },
   };
 
   DEFAULT_BEHAVIOUR_FACTORIES
+
     // create behaviours & register them if they're applicable
     .map((createBehaviour) => createBehaviour(enemy))
     .filter((behaviour) => behaviour.predicate(enemy))

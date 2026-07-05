@@ -8,20 +8,19 @@ const SignupFormSchema = z.object({
   firstName: z.string().min(5),
 });
 
-export const Default = () => {
+export function Default() {
   const [form, fields] = useForm({
     constraint: getZodConstraint(SignupFormSchema),
     id: 'signup-form',
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: SignupFormSchema });
+    onValidate(options) {
+      return parseWithZod(options.formData, { schema: SignupFormSchema });
     },
     shouldRevalidate: 'onBlur',
   });
 
-  const { key: _firstNameKey, ...firstNameInputProps } = getInputProps(
-    fields.firstName,
-    { type: 'text' },
-  );
+  const { key: _firstNameKey, ...firstNameInputProps } = getInputProps(fields.firstName, {
+    type: 'text',
+  });
 
   return (
     <form {...getFormProps(form)}>
@@ -38,4 +37,4 @@ export const Default = () => {
       <Button type="submit">Submit</Button>
     </form>
   );
-};
+}

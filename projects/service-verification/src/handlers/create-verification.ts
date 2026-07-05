@@ -1,16 +1,13 @@
-import type {
-  CreateVerificationPayload,
-  VerificationType,
-} from '@vers/service-types';
 import { generateTOTP } from '@epic-web/totp';
 import { createId } from '@paralleldrive/cuid2';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { CreateVerificationPayload, VerificationType } from '@vers/service-types';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import type { Context } from '../types';
 import { logger } from '../logger';
 import { t } from '../t';
+import type { Context } from '../types';
 
 // alphanumeirc excluding 0, O, and I on purpose to avoid confusing users
 const TOTP_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789';
@@ -42,12 +39,7 @@ export async function createVerification(
     // delete any existing verifications for this target and type to invalidate previous codes
     await ctx.db
       .delete(schema.verifications)
-      .where(
-        and(
-          eq(schema.verifications.target, target),
-          eq(schema.verifications.type, type),
-        ),
-      );
+      .where(and(eq(schema.verifications.target, target), eq(schema.verifications.type, type)));
 
     const { otp, ...verificationConfig } = await generateTOTP({
       algorithm: 'SHA-256',
@@ -91,4 +83,4 @@ export async function createVerification(
 
 export const procedure = t.procedure
   .input(CreateVerificationInputSchema)
-  .mutation(async ({ ctx, input }) => createVerification(input, ctx));
+  .mutation((opts) => createVerification(opts.input, opts.ctx));

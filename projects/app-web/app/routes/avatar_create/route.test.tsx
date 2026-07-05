@@ -1,12 +1,11 @@
-import { afterEach, expect, test } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
 import { Class } from '@vers/data';
 import { GraphQLError } from 'graphql';
-import { HttpResponse } from 'msw';
-import { graphql } from 'msw';
+import { HttpResponse, graphql } from 'msw';
+import { createRoutesStub } from 'react-router';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { AVATAR_NAME_EXISTS_ERROR } from '~/mocks/errors';
 import { server } from '~/mocks/node';
@@ -15,7 +14,7 @@ import { withAppLoadContext } from '~/test-utils/with-app-load-context';
 import { withAuthedUser } from '~/test-utils/with-authed-user';
 import { withRouteProps } from '~/test-utils/with-route-props';
 import { Routes } from '~/types';
-import { action, AvatarCreate, loader } from './route';
+import { AvatarCreate, action, loader } from './route';
 
 interface TestConfig {
   isAuthed: boolean;
@@ -169,15 +168,15 @@ test('it displays an ambiguous error when the api call fails', async () => {
 
 test('it displays the mutation error if one is returned', async () => {
   server.use(
-    graphql.mutation('CreateAvatar', () => {
-      return HttpResponse.json({
+    graphql.mutation('CreateAvatar', () =>
+      HttpResponse.json({
         data: {
           createAvatar: {
             error: AVATAR_NAME_EXISTS_ERROR,
           },
         },
-      });
-    }),
+      }),
+    ),
   );
 
   const { user } = setupTest({ isAuthed: true, user: { id: 'user_id' } });
@@ -190,9 +189,7 @@ test('it displays the mutation error if one is returned', async () => {
   await user.click(scoundrelClass);
   await user.click(submitButton);
 
-  const error = await screen.findByText(
-    'An Avatar with this name already exists.',
-  );
+  const error = await screen.findByText('An Avatar with this name already exists.');
 
   expect(error).toBeInTheDocument();
 });

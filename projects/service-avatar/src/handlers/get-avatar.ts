@@ -1,11 +1,11 @@
-import type { GetAvatarPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { GetAvatarPayload } from '@vers/service-types';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { logger } from '~/logger';
-import type { Context } from '../types';
 import { t } from '../t';
+import type { Context } from '../types';
 
 const GetAvatarInputSchema = z.object({
   id: z.string(),
@@ -38,4 +38,4 @@ async function getAvatar(
 
 export const procedure = t.procedure
   .input(GetAvatarInputSchema)
-  .query(async ({ ctx, input }) => getAvatar(input, ctx));
+  .query((opts) => getAvatar(opts.input, opts.ctx));

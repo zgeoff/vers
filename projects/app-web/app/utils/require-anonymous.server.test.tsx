@@ -1,7 +1,7 @@
-import { afterEach, expect, test } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { withAuthedUser } from '~/test-utils/with-authed-user';
 import { Routes } from '~/types';
@@ -11,11 +11,15 @@ interface TestConfig {
   isAuthed?: boolean;
 }
 
-const loader = async ({ request }: { request: Request }) => {
-  await requireAnonymous(request);
+interface LoaderArgs {
+  request: Request;
+}
+
+async function loader(args: LoaderArgs) {
+  await requireAnonymous(args.request);
 
   return null;
-};
+}
 
 function setupTest(config: TestConfig = {}) {
   const TestRoutesStub = createRoutesStub([

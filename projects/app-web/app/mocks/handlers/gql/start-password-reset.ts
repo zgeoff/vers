@@ -1,8 +1,5 @@
-import { graphql, HttpResponse } from 'msw';
-import type {
-  StartPasswordResetInput,
-  StartPasswordResetPayload,
-} from '~/gql/graphql';
+import { HttpResponse, graphql } from 'msw';
+import type { StartPasswordResetInput, StartPasswordResetPayload } from '~/gql/graphql';
 import { db } from '../../db';
 
 interface StartPasswordResetVariables {
@@ -16,10 +13,10 @@ interface StartPasswordResetResponse {
 export const StartPasswordReset = graphql.mutation<
   StartPasswordResetResponse,
   StartPasswordResetVariables
->('StartPasswordReset', ({ variables }) => {
+>('StartPasswordReset', (opts) => {
   const user = db.user.findFirst({
     where: {
-      email: { equals: variables.input.email },
+      email: { equals: opts.variables.input.email },
     },
   });
 

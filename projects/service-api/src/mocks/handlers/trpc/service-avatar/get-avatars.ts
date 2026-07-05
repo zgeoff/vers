@@ -1,10 +1,10 @@
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const getAvatars = trpc.getAvatars.query(({ input }) => {
+export const getAvatars = trpc.getAvatars.query((opts) => {
   const avatars = db.avatar.findMany({
     where: {
-      userID: { equals: input.userID },
+      userID: { equals: opts.input.userID },
     },
   });
 

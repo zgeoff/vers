@@ -1,8 +1,8 @@
-import { createHonoServer } from 'react-router-hono-server/node';
 import { remoteAddressMiddleware } from '@vers/service-utils';
 import { compress } from 'hono/compress';
 import { poweredBy } from 'hono/powered-by';
 import { Hono } from 'hono/quick';
+import { createHonoServer } from 'react-router-hono-server/node';
 import { createGQLClient } from '~/utils/create-gql-client.server';
 import { env } from './env';
 import { logger as appLogger } from './logger';
@@ -15,7 +15,11 @@ import { setSecureHeaders } from './middleware/set-secure-headers';
 
 if (env.isProduction && env.SENTRY_DSN) {
   // eslint-disable-next-line unicorn/prefer-top-level-await
-  void import('./utils/init-sentry').then(({ initSentry }) => initSentry());
+  void (async () => {
+    const { initSentry } = await import('./utils/init-sentry');
+
+    initSentry();
+  })();
 }
 
 if (!import.meta.env.PROD && env.isE2E) {
@@ -37,9 +41,7 @@ export default await createHonoServer({
     server.use('*', poweredBy({ serverName: 'vers-idle' }));
 
     // if we made it past our static asset serving and reached out, bail out
-    server.on('GET', ['/favicons/*', '/img/*'], (c) => {
-      return c.text('Not found', 404);
-    });
+    server.on('GET', ['/favicons/*', '/img/*'], (c) => c.text('Not found', 404));
 
     server.use(compress());
 
@@ -50,7 +52,7 @@ export default await createHonoServer({
     });
   },
   defaultLogger: false,
-  getLoadContext: async (ctx, { build }) => {
+  getLoadContext: async (ctx, opts) => {
     // instantiate our GQL client as part of our load context so
     // we only have a single instance. prevents issues with refreshing
     // tokens for multiple inflight requests, etc.
@@ -59,7 +61,7 @@ export default await createHonoServer({
     return {
       client,
       cspNonce: ctx.get('cspNonce'),
-      serverBuild: build,
+      serverBuild: opts.build,
     };
   },
 });

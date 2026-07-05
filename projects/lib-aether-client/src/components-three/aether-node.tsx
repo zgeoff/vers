@@ -1,6 +1,6 @@
-import { useCallback } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { AetherNode } from '@vers/aether-core';
+import { useCallback } from 'react';
 import type { Mesh } from 'three';
 import { setHoveredNode } from '../state/set-hovered-node';
 import { setSelectedNode } from '../state/set-selected-node';
@@ -41,11 +41,10 @@ export function AetherNode(props: AetherNodeProps) {
     <mesh
       ref={setSelectedNodeRef}
       position={position}
+
       // its important we attach our node ID so we can look it up without selecting
       userData={{ id: props.node.id }}
-      onPointerDown={(event: ThreeEvent<PointerEvent>) =>
-        handleClickNode(event)
-      }
+      onPointerDown={(event: ThreeEvent<PointerEvent>) => handleClickNode(event)}
       onPointerEnter={() => setHoveredNode(props.node)}
       onPointerLeave={() => setHoveredNode(null)}
     >

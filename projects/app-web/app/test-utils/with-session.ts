@@ -1,9 +1,6 @@
 import type { AppLoadContext } from 'react-router';
-import {
-  type SessionData,
-  type SessionKey,
-  verifySessionStorage,
-} from '~/session/verify-session-storage.server';
+import { verifySessionStorage } from '~/session/verify-session-storage.server';
+import type { SessionData, SessionKey } from '~/session/verify-session-storage.server';
 import { combineCookies } from './combine-cookies';
 
 interface DataFnArgs {
@@ -25,9 +22,7 @@ export function withSession<Args extends DataFnArgs, Data>(
   verifySessionData: { [K in keyof SessionData]?: SessionData[K] | undefined },
 ) {
   return async (args: Args): Promise<Data> => {
-    const verifySession = await verifySessionStorage.getSession(
-      args.request.headers.get('cookie'),
-    );
+    const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
     for (const [key, value] of Object.entries(verifySessionData)) {
       if (value !== undefined) {
@@ -35,8 +30,7 @@ export function withSession<Args extends DataFnArgs, Data>(
       }
     }
 
-    const setCookieHeader =
-      await verifySessionStorage.commitSession(verifySession);
+    const setCookieHeader = await verifySessionStorage.commitSession(verifySession);
 
     const existingCookie = args.request.headers.get('cookie');
 

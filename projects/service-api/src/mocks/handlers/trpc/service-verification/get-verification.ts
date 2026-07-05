@@ -1,15 +1,12 @@
-import type {
-  GetVerificationPayload,
-  VerificationType,
-} from '@vers/service-types';
+import type { GetVerificationPayload, VerificationType } from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const getVerification = trpc.getVerification.query(({ input }) => {
+export const getVerification = trpc.getVerification.query((opts) => {
   const verification = db.verification.findFirst({
     where: {
-      target: { equals: input.target },
-      type: { equals: input.type },
+      target: { equals: opts.input.target },
+      type: { equals: opts.input.type },
     },
   });
 

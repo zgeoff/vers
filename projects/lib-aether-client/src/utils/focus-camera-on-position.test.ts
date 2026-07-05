@@ -1,5 +1,5 @@
-import { expect, test, vi } from 'vitest';
 import { PerspectiveCamera } from 'three';
+import { expect, test, vi } from 'vitest';
 import { focusCameraOnPosition } from './focus-camera-on-position';
 
 test('it updates camera position to focus on target', () => {
@@ -12,8 +12,8 @@ test('it updates camera position to focus on target', () => {
   expect(camera.position.y).toBe(40);
 
   // adjusted x,z position for an isometric view
-  expect(camera.position.x).toBeCloseTo(33.094_010_76, 7);
-  expect(camera.position.z).toBeCloseTo(12.659_863_23, 7);
+  expect(camera.position.x).toBeCloseTo(33.09401076, 7);
+  expect(camera.position.z).toBeCloseTo(12.65986323, 7);
 
-  expect(updateProjectionMatrixSpy).toHaveBeenCalledTimes(1);
+  expect(updateProjectionMatrixSpy).toHaveBeenCalledOnce();
 });

@@ -1,9 +1,9 @@
 import { Icon } from './icon';
 
-export const Checkmark = () => {
+export function Checkmark() {
   return <Icon.Checkmark />;
-};
+}
 
-export const Alert = () => {
+export function Alert() {
   return <Icon.Alert />;
-};
+}

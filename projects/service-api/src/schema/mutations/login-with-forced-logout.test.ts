@@ -1,5 +1,5 @@
-import { afterEach, expect, test } from 'vitest';
 import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';
 import { SecureAction } from '~/types';
@@ -79,7 +79,7 @@ test('it removes all previous sessions when a user is logged in', async () => {
   });
 
   // create 3 other sessions for our user
-  Array.from({ length: 3 }).map(() => {
+  Array.from({ length: 3 }).forEach(() => {
     db.session.create({
       userID: user.id,
     });

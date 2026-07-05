@@ -1,6 +1,6 @@
-import type { AnyContractRouter, ContractRouterClient } from '@orpc/contract';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
+import type { AnyContractRouter, ContractRouterClient } from '@orpc/contract';
 
 /** An Elysia app (or anything shaped like one) an RPC test client can call in-process. */
 interface RPCTestClientApp {
@@ -9,6 +9,7 @@ interface RPCTestClientApp {
 
 interface BuildRPCTestClientOptions {
   headers?: Record<string, string>;
+
   /** Base URL the client sends requests to; only the path reaches `app.handle`. Default 'http://test.local/rpc'. */
   url?: string;
 }

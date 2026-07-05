@@ -8,7 +8,7 @@ interface TooltipProps {
   className?: string;
 }
 
-const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>((props, ref) => {
+const TooltipRoot = React.forwardRef<HTMLDivElement, TooltipProps>((props, ref) => {
   const { children, className, ...restProps } = props;
 
   return (
@@ -18,11 +18,9 @@ const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>((props, ref) => {
   );
 });
 
-Tooltip.displayName = 'Tooltip';
+TooltipRoot.displayName = 'TooltipRoot';
 
-const CompoundTooltip = Object.assign(withProvider(Tooltip, 'root'), {
+export const Tooltip = Object.assign(withProvider(TooltipRoot, 'root'), {
   Content: withContext(TooltipContent, 'content'),
   Header: withContext(TooltipHeader, 'header'),
 });
-
-export { CompoundTooltip as Tooltip };

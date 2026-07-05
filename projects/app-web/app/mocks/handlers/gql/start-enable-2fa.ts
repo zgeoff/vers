@@ -1,4 +1,4 @@
-import { graphql, HttpResponse } from 'msw';
+import { HttpResponse, graphql } from 'msw';
 import type { StartEnable2FaInput, StartEnable2FaPayload } from '~/gql/graphql';
 import { db } from '../../db';
 import { TWO_FACTOR_ALREADY_ENABLED_ERROR, UNKNOWN_ERROR } from '../../errors';
@@ -12,77 +12,77 @@ interface StartEnable2FAResponse {
   startEnable2FA: StartEnable2FaPayload;
 }
 
-export const StartEnable2FA = graphql.mutation<
-  StartEnable2FAResponse,
-  StartEnable2FAVariables
->('StartEnable2FA', ({ request }) => {
-  const authHeader = request.headers.get('authorization');
+export const StartEnable2FA = graphql.mutation<StartEnable2FAResponse, StartEnable2FAVariables>(
+  'StartEnable2FA',
+  (opts) => {
+    const authHeader = opts.request.headers.get('authorization');
 
-  if (!authHeader) {
-    return HttpResponse.json({
-      errors: [{ message: 'Unauthorized' }],
+    if (!authHeader) {
+      return HttpResponse.json({
+        errors: [{ message: 'Unauthorized' }],
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const payload = decodeMockJWT(token);
+
+    const user = db.user.findFirst({
+      where: { id: { equals: payload.sub } },
     });
-  }
 
-  const token = authHeader.replace('Bearer ', '');
-  const payload = decodeMockJWT(token);
-
-  const user = db.user.findFirst({
-    where: { id: { equals: payload.sub } },
-  });
-
-  if (!user) {
-    return HttpResponse.json({
-      data: {
-        startEnable2FA: {
-          error: UNKNOWN_ERROR,
+    if (!user) {
+      return HttpResponse.json({
+        data: {
+          startEnable2FA: {
+            error: UNKNOWN_ERROR,
+          },
         },
-      },
-    });
-  }
+      });
+    }
 
-  const is2FAEnabled = db.verification.findFirst({
-    where: {
-      target: { equals: user.email },
-      type: { equals: '2fa' },
-    },
-  });
-
-  if (is2FAEnabled) {
-    return HttpResponse.json({
-      data: {
-        startEnable2FA: {
-          error: TWO_FACTOR_ALREADY_ENABLED_ERROR,
-        },
-      },
-    });
-  }
-
-  const existingVerification = db.verification.findFirst({
-    where: {
-      target: { equals: user.email },
-      type: { equals: '2fa-setup' },
-    },
-  });
-
-  if (existingVerification) {
-    db.verification.delete({
+    const is2FAEnabled = db.verification.findFirst({
       where: {
-        id: { equals: existingVerification.id },
+        target: { equals: user.email },
+        type: { equals: '2fa' },
       },
     });
-  }
 
-  db.verification.create({
-    target: user.email,
-    type: '2fa-setup',
-  });
+    if (is2FAEnabled) {
+      return HttpResponse.json({
+        data: {
+          startEnable2FA: {
+            error: TWO_FACTOR_ALREADY_ENABLED_ERROR,
+          },
+        },
+      });
+    }
 
-  return HttpResponse.json({
-    data: {
-      startEnable2FA: {
-        transactionID: 'valid-transaction-id',
+    const existingVerification = db.verification.findFirst({
+      where: {
+        target: { equals: user.email },
+        type: { equals: '2fa-setup' },
       },
-    },
-  });
-});
+    });
+
+    if (existingVerification) {
+      db.verification.delete({
+        where: {
+          id: { equals: existingVerification.id },
+        },
+      });
+    }
+
+    db.verification.create({
+      target: user.email,
+      type: '2fa-setup',
+    });
+
+    return HttpResponse.json({
+      data: {
+        startEnable2FA: {
+          transactionID: 'valid-transaction-id',
+        },
+      },
+    });
+  },
+);

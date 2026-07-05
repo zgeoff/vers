@@ -15,8 +15,7 @@ export function getServerTimingHeader(timings?: Timings) {
       let duration = 0;
 
       for (const timingMetric of timingMetrics) {
-        const time =
-          timingMetric.time ?? performance.now() - timingMetric.start;
+        const time = timingMetric.time ?? performance.now() - timingMetric.start;
 
         duration += time;
       }
@@ -27,7 +26,7 @@ export function getServerTimingHeader(timings?: Timings) {
         .join(' & ');
 
       return [
-        key.replaceAll(/(:| |@|=|;|,|\/|\\)/g, '_'),
+        key.replaceAll(/(?<separator>:| |@|=|;|,|\/|\\)/g, '_'),
         description ? `desc=${JSON.stringify(description)}` : null,
         `dur=${duration.toFixed(1)}`,
       ]

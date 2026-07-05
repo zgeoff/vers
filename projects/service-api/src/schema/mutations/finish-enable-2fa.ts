@@ -1,5 +1,5 @@
-import type { AuthedContext } from '~/types';
 import { logger } from '~/logger';
+import type { AuthedContext } from '~/types';
 import { SecureAction } from '~/types';
 import { verifyTransactionToken } from '~/utils/verify-transaction-token';
 import { builder } from '../builder';
@@ -55,11 +55,10 @@ export async function finishEnable2FA(
       };
     }
 
-    const twoFactorVerification =
-      await ctx.services.verification.getVerification.query({
-        target: ctx.user.email,
-        type: '2fa-setup',
-      });
+    const twoFactorVerification = await ctx.services.verification.getVerification.query({
+      target: ctx.user.email,
+      type: '2fa-setup',
+    });
 
     if (!twoFactorVerification) {
       return {
@@ -106,7 +105,7 @@ builder.mutationField('finishEnable2FA', (t) =>
         limit: 10,
       },
     },
-    resolve: resolve,
+    resolve,
     type: FinishEnable2FAPayload,
   }),
 );

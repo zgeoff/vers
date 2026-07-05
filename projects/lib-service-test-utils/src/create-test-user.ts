@@ -1,7 +1,7 @@
 import { createSeed } from '@vers/game-utils';
 import * as schema from '@vers/postgres-schema';
 import bcrypt from 'bcryptjs';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 /**
  * Matches the cost factor the production password hasher uses — seeded test
@@ -25,10 +25,7 @@ export async function createTestUser(
   let passwordHash = null;
 
   if (data.password !== null) {
-    passwordHash = await bcrypt.hash(
-      data.password ?? 'password123',
-      PASSWORD_HASH_COST_FACTOR,
-    );
+    passwordHash = await bcrypt.hash(data.password ?? 'password123', PASSWORD_HASH_COST_FACTOR);
   }
 
   const user = {

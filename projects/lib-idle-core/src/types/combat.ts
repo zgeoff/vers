@@ -7,10 +7,10 @@ export interface CombatExecutor {
   get elapsed(): number;
 
   // utils
-  getAppState(): CombatExecutorAppState;
-  reset(): void;
-  run(delta: number): void;
-  scheduleEvent(event: CombatEvent): void;
+  getAppState: () => CombatExecutorAppState;
+  reset: () => void;
+  run: (delta: number) => void;
+  scheduleEvent: (event: CombatEvent) => void;
 }
 
 interface ICombatEvent {

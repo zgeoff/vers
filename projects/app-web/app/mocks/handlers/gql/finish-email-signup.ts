@@ -1,8 +1,5 @@
-import { graphql, HttpResponse } from 'msw';
-import type {
-  FinishEmailSignupInput,
-  FinishEmailSignupPayload,
-} from '~/gql/graphql';
+import { HttpResponse, graphql } from 'msw';
+import type { FinishEmailSignupInput, FinishEmailSignupPayload } from '~/gql/graphql';
 import { db } from '../../db';
 import { UNKNOWN_ERROR } from '../../errors';
 import { encodeMockJWT } from '../../utils/encode-mock-jwt';
@@ -21,9 +18,9 @@ const EXPIRATION_IN_MS = 1000 * 60 * 60 * 24; // 1 day
 export const FinishEmailSignup = graphql.mutation<
   FinishEmailSignupResponse,
   FinishEmailSignupVariables
->('FinishEmailSignup', ({ variables }) => {
+>('FinishEmailSignup', (opts) => {
   const existingUser = db.user.findFirst({
-    where: { email: { equals: variables.input.email } },
+    where: { email: { equals: opts.variables.input.email } },
   });
 
   if (existingUser) {
@@ -37,10 +34,10 @@ export const FinishEmailSignup = graphql.mutation<
   }
 
   const user = db.user.create({
-    email: variables.input.email,
-    name: variables.input.name,
-    password: variables.input.password,
-    username: variables.input.username,
+    email: opts.variables.input.email,
+    name: opts.variables.input.name,
+    password: opts.variables.input.password,
+    username: opts.variables.input.username,
   });
 
   const session = db.session.create({

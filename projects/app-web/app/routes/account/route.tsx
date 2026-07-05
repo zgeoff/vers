@@ -1,6 +1,6 @@
-import { data, Form, redirect, useFetcher } from 'react-router';
 import { parseWithZod } from '@conform-to/zod';
 import { Button, Heading, StatusButton, Text } from '@vers/design-system';
+import { Form, data, redirect, useFetcher } from 'react-router';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import { ContentContainer } from '~/components/content-container';
@@ -17,20 +17,22 @@ import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
 import { requireAuth } from '~/utils/require-auth.server';
 import { withErrorHandling } from '~/utils/with-error-handling';
-import type { Route } from './+types/route';
 import { QueryParam } from '../verify-otp/types';
+import type { Route } from './+types/route';
 import * as styles from './route.styles';
 
 const TwoFactorDisableFormSchema = z.object({
   target: z.string().min(1),
 });
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: 'Manage your account and security settings',
-    title: 'vers | Account',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: 'Manage your account and security settings',
+      title: 'vers | Account',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
@@ -85,20 +87,12 @@ async function handleEnable2FA(args: Route.ActionArgs) {
   invariant(result.data, 'if no error, there must be data');
 
   if (isMutationError(result.data.startEnable2FA)) {
-    return data(
-      { error: result.data.startEnable2FA.error.message },
-      { status: 400 },
-    );
+    return data({ error: result.data.startEnable2FA.error.message }, { status: 400 });
   }
 
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
-  verifySession.set(
-    'enable2FA#transactionID',
-    result.data.startEnable2FA.transactionID,
-  );
+  verifySession.set('enable2FA#transactionID', result.data.startEnable2FA.transactionID);
 
   return redirect(Routes.AccountVerify2FA, {
     headers: {
@@ -131,20 +125,12 @@ async function handleDisable2FA(args: Route.ActionArgs, formData: FormData) {
   invariant(result.data, 'if no error, there must be data');
 
   if (isMutationError(result.data.startStepUpAuth)) {
-    return data(
-      { error: result.data.startStepUpAuth.error.message },
-      { status: 400 },
-    );
+    return data({ error: result.data.startStepUpAuth.error.message }, { status: 400 });
   }
 
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
-  verifySession.set(
-    'disable2FA#transactionID',
-    result.data.startStepUpAuth.transactionID,
-  );
+  verifySession.set('disable2FA#transactionID', result.data.startStepUpAuth.transactionID);
 
   const searchParams = new URLSearchParams({
     [QueryParam.Target]: submission.value.target,
@@ -162,9 +148,7 @@ export function Account(props: Route.ComponentProps) {
   const twoFactorFetcher = useFetcher<{ error: string }>();
   const isFormPending = useIsFormPending();
 
-  const submitButtonStatus = isFormPending
-    ? StatusButton.Status.Pending
-    : StatusButton.Status.Idle;
+  const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
   const { user } = props.loaderData;
 
@@ -214,9 +198,7 @@ export function Account(props: Route.ComponentProps) {
                 Disable 2FA
               </StatusButton>
             </twoFactorFetcher.Form>
-            {twoFactorFetcher.data?.error && (
-              <p>{twoFactorFetcher.data.error}</p>
-            )}
+            {twoFactorFetcher.data?.error && <p>{twoFactorFetcher.data.error}</p>}
           </>
         )}
 
@@ -226,9 +208,9 @@ export function Account(props: Route.ComponentProps) {
               Two-factor authentication is <strong>not enabled</strong>.
             </Text>
             <Text className={styles.twoFactorDescription}>
-              Two factor authentication adds an extra layer of security to your
-              account. You will need to enter a code from an authenticator app
-              like <Link to="https://1password.com">1Password</Link> to log in.
+              Two factor authentication adds an extra layer of security to your account. You will
+              need to enter a code from an authenticator app like{' '}
+              <Link to="https://1password.com">1Password</Link> to log in.
             </Text>
             <twoFactorFetcher.Form method="post">
               <input name="target" type="hidden" value={user.email} />
@@ -243,9 +225,7 @@ export function Account(props: Route.ComponentProps) {
                 Enable 2FA
               </StatusButton>
             </twoFactorFetcher.Form>
-            {twoFactorFetcher.data?.error && (
-              <p>{twoFactorFetcher.data.error}</p>
-            )}
+            {twoFactorFetcher.data?.error && <p>{twoFactorFetcher.data.error}</p>}
           </>
         )}
       </section>

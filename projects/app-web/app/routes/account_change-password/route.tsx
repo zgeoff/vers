@@ -1,7 +1,7 @@
-import { data, Form, redirect } from 'react-router';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
 import { Field, Heading, StatusButton, Text } from '@vers/design-system';
+import { Form, data, redirect } from 'react-router';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import { ContentContainer } from '~/components/content-container';
@@ -20,23 +20,23 @@ import { requireAuth } from '~/utils/require-auth.server';
 import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import { ConfirmPasswordSchema } from '~/validation/confirm-password-schema';
-import type { Route } from './+types/route';
 import { QueryParam } from '../verify-otp/types';
+import type { Route } from './+types/route';
 import * as styles from './route.styles';
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: 'Change your account password',
-    title: 'vers | Change Password',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: 'Change your account password',
+      title: 'vers | Change Password',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
 
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
   const transactionToken = verifySession.get('changePassword#transactionToken');
 
@@ -82,13 +82,9 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
 
   invariant(result.data, 'if no error, there must be data');
 
-  verifySession.set(
-    'changePassword#transactionID',
-    result.data.startStepUpAuth.transactionID,
-  );
+  verifySession.set('changePassword#transactionID', result.data.startStepUpAuth.transactionID);
 
-  const setCookieHeader =
-    await verifySessionStorage.commitSession(verifySession);
+  const setCookieHeader = await verifySessionStorage.commitSession(verifySession);
 
   const verifySearchParams = new URLSearchParams({
     [QueryParam.Target]: user.email,
@@ -126,22 +122,17 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     return data({ result }, { status });
   }
 
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('Cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('Cookie'));
 
   const transactionToken = verifySession.get('changePassword#transactionToken');
 
-  const result = await args.context.client.mutation(
-    ChangeUserPasswordMutation,
-    {
-      input: {
-        currentPassword: submission.value.currentPassword,
-        newPassword: submission.value.password,
-        ...(transactionToken !== undefined && { transactionToken }),
-      },
+  const result = await args.context.client.mutation(ChangeUserPasswordMutation, {
+    input: {
+      currentPassword: submission.value.currentPassword,
+      newPassword: submission.value.password,
+      ...(transactionToken !== undefined && { transactionToken }),
     },
-  );
+  });
 
   if (result.error) {
     handleGQLError(result.error);
@@ -165,8 +156,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   verifySession.unset('changePassword#transactionToken');
   verifySession.unset('changePassword#transactionID');
 
-  const setCookieHeader =
-    await verifySessionStorage.commitSession(verifySession);
+  const setCookieHeader = await verifySessionStorage.commitSession(verifySession);
 
   return redirect(Routes.Account, {
     headers: { 'set-cookie': setCookieHeader },
@@ -180,35 +170,29 @@ export function AccountChangeUserPassword(props: Route.ComponentProps) {
     constraint: getZodConstraint(ChangeUserPasswordFormSchema),
     id: 'change-password-form',
     lastResult: props.actionData?.result,
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: ChangeUserPasswordFormSchema });
+    onValidate(opts) {
+      return parseWithZod(opts.formData, {
+        schema: ChangeUserPasswordFormSchema,
+      });
     },
     shouldRevalidate: 'onBlur',
   });
 
-  const submitButtonStatus = isFormPending
-    ? StatusButton.Status.Pending
-    : StatusButton.Status.Idle;
+  const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
   return (
     <ContentContainer>
       <div className={styles.container}>
         <Heading level={2}>Change your password</Heading>
         <Text align="center">
-          To change your password, please enter your current password and then
-          enter your new password twice.
+          To change your password, please enter your current password and then enter your new
+          password twice.
         </Text>
-        <Form
-          method="POST"
-          {...getFormProps(form)}
-          className={styles.formStyles}
-        >
+        <Form method="POST" {...getFormProps(form)} className={styles.formStyles}>
           <Field
             errors={fields.currentPassword.errors ?? []}
             inputProps={{
-              ...toKeylessProps(
-                getInputProps(fields.currentPassword, { type: 'password' }),
-              ),
+              ...toKeylessProps(getInputProps(fields.currentPassword, { type: 'password' })),
               autoComplete: 'current-password',
               autoFocus: true,
               placeholder: '********',
@@ -218,9 +202,7 @@ export function AccountChangeUserPassword(props: Route.ComponentProps) {
           <Field
             errors={fields.password.errors ?? []}
             inputProps={{
-              ...toKeylessProps(
-                getInputProps(fields.password, { type: 'password' }),
-              ),
+              ...toKeylessProps(getInputProps(fields.password, { type: 'password' })),
               autoComplete: 'new-password',
               placeholder: '********',
             }}
@@ -229,9 +211,7 @@ export function AccountChangeUserPassword(props: Route.ComponentProps) {
           <Field
             errors={fields.confirmPassword.errors ?? []}
             inputProps={{
-              ...toKeylessProps(
-                getInputProps(fields.confirmPassword, { type: 'password' }),
-              ),
+              ...toKeylessProps(getInputProps(fields.confirmPassword, { type: 'password' })),
               autoComplete: 'new-password',
               placeholder: '********',
             }}

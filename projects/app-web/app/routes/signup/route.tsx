@@ -1,9 +1,9 @@
-import { data, Form, redirect, Link as RRLink } from 'react-router';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
 import { Brand, Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { UserEmailSchema } from '@vers/validation';
+import { Form, Link as RRLink, data, redirect } from 'react-router';
 import { HoneypotInputs } from 'remix-utils/honeypot/react';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
@@ -21,19 +21,21 @@ import { isMutationError } from '~/utils/is-mutation-error';
 import { requireAnonymous } from '~/utils/require-anonymous.server';
 import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
-import type { Route } from './+types/route';
 import { QueryParam } from '../verify-otp/types';
+import type { Route } from './+types/route';
 
 const SignupFormSchema = z.object({
   email: UserEmailSchema,
 });
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: '',
-    title: 'vers | Signup',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: '',
+      title: 'vers | Signup',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAnonymous(args.request);
@@ -83,14 +85,9 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     return data({ result: formResult }, { status: 400 });
   }
 
-  const verifySession = await verifySessionStorage.getSession(
-    args.request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(args.request.headers.get('cookie'));
 
-  verifySession.set(
-    'onboarding#transactionID',
-    result.data.startEmailSignup.transactionID,
-  );
+  verifySession.set('onboarding#transactionID', result.data.startEmailSignup.transactionID);
 
   const searchParams = new URLSearchParams({
     [QueryParam.Target]: submission.value.email,
@@ -121,15 +118,13 @@ export function Signup(props: Route.ComponentProps) {
     constraint: getZodConstraint(SignupFormSchema),
     id: 'signup-form',
     lastResult: props.actionData?.result,
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: SignupFormSchema });
+    onValidate(opts) {
+      return parseWithZod(opts.formData, { schema: SignupFormSchema });
     },
     shouldRevalidate: 'onBlur',
   });
 
-  const submitButtonStatus = isFormPending
-    ? StatusButton.Status.Pending
-    : StatusButton.Status.Idle;
+  const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
   return (
     <>

@@ -1,7 +1,7 @@
-import type { IconType } from 'react-icons/lib';
-import type { NavLinkRenderProps } from 'react-router';
 import { Brand, Icon, Text } from '@vers/design-system';
 import { cx } from '@vers/styled-system/css';
+import type { IconType } from 'react-icons/lib';
+import type { NavLinkRenderProps } from 'react-router';
 import { NavLink } from '~/components/nav-link';
 import { setNavigationVisible } from '~/state/set-navigation-visible';
 import { useNavigationVisible } from '~/state/use-navigation-visible';
@@ -20,10 +20,7 @@ export function SideNavigation() {
   return (
     <>
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-      <div
-        className={styles.navOverlay({ isVisible: isNavVisible })}
-        onClick={handleHideNav}
-      />
+      <div className={styles.navOverlay({ isVisible: isNavVisible })} onClick={handleHideNav} />
       {/* eslint-enable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
 
       <nav className={cx(styles.nav, !isNavVisible && styles.navHidden)}>
@@ -79,7 +76,6 @@ function renderLink(link: LinkData) {
   );
 }
 
-/* eslint-disable perfectionist/sort-objects */
 const GAME_LINKS: Record<string, LinkData> = {
   [Routes.Nexus]: {
     Icon: Icon.Nexus,
@@ -150,4 +146,3 @@ const SETTINGS_LINKS: Record<string, LinkData> = {
     route: Routes.Account,
   },
 };
-/* eslint-enable perfectionist/sort-objects */

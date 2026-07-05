@@ -2,7 +2,8 @@ import * as jose from 'jose';
 import { z } from 'zod';
 import { env } from '~/env';
 import { logger } from '~/logger';
-import { type Context, SecureAction } from '~/types';
+import { SecureAction } from '~/types';
+import type { Context } from '~/types';
 import { transactionJTIBlocklist } from './transaction-jti-blocklist';
 
 const JWTPayloadSchema = z.object({
@@ -95,10 +96,7 @@ export async function verifyTransactionToken(
     }
 
     if (payload.ip_address !== ctx.ipAddress) {
-      logger.debug(
-        logCtx,
-        'IP address mismatch while verifying transaction token',
-      );
+      logger.debug(logCtx, 'IP address mismatch while verifying transaction token');
 
       return null;
     }
@@ -117,10 +115,7 @@ export async function verifyTransactionToken(
     }
 
     if (payload.session_id !== ctx.session?.id) {
-      logger.debug(
-        logCtx,
-        'Session ID mismatch while verifying transaction token',
-      );
+      logger.debug(logCtx, 'Session ID mismatch while verifying transaction token');
 
       return null;
     }
@@ -130,10 +125,7 @@ export async function verifyTransactionToken(
     });
 
     if (!session) {
-      logger.debug(
-        logCtx,
-        'Session not found while verifying transaction token',
-      );
+      logger.debug(logCtx, 'Session not found while verifying transaction token');
 
       return null;
     }

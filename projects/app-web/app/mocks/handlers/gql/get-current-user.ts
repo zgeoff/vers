@@ -1,4 +1,4 @@
-import { graphql, HttpResponse } from 'msw';
+import { HttpResponse, graphql } from 'msw';
 import type { GetCurrentUserQueryVariables, User } from '~/gql/graphql';
 import { db } from '../../db';
 import { decodeMockJWT } from '../../utils/decode-mock-jwt';
@@ -10,34 +10,34 @@ interface GetCurrentUserResponse {
   getCurrentUser: User;
 }
 
-export const GetCurrentUser = graphql.query<
-  GetCurrentUserResponse,
-  GetCurrentUserVariables
->('GetCurrentUser', ({ request }) => {
-  const authHeader = request.headers.get('authorization');
+export const GetCurrentUser = graphql.query<GetCurrentUserResponse, GetCurrentUserVariables>(
+  'GetCurrentUser',
+  (opts) => {
+    const authHeader = opts.request.headers.get('authorization');
 
-  if (!authHeader) {
-    return HttpResponse.json({
-      errors: [{ message: 'Unauthorized' }],
+    if (!authHeader) {
+      return HttpResponse.json({
+        errors: [{ message: 'Unauthorized' }],
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const payload = decodeMockJWT(token);
+
+    const user = db.user.findFirst({
+      where: { id: { equals: payload.sub } },
     });
-  }
 
-  const token = authHeader.replace('Bearer ', '');
-  const payload = decodeMockJWT(token);
+    if (!user) {
+      return HttpResponse.json({
+        errors: [{ message: 'Internal Server Error' }],
+      });
+    }
 
-  const user = db.user.findFirst({
-    where: { id: { equals: payload.sub } },
-  });
-
-  if (!user) {
     return HttpResponse.json({
-      errors: [{ message: 'Internal Server Error' }],
+      data: {
+        getCurrentUser: addUserResolvedFields(user),
+      },
     });
-  }
-
-  return HttpResponse.json({
-    data: {
-      getCurrentUser: addUserResolvedFields(user),
-    },
-  });
-});
+  },
+);

@@ -1,8 +1,5 @@
-import { graphql, HttpResponse } from 'msw';
-import type {
-  LoginWithPasswordInput,
-  LoginWithPasswordPayload,
-} from '~/gql/graphql';
+import { HttpResponse, graphql } from 'msw';
+import type { LoginWithPasswordInput, LoginWithPasswordPayload } from '~/gql/graphql';
 import { db } from '../../db';
 import { INVALID_CREDENTIALS_ERROR } from '../../errors';
 import { encodeMockJWT } from '../../utils/encode-mock-jwt';
@@ -21,8 +18,8 @@ const EXPIRATION_IN_MS = 1000 * 60 * 60 * 24; // 24 hours
 export const LoginWithPassword = graphql.mutation<
   LoginWithPasswordResponse,
   LoginWithPasswordVariables
->('LoginWithPassword', ({ variables }) => {
-  const { email, password } = variables.input;
+>('LoginWithPassword', (opts) => {
+  const { email, password } = opts.variables.input;
 
   const user = db.user.findFirst({
     where: {
@@ -94,10 +91,10 @@ export const LoginWithPassword = graphql.mutation<
     });
   }
 
+  const expSeconds = (Date.now() + EXPIRATION_IN_MS).toString().slice(0, 10);
+
   const accessToken = encodeMockJWT({
-    exp: Number.parseInt(
-      (Date.now() + EXPIRATION_IN_MS).toString().slice(0, 10),
-    ),
+    exp: Number(expSeconds),
     sub: user.id,
   });
 

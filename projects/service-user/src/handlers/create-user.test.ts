@@ -1,9 +1,9 @@
-import { expect, test } from 'vitest';
-import * as schema from '@vers/postgres-schema';
+import type * as schema from '@vers/postgres-schema';
 import { createTestDB } from '@vers/service-test-utils';
 import bcrypt from 'bcryptjs';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import invariant from 'tiny-invariant';
+import { expect, test } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 
@@ -46,14 +46,12 @@ test('it creates a user with a hashed password', async () => {
   });
 
   const user = await db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.email, 'user@test.com'),
+    where: (users, operators) => operators.eq(users.email, 'user@test.com'),
   });
 
   invariant(user?.passwordHash, 'user with password hash must be created');
 
-  await expect(
-    bcrypt.compare(password, user.passwordHash),
-  ).resolves.toBeTruthy();
+  await expect(bcrypt.compare(password, user.passwordHash)).resolves.toBeTrue();
 });
 
 test('it throws an error if a user with that email already exists', async () => {

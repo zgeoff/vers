@@ -6,7 +6,7 @@ interface Config {
   email: string;
 }
 
-export async function generatePasswordChangedEmail(config: Config) {
+export function generatePasswordChangedEmail(config: Config) {
   return generateEmail({
     component: (
       <E.Html dir="ltr" lang="en">

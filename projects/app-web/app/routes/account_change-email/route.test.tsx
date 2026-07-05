@@ -1,9 +1,9 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { HttpResponse, graphql } from 'msw';
 import { createRoutesStub, useSearchParams } from 'react-router';
-import { drop } from '@mswjs/data';
-import { graphql, HttpResponse } from 'msw';
+import { afterEach, expect, test, vi } from 'vitest';
 import { VerificationType } from '~/gql/graphql';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
@@ -146,9 +146,7 @@ test('it redirects to verify 2FA as needed when no transaction token is in the s
   });
 
   const verifyOTPRoute = await screen.findByText('VERIFY_OTP_ROUTE');
-  const searchParams = screen.getByText(
-    'target=test%40example.com&type=CHANGE_EMAIL',
-  );
+  const searchParams = screen.getByText('target=test%40example.com&type=CHANGE_EMAIL');
 
   expect(searchParams).toBeInTheDocument();
   expect(verifyOTPRoute).toBeInTheDocument();
@@ -234,18 +232,16 @@ test('it handles a successful email change submission', async () => {
   const verifySession = await verifySessionStorage.getSession(setCookieHeader);
 
   expect(verifySession.get('changeEmail#transactionID')).toBeUndefined();
-  expect(verifySession.get('changeEmailConfirm#transactionID')).toStrictEqual(
-    expect.any(String),
-  );
+  expect(verifySession.get('changeEmailConfirm#transactionID')).toStrictEqual(expect.any(String));
 });
 
 test('it shows an error when the email change fails', async () => {
   server.use(
-    graphql.mutation('StartChangeUserEmail', () => {
-      return HttpResponse.json({
+    graphql.mutation('StartChangeUserEmail', () =>
+      HttpResponse.json({
         errors: [{ message: 'Email already in use' }],
-      });
-    }),
+      }),
+    ),
   );
 
   const { user } = setupTest({
@@ -273,8 +269,8 @@ test('it shows an error when the email change fails', async () => {
 
 test('it shows a specific error when the mutation returns an error payload', async () => {
   server.use(
-    graphql.mutation('StartChangeUserEmail', () => {
-      return HttpResponse.json({
+    graphql.mutation('StartChangeUserEmail', () =>
+      HttpResponse.json({
         data: {
           startChangeUserEmail: {
             __typename: 'MutationErrorPayload',
@@ -284,8 +280,8 @@ test('it shows a specific error when the mutation returns an error payload', asy
             },
           },
         },
-      });
-    }),
+      }),
+    ),
   );
 
   const { user } = setupTest({

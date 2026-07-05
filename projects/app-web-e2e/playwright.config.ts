@@ -35,6 +35,7 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
+
   // one retry absorbs the full page reload vite forces when a code-split
   // route pulls in a dependency the warmup pass didn't reach
   retries: process.env['CI'] ? 1 : 0,

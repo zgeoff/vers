@@ -26,9 +26,7 @@ export async function createTestDB() {
 
   const dbName = `test_${createId()}`;
 
-  await setupClient.unsafe(
-    /* SQL */ `CREATE DATABASE ${dbName} TEMPLATE ${templateDB}`,
-  );
+  await setupClient.unsafe(/* SQL */ `CREATE DATABASE ${dbName} TEMPLATE ${templateDB}`);
 
   await setupClient.end();
 
@@ -40,6 +38,6 @@ export async function createTestDB() {
 
   return {
     db: drizzle(client, { schema }),
-    [Symbol.asyncDispose]: async () => client.end(),
+    [Symbol.asyncDispose]: () => client.end(),
   };
 }

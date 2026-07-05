@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
-import { Form } from 'react-router';
-import { isRouteErrorResponse, useRouteError } from 'react-router';
 import { captureException } from '@sentry/react';
 import { Brand, Button, Heading, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
+import { useEffect } from 'react';
+import { Form, isRouteErrorResponse, useRouteError } from 'react-router';
 import { Link } from '~/components/link';
 import { Routes } from '~/types';
 import { getErrorMessage } from '~/utils/get-error-message';
@@ -21,12 +20,9 @@ export function RouteErrorBoundary() {
   if (isRouteError && error.status === 404) {
     return (
       <ErrorBoundaryContainer>
-        <Heading level={2}>
-          We couldn&apos;t find what you were looking for
-        </Heading>
+        <Heading level={2}>We couldn&apos;t find what you were looking for</Heading>
         <Text>
-          The page you are looking for does not exist. It might have been moved
-          or deleted.
+          The page you are looking for does not exist. It might have been moved or deleted.
         </Text>
       </ErrorBoundaryContainer>
     );
@@ -35,8 +31,8 @@ export function RouteErrorBoundary() {
   const errorMessage =
     process.env['NODE_ENV'] === 'production' ? (
       <Text>
-        Sorry, an unknown error occurred. Please try again later. If the problem
-        persists, please <Link to={Routes.Contact}>contact support</Link>.
+        Sorry, an unknown error occurred. Please try again later. If the problem persists, please{' '}
+        <Link to={Routes.Contact}>contact support</Link>.
       </Text>
     ) : (
       <Text>{getErrorMessage(error)}</Text>

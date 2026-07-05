@@ -2,11 +2,11 @@ import { TRPCError } from '@trpc/server';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const updateAvatar = trpc.updateAvatar.mutation(({ input }) => {
+export const updateAvatar = trpc.updateAvatar.mutation((opts) => {
   const avatar = db.avatar.findFirst({
     where: {
-      id: { equals: input.id },
-      userID: { equals: input.userID },
+      id: { equals: opts.input.id },
+      userID: { equals: opts.input.userID },
     },
   });
 
@@ -19,11 +19,11 @@ export const updateAvatar = trpc.updateAvatar.mutation(({ input }) => {
 
   db.avatar.update({
     data: {
-      name: input.name,
+      name: opts.input.name,
       updatedAt: new Date(),
     },
     where: {
-      id: { equals: input.id },
+      id: { equals: opts.input.id },
     },
   });
 

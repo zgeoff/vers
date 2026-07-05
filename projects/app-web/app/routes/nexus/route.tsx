@@ -11,12 +11,14 @@ import { withErrorHandling } from '~/utils/with-error-handling';
 import type { Route } from './+types/route';
 import * as styles from './route.styles';
 
-export const meta: Route.MetaFunction = () => [
-  {
-    description: '',
-    title: 'vers | Nexus',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      description: '',
+      title: 'vers | Nexus',
+    },
+  ];
+}
 
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   await requireAuth(args.request);
@@ -41,12 +43,8 @@ export function Nexus(props: Route.ComponentProps) {
     return (
       <ContentContainer className={styles.container}>
         <Heading level={1}>Destiny Awaits a Vessel</Heading>
-        <Text className={styles.tagline}>
-          What is an Arbiter without a champion?
-        </Text>
-        <Text>
-          Call forth your Avatar and guide their path across the Aether.
-        </Text>
+        <Text className={styles.tagline}>What is an Arbiter without a champion?</Text>
+        <Text>Call forth your Avatar and guide their path across the Aether.</Text>
         <Link className={styles.link} to={Routes.AvatarCreate}>
           Awaken your Avatar
         </Link>

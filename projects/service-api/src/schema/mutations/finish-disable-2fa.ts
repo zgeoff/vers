@@ -1,5 +1,5 @@
-import type { AuthedContext } from '~/types';
 import { logger } from '~/logger';
+import type { AuthedContext } from '~/types';
 import { SecureAction } from '~/types';
 import { verifyTransactionToken } from '~/utils/verify-transaction-token';
 import { builder } from '../builder';
@@ -106,7 +106,7 @@ builder.mutationField('finishDisable2FA', (t) =>
         limit: 10,
       },
     },
-    resolve: resolve,
+    resolve,
     type: FinishDisable2FAPayload,
   }),
 );

@@ -1,12 +1,12 @@
-import type { RefreshTokensPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { RefreshTokensPayload } from '@vers/service-types';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import type { Context } from '../types';
 import * as consts from '../consts';
 import { logger } from '../logger';
 import { t } from '../t';
+import type { Context } from '../types';
 import { createJWT } from '../utils/create-jwt';
 
 export const RefreshTokensInputSchema = z.object({
@@ -35,9 +35,7 @@ export async function refreshTokens(
 
     // Check if the session has expired
     if (existingSession.expiresAt < new Date()) {
-      await ctx.db
-        .delete(schema.sessions)
-        .where(eq(schema.sessions.id, existingSession.id));
+      await ctx.db.delete(schema.sessions).where(eq(schema.sessions.id, existingSession.id));
 
       throw new TRPCError({
         code: 'BAD_REQUEST',
@@ -98,4 +96,4 @@ export async function refreshTokens(
 
 export const procedure = t.procedure
   .input(RefreshTokensInputSchema)
-  .mutation(async ({ ctx, input }) => refreshTokens(input, ctx));
+  .mutation((opts) => refreshTokens(opts.input, opts.ctx));

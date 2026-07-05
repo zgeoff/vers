@@ -8,7 +8,7 @@ const yoga = createYoga({
   graphqlEndpoint: '/graphql',
   logging: env.LOGGING,
   maskedErrors: env.isProduction,
-  schema: schema,
+  schema,
 });
 
 export const executor = buildHTTPExecutor({

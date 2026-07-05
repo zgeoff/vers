@@ -10,7 +10,5 @@ export async function enforceHTTPS(ctx: Context, next: Next) {
     return ctx.redirect(secureUrl, 301);
   }
 
-  await next();
-
-  return;
+  return await next();
 }

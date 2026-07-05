@@ -1,11 +1,10 @@
-import { redirect } from 'react-router';
 import { captureException } from '@sentry/react';
+import { redirect } from 'react-router';
 import { safeRedirect } from 'remix-utils/safe-redirect';
 import { DeleteSessionMutation } from '~/data/mutations/delete-session';
 import { authSessionStorage } from '~/session/auth-session-storage.server';
 import { Routes } from '~/types';
 import { combineHeaders } from './combine-headers.server';
-import { createGQLClient } from './create-gql-client.server';
 
 interface LogoutOptions {
   deleteSession?: boolean | undefined;
@@ -20,15 +19,12 @@ interface LogoutOptions {
  * @param ctx - Context containing optional redirect path and response init
  * @throws Redirect to the specified path or home page
  */
-export async function logout(
-  request: Request,
-  options: LogoutOptions = {},
-): Promise<never> {
+export async function logout(request: Request, options: LogoutOptions = {}): Promise<never> {
+  const { createGQLClient } = await import('./create-gql-client.server');
+
   const client = await createGQLClient(request);
 
-  const authSession = await authSessionStorage.getSession(
-    request.headers.get('cookie'),
-  );
+  const authSession = await authSessionStorage.getSession(request.headers.get('cookie'));
 
   const sessionID = authSession.get('sessionID');
 

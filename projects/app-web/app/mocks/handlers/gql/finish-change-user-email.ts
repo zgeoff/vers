@@ -1,12 +1,10 @@
-import { graphql, HttpResponse } from 'msw';
-import type {
-  FinishChangeUserEmailInput,
-  FinishChangeUserEmailPayload,
-} from '~/gql/graphql';
+import { HttpResponse, graphql } from 'msw';
+import type { FinishChangeUserEmailInput, FinishChangeUserEmailPayload } from '~/gql/graphql';
 import { db } from '../../db';
 import { UNKNOWN_ERROR } from '../../errors';
 import { decodeMockJWT } from '../../utils/decode-mock-jwt';
 import { isValidTransactionToken } from './utils/is-valid-transaction-token';
+
 interface FinishChangeUserEmailVariables {
   input: FinishChangeUserEmailInput;
 }
@@ -18,8 +16,8 @@ interface FinishChangeUserEmailResponse {
 export const FinishChangeUserEmail = graphql.mutation<
   FinishChangeUserEmailResponse,
   FinishChangeUserEmailVariables
->('FinishChangeUserEmail', ({ request, variables }) => {
-  const authHeader = request.headers.get('authorization');
+>('FinishChangeUserEmail', (opts) => {
+  const authHeader = opts.request.headers.get('authorization');
 
   if (!authHeader) {
     return HttpResponse.json({
@@ -44,7 +42,7 @@ export const FinishChangeUserEmail = graphql.mutation<
     });
   }
 
-  if (!isValidTransactionToken(variables.input.transactionToken)) {
+  if (!isValidTransactionToken(opts.variables.input.transactionToken)) {
     return HttpResponse.json({
       data: {
         finishChangeUserEmail: {
@@ -55,7 +53,7 @@ export const FinishChangeUserEmail = graphql.mutation<
   }
 
   db.user.update({
-    data: { email: variables.input.email },
+    data: { email: opts.variables.input.email },
     where: { id: { equals: user.id } },
   });
 

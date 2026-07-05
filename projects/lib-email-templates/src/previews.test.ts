@@ -11,8 +11,8 @@ test('it has a preview entry for every template generator', () => {
       .toLowerCase(),
   );
 
-  expect(previews.map((preview) => preview.name).sort()).toStrictEqual(
-    expectedNames.sort(),
+  expect(previews.map((preview) => preview.name).toSorted()).toStrictEqual(
+    expectedNames.toSorted(),
   );
 });
 

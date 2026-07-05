@@ -1,5 +1,5 @@
+import { HttpResponse, http } from 'msw';
 import { afterEach, expect, test } from 'vitest';
-import { http, HttpResponse } from 'msw';
 import { ENDPOINT_URL as RESEND_EMAIL_ENDPOINT_URL } from '~/mocks/handlers/http/resend-emails';
 import { server } from '~/mocks/node';
 import { router } from '../router';
@@ -33,11 +33,7 @@ test('it successfully sends an email', async () => {
 });
 
 test('it throws an error for Resend errors', async () => {
-  server.use(
-    http.post(RESEND_EMAIL_ENDPOINT_URL, () => {
-      return HttpResponse.error();
-    }),
-  );
+  server.use(http.post(RESEND_EMAIL_ENDPOINT_URL, () => HttpResponse.error()));
 
   const { caller } = setupTest();
 

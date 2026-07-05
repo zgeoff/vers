@@ -1,8 +1,8 @@
-import { afterEach, expect, test } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
 import { withAppLoadContext } from '~/test-utils/with-app-load-context';
@@ -10,7 +10,7 @@ import { withAuthedUser } from '~/test-utils/with-authed-user';
 import { withRouteProps } from '~/test-utils/with-route-props';
 import { withSession } from '~/test-utils/with-session';
 import { Routes } from '~/types';
-import { action, loader, Onboarding } from './route';
+import { Onboarding, action, loader } from './route';
 
 interface TestConfig {
   email?: string;
@@ -22,13 +22,10 @@ interface TestConfig {
 function setupTest(config: TestConfig) {
   const user = userEvent.setup();
 
-  const email =
-    typeof config.email === 'string' ? config.email : 'user@test.com';
+  const email = typeof config.email === 'string' ? config.email : 'user@test.com';
 
   const transactionToken =
-    typeof config.transactionToken === 'string'
-      ? config.transactionToken
-      : '1234567890';
+    typeof config.transactionToken === 'string' ? config.transactionToken : '1234567890';
 
   const _loader = composeDataFnWrappers(
     loader,

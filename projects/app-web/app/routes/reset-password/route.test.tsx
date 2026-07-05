@@ -1,10 +1,10 @@
-import { afterEach, expect, test } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
 import { GraphQLError } from 'graphql';
 import { graphql } from 'msw';
+import { createRoutesStub } from 'react-router';
+import { afterEach, expect, test } from 'vitest';
 import { VerificationType } from '~/gql/graphql';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
@@ -13,7 +13,7 @@ import { withAppLoadContext } from '~/test-utils/with-app-load-context';
 import { withRouteProps } from '~/test-utils/with-route-props';
 import { Routes } from '~/types';
 import type { Route } from './+types/route';
-import { action, loader, ResetPassword } from './route';
+import { ResetPassword, action, loader } from './route';
 
 interface TestConfig {
   initialPath: string;
@@ -26,10 +26,7 @@ async function setupTest(config: TestConfig) {
   const verifySession = await verifySessionStorage.getSession();
 
   if (config.transactionToken) {
-    verifySession.set(
-      'resetPassword#transactionToken',
-      config.transactionToken,
-    );
+    verifySession.set('resetPassword#transactionToken', config.transactionToken);
   }
 
   const cookie = await verifySessionStorage.commitSession(verifySession);
@@ -38,16 +35,16 @@ async function setupTest(config: TestConfig) {
   const _action = withAppLoadContext(action);
 
   // wrap our loader that sets our cookie in the request
-  const loaderWithCookie = async ({ request, ...rest }: Route.LoaderArgs) => {
-    request.headers.set('cookie', cookie);
+  const loaderWithCookie = (args: Route.LoaderArgs) => {
+    args.request.headers.set('cookie', cookie);
 
-    return _loader({ ...rest, params: {}, request });
+    return _loader({ ...args, params: {} });
   };
 
-  const actionWithCookie = async ({ request, ...rest }: Route.ActionArgs) => {
-    request.headers.set('cookie', cookie);
+  const actionWithCookie = (args: Route.ActionArgs) => {
+    args.request.headers.set('cookie', cookie);
 
-    return _action({ ...rest, request });
+    return _action(args);
   };
 
   const ResetPasswordStub = createRoutesStub([
@@ -121,9 +118,7 @@ test('it shows validation errors for invalid password', async () => {
   await user.type(confirmPasswordInput, 'weak');
   await user.click(submitButton);
 
-  const errorText = await screen.findAllByText(
-    'Password must be 8+ characters',
-  );
+  const errorText = await screen.findAllByText('Password must be 8+ characters');
 
   expect(errorText).toHaveLength(2);
 });

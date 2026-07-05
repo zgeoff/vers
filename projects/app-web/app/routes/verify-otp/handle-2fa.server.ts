@@ -1,8 +1,8 @@
 import { redirect } from 'react-router';
 import { safeRedirect } from 'remix-utils/safe-redirect';
 import invariant from 'tiny-invariant';
-import type { ForceLogoutPayload } from '~/gql/graphql';
 import { FinishLoginWith2FAMutation } from '~/data/mutations/finish-login-with-2fa';
+import type { ForceLogoutPayload } from '~/gql/graphql';
 import { authSessionStorage } from '~/session/auth-session-storage.server';
 import { verifySessionStorage } from '~/session/verify-session-storage.server';
 import { Routes } from '~/types';
@@ -11,10 +11,7 @@ import { isMutationError } from '~/utils/is-mutation-error';
 import type { HandleVerificationContext } from './types';
 
 export async function handle2FA(ctx: HandleVerificationContext) {
-  invariant(
-    ctx.submission.status === 'success',
-    'submission should be successful by now',
-  );
+  invariant(ctx.submission.status === 'success', 'submission should be successful by now');
 
   const result = await ctx.client.mutation(FinishLoginWith2FAMutation, {
     input: {
@@ -35,9 +32,7 @@ export async function handle2FA(ctx: HandleVerificationContext) {
     throw new Error(result.data.finishLoginWith2FA.error.message);
   }
 
-  const verifySession = await verifySessionStorage.getSession(
-    ctx.request.headers.get('cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(ctx.request.headers.get('cookie'));
 
   // yeet the transaction ID as we don't need it anymore
   verifySession.unset('login2FA#transactionID');
@@ -58,9 +53,7 @@ export async function handle2FA(ctx: HandleVerificationContext) {
   }
 
   // if we're here, we've received our tokens and we can set the auth session
-  const authSession = await authSessionStorage.getSession(
-    ctx.request.headers.get('cookie'),
-  );
+  const authSession = await authSessionStorage.getSession(ctx.request.headers.get('cookie'));
 
   authSession.set('sessionID', result.data.finishLoginWith2FA.session.id);
   authSession.set('accessToken', result.data.finishLoginWith2FA.accessToken);
@@ -74,23 +67,19 @@ export async function handle2FA(ctx: HandleVerificationContext) {
 
   const headers = new Headers();
 
-  headers.append(
-    'set-cookie',
-    await verifySessionStorage.commitSession(verifySession),
-  );
+  const verifySetCookieHeader = await verifySessionStorage.commitSession(verifySession);
 
-  headers.append(
-    'set-cookie',
-    await authSessionStorage.commitSession(authSession, {
-      expires: new Date(result.data.finishLoginWith2FA.session.expiresAt),
-    }),
-  );
+  headers.append('set-cookie', verifySetCookieHeader);
+
+  const authSetCookieHeader = await authSessionStorage.commitSession(authSession, {
+    expires: new Date(result.data.finishLoginWith2FA.session.expiresAt),
+  });
+
+  headers.append('set-cookie', authSetCookieHeader);
 
   return redirect(safeRedirect(redirectTo), { headers });
 }
 
-function isForceLogoutPayload(
-  payload: ForceLogoutPayload | object,
-): payload is ForceLogoutPayload {
+function isForceLogoutPayload(payload: ForceLogoutPayload | object): payload is ForceLogoutPayload {
   return 'transactionToken' in payload;
 }

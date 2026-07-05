@@ -1,10 +1,10 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
 import { GraphQLError } from 'graphql';
 import { graphql } from 'msw';
+import { createRoutesStub } from 'react-router';
+import { afterEach, expect, test, vi } from 'vitest';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
 import { verifySessionStorage } from '~/session/verify-session-storage.server';
@@ -13,7 +13,7 @@ import { withAppLoadContext } from '~/test-utils/with-app-load-context';
 import { withAuthedUser } from '~/test-utils/with-authed-user';
 import { withRouteProps } from '~/test-utils/with-route-props';
 import { Routes } from '~/types';
-import { action, loader, Login } from './route';
+import { Login, action, loader } from './route';
 
 let setCookieHeader: null | string = null;
 
@@ -203,9 +203,7 @@ test('it redirects to verify-otp when 2FA is required', async () => {
   const verifySession = await verifySessionStorage.getSession(setCookieHeader);
 
   expect(verifySession.get('login2FA#transactionID')).toBe('transaction_id');
-  expect(verifySession.get('login2FA#sessionID')).toStrictEqual(
-    expect.any(String),
-  );
+  expect(verifySession.get('login2FA#sessionID')).toStrictEqual(expect.any(String));
 });
 
 test('it redirects to the force logout sessions route when a previous session exists', async () => {
@@ -236,9 +234,7 @@ test('it redirects to the force logout sessions route when a previous session ex
   const verifySession = await verifySessionStorage.getSession(setCookieHeader);
 
   expect(verifySession.get('loginLogout#email')).toBe('test@example.com');
-  expect(verifySession.get('loginLogout#transactionToken')).toBe(
-    'valid_transaction_token',
-  );
+  expect(verifySession.get('loginLogout#transactionToken')).toBe('valid_transaction_token');
 });
 
 test('it redirects to the specified route when provided', async () => {

@@ -1,30 +1,28 @@
-import type { DeleteVerificationPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
+import type { DeleteVerificationPayload } from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 
-export const deleteVerification = trpc.deleteVerification.mutation(
-  ({ input }) => {
-    const verification = db.verification.findFirst({
-      where: { id: { equals: input.id } },
+export const deleteVerification = trpc.deleteVerification.mutation((opts) => {
+  const verification = db.verification.findFirst({
+    where: { id: { equals: opts.input.id } },
+  });
+
+  if (!verification) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Verification not found',
     });
+  }
 
-    if (!verification) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Verification not found',
-      });
-    }
+  // Delete the verification record
+  db.verification.delete({
+    where: { id: { equals: opts.input.id } },
+  });
 
-    // Delete the verification record
-    db.verification.delete({
-      where: { id: { equals: input.id } },
-    });
+  const result: DeleteVerificationPayload = {
+    deletedID: verification.id,
+  };
 
-    const result: DeleteVerificationPayload = {
-      deletedID: verification.id,
-    };
-
-    return result;
-  },
-);
+  return result;
+});

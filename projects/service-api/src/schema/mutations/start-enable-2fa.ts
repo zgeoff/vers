@@ -1,5 +1,5 @@
-import type { AuthedContext } from '~/types';
 import { logger } from '~/logger';
+import type { AuthedContext } from '~/types';
 import { SecureAction } from '~/types';
 import { createPendingTransaction } from '~/utils/create-pending-transaction';
 import { builder } from '../builder';
@@ -47,11 +47,10 @@ export async function startEnable2FA(
       };
     }
 
-    const existing2FASetupVerification =
-      await ctx.services.verification.getVerification.query({
-        target: ctx.user.email,
-        type: '2fa-setup',
-      });
+    const existing2FASetupVerification = await ctx.services.verification.getVerification.query({
+      target: ctx.user.email,
+      type: '2fa-setup',
+    });
 
     // If there's an existing 2FA setup verification, delete it
     if (existing2FASetupVerification) {
@@ -108,7 +107,7 @@ builder.mutationField('startEnable2FA', (t) =>
         limit: 10,
       },
     },
-    resolve: resolve,
+    resolve,
     type: StartEnable2FAPayload,
   }),
 );

@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { envSchema } from './env';
+import type { z } from 'zod';
+import type { envSchema } from './env';
 
 export type Context = Record<string, never>;
 

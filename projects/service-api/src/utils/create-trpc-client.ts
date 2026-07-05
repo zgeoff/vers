@@ -1,7 +1,7 @@
 import type { TRPCClient } from '@trpc/client';
-import type { AnyTRPCRouter } from '@trpc/server';
 import * as trpc from '@trpc/client';
-import { ServiceID } from '@vers/service-types';
+import type { AnyTRPCRouter } from '@trpc/server';
+import type { ServiceID } from '@vers/service-types';
 import superjson from 'superjson';
 import { env } from '~/env';
 import { logger } from '~/logger';

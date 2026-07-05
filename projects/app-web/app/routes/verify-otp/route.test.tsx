@@ -1,14 +1,14 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub } from 'react-router';
-import { drop } from '@mswjs/data';
 import { GraphQLError } from 'graphql';
 import { graphql } from 'msw';
-import type { SessionData } from '~/session/verify-session-storage.server';
+import { createRoutesStub } from 'react-router';
+import { afterEach, expect, test, vi } from 'vitest';
 import { VerificationType } from '~/gql/graphql';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
+import type { SessionData } from '~/session/verify-session-storage.server';
 import { verifySessionStorage } from '~/session/verify-session-storage.server';
 import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
 import { withAppLoadContext } from '~/test-utils/with-app-load-context';
@@ -16,7 +16,7 @@ import { withAuthedUser } from '~/test-utils/with-authed-user';
 import { withRouteProps } from '~/test-utils/with-route-props';
 import { withSession } from '~/test-utils/with-session';
 import { Routes } from '~/types';
-import { action, loader, VerifyOTPRoute } from './route';
+import { VerifyOTPRoute, action, loader } from './route';
 
 interface TestConfig {
   initialPath: string;
@@ -163,9 +163,7 @@ test('it handles resetting password and redirects to the reset password route on
   const verifySession = await verifySessionStorage.getSession(setCookieHeader);
 
   expect(verifySession.get('resetPassword#transactionID')).toBeUndefined();
-  expect(verifySession.get('resetPassword#transactionToken')).toBe(
-    'valid_transaction_token',
-  );
+  expect(verifySession.get('resetPassword#transactionToken')).toBe('valid_transaction_token');
 });
 
 test('it handles onboarding and redirects to the onboarding route on success', async () => {
@@ -195,15 +193,12 @@ test('it handles onboarding and redirects to the onboarding route on success', a
 
   expect(verifySession.get('onboarding#email')).toBe('test@example.com');
   expect(verifySession.get('onboarding#transactionID')).toBeUndefined();
-  expect(verifySession.get('onboarding#transactionToken')).toBe(
-    'valid_transaction_token',
-  );
+  expect(verifySession.get('onboarding#transactionToken')).toBe('valid_transaction_token');
 });
 
 test('it handles 2FA setup and throws an error', async () => {
   const { user } = setupTest({
-    initialPath:
-      '/verify-otp?type=TWO_FACTOR_AUTH_SETUP&target=test@example.com',
+    initialPath: '/verify-otp?type=TWO_FACTOR_AUTH_SETUP&target=test@example.com',
     sessionData: {
       'enable2FA#transactionID': 'test_transaction_id',
     },
@@ -227,8 +222,7 @@ test('it handles 2FA setup and throws an error', async () => {
 
 test('it handles 2FA disabling and redirects to the account route on success', async () => {
   const { user } = setupTest({
-    initialPath:
-      '/verify-otp?type=TWO_FACTOR_AUTH_DISABLE&target=test@example.com',
+    initialPath: '/verify-otp?type=TWO_FACTOR_AUTH_DISABLE&target=test@example.com',
     isAuthed: true,
     sessionData: {
       'disable2FA#transactionID': 'test_transaction_id',
@@ -356,12 +350,8 @@ test('it handles 2FA login and redirects to the logout sessions route when a pre
   const verifySession = await verifySessionStorage.getSession(setCookieHeader);
 
   expect(verifySession.get('loginLogout#email')).toBe('test@example.com');
-  expect(verifySession.get('loginLogout#transactionToken')).toBe(
-    'valid_transaction_token',
-  );
-  expect(verifySession.get('login2FA#sessionID')).toBe(
-    'test_unverified_session_id',
-  );
+  expect(verifySession.get('loginLogout#transactionToken')).toBe('valid_transaction_token');
+  expect(verifySession.get('login2FA#sessionID')).toBe('test_unverified_session_id');
 });
 
 test('it handles changing email and redirects to the change email route on success', async () => {
@@ -390,15 +380,12 @@ test('it handles changing email and redirects to the change email route on succe
   const verifySession = await verifySessionStorage.getSession(setCookieHeader);
 
   expect(verifySession.get('changeEmail#transactionID')).toBeUndefined();
-  expect(verifySession.get('changeEmail#transactionToken')).toBe(
-    'valid_transaction_token',
-  );
+  expect(verifySession.get('changeEmail#transactionToken')).toBe('valid_transaction_token');
 });
 
 test('it handles changed email verification and redirects to the account route on success', async () => {
   const { user } = setupTest({
-    initialPath:
-      '/verify-otp?type=CHANGE_EMAIL_CONFIRMATION&target=test@example.com',
+    initialPath: '/verify-otp?type=CHANGE_EMAIL_CONFIRMATION&target=test@example.com',
     isAuthed: true,
     sessionData: {
       'changeEmailConfirm#transactionID': 'test_transaction_id',
@@ -445,18 +432,14 @@ test('it handles change password verification and redirects to the change passwo
   await user.type(codeInput, '999999');
   await user.click(submitButton);
 
-  const changeUserPasswordRoute = await screen.findByText(
-    'CHANGE_PASSWORD_ROUTE',
-  );
+  const changeUserPasswordRoute = await screen.findByText('CHANGE_PASSWORD_ROUTE');
 
   expect(changeUserPasswordRoute).toBeInTheDocument();
 
   const verifySession = await verifySessionStorage.getSession(setCookieHeader);
 
   expect(verifySession.get('changePassword#transactionID')).toBeUndefined();
-  expect(verifySession.get('changePassword#transactionToken')).toBe(
-    'valid_transaction_token',
-  );
+  expect(verifySession.get('changePassword#transactionToken')).toBe('valid_transaction_token');
 });
 
 test('it shows error for invalid verification code', async () => {

@@ -5,13 +5,13 @@ import { requireAuth } from '../utils/require-auth';
 
 type Args = Record<PropertyKey, never>;
 
-export async function getCurrentUser(
+export function getCurrentUser(
   _: object,
   __: Args,
   ctx: AuthedContext,
 ): Promise<typeof User.$inferType> {
   // we can return the user from the context directly as it was fetched when we instantiated our context
-  return ctx.user;
+  return Promise.resolve(ctx.user);
 }
 
 export const resolve = requireAuth(getCurrentUser);

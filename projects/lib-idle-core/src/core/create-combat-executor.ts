@@ -1,3 +1,4 @@
+import { createEventSorter } from '../core/utils/create-event-sorter';
 import type {
   Activity,
   Avatar,
@@ -6,7 +7,6 @@ import type {
   CombatExecutorAppState,
   SimulationContext,
 } from '../types';
-import { createEventSorter } from '../core/utils/create-event-sorter';
 import { handleEvent } from './handle-event';
 
 export function createCombatExecutor(
@@ -30,7 +30,7 @@ export function createCombatExecutor(
 
     scheduledEvents.sort(sortEvents);
 
-    scheduledEvents.map((event: CombatEvent) => {
+    scheduledEvents.forEach((event: CombatEvent) => {
       handleEvent(event, avatar, activity, ctx);
     });
 
@@ -59,9 +59,7 @@ export function createCombatExecutor(
     elapsed += delta;
 
     avatar.handleTick(executor, ctx);
-    activity.currentEnemyGroup?.enemies.map((enemy) =>
-      enemy.handleTick(executor, ctx),
-    );
+    activity.currentEnemyGroup?.enemies.map((enemy) => enemy.handleTick(executor, ctx));
 
     processEvents();
 

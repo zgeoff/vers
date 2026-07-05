@@ -1,9 +1,6 @@
 import { serve } from '@hono/node-server';
 import { sentry } from '@hono/sentry';
-import {
-  createLoggerMiddleware,
-  remoteAddressMiddleware,
-} from '@vers/service-utils';
+import { createLoggerMiddleware, remoteAddressMiddleware } from '@vers/service-utils';
 import { requestId } from 'hono/request-id';
 import { app } from './app';
 import { env } from './env';
@@ -12,10 +9,9 @@ import { logger } from './logger';
 import { rateLimitMiddleware } from './middleware/rate-limit-middleware';
 import { sessionHeaderMiddleware } from './middleware/session-header-middleware';
 
-app.use(
-  '*',
-  sentry(env.SENTRY_DSN === undefined ? undefined : { dsn: env.SENTRY_DSN }),
-);
+const sentryOptions = env.SENTRY_DSN === undefined ? undefined : { dsn: env.SENTRY_DSN };
+
+app.use('*', sentry(sentryOptions));
 app.use('*', requestId());
 app.use('*', remoteAddressMiddleware);
 app.use('*', sessionHeaderMiddleware);

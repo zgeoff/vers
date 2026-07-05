@@ -1,9 +1,6 @@
-import { graphql, HttpResponse } from 'msw';
+import { HttpResponse, graphql } from 'msw';
 import invariant from 'tiny-invariant';
-import type {
-  LoginWithForcedLogoutInput,
-  LoginWithForcedLogoutPayload,
-} from '~/gql/graphql';
+import type { LoginWithForcedLogoutInput, LoginWithForcedLogoutPayload } from '~/gql/graphql';
 import { db } from '../../db';
 import { UNKNOWN_ERROR } from '../../errors';
 import { encodeMockJWT } from '../../utils/encode-mock-jwt';
@@ -23,8 +20,8 @@ const EXPIRATION_IN_MS = 1000 * 60 * 60 * 24; // 24 hours
 export const LoginWithForcedLogout = graphql.mutation<
   LoginWithForcedLogoutResponse,
   LoginWithForcedLogoutVariables
->('LoginWithForcedLogout', ({ variables }) => {
-  const { target, transactionToken } = variables.input;
+>('LoginWithForcedLogout', (opts) => {
+  const { target, transactionToken } = opts.variables.input;
 
   const user = db.user.findFirst({
     where: {
@@ -74,15 +71,15 @@ export const LoginWithForcedLogout = graphql.mutation<
   db.session.deleteMany({
     where: {
       id: {
-        in: prevSessions.map((session) => session.id),
+        in: prevSessions.map((prevSession) => prevSession.id),
       },
     },
   });
 
+  const expSeconds = (Date.now() + EXPIRATION_IN_MS).toString().slice(0, 10);
+
   const accessToken = encodeMockJWT({
-    exp: Number.parseInt(
-      (Date.now() + EXPIRATION_IN_MS).toString().slice(0, 10),
-    ),
+    exp: Number(expSeconds),
     sub: user.id,
   });
 

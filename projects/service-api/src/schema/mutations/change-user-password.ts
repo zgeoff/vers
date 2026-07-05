@@ -1,6 +1,6 @@
 import { generatePasswordChangedEmail } from '@vers/email-templates';
-import type { AuthedContext } from '~/types';
 import { logger } from '~/logger';
+import type { AuthedContext } from '~/types';
 import { SecureAction } from '~/types';
 import { verifyTransactionToken } from '~/utils/verify-transaction-token';
 import { builder } from '../builder';
@@ -114,13 +114,10 @@ const ChangeUserPasswordInput = builder.inputType('ChangeUserPasswordInput', {
   }),
 });
 
-const ChangeUserPasswordPayload = builder.unionType(
-  'ChangeUserPasswordPayload',
-  {
-    resolveType: createPayloadResolver(MutationSuccess),
-    types: [MutationSuccess, MutationErrorPayload],
-  },
-);
+const ChangeUserPasswordPayload = builder.unionType('ChangeUserPasswordPayload', {
+  resolveType: createPayloadResolver(MutationSuccess),
+  types: [MutationSuccess, MutationErrorPayload],
+});
 
 export const resolve = requireAuth(changeUserPassword);
 
@@ -135,7 +132,7 @@ builder.mutationField('changeUserPassword', (t) =>
         limit: 10,
       },
     },
-    resolve: resolve,
+    resolve,
     type: ChangeUserPasswordPayload,
   }),
 );

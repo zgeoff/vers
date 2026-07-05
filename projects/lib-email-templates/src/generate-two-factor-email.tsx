@@ -6,7 +6,7 @@ interface Config {
   verificationCode: string;
 }
 
-export async function generateTwoFactorEmail(config: Config) {
+export function generateTwoFactorEmail(config: Config) {
   return generateEmail({
     component: (
       <E.Html dir="ltr" lang="en">

@@ -1,3 +1,9 @@
+import { PassThrough } from 'node:stream';
+import { styleText } from 'node:util';
+import { createReadableStreamFromReadable } from '@react-router/node';
+import * as Sentry from '@sentry/node';
+import type { Client } from '@urql/core';
+import { isbot } from 'isbot';
 import { renderToPipeableStream } from 'react-dom/server';
 import type {
   ActionFunctionArgs,
@@ -6,12 +12,6 @@ import type {
   LoaderFunctionArgs,
 } from 'react-router';
 import { ServerRouter } from 'react-router';
-import type { Client } from '@urql/core';
-import { PassThrough } from 'node:stream';
-import { styleText } from 'node:util';
-import { createReadableStreamFromReadable } from '@react-router/node';
-import * as Sentry from '@sentry/node';
-import { isbot } from 'isbot';
 import { createTimings } from './utils/create-timings.server';
 import { getServerTimingHeader } from './utils/get-server-timing-header.server';
 import { NonceProvider } from './utils/nonce-provider';
@@ -51,9 +51,7 @@ export default function handleRequest(
     responseHeaders.append('Document-Policy', 'js-profiling');
   }
 
-  const callbackName = isbot(request.headers.get('user-agent'))
-    ? 'onAllReady'
-    : 'onShellReady';
+  const callbackName = isbot(request.headers.get('user-agent')) ? 'onAllReady' : 'onShellReady';
 
   return new Promise((resolve, reject) => {
     let didError = false;
@@ -64,21 +62,14 @@ export default function handleRequest(
 
     const { abort, pipe } = renderToPipeableStream(
       <NonceProvider value={loadContext.cspNonce}>
-        <ServerRouter
-          context={reactRouterContext}
-          nonce={loadContext.cspNonce}
-          url={request.url}
-        />
+        <ServerRouter context={reactRouterContext} nonce={loadContext.cspNonce} url={request.url} />
       </NonceProvider>,
       {
         [callbackName]: () => {
           const body = new PassThrough();
 
           responseHeaders.set('Content-Type', 'text/html');
-          responseHeaders.append(
-            'Server-Timing',
-            getServerTimingHeader(timings),
-          );
+          responseHeaders.append('Server-Timing', getServerTimingHeader(timings));
 
           resolve(
             new Response(createReadableStreamFromReadable(body), {
@@ -103,13 +94,10 @@ export default function handleRequest(
   });
 }
 
-export function handleError(
-  error: unknown,
-  { request }: ActionFunctionArgs | LoaderFunctionArgs,
-) {
+export function handleError(error: unknown, args: ActionFunctionArgs | LoaderFunctionArgs) {
   // Skip capturing if the request is aborted as Remix docs suggest
   // Ref: https://remix.run/docs/en/main/file-conventions/entry.server#handleerror
-  if (request.signal.aborted) {
+  if (args.request.signal.aborted) {
     return;
   }
 

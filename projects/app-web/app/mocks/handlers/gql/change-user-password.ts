@@ -1,4 +1,4 @@
-import { graphql, HttpResponse } from 'msw';
+import { HttpResponse, graphql } from 'msw';
 import type {
   ChangeUserPasswordMutation,
   ChangeUserPasswordMutationVariables,
@@ -10,8 +10,8 @@ import { decodeMockJWT } from '../../utils/decode-mock-jwt';
 export const ChangeUserPassword = graphql.mutation<
   ChangeUserPasswordMutation,
   ChangeUserPasswordMutationVariables
->('ChangeUserPassword', ({ request, variables }) => {
-  const authHeader = request.headers.get('authorization');
+>('ChangeUserPassword', (opts) => {
+  const authHeader = opts.request.headers.get('authorization');
 
   if (!authHeader) {
     return HttpResponse.json({
@@ -36,7 +36,7 @@ export const ChangeUserPassword = graphql.mutation<
     });
   }
 
-  if (user.password !== variables.input.currentPassword) {
+  if (user.password !== opts.variables.input.currentPassword) {
     return HttpResponse.json({
       data: {
         changeUserPassword: { error: INVALID_PASSWORD_ERROR },
@@ -45,7 +45,7 @@ export const ChangeUserPassword = graphql.mutation<
   }
 
   db.user.update({
-    data: { password: variables.input.newPassword },
+    data: { password: opts.variables.input.newPassword },
     where: { id: { equals: user.id } },
   });
 

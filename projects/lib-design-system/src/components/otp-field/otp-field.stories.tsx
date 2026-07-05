@@ -1,5 +1,5 @@
 import { OTPField } from './otp-field';
 
-export const Default = () => {
+export function Default() {
   return <OTPField errors={[]} inputProps={{}} />;
-};
+}

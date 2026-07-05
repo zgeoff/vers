@@ -1,5 +1,5 @@
-import type { Context } from '~/types';
 import { logger } from '~/logger';
+import type { Context } from '~/types';
 import { SecureAction } from '~/types';
 import { createTransactionToken } from '~/utils/create-transaction-token';
 import { verifyTransactionToken } from '~/utils/verify-transaction-token';
@@ -53,17 +53,13 @@ export async function finishLoginWith2FA(
       userID: user.id,
     });
 
-    const session = sessions.find(
-      (session) => session.id === payload.session_id,
-    );
+    const session = sessions.find((candidate) => candidate.id === payload.session_id);
 
     if (!session) {
       return { error: UNKNOWN_ERROR };
     }
 
-    const previousSessions = sessions.filter(
-      (session) => session.id !== payload.session_id,
-    );
+    const previousSessions = sessions.filter((candidate) => candidate.id !== payload.session_id);
 
     // if we have previous sessions (that aren't the one we've just authed),
     // create a verified transaction bound to a forceful logout where we can finalize
@@ -117,13 +113,10 @@ function resolveType(value: object) {
   return AuthPayload;
 }
 
-const FinishLoginWith2FAPayload = builder.unionType(
-  'FinishLoginWith2FAPayload',
-  {
-    resolveType,
-    types: [AuthPayload, ForceLogoutPayload, MutationErrorPayload],
-  },
-);
+const FinishLoginWith2FAPayload = builder.unionType('FinishLoginWith2FAPayload', {
+  resolveType,
+  types: [AuthPayload, ForceLogoutPayload, MutationErrorPayload],
+});
 
 export const resolve = finishLoginWith2FA;
 

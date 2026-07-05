@@ -1,11 +1,4 @@
-import {
-  Links,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-  useLoaderData,
-} from 'react-router';
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from 'react-router';
 import { HoneypotProvider } from 'remix-utils/honeypot/react';
 import type { Route } from './+types/root';
 import stylesheet from './app.css?url';
@@ -13,10 +6,11 @@ import { honeypot } from './honeypot.server';
 import pandaStylesheet from './styled-system/styles.css?url';
 import { useNonce } from './utils/nonce-provider';
 
-export const links: Route.LinksFunction = () => {
+export function links(): ReturnType<Route.LinksFunction> {
   return [
     { href: stylesheet, rel: 'stylesheet' },
     { href: pandaStylesheet, rel: 'stylesheet' },
+
     // {
     //   rel: 'icon',
     //   href: '/favicon.ico',
@@ -30,16 +24,18 @@ export const links: Route.LinksFunction = () => {
     //   crossOrigin: 'use-credentials',
     // } as const,
   ].filter(Boolean);
-};
+}
 
-export const meta: Route.MetaFunction = () => [
-  {
-    // eslint-disable-next-line unicorn/text-encoding-identifier-case
-    charset: 'utf-8',
-    title: 'vers',
-    viewport: 'width=device-width,initial-scale=1',
-  },
-];
+export function meta(): ReturnType<Route.MetaFunction> {
+  return [
+    {
+      // eslint-disable-next-line unicorn/text-encoding-identifier-case
+      charset: 'utf-8',
+      title: 'vers',
+      viewport: 'width=device-width,initial-scale=1',
+    },
+  ];
+}
 
 export async function loader() {
   const honeyProps = await honeypot.getInputProps();

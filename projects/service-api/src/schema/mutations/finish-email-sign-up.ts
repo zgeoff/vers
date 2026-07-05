@@ -1,5 +1,5 @@
-import type { Context } from '~/types';
 import { logger } from '~/logger';
+import type { Context } from '~/types';
 import { SecureAction } from '~/types';
 import { verifyTransactionToken } from '~/utils/verify-transaction-token';
 import { builder } from '../builder';
@@ -59,7 +59,7 @@ export async function finishEmailSignup(
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      session: session,
+      session,
     };
   } catch (error: unknown) {
     if (error instanceof Error) {

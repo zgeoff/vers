@@ -1,11 +1,12 @@
+import type * as GameUtils from '@vers/game-utils';
 import { expect, test, vi } from 'vitest';
 import { generateGraphNodes } from './generate-graph-nodes';
 
 // mock our ID & seed generation so they return predictable values
-vi.mock('./create-id', () => {
+vi.mock(import('./create-id'), () => {
   let id = 0;
 
-  const createID = vi.fn(() => {
+  const createID = vi.fn<() => string>(() => {
     const result = `id-${id}`;
     id++;
     return result;
@@ -14,12 +15,12 @@ vi.mock('./create-id', () => {
   return { createID };
 });
 
-vi.mock('@vers/game-utils', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@vers/game-utils')>();
+vi.mock(import('@vers/game-utils'), async (importOriginal) => {
+  const original = await importOriginal<typeof GameUtils>();
 
   let seed = 0;
 
-  const createSeed = vi.fn(() => seed++);
+  const createSeed = vi.fn<() => number>(() => seed++);
 
   return {
     ...original,

@@ -1,13 +1,13 @@
-import type { CreatePasswordResetTokenPayload } from '@vers/service-types';
 import { randomBytes } from 'node:crypto';
 import { promisify } from 'node:util';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { CreatePasswordResetTokenPayload } from '@vers/service-types';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { logger } from '~/logger';
-import type { Context } from '../types';
 import { t } from '../t';
+import type { Context } from '../types';
 
 const randomBytesAsync = promisify(randomBytes);
 
@@ -70,4 +70,4 @@ export async function createPasswordResetToken(
 
 export const procedure = t.procedure
   .input(CreatePasswordResetTokenInputSchema)
-  .mutation(async ({ ctx, input }) => createPasswordResetToken(input, ctx));
+  .mutation((opts) => createPasswordResetToken(opts.input, opts.ctx));

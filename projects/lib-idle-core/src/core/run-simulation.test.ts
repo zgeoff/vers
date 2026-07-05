@@ -2,11 +2,7 @@ import { expect, test } from 'vitest';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
-import {
-  ActivityCheckpointType,
-  ActivityFailureAction,
-  ActivityType,
-} from '../types';
+import { ActivityCheckpointType, ActivityFailureAction, ActivityType } from '../types';
 import { runSimulation } from './run-simulation';
 
 test('runs a simulation with default configuration', async () => {
@@ -122,6 +118,7 @@ test('it stops at the specified seed if provided', async () => {
   const config = {
     // set a long duration so we always reach the right value
     duration: 200_000,
+
     // when our algo changes, can just pull this seed to something valid from our
     // happy path snapshot test ouput
     stopAtSeed: 4_197_947_599,

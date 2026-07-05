@@ -1,5 +1,5 @@
-import { afterAll, afterEach, beforeAll, expect } from 'vitest';
 import * as matchers from 'jest-extended';
+import { afterAll, afterEach, beforeAll, expect } from 'vitest';
 import { server } from './src/mocks/node';
 
 expect.extend(matchers);
@@ -10,6 +10,6 @@ afterEach(() => server.resetHandlers());
 
 afterAll(() => server.close());
 
-server.events.on('request:start', ({ request }) => {
-  console.log('Outgoing:', request.method, request.url);
+server.events.on('request:start', (event) => {
+  console.log('Outgoing:', event.request.method, event.request.url);
 });

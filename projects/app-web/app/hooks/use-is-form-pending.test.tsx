@@ -1,7 +1,7 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createMemoryRouter, Form, RouterProvider } from 'react-router';
+import { Form, RouterProvider, createMemoryRouter } from 'react-router';
+import { expect, test } from 'vitest';
 import { useIsFormPending } from './use-is-form-pending';
 
 type FormMethod = 'DELETE' | 'GET' | 'PATCH' | 'POST' | 'PUT';

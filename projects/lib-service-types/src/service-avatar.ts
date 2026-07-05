@@ -1,4 +1,4 @@
-import { Class } from '@vers/data';
+import type { Class } from '@vers/data';
 
 export interface AvatarData {
   class: (typeof Class)[keyof typeof Class];

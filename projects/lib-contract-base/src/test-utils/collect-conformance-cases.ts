@@ -1,11 +1,11 @@
+import assert from 'node:assert/strict';
+import { ORPCError } from '@orpc/client';
 import type {
   AnyContractProcedure,
   AnyContractRouter,
   AnySchema,
   ContractRouterClient,
 } from '@orpc/contract';
-import assert from 'node:assert/strict';
-import { ORPCError } from '@orpc/client';
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { traverseContractProcedures } from '@orpc/server';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
@@ -29,11 +29,13 @@ type ConformanceHeaders = Record<string, string>;
 interface CollectConformanceCasesOptions {
   /** Headers carrying a valid service token with no acting user. */
   anonymousHeaders: ConformanceHeaders;
+
   /**
    * Schema-valid sample inputs keyed by dot-path (e.g. "getCurrentUser"). Enables the
    * anonymous-call UNAUTHORIZED case for that procedure, which must reach the handler.
    */
   authedSamples?: Record<string, unknown>;
+
   /** RPC mount prefix of the app under test. Default '/rpc'. */
   rpcPrefix?: string;
 }
@@ -52,21 +54,13 @@ export function collectConformanceCases(
   const cases: Array<ConformanceCase> = [];
 
   for (const entry of collectContractProcedures(contract)) {
-    const malformedCase = buildMalformedInputCase(
-      entry,
-      rpcPrefix,
-      options.anonymousHeaders,
-    );
+    const malformedCase = buildMalformedInputCase(entry, rpcPrefix, options.anonymousHeaders);
 
     if (malformedCase) {
       cases.push(malformedCase);
     }
 
-    const anonymousCase = buildAnonymousRejectionCase(
-      entry,
-      rpcPrefix,
-      options,
-    );
+    const anonymousCase = buildAnonymousRejectionCase(entry, rpcPrefix, options);
 
     if (anonymousCase) {
       cases.push(anonymousCase);
@@ -84,20 +78,15 @@ interface ContractProcedureEntry {
 }
 
 /** Gathers every leaf procedure in a contract router, paired with its dot-separated path. */
-function collectContractProcedures(
-  contract: AnyContractRouter,
-): Array<ContractProcedureEntry> {
+function collectContractProcedures(contract: AnyContractRouter): Array<ContractProcedureEntry> {
   const entries: Array<ContractProcedureEntry> = [];
 
-  traverseContractProcedures(
-    { path: [], router: contract },
-    ({ contract: procedure, path }) => {
-      entries.push({
-        dotPath: path.join('.'),
-        procedure: procedure as AnyContractProcedure,
-      });
-    },
-  );
+  traverseContractProcedures({ path: [], router: contract }, (node) => {
+    entries.push({
+      dotPath: node.path.join('.'),
+      procedure: node.contract as AnyContractProcedure,
+    });
+  });
 
   return entries;
 }
@@ -107,7 +96,7 @@ function buildMalformedInputCase(
   rpcPrefix: string,
   anonymousHeaders: ConformanceHeaders,
 ): ConformanceCase | undefined {
-  const inputSchema = getProcedureDef(entry.procedure).inputSchema;
+  const { inputSchema } = getProcedureDef(entry.procedure);
 
   if (!inputSchema) {
     return undefined;
@@ -147,10 +136,7 @@ function findRejectingProbe(schema: AnySchema): unknown {
   for (const probe of PROBE_VALUES) {
     const result = schema['~standard'].validate(probe);
 
-    assert.ok(
-      !(result instanceof Promise),
-      'conformance probing requires a synchronous schema',
-    );
+    assert.ok(!(result instanceof Promise), 'conformance probing requires a synchronous schema');
 
     if (result.issues) {
       return probe;
@@ -187,16 +173,11 @@ function getClientProcedure(
 }
 
 /** Runs a client call expected to throw, and returns the thrown ORPCError. */
-async function runRejectingCall(
-  call: () => Promise<unknown>,
-): Promise<ORPCError<string, unknown>> {
+async function runRejectingCall(call: () => Promise<unknown>): Promise<ORPCError<string, unknown>> {
   try {
     await call();
   } catch (error) {
-    assert.ok(
-      error instanceof ORPCError,
-      `expected an ORPCError, got ${String(error)}`,
-    );
+    assert.ok(error instanceof ORPCError, `expected an ORPCError, got ${String(error)}`);
 
     return error;
   }
@@ -209,8 +190,7 @@ function buildAnonymousRejectionCase(
   rpcPrefix: string,
   options: CollectConformanceCasesOptions,
 ): ConformanceCase | undefined {
-  const declaresUnauthorized =
-    'UNAUTHORIZED' in getProcedureDef(entry.procedure).errorMap;
+  const declaresUnauthorized = 'UNAUTHORIZED' in getProcedureDef(entry.procedure).errorMap;
   const sample = options.authedSamples?.[entry.dotPath];
 
   if (!declaresUnauthorized || sample === undefined) {
@@ -219,27 +199,18 @@ function buildAnonymousRejectionCase(
 
   return {
     run: async (app) => {
-      const client = buildConformanceClient(
-        app,
-        rpcPrefix,
-        options.anonymousHeaders,
-      );
+      const client = buildConformanceClient(app, rpcPrefix, options.anonymousHeaders);
       const call = getClientProcedure(client, entry.dotPath);
       const error = await runRejectingCall(() => call(sample));
 
       assert.equal(error.code, 'UNAUTHORIZED');
-      assert.equal(
-        (error.data as { reason: string }).reason,
-        'missing-session',
-      );
+      assert.equal((error.data as { reason: string }).reason, 'missing-session');
     },
     title: `it rejects an anonymous call to ${entry.dotPath} with UNAUTHORIZED`,
   };
 }
 
-function buildOpenAPIGenerationCase(
-  contract: AnyContractRouter,
-): ConformanceCase {
+function buildOpenAPIGenerationCase(contract: AnyContractRouter): ConformanceCase {
   return {
     run: async () => {
       const generator = new OpenAPIGenerator({
@@ -249,10 +220,7 @@ function buildOpenAPIGenerationCase(
         info: { title: 'conformance', version: '0.0.0' },
       });
 
-      assert.ok(
-        document.openapi,
-        'expected the generated document to declare an openapi version',
-      );
+      assert.ok(document.openapi, 'expected the generated document to declare an openapi version');
       assert.ok(
         Object.keys(document.paths ?? {}).length > 0,
         'expected the generated document to declare at least one path',

@@ -1,12 +1,12 @@
-import type { VerifySessionPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
+import type { VerifySessionPayload } from '@vers/service-types';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import type { Context } from '../types';
 import * as consts from '../consts';
 import { logger } from '../logger';
 import { t } from '../t';
+import type { Context } from '../types';
 import { createJWT } from '../utils/create-jwt';
 
 export const VerifySessionInputSchema = z.object({
@@ -19,10 +19,7 @@ export async function verifySession(
 ): Promise<VerifySessionPayload> {
   try {
     const session = await ctx.db.query.sessions.findFirst({
-      where: and(
-        eq(schema.sessions.id, input.id),
-        eq(schema.sessions.verified, false),
-      ),
+      where: and(eq(schema.sessions.id, input.id), eq(schema.sessions.verified, false)),
     });
 
     if (!session) {
@@ -69,4 +66,4 @@ export async function verifySession(
 
 export const procedure = t.procedure
   .input(VerifySessionInputSchema)
-  .mutation(async ({ ctx, input }) => verifySession(input, ctx));
+  .mutation((opts) => verifySession(opts.input, opts.ctx));
