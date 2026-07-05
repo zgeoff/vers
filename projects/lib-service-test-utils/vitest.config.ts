@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [],
@@ -11,6 +11,7 @@ export default defineConfig({
       reportsDirectory: '../../coverage/apps/lib-service-test-utils',
     },
     environment: 'node',
+    exclude: [...configDefaults.exclude, 'src/bun/**'],
     globalSetup: './vitest.global-setup.ts',
     include: ['src/**/*.test.ts'],
     passWithNoTests: true,

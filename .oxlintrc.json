@@ -241,6 +241,10 @@
   "overrides": [
     {
       "files": ["**/*.test.ts", "**/*.test.tsx"],
+      // bun-test suites (under a package's `src/bun/**`) aren't vitest —
+      // the plugin would misjudge `bun:test`'s `test`/`expect` globals as
+      // vitest's own
+      "excludeFiles": ["**/src/bun/**"],
       // vitest plugin only applies to `.test.ts(x)` files — scoping it here
       // (rather than in the top-level `plugins` list) keeps its rules off
       // ordinary source files, which the plugin would otherwise misjudge as
