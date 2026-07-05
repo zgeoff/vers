@@ -1,10 +1,7 @@
-name: CI
+name: Main
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
     branches:
       - main
 
@@ -13,19 +10,17 @@ permissions:
   contents: read
 
 jobs:
-  main:
+  checks:
     runs-on: ubuntu-latest
     outputs:
       affected-projects: ${{ steps.record-affected-projects.outputs.affected-projects }}
     env:
-      # a PR compares against the tracked local `main` below; a push to
-      # main has nothing to diff against except the commit it replaced
-      TURBO_SCM_BASE: ${{ github.event_name == 'push' && github.event.before || 'main' }}
+      TURBO_SCM_BASE: ${{ github.event.before }}
       # CI never commits, but skip hook install/execution regardless
       LEFTHOOK: 0
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
@@ -35,7 +30,7 @@ jobs:
           echo "${{ secrets.DOTENV_APP_WEB_E2E }}" > projects/app-web-e2e/.env
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 24.18.0
 
@@ -52,10 +47,6 @@ jobs:
           bun run build:agents
           git diff --exit-code AGENTS.md agents/ scripts/build-agents-md.sh
 
-      - name: Track main branch
-        run: git branch --track main origin/main
-        if: ${{ github.event_name == 'pull_request' }}
-
       - name: Setup Turbo cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -65,7 +56,7 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Setup Docker image cache
-        uses: ScribeMD/docker-cache@0.5.0
+        uses: ScribeMD/docker-cache@fb28c93772363301b8d0a6072ce850224b73f74e # 0.5.0
         id: docker-cache
         with:
           key: docker-${{ runner.os }}-${{ github.sha }}
@@ -93,21 +84,19 @@ jobs:
           bun run pg:test-container:start
           bun run test
 
-      - name: Build
-        if: ${{ github.ref_name != 'main' }}
-        run: bunx turbo run build --affected
-
       - name: Install E2E browsers
         run: bun run playwright install --with-deps --only-shell chromium
 
       - name: E2E Tests
+        id: e2e
         # non-blocking until #212 stabilizes the suite
         continue-on-error: true
         run: bunx turbo run e2e --affected
 
       - name: Upload Videos Of Failed E2E
-        uses: actions/upload-artifact@v4
-        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        # continue-on-error hides the e2e outcome from failure(), so gate on the step directly
+        if: ${{ steps.e2e.outcome == 'failure' }}
         with:
           name: playwright-results
           include-hidden-files: true
@@ -115,7 +104,6 @@ jobs:
 
       - name: Record Affected Projects
         id: record-affected-projects
-        if: ${{ github.ref_name == 'main' }}
         run: |
           # names are <>-wrapped so the contains() gates can't substring-match
           affected="$(bunx turbo run build --affected --dry=json | jq -r '.packages[] | "<\(.)>"')"
@@ -127,11 +115,11 @@ jobs:
 
       - name: Build db-postgres Image
         if:
-          ${{ github.ref_name == 'main' &&
-          (contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/db-postgres>')
-          || contains(steps.record-affected-projects.outputs.affected-projects,
-          '<@vers/postgres-schema>')) }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
+          '<@vers/db-postgres>') ||
+          contains(steps.record-affected-projects.outputs.affected-projects,
+          '<@vers/postgres-schema>') }}
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/db-postgres/Dockerfile
@@ -140,10 +128,9 @@ jobs:
 
       - name: Build API Service Image
         if:
-          ${{ github.ref_name == 'main' &&
-          contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-api>')
-          }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
+          '<@vers/service-api>') }}
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/service-api/Dockerfile
@@ -152,10 +139,9 @@ jobs:
 
       - name: Build Avatar Service Image
         if:
-          ${{ github.ref_name == 'main' &&
-          contains(steps.record-affected-projects.outputs.affected-projects,
+          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-avatar>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/service-avatar/Dockerfile
@@ -164,10 +150,9 @@ jobs:
 
       - name: Build Email Service Image
         if:
-          ${{ github.ref_name == 'main' &&
-          contains(steps.record-affected-projects.outputs.affected-projects,
+          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-email>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/service-email/Dockerfile
@@ -176,10 +161,9 @@ jobs:
 
       - name: Build Session Service Image
         if:
-          ${{ github.ref_name == 'main' &&
-          contains(steps.record-affected-projects.outputs.affected-projects,
+          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-session>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/service-session/Dockerfile
@@ -188,10 +172,9 @@ jobs:
 
       - name: Build User Service Image
         if:
-          ${{ github.ref_name == 'main' &&
-          contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/service-user>')
-          }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
+          '<@vers/service-user>') }}
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/service-user/Dockerfile
@@ -200,10 +183,9 @@ jobs:
 
       - name: Build Verification Service Image
         if:
-          ${{ github.ref_name == 'main' &&
-          contains(steps.record-affected-projects.outputs.affected-projects,
+          ${{ contains(steps.record-affected-projects.outputs.affected-projects,
           '<@vers/service-verification>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/service-verification/Dockerfile
@@ -211,10 +193,8 @@ jobs:
           push: false
 
       - name: Build Web App Image
-        if:
-          ${{ github.ref_name == 'main' &&
-          contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/web>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        if: ${{ contains(steps.record-affected-projects.outputs.affected-projects, '<@vers/web>') }}
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: projects/app-web/Dockerfile
