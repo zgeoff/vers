@@ -311,6 +311,15 @@
       }
     },
     {
+      // playwright resolves fixtures by statically parsing the destructure
+      // pattern in a test callback's first parameter — a plain parameter
+      // fails at collection, so the framework convention wins here
+      "files": ["**/projects/app-web-e2e/src/**"],
+      "rules": {
+        "local/no-destructured-params": "off"
+      }
+    },
+    {
       // react-router's loader/action contract is to throw Response (directly,
       // or via its `redirect()` helper) for redirects and error pages — not an
       // Error instance. all 9 violations `lint:type-aware` found here are that

@@ -23,7 +23,9 @@ if (env.isProduction && env.SENTRY_DSN) {
   })();
 }
 
-if (!import.meta.env.PROD && env.isE2E) {
+// the seed is e2e-only: gated on the build mode so it never runs under `dev`
+// (which also mocks the network) and can't leak into a production bundle
+if (import.meta.env.MODE === 'e2e') {
   void import('../app/mocks/e2e-migration');
 }
 

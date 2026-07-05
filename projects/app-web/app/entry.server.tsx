@@ -18,7 +18,10 @@ import { NonceProvider } from './utils/nonce-provider';
 
 export const streamTimeout = 5000;
 
-if (!import.meta.env.PROD && import.meta.env.VITE_ENABLE_MSW === 'true') {
+// mock the network in dev and the e2e build, never in production — gating on
+// the build mode (not just the flag) keeps a stray VITE_ENABLE_MSW out of a
+// production bundle
+if (import.meta.env.MODE !== 'production' && import.meta.env.VITE_ENABLE_MSW === 'true') {
   const { server } = await import('./mocks/node');
 
   server.listen();
