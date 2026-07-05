@@ -1,9 +1,8 @@
 {
   "recommendations": [
-    "esbenp.prettier-vscode",
+    "oxc.oxc-vscode",
     "ms-playwright.playwright",
     "arcanis.vscode-zipfs",
-    "dbaeumer.vscode-eslint",
     "bierner.markdown-mermaid",
     "kumar-harsh.graphql-for-vscode"
   ]
