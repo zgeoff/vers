@@ -260,6 +260,15 @@
       }
     },
     {
+      // oxfmt pins comments in JSX attribute lists to the line above and
+      // strips any blank line the rule would demand — the formatter owns
+      // comment placement in JSX
+      "files": ["**/*.tsx"],
+      "rules": {
+        "@stylistic/lines-around-comment": "off"
+      }
+    },
+    {
       "files": ["**/*.js", "**/*.cjs", "**/*.mjs"],
       // untyped JS is `any` end to end, so the unsafe-* rules flag every
       // expression
@@ -275,10 +284,7 @@
     {
       // react-three-fiber props aren't DOM attributes — same ignore list the
       // eslint config carried for the r3f renderer
-      "files": [
-        "**/projects/lib-aether-client/**/*.ts",
-        "**/projects/lib-aether-client/**/*.tsx"
-      ],
+      "files": ["**/projects/lib-aether-client/**/*.ts", "**/projects/lib-aether-client/**/*.tsx"],
       "rules": {
         "react/no-unknown-property": [
           "error",
