@@ -16,7 +16,7 @@ export const preset = definePreset({
     },
   },
   globalFontface: {
-    'Fira Mona': {
+    'Fira Mono': {
       fontDisplay: 'swap',
       fontStyle: 'normal',
       fontWeight: 400,
