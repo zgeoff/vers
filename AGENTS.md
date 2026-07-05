@@ -197,7 +197,7 @@ implementing that algorithm — forcing list verbs onto textbook terms hides the
 
 ## Monorepo layout
 
-26 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
+28 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
 `package.json` named `@vers/<name>`: internal deps use the `workspace:*` protocol, and versions
 shared by 5+ projects live in the root manifest's `workspaces.catalog` (referenced as `catalog:`).
 Libraries are consumed as TypeScript source (`exports` → `./src/index.ts`); there are no per-library
@@ -217,6 +217,13 @@ boundaries` also flags imports of packages missing from the importer's `package.
 filesystem, ignoring `.gitignore` — run it on a clean tree, or stale `dist/`/`build/`/
 `styled-system/` output reads as source. CI runs it straight after install, before codegen
 populates those directories.
+
+### Package naming
+
+Every importable workspace package lives in a `lib-`-prefixed folder. A package's name is its
+folder name minus the taxonomy prefix: `lib-` and `app-` strip (`lib-validation` →
+`@vers/validation`, `app-web` → `@vers/web`); `service-` and `db-` are part of the name and carry
+through (`@vers/service-user`, `@vers/db-postgres`).
 
 ## Running things today
 
