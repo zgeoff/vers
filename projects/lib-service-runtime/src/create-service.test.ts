@@ -4,12 +4,12 @@ import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { implement } from '@orpc/server';
 import { authedRoute, publicRoute } from '@vers/contract-base';
-import { collectConformanceCases } from '@vers/contract-base/testing';
+import { collectConformanceCases } from '@vers/contract-base/test-utils';
 import * as z from 'zod';
 import type { ServiceContext } from './types';
 import { createService } from './create-service';
-import { createServiceKeyPair } from './testing/create-service-key-pair';
-import { createServiceToken } from './testing/create-service-token';
+import { createServiceKeyPair } from './test-utils/create-service-key-pair';
+import { createServiceToken } from './test-utils/create-service-token';
 
 async function withServiceEnv(
   overrides: Record<string, string | undefined>,

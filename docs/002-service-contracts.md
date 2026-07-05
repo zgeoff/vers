@@ -158,14 +158,14 @@ the compatibility mechanism.
 
 Two layers, per the repo's mock-free testing rules:
 
-- **Conformance** (generic, free with the scaffold): a helper from `@vers/contract-base/testing`
+- **Conformance** (generic, free with the scaffold): a helper from `@vers/contract-base/test-utils`
   walks a contract against the real Elysia app in-process via `app.handle(request)` — no network,
   no mocks — and asserts the mechanical guarantees per procedure: malformed input is rejected,
   error payloads round-trip with their declared shape, and OpenAPI generation succeeds.
 - **Behavioural** (hand-written, per service): what the service actually does, with test data
   declared inline.
 
-The `/testing` subpath export keeps test-time code out of application bundles.
+The `/test-utils` subpath export keeps test-time code out of application bundles.
 
 ## Known gotchas
 
