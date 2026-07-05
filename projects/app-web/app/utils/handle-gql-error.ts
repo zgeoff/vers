@@ -17,7 +17,5 @@ export function handleGQLError(error: CombinedError) {
 }
 
 function isRedirectResponse(error: CombinedError) {
-  return (
-    error.networkError instanceof Response && error.networkError.status === 302
-  );
+  return error.networkError instanceof Response && error.networkError.status === 302;
 }

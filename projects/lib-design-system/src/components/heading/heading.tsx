@@ -1,5 +1,5 @@
-import * as React from 'react';
 import { cva, cx } from '@vers/styled-system/css';
+import * as React from 'react';
 
 export interface Props {
   children: React.ReactNode;

@@ -48,11 +48,7 @@
     "codegen": {
       "dependsOn": ["^codegen"],
       "inputs": ["$TURBO_DEFAULT$", "panda.config.ts"],
-      "outputs": [
-        "styled-system/**",
-        "src/styled-system/**",
-        "app/styled-system/**"
-      ]
+      "outputs": ["styled-system/**", "src/styled-system/**", "app/styled-system/**"]
     },
     "typegen": {
       "outputs": [".react-router/types/**"]
@@ -72,11 +68,7 @@
       "dependsOn": ["codegen", "typegen", "//#codegen:graphql"]
     },
     "e2e": {
-      "dependsOn": [
-        "@vers/web#codegen",
-        "@vers/web#typegen",
-        "//#codegen:graphql"
-      ],
+      "dependsOn": ["@vers/web#codegen", "@vers/web#typegen", "//#codegen:graphql"],
       "cache": false
     },
     "dev": {

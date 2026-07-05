@@ -1,9 +1,9 @@
-import { afterEach, expect, test } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { postMessageAndWaitForReply } from '@vers/client-test-utils';
 import { createMockActivityData, createMockAvatarData } from '@vers/idle-core';
 import { setSimulationWorker } from 'src/state/set-simulation-worker';
 import invariant from 'tiny-invariant';
+import { afterEach, expect, test } from 'vitest';
 import type { InitializeMessage, SetActivityMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { useSimulationWorker } from './use-simulation-worker';
@@ -54,10 +54,7 @@ test('it handles state updates from worker', async () => {
     type: ClientMessageType.Initialize,
   };
 
-  const firstEvent = await postMessageAndWaitForReply(
-    result.current,
-    initializeMessage,
-  );
+  const firstEvent = await postMessageAndWaitForReply(result.current, initializeMessage);
 
   expect(firstEvent.data.type).toBe(WorkerMessageType.InitialState);
 
@@ -67,10 +64,7 @@ test('it handles state updates from worker', async () => {
     type: ClientMessageType.SetActivity,
   };
 
-  const secondEvent = await postMessageAndWaitForReply(
-    result.current,
-    setActivityMessage,
-  );
+  const secondEvent = await postMessageAndWaitForReply(result.current, setActivityMessage);
 
   expect(secondEvent.data.type).toBe(WorkerMessageType.SimulationUpdate);
 });

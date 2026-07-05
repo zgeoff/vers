@@ -1,7 +1,7 @@
-import { expect, test } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRoutesStub } from 'react-router';
+import { expect, test } from 'vitest';
 import { composeDataFnWrappers } from '~/test-utils/compose-data-fn-wrappers';
 import { withAppLoadContext } from '~/test-utils/with-app-load-context';
 import { withAuthedUser } from '~/test-utils/with-authed-user';

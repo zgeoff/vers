@@ -1,7 +1,8 @@
-import type { XXHashAPI } from 'xxhash-wasm';
 import { createRNG } from '@vers/game-utils';
 import { deepEqual } from 'fast-equals';
 import invariant from 'tiny-invariant';
+import type { XXHashAPI } from 'xxhash-wasm';
+import { createAvatar } from '../entities/create-avatar';
 import type {
   Activity,
   ActivityCheckpoint,
@@ -16,7 +17,6 @@ import type {
   SimulationListener,
   SimulationState,
 } from '../types';
-import { createAvatar } from '../entities/create-avatar';
 import { createActivity } from './create-activity';
 import { createCombatExecutor } from './create-combat-executor';
 import { simulateActivity } from './simulate-activity';
@@ -64,10 +64,7 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     updated: [],
   };
 
-  const startActivity = async (
-    avatarData: AvatarData,
-    activityData: ActivityData,
-  ) => {
+  const startActivity = async (avatarData: AvatarData, activityData: ActivityData) => {
     const isSameActivity = _activityData?.id === activityData.id;
     const isSameAvatar = _avatar?.id === avatarData.id;
 
@@ -181,10 +178,7 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     },
 
     // utils
-    addEventListener: (
-      eventName: SimulationEventName,
-      listener: SimulationListener,
-    ) => {
+    addEventListener: (eventName: SimulationEventName, listener: SimulationListener) => {
       listeners[eventName].push(listener);
     },
     getAppState: () => getAppState(state),

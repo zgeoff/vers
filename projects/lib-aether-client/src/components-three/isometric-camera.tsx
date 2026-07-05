@@ -63,12 +63,10 @@ export function IsometricCamera() {
   });
 
   return (
-
     // @ts-expect-error - can't make ref types work with useHelper for the life of me
     <AnimatedGroup position={spring.position} rotation={ISOMETRIC_CAMERA_ROTATION}>
       <PerspectiveCamera
         ref={setCameraRef}
-
         // args={[75, aspect, 0.1, 1000]}
         makeDefault={!isDevCameraActive}
       />

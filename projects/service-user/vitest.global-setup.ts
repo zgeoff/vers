@@ -1,9 +1,9 @@
-import type { TestProject } from 'vitest/node';
 import {
   createPostgresContainer,
   getContainerConnectionURI,
   setupTestDB,
 } from '@vers/service-test-utils';
+import type { TestProject } from 'vitest/node';
 
 declare module 'vitest' {
   export interface ProvidedContext {

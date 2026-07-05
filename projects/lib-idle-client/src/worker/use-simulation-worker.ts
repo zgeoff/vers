@@ -1,15 +1,11 @@
 import { useEffect } from 'react';
-import type {
-  InitialStateMessage,
-  SimulationUpdateMessage,
-  WorkerMessage,
-} from '../types';
 import { setActivity } from '../state/set-activity';
 import { setAvatar } from '../state/set-avatar';
 import { setCombat } from '../state/set-combat';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationWorker } from '../state/set-simulation-worker';
 import { useSimulationStore } from '../state/use-simulation-store';
+import type { InitialStateMessage, SimulationUpdateMessage, WorkerMessage } from '../types';
 import { WorkerMessageType } from '../types';
 import SimulationWorker from './worker.ts?sharedworker';
 
@@ -40,14 +36,10 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
   }
 }
 
-function isInitialStateMessage(
-  message: WorkerMessage,
-): message is InitialStateMessage {
+function isInitialStateMessage(message: WorkerMessage): message is InitialStateMessage {
   return message.type === WorkerMessageType.InitialState;
 }
 
-function isUpdateMessage(
-  message: WorkerMessage,
-): message is SimulationUpdateMessage {
+function isUpdateMessage(message: WorkerMessage): message is SimulationUpdateMessage {
   return message.type === WorkerMessageType.SimulationUpdate;
 }

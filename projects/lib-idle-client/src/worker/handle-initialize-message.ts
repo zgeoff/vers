@@ -21,9 +21,7 @@ export async function handleInitializeMessage(_message: InitializeMessage) {
 
   setSimulation(simulation);
 
-  const initialStateMessage = createInitialStateMessage(
-    simulation.getAppState(),
-  );
+  const initialStateMessage = createInitialStateMessage(simulation.getAppState());
 
   for (const connection of connections) {
     connection.postMessage(initialStateMessage);

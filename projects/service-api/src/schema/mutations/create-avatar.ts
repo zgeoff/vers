@@ -1,12 +1,8 @@
 import { TRPCClientError } from '@trpc/client';
-import type { AuthedContext } from '~/types';
 import { logger } from '~/logger';
+import type { AuthedContext } from '~/types';
 import { builder } from '../builder';
-import {
-  AVATAR_LIMIT_REACHED_ERROR,
-  AVATAR_NAME_EXISTS_ERROR,
-  UNKNOWN_ERROR,
-} from '../errors';
+import { AVATAR_LIMIT_REACHED_ERROR, AVATAR_NAME_EXISTS_ERROR, UNKNOWN_ERROR } from '../errors';
 import { Avatar } from '../types/avatar';
 import { AvatarClass } from '../types/avatar-class';
 import { MutationErrorPayload } from '../types/mutation-error-payload';

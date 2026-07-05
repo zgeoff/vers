@@ -4,27 +4,27 @@ primary_region = 'syd'
 [build]
 
 [env]
-  API_IDENTIFIER = 'https://api.versidle.com/'
-  APP_WEB_URL = 'https://versidle.com'
-  AVATARS_SERVICE_URL = 'http://vers-service-avatar.internal:3005/'
-  EMAILS_SERVICE_URL = 'http://vers-service-email.internal:3001/'
-  HOSTNAME = '0.0.0.0'
-  LOGGING = 'info'
-  NODE_ENV = 'production'
-  PORT = '3000'
-  SESSIONS_SERVICE_URL = 'http://vers-service-session.internal:3002/'
-  USERS_SERVICE_URL = 'http://vers-service-user.internal:3003/'
-  VERIFICATIONS_SERVICE_URL = 'http://vers-service-verification.internal:3004/'
+API_IDENTIFIER = 'https://api.versidle.com/'
+APP_WEB_URL = 'https://versidle.com'
+AVATARS_SERVICE_URL = 'http://vers-service-avatar.internal:3005/'
+EMAILS_SERVICE_URL = 'http://vers-service-email.internal:3001/'
+HOSTNAME = '0.0.0.0'
+LOGGING = 'info'
+NODE_ENV = 'production'
+PORT = '3000'
+SESSIONS_SERVICE_URL = 'http://vers-service-session.internal:3002/'
+USERS_SERVICE_URL = 'http://vers-service-user.internal:3003/'
+VERIFICATIONS_SERVICE_URL = 'http://vers-service-verification.internal:3004/'
 
 [http_service]
-  internal_port = 3000
-  force_https = true
-  auto_stop_machines = 'stop'
-  auto_start_machines = false 
-  min_machines_running = 1
-  processes = ['app']
+internal_port = 3000
+force_https = true
+auto_stop_machines = 'stop'
+auto_start_machines = false
+min_machines_running = 1
+processes = ['app']
 
 [[vm]]
-  memory = '256mb'
-  cpu_kind = 'shared'
-  cpus = 1
+memory = '256mb'
+cpu_kind = 'shared'
+cpus = 1

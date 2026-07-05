@@ -1,5 +1,5 @@
-import type { ReactElement } from 'react';
 import * as E from '@react-email/components';
+import type { ReactElement } from 'react';
 
 export function ChangeEmailNotificationEmail(): ReactElement {
   return (

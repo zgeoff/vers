@@ -5,10 +5,7 @@
  * @param difficulty - The difficulty of the node (used to determine the radius)
  * @returns The [X, Y] coordinates of the node
  */
-export function getNodePosition(
-  i: number,
-  difficulty: number,
-): [number, number] {
+export function getNodePosition(i: number, difficulty: number): [number, number] {
   if (i === 0 && difficulty === 0) {
     return [0, 0];
   }

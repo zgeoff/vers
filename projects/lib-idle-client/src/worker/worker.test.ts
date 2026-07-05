@@ -1,6 +1,6 @@
-import { expect, test } from 'vitest';
 import { postMessageAndWaitForReply } from '@vers/client-test-utils';
 import { createMockActivityData, createMockAvatarData } from '@vers/idle-core';
+import { expect, test } from 'vitest';
 import type { InitializeMessage, SetActivityMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import SimulationWorker from './worker.ts?sharedworker';

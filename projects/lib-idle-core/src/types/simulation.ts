@@ -1,11 +1,6 @@
 import type { RNG } from '@vers/game-utils';
 import type { XXHashAPI } from 'xxhash-wasm';
-import type {
-  Activity,
-  ActivityAppState,
-  ActivityCheckpoint,
-  ActivityData,
-} from './activity';
+import type { Activity, ActivityAppState, ActivityCheckpoint, ActivityData } from './activity';
 import type { CombatExecutor, CombatExecutorAppState } from './combat';
 import type { Avatar, AvatarAppState, AvatarData } from './entities';
 
@@ -22,11 +17,7 @@ export interface SimulationState {
   readonly elapsed: number;
 }
 
-export type SimulationEventName =
-  | 'restarted'
-  | 'started'
-  | 'stopped'
-  | 'updated';
+export type SimulationEventName = 'restarted' | 'started' | 'stopped' | 'updated';
 
 export interface Simulation {
   // meta
@@ -41,10 +32,7 @@ export interface Simulation {
   get state(): SimulationState;
 
   // utils
-  addEventListener: (
-    eventName: SimulationEventName,
-    listener: SimulationListener,
-  ) => void;
+  addEventListener: (eventName: SimulationEventName, listener: SimulationListener) => void;
   getAppState: () => SimulationAppState;
   restartActivity: () => void;
   run: (time: number) => Promise<ActivityCheckpoint | null>;

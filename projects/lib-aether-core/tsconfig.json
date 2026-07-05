@@ -5,11 +5,6 @@
     "baseUrl": "."
   },
   "files": [],
-  "include": [
-    "vitest.config.ts",
-    "vitest.setup.ts",
-    "src/**/*.ts",
-    "generate-graph.ts"
-  ],
+  "include": ["vitest.config.ts", "vitest.setup.ts", "src/**/*.ts", "generate-graph.ts"],
   "exclude": []
 }

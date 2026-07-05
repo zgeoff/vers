@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { expect, test } from 'vitest';
 import { TwoFactorEmail } from './two-factor-email';
 
 test('it renders a two-factor email with the provided configuration', () => {
@@ -16,8 +16,5 @@ test('it renders a two-factor email with the provided configuration', () => {
   expect(heading).toBeInTheDocument();
   expect(codeText).toBeInTheDocument();
   expect(resetLink).toBeInTheDocument();
-  expect(resetLink).toHaveAttribute(
-    'href',
-    'https://versidle.com/forgot-password',
-  );
+  expect(resetLink).toHaveAttribute('href', 'https://versidle.com/forgot-password');
 });

@@ -32,9 +32,7 @@ export function withAuthedUser<Args extends DataFnArgs, Data>(
       config.sessionID,
     );
 
-    const authSession = await authSessionStorage.getSession(
-      args.request.headers.get('cookie'),
-    );
+    const authSession = await authSessionStorage.getSession(args.request.headers.get('cookie'));
 
     authSession.set('accessToken', accessToken);
     authSession.set('refreshToken', refreshToken);

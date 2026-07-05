@@ -1,5 +1,5 @@
-import type { CombinedError } from '@urql/core';
 import { captureException } from '@sentry/react';
+import type { CombinedError } from '@urql/core';
 
 export function captureGQLExceptions(error: CombinedError) {
   if (error.networkError) {

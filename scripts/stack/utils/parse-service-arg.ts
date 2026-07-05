@@ -7,7 +7,5 @@ export function parseServiceArg(value: string): ServiceID {
     return value as ServiceID;
   }
 
-  throw new Error(
-    `Invalid service "${value}". Available services: ${SERVICE_IDS.join(', ')}`,
-  );
+  throw new Error(`Invalid service "${value}". Available services: ${SERVICE_IDS.join(', ')}`);
 }

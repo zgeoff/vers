@@ -1,10 +1,6 @@
-import type { ActivityData, AvatarData } from '@vers/idle-core';
 import { Class } from '@vers/data';
-import {
-  ActivityFailureAction,
-  ActivityType,
-  EquipmentSlot,
-} from '@vers/idle-core';
+import type { ActivityData, AvatarData } from '@vers/idle-core';
+import { ActivityFailureAction, ActivityType, EquipmentSlot } from '@vers/idle-core';
 
 export const activityData: ActivityData = {
   enemies: [

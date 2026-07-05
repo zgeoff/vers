@@ -1,7 +1,7 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useDevStore } from 'src/state/use-dev-store';
+import { expect, test } from 'vitest';
 import { DevTools } from './dev-tools';
 
 function setupTest() {

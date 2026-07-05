@@ -118,7 +118,6 @@ function getStatusIcon(status: StatusButtonStatus) {
         aria-hidden="false"
         aria-label="Success"
         color="#fff"
-
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- inline SVG icon; role="img" + aria-label is the accessible-SVG pattern, an <img> tag needs a src
         role="img"
         size={24}
@@ -132,7 +131,6 @@ function getStatusIcon(status: StatusButtonStatus) {
         aria-hidden="false"
         aria-label="Error"
         color="#fff"
-
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- inline SVG icon; role="img" + aria-label is the accessible-SVG pattern, an <img> tag needs a src
         role="img"
         size={32}

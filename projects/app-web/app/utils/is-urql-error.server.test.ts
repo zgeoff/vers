@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import { CombinedError } from '@urql/core';
+import { expect, test } from 'vitest';
 import { isURQLError } from './is-urql-error.server';
 
 test('it returns true if the error is a URQL error', () => {

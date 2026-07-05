@@ -15,18 +15,18 @@ detection is `turbo run --affected`. See `docs/000-overview.md` for the project 
 ## Boundaries
 
 Projects are tagged `lib`, `service`, or `app` in their own `turbo.json`; the root `boundaries`
-block denies `lib` → `service`/`app` and `service` → `app` imports, transitively. `bun run
-boundaries` also flags imports of packages missing from the importer's `package.json`. It walks the
-filesystem, ignoring `.gitignore` — run it on a clean tree, or stale `dist/`/`build/`/
-`styled-system/` output reads as source. CI runs it straight after install, before codegen
-populates those directories.
+block denies `lib` → `service`/`app` and `service` → `app` imports, transitively.
+`bun run boundaries` also flags imports of packages missing from the importer's `package.json`. It
+walks the filesystem, ignoring `.gitignore` — run it on a clean tree, or stale `dist/`/`build/`/
+`styled-system/` output reads as source. CI runs it straight after install, before codegen populates
+those directories.
 
 ### Package naming
 
-Every importable workspace package lives in a `lib-`-prefixed folder. A package's name is its
-folder name minus the taxonomy prefix: `lib-` and `app-` strip (`lib-validation` →
-`@vers/validation`, `app-web` → `@vers/web`); `service-` and `db-` are part of the name and carry
-through (`@vers/service-user`, `@vers/db-postgres`).
+Every importable workspace package lives in a `lib-`-prefixed folder. A package's name is its folder
+name minus the taxonomy prefix: `lib-` and `app-` strip (`lib-validation` → `@vers/validation`,
+`app-web` → `@vers/web`); `service-` and `db-` are part of the name and carry through
+(`@vers/service-user`, `@vers/db-postgres`).
 
 ## Running things today
 
@@ -35,8 +35,8 @@ through (`@vers/service-user`, `@vers/db-postgres`).
   `--filter=@vers/<name>`.
 - `bun run test` — `turbo run test` (per-project `vitest run`); one project via `--filter`.
   Postgres-backed suites need `bun run pg:test-container:start` first.
-- `bun run lint` / `bun run lint:fix` — `oxlint` over the whole tree (`.oxlintrc.json` at the
-  root); not a turbo task, oxlint covers everything in one fast invocation.
+- `bun run lint` / `bun run lint:fix` — `oxlint` over the whole tree (`.oxlintrc.json` at the root);
+  not a turbo task, oxlint covers everything in one fast invocation.
 - `bun run format` / `bun run format:check` — `oxfmt` (`.oxfmtrc.json` at the root).
 - `bun run build` — `turbo run build`; one project via `--filter`.
 - `bun run e2e` — `turbo run e2e` (Playwright, `app-web-e2e`).
@@ -57,10 +57,10 @@ Each deployable (`app-web`, `db-postgres`, the 6 services) has a multi-stage Doc
    bundle's own location — only a flat `node_modules` serves them all.
 5. **runtime** — `node:alpine` with the prod-deps `node_modules` and built output only.
 
-app-web's builder runs its `codegen`/`typegen`/`build` scripts directly instead of `turbo run
-build`, which would pull in `//#codegen:graphql` — that task reads service-api's schema, outside
-app-web's pruned graph. `app/gql/**` is committed so builds without service-api's source use it
-as-is.
+app-web's builder runs its `codegen`/`typegen`/`build` scripts directly instead of
+`turbo run build`, which would pull in `//#codegen:graphql` — that task reads service-api's schema,
+outside app-web's pruned graph. `app/gql/**` is committed so builds without service-api's source use
+it as-is.
 
 ## Tooling migration in progress
 
@@ -68,11 +68,11 @@ See #160 for the full phase plan (turborepo + bun, spike-gated; shared configs a
 `zgeoff/tools`). This repo is mid-migration — several claims in `agents/shared.md` above describe
 the _target_ state, not this repo yet:
 
-- **lefthook** — not adopted. Git hooks are still husky + lint-staged (`.husky/`), minimally
-  adapted to invoke bun. Lands in #189.
+- **lefthook** — not adopted. Git hooks are still husky + lint-staged (`.husky/`), minimally adapted
+  to invoke bun. Lands in #189.
 - **`bun test`** — not adopted. bun is the package manager and script runner only; all
-  unit/integration tests run under vitest on node. Deferred past #160 to the rebuild (#163) —
-  vitest stays until services move to the bun runtime.
+  unit/integration tests run under vitest on node. Deferred past #160 to the rebuild (#163) — vitest
+  stays until services move to the bun runtime.
 
 oxlint/oxfmt landed in #188, but two pieces of the tools-repo stack are deliberately still missing:
 

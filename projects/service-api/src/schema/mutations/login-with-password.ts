@@ -1,5 +1,5 @@
-import type { Context } from '~/types';
 import { logger } from '~/logger';
+import type { Context } from '~/types';
 import { SecureAction } from '~/types';
 import { createPendingTransaction } from '~/utils/create-pending-transaction';
 import { createTransactionToken } from '~/utils/create-transaction-token';
@@ -129,12 +129,7 @@ function resolveType(value: object) {
 
 const LoginWithPasswordPayload = builder.unionType('LoginWithPasswordPayload', {
   resolveType,
-  types: [
-    AuthPayload,
-    TwoFactorLoginPayload,
-    ForceLogoutPayload,
-    MutationErrorPayload,
-  ],
+  types: [AuthPayload, TwoFactorLoginPayload, ForceLogoutPayload, MutationErrorPayload],
 });
 
 export const resolve = loginWithPassword;

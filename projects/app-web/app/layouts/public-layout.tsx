@@ -1,5 +1,5 @@
-import { Outlet } from 'react-router';
 import { css } from '@vers/styled-system/css';
+import { Outlet } from 'react-router';
 
 const container = css({
   alignItems: 'center',

@@ -1,7 +1,7 @@
+import { css, cx } from '@vers/styled-system/css';
 import * as React from 'react';
 import type { NavLinkRenderProps } from 'react-router';
 import { NavLink as RRNavLink } from 'react-router';
-import { css, cx } from '@vers/styled-system/css';
 
 export interface NavLinkProps {
   children: React.ReactNode;

@@ -7,6 +7,10 @@
     ".": "./src/index.ts",
     "./test-utils": "./src/test-utils/index.ts"
   },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "dependencies": {
     "@elysiajs/opentelemetry": "1.4.11",
     "@opentelemetry/exporter-trace-otlp-proto": "0.219.0",
@@ -28,9 +32,5 @@
     "typescript": "catalog:",
     "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
-  },
-  "scripts": {
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

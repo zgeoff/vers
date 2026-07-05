@@ -18,7 +18,14 @@
   "bracketSpacing": true,
   "arrowParens": "always",
   "sortImports": {
-    "groups": ["side_effect", "test-libs", "builtin", "external", "unknown", ["parent", "sibling", "index"]],
+    "groups": [
+      "side_effect",
+      "test-libs",
+      "builtin",
+      "external",
+      "unknown",
+      ["parent", "sibling", "index"]
+    ],
     "customGroups": [
       {
         "groupName": "test-libs",

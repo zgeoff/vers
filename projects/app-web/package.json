@@ -5,6 +5,7 @@
   "description": "",
   "license": "",
   "type": "module",
+  "sideEffects": false,
   "scripts": {
     "build": "react-router build",
     "codegen": "panda cssgen",
@@ -87,7 +88,6 @@
   "engines": {
     "node": "20.18.3"
   },
-  "sideEffects": false,
   "msw": {
     "workerDirectory": [
       "public"

@@ -1,8 +1,4 @@
-import type {
-  Avatar,
-  AvatarWeaponAttackBehaviourState,
-  CombatExecutor,
-} from '../../types';
+import type { Avatar, AvatarWeaponAttackBehaviourState, CombatExecutor } from '../../types';
 import { getNextAttackTime } from './get-next-attack-time';
 
 export function isAttackReady(

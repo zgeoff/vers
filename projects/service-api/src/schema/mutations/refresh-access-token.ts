@@ -1,6 +1,6 @@
 import invariant from 'tiny-invariant';
-import type { Context } from '~/types';
 import { logger } from '~/logger';
+import type { Context } from '~/types';
 import { builder } from '../builder';
 import { UNKNOWN_ERROR } from '../errors';
 import { MutationErrorPayload } from '../types/mutation-error-payload';
@@ -40,13 +40,10 @@ const RefreshAccessTokenInput = builder.inputType('RefreshAccessTokenInput', {
   }),
 });
 
-const RefreshAccessTokenPayload = builder.unionType(
-  'RefreshAccessTokenPayload',
-  {
-    resolveType: createPayloadResolver(TokenPayload),
-    types: [TokenPayload, MutationErrorPayload],
-  },
-);
+const RefreshAccessTokenPayload = builder.unionType('RefreshAccessTokenPayload', {
+  resolveType: createPayloadResolver(TokenPayload),
+  types: [TokenPayload, MutationErrorPayload],
+});
 
 export const resolve = refreshAccessToken;
 

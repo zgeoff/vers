@@ -1,5 +1,5 @@
-import * as React from 'react';
 import { Spinner } from '@vers/design-system';
+import * as React from 'react';
 import * as styles from './route.styles';
 
 export function AetherRoute() {

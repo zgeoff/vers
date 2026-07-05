@@ -18,8 +18,7 @@ export function getEnemyGroups(
   const enemyGroupCount = config.groupCount ?? getRandomEnemyGroupCount(ctx);
 
   return Array.from({ length: enemyGroupCount }, () => {
-    const enemyCount =
-      config.groupSize ?? ctx.rng.getInt(MIN_ENEMIES, MAX_ENEMIES);
+    const enemyCount = config.groupSize ?? ctx.rng.getInt(MIN_ENEMIES, MAX_ENEMIES);
 
     return createEnemyGroup(activity, ctx, enemyCount);
   });

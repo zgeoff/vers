@@ -4,10 +4,9 @@ interface VerificationRequiredPayloadData {
   transactionID: string;
 }
 
-export const VerificationRequiredPayload =
-  builder.objectRef<VerificationRequiredPayloadData>(
-    'VerificationRequiredPayload',
-  );
+export const VerificationRequiredPayload = builder.objectRef<VerificationRequiredPayloadData>(
+  'VerificationRequiredPayload',
+);
 
 VerificationRequiredPayload.implement({
   fields: (t) => ({

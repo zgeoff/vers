@@ -24,10 +24,7 @@ interface TransactionData {
  * @param ctx - The context of the request.
  * @returns The transaction token.
  */
-export async function createTransactionToken(
-  data: TransactionData,
-  ctx: Context,
-): Promise<string> {
+export async function createTransactionToken(data: TransactionData, ctx: Context): Promise<string> {
   // if the transaction is not verified, we need to check that a pending
   // transaction exists and that it matches the data provided
   if (!data.isVerified) {

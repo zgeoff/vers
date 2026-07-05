@@ -1,8 +1,8 @@
-import { expect, test } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import type { AvatarAppState } from '@vers/idle-core';
 import { Class } from '@vers/data';
+import type { AvatarAppState } from '@vers/idle-core';
 import { EntityStatus } from '@vers/idle-core';
+import { expect, test } from 'vitest';
 import { setAvatar } from './set-avatar';
 import { useAvatar } from './use-avatar';
 

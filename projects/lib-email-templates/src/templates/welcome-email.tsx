@@ -12,8 +12,7 @@ export function WelcomeEmail(props: Props) {
         <E.Text>Welcome to vers</E.Text>
       </E.Heading>
       <E.Text>
-        Please verify your vers account to get started. Just click on the link
-        to get started:
+        Please verify your vers account to get started. Just click on the link to get started:
       </E.Text>
       <E.Link href={props.verificationURL}>Verify your account</E.Link>
       <E.Text>Or enter the following verification code:</E.Text>

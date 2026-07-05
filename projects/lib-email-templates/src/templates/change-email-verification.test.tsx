@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { expect, test } from 'vitest';
 import { ChangeEmailVerificationEmail } from './change-email-verification';
 
 test('it renders a verification email with provided configuration', () => {

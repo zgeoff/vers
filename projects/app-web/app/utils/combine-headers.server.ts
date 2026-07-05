@@ -1,6 +1,4 @@
-export function combineHeaders(
-  ...headers: Array<null | ResponseInit['headers'] | undefined>
-) {
+export function combineHeaders(...headers: Array<null | ResponseInit['headers'] | undefined>) {
   const combined = new Headers();
 
   for (const header of headers) {

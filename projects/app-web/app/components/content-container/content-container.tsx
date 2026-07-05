@@ -1,5 +1,5 @@
-import * as React from 'react';
 import { cx } from '@vers/styled-system/css';
+import * as React from 'react';
 import * as styles from './content-container.styles';
 
 interface Props {

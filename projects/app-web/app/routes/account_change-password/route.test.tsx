@@ -1,10 +1,10 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { drop } from '@mswjs/data';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub, useSearchParams } from 'react-router';
-import { drop } from '@mswjs/data';
 import { GraphQLError } from 'graphql';
 import { graphql } from 'msw';
+import { createRoutesStub, useSearchParams } from 'react-router';
+import { afterEach, expect, test, vi } from 'vitest';
 import { db } from '~/mocks/db';
 import { server } from '~/mocks/node';
 import { verifySessionStorage } from '~/session/verify-session-storage.server';
@@ -151,9 +151,7 @@ test('it redirects to verify 2FA as needed when no transaction token is in the s
   });
 
   const verifyOTPRoute = await screen.findByText('VERIFY_OTP_ROUTE');
-  const searchParams = screen.getByText(
-    'target=test%40example.com&type=CHANGE_PASSWORD',
-  );
+  const searchParams = screen.getByText('target=test%40example.com&type=CHANGE_PASSWORD');
 
   expect(searchParams).toBeInTheDocument();
   expect(verifyOTPRoute).toBeInTheDocument();

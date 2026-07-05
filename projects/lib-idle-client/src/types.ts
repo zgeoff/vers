@@ -1,8 +1,4 @@
-import type {
-  ActivityData,
-  AvatarData,
-  SimulationAppState,
-} from '@vers/idle-core';
+import type { ActivityData, AvatarData, SimulationAppState } from '@vers/idle-core';
 
 export enum ClientMessageType {
   Initialize = 'initialize',

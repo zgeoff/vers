@@ -7,10 +7,7 @@ export interface StartOptions {
   forceRecreate?: boolean;
 }
 
-export async function start(
-  service?: ServiceID,
-  options?: StartOptions,
-): Promise<void> {
+export async function start(service?: ServiceID, options?: StartOptions): Promise<void> {
   const args = [];
 
   if (options?.build) {

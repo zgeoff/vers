@@ -1,5 +1,5 @@
-import { afterEach, expect, test } from 'vitest';
 import { createSimulation } from '@vers/idle-core';
+import { afterEach, expect, test } from 'vitest';
 import xxhash from 'xxhash-wasm';
 import { getSimulation, setSimulation } from './simulation';
 

@@ -28,7 +28,6 @@ export function ClassPreview(props: Props) {
     <div
       aria-checked={props.isSelected}
       className={cx(styles.container, props.isSelected && styles.selected)}
-
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- styled card acting as one option in a custom radio group; a native <input type="radio"> can't carry this layout
       role="radio"
       tabIndex={props.tabIndex}

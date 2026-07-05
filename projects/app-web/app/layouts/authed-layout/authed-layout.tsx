@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
-import { Outlet } from 'react-router';
 import {
   createInitializeMessage,
   useSimulationInitialized,
   useSimulationWorker,
 } from '@vers/idle-client';
+import { useEffect } from 'react';
+import { Outlet } from 'react-router';
 import { Header } from '~/components/header';
 import { SideNavigation } from '~/components/side-navigation';
 import { requireAuth } from '~/utils/require-auth.server';

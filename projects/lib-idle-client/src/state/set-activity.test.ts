@@ -1,6 +1,6 @@
-import { expect, test } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ActivityAppState } from '@vers/idle-core';
+import { expect, test } from 'vitest';
 import { setActivity } from './set-activity';
 import { useActivityStore } from './use-activity-store';
 
@@ -17,9 +17,7 @@ test('it updates the activity state', () => {
 
   setActivity(activity);
 
-  const { result } = renderHook(() =>
-    useActivityStore((state) => state.activity),
-  );
+  const { result } = renderHook(() => useActivityStore((state) => state.activity));
 
   expect(result.current).toStrictEqual({
     currentEnemyGroup: null,

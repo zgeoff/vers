@@ -24,9 +24,7 @@ export async function* simulateActivity(
 
   const label = `[activity:${activity.type}]`;
 
-  logger.debug(
-    `${label} starting activity with ${activity.enemyGroups.length} enemy groups`,
-  );
+  logger.debug(`${label} starting activity with ${activity.enemyGroups.length} enemy groups`);
 
   logger.debug(
     `${label} starting combat with first group of ${activity.currentEnemyGroup?.enemies.length} enemies`,

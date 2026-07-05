@@ -1,5 +1,5 @@
-import type { ActivityAppState } from '@vers/idle-core';
 import { Heading, Text } from '@vers/design-system';
+import type { ActivityAppState } from '@vers/idle-core';
 import { css } from '@vers/styled-system/css';
 
 const activityInfo = css({
@@ -16,8 +16,7 @@ export function ActivityInfo(props: ActivityInfoProps) {
     <section className={activityInfo}>
       <Heading level={2}>{props.activity.name}</Heading>
       <Text>
-        <strong>{props.activity.enemyGroupsRemaining}</strong> enemy groups
-        remain
+        <strong>{props.activity.enemyGroupsRemaining}</strong> enemy groups remain
       </Text>
       <Text>
         <strong>{props.activity.enemiesRemaining}</strong> enemies remain

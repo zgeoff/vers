@@ -38,10 +38,7 @@ async function writePreviews(outDir: string) {
 
         await Promise.all([
           writeFile(path.join(resolvedOutDir, `${preview.name}.html`), html),
-          writeFile(
-            path.join(resolvedOutDir, `${preview.name}.txt`),
-            plainText,
-          ),
+          writeFile(path.join(resolvedOutDir, `${preview.name}.txt`), plainText),
         ]);
       }),
     ),

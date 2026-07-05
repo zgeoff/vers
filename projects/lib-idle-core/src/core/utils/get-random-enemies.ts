@@ -1,5 +1,5 @@
-import type { ActivityData, Enemy, SimulationContext } from '../../types';
 import { createEnemy } from '../../entities/create-enemy';
+import type { ActivityData, Enemy, SimulationContext } from '../../types';
 
 export function getRandomEnemies(
   activity: ActivityData,

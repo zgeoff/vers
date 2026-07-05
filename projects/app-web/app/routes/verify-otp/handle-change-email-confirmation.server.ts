@@ -15,10 +15,7 @@ import type { HandleVerificationContext } from './types';
 export async function handleChangeEmailConfirmation(
   ctx: HandleVerificationContext,
 ): Promise<Response> {
-  invariant(
-    ctx.submission.status === 'success',
-    'submission should be successful by now',
-  );
+  invariant(ctx.submission.status === 'success', 'submission should be successful by now');
 
   const result = await ctx.client.mutation(FinishChangeUserEmailMutation, {
     input: {
@@ -37,15 +34,12 @@ export async function handleChangeEmailConfirmation(
     throw new Error(result.data.finishChangeUserEmail.error.message);
   }
 
-  const verifySession = await verifySessionStorage.getSession(
-    ctx.request.headers.get('Cookie'),
-  );
+  const verifySession = await verifySessionStorage.getSession(ctx.request.headers.get('Cookie'));
 
   // clear all session data related to email change confirmation
   verifySession.unset('changeEmailConfirm#transactionID');
 
-  const setCookieHeader =
-    await verifySessionStorage.commitSession(verifySession);
+  const setCookieHeader = await verifySessionStorage.commitSession(verifySession);
 
   return redirect(Routes.Account, {
     headers: {

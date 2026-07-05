@@ -1,6 +1,6 @@
-import { expect, test } from 'vitest';
-import type { AetherNode as AetherNodeType } from '@vers/aether-core';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type { AetherNode as AetherNodeType } from '@vers/aether-core';
+import { expect, test } from 'vitest';
 import { useHoveredNodeStore } from '../state/use-hovered-node-store';
 import { useSelectedNodeStore } from '../state/use-selected-node-store';
 import { AetherNode } from './aether-node';
@@ -15,9 +15,7 @@ const node: AetherNodeType = {
 };
 
 async function setupTest() {
-  const renderer = await ReactThreeTestRenderer.create(
-    <AetherNode node={node} />,
-  );
+  const renderer = await ReactThreeTestRenderer.create(<AetherNode node={node} />);
 
   return renderer;
 }

@@ -17,7 +17,4 @@ export function TooltipHeader(props: TooltipHeaderProps) {
   );
 }
 
-const TooltipHeaderBackground = withContext(
-  BackgroundPattern,
-  'headerBackground',
-);
+const TooltipHeaderBackground = withContext(BackgroundPattern, 'headerBackground');

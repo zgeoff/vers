@@ -1,10 +1,8 @@
 import { createRNG } from '@vers/game-utils';
-import type { AetherNode, AetherNodeMap, CompressedAetherNode } from './types';
 import { getRandomizedPosition } from './get-randomized-position';
+import type { AetherNode, AetherNodeMap, CompressedAetherNode } from './types';
 
-export function getAetherNodeMap(
-  compressedNodes: Array<CompressedAetherNode>,
-): AetherNodeMap {
+export function getAetherNodeMap(compressedNodes: Array<CompressedAetherNode>): AetherNodeMap {
   const nodes: AetherNodeMap = {};
 
   for (const node of compressedNodes) {

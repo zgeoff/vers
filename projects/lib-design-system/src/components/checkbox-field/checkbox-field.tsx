@@ -1,7 +1,7 @@
-import * as React from 'react';
 import { Checkbox } from '@ark-ui/react/checkbox';
 import { Field } from '@ark-ui/react/field';
 import { cx, sva } from '@vers/styled-system/css';
+import * as React from 'react';
 import { Icon } from '../icon/icon';
 
 interface Props {
@@ -60,28 +60,12 @@ const checkboxFieldRecipe = sva({
       maxWidth: '96',
     },
   },
-  slots: [
-    'root',
-    'checkbox',
-    'control',
-    'indicator',
-    'icon',
-    'label',
-    'errorText',
-  ],
+  slots: ['root', 'checkbox', 'control', 'indicator', 'icon', 'label', 'errorText'],
 });
 
 export function CheckboxField(props: Props) {
-  const {
-    checked,
-    defaultChecked,
-    disabled,
-    form,
-    id,
-    name,
-    onClick,
-    required,
-  } = props.checkboxProps;
+  const { checked, defaultChecked, disabled, form, id, name, onClick, required } =
+    props.checkboxProps;
   const [firstError] = props.errors;
   const styles = checkboxFieldRecipe();
 
@@ -109,9 +93,7 @@ export function CheckboxField(props: Props) {
         />
         <Checkbox.HiddenInput onClick={onClick} />
       </Checkbox.Root>
-      <Field.ErrorText className={styles.errorText}>
-        {firstError}
-      </Field.ErrorText>
+      <Field.ErrorText className={styles.errorText}>{firstError}</Field.ErrorText>
     </Field.Root>
   );
 }

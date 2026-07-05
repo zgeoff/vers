@@ -1,8 +1,4 @@
-import type {
-  AetherEdgeMap,
-  AetherGraph,
-  AetherNodeMap,
-} from '@vers/aether-core';
+import type { AetherEdgeMap, AetherGraph, AetherNodeMap } from '@vers/aether-core';
 import type { Object3D } from 'three';
 import { Vector3 } from 'three';
 import { getScenePosition } from './get-scene-position';

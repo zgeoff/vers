@@ -15,7 +15,6 @@ export function AetherEdge(props: AetherEdgeProps) {
   const lineGeometry = new BufferGeometry().setFromPoints(points);
 
   return (
-
     // @ts-expect-error - this should map to the THREE.Line type, not the SVG line element
     <line geometry={lineGeometry}>
       <lineBasicMaterial color="#64748b" />

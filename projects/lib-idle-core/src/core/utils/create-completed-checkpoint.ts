@@ -1,7 +1,4 @@
-import type {
-  ActivityCompletedCheckpoint,
-  SimulationContext,
-} from '../../types';
+import type { ActivityCompletedCheckpoint, SimulationContext } from '../../types';
 import { ActivityCheckpointType } from '../../types';
 import { hashObject } from '../../utils/hash-object';
 

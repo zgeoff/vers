@@ -1,5 +1,5 @@
-import { afterEach, expect, test } from 'vitest';
 import { drop } from '@mswjs/data';
+import { afterEach, expect, test } from 'vitest';
 import { db } from '~/mocks/db';
 import { sentEmails } from '~/mocks/handlers/trpc/service-email/send-email';
 import { createMockGQLContext } from '~/test-utils/create-mock-gql-context';

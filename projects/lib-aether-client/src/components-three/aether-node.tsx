@@ -41,7 +41,6 @@ export function AetherNode(props: AetherNodeProps) {
     <mesh
       ref={setSelectedNodeRef}
       position={position}
-
       // its important we attach our node ID so we can look it up without selecting
       userData={{ id: props.node.id }}
       onPointerDown={(event: ThreeEvent<PointerEvent>) => handleClickNode(event)}

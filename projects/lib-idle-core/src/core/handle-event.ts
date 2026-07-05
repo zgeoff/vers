@@ -1,9 +1,4 @@
-import type {
-  Activity,
-  Avatar,
-  CombatEvent,
-  SimulationContext,
-} from '../types';
+import type { Activity, Avatar, CombatEvent, SimulationContext } from '../types';
 import { CombatEventType } from '../types';
 import { handleAvatarAttack } from './handle-avatar-attack';
 import { handleEnemyAttack } from './handle-enemy-attack';

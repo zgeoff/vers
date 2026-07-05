@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import { createMockEnemyData } from 'src/test-utils/create-mock-enemy-data';
+import { expect, test } from 'vitest';
 import { createActivity } from '../../core/create-activity';
 import { createCombatExecutor } from '../../core/create-combat-executor';
 import { createAvatar } from '../../entities/create-avatar';

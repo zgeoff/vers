@@ -2,11 +2,7 @@ import type { Activity, Avatar, AvatarAttackEvent } from '../types';
 import { createLogLabel } from '../utils/create-log-label';
 import { logger } from '../utils/logger';
 
-export function handleAvatarAttack(
-  _event: AvatarAttackEvent,
-  avatar: Avatar,
-  activity: Activity,
-) {
+export function handleAvatarAttack(_event: AvatarAttackEvent, avatar: Avatar, activity: Activity) {
   const label = createLogLabel('avatar', avatar.id);
 
   // find the first enemy that is alive

@@ -13,20 +13,14 @@ export default [
     route(Routes.Logout, 'routes/logout/route.tsx'),
     route(Routes.ForgotPassword, 'routes/forgot-password/route.tsx'),
     route(Routes.ResetPassword, 'routes/reset-password/route.tsx'),
-    route(
-      Routes.ResetPasswordStarted,
-      'routes/reset-password-started/route.tsx',
-    ),
+    route(Routes.ResetPasswordStarted, 'routes/reset-password-started/route.tsx'),
   ]),
 
   layout('layouts/authed-layout/authed-layout.tsx', [
     route(Routes.Nexus, 'routes/nexus/route.tsx'),
     route(Routes.Account, 'routes/account/route.tsx'),
     route(Routes.AccountChangeEmail, 'routes/account_change-email/route.tsx'),
-    route(
-      Routes.AccountChangePassword,
-      'routes/account_change-password/route.tsx',
-    ),
+    route(Routes.AccountChangePassword, 'routes/account_change-password/route.tsx'),
     route(Routes.AccountVerify2FA, 'routes/account_verify-2fa/route.tsx'),
     route(Routes.Aether, 'routes/aether/route.tsx'),
     route(Routes.AetherNode, 'routes/aether_node/route.tsx'),

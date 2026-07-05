@@ -1,8 +1,8 @@
-import { expect, test } from 'vitest';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@vers/postgres-schema';
 import { createTestDB } from '@vers/service-test-utils';
 import { and, eq } from 'drizzle-orm';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { expect, test } from 'vitest';
 import { router } from '../router';
 import { t } from '../t';
 

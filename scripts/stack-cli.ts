@@ -11,9 +11,7 @@ import { status } from './stack/commands/status';
 import { stop } from './stack/commands/stop';
 import { parseServiceArg } from './stack/utils/parse-service-arg';
 
-const program = new Command()
-  .name('stack')
-  .description('CLI to manage the development stack');
+const program = new Command().name('stack').description('CLI to manage the development stack');
 
 program
   .command('start')

@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { expect, test } from 'vitest';
 import { PasswordChangedEmail } from './password-changed-email';
 
 test('it renders the password changed email with all required elements', () => {
@@ -16,8 +16,5 @@ test('it renders the password changed email with all required elements', () => {
   expect(heading).toBeInTheDocument();
   expect(emailText).toBeInTheDocument();
   expect(resetLink).toBeInTheDocument();
-  expect(resetLink).toHaveAttribute(
-    'href',
-    'https://versidle.com/forgot-password',
-  );
+  expect(resetLink).toHaveAttribute('href', 'https://versidle.com/forgot-password');
 });

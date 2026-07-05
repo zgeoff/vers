@@ -6,6 +6,11 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "codegen": "panda cssgen",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "dependencies": {
     "@ark-ui/react": "5.37.2",
     "@react-hookz/web": "25.1.0",
@@ -33,10 +38,5 @@
     "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"
-  },
-  "scripts": {
-    "codegen": "panda cssgen",
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

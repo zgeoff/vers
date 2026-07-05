@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import type { CompressedAetherNode } from './types';
 import { getAetherNodeMap } from './get-aether-node-map';
 import * as getRandomizedPosition from './get-randomized-position';
+import type { CompressedAetherNode } from './types';
 
 afterEach(() => {
   vi.restoreAllMocks();

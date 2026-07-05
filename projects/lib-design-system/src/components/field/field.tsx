@@ -1,6 +1,6 @@
-import * as React from 'react';
 import { Field as ArkField } from '@ark-ui/react/field';
 import { cx, sva } from '@vers/styled-system/css';
+import * as React from 'react';
 
 interface Props {
   className?: string;
@@ -78,14 +78,8 @@ export function Field(props: Props) {
         {...props.labelProps}
         className={cx(styles.label, props.labelProps.className)}
       />
-      <ArkField.Input
-        {...inputProps}
-        key={key}
-        className={cx(styles.input, className)}
-      />
-      <ArkField.ErrorText className={styles.errorText}>
-        {firstError}
-      </ArkField.ErrorText>
+      <ArkField.Input {...inputProps} key={key} className={cx(styles.input, className)} />
+      <ArkField.ErrorText className={styles.errorText}>{firstError}</ArkField.ErrorText>
     </ArkField.Root>
   );
 }

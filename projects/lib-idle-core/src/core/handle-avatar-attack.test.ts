@@ -1,10 +1,10 @@
 import { expect, test } from 'vitest';
-import type { AvatarAttackEvent, EquipmentWeapon } from '../types';
 import { createAvatar } from '../entities/create-avatar';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
+import type { AvatarAttackEvent, EquipmentWeapon } from '../types';
 import { CombatEventType, EquipmentSlot } from '../types';
 import { createActivity } from './create-activity';
 import { handleAvatarAttack } from './handle-avatar-attack';

@@ -17,14 +17,17 @@ Backend:
 
 - Web Server - [Hono](https://hono.dev)
 - Database - [PostgreSQL](https://postgresql.org) + [Drizzle ORM](https://orm.drizzle.team)
-- API Layer - [tRPC](https://trpc.io), [GraphQL](https://graphql.org) + [Pothos](https://pothos-graphql.dev)
-- Authentication - [TOTP](https://github.com/epicweb-dev/totp), [jose](https://github.com/panva/jose)
+- API Layer - [tRPC](https://trpc.io), [GraphQL](https://graphql.org) +
+  [Pothos](https://pothos-graphql.dev)
+- Authentication - [TOTP](https://github.com/epicweb-dev/totp),
+  [jose](https://github.com/panva/jose)
 - Email - [React Email](https://react.email), [Resend](https://resend.com)
 
 Development:
 
 - Build - [Vite](https://vitejs.dev), [esbuild](https://esbuild.github.io)
-- Testing - [Vitest](https://vitest.dev), [Playwright](https://playwright.dev), [MSW](https://mswjs.io)
+- Testing - [Vitest](https://vitest.dev), [Playwright](https://playwright.dev),
+  [MSW](https://mswjs.io)
 - Monorepo - [Turborepo](https://turborepo.dev)
 - Type Safety - [TypeScript](https://typescriptlang.org), [Zod](https://zod.dev)
 - Monitoring - [Sentry](https://sentry.io)
@@ -56,7 +59,8 @@ Libraries:
 - `lib-idle-core` - platform agnostic code for the idle simulation
 - `lib-panda-preset` - design tokens & panda css config
 - `lib-postgres-schema` - postgres schemas
-- `lib-service-runtime` - Elysia service runtime: createService, s2s auth, health, logging, OTel/Sentry wiring
+- `lib-service-runtime` - Elysia service runtime: createService, s2s auth, health, logging,
+  OTel/Sentry wiring
 - `lib-service-test-utils` - postgres test container & mock data utils
 - `lib-service-types` - tRPC service payload types
 - `lib-service-utils` - postgres, logging, jwt utils & hono middleware

@@ -1,6 +1,6 @@
-import * as React from 'react';
 import type { RecipeVariantProps, Styles } from '@vers/styled-system/css';
 import { cva, cx } from '@vers/styled-system/css';
+import * as React from 'react';
 import type { PolymorphicComponentProps } from '../../types';
 
 const button = cva({
@@ -151,25 +151,23 @@ const button = cva({
   },
 });
 
-export type ButtonProps<C extends React.ElementType = 'button'> =
-  RecipeVariantProps<typeof button> & {
-    as?: C;
-    children: React.ReactNode;
-    css?: Styles;
-  };
+export type ButtonProps<C extends React.ElementType = 'button'> = RecipeVariantProps<
+  typeof button
+> & {
+  as?: C;
+  children: React.ReactNode;
+  css?: Styles;
+};
 
-export type Props<C extends React.ElementType = 'button'> =
-  PolymorphicComponentProps<C, ButtonProps>;
+export type Props<C extends React.ElementType = 'button'> = PolymorphicComponentProps<
+  C,
+  ButtonProps
+>;
 
 export function Button<C extends React.ElementType>(props: Props<C>) {
   const { as, className, fullWidth, size, variant, ...restProps } = props;
 
   const Element = as ?? 'button';
 
-  return (
-    <Element
-      {...restProps}
-      className={cx(button({ fullWidth, size, variant }), className)}
-    />
-  );
+  return <Element {...restProps} className={cx(button({ fullWidth, size, variant }), className)} />;
 }

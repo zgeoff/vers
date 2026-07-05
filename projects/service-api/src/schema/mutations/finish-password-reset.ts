@@ -1,6 +1,6 @@
 import { generatePasswordChangedEmail } from '@vers/email-templates';
-import type { Context } from '~/types';
 import { logger } from '~/logger';
+import type { Context } from '~/types';
 import { SecureAction } from '~/types';
 import { verifyTransactionToken } from '~/utils/verify-transaction-token';
 import { builder } from '../builder';
@@ -52,11 +52,10 @@ export async function finishPasswordReset(
       return { success: true };
     }
 
-    const twoFactorVerification =
-      await ctx.services.verification.getVerification.query({
-        target: args.input.email,
-        type: '2fa',
-      });
+    const twoFactorVerification = await ctx.services.verification.getVerification.query({
+      target: args.input.email,
+      type: '2fa',
+    });
 
     const isValidTransaction = await verifyTransactionToken(
       {
@@ -107,13 +106,10 @@ const FinishPasswordResetInput = builder.inputType('FinishPasswordResetInput', {
   }),
 });
 
-const FinishPasswordResetPayload = builder.unionType(
-  'FinishPasswordResetPayload',
-  {
-    resolveType: createPayloadResolver(MutationSuccess),
-    types: [MutationSuccess, MutationErrorPayload],
-  },
-);
+const FinishPasswordResetPayload = builder.unionType('FinishPasswordResetPayload', {
+  resolveType: createPayloadResolver(MutationSuccess),
+  types: [MutationSuccess, MutationErrorPayload],
+});
 
 export const resolve = finishPasswordReset;
 

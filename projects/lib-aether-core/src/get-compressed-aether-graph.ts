@@ -6,9 +6,7 @@ import type { AetherNode, CompressedAetherNode } from './types';
  * @param nodes - The AetherNodes to serialize.
  * @returns An array of CompressedAetherNodes.
  */
-export function getCompressedAetherGraph(
-  nodes: Array<AetherNode>,
-): Array<CompressedAetherNode> {
+export function getCompressedAetherGraph(nodes: Array<AetherNode>): Array<CompressedAetherNode> {
   return nodes.map((node) => ({
     c: node.connections,
     d: node.difficulty,

@@ -1,9 +1,5 @@
 import type { TestProject } from 'vitest/node';
-import {
-  createPostgresContainer,
-  getContainerConnectionURI,
-  setupTestDB,
-} from './src/index';
+import { createPostgresContainer, getContainerConnectionURI, setupTestDB } from './src/index';
 
 declare module 'vitest' {
   export interface ProvidedContext {

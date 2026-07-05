@@ -28,7 +28,6 @@ export function SelectedNodeInfo(props: SelectedNodeInfoProps) {
           Difficulty <strong>{node.difficulty}</strong>
         </span>
         <Button
-
           // @ts-expect-error - polymorphic component issues. not worth it
           as={Link}
           className={styles.startButton}
