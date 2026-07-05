@@ -16,9 +16,6 @@ yarn build:<project>
 yarn dev:<project>
 yarn test:<project>
 
-# run graphql types codegen
-yarn codegen:graphql
-
 # run panda css codegen
 yarn codegen:styles
 
