@@ -1,5 +1,5 @@
 import { graphql, HttpResponse } from 'msw';
-import {
+import type {
   ChangeUserPasswordMutation,
   ChangeUserPasswordMutationVariables,
 } from '~/gql/graphql';

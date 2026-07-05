@@ -1,7 +1,7 @@
 import { data, Form, redirect } from 'react-router';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
-import { Class, ClassID } from '@vers/data';
+import { Class, type ClassID } from '@vers/data';
 import { Field, Heading, StatusButton } from '@vers/design-system';
 import { AvatarNameSchema } from '@vers/validation';
 import invariant from 'tiny-invariant';
@@ -15,6 +15,7 @@ import { Routes } from '~/types';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
 import { requireAuth } from '~/utils/require-auth.server';
+import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import type { Route } from './+types/route';
 import { ClassSelectionInput } from './class-selection-input';
@@ -101,7 +102,7 @@ export function AvatarCreate(props: Route.ComponentProps) {
     : StatusButton.Status.Idle;
 
   const handleSelectClass = (classID: ClassID) => {
-    form.update({ index: undefined, name: 'class', value: classID });
+    form.update({ name: 'class', value: classID });
   };
 
   return (
@@ -109,7 +110,7 @@ export function AvatarCreate(props: Route.ComponentProps) {
       <Heading level={1}>Create an Avatar</Heading>
       <Form method="POST" {...getFormProps(form)} className={styles.formStyles}>
         <ClassSelectionInput
-          {...omitKeyProp(getInputProps(fields.class, { type: 'hidden' }))}
+          {...toKeylessProps(getInputProps(fields.class, { type: 'hidden' }))}
           selected={fields.class.value as ClassID | undefined}
           onSelectClass={handleSelectClass}
         />
@@ -117,7 +118,7 @@ export function AvatarCreate(props: Route.ComponentProps) {
           className={styles.nameField}
           errors={fields.name.errors ?? []}
           inputProps={{
-            ...getInputProps(fields.name, { type: 'text' }),
+            ...toKeylessProps(getInputProps(fields.name, { type: 'text' })),
             autoComplete: 'name',
             onKeyDown: handleNameInputKeyDown,
             placeholder: 'Enter your name',
@@ -131,7 +132,7 @@ export function AvatarCreate(props: Route.ComponentProps) {
         >
           Create Avatar
         </StatusButton>
-        <FormErrorList errors={form.errors} />
+        <FormErrorList errors={form.errors ?? []} />
       </Form>
     </div>
   );
@@ -153,15 +154,4 @@ function handleNameInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
   if (!isBackspace && !isLetter) {
     event.preventDefault();
   }
-}
-
-/**
- * required to bypasss an annoying error thrown by conform-to's getFieldProps
- *
- * ref: https://github.com/edmundhung/conform/issues/620
- */
-function omitKeyProp(obj: Record<string, unknown>) {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([key]) => key !== 'key'),
-  );
 }

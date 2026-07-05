@@ -38,8 +38,8 @@ export enum Routes {
 }
 
 type TimingMetric =
-  | { description?: string; start: number; time?: never }
-  | { description?: string; start?: never; time: number };
+  | { description?: string | undefined; start: number; time?: never }
+  | { description?: string | undefined; start?: never; time: number };
 
 export type Timings = Record<string, Array<TimingMetric>>;
 

@@ -1,8 +1,8 @@
+import type { CreateUserPayload } from '@vers/service-types';
 import { createId } from '@paralleldrive/cuid2';
 import { TRPCError } from '@trpc/server';
 import { createSeed } from '@vers/game-utils';
 import * as schema from '@vers/postgres-schema';
-import { CreateUserPayload } from '@vers/service-types';
 import {
   hashPassword,
   isPGError,

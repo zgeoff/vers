@@ -12,7 +12,10 @@ import { logger } from './logger';
 import { rateLimitMiddleware } from './middleware/rate-limit-middleware';
 import { sessionHeaderMiddleware } from './middleware/session-header-middleware';
 
-app.use('*', sentry({ dsn: env.SENTRY_DSN }));
+app.use(
+  '*',
+  sentry(env.SENTRY_DSN === undefined ? undefined : { dsn: env.SENTRY_DSN }),
+);
 app.use('*', requestId());
 app.use('*', remoteAddressMiddleware);
 app.use('*', sessionHeaderMiddleware);

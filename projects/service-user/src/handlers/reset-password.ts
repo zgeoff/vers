@@ -1,6 +1,6 @@
+import type { ResetPasswordPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
-import { ResetPasswordPayload } from '@vers/service-types';
 import { hashPassword } from '@vers/service-utils';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';

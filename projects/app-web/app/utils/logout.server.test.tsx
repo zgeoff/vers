@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { createRoutesStub, LoaderFunctionArgs } from 'react-router';
+import { createRoutesStub, type LoaderFunctionArgs } from 'react-router';
 import { drop } from '@mswjs/data';
 import invariant from 'tiny-invariant';
 import { db } from '~/mocks/db';
@@ -45,7 +45,7 @@ function setupTest(config: TestConfig = {}) {
       Component: () => 'LOGOUT_ROUTE',
       loader: withAuthedUser(loader, {
         sessionID: config.sessionID,
-        user: { id: config.userID },
+        user: { ...(config.userID !== undefined && { id: config.userID }) },
       }),
       path: '/logout',
     },

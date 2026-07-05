@@ -18,6 +18,7 @@ import { Routes } from '~/types';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
 import { requireAuth } from '~/utils/require-auth.server';
+import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import type { Route } from './+types/route';
 import { QueryParam } from '../verify-otp/types';
@@ -130,7 +131,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
     {
       input: {
         email: submission.value.email,
-        transactionToken: transactionToken,
+        ...(transactionToken !== undefined && { transactionToken }),
       },
     },
   );
@@ -207,7 +208,7 @@ export function AccountChangeUserEmail(props: Route.ComponentProps) {
           <Field
             errors={fields.email.errors ?? []}
             inputProps={{
-              ...getInputProps(fields.email, { type: 'email' }),
+              ...toKeylessProps(getInputProps(fields.email, { type: 'email' })),
               autoComplete: 'email',
               placeholder: 'your.new.email@example.com',
             }}

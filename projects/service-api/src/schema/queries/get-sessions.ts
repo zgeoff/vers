@@ -14,7 +14,7 @@ interface Args {
 
 export async function getSessions(
   _: object,
-  args: Args,
+  _args: Args,
   ctx: Context,
 ): Promise<Array<typeof Session.$inferType>> {
   invariant(ctx.user, 'user is required in an authed resolver');

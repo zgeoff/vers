@@ -1,7 +1,7 @@
 import { type Submission } from '@conform-to/react';
 import { Client } from '@urql/core';
 import { z } from 'zod';
-import { type VerifyOTPFormSchema } from './route';
+import type { VerifyOTPFormSchema } from './route';
 
 export enum QueryParam {
   Code = 'code',

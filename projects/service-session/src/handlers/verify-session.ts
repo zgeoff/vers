@@ -1,6 +1,6 @@
+import type { VerifySessionPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
-import { VerifySessionPayload } from '@vers/service-types';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Context } from '../types';

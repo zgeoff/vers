@@ -5,12 +5,12 @@ import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
 import {
-  ActivityCheckpoint,
+  type ActivityCheckpoint,
   ActivityCheckpointType,
   ActivityFailureAction,
   ActivityType,
   EquipmentSlot,
-  EquipmentWeapon,
+  type EquipmentWeapon,
 } from '../types';
 import { createActivity } from './create-activity';
 import { createCombatExecutor } from './create-combat-executor';

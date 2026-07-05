@@ -1,5 +1,5 @@
+import type { SendEmailPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
-import { SendEmailPayload } from '@vers/service-types';
 import { Resend } from 'resend';
 import { z } from 'zod';
 import type { Context } from '../types';
@@ -18,8 +18,7 @@ export const SendEmailInputSchema = z.object({
 
 export async function sendEmail(
   input: z.infer<typeof SendEmailInputSchema>,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ctx: Context,
+  _ctx: Context,
 ): Promise<SendEmailPayload> {
   try {
     const { html, plainText, subject, to } = input;

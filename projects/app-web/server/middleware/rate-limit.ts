@@ -2,9 +2,9 @@ import type { Context, Next } from 'hono';
 import { rateLimiter } from 'hono-rate-limiter';
 import { Routes } from '~/types';
 
-const IS_PROD = process.env.NODE_ENV === 'production';
+const IS_PROD = process.env['NODE_ENV'] === 'production';
 const maxMultiple =
-  !IS_PROD || process.env.PLAYWRIGHT_TEST_BASE_URL ? 10_000 : 1;
+  !IS_PROD || process.env['PLAYWRIGHT_TEST_BASE_URL'] ? 10_000 : 1;
 
 type RateLimit = Parameters<typeof rateLimiter>[0];
 

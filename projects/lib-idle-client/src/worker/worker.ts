@@ -1,4 +1,4 @@
-import { ClientMessage } from 'src/types';
+import type { ClientMessage } from 'src/types';
 import invariant from 'tiny-invariant';
 import { connections } from './connections';
 import { handleClientMessage } from './handle-client-message';

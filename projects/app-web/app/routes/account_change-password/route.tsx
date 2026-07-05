@@ -17,6 +17,7 @@ import { Routes } from '~/types';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
 import { requireAuth } from '~/utils/require-auth.server';
+import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import { ConfirmPasswordSchema } from '~/validation/confirm-password-schema';
 import type { Route } from './+types/route';
@@ -137,7 +138,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
       input: {
         currentPassword: submission.value.currentPassword,
         newPassword: submission.value.password,
-        transactionToken,
+        ...(transactionToken !== undefined && { transactionToken }),
       },
     },
   );
@@ -205,7 +206,9 @@ export function AccountChangeUserPassword(props: Route.ComponentProps) {
           <Field
             errors={fields.currentPassword.errors ?? []}
             inputProps={{
-              ...getInputProps(fields.currentPassword, { type: 'password' }),
+              ...toKeylessProps(
+                getInputProps(fields.currentPassword, { type: 'password' }),
+              ),
               autoComplete: 'current-password',
               autoFocus: true,
               placeholder: '********',
@@ -215,7 +218,9 @@ export function AccountChangeUserPassword(props: Route.ComponentProps) {
           <Field
             errors={fields.password.errors ?? []}
             inputProps={{
-              ...getInputProps(fields.password, { type: 'password' }),
+              ...toKeylessProps(
+                getInputProps(fields.password, { type: 'password' }),
+              ),
               autoComplete: 'new-password',
               placeholder: '********',
             }}
@@ -224,7 +229,9 @@ export function AccountChangeUserPassword(props: Route.ComponentProps) {
           <Field
             errors={fields.confirmPassword.errors ?? []}
             inputProps={{
-              ...getInputProps(fields.confirmPassword, { type: 'password' }),
+              ...toKeylessProps(
+                getInputProps(fields.confirmPassword, { type: 'password' }),
+              ),
               autoComplete: 'new-password',
               placeholder: '********',
             }}

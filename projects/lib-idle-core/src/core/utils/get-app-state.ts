@@ -6,8 +6,8 @@ export function getAppState(state: SimulationState): SimulationAppState {
   const avatar = state.avatar?.getAppState();
 
   return {
-    activity,
-    avatar,
-    combat,
+    ...(activity !== undefined && { activity }),
+    ...(avatar !== undefined && { avatar }),
+    ...(combat !== undefined && { combat }),
   };
 }

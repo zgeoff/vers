@@ -69,7 +69,11 @@ export const preset = definePreset({
     '--font-karla': 'Karla, sans-serif',
   },
   name: 'vers-preset',
-  presets: [defaultPreset],
+  presets: [
+    // @ts-expect-error - pandacss's bundled default preset doesn't satisfy its own
+    // Preset type under exactOptionalPropertyTypes
+    defaultPreset,
+  ],
   theme: {
     extend: {
       keyframes: {

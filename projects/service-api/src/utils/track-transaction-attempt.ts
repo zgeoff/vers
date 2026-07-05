@@ -18,7 +18,9 @@ export function trackTransactionAttempt(transactionID: string) {
   }
 
   if (pendingTransaction.attempts === MAX_TRANSACTION_ATTEMPTS - 1) {
-    return pendingTransactionCache.delete(transactionID);
+    pendingTransactionCache.delete(transactionID);
+
+    return;
   }
 
   // increment our attempts by 1

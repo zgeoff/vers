@@ -1,5 +1,5 @@
+import type { VectorTuple } from '../types';
 import { NODE_POSITION_SCALING_FACTOR } from '../consts';
-import { VectorTuple } from '../types';
 
 /**
  * convert a given x,y position to an x,y,z

@@ -23,7 +23,7 @@ export function buildRPCTestClient<TContract extends AnyContractRouter>(
 ): ContractRouterClient<TContract> {
   const link = new RPCLink<Record<never, never>>({
     fetch: (request) => Promise.resolve(app.handle(request)),
-    headers: options?.headers,
+    ...(options?.headers !== undefined && { headers: options.headers }),
     url: options?.url ?? 'http://test.local/rpc',
   });
 

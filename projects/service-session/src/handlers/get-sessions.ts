@@ -1,6 +1,6 @@
+import type { GetSessionsPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
-import { GetSessionsPayload } from '@vers/service-types';
 import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Context } from '../types';

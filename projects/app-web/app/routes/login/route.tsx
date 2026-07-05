@@ -34,6 +34,7 @@ import { checkHoneypot } from '~/utils/check-honeypot.server';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
 import { requireAnonymous } from '~/utils/require-anonymous.server';
+import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import { FormBooleanSchema } from '~/validation/form-boolean-schema';
 import type { Route } from './+types/route';
@@ -218,7 +219,7 @@ export function Login(props: Route.ComponentProps) {
         <Field
           errors={fields.email.errors ?? []}
           inputProps={{
-            ...getInputProps(fields.email, { type: 'email' }),
+            ...toKeylessProps(getInputProps(fields.email, { type: 'email' })),
             autoComplete: 'email',
             placeholder: 'your.email@example.com',
           }}
@@ -227,7 +228,9 @@ export function Login(props: Route.ComponentProps) {
         <Field
           errors={fields.password.errors ?? []}
           inputProps={{
-            ...getInputProps(fields.password, { type: 'password' }),
+            ...toKeylessProps(
+              getInputProps(fields.password, { type: 'password' }),
+            ),
             autoComplete: 'current-password',
             placeholder: '********',
           }}
@@ -235,7 +238,9 @@ export function Login(props: Route.ComponentProps) {
         />
         <input {...getInputProps(fields.redirect, { type: 'hidden' })} />
         <CheckboxField
-          checkboxProps={getInputProps(fields.rememberMe, { type: 'checkbox' })}
+          checkboxProps={toKeylessProps(
+            getInputProps(fields.rememberMe, { type: 'checkbox' }),
+          )}
           errors={fields.rememberMe.errors ?? []}
           labelProps={{ children: 'Remember me' }}
         />

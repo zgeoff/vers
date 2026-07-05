@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { createRoutesStub, LoaderFunction } from 'react-router';
+import { createRoutesStub, type LoaderFunction } from 'react-router';
 import { drop } from '@mswjs/data';
 import { graphql, HttpResponse } from 'msw';
 import { db } from '~/mocks/db';

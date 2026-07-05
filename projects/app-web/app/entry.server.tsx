@@ -47,7 +47,7 @@ export default function handleRequest(
   reactRouterContext: EntryContext,
   loadContext: AppLoadContext,
 ) {
-  if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
+  if (process.env['NODE_ENV'] === 'production' && process.env['SENTRY_DSN']) {
     responseHeaders.append('Document-Policy', 'js-profiling');
   }
 

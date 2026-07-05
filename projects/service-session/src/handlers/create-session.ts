@@ -1,7 +1,7 @@
+import type { CreateSessionPayload } from '@vers/service-types';
 import { createId } from '@paralleldrive/cuid2';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
-import { CreateSessionPayload } from '@vers/service-types';
 import { z } from 'zod';
 import type { Context } from '../types';
 import * as consts from '../consts';

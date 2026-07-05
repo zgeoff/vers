@@ -11,7 +11,7 @@ Session.implement({
     expiresAt: t.expose('expiresAt', { type: 'DateTime' }),
     id: t.exposeID('id'),
     user: t.field({
-      resolve: async (parent, args, ctx) => {
+      resolve: async (parent, _args, ctx) => {
         const user = await ctx.services.user.getUser.query({
           id: parent.userID,
         });

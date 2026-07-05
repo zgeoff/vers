@@ -1,6 +1,6 @@
+import type { AuthedContext } from '~/types';
 import { logger } from '~/logger';
 import { SecureAction } from '~/types';
-import { AuthedContext } from '~/types';
 import { verifyTransactionToken } from '~/utils/verify-transaction-token';
 import { builder } from '../builder';
 import { UNKNOWN_ERROR } from '../errors';

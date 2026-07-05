@@ -1,6 +1,6 @@
+import type { UpdateAvatarPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
-import { UpdateAvatarPayload } from '@vers/service-types';
 import { AvatarNameSchema } from '@vers/validation';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';

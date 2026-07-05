@@ -1,5 +1,5 @@
 import { graphql, HttpResponse } from 'msw';
-import { DeleteSessionInput, DeleteSessionPayload } from '~/gql/graphql';
+import type { DeleteSessionInput, DeleteSessionPayload } from '~/gql/graphql';
 import { db } from '../../db';
 
 interface DeleteSessionVariables {

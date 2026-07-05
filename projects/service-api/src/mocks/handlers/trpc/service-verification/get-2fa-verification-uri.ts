@@ -1,6 +1,6 @@
+import type { Get2FAVerificationURIPayload } from '@vers/service-types';
 import { getTOTPAuthUri } from '@epic-web/totp';
 import { TRPCError } from '@trpc/server';
-import { Get2FAVerificationURIPayload } from '@vers/service-types';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 

@@ -1,4 +1,4 @@
-import { AppLoadContext } from 'react-router';
+import type { AppLoadContext } from 'react-router';
 import { handle401Error } from './handle-401-error';
 
 interface DataFnArgs {

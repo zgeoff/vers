@@ -4,7 +4,9 @@ import { db } from './src/db';
 import { pg } from './src/pg';
 
 Sentry.init({
-  dsn: process.env.SENTRY_DSN,
+  ...(process.env['SENTRY_DSN'] !== undefined && {
+    dsn: process.env['SENTRY_DSN'],
+  }),
 });
 
 try {

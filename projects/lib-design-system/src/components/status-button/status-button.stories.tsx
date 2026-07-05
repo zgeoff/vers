@@ -80,6 +80,8 @@ function useEmulateSubmit(config: EmulateSubmitConfig) {
 
       return () => clearTimeout(timeout);
     }
+
+    return;
   }, [submitting, setSubmitting, config.success]);
 
   return { handleSubmit, resetStatus, status };

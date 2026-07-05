@@ -37,7 +37,7 @@ export async function createGQLClient(request: Request): Promise<Client> {
         const headers: Record<string, string> = {};
 
         if (accessToken) {
-          headers.authorization = `Bearer ${accessToken}`;
+          headers['authorization'] = `Bearer ${accessToken}`;
         }
 
         if (unverifiedSessionID) {

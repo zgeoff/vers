@@ -24,6 +24,7 @@ import { Routes } from '~/types';
 import { checkHoneypot } from '~/utils/check-honeypot.server';
 import { handleGQLError } from '~/utils/handle-gql-error';
 import { isMutationError } from '~/utils/is-mutation-error';
+import { toKeylessProps } from '~/utils/to-keyless-props';
 import { withErrorHandling } from '~/utils/with-error-handling';
 import { ConfirmPasswordSchema } from '~/validation/confirm-password-schema';
 import { FormBooleanSchema } from '~/validation/form-boolean-schema';
@@ -181,7 +182,7 @@ export function Onboarding(props: Route.ComponentProps) {
         <Field
           errors={fields.username.errors ?? []}
           inputProps={{
-            ...getInputProps(fields.username, { type: 'text' }),
+            ...toKeylessProps(getInputProps(fields.username, { type: 'text' })),
             autoComplete: 'username',
             autoFocus: true,
             placeholder: 'john_smith13',
@@ -191,7 +192,7 @@ export function Onboarding(props: Route.ComponentProps) {
         <Field
           errors={fields.name.errors ?? []}
           inputProps={{
-            ...getInputProps(fields.name, { type: 'text' }),
+            ...toKeylessProps(getInputProps(fields.name, { type: 'text' })),
             autoComplete: 'name',
             placeholder: 'John Smith',
           }}
@@ -200,7 +201,9 @@ export function Onboarding(props: Route.ComponentProps) {
         <Field
           errors={fields.password.errors ?? []}
           inputProps={{
-            ...getInputProps(fields.password, { type: 'password' }),
+            ...toKeylessProps(
+              getInputProps(fields.password, { type: 'password' }),
+            ),
             autoComplete: 'new-password',
             placeholder: '********',
           }}
@@ -209,23 +212,29 @@ export function Onboarding(props: Route.ComponentProps) {
         <Field
           errors={fields.confirmPassword.errors ?? []}
           inputProps={{
-            ...getInputProps(fields.confirmPassword, { type: 'password' }),
+            ...toKeylessProps(
+              getInputProps(fields.confirmPassword, { type: 'password' }),
+            ),
             autoComplete: 'new-password',
             placeholder: '********',
           }}
           labelProps={{ children: 'Confirm Password' }}
         />
         <CheckboxField
-          checkboxProps={getInputProps(fields.agreeToTerms, {
-            type: 'checkbox',
-          })}
+          checkboxProps={toKeylessProps(
+            getInputProps(fields.agreeToTerms, {
+              type: 'checkbox',
+            }),
+          )}
           errors={fields.agreeToTerms.errors ?? []}
           labelProps={{ children: 'Agree to terms' }}
         />
         <CheckboxField
-          checkboxProps={getInputProps(fields.rememberMe, {
-            type: 'checkbox',
-          })}
+          checkboxProps={toKeylessProps(
+            getInputProps(fields.rememberMe, {
+              type: 'checkbox',
+            }),
+          )}
           errors={fields.rememberMe.errors ?? []}
           labelProps={{ children: 'Remember me' }}
         />

@@ -14,19 +14,19 @@ interface SessionFlashData {
   error: string;
 }
 
-invariant(process.env.SESSION_SECRET, '$SESSION_SECRET is required');
+invariant(process.env['SESSION_SECRET'], '$SESSION_SECRET is required');
 
 export const authSessionStorage = createCookieSessionStorage<
   SessionData,
   SessionFlashData
 >({
   cookie: {
-    domain: import.meta.env.VITE_DOMAIN,
+    domain: import.meta.env['VITE_DOMAIN'],
     httpOnly: true,
     name: 'en_session',
     path: '/',
     sameSite: 'lax',
-    secrets: [process.env.SESSION_SECRET],
+    secrets: [process.env['SESSION_SECRET']],
 
     // only use secure cookies in prod because Safari doesn't allow setting secure cookies
     // for HTTP requests i.e. localhost which breaks our e2e
@@ -60,7 +60,7 @@ Object.defineProperty(authSessionStorage, 'commitSession', {
 
     const setCookieHeader = await originalCommitSession(session, {
       ...options,
-      expires,
+      ...(expires !== undefined && { expires }),
     });
 
     return setCookieHeader;

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { RecipeVariantProps } from '@vers/styled-system/css';
 import { cva, cx } from '@vers/styled-system/css';
-import { PolymorphicComponentProps } from '../../types';
+import type { PolymorphicComponentProps } from '../../types';
 
 export type TextProps<C extends React.ElementType = 'p'> = RecipeVariantProps<
   typeof text

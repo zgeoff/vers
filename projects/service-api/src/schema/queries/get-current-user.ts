@@ -1,4 +1,4 @@
-import { AuthedContext } from '~/types';
+import type { AuthedContext } from '~/types';
 import { builder } from '../builder';
 import { User } from '../types/user';
 import { requireAuth } from '../utils/require-auth';

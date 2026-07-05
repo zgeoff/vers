@@ -21,7 +21,7 @@ function setupTest(config: TestConfig = {}) {
   const TestRoutesStub = createRoutesStub([
     {
       Component: () => 'TEST_ROUTE',
-      loader: config.isAuthed ? withAuthedUser(loader) : undefined,
+      ...(config.isAuthed && { loader: withAuthedUser(loader) }),
       path: '/',
     },
     {

@@ -8,7 +8,7 @@ const sortedClasses = [Class.Brute, Class.Scoundrel, Class.Scholar];
 interface Props {
   id?: string;
   onSelectClass: (classID: (typeof Class)[keyof typeof Class]) => void;
-  selected?: (typeof Class)[keyof typeof Class];
+  selected?: (typeof Class)[keyof typeof Class] | undefined;
 }
 
 export function ClassSelectionInput(props: Props) {

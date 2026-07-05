@@ -70,8 +70,8 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
       const slotStyles = React.useContext(StyleContext);
 
       const className =
-        'className' in props && typeof props.className === 'string'
-          ? cx(slotStyles?.[slot ?? ''], props.className)
+        'className' in props && typeof props['className'] === 'string'
+          ? cx(slotStyles?.[slot ?? ''], props['className'])
           : slotStyles?.[slot ?? ''];
 
       return React.createElement(Component, {

@@ -31,35 +31,45 @@ export function createMockGQLContext(config: MockContextConfig): Context {
     config.session?.ipAddress ?? config.ipAddress ?? '127.0.0.1';
 
   const avatar = createTRPCClient<AvatarServiceRouter>({
-    accessToken: config.accessToken,
+    ...(config.accessToken !== undefined && {
+      accessToken: config.accessToken,
+    }),
     apiURL: env.AVATARS_SERVICE_URL,
     requestID,
     serviceID: ServiceID.ServiceAvatar,
   });
 
   const email = createTRPCClient<EmailServiceRouter>({
-    accessToken: config.accessToken,
+    ...(config.accessToken !== undefined && {
+      accessToken: config.accessToken,
+    }),
     apiURL: env.EMAILS_SERVICE_URL,
     requestID,
     serviceID: ServiceID.ServiceEmail,
   });
 
   const user = createTRPCClient<UserServiceRouter>({
-    accessToken: config.accessToken,
+    ...(config.accessToken !== undefined && {
+      accessToken: config.accessToken,
+    }),
     apiURL: env.USERS_SERVICE_URL,
     requestID,
     serviceID: ServiceID.ServiceUser,
   });
 
   const session = createTRPCClient<SessionServiceRouter>({
-    accessToken: config.accessToken,
+    ...(config.accessToken !== undefined && {
+      accessToken: config.accessToken,
+    }),
     apiURL: env.SESSIONS_SERVICE_URL,
     requestID,
     serviceID: ServiceID.ServiceSession,
   });
 
   const verification = createTRPCClient<VerificationServiceRouter>({
-    accessToken: config.accessToken,
+    ...(config.accessToken !== undefined && {
+      accessToken: config.accessToken,
+    }),
     apiURL: env.VERIFICATIONS_SERVICE_URL,
     requestID,
     serviceID: ServiceID.ServiceVerification,

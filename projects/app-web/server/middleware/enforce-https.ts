@@ -11,4 +11,6 @@ export async function enforceHTTPS(ctx: Context, next: Next) {
   }
 
   await next();
+
+  return;
 }

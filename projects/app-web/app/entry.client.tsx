@@ -2,7 +2,7 @@ import { startTransition, StrictMode } from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { HydratedRouter } from 'react-router/dom';
 
-if (import.meta.env.PROD && import.meta.env.SENTRY_DSN) {
+if (import.meta.env.PROD && import.meta.env['SENTRY_DSN']) {
   // eslint-disable-next-line unicorn/prefer-top-level-await
   void import('./utils/init-sentry.client').then(({ initSentry }) =>
     initSentry(),

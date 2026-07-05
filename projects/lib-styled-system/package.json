@@ -16,7 +16,7 @@
     "react": "catalog:"
   },
   "devDependencies": {
-    "@pandacss/dev": "1.11.3",
+    "@pandacss/dev": "1.11.4",
     "typescript": "catalog:"
   },
   "scripts": {

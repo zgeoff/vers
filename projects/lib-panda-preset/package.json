@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@pandacss/dev": "1.11.3"
+    "@pandacss/dev": "1.11.4"
   },
   "devDependencies": {
     "typescript": "catalog:"

@@ -33,7 +33,7 @@ export function RouteErrorBoundary() {
   }
 
   const errorMessage =
-    process.env.NODE_ENV === 'production' ? (
+    process.env['NODE_ENV'] === 'production' ? (
       <Text>
         Sorry, an unknown error occurred. Please try again later. If the problem
         persists, please <Link to={Routes.Contact}>contact support</Link>.

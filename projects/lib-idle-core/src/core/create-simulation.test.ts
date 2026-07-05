@@ -176,9 +176,5 @@ test('it returns the expected simulation state for a client app', () => {
 
   const state = simulation.getAppState();
 
-  expect(state).toStrictEqual({
-    activity: undefined,
-    avatar: undefined,
-    combat: undefined,
-  });
+  expect(state).toStrictEqual({});
 });

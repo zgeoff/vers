@@ -30,7 +30,7 @@ const outdir = path.join(projectDir, 'dist');
 fs.rmSync(outdir, { force: true, recursive: true });
 
 await esbuild.build({
-  banner: config.banner,
+  ...(config.banner !== undefined && { banner: config.banner }),
   bundle: true,
   entryPoints: [config.entryPoint],
   external: config.external ?? [],

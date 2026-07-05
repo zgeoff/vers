@@ -1,4 +1,4 @@
-import { Enemy, EntityStatus } from '../../types';
+import { type Enemy, EntityStatus } from '../../types';
 
 export function handleReceiveEnemyDamage(amount: number, entity: Enemy): void {
   // prevent negative life

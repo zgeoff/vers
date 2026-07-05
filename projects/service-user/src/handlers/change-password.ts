@@ -1,6 +1,6 @@
+import type { ChangePasswordPayload } from '@vers/service-types';
 import { TRPCError } from '@trpc/server';
 import * as schema from '@vers/postgres-schema';
-import { ChangePasswordPayload } from '@vers/service-types';
 import { hashPassword } from '@vers/service-utils';
 import { PasswordSchema } from '@vers/validation';
 import { eq } from 'drizzle-orm';

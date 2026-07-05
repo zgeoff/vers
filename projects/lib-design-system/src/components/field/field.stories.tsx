@@ -18,12 +18,17 @@ export const Default = () => {
     shouldRevalidate: 'onBlur',
   });
 
+  const { key: _firstNameKey, ...firstNameInputProps } = getInputProps(
+    fields.firstName,
+    { type: 'text' },
+  );
+
   return (
     <form {...getFormProps(form)}>
       <Field
         errors={fields.firstName.errors ?? []}
         inputProps={{
-          ...getInputProps(fields.firstName, { type: 'text' }),
+          ...firstNameInputProps,
           placeholder: 'Enter your first name',
         }}
         labelProps={{

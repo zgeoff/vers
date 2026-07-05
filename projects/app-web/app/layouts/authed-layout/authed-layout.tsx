@@ -18,8 +18,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
   return {};
 });
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function AuthedLayout(props: Route.ComponentProps) {
+export function AuthedLayout(_props: Route.ComponentProps) {
   const worker = useSimulationWorker();
   const initialized = useSimulationInitialized();
 

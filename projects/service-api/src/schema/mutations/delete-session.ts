@@ -1,5 +1,5 @@
+import type { AuthedContext } from '~/types';
 import { logger } from '~/logger';
-import { AuthedContext } from '~/types';
 import { builder } from '../builder';
 import { UNKNOWN_ERROR } from '../errors';
 import { MutationErrorPayload } from '../types/mutation-error-payload';
@@ -23,7 +23,7 @@ const DeleteSessionPayload = builder.unionType('DeleteSessionPayload', {
 });
 
 export async function deleteSession(
-  root: unknown,
+  _: unknown,
   args: Args,
   ctx: AuthedContext,
 ): Promise<typeof DeleteSessionPayload.$inferType> {

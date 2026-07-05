@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vitest';
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { remoteAddressMiddleware } from './remote-address-middleware';
 

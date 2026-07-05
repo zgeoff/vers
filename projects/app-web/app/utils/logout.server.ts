@@ -8,8 +8,8 @@ import { combineHeaders } from './combine-headers.server';
 import { createGQLClient } from './create-gql-client.server';
 
 interface LogoutOptions {
-  deleteSession?: boolean;
-  redirectTo?: string;
+  deleteSession?: boolean | undefined;
+  redirectTo?: string | undefined;
   responseInit?: ResponseInit;
 }
 

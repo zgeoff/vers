@@ -1,8 +1,8 @@
-import { generateTOTP } from '@epic-web/totp';
-import {
+import type {
   CreateVerificationPayload,
   VerificationType,
 } from '@vers/service-types';
+import { generateTOTP } from '@epic-web/totp';
 import { db } from '../../../db';
 import { trpc } from './trpc';
 

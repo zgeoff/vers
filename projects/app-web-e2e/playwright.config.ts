@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.BASE_URL ?? 'http://localhost:4000';
+const baseURL = process.env['BASE_URL'] ?? 'http://localhost:4000';
 
 // having a million issues trying to use __dirname to establish a reliable path
 // so it's easier to do this to handle the case when this file gets parsed for
@@ -37,7 +37,7 @@ export default defineConfig({
   ],
   // one retry absorbs the full page reload vite forces when a code-split
   // route pulls in a dependency the warmup pass didn't reach
-  retries: process.env.CI ? 1 : 0,
+  retries: process.env['CI'] ? 1 : 0,
   timeout: 30 * 1000,
   use: {
     baseURL,
@@ -47,11 +47,11 @@ export default defineConfig({
   webServer: {
     command: 'bun run dev:app-web',
     cwd: workspaceRoot,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !process.env['CI'],
     stderr: 'pipe',
     stdout: 'pipe',
     timeout: 60 * 1000,
     url: 'http://localhost:4000',
   },
-  workers: process.env.CI ? 1 : undefined,
+  ...(process.env['CI'] && { workers: 1 }),
 });
