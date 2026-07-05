@@ -1,0 +1,6 @@
+# Mechanical whole-repo reformats — pass to git blame via
+# --ignore-revs-file, or set it once with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style(#188): reformat repo with oxfmt
+c392f51ae9c27449cbc3edbb9add879b5c583362
