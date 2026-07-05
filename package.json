@@ -38,7 +38,7 @@
     "build": "turbo run build",
     "build:agents": "bash scripts/build-agents-md.sh agents/shared.md agents/project.md AGENTS.md",
     "boundaries": "turbo boundaries",
-    "lint": "oxlint --report-unused-disable-directives-severity error",
+    "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "lint:type-aware": "oxlint --type-aware --type-check --report-unused-disable-directives-severity error",
     "test": "turbo run test",

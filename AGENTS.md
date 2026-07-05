@@ -250,14 +250,21 @@ strings/numbers.
 - `bun run test` — `turbo run test` (per-project `vitest run`); one project via `--filter`.
   Postgres-backed suites need `bun run pg:test-container:start` first.
 - `bun run lint` / `bun run lint:fix` — `oxlint` over the whole tree (`.oxlintrc.json` at the root);
-  not a turbo task, oxlint covers everything in one fast invocation.
-- `bun run lint:type-aware` — `oxlint --type-aware --type-check` (oxlint-tsgolint underneath, needs
-  the TS7 toolchain). Runs after plain lint in CI. A handful of type-aware rules are off with a
-  comment in `.oxlintrc.json`: some for good (documented, permanent) reasons — app-web's
-  `only-throw-error` exception for react-router's throw-a-Response idiom — others because turning on
-  real type info for the first time surfaced a large pre-existing backlog unrelated to any one
-  change (`no-unsafe-assignment`, `prefer-readonly-parameter-types`, and others), left for a
-  dedicated follow-up rather than folded into whatever PR happened to flip the switch.
+  not a turbo task, oxlint covers everything in one fast invocation. It runs without
+  `--report-unused-disable-directives-severity`: oxlint can't tell whether a directive for a
+  type-aware rule is stale without type info, so it would flag every inline `#236` baseline comment
+  as unused. `lint:type-aware` is a superset of the same rules plus type info, so it's the one gate
+  that can actually judge those directives.
+- `bun run lint:type-aware` —
+  `oxlint --type-aware --type-check --report-unused-disable-directives-severity error`
+  (oxlint-tsgolint underneath, needs the TS7 toolchain). Runs after plain lint in CI. Every
+  type-aware rule is on; `only-throw-error`'s app-web override is the one permanent, documented
+  exception. #217's original backlog (~1,047 sites) is baselined inline with
+  `// oxlint-disable-next-line <rule> -- baseline(#236)` comments rather than left off in config —
+  the unused-directive check is the ratchet: fixing a baselined site makes its comment stale and
+  this command fails until the comment is deleted. `lib-idle-core`/`lib-aether-core` tick/lifecycle
+  handlers that mutate their entity parameter by design carry a real reason instead of the baseline
+  marker; those are permanent.
 - `bun run format` — `oxfmt .` (`.oxfmtrc.json` at the root), then `format-codemod` (blank-line
   padding) over the whole tree. The codemod has no ignore file, so its `--ignore` flags are what
   keep it off committed codegen output (`app/gql`, panda's `styled-system` dirs, react-router's

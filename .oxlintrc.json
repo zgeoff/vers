@@ -50,7 +50,8 @@
         "allowEnumStart": true,
         "allowInterfaceStart": true,
         "allowModuleStart": true,
-        "allowTypeStart": true
+        "allowTypeStart": true,
+        "ignorePattern": "oxlint-disable"
       }
     ],
 
@@ -152,32 +153,42 @@
 
     // these type-aware rules were nominally "on" via the categories above all
     // along, but oxlint's non-type-aware engine can't evaluate them without a
-    // type checker, so they were silently never checked. #217 wires up
-    // `lint:type-aware` (oxlint + tsgolint) for the first time, which surfaces
-    // real type info and lights all of these up at once -- a large pre-existing
+    // type checker, so they were silently never checked. #217 wired up
+    // `lint:type-aware` (oxlint + tsgolint) for the first time, which surfaced
+    // real type info and lit all of these up at once -- a large pre-existing
     // backlog unrelated to the TS7/panda2/node toolchain migration itself.
-    // tracked for a dedicated follow-up rather than folded into #217
-    // (`no-unsafe-assignment` is the other rule #217's original seam named;
-    // it stays off here for the same reason, its backlog is large enough to
-    // warrant its own pass)
-    "typescript/consistent-return": "off",
-    "typescript/consistent-type-exports": "off",
-    "typescript/no-confusing-void-expression": "off",
-    "typescript/no-deprecated": "off",
-    "typescript/no-misused-promises": "off",
-    "typescript/no-misused-spread": "off",
-    "typescript/no-unsafe-argument": "off",
-    "typescript/no-unsafe-assignment": "off",
-    "typescript/no-unsafe-member-access": "off",
-    "typescript/no-unsafe-type-assertion": "off",
-    "typescript/prefer-nullish-coalescing": "off",
-    "typescript/prefer-readonly-parameter-types": "off",
-    "typescript/prefer-regexp-exec": "off",
-    "typescript/require-await": "off",
-    "typescript/return-await": "off",
-    "typescript/strict-boolean-expressions": "off",
-    "typescript/strict-void-return": "off",
-    "typescript/unbound-method": "off",
+    // #236 turns every one of them on: the existing backlog is baselined
+    // inline at each violation site with an `oxlint-disable-next-line <rule>
+    // -- baseline(#236)` comment rather than left off in config. The ratchet
+    // is `lint:type-aware`'s `--report-unused-disable-directives-severity
+    // error`: fixing a baselined site makes its directive stale and that
+    // command fails until the comment is deleted, so debt only shrinks from
+    // here. Plain `lint` runs without that flag -- it has no type info, so it
+    // can't tell a stale directive from a live one and would flag all of
+    // these as unused; `lint:type-aware` is the superset run that actually
+    // judges them. New and refactored code is fully enforced from day one.
+    "typescript/consistent-return": "error",
+    "typescript/consistent-type-exports": "error",
+    "typescript/no-confusing-void-expression": "error",
+    "typescript/no-deprecated": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/no-misused-spread": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-type-assertion": "error",
+    "typescript/prefer-nullish-coalescing": "error",
+    // `lib-idle-core`/`lib-aether-core` tick/lifecycle handlers mutate their
+    // entity parameter in place by design -- those sites carry a real reason
+    // instead of a baseline marker (see the sim-core exception noted where
+    // they occur)
+    "typescript/prefer-readonly-parameter-types": ["error", { "ignoreInferredTypes": true }],
+    "typescript/prefer-regexp-exec": "error",
+    "typescript/require-await": "error",
+    "typescript/return-await": "error",
+    "typescript/strict-boolean-expressions": "error",
+    "typescript/strict-void-return": "error",
+    "typescript/unbound-method": "error",
 
     // vers-specific: rules oxlint's error-everywhere categories turn on that
     // the former eslint config (built from targeted `recommended` presets,
