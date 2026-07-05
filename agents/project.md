@@ -71,6 +71,12 @@ strings/numbers.
 - `bun run build` — `turbo run build`; one project via `--filter`.
 - `bun run e2e` — `turbo run e2e` (Playwright, `app-web-e2e`).
 - `bun run boundaries` — `turbo boundaries`.
+- Git hooks run through lefthook (`lefthook.yml`, installed via the root `prepare` script):
+  pre-commit fixes and codegens staged files only (oxlint, oxfmt, format-codemod, then
+  graphql/panda-styles/pg-migration codegen for the files that touch them); commit-msg enforces
+  commitlint; pre-push re-runs format/lint/typecheck across the whole tree, no tests (the
+  pg-testcontainer dependency makes push hooks flaky — CI owns tests). `LEFTHOOK=0` skips
+  everything; CI sets it since it never commits.
 
 ## Docker
 
@@ -98,8 +104,6 @@ See #160 for the full phase plan (turborepo + bun, spike-gated; shared configs a
 `zgeoff/tools`). This repo is mid-migration — several claims in `agents/shared.md` above describe
 the _target_ state, not this repo yet:
 
-- **lefthook** — not adopted. Git hooks are still husky + lint-staged (`.husky/`), minimally adapted
-  to invoke bun. Lands in #189.
 - **`bun test`** — not adopted. bun is the package manager and script runner only; all
   unit/integration tests run under vitest on node. Deferred past #160 to the rebuild (#163) — vitest
   stays until services move to the bun runtime.
@@ -107,6 +111,7 @@ the _target_ state, not this repo yet:
 oxlint/oxfmt and `@zgeoff/format-codemod` landed in #188 (the codemod installs through a tracked
 `minimumReleaseAgeExcludes` entry in `bunfig.toml` — #219 removes it once 0.0.2 ages past the gate).
 Type-aware lint (`oxlint --type-aware`/tsgolint) landed in #217 once the TS7 toolchain it needs was
-in place — see the Running Things Today section above for what's still off and why.
+in place — see the Running Things Today section above for what's still off and why. lefthook landed
+in #189, replacing husky + lint-staged.
 
 Don't "fix" these to match the shared partial mid-migration — follow the phase plan in #160 instead.
