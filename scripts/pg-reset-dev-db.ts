@@ -4,7 +4,9 @@ import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { oraPromise } from 'ora';
+import { migrateToLatest } from '../projects/lib-db/src/migrate-to-latest';
 import * as schema from '../projects/lib-postgres-schema/src/index';
+import { env } from './postgres/env';
 import { pg } from './postgres/pg';
 
 export const db = drizzle(pg, { schema });
@@ -102,6 +104,23 @@ async function resetDevDB() {
     }),
     migrationSpinnerConfig,
   );
+
+  const kyselyMigrationStart = Date.now();
+
+  const kyselyMigrationSpinnerConfig = {
+    failText: () => `Kysely migration failed in ${Date.now() - kyselyMigrationStart}ms`,
+    successText: () => `Kysely migration completed in ${Date.now() - kyselyMigrationStart}ms`,
+    text: 'Applying kysely migrations...',
+  };
+
+  const { error } = await oraPromise(
+    migrateToLatest({ databaseURL: env.DATABASE_URL }),
+    kyselyMigrationSpinnerConfig,
+  );
+
+  if (error !== undefined) {
+    throw error instanceof Error ? error : new Error('kysely migration failed', { cause: error });
+  }
 
   process.exit(0);
 }
