@@ -182,7 +182,6 @@
         "ignoreInferredTypes": true,
         "allow": [
           { "from": "package", "name": "Kysely", "package": "kysely" },
-          { "from": "package", "name": "Elysia", "package": "elysia" },
           { "from": "package", "name": "TestProject", "package": "vitest" },
           {
             "from": "package",

@@ -63,7 +63,7 @@ function buildTestContract() {
 type TestContract = ReturnType<typeof buildTestContract>;
 
 /** Builds an app whose getThing handler enforces the acting-user check the contract declares. */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the oRPC procedure builders returned by buildTestContract carry internal mutable state no local wrapper can mark readonly
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the oRPC procedure builders this test constructs carry internal mutable state no local wrapper can mark readonly
 function buildConformingApp(contract: TestContract): ConformanceCaseApp {
   const os = implement(contract).$context<{ actingUserId: null | string }>();
 
@@ -82,7 +82,7 @@ function buildConformingApp(contract: TestContract): ConformanceCaseApp {
 }
 
 /** Builds an app whose getThing handler skips the acting-user check, so anonymous calls succeed. */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the oRPC procedure builders returned by buildTestContract carry internal mutable state no local wrapper can mark readonly
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the oRPC procedure builders this test constructs carry internal mutable state no local wrapper can mark readonly
 function buildBrokenApp(contract: TestContract): ConformanceCaseApp {
   const os = implement(contract).$context<{ actingUserId: null | string }>();
 
