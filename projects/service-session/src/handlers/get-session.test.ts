@@ -1,111 +1,65 @@
-import { createId } from '@paralleldrive/cuid2';
-import * as schema from '@vers/postgres-schema';
-import { createTestDB, createTestUser } from '@vers/service-test-utils';
-import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { expect, test } from 'vitest';
-import { router } from '../router';
-import { t } from '../t';
+import { expect, test } from 'bun:test';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import type { SessionContract } from '@vers/contract-session';
+import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import { createSessionService } from '../create-session-service';
+import { createSessionRow } from '../test-utils/create-session-row';
 
-const createCaller = t.createCallerFactory(router);
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createSessionService({ db: db.db });
 
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-async function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
+test('it returns an owned session by id', async () => {
+  await using ctx = await setupTest();
+  const { token, user } = await createViewer({ audience: 'service-session', db: ctx.db });
+  const session = await createSessionRow(ctx.db, { userId: user.id });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  const user = await createTestUser(config.db);
+  const found = await client.getSession({ id: session.id });
 
-  return { caller, user };
-}
-
-test('it returns the requested session', async () => {
-  await using handle = await createTestDB();
-
-  const { db } = handle;
-
-  const { caller, user } = await setupTest({ db });
-
-  const sessionID = createId();
-
-  const now = new Date();
-
-  await db.insert(schema.sessions).values({
-    createdAt: now,
-    expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000), // 24 hours from now
-    id: sessionID,
-    ipAddress: '127.0.0.1',
-    refreshToken: createId(),
-    updatedAt: now,
+  expect(found).toStrictEqual({
+    createdAt: session.createdAt,
+    expiresAt: session.expiresAt,
+    id: session.id,
+    ipAddress: session.ipAddress,
+    updatedAt: session.updatedAt,
     userID: user.id,
-  });
-
-  const result = await caller.getSession({
-    id: sessionID,
-  });
-
-  expect(result).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    createdAt: expect.any(Date),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    expiresAt: expect.any(Date),
-    id: sessionID,
-    ipAddress: '127.0.0.1',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    updatedAt: expect.any(Date),
-    userID: user.id,
-    verified: false,
+    verified: session.verified,
   });
 });
 
-test('it returns null for non-existent session', async () => {
-  await using handle = await createTestDB();
+test('it returns null when the session belongs to a different user', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createViewer({ audience: 'service-session', db: ctx.db });
+  const other = await createViewer({ audience: 'service-session', db: ctx.db });
+  const foreign = await createSessionRow(ctx.db, { userId: other.user.id });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  const { db } = handle;
+  const found = await client.getSession({ id: foreign.id });
 
-  const { caller } = await setupTest({ db });
-
-  const result = await caller.getSession({
-    id: 'non-existent-id',
-  });
-
-  expect(result).toBeNull();
+  expect(found).toBeNull();
 });
 
-test('it deletes expired sessions and returns null', async () => {
-  await using handle = await createTestDB();
+test('it returns null for an id that does not exist', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createViewer({ audience: 'service-session', db: ctx.db });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  const { db } = handle;
+  const found = await client.getSession({ id: 'does-not-exist' });
 
-  const { caller, user } = await setupTest({ db });
+  expect(found).toBeNull();
+});
 
-  const sessionID = createId();
+test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  const now = new Date();
-
-  await db.insert(schema.sessions).values({
-    createdAt: now,
-    expiresAt: new Date(now.getTime() - 1000),
-    id: sessionID,
-    ipAddress: '127.0.0.1',
-    refreshToken: createId(),
-    updatedAt: now,
-    userID: user.id,
-    verified: false,
+  expect(client.getSession({ id: 'x' })).rejects.toMatchObject({
+    code: 'UNAUTHORIZED',
+    data: { reason: 'missing-session' },
   });
-
-  const result = await caller.getSession({
-    id: sessionID,
-  });
-
-  expect(result).toBeNull();
-
-  const session = await db.query.sessions.findFirst({
-    where: eq(schema.sessions.id, sessionID),
-  });
-
-  expect(session).toBeUndefined();
 });

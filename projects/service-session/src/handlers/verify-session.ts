@@ -1,70 +1,65 @@
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { VerifySessionPayload } from '@vers/service-types';
-import { and, eq } from 'drizzle-orm';
-import { z } from 'zod';
-import * as consts from '../consts';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
-import { createJWT } from '../utils/create-jwt';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import { ACCESS_TOKEN_DURATION } from '../consts';
+import { createJWT } from '../create-jwt';
+import type { EmptyErrorPayload, SessionSigningDeps } from '../types';
 
-export const VerifySessionInputSchema = z.object({
-  id: z.string(),
-});
-
-export async function verifySession(
-  input: z.infer<typeof VerifySessionInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<VerifySessionPayload> {
-  try {
-    const session = await ctx.db.query.sessions.findFirst({
-      where: and(eq(schema.sessions.id, input.id), eq(schema.sessions.verified, false)),
-    });
-
-    if (!session) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Session not found',
-      });
-    }
-
-    const refreshToken = await createJWT({
-      expiresAt: session.expiresAt,
-      userID: session.userID,
-    });
-
-    const accessToken = await createJWT({
-      expiresAt: new Date(Date.now() + consts.ACCESS_TOKEN_DURATION),
-      userID: session.userID,
-    });
-
-    await ctx.db
-      .update(schema.sessions)
-      .set({
-        refreshToken,
-        updatedAt: new Date(),
-        verified: true,
-      })
-      .where(eq(schema.sessions.id, session.id));
-
-    return { accessToken, refreshToken };
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
-  }
+/** oRPC handler opts for the public `verifySession` procedure. */
+interface VerifySessionOpts {
+  readonly errors: {
+    readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
+  };
+  readonly input: { readonly id: string };
 }
 
-export const procedure = t.procedure
-  .input(VerifySessionInputSchema)
-  .mutation((opts) => verifySession(opts.input, opts.ctx));
+/**
+ * Completes a 2FA-gated login: mints the session's first token pair, then flips `verified` in a
+ * conditional update guarded on the same `verified = false` precondition the select used, so a
+ * concurrent second verify of the same session finds no row to update.
+ */
+export async function verifySession(
+  db: Kysely<DB>,
+  deps: SessionSigningDeps,
+  opts: VerifySessionOpts,
+): Promise<{ accessToken: string; refreshToken: string }> {
+  const session = await db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('id', '=', opts.input.id)
+    .where('verified', '=', false)
+    .executeTakeFirst();
+
+  if (session === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  const accessTokenExpiresAt = new Date(Date.now() + ACCESS_TOKEN_DURATION);
+
+  const [refreshToken, accessToken] = await Promise.all([
+    createJWT({
+      apiIdentifier: deps.apiIdentifier,
+      expiresAt: session.expiresAt,
+      signingKey: deps.signingKey,
+      userID: session.userId,
+    }),
+    createJWT({
+      apiIdentifier: deps.apiIdentifier,
+      expiresAt: accessTokenExpiresAt,
+      signingKey: deps.signingKey,
+      userID: session.userId,
+    }),
+  ]);
+
+  const updateResult = await db
+    .updateTable('sessions')
+    .set({ refreshToken, verified: true })
+    .where('id', '=', session.id)
+    .where('verified', '=', false)
+    .executeTakeFirst();
+
+  if (updateResult.numUpdatedRows === 0n) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  return { accessToken, refreshToken };
+}

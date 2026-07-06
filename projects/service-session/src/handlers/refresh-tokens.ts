@@ -1,101 +1,101 @@
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { RefreshTokensPayload } from '@vers/service-types';
-import { and, eq } from 'drizzle-orm';
-import { z } from 'zod';
-import * as consts from '../consts';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
-import { createJWT } from '../utils/create-jwt';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import { ACCESS_TOKEN_DURATION, SESSION_DURATION_SHORT } from '../consts';
+import { createJWT } from '../create-jwt';
+import type { EmptyErrorPayload, SessionSigningDeps } from '../types';
 
-export const RefreshTokensInputSchema = z.object({
-  id: z.string(),
-  refreshToken: z.string(),
-});
-
-export async function refreshTokens(
-  input: z.infer<typeof RefreshTokensInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<RefreshTokensPayload> {
-  try {
-    const existingSession = await ctx.db.query.sessions.findFirst({
-      where: and(
-        eq(schema.sessions.refreshToken, input.refreshToken),
-        eq(schema.sessions.id, input.id),
-      ),
-    });
-
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    if (!existingSession?.refreshToken) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Session not found',
-      });
-    }
-
-    // Check if the session has expired
-    if (existingSession.expiresAt < new Date()) {
-      await ctx.db.delete(schema.sessions).where(eq(schema.sessions.id, existingSession.id));
-
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Session expired',
-      });
-    }
-
-    const now = Date.now();
-    const sessionAge = now - existingSession.createdAt.getTime();
-
-    // if our session has existed for less than our short sessionduration,
-    // we can just create a new access token and skip rotating the refresh token
-    if (sessionAge < consts.SESSION_DURATION_SHORT) {
-      const accessToken = await createJWT({
-        expiresAt: new Date(Date.now() + consts.ACCESS_TOKEN_DURATION),
-        userID: existingSession.userID,
-      });
-
-      return { accessToken, refreshToken: existingSession.refreshToken };
-    }
-
-    // generate a new refresh token so we can rotate it, using the same expiry as before
-    const refreshToken = await createJWT({
-      expiresAt: existingSession.expiresAt,
-      userID: existingSession.userID,
-    });
-
-    const accessToken = await createJWT({
-      expiresAt: new Date(Date.now() + consts.ACCESS_TOKEN_DURATION),
-      userID: existingSession.userID,
-    });
-
-    const updatedAt = new Date();
-
-    await ctx.db
-      .update(schema.sessions)
-      .set({
-        refreshToken,
-        updatedAt,
-      })
-      .where(eq(schema.sessions.id, existingSession.id));
-
-    return { accessToken, refreshToken };
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
-  }
+/** oRPC handler opts for the public `refreshTokens` procedure. */
+interface RefreshTokensOpts {
+  readonly errors: {
+    readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
+    readonly REFRESH_TOKEN_REUSED: (payload: EmptyErrorPayload) => Error;
+    readonly SESSION_EXPIRED: (payload: EmptyErrorPayload) => Error;
+  };
+  readonly input: { readonly id: string; readonly refreshToken: string };
 }
 
-export const procedure = t.procedure
-  .input(RefreshTokensInputSchema)
-  .mutation((opts) => refreshTokens(opts.input, opts.ctx));
+/**
+ * Rotates a session's refresh token, or skips rotation inside the grace window. Reuse detection
+ * (#154) keeps a one-deep history: `previousRefreshToken` is the last rotated-away token, so a
+ * client that replays it (its own request having lost the race, or an attacker replaying a
+ * stolen token) revokes the whole session rather than being silently ignored. Rotation itself is
+ * one conditional UPDATE keyed on the refresh token it expects to replace — a concurrent
+ * rotation's write invalidates that precondition, so at most one of two racing requests rotates
+ * and the loser is treated as reuse.
+ */
+export async function refreshTokens(
+  db: Kysely<DB>,
+  deps: SessionSigningDeps,
+  opts: RefreshTokensOpts,
+): Promise<{ accessToken: string; refreshToken: string }> {
+  const row = await db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('id', '=', opts.input.id)
+    .executeTakeFirst();
+
+  if (row === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  if (row.expiresAt < new Date()) {
+    await db.deleteFrom('sessions').where('id', '=', row.id).execute();
+
+    throw opts.errors.SESSION_EXPIRED({ data: {} });
+  }
+
+  if (row.previousRefreshToken !== null && opts.input.refreshToken === row.previousRefreshToken) {
+    await db.deleteFrom('sessions').where('id', '=', row.id).execute();
+
+    throw opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
+  }
+
+  if (row.refreshToken === null || opts.input.refreshToken !== row.refreshToken) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  const sessionAge = Date.now() - row.createdAt.getTime();
+
+  const accessTokenExpiresAt = new Date(Date.now() + ACCESS_TOKEN_DURATION);
+
+  if (sessionAge < SESSION_DURATION_SHORT) {
+    const accessToken = await createJWT({
+      apiIdentifier: deps.apiIdentifier,
+      expiresAt: accessTokenExpiresAt,
+      signingKey: deps.signingKey,
+      userID: row.userId,
+    });
+
+    return { accessToken, refreshToken: row.refreshToken };
+  }
+
+  const [refreshToken, accessToken] = await Promise.all([
+    createJWT({
+      apiIdentifier: deps.apiIdentifier,
+      expiresAt: row.expiresAt,
+      signingKey: deps.signingKey,
+      userID: row.userId,
+    }),
+    createJWT({
+      apiIdentifier: deps.apiIdentifier,
+      expiresAt: accessTokenExpiresAt,
+      signingKey: deps.signingKey,
+      userID: row.userId,
+    }),
+  ]);
+
+  const updateResult = await db
+    .updateTable('sessions')
+    .set({ previousRefreshToken: row.refreshToken, refreshToken })
+    .where('id', '=', row.id)
+    .where('refreshToken', '=', row.refreshToken)
+    .executeTakeFirst();
+
+  if (updateResult.numUpdatedRows === 0n) {
+    await db.deleteFrom('sessions').where('id', '=', row.id).execute();
+
+    throw opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
+  }
+
+  return { accessToken, refreshToken };
+}

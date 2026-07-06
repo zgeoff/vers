@@ -1,65 +1,40 @@
 import { createId } from '@paralleldrive/cuid2';
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { CreateSessionPayload } from '@vers/service-types';
-import { z } from 'zod';
-import * as consts from '../consts';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { SessionData } from '@vers/contract-session';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import { SESSION_DURATION_LONG, SESSION_DURATION_SHORT } from '../consts';
+import { toSessionData } from './to-session-data';
 
-export const CreateSessionInputSchema = z.object({
-  expiresAt: z.date().optional(),
-  ipAddress: z.string(),
-  rememberMe: z.boolean().optional(),
-  userID: z.string(),
-});
+/** oRPC handler opts for the public `createSession` procedure. */
+interface CreateSessionOpts {
+  readonly input: {
+    readonly expiresAt?: Date | undefined;
+    readonly ipAddress: string;
+    readonly rememberMe?: boolean | undefined;
+    readonly userID: string;
+  };
+}
 
-export async function createSession(
-  input: z.infer<typeof CreateSessionInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<CreateSessionPayload> {
-  try {
-    const { expiresAt, ipAddress, rememberMe, userID } = input;
+/** Creates an unverified session for a login, its expiry set by `rememberMe` unless overridden. */
+export async function createSession(db: Kysely<DB>, opts: CreateSessionOpts): Promise<SessionData> {
+  const { expiresAt, ipAddress, rememberMe, userID } = opts.input;
 
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    const sessionDuration = rememberMe
-      ? consts.SESSION_DURATION_LONG
-      : consts.SESSION_DURATION_SHORT;
+  const sessionDuration = rememberMe === true ? SESSION_DURATION_LONG : SESSION_DURATION_SHORT;
+  const sessionExpiresAt = expiresAt ?? new Date(Date.now() + sessionDuration);
 
-    const sessionExpiresAt = expiresAt
-      ? new Date(expiresAt)
-      : new Date(Date.now() + sessionDuration);
-
-    const session = {
-      createdAt: new Date(),
+  const row = await db
+    .insertInto('sessions')
+    .values({
       expiresAt: sessionExpiresAt,
       id: createId(),
       ipAddress,
-      updatedAt: new Date(),
-      userID,
+      previousRefreshToken: null,
+      refreshToken: null,
+      userId: userID,
       verified: false,
-    } satisfies typeof schema.sessions.$inferInsert;
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
-    await ctx.db.insert(schema.sessions).values(session);
-
-    return session;
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
-  }
+  return toSessionData(row);
 }
-
-export const procedure = t.procedure
-  .input(CreateSessionInputSchema)
-  .mutation((opts) => createSession(opts.input, opts.ctx));
