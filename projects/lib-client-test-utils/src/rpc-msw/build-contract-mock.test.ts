@@ -27,7 +27,6 @@ const secretContract = {
 };
 
 /** Reads the acting user from a bearer token forwarded on the `Authorization` header. */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Request is a DOM built-in, not declared readonly
 function resolveContext(request: Request): SecretContext {
   const header = request.headers.get('authorization') ?? '';
   const actingUserId = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
@@ -212,7 +211,6 @@ test('it surfaces a raw Response returned by a mock handler verbatim to the clie
   let transportResponse: Response | undefined;
 
   const link = new RPCLink<Record<never, never>>({
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Request is a DOM built-in, not declared readonly
     fetch: async (request: Request) => {
       const response = await fetch(request);
 

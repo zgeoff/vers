@@ -10,10 +10,8 @@ type TestVerificationData = Partial<Insertable<Verifications>>;
  * real TOTP secret/config so `@epic-web/totp` can verify codes against it.
  */
 export async function createTestVerification(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   db: Kysely<DB>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  data: TestVerificationData = {},
+  data: Readonly<TestVerificationData> = {},
 ): Promise<Selectable<Verifications>> {
   const now = new Date();
 

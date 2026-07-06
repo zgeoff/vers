@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { factory, primaryKey } from '@mswjs/data';
+import { Collection } from '@msw/data';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ContractRouterClient } from '@orpc/contract';
@@ -16,32 +16,28 @@ const widgetContract = {
     .output(z.object({ id: z.string(), name: z.string() }).nullable()),
 };
 
+const widgetSchema = z.object({ id: z.string(), name: z.string() });
+
 /** A fresh, per-test in-memory backend the mocked `getWidget` handler reads from. */
-function buildWidgetDB() {
-  return factory({
-    widget: {
-      id: primaryKey(String),
-      name: String,
-    },
-  });
+function buildWidgetCollection() {
+  return new Collection({ schema: widgetSchema });
 }
 
-type WidgetDB = ReturnType<typeof buildWidgetDB>;
+type WidgetCollection = ReturnType<typeof buildWidgetCollection>;
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- @mswjs/data's factory type isn't declared readonly
-function findWidget(db: WidgetDB, id: string) {
-  const widget = db.widget.findFirst({ where: { id: { equals: id } } });
+function findWidget(widgets: WidgetCollection, id: string) {
+  const widget = widgets.findFirst((query) => query.where({ id }));
 
   return widget ?? null;
 }
 
-test('it serves a stateful value from an @mswjs/data-backed router', async () => {
-  const db = buildWidgetDB();
+test('it serves a stateful value from an @msw/data-backed router', async () => {
+  const widgets = buildWidgetCollection();
 
-  db.widget.create({ id: 'widget_1', name: 'Lantern' });
+  await widgets.create({ id: 'widget_1', name: 'Lantern' });
 
   const getWidget = implement(widgetContract).getWidget.handler((opts) =>
-    findWidget(db, opts.input.id),
+    findWidget(widgets, opts.input.id),
   );
 
   const handlers = buildMockService({

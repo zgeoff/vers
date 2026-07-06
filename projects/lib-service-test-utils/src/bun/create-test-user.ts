@@ -32,10 +32,8 @@ const LEGACY_BCRYPT_COST_FACTOR = 12;
  * callers that need to present it to a reset flow.
  */
 export async function createTestUser(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   db: Kysely<DB>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  data: CreateTestUserData = {},
+  data: Readonly<CreateTestUserData> = {},
 ): Promise<TestUser> {
   const now = new Date();
 

@@ -138,6 +138,7 @@
         "allow": [
           "jest-extended",
           "@testing-library/jest-dom/vitest",
+          "@zgeoff/bun-test-extended",
           "**/augment-bun-test.ts",
           "**/*.css"
         ]
@@ -175,8 +176,50 @@
     // `lib-idle-core`/`lib-aether-core` tick/lifecycle handlers mutate their
     // entity parameter in place by design -- those sites carry a real reason
     // instead of a baseline marker (see the sim-core exception noted where
-    // they occur)
-    "typescript/prefer-readonly-parameter-types": ["error", { "ignoreInferredTypes": true }],
+    // they occur).
+    //
+    // `allow` exempts framework/library handles per-arg: readonly is
+    // semantically wrong for a live mutable handle (a db client, an HTTP app,
+    // a test container), so only params whose *type* matches are exempted --
+    // a data param on the same function is still checked. New code marks its
+    // own data/config/props types `readonly` rather than suppressing; this
+    // list is for the handles it can't (#265).
+    "typescript/prefer-readonly-parameter-types": [
+      "error",
+      {
+        "ignoreInferredTypes": true,
+        "allow": [
+          { "from": "package", "name": "Kysely", "package": "kysely" },
+          { "from": "package", "name": "PostgresJsDatabase", "package": "drizzle-orm" },
+          { "from": "package", "name": "Elysia", "package": "elysia" },
+          { "from": "package", "name": "Logger", "package": "pino" },
+          { "from": "package", "name": "TestProject", "package": "vitest" },
+          {
+            "from": "package",
+            "name": "StartedPostgreSqlContainer",
+            "package": "@testcontainers/postgresql"
+          },
+          {
+            "from": "package",
+            "name": ["AnyContractRouter", "AnyContractProcedure"],
+            "package": "@orpc/contract"
+          },
+          {
+            "from": "package",
+            "name": ["AnyRouter", "Router", "RPCHandler", "FetchHandler"],
+            "package": "@orpc/server"
+          },
+          { "from": "package", "name": "SetupServerApi", "package": "msw" },
+          { "from": "package", "name": "Collection", "package": "@msw/data" },
+          {
+            "from": "package",
+            "name": ["CryptoKey", "Request", "Response"],
+            "package": "@types/node"
+          },
+          { "from": "lib", "name": ["Request", "Response", "Date"] }
+        ]
+      }
+    ],
     "typescript/prefer-regexp-exec": "error",
     "typescript/require-await": "error",
     "typescript/return-await": "error",

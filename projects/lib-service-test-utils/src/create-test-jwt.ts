@@ -1,13 +1,12 @@
 import * as jose from 'jose';
 
 interface TestTokenConfig {
-  audience: string;
-  issuer: string;
-  pkcs8Key?: jose.CryptoKey;
-  sub: string;
+  readonly audience: string;
+  readonly issuer: string;
+  readonly pkcs8Key?: jose.CryptoKey;
+  readonly sub: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function createTestJWT(config: TestTokenConfig): Promise<string> {
   const signingKey = config.pkcs8Key ?? new TextEncoder().encode('secret');
 

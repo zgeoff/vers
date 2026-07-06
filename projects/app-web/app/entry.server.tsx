@@ -44,7 +44,6 @@ declare module 'react-router' {
 }
 
 export default function handleRequest(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   request: Request,
   responseStatusCode: number,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)

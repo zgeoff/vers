@@ -6,8 +6,7 @@ interface Config {
   email: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function generateExistingAccountEmail(config: Config) {
+export function generateExistingAccountEmail(config: Readonly<Config>) {
   return generateEmail({
     component: (
       <E.Html dir="ltr" lang="en">

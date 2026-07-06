@@ -5,7 +5,7 @@ import type {
   InferSchemaInput,
   InferSchemaOutput,
 } from '@orpc/contract';
-import type { ORPCErrorConstructorMap, Router } from '@orpc/server';
+import type { AnyRouter, ORPCErrorConstructorMap } from '@orpc/server';
 import { implement } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/fetch';
 import type { HttpHandler } from 'msw';
@@ -19,11 +19,11 @@ export interface MockProcedureHandlerArgs<
   TContext extends Record<string, unknown>,
   TErrorMap extends ErrorMap,
 > {
-  context: TContext;
-  errors: ORPCErrorConstructorMap<TErrorMap>;
-  input: TInput;
-  path: ReadonlyArray<string>;
-  request: Request;
+  readonly context: TContext;
+  readonly errors: ORPCErrorConstructorMap<TErrorMap>;
+  readonly input: TInput;
+  readonly path: ReadonlyArray<string>;
+  readonly request: Request;
 }
 
 /** A mocked procedure's output: a static value, or a function computing it per call. */
@@ -35,7 +35,7 @@ export type MockProcedureHandler<
 > =
   | TOutput
   | ((
-      // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- this module's own generic args type, not worth deep-readonly wrapping
+      // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- generic callback-arg object; members are caller-typed, no deep-readonly satisfies the rule
       args: MockProcedureHandlerArgs<TInput, TContext, TErrorMap>,
     ) => Promise<Response | TOutput> | Response | TOutput);
 
@@ -84,7 +84,6 @@ export interface MockServiceOptions<
   contract: TContract;
 
   /** Builds per-call context (e.g. `actingUserId`) from a request's forwarded headers. */
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Request is a DOM built-in, not declared readonly
   resolveContext: (request: Request) => TContext | Promise<TContext>;
 }
 
@@ -99,31 +98,29 @@ export function buildContractMock<
   TContract extends AnyContractRouter,
   TContext extends Record<string, unknown>,
 >(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the contract router type this mirrors isn't declared readonly
-  options: MockServiceOptions<TContract, TContext>,
+  options: Readonly<MockServiceOptions<TContract, TContext>>,
 ): MockServiceProxy<TContract, TContext> {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the runtime proxy walks the contract generically; this cast is what the exported type promises callers
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- type-erased runtime Proxy walking a generic contract; no typed path-accessor exists
   return buildProxyNode(options, []) as MockServiceProxy<TContract, TContext>;
 }
 
 /** Arguments a mocked procedure's handler function receives, once its types are erased. */
 interface LooseMockFnArgs {
-  context: Record<string, unknown>;
-  errors: unknown;
-  input: unknown;
-  path: ReadonlyArray<string>;
-  request: Request;
+  readonly context: Record<string, unknown>;
+  readonly errors: unknown;
+  readonly input: unknown;
+  readonly path: ReadonlyArray<string>;
+  readonly request: Request;
 }
 
 /** A mocked procedure's handler function, once its input/output/error/context types are erased. */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- this module's own generic args type, not worth deep-readonly wrapping
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- generic callback-arg object; members are caller-typed, no deep-readonly satisfies the rule
 type LooseMockFn = (args: LooseMockFnArgs) => unknown;
 
 /** The loosely-typed view of `MockServiceOptions` this module's runtime traversal operates over. */
 interface UntypedMockServiceOptions {
   baseUrl: string;
   contract: AnyContractRouter;
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Request is a DOM built-in, not declared readonly
   resolveContext: (request: Request) => Promise<Record<string, unknown>> | Record<string, unknown>;
 }
 
@@ -132,8 +129,7 @@ function buildProxyNode<
   TContract extends AnyContractRouter,
   TContext extends Record<string, unknown>,
 >(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the contract router type this mirrors isn't declared readonly
-  options: MockServiceOptions<TContract, TContext>,
+  options: Readonly<MockServiceOptions<TContract, TContext>>,
   path: ReadonlyArray<string>,
 ): unknown {
   const untypedOptions: UntypedMockServiceOptions = options;
@@ -141,10 +137,9 @@ function buildProxyNode<
   const target = { handler: (mock: unknown) => buildProcedureHandler(untypedOptions, path, mock) };
 
   return new Proxy(target, {
-    get(currentTarget, prop, receiver) {
+    get(currentTarget, prop, receiver): unknown {
       if (typeof prop !== 'string' || prop === 'handler') {
-        // oxlint-disable-next-line typescript/no-unsafe-return -- ProxyHandler.get's own signature returns `any`
-        return Reflect.get(currentTarget, prop, receiver);
+        return Reflect.get(currentTarget, prop, receiver) as unknown;
       }
 
       return buildProxyNode(options, [...path, prop]);
@@ -154,8 +149,7 @@ function buildProxyNode<
 
 /** Builds the narrow MSW handler for one procedure's `.handler(mock)` call. */
 function buildProcedureHandler(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- carries a resolveContext callback typed over the DOM's Request
-  options: UntypedMockServiceOptions,
+  options: Readonly<UntypedMockServiceOptions>,
   path: ReadonlyArray<string>,
   mock: unknown,
 ): HttpHandler {
@@ -188,16 +182,16 @@ function buildProcedureHandler(
 
 /** Arguments a single implemented procedure's inner handler receives. */
 interface ProcedureImplementerHandlerArgs {
-  context: Record<string, unknown>;
-  errors: unknown;
-  input: unknown;
-  path: ReadonlyArray<string>;
+  readonly context: Record<string, unknown>;
+  readonly errors: unknown;
+  readonly input: unknown;
+  readonly path: ReadonlyArray<string>;
 }
 
 /** The shape `implement(contract)` exposes at a single procedure's path. */
 interface ProcedureImplementer {
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- this module's own generic args type, not worth deep-readonly wrapping
-  handler: (fn: (opts: ProcedureImplementerHandlerArgs) => Promise<unknown>) => unknown;
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- generic callback-arg object; members are caller-typed, no deep-readonly satisfies the rule
+  handler: (fn: (opts: ProcedureImplementerHandlerArgs) => Promise<unknown>) => AnyRouter;
 }
 
 /**
@@ -206,25 +200,22 @@ interface ProcedureImplementer {
  * satisfy the procedure's output schema; the caller replaces the RPC response with it verbatim.
  */
 function buildMockProcedure(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- @orpc/contract's router type isn't declared readonly
   contract: AnyContractRouter,
   path: ReadonlyArray<string>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Request is a DOM built-in, not declared readonly
   request: Request,
   mock: unknown,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Response is a DOM built-in, not declared readonly
   onRawResponse: (response: Response) => void,
-): unknown {
+): AnyRouter {
   let node: unknown = implement(contract);
 
   for (const segment of path) {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- walking a generically-shaped implementer tree at runtime
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- type-erased runtime Proxy walking a generic contract; no typed path-accessor exists
     node = (node as Record<string, unknown>)[segment];
   }
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the resolved node is the implementer for `path`'s leaf procedure
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- type-erased runtime Proxy walking a generic contract; no typed path-accessor exists
   const implementer = node as ProcedureImplementer;
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- callers supply either a static value or this shape; only the function case is cast
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- type-erased runtime Proxy walking a generic contract; no typed path-accessor exists
   const mockFn = typeof mock === 'function' ? (mock as LooseMockFn) : undefined;
 
   return implementer.handler(async (handlerOptions) => {
@@ -241,15 +232,7 @@ function buildMockProcedure(
 }
 
 /** Rebuilds the nested router shape a single implemented procedure needs to sit at its path. */
-function buildNestedRouter(
-  path: ReadonlyArray<string>,
-  leaf: unknown,
-): Router<AnyContractRouter, Record<string, unknown>> {
-  const nested = path.reduceRight<unknown>(
-    (accumulator, segment) => ({ [segment]: accumulator }),
-    leaf,
-  );
-
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the single-procedure router is assembled generically at runtime
-  return nested as Router<AnyContractRouter, Record<string, unknown>>;
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- oRPC AnyRouter is a live router handle; no readonly form
+function buildNestedRouter(path: ReadonlyArray<string>, leaf: AnyRouter): AnyRouter {
+  return path.reduceRight<AnyRouter>((accumulator, segment) => ({ [segment]: accumulator }), leaf);
 }

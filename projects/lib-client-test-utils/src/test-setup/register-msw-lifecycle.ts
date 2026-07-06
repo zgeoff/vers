@@ -7,7 +7,6 @@ import type { SetupServerApi } from 'msw/node';
  * preload — `bun test` runs every file in one process, so these hooks apply suite-wide. Test files
  * then add per-test handlers with `server.use(...)`.
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the server is a mutable handle whose lifecycle methods this wires
 export function registerMSWLifecycle(server: SetupServerApi): void {
   server.listen({ onUnhandledRequest: 'error' });
 

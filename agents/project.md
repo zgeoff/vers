@@ -64,7 +64,14 @@ strings/numbers.
   left off in config — the unused-directive check is the ratchet: fixing a baselined site makes its
   comment stale and lint fails until the comment is deleted. `lib-idle-core`/`lib-aether-core`
   tick/lifecycle handlers that mutate their entity parameter by design carry a real reason instead
-  of the baseline marker; those are permanent.
+  of the baseline marker; those are permanent. `typescript/prefer-readonly-parameter-types` is the
+  one rule new code must never `baseline(#236)`: its own data/config/props/option types are made
+  `readonly` (or the param `Readonly<…>`-wrapped; React props `Readonly<Props>`), and
+  framework/library handles that have no readonly form (a `Kysely`/`Elysia`/`RPCHandler`/`Request`
+  handle, a `Date`, …) are exempted per-type via the rule's `allow` list in `.oxlintrc.json` — never
+  an inline marker. Only a genuinely un-`readonly`-able own type (a generic callback-arg object, a
+  `ZodType`-bearing shape, a React-element wrapper) carries a single honest inline directive stating
+  why; `allow` covers the rest.
 - `bun run format` — `oxfmt .` (`.oxfmtrc.json` at the root), then `format-codemod` (blank-line
   padding) over the whole tree. The codemod has no ignore file, so its `--ignore` flags are what
   keep it off committed codegen output (`app/gql`, panda's `styled-system` dirs, react-router's
@@ -141,8 +148,12 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
   (`it flags the run as invalid`, not `it sets isValid to false`).
 - Declare test data inline per test; no factory builders (`createUser`) and no shared mutable
   module-level fixtures. One-off helpers stay inline — reusable ones live in `test-utils/`.
+- **Stateful backends** use `@msw/data`: build an in-memory store from a zod schema
+  (`new Collection({ schema: z.object({ … }) })`, `.create()`/`.createMany()`,
+  `.findFirst((q) => q.where(…))`/`.findMany()`, `.defineRelations()`) and read/write it directly
+  from the oRPC mock handlers. Models are zod schemas, not the legacy `factory()` model dictionary.
 - **React (phases 1–3):** React Testing Library on happy-dom (bootstrapped via
   `@happy-dom/global-registrator` in the preload); prefer a project `render` util over bare RTL and
   the utils it returns over the imported `screen`; load data through the centralized MSW handlers +
-  `@mswjs/data` in-memory DB rather than stubbing hooks or poking Zustand; `waitFor` the fetch
+  `@msw/data` in-memory store rather than stubbing hooks or poking Zustand; `waitFor` the fetch
   before asserting.

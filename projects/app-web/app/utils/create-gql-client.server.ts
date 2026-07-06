@@ -18,7 +18,6 @@ import { refreshAccessToken } from './refresh-access-token.server';
  * @param request - The request object
  * @returns An Apollo Client instance
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function createGQLClient(request: Request): Promise<Client> {
   const authSession = await authSessionStorage.getSession(request.headers.get('cookie'));
 

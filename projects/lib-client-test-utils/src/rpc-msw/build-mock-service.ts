@@ -16,7 +16,6 @@ export interface BuildMockServiceOptions<
   contract: TContract;
 
   /** Builds per-call context (e.g. `actingUserId`) from a request's forwarded headers. */
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Request is a DOM built-in, not declared readonly
   resolveContext: (request: Request) => TContext | Promise<TContext>;
 
   /** A full `implement(contract)` router; every leaf handled, backend storage is the caller's choice. */
@@ -31,10 +30,7 @@ export interface BuildMockServiceOptions<
 export function buildMockService<
   TContract extends AnyContractRouter,
   TContext extends Record<string, unknown>,
->(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- @orpc/server's Router type isn't declared readonly
-  options: BuildMockServiceOptions<TContract, TContext>,
-): Array<HttpHandler> {
+>(options: Readonly<BuildMockServiceOptions<TContract, TContext>>): Array<HttpHandler> {
   const rpcHandler = new RPCHandler<TContext>(options.router);
 
   return [

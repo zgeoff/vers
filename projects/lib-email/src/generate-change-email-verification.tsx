@@ -8,8 +8,7 @@ interface Config {
   verificationURL: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function generateChangeEmailVerificationEmail(config: Config) {
+export function generateChangeEmailVerificationEmail(config: Readonly<Config>) {
   return generateEmail({
     component: (
       <E.Html dir="ltr" lang="en">

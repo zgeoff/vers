@@ -6,8 +6,7 @@ interface Config {
   resetURL: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function generateResetPasswordEmail(config: Config) {
+export function generateResetPasswordEmail(config: Readonly<Config>) {
   return generateEmail({
     component: (
       <E.Html dir="ltr" lang="en">
