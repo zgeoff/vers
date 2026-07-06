@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { sql } from 'kysely';
 import { createTestUser } from '../create-test-user';
-import { createDatabaseTestDB } from './database-test-db';
+import { createDatabaseTestDB } from './create-database-test-db';
 
 test('it clones a fresh database on every acquisition', async () => {
   await using first = await createDatabaseTestDB();

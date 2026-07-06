@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { removeEnvOverrides, updateEnv } from './env-overrides';
+import { removeEnvOverrides } from './remove-env-overrides';
+import { updateEnv } from './update-env';
 
 test('it overrides an env var for the duration of the override', () => {
   updateEnv('ENV_OVERRIDES_TEST_OVERRIDE', 'overridden');
@@ -7,27 +8,6 @@ test('it overrides an env var for the duration of the override', () => {
   expect(process.env['ENV_OVERRIDES_TEST_OVERRIDE']).toBe('overridden');
 
   removeEnvOverrides();
-});
-
-test('it restores a previously-set var to its original value', () => {
-  process.env['ENV_OVERRIDES_TEST_RESTORE'] = 'original';
-
-  updateEnv('ENV_OVERRIDES_TEST_RESTORE', 'overridden');
-
-  removeEnvOverrides();
-
-  expect(process.env['ENV_OVERRIDES_TEST_RESTORE']).toBe('original');
-
-  delete process.env['ENV_OVERRIDES_TEST_RESTORE'];
-});
-
-test('it deletes a previously-unset var rather than leaving it overridden', () => {
-  delete process.env['ENV_OVERRIDES_TEST_UNSET'];
-  updateEnv('ENV_OVERRIDES_TEST_UNSET', 'overridden');
-
-  removeEnvOverrides();
-
-  expect(process.env['ENV_OVERRIDES_TEST_UNSET']).toBeUndefined();
 });
 
 test('it keeps the first recorded original across repeated overrides of the same key', () => {

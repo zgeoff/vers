@@ -1,6 +1,6 @@
-import { createDatabaseTestDB } from './strategies/database-test-db';
-import { createTransactionTestDB } from './strategies/transaction-test-db';
-import type { TestDB } from './test-db-handle';
+import { createDatabaseTestDB } from './strategies/create-database-test-db';
+import { createTransactionTestDB } from './strategies/create-transaction-test-db';
+import type { TestDBHandle } from './test-db-handle';
 
 export type Isolation = 'database' | 'transaction';
 
@@ -13,26 +13,26 @@ interface CreateTestDBOptions {
   readonly isolation?: Isolation;
 }
 
-const STRATEGIES: Record<Isolation, () => Promise<TestDB>> = {
+const STRATEGIES: Record<Isolation, () => Promise<TestDBHandle>> = {
   database: createDatabaseTestDB,
   transaction: createTransactionTestDB,
 };
 
 /**
  * Makes a package's isolated-test-DB factory. Isolation legality is declared, not detected:
- * requesting a strategy absent from `config.enabled` throws. The baseline (the migrated template
- * database) is built once by `setupBunTestDB`; this facade only chooses isolation.
+ * requesting a strategy absent from `config.enabled` throws. The migrated template database is
+ * built once per test process; this facade only chooses isolation.
  */
 export function makeTestDB(
   config: TestDBConfig,
-): (options?: CreateTestDBOptions) => Promise<TestDB> {
+): (options?: CreateTestDBOptions) => Promise<TestDBHandle> {
   if (!config.enabled.includes(config.default)) {
     throw new Error(
       `makeTestDB: default '${config.default}' not in enabled (${config.enabled.join(', ')})`,
     );
   }
 
-  return function createTestDB(options?: CreateTestDBOptions): Promise<TestDB> {
+  return function createTestDB(options?: CreateTestDBOptions): Promise<TestDBHandle> {
     const isolation = options?.isolation ?? config.default;
 
     if (!config.enabled.includes(isolation)) {

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { updateEnv } from './env-overrides';
+import { updateEnv } from './update-env';
 
 // This package's own preload calls `registerBunTestCleanup` once for the whole process, so its
 // effect is observed across tests rather than within a single one — order-dependent by design.

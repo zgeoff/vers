@@ -1,5 +1,5 @@
 import { afterEach, mock } from 'bun:test';
-import { removeEnvOverrides } from './env-overrides';
+import { removeEnvOverrides } from './remove-env-overrides';
 
 /**
  * Registers the process-wide cleanup contract, called once from a package's preload: restores

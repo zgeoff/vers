@@ -4,10 +4,7 @@ import type { Users } from '@vers/db';
 import { createSeed } from '@vers/game-utils';
 import type { Insertable } from 'kysely';
 
-/**
- * A plain, unpersisted user row with faker-generated defaults. Never persisted and never requires
- * a parent; `createTestUser` is the composite that persists one, applying password hashing.
- */
+/** A plain, unpersisted user row with faker-generated defaults. Never requires a parent. */
 export function createMockUser(overrides: Partial<Insertable<Users>> = {}): Insertable<Users> {
   const now = new Date();
 

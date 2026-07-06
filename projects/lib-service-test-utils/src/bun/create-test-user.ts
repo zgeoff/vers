@@ -24,7 +24,7 @@ interface TestUser {
 const LEGACY_BCRYPT_COST_FACTOR = 12;
 
 /**
- * Inserts a user for bun-test suites via kysely, sourcing its defaults from `createMockUser`.
+ * Inserts a user for bun-test suites via kysely, sourcing its defaults from a plain mock row.
  * Hashes `password` as argon2id by default, or bcrypt when `passwordAlgorithm: 'bcrypt'` (for
  * legacy-hash regression coverage). A `resetToken` plaintext is hashed with sha256 into
  * `passwordResetToken` and echoed back on the return value for callers that need to present it to

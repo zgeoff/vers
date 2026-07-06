@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { sql } from 'kysely';
 import { createTestUser } from '../create-test-user';
-import { createTransactionTestDB } from './transaction-test-db';
+import { createTransactionTestDB } from './create-transaction-test-db';
 
 test('it rolls back everything written through the handle once disposed', async () => {
   let userId: string;

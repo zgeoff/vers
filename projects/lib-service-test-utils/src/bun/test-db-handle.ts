@@ -6,6 +6,6 @@ import type { Kysely } from 'kysely';
  * test body both run through `db`, which is what keeps the code inside the isolation boundary —
  * code that opens its own connection instead bypasses whatever guarantee the strategy provides.
  */
-export interface TestDB extends AsyncDisposable {
+export interface TestDBHandle extends AsyncDisposable {
   readonly db: Kysely<DB>;
 }
