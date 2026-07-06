@@ -3,5 +3,3 @@ export { ServiceID } from './service-id';
 export * from './service-session';
 // oxlint-disable-next-line typescript/consistent-type-exports -- baseline(#236)
 export * from './service-user';
-// oxlint-disable-next-line typescript/consistent-type-exports -- baseline(#236)
-export * from './service-verification';

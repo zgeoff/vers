@@ -4,5 +4,4 @@ export enum ServiceID {
   ServiceAPI = 'service-api',
   ServiceSession = 'service-session',
   ServiceUser = 'service-user',
-  ServiceVerification = 'service-verification',
 }

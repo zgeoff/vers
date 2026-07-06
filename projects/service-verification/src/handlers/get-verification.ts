@@ -1,61 +1,34 @@
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { GetVerificationPayload } from '@vers/service-types';
-import { and, eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { VerificationData, VerificationType } from '@vers/contract-verification';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import { toVerificationData } from './to-verification-data';
 
-export const GetVerificationInputSchema = z.object({
-  target: z.string(),
-  type: z.enum(['2fa', '2fa-setup', 'change-email', 'onboarding']),
-});
-
-export async function getVerification(
-  input: z.infer<typeof GetVerificationInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<GetVerificationPayload> {
-  try {
-    const verification = await ctx.db.query.verifications.findFirst({
-      where: and(
-        eq(schema.verifications.type, input.type),
-        eq(schema.verifications.target, input.target),
-      ),
-    });
-
-    if (!verification) {
-      return null;
-    }
-
-    // if the verification has expired, delete it and return null
-    if (verification.expiresAt && verification.expiresAt < new Date()) {
-      await ctx.db.delete(schema.verifications).where(eq(schema.verifications.id, verification.id));
-
-      return null;
-    }
-
-    return {
-      id: verification.id,
-      target: verification.target,
-      type: verification.type,
-    };
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
-  }
+/** oRPC handler opts for the `getVerification` procedure. */
+interface GetVerificationOpts {
+  readonly input: { readonly target: string; readonly type: VerificationType };
 }
 
-export const procedure = t.procedure
-  .input(GetVerificationInputSchema)
-  .query((opts) => getVerification(opts.input, opts.ctx));
+/** Looks up a verification by target and type; deletes and returns null when it has expired. */
+export async function getVerification(
+  db: Kysely<DB>,
+  opts: GetVerificationOpts,
+): Promise<VerificationData | null> {
+  const row = await db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('type', '=', opts.input.type)
+    .where('target', '=', opts.input.target)
+    .executeTakeFirst();
+
+  if (row === undefined) {
+    return null;
+  }
+
+  if (row.expiresAt !== null && row.expiresAt < new Date()) {
+    await db.deleteFrom('verifications').where('id', '=', row.id).execute();
+
+    return null;
+  }
+
+  return toVerificationData(row);
+}

@@ -12,24 +12,31 @@ async function setupTest() {
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-test('it returns a TOTP auth URI for a pending 2fa setup', async () => {
+test('it deletes a verification record', async () => {
   await using ctx = await setupTest();
   const { token } = await createAnonymousViewer({ audience: 'service-verification' });
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const verification = await createVerificationRow(ctx.db);
 
-  await createVerificationRow(ctx.db, { target: 'setup@example.com', type: '2fa-setup' });
+  const result = await client.deleteVerification({ id: verification.id });
 
-  const result = await client.get2FAVerificationURI({ target: 'setup@example.com' });
+  expect(result).toStrictEqual({ deletedID: verification.id });
 
-  expect(result.otpURI).toStartWith('otpauth://totp/');
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', verification.id)
+    .executeTakeFirst();
+
+  expect(row).toBeUndefined();
 });
 
-test('it throws NOT_FOUND when no 2fa setup verification exists for the target', async () => {
+test('it throws NOT_FOUND when the verification does not exist', async () => {
   await using ctx = await setupTest();
   const { token } = await createAnonymousViewer({ audience: 'service-verification' });
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
-  expect(client.get2FAVerificationURI({ target: 'missing@example.com' })).rejects.toMatchObject({
+  expect(client.deleteVerification({ id: 'does-not-exist' })).rejects.toMatchObject({
     code: 'NOT_FOUND',
   });
 });

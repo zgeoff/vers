@@ -1,180 +1,169 @@
-import { createId } from '@paralleldrive/cuid2';
-import * as schema from '@vers/postgres-schema';
-import { createTestDB } from '@vers/service-test-utils';
-import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import invariant from 'tiny-invariant';
-import { expect, test } from 'vitest';
-import { router } from '../router';
-import { t } from '../t';
+import { expect, test } from 'bun:test';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import type { VerificationContract } from '@vers/contract-verification';
+import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
+import { createVerificationService } from '../create-verification-service';
+import { createVerificationRow } from '../test-utils/create-verification-row';
 
-const createCaller = t.createCallerFactory(router);
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createVerificationService({ db: db.db });
 
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
-}
-
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
-
-  return { caller };
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it verifies a valid code', async () => {
-  await using handle = await createTestDB();
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
-  const { db } = handle;
-
-  const { caller } = setupTest({ db });
-
-  const createResult = await caller.createVerification({
-    period: 300,
-    target: 'test@example.com',
+  const created = await client.createVerification({
+    target: 'onboard@example.com',
     type: 'onboarding',
   });
 
-  const verifyResult = await caller.verifyCode({
-    code: createResult.otp,
-    target: 'test@example.com',
+  const result = await client.verifyCode({
+    code: created.otp,
+    target: 'onboard@example.com',
     type: 'onboarding',
   });
 
-  expect(verifyResult).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
-    target: 'test@example.com',
+  expect(result).toStrictEqual({
+    id: expect.toBeString(),
+    target: 'onboard@example.com',
     type: 'onboarding',
   });
 
-  invariant(verifyResult);
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', created.id)
+    .executeTakeFirst();
 
-  // verify the record was deleted
-  const verifications = await db.query.verifications.findMany({
-    where: eq(schema.verifications.id, verifyResult.id),
-  });
-
-  expect(verifications).toHaveLength(0);
+  expect(row).toBeUndefined();
 });
 
-test('it rejects invalid code', async () => {
-  await using handle = await createTestDB();
+test('it rejects an invalid code with INVALID_CODE', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
-  const { db } = handle;
+  await createVerificationRow(ctx.db, { target: 'invalid@example.com', type: 'onboarding' });
 
-  const { caller } = setupTest({ db });
+  expect(
+    client.verifyCode({ code: 'wrong-code', target: 'invalid@example.com', type: 'onboarding' }),
+  ).rejects.toMatchObject({ code: 'INVALID_CODE' });
+});
+
+test('it rejects an expired code with CODE_EXPIRED and deletes it', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+
+  const verification = await createVerificationRow(ctx.db, {
+    expiresAt: new Date(Date.now() - 60_000),
+    target: 'expired@example.com',
+    type: 'onboarding',
+  });
+
+  expect(
+    client.verifyCode({ code: 'wrong-code', target: 'expired@example.com', type: 'onboarding' }),
+  ).rejects.toMatchObject({ code: 'CODE_EXPIRED' });
+
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', verification.id)
+    .executeTakeFirst();
+
+  expect(row).toBeUndefined();
+});
+
+test('it does not delete a 2fa setup verification', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const created = await client.createVerification({ target: '+15551234567', type: '2fa-setup' });
+
+  await client.verifyCode({ code: created.otp, target: '+15551234567', type: '2fa-setup' });
+
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', created.id)
+    .executeTakeFirst();
+
+  expect(row).not.toBeUndefined();
+});
+
+test('it does not delete a 2fa verification', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const created = await client.createVerification({ target: '+15551234568', type: '2fa' });
+
+  await client.verifyCode({ code: created.otp, target: '+15551234568', type: '2fa' });
+
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', created.id)
+    .executeTakeFirst();
+
+  expect(row).not.toBeUndefined();
+});
+
+test('it rejects an immediately replayed 2fa code with CODE_ALREADY_USED', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const created = await client.createVerification({ target: '+15551234569', type: '2fa' });
+
+  await client.verifyCode({ code: created.otp, target: '+15551234569', type: '2fa' });
+
+  expect(
+    client.verifyCode({ code: created.otp, target: '+15551234569', type: '2fa' }),
+  ).rejects.toMatchObject({ code: 'CODE_ALREADY_USED' });
+});
+
+test('it records the verified code and timestamp on a successful 2fa verification', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const created = await client.createVerification({ target: '+15551234570', type: '2fa' });
+
+  await client.verifyCode({ code: created.otp, target: '+15551234570', type: '2fa' });
+
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', created.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.lastVerifiedCode).toBe(created.otp);
+  expect(row.lastVerifiedAt).toBeValidDate();
+});
+
+test('it accepts the same 2fa code again once the replay window has passed', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+
+  const created = await client.createVerification({
+    period: 300,
+    target: '+15551234571',
+    type: '2fa',
+  });
+
+  await client.verifyCode({ code: created.otp, target: '+15551234571', type: '2fa' });
+
+  await ctx.db
+    .updateTable('verifications')
+    .set({ lastVerifiedAt: new Date(Date.now() - 300 * 2 * 1000 - 1000) })
+    .where('id', '=', created.id)
+    .execute();
 
   await expect(
-    caller.verifyCode({
-      code: 'INVALID',
-      target: 'test@example.com',
-      type: 'onboarding',
-    }),
-  ).rejects.toMatchObject({
-    code: 'BAD_REQUEST',
-    message: 'Invalid verification code',
-  });
-});
-
-test('it rejects expired codes', async () => {
-  await using handle = await createTestDB();
-
-  const { db } = handle;
-
-  const { caller } = setupTest({ db });
-
-  const verification = {
-    algorithm: 'sha1',
-    charSet: 'hex',
-    createdAt: new Date(),
-    digits: 6,
-    expiresAt: new Date(Date.now() - 1000),
-    id: createId(),
-    period: 300,
-    secret: 'ABC123',
-    target: 'test@example.com',
-    type: 'onboarding',
-  } as const;
-
-  await db.insert(schema.verifications).values(verification);
-
-  await expect(
-    caller.verifyCode({
-      code: verification.secret,
-      target: 'test@example.com',
-      type: 'onboarding',
-    }),
-  ).rejects.toMatchObject({
-    code: 'BAD_REQUEST',
-    message: 'Verification code has expired',
-  });
-
-  // verify the record was deleted
-  const verifications = await db.query.verifications.findMany({
-    where: eq(schema.verifications.id, verification.id),
-  });
-
-  expect(verifications).toHaveLength(0);
-});
-
-test('it does not delete a 2FA setup verification', async () => {
-  await using handle = await createTestDB();
-
-  const { db } = handle;
-
-  const { caller } = setupTest({ db });
-
-  const createResult = await caller.createVerification({
-    target: 'test@example.com',
-    type: '2fa-setup',
-  });
-
-  const verifyResult = await caller.verifyCode({
-    code: createResult.otp,
-    target: 'test@example.com',
-    type: '2fa-setup',
-  });
-
-  expect(verifyResult).toStrictEqual({
-    id: createResult.id,
-    target: 'test@example.com',
-    type: '2fa-setup',
-  });
-
-  const verification = await db.query.verifications.findFirst({
-    where: eq(schema.verifications.id, createResult.id),
-  });
-
-  expect(verification).toBeDefined();
-});
-
-test('it does not delete a 2FA verification', async () => {
-  await using handle = await createTestDB();
-
-  const { db } = handle;
-
-  const { caller } = setupTest({ db });
-
-  const createResult = await caller.createVerification({
-    target: 'test@example.com',
-    type: '2fa',
-  });
-
-  const verifyResult = await caller.verifyCode({
-    code: createResult.otp,
-    target: 'test@example.com',
-    type: '2fa',
-  });
-
-  expect(verifyResult).toStrictEqual({
-    id: createResult.id,
-    target: 'test@example.com',
-    type: '2fa',
-  });
-
-  const verification = await db.query.verifications.findFirst({
-    where: eq(schema.verifications.id, createResult.id),
-  });
-
-  expect(verification).toBeDefined();
+    client.verifyCode({ code: created.otp, target: '+15551234571', type: '2fa' }),
+  ).toResolve();
 });
