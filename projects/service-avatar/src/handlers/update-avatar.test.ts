@@ -1,0 +1,44 @@
+import { expect, test } from 'bun:test';
+import { createTestUser } from '@vers/service-test-utils/bun';
+import { createAvatarRow } from '../test-utils/create-avatar-row';
+import { setupTest } from '../test-utils/setup-test';
+
+test('it updates the name of an owned avatar and reports the updated id', async () => {
+  await using ctx = await setupTest();
+  const client = await ctx.client();
+  const created = await client.createAvatar({ class: 'brute', name: 'Renameable' });
+
+  const result = await client.updateAvatar({ id: created.id, name: 'Renamed' });
+
+  expect(result).toStrictEqual({ updatedID: created.id });
+
+  const row = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', created.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.name).toBe('Renamed');
+});
+
+test('it returns NOT_FOUND updating an avatar the caller does not own', async () => {
+  await using ctx = await setupTest();
+  const other = await createTestUser(ctx.db);
+  const foreign = await createAvatarRow(ctx.db, { name: 'Unrenameable', userId: other.user.id });
+
+  const client = await ctx.client();
+
+  expect(client.updateAvatar({ id: foreign.id, name: 'Hijacked' })).rejects.toMatchObject({
+    code: 'NOT_FOUND',
+  });
+});
+
+test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
+  await using ctx = await setupTest();
+  const anonymousClient = await ctx.client(null);
+
+  expect(anonymousClient.updateAvatar({ id: 'x', name: 'Anonymous' })).rejects.toMatchObject({
+    code: 'UNAUTHORIZED',
+    data: { reason: 'missing-session' },
+  });
+});
