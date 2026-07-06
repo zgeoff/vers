@@ -1,4 +1,13 @@
-export { createKyselyTestDB } from './create-kysely-test-db';
+export { cloneTemplateDatabase, resolveTestDBTarget } from './clone-database';
+export { createTestDB } from './create-test-db';
 export { createTestUser } from './create-test-user';
 export { createTestVerification } from './create-test-verification';
+export { defineTestDB } from './define-test-db';
+export type { Isolation } from './define-test-db';
+export { stubEnv, unstubAllEnvs } from './env-stubbing';
+export { getTestServiceKeyPair } from './get-test-service-key-pair';
+export { registerBunTestCleanup } from './register-bun-test-cleanup';
 export { setupBunTestDB } from './setup-bun-test-db';
+export { createDatabaseTestDB } from './strategies/database-test-db';
+export { createTransactionTestDB } from './strategies/transaction-test-db';
+export type { TestDB } from './test-db-handle';

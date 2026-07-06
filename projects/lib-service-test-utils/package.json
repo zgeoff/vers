@@ -13,11 +13,13 @@
   },
   "dependencies": {
     "@epic-web/totp": "4.0.1",
+    "@faker-js/faker": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
     "@testcontainers/postgresql": "10.18.0",
     "@vers/db": "workspace:*",
     "@vers/game-utils": "workspace:*",
     "@vers/postgres-schema": "workspace:*",
+    "@vers/service-runtime": "workspace:*",
     "bcryptjs": "3.0.2",
     "drizzle-orm": "catalog:",
     "jose": "catalog:",
