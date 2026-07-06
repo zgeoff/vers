@@ -1,11 +1,21 @@
 import { expect, test } from 'bun:test';
-import { createTestUser } from '@vers/service-test-utils/bun';
+import type { AvatarContract } from '@vers/contract-avatar';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import { createAvatarService } from '../create-avatar-service';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
-import { setupTest } from '../test-utils/setup-test';
+
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createAvatarService({ db: db.db });
+
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+}
 
 test('it lists only the acting user avatars', async () => {
   await using ctx = await setupTest();
-  const client = await ctx.client();
+  const { token } = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
 
   await client.createAvatar({ class: 'brute', name: 'OwnerAvatarOne' });
   await client.createAvatar({ class: 'scholar', name: 'OwnerAvatarTwo' });
@@ -20,11 +30,12 @@ test('it lists only the acting user avatars', async () => {
 
 test('it excludes avatars owned by another user', async () => {
   await using ctx = await setupTest();
-  const other = await createTestUser(ctx.db);
+  const { token } = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const other = await createViewer({ audience: 'service-avatar', db: ctx.db });
 
   await createAvatarRow(ctx.db, { name: 'NotYours', userId: other.user.id });
 
-  const client = await ctx.client();
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
   const avatars = await client.getAvatars({});
 
   expect(avatars).toBeEmpty();
@@ -32,9 +43,10 @@ test('it excludes avatars owned by another user', async () => {
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   await using ctx = await setupTest();
-  const anonymousClient = await ctx.client(null);
+  const { token } = await createAnonymousViewer({ audience: 'service-avatar' });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
 
-  expect(anonymousClient.getAvatars({})).rejects.toMatchObject({
+  expect(client.getAvatars({})).rejects.toMatchObject({
     code: 'UNAUTHORIZED',
     data: { reason: 'missing-session' },
   });

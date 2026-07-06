@@ -1,17 +1,22 @@
 import { expect, test } from 'bun:test';
 import { avatarContract } from '@vers/contract-avatar';
 import { collectConformanceCases } from '@vers/contract-base/test-utils';
-import { createServiceToken } from '@vers/service-runtime/test-utils';
-import { getTestServiceKeyPair } from '@vers/service-test-utils/bun';
-import { setupTest } from './test-utils/setup-test';
+import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
+import { createAvatarService } from './create-avatar-service';
+
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createAvatarService({ db: db.db });
+
+  return { app, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+}
 
 test('it passes every conformance case collected from its contract', async () => {
   await using ctx = await setupTest();
-  const { privateKey } = await getTestServiceKeyPair();
-  const anonymousToken = await createServiceToken({ audience: 'service-avatar', privateKey });
+  const { token } = await createAnonymousViewer({ audience: 'service-avatar' });
 
   const cases = collectConformanceCases(avatarContract, {
-    anonymousHeaders: { authorization: `Bearer ${anonymousToken}` },
+    anonymousHeaders: { authorization: `Bearer ${token}` },
     authedSamples: {
       createAvatar: { class: 'brute', name: 'Conformance' },
       deleteAvatar: { id: 'x' },
