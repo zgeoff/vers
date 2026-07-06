@@ -56,20 +56,25 @@ without making lore the main activity.
 Avatar is the canonical term.
 
 An avatar is an enhanced human shaped by the player and capable of entering regions that ordinary
-people cannot survive. The term has deeper historical meaning in the world, but the player-facing
-fantasy is simple: shape your avatar, send them into danger, recover power, and push deeper.
+people cannot survive. "Avatar" is the worn remnant of a longer phrase — avatar _of_ something — and
+what filled the blank is lost, contested knowledge. What is known: the capacity is inborn, appearing
+by chance in some and not others, and no institution can manufacture it. The player-facing fantasy
+stays simple: shape your avatar, send them into danger, recover power, and push deeper.
 
 Avatars are embodied people, not disposable drones. They can be augmented, equipped, specialized,
 injured, defeated, recovered, ranked, and eventually set against other avatars.
 
 ### Defeat Stakes
 
-Defeat ends the activity. Avatars are always recovered, never permanently lost.
+Defeat ends the activity — an expedition, or any future instanced undertaking. Avatars are always
+recovered, never permanently lost.
 
 Defeat costs progress, not the avatar: experience toward the next level is lost but levels are never
 removed; yield from the run that was not already extracted is lost; and any investment in the
 activity instance is lost — the instance resets to baseline. Extraction is the player's mid-run
-banking decision: yield stays at risk until it is pulled out.
+banking decision: yield stays at risk until it is pulled out. Extraction is set as policy, not
+performed by hand — automated rules (extract at a yield threshold, or when defenses degrade) are
+intended, so unattended runs bank deliberately.
 
 Exact loss rates, floors, and extraction mechanics belong to the progression and economy notes.
 
@@ -175,12 +180,15 @@ itself.
 
 ## Vocabulary Register
 
+The register covers world vocabulary and cross-cutting provisional terms. System vocabulary — damage
+types, defensive layers, attributes — is defined in the damage-model note and is canonical under the
+naming grammar's first rule.
+
 | Term       | Status      | Notes                                                                            |
 | ---------- | ----------- | -------------------------------------------------------------------------------- |
 | Vers       | Keep        | Carries universe and versus: world exploration plus competition.                 |
 | avatar     | Canonical   | Enhanced human shaped by the player and sent into dangerous regions.             |
-| Respite    | Canonical   | The largest known human center and the player's operational home. Officially     |
-|            |             | Habitat Nine; the vernacular name won. Implies habitats one through eight.       |
+| Respite    | Canonical   | The largest human center; officially Habitat Nine — the vernacular name won.     |
 | world      | Keep        | The broad play space and fiction layer; not just a menu.                         |
 | region     | Provisional | Neutral term for world-map areas.                                                |
 | expedition | Provisional | The core activity: outfit an avatar, send it out, recover what returns.          |
@@ -188,5 +196,4 @@ itself.
 | power      | Keep        | Umbrella term for rewards that help the player push farther or more efficiently. |
 | Reserve    | Provisional | The single avatar skill resource; name open until itemisation settles.           |
 | buffer     | Reserved    | Held for a future deferred-damage defensive mechanic; distinct from Barrier.     |
-| aether     | Not canon   | Existing placeholder; only survives if it beats alternatives.                    |
 | glyph      | Not canon   | Visual candidate for mythic systems, not yet a world rule.                       |
