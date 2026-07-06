@@ -25,7 +25,7 @@ test('it persists a user and mints a token carrying that user as the acting subj
   expect(row.id).toBe(user.id);
 });
 
-test('it applies user overrides on top of the faker-generated defaults', async () => {
+test('it applies the given user overrides', async () => {
   await using testDB = await createTestDB();
 
   const { user } = await createViewer({

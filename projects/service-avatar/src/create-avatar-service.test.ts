@@ -17,7 +17,7 @@ test('it wires an injected db into the router instead of building one from env',
   expect(rows).toHaveLength(1);
 });
 
-test('it builds its own db from env.DATABASE_URL when none is injected', async () => {
+test('it boots from env.DATABASE_URL when no db is injected', async () => {
   const service = await createAvatarService();
 
   expect(service.env.DATABASE_URL).toStartWith('postgres://');
