@@ -4,21 +4,17 @@ import { createTestUser } from '../create-test-user';
 import { createTransactionTestDB } from './create-transaction-test-db';
 
 test('it rolls back everything written through the handle once disposed', async () => {
-  let userId: string;
+  const written = await createTransactionTestDB();
+  const { user } = await createTestUser(written.db, { email: 'rollback-proof@test.com' });
 
-  {
-    await using testDB = await createTransactionTestDB();
-    const { user } = await createTestUser(testDB.db, { email: 'rollback-proof@test.com' });
-
-    userId = user.id;
-  }
+  await written[Symbol.asyncDispose]();
 
   await using verify = await createTransactionTestDB();
 
   const row = await verify.db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', userId)
+    .where('id', '=', user.id)
     .executeTakeFirst();
 
   expect(row).toBeUndefined();
