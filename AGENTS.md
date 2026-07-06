@@ -199,12 +199,12 @@ implementing that algorithm — forcing list verbs onto textbook terms hides the
 
 ### Banned words
 
-Overused jargon a plainer word covers. Applies to all prose — docs, comments, PR descriptions,
-issue text. An exception is allowed only when no other word logically represents the meaning and
-the sentence can't be simplified without losing it.
+Overused jargon a plainer word covers. Applies to all prose — docs, comments, PR descriptions, issue
+text. An exception is allowed only when no other word logically represents the meaning and the
+sentence can't be simplified without losing it.
 
-- `load-bearing` / `load bearing` — say what breaks without it: "required", "essential", or name
-  the failure.
+- `load-bearing` / `load bearing` — say what breaks without it: "required", "essential", or name the
+  failure.
 - `seam` — "boundary", "join", "integration point".
 - `surface` — noun: "area", "API", the concrete thing itself; verb: "show", "raise", "report".
 
