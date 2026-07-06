@@ -191,7 +191,6 @@
         "allow": [
           { "from": "package", "name": "Kysely", "package": "kysely" },
           { "from": "package", "name": "PostgresJsDatabase", "package": "drizzle-orm" },
-          { "from": "package", "name": "Elysia", "package": "elysia" },
           { "from": "package", "name": "Logger", "package": "pino" },
           { "from": "package", "name": "TestProject", "package": "vitest" },
           {
@@ -206,7 +205,7 @@
           },
           {
             "from": "package",
-            "name": ["AnyRouter", "Router", "RPCHandler", "FetchHandler"],
+            "name": ["RPCHandler", "FetchHandler"],
             "package": "@orpc/server"
           },
           { "from": "package", "name": "SetupServerApi", "package": "msw" },
