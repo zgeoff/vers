@@ -17,3 +17,10 @@ test('it clones the template db and round-trips a row through kysely under bun t
   expect(row.username).toBeString();
   expect(Object.keys(row)).toIncludeSameMembers(Object.keys(user));
 });
+
+test('it returns the cloned database url', async () => {
+  await using testDB = await createKyselyTestDB();
+
+  expect(testDB.databaseURL).toBeString();
+  expect(testDB.databaseURL).toInclude('test_');
+});

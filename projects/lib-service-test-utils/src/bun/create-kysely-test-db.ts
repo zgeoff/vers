@@ -14,7 +14,8 @@ const DEFAULT_TEST_TEMPLATE_DB = 'test_template';
  *
  * Implements `Symbol.asyncDispose` to close the client's connection.
  *
- * @returns - The test database client.
+ * @returns - The test database client and the cloned database's connection URL, for callers that
+ *   need to point a separately-booted service at the same database.
  */
 export async function createKyselyTestDB() {
   const dbURI = process.env['TEST_DB_URI'] ?? DEFAULT_TEST_DB_URI;
@@ -27,9 +28,11 @@ export async function createKyselyTestDB() {
 
   await setupClient.end();
 
-  const db = createDB({ databaseURL: `${dbURI}/${dbName}` });
+  const databaseURL = `${dbURI}/${dbName}`;
+  const db = createDB({ databaseURL });
 
   return {
+    databaseURL,
     db,
     [Symbol.asyncDispose]: () => db.destroy(),
   };
