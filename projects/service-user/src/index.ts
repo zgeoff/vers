@@ -1,3 +1,1 @@
-import type { router } from './router';
-
-export type ServiceRouter = typeof router;
+export type { UserRouter } from './build-router';

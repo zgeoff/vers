@@ -1,132 +1,131 @@
-import * as schema from '@vers/postgres-schema';
-import { createTestDB, createTestUser, createTestVerification } from '@vers/service-test-utils';
-import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { expect, test } from 'vitest';
-import { router } from '../router';
-import { t } from '../t';
+import { expect, test } from 'bun:test';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import type { UserContract } from '@vers/contract-user';
+import {
+  createAnonymousViewer,
+  createTestDB,
+  createTestVerification,
+  createViewer,
+} from '@vers/service-test-utils/bun';
+import { createUserService } from '../create-user-service';
 
-const createCaller = t.createCallerFactory(router);
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createUserService({ db: db.db });
 
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
+test('it updates the acting user email', async () => {
+  await using ctx = await setupTest();
+  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  return { caller };
-}
-
-test('it updates the provided user email', async () => {
-  await using handle = await createTestDB();
-
-  const { db } = handle;
-
-  const user = await createTestUser(db);
-
-  const { caller } = setupTest({ db });
-
-  const update = {
-    email: 'updated@test.com',
-    id: user.id,
-  };
-
-  const result = await caller.updateEmail(update);
+  const result = await client.updateEmail({ email: 'updated@test.com' });
 
   expect(result).toStrictEqual({ updatedID: user.id });
 
-  const updatedUser = await db.query.users.findFirst({
-    where: eq(schema.users.id, user.id),
-  });
+  const row = await ctx.db
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', user.id)
+    .executeTakeFirstOrThrow();
 
-  expect(updatedUser).toStrictEqual({
-    ...user,
-    email: 'updated@test.com',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    updatedAt: expect.any(Date),
-  });
-
-  expect(updatedUser?.updatedAt.getTime()).toBeGreaterThan(user.updatedAt.getTime());
+  expect(row.email).toBe('updated@test.com');
 });
 
-test('it updates a users 2FA verification', async () => {
-  await using handle = await createTestDB();
+test('it repoints an in-progress 2fa verification to the new email', async () => {
+  await using ctx = await setupTest();
 
-  const { db } = handle;
+  const { token } = await createViewer({
+    audience: 'service-user',
+    db: ctx.db,
+    user: { email: 'current@test.com' },
+  });
 
-  const user = await createTestUser(db, { email: 'test@test.com' });
-
-  const verification = await createTestVerification(db, {
-    target: user.email,
+  const verification = await createTestVerification(ctx.db, {
+    target: 'current@test.com',
     type: '2fa',
   });
 
-  const { caller } = setupTest({ db });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  const update = {
-    email: 'updated@test.com',
-    id: user.id,
-  };
+  await client.updateEmail({ email: 'updated@test.com' });
 
-  await caller.updateEmail(update);
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', verification.id)
+    .executeTakeFirstOrThrow();
 
-  const updatedVerification = await db.query.verifications.findFirst({
-    where: eq(schema.verifications.id, verification.id),
-  });
-
-  expect(updatedVerification).toStrictEqual({
-    ...verification,
-    target: 'updated@test.com',
-  });
+  expect(row.target).toBe('updated@test.com');
 });
 
-test('it updates a users 2FA setup verification', async () => {
-  await using handle = await createTestDB();
+test('it repoints an in-progress 2fa-setup verification to the new email', async () => {
+  await using ctx = await setupTest();
 
-  const { db } = handle;
+  const { token } = await createViewer({
+    audience: 'service-user',
+    db: ctx.db,
+    user: { email: 'current@test.com' },
+  });
 
-  const user = await createTestUser(db, { email: 'test@test.com' });
-
-  const verification = await createTestVerification(db, {
-    target: user.email,
+  const verification = await createTestVerification(ctx.db, {
+    target: 'current@test.com',
     type: '2fa-setup',
   });
 
-  const { caller } = setupTest({ db });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  const update = {
-    email: 'updated@test.com',
-    id: user.id,
-  };
+  await client.updateEmail({ email: 'updated@test.com' });
 
-  await caller.updateEmail(update);
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', verification.id)
+    .executeTakeFirstOrThrow();
 
-  const updatedVerification = await db.query.verifications.findFirst({
-    where: eq(schema.verifications.id, verification.id),
-  });
+  expect(row.target).toBe('updated@test.com');
+});
 
-  expect(updatedVerification).toStrictEqual({
-    ...verification,
-    target: 'updated@test.com',
+test('it throws NOT_FOUND when the acting user no longer exists', async () => {
+  await using ctx = await setupTest();
+  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+
+  await ctx.db.deleteFrom('users').where('id', '=', user.id).execute();
+
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+
+  expect(client.updateEmail({ email: 'updated@test.com' })).rejects.toMatchObject({
+    code: 'NOT_FOUND',
   });
 });
 
-test('should throw an error if the user is not found', async () => {
-  await using handle = await createTestDB();
+test('it throws CONFLICT with field email when the email is taken', async () => {
+  await using ctx = await setupTest();
 
-  const { db } = handle;
+  await createViewer({
+    audience: 'service-user',
+    db: ctx.db,
+    user: { email: 'taken@test.com' },
+  });
 
-  const { caller } = setupTest({ db });
+  const { token } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  const update = {
-    email: 'updated@test.com',
-    id: 'non-existent-id',
-  } as const;
+  expect(client.updateEmail({ email: 'taken@test.com' })).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { field: 'email' },
+  });
+});
 
-  await expect(caller.updateEmail(update)).rejects.toMatchObject({
-    code: 'NOT_FOUND',
-    message: 'User not found',
+test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+
+  expect(client.updateEmail({ email: 'anonymous@test.com' })).rejects.toMatchObject({
+    code: 'UNAUTHORIZED',
+    data: { reason: 'missing-session' },
   });
 });

@@ -1,95 +1,68 @@
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { ResetPasswordPayload } from '@vers/service-types';
-import { hashPassword } from '@vers/service-utils';
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import { createHash, timingSafeEqual } from 'node:crypto';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import type { EmptyErrorPayload } from '../types';
 
-export const ResetPasswordInputSchema = z.object({
-  id: z.string(),
-  password: z.string(),
-  resetToken: z.string(),
-});
-
-export async function resetPassword(
-  input: z.infer<typeof ResetPasswordInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<ResetPasswordPayload> {
-  try {
-    const { id, password, resetToken } = input;
-
-    const user = await ctx.db.query.users.findFirst({
-      where: eq(schema.users.id, id),
-    });
-
-    if (!user) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'No user with that ID',
-      });
-    }
-
-    const isTokenMismatch = user.passwordResetToken !== resetToken;
-
-    if (isTokenMismatch) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Invalid reset token',
-      });
-    }
-
-    const isTokenExpired =
-      user.passwordResetTokenExpiresAt && user.passwordResetTokenExpiresAt < new Date();
-
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    if (isTokenExpired) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Reset token expired',
-      });
-    }
-
-    const passwordHash = await hashPassword(password);
-
-    await ctx.db.transaction(async (tx) => {
-      // delete all sessions for this user
-      await tx.delete(schema.sessions).where(eq(schema.sessions.userID, id));
-
-      // update the user's password
-      const [updatedUser] = await tx
-        .update(schema.users)
-        .set({
-          passwordHash,
-          passwordResetToken: null,
-          passwordResetTokenExpiresAt: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(schema.users.id, id))
-        .returning();
-
-      return [updatedUser];
-    });
-
-    return {};
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
-  }
+/** oRPC handler opts for the `resetPassword` procedure. */
+interface ResetPasswordOpts {
+  readonly errors: {
+    readonly INVALID_RESET_TOKEN: (payload: EmptyErrorPayload) => Error;
+    readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
+    readonly RESET_TOKEN_EXPIRED: (payload: EmptyErrorPayload) => Error;
+  };
+  readonly input: { readonly id: string; readonly password: string; readonly resetToken: string };
 }
 
-export const procedure = t.procedure
-  .input(ResetPasswordInputSchema)
-  .mutation((opts) => resetPassword(opts.input, opts.ctx));
+/**
+ * Resets a user's password given a plaintext reset token whose sha256 hash matches the stored
+ * value (#152); atomically rehashes the password and signs the user out of every session (#149).
+ */
+export async function resetPassword(
+  db: Kysely<DB>,
+  opts: ResetPasswordOpts,
+): Promise<Record<never, never>> {
+  const user = await db
+    .selectFrom('users')
+    .select(['passwordResetToken', 'passwordResetTokenExpiresAt'])
+    .where('id', '=', opts.input.id)
+    .executeTakeFirst();
+
+  if (user === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  if (user.passwordResetToken === null) {
+    throw opts.errors.INVALID_RESET_TOKEN({ data: {} });
+  }
+
+  if (user.passwordResetTokenExpiresAt !== null && user.passwordResetTokenExpiresAt < new Date()) {
+    throw opts.errors.RESET_TOKEN_EXPIRED({ data: {} });
+  }
+
+  const providedTokenHash = createHash('sha256').update(opts.input.resetToken).digest();
+  const storedTokenHash = Buffer.from(user.passwordResetToken, 'hex');
+
+  const tokenMatches =
+    providedTokenHash.length === storedTokenHash.length &&
+    timingSafeEqual(providedTokenHash, storedTokenHash);
+
+  if (!tokenMatches) {
+    throw opts.errors.INVALID_RESET_TOKEN({ data: {} });
+  }
+
+  const passwordHash = await Bun.password.hash(opts.input.password, 'argon2id');
+
+  await db
+    .with('updated', (qb) =>
+      qb
+        .updateTable('users')
+        .set({ passwordHash, passwordResetToken: null, passwordResetTokenExpiresAt: null })
+        .where('id', '=', opts.input.id)
+        .returningAll(),
+    )
+    .deleteFrom('sessions')
+    .where('userId', '=', opts.input.id)
+    .execute();
+
+  return {};
+}

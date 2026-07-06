@@ -1,117 +1,95 @@
-import type * as schema from '@vers/postgres-schema';
-import { createTestDB } from '@vers/service-test-utils';
-import bcrypt from 'bcryptjs';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import invariant from 'tiny-invariant';
-import { expect, test } from 'vitest';
-import { router } from '../router';
-import { t } from '../t';
+import { expect, test } from 'bun:test';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import type { UserContract } from '@vers/contract-user';
+import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
+import { createUserService } from '../create-user-service';
 
-const createCaller = t.createCallerFactory(router);
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createUserService({ db: db.db });
 
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
+test('it creates a user with an argon2id-hashed password', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  return { caller };
-}
-
-test('it creates a user with a hashed password', async () => {
-  await using handle = await createTestDB();
-
-  const { db } = handle;
-
-  const { caller } = setupTest({ db });
-
-  const password = 'password123';
-
-  const result = await caller.createUser({
+  const result = await client.createUser({
     email: 'user@test.com',
     name: 'Test User',
-    password,
+    password: 'password123',
     username: 'test_user',
   });
 
   expect(result).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    createdAt: expect.any(Date),
+    createdAt: expect.toBeValidDate(),
     email: 'user@test.com',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
+    id: expect.toBeString(),
     name: 'Test User',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    seed: expect.any(Number),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    updatedAt: expect.any(Date),
+    seed: expect.toBeNumber(),
+    updatedAt: expect.toBeValidDate(),
     username: 'test_user',
   });
 
-  const user = await db.query.users.findFirst({
-    where: (users, operators) => operators.eq(users.email, 'user@test.com'),
-  });
+  const row = await ctx.db
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', result.id)
+    .executeTakeFirstOrThrow();
 
-  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-  invariant(user?.passwordHash, 'user with password hash must be created');
-
-  await expect(bcrypt.compare(password, user.passwordHash)).resolves.toBeTrue();
+  expect(row.passwordHash).toStartWith('$argon2id$');
 });
 
-test('it throws an error if a user with that email already exists', async () => {
-  await using handle = await createTestDB();
+// after this expected constraint violation, the shared transaction handle is aborted — no
+// further queries run on ctx.db past the assertion
+test('it throws CONFLICT with field email when a user with that email already exists', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  const { db } = handle;
-
-  const { caller } = setupTest({ db });
-
-  await caller.createUser({
-    email: 'user@test.com',
+  await client.createUser({
+    email: 'duplicate@test.com',
     name: 'Test User',
     password: 'password123',
-    username: 'test_user',
+    username: 'first_user',
   });
 
-  // try to create another user with the same email
-  await expect(
-    caller.createUser({
-      email: 'user@test.com',
+  expect(
+    client.createUser({
+      email: 'duplicate@test.com',
       name: 'Another User',
       password: 'password456',
-      username: 'another_user',
+      username: 'second_user',
     }),
   ).rejects.toMatchObject({
     code: 'CONFLICT',
-    message: 'A user with that email already exists',
+    data: { field: 'email' },
   });
 });
 
-test('it throws an error if a user with that username already exists', async () => {
-  await using handle = await createTestDB();
+test('it throws CONFLICT with field username when a user with that username already exists', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  const { db } = handle;
-
-  const { caller } = setupTest({ db });
-
-  await caller.createUser({
+  await client.createUser({
     email: 'user1@test.com',
     name: 'Test User',
     password: 'password123',
-    username: 'test_user',
+    username: 'duplicate_user',
   });
 
-  // try to create another user with the same username
-  await expect(
-    caller.createUser({
+  expect(
+    client.createUser({
       email: 'user2@test.com',
       name: 'Another User',
       password: 'password456',
-      username: 'test_user',
+      username: 'duplicate_user',
     }),
   ).rejects.toMatchObject({
     code: 'CONFLICT',
-    message: 'A user with that username already exists',
+    data: { field: 'username' },
   });
 });

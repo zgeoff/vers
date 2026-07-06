@@ -1,77 +1,51 @@
-import { randomBytes } from 'node:crypto';
-import { promisify } from 'node:util';
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { CreatePasswordResetTokenPayload } from '@vers/service-types';
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import { createHash, randomBytes } from 'node:crypto';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import type { EmptyErrorPayload } from '../types';
 
-// oxlint-disable-next-line typescript/strict-void-return -- baseline(#236)
-const randomBytesAsync = promisify(randomBytes);
+const RESET_TOKEN_TTL_MS = 10 * 60 * 1000;
 
-export const CreatePasswordResetTokenInputSchema = z.object({
-  id: z.string(),
-});
-
-export async function createPasswordResetToken(
-  input: z.infer<typeof CreatePasswordResetTokenInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<CreatePasswordResetTokenPayload> {
-  try {
-    const user = await ctx.db.query.users.findFirst({
-      where: eq(schema.users.id, input.id),
-    });
-
-    if (!user) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'User not found',
-      });
-    }
-
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    if (!user.passwordHash) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'User has no password',
-      });
-    }
-
-    const tokenBytes = await randomBytesAsync(32);
-    const resetToken = tokenBytes.toString('hex');
-
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-    // intentionally not updating our user record's `updatedAt` field
-    // so that it's reflective of information that matters to the user
-    await ctx.db
-      .update(schema.users)
-      .set({
-        passwordResetToken: resetToken,
-        passwordResetTokenExpiresAt: expiresAt,
-      })
-      .where(eq(schema.users.id, input.id));
-
-    return { resetToken };
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
-  }
+/** oRPC handler opts for the `createPasswordResetToken` procedure. */
+interface CreatePasswordResetTokenOpts {
+  readonly errors: {
+    readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
+    readonly NO_PASSWORD: (payload: EmptyErrorPayload) => Error;
+  };
+  readonly input: { readonly id: string };
 }
 
-export const procedure = t.procedure
-  .input(CreatePasswordResetTokenInputSchema)
-  .mutation((opts) => createPasswordResetToken(opts.input, opts.ctx));
+/**
+ * Mints a password-reset token, storing only its sha256 hash (#152) and returning the plaintext to
+ * present to the reset flow.
+ */
+export async function createPasswordResetToken(
+  db: Kysely<DB>,
+  opts: CreatePasswordResetTokenOpts,
+): Promise<{ resetToken: string }> {
+  const user = await db
+    .selectFrom('users')
+    .select('passwordHash')
+    .where('id', '=', opts.input.id)
+    .executeTakeFirst();
+
+  if (user === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  if (user.passwordHash === null) {
+    throw opts.errors.NO_PASSWORD({ data: {} });
+  }
+
+  const resetToken = randomBytes(32).toString('hex');
+  const passwordResetToken = createHash('sha256').update(resetToken).digest('hex');
+
+  const passwordResetTokenExpiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+
+  await db
+    .updateTable('users')
+    .set({ passwordResetToken, passwordResetTokenExpiresAt })
+    .where('id', '=', opts.input.id)
+    .execute();
+
+  return { resetToken };
+}

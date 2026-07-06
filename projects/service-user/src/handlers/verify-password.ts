@@ -1,65 +1,52 @@
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { VerifyPasswordPayload } from '@vers/service-types';
+import type { DB } from '@vers/db';
 import bcrypt from 'bcryptjs';
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { Kysely } from 'kysely';
 
-export const VerifyPasswordInputSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
-});
+// a fixed, valid argon2id hash verified against on every miss so a missing user or unset
+// password takes the same time as a real check — never revealing which case occurred (#155)
+const DUMMY_HASH =
+  '$argon2id$v=19$m=65536,t=2,p=1$HcnWDKgn0Ge+fMLfUNLxdQyZQP62cm11r4tp2hS9GwE$jcksXM4djDmS+FjzQVmKOHr/5+J1lvSh1lPjUesXBco';
 
+/** oRPC handler opts for the `verifyPassword` procedure. */
+interface VerifyPasswordOpts {
+  readonly input: { readonly email: string; readonly password: string };
+}
+
+/**
+ * Checks a password against a user's stored hash; never throws for wrong credentials or an
+ * unknown email, and rehashes a successfully verified legacy bcrypt hash to argon2id (#150).
+ */
 export async function verifyPassword(
-  input: z.infer<typeof VerifyPasswordInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<VerifyPasswordPayload> {
-  try {
-    const user = await ctx.db.query.users.findFirst({
-      where: eq(schema.users.email, input.email),
-    });
+  db: Kysely<DB>,
+  opts: VerifyPasswordOpts,
+): Promise<{ success: boolean }> {
+  const row = await db
+    .selectFrom('users')
+    .selectAll()
+    .where('email', '=', opts.input.email)
+    .executeTakeFirst();
 
-    if (!user) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'User not found',
-      });
-    }
+  if (row === undefined || row.passwordHash === null) {
+    await Bun.password.verify(opts.input.password, DUMMY_HASH);
 
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    if (!user.passwordHash) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'User does not have a password set',
-      });
-    }
+    return { success: false };
+  }
 
-    const isValid = await bcrypt.compare(input.password, user.passwordHash);
+  if (row.passwordHash.startsWith('$2')) {
+    const isValid = await bcrypt.compare(opts.input.password, row.passwordHash);
 
     if (!isValid) {
       return { success: false };
     }
 
+    const passwordHash = await Bun.password.hash(opts.input.password, 'argon2id');
+
+    await db.updateTable('users').set({ passwordHash }).where('id', '=', row.id).execute();
+
     return { success: true };
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
   }
-}
 
-export const procedure = t.procedure
-  .input(VerifyPasswordInputSchema)
-  .mutation((opts) => verifyPassword(opts.input, opts.ctx));
+  const isValid = await Bun.password.verify(opts.input.password, row.passwordHash);
+
+  return { success: isValid };
+}

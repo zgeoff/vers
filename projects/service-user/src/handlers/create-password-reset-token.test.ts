@@ -1,113 +1,92 @@
-import type * as schema from '@vers/postgres-schema';
-import { createTestDB, createTestUser } from '@vers/service-test-utils';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { expect, test } from 'vitest';
-import { router } from '../router';
-import { t } from '../t';
+import { expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import type { UserContract } from '@vers/contract-user';
+import { createAnonymousViewer, createTestDB, createTestUser } from '@vers/service-test-utils/bun';
+import { createUserService } from '../create-user-service';
 
-const createCaller = t.createCallerFactory(router);
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createUserService({ db: db.db });
 
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
-  user?: Partial<typeof schema.users.$inferInsert>;
-}
-
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
-
-  return { caller };
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it creates a password reset token for an existing user', async () => {
-  await using handle = await createTestDB();
+  await using ctx = await setupTest();
+  const { user } = await createTestUser(ctx.db);
+  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  const { db } = handle;
+  const result = await client.createPasswordResetToken({ id: user.id });
 
-  const user = await createTestUser(db);
+  expect(result).toStrictEqual({ resetToken: expect.toBeString() });
 
-  const { caller } = setupTest({ db });
+  const row = await ctx.db
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', user.id)
+    .executeTakeFirstOrThrow();
 
-  const result = await caller.createPasswordResetToken({
-    id: user.id,
-  });
-
-  expect(result).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    resetToken: expect.any(String),
-  });
-
-  const updatedUser = await db.query.users.findFirst({
-    where: (users, operators) => operators.eq(users.id, user.id),
-  });
-
-  expect(updatedUser?.passwordResetToken).toBe(result.resetToken);
-  expect(updatedUser?.passwordResetTokenExpiresAt).toBeDate();
-  expect(updatedUser?.passwordResetTokenExpiresAt).toBeAfter(new Date());
-
-  expect(updatedUser?.passwordResetTokenExpiresAt).toBeBefore(
-    new Date(Date.now() + 11 * 60 * 1000),
-  );
+  expect(row.passwordResetTokenExpiresAt).toBeAfter(new Date());
+  expect(row.passwordResetTokenExpiresAt).toBeBefore(new Date(Date.now() + 11 * 60 * 1000));
 });
 
-test('it updates the user record with the new reset token', async () => {
-  await using handle = await createTestDB();
+test('it stores only a hash of the reset token at rest', async () => {
+  await using ctx = await setupTest();
+  const { user } = await createTestUser(ctx.db);
+  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  const { db } = handle;
+  const result = await client.createPasswordResetToken({ id: user.id });
 
-  const user = await createTestUser(db);
+  const row = await ctx.db
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', user.id)
+    .executeTakeFirstOrThrow();
 
-  const { caller } = setupTest({ db });
-
-  const firstResult = await caller.createPasswordResetToken({
-    id: user.id,
-  });
-
-  const secondResult = await caller.createPasswordResetToken({
-    id: user.id,
-  });
-
-  expect(firstResult.resetToken).not.toBe(secondResult.resetToken);
-
-  const updatedUser = await db.query.users.findFirst({
-    where: (users, operators) => operators.eq(users.id, user.id),
-  });
-
-  expect(updatedUser?.passwordResetToken).toBe(secondResult.resetToken);
+  expect(row.passwordResetToken).not.toBe(result.resetToken);
+  expect(row.passwordResetToken).toBe(createHash('sha256').update(result.resetToken).digest('hex'));
 });
 
-test('it throws an error if the user does not exist', async () => {
-  await using handle = await createTestDB();
+test('it replaces the previous reset token when called again', async () => {
+  await using ctx = await setupTest();
+  const { user } = await createTestUser(ctx.db);
+  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  const { db } = handle;
+  const first = await client.createPasswordResetToken({ id: user.id });
+  const second = await client.createPasswordResetToken({ id: user.id });
 
-  const { caller } = setupTest({ db });
+  expect(first.resetToken).not.toBe(second.resetToken);
 
-  await expect(
-    caller.createPasswordResetToken({
-      id: 'nonexistent_id',
-    }),
-  ).rejects.toMatchObject({
+  const row = await ctx.db
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', user.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.passwordResetToken).toBe(createHash('sha256').update(second.resetToken).digest('hex'));
+});
+
+test('it throws NOT_FOUND when the user does not exist', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+
+  expect(client.createPasswordResetToken({ id: 'nonexistent-id' })).rejects.toMatchObject({
     code: 'NOT_FOUND',
-    message: 'User not found',
   });
 });
 
-test('it throws an error if the user has no password', async () => {
-  await using handle = await createTestDB();
+test('it throws NO_PASSWORD for a user without a password', async () => {
+  await using ctx = await setupTest();
+  const { user } = await createTestUser(ctx.db, { password: null });
+  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  const { db } = handle;
-
-  const user = await createTestUser(db, { password: null });
-
-  const { caller } = setupTest({ db });
-
-  await expect(
-    caller.createPasswordResetToken({
-      id: user.id,
-    }),
-  ).rejects.toMatchObject({
-    code: 'BAD_REQUEST',
-    message: 'User has no password',
+  expect(client.createPasswordResetToken({ id: user.id })).rejects.toMatchObject({
+    code: 'NO_PASSWORD',
   });
 });

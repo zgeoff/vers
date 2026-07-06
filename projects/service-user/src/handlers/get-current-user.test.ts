@@ -11,26 +11,25 @@ async function setupTest() {
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-test('it changes the acting user password', async () => {
+test('it returns the acting user', async () => {
   await using ctx = await setupTest();
   const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  const result = await client.changePassword({ password: 'newpassword123' });
+  const result = await client.getCurrentUser({});
 
-  expect(result).toStrictEqual({ updatedID: user.id });
-
-  const row = await ctx.db
-    .selectFrom('users')
-    .selectAll()
-    .where('id', '=', user.id)
-    .executeTakeFirstOrThrow();
-
-  expect(row.passwordHash).not.toBe(user.passwordHash);
-  expect(row.passwordHash).toStartWith('$argon2id$');
+  expect(result).toStrictEqual({
+    createdAt: user.createdAt,
+    email: user.email,
+    id: user.id,
+    name: user.name,
+    seed: user.seed,
+    updatedAt: user.updatedAt,
+    username: user.username,
+  });
 });
 
-test('it throws NOT_FOUND when the acting user no longer exists', async () => {
+test('it throws UNAUTHORIZED when the acting user no longer exists', async () => {
   await using ctx = await setupTest();
   const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
 
@@ -38,8 +37,9 @@ test('it throws NOT_FOUND when the acting user no longer exists', async () => {
 
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  expect(client.changePassword({ password: 'newpassword123' })).rejects.toMatchObject({
-    code: 'NOT_FOUND',
+  expect(client.getCurrentUser({})).rejects.toMatchObject({
+    code: 'UNAUTHORIZED',
+    data: { reason: 'missing-session' },
   });
 });
 
@@ -48,7 +48,7 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   const { token } = await createAnonymousViewer({ audience: 'service-user' });
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  expect(client.changePassword({ password: 'newpassword123' })).rejects.toMatchObject({
+  expect(client.getCurrentUser({})).rejects.toMatchObject({
     code: 'UNAUTHORIZED',
     data: { reason: 'missing-session' },
   });
