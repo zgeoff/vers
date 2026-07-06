@@ -10,7 +10,7 @@ Vers uses two attribute layers: avatar attributes and metagame attributes. They 
 for the same item budget or progression choices.
 
 Avatar attributes are local to an avatar. They can appear on gear, avatar passives, class systems,
-and other character-power surfaces. They determine how an avatar survives and performs inside
+and other character-power systems. They determine how an avatar survives and performs inside
 regions.
 
 Metagame attributes are persistent player/world progression. They can appear on metagame passive
@@ -59,6 +59,27 @@ and the ability to recognize what the world is offering.
 Aptitude is refinement. It represents practical capability with items, systems, upgrades, and other
 long-term tools that turn resources into better outcomes.
 
+## Resource
+
+Avatars act on cadence: attacks, skills, and recovery run on their own beats, and idle play means
+those beats fire without piloting. Reserve (provisional name) is the single avatar resource layered
+over that cadence. Skills relate to it in one of three ways:
+
+- **Free** skills fire on their beat at no cost. They are the baseline lane: a starved avatar
+  degrades to its free skills instead of stalling.
+- **Costed** skills spend Reserve to fire. A costed skill that cannot pay skips its beat rather than
+  blocking the avatar. A costed skill should be stronger per beat than a free one by roughly the
+  value of its cost — the cost is a tax on throughput, and the build question is whether
+  regeneration can sustain it.
+- **Optional-cost** skills fire either way and consume Reserve for a stronger outcome when it is
+  available. Empowerment uptime is a build outcome worth reporting to the player.
+
+Cost shape is a skill property, not a class rule. Archetypes may still skew the flow — heavy
+spenders, or generators that build Reserve by acting or being hit — through skills and passives.
+
+Focus's recovery mandate includes Reserve regeneration. Specific regeneration, cost, capacity, and
+on-full/on-empty investment stays in itemisation and skills, as with every attribute.
+
 ## Damage Types
 
 Vers starts with six damage types. The set is intentionally wider than a traditional fantasy ARPG
@@ -90,10 +111,25 @@ environmental taint, and other damaging intrusion.
 Cognitive damage is hostile patterning: perception attack, neural interference, signal confusion,
 memory pressure, and other effects that harm through thought, control, or understanding.
 
-### Void
+### Null
 
-Void damage is absence and impossibility: entropy, null effects, erasure, unreality, and forces that
-do not fit cleanly into the known material systems.
+Null damage is absence and impossibility: entropy, erasure, unreality, and forces that do not fit
+cleanly into the known material systems.
+
+## Threat Mix & Coverage
+
+Five of the six damage types are resistable: type-specific mitigation exists for Thermal, Voltaic,
+Toxic, Cognitive, and Null, and an endgame avatar is expected to reach the mitigation cap for the
+types its target regions deal. Kinetic is not resistable — it is the universal pressure type,
+handled through the other defensive layers rather than a resistance stat.
+
+Regions are weighted toward a dominant damage type but never deal it exclusively. Type mitigation is
+specced against a region's mix, and the type-agnostic layers — avoidance, block, barrier — are the
+floor under whatever a build has not covered.
+
+Every damage type has at least one region or faction that expresses it. The strange types are
+progression-gated: Cognitive appears later, and Null is endgame. The type spectrum deepens as
+avatars push farther from Respite.
 
 ## Damage Events
 
@@ -104,6 +140,19 @@ interactions.
 
 Hits are discrete damage events. They are the baseline event type for attacks, skills, and enemy
 actions that connect at a point in time.
+
+### Critical Hits
+
+A hit may resolve as critical, scaling that hit's impact. Criticals are a property of hits, not a
+separate event type: persistent damage and status effects do not crit on their own, though a
+critical hit may strengthen the secondary outcomes it causes.
+
+Criticals are symmetric. Avatar criticals are a build lever: chance and magnitude are both
+investable through gear, skills, and passives. Enemy criticals are spike pressure — the reason
+defensive layers and recovery need headroom above average incoming damage rather than being tuned to
+it. An unattended avatar must be able to survive unlucky sequences, so enemy critical magnitude is a
+tuning lever for region danger, not a source of unavoidable loss. That tuning belongs to the
+progression and enemy notes.
 
 ### Persistent Damage
 
@@ -156,13 +205,19 @@ The default resolution order is:
 1. A hostile action attempts to connect.
 2. Avoidance may prevent connection.
 3. Block may intercept a connected hit.
-4. Mitigation reduces remaining damage.
-5. Barrier absorbs damage before life.
-6. Life is reduced by unabsorbed damage.
-7. Status effects and secondary outcomes are checked from the resolved event.
+4. A connected hit may resolve as critical, scaling its damage.
+5. Mitigation reduces remaining damage.
+6. Barrier absorbs damage before life.
+7. Life is reduced by unabsorbed damage.
+8. Status effects and secondary outcomes are checked from the resolved event.
 
 This order is a design spine, not a final formula. Individual skills, items, enemies, and regions
 may alter it when a specific build or encounter needs a rule-breaking hook.
+
+The order is also the structure of expedition reporting: each defensive layer consumed is
+escalation, and a hit that reaches life is a close call worth reporting. Reporting carries both a
+high-level summary and the drill-down that explains it — including what failed on defeat; its own
+design note owns the specifics.
 
 ## Scaling Philosophy
 
@@ -181,5 +236,5 @@ only when they create meaningful build or encounter identity.
 ## Non-Goals
 
 This note does not define exact formulas, ailment lists, resistance caps, block math, avoidance
-math, or complete itemisation rules. Those belong in downstream combat, itemisation, enemy, and
-progression notes.
+math, critical chance or magnitude baselines, Reserve cost or regeneration baselines, or complete
+itemisation rules. Those belong in downstream combat, itemisation, enemy, and progression notes.
