@@ -177,21 +177,37 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
 Services, apps, and DB-backed libraries that exercise a real postgres instead of MSW follow this
 standard instead of the inline-data rule above — `service-avatar` is the reference example.
 
+- **Production service factory.** A service exposes one `create<Service>Service({ db? })` in `src/`,
+  owning its `createService` config; the production entrypoint and every test call that same
+  factory. `db` is injected only in tests, for transaction isolation — never clone the
+  `createService` config into tests.
 - **Isolation strategy.** Acquire the database through `@vers/service-test-utils/bun`:
   `createTestDB()` returns an `await using` handle; `transaction` isolation (rollback on dispose) is
   the default, `database` isolation (a real, committed clone) is the opt-out for code that commits
   mid-op, takes advisory locks, or asserts something that only fires at COMMIT. Inject the handle's
-  `db` into the code under test — for a service, through its `buildRouter` — since code that opens
-  its own connection bypasses the rollback.
-- **`setupTest()`, not `beforeEach`.** A local environment builder: typed config in, named props
-  out, no `if`, declarative wiring — it builds an environment, not a scenario.
+  `db` into the code under test — for a service, through its factory — since code that opens its own
+  connection bypasses the rollback.
+- **Test-setup layering, by scope.** A local `setupTest()` per suite — typed config in, named props
+  out, no `if`, declarative wiring — builds the db and boots the service, with no data. Never
+  centralise it: a shared `setupTest` accretes conditionals as services multiply.
+- **Composites build/register/return DATA, never runtime utils** (no clients, apps, servers) — the
+  approved-reuse shortcut, not a mandate; a test with more refined needs may still build actors
+  bespoke. Default to shared factories/composites for domain entities and DTOs, even on first use,
+  for consistency. `createViewer`/`createAnonymousViewer` (`@vers/service-test-utils/bun`) are the
+  shared s2s-actor composites, returning `{ user, token }` / `{ token }`; build the client in-test
+  via `buildRPCTestClient(app, { token })`.
 - **Test data — factories + composites, always.** Every domain entity/DTO gets a faker-defaulted
   `create-mock-*.ts` factory in `test-utils/factories/` (a plain object, never persisted, never
   requiring a parent), each with its own test. Persisted or wired data goes through a
   composite/entity-util (`create-*.ts`, no `-mock-`) that sources its defaults from the factory.
+- **Assertions.** `toStrictEqual` + asymmetric matchers (`expect.toBeString()`, `expect.toInclude`,
+  …) for whole-shape assertions; a single-field `.toBe` after a mutation is fine.
 - **Naming.** Behavioural, plain English, never citing internal identifiers. Prefix `#procedureName`
-  only when one file holds several procedures' tests; plain `it …` when a file covers one unit. No
-  HTTP-verb prefix.
+  only when one file holds several procedures' tests; plain `it …` when a file covers one unit.
+- **One export per file, filename = its kebab-cased export.** `types.ts`/`index.ts` excepted — hold
+  this line on new files; it's the violation reviewers keep catching.
+- **Comments.** No JSDoc that only restates a name/signature; document only genuinely non-obvious
+  contract; never name another declaration in a comment.
 - **Failure paths are contract.** Assert on the rejection directly —
   `expect(promise).rejects.toMatchObject({ code })` — never try/catch. Bun's own matcher types
   declare every `.rejects`/`.resolves` chain synchronous (`void`), matching its own doc examples, so
