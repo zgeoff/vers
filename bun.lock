@@ -533,17 +533,6 @@
         "typescript": "catalog:",
       },
     },
-    "projects/lib-service-types": {
-      "name": "@vers/service-types",
-      "version": "0.0.0",
-      "dependencies": {
-        "@vers/data": "workspace:*",
-        "@vers/postgres-schema": "workspace:*",
-      },
-      "devDependencies": {
-        "typescript": "catalog:",
-      },
-    },
     "projects/lib-service-utils": {
       "name": "@vers/service-utils",
       "version": "0.0.0",
@@ -1916,8 +1905,6 @@
     "@vers/service-session": ["@vers/service-session@workspace:projects/service-session"],
 
     "@vers/service-test-utils": ["@vers/service-test-utils@workspace:projects/lib-service-test-utils"],
-
-    "@vers/service-types": ["@vers/service-types@workspace:projects/lib-service-types"],
 
     "@vers/service-user": ["@vers/service-user@workspace:projects/service-user"],
 
