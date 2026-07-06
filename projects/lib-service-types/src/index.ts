@@ -1,5 +1,3 @@
-// oxlint-disable-next-line typescript/consistent-type-exports -- baseline(#236)
-export * from './service-avatar';
 export { ServiceID } from './service-id';
 // oxlint-disable-next-line typescript/consistent-type-exports -- baseline(#236)
 export * from './service-session';
