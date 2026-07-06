@@ -1,54 +1,57 @@
-import { createId } from '@paralleldrive/cuid2';
-import { Class } from '@vers/data';
-import type * as schema from '@vers/postgres-schema';
-import { createTestDB, createTestUser } from '@vers/service-test-utils';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { expect, test } from 'vitest';
-import { router } from '../router';
-import { t } from '../t';
+import { expect, test } from 'bun:test';
+import type { AvatarContract } from '@vers/contract-avatar';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import { createAvatarService } from '../create-avatar-service';
+import { createAvatarRow } from '../test-utils/create-avatar-row';
 
-const createCaller = t.createCallerFactory(router);
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createAvatarService({ db: db.db });
 
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-async function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
-  const user = await createTestUser(config.db);
+test('it returns an owned avatar by id', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
+  const created = await client.createAvatar({ class: 'brute', name: 'Findable' });
 
-  return { caller, user };
-}
+  const found = await client.getAvatar({ id: created.id });
 
-test('it retrieves an avatar by id', async () => {
-  await using handle = await createTestDB();
-
-  const { db } = handle;
-  const { caller, user } = await setupTest({ db });
-
-  const avatar = await caller.createAvatar({
-    class: Class.Brute,
-    name: 'TestAvatar',
-    userID: user.id,
-  });
-
-  const result = await caller.getAvatar({
-    id: avatar.id,
-  });
-
-  expect(result).toStrictEqual(avatar);
+  expect(found).toStrictEqual(created);
 });
 
-test('it returns null when avatar is not found', async () => {
-  await using handle = await createTestDB();
+test('it returns null for an avatar owned by another user', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const other = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const foreign = await createAvatarRow(ctx.db, { name: 'Foreign', userId: other.user.id });
 
-  const { db } = handle;
-  const { caller } = await setupTest({ db });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
+  const found = await client.getAvatar({ id: foreign.id });
 
-  const result = await caller.getAvatar({
-    id: createId(),
+  expect(found).toBeNull();
+});
+
+test('it returns null for an id that does not exist', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
+
+  const found = await client.getAvatar({ id: 'does-not-exist' });
+
+  expect(found).toBeNull();
+});
+
+test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-avatar' });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
+
+  expect(client.getAvatar({ id: 'x' })).rejects.toMatchObject({
+    code: 'UNAUTHORIZED',
+    data: { reason: 'missing-session' },
   });
-
-  expect(result).toBeNull();
 });

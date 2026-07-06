@@ -510,11 +510,13 @@
       "version": "0.0.0",
       "dependencies": {
         "@epic-web/totp": "4.0.1",
+        "@faker-js/faker": "catalog:",
         "@paralleldrive/cuid2": "catalog:",
         "@testcontainers/postgresql": "10.18.0",
         "@vers/db": "workspace:*",
         "@vers/game-utils": "workspace:*",
         "@vers/postgres-schema": "workspace:*",
+        "@vers/service-runtime": "workspace:*",
         "bcryptjs": "3.0.2",
         "drizzle-orm": "catalog:",
         "jose": "catalog:",
@@ -606,30 +608,25 @@
       "name": "@vers/service-avatar",
       "version": "0.0.0",
       "dependencies": {
-        "@hono/node-server": "catalog:",
-        "@hono/sentry": "catalog:",
-        "@hono/trpc-server": "catalog:",
+        "@orpc/server": "1.14.6",
         "@paralleldrive/cuid2": "catalog:",
-        "@trpc/server": "catalog:",
-        "@vers/data": "workspace:*",
-        "@vers/postgres-schema": "workspace:*",
-        "@vers/service-test-utils": "workspace:*",
-        "@vers/service-types": "workspace:*",
-        "@vers/service-utils": "workspace:*",
-        "@vers/validation": "workspace:*",
-        "drizzle-orm": "catalog:",
-        "hono": "catalog:",
-        "postgres": "catalog:",
-        "superjson": "catalog:",
-        "zod": "catalog:",
+        "@vers/contract-avatar": "workspace:*",
+        "@vers/db": "workspace:*",
+        "@vers/service-runtime": "workspace:*",
+        "elysia": "1.4.29",
+        "kysely": "0.29.2",
+        "zod": "4.4.3",
       },
       "devDependencies": {
-        "@sentry/esbuild-plugin": "catalog:",
+        "@faker-js/faker": "catalog:",
+        "@orpc/contract": "1.14.6",
+        "@types/bun": "1.3.14",
         "@types/node": "22.13.10",
+        "@vers/contract-base": "workspace:*",
+        "@vers/service-test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "0.0.2",
         "jest-extended": "catalog:",
         "typescript": "catalog:",
-        "vite": "catalog:",
-        "vitest": "catalog:",
       },
     },
     "projects/service-session": {
@@ -726,6 +723,7 @@
     },
   },
   "catalog": {
+    "@faker-js/faker": "10.5.0",
     "@hono/node-server": "1.13.8",
     "@hono/sentry": "1.2.0",
     "@hono/trpc-server": "0.3.4",
@@ -966,6 +964,8 @@
     "@eslint/object-schema": ["@eslint/object-schema@2.1.7", "", {}, "sha512-VtAOaymWVfZcmZbp6E2mympDIHvyjXs/12LqWYjVw6qjrfF+VK+fyG33kChz3nnK+SU5/NeHOqrTEHS8sXO3OA=="],
 
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.2.8", "", { "dependencies": { "@eslint/core": "^0.13.0", "levn": "^0.4.1" } }, "sha512-ZAoA40rNMPwSm+AeHpCq8STiNAwzWLJuP8Xv4CHIc9wv/PSuExjMrmjfYNj682vW0OOiZ1HKxzvjQr9XZIisQA=="],
+
+    "@faker-js/faker": ["@faker-js/faker@10.5.0", "", {}, "sha512-bsxD8WLS5lIj7aaoCx1YJkktqYj5vlBUE6HWzu2Q51ksrGJ0H737ECCKlFU7Yf8Br45z9t99frBp/J7kzbMPAg=="],
 
     "@fastify/busboy": ["@fastify/busboy@2.1.1", "", {}, "sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA=="],
 
@@ -4106,6 +4106,8 @@
     "@vers/contract-user/zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 
     "@vers/contract-verification/zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
+
+    "@vers/service-avatar/zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 
     "@vers/service-runtime/zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 

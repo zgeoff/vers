@@ -1,61 +1,54 @@
 import { createId } from '@paralleldrive/cuid2';
-import { TRPCError } from '@trpc/server';
-import { Class } from '@vers/data';
-import * as schema from '@vers/postgres-schema';
-import type { CreateAvatarPayload } from '@vers/service-types';
-import { isPGError, isUniqueConstraintError } from '@vers/service-utils';
-import { AvatarNameSchema } from '@vers/validation';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { AvatarData } from '@vers/contract-avatar';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
+import { toAvatarData } from './to-avatar-data';
 
-const CreateAvatarInputSchema = z.object({
-  class: z.nativeEnum(Class),
-  name: AvatarNameSchema,
-  userID: z.string(),
-});
+/** oRPC handler opts for the authed `createAvatar` procedure. */
+interface CreateAvatarOpts {
+  readonly context: { readonly actingUserId: null | string };
+  readonly errors: {
+    readonly CONFLICT: (payload: EmptyErrorPayload) => Error;
+    readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
+  };
+  readonly input: { readonly class: AvatarData['class']; readonly name: string };
+}
 
-async function createAvatar(
-  input: z.infer<typeof CreateAvatarInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<CreateAvatarPayload> {
+/** Creates an avatar owned by the acting user; throws CONFLICT when the name is already taken. */
+export async function createAvatar(db: Kysely<DB>, opts: CreateAvatarOpts): Promise<AvatarData> {
+  if (opts.context.actingUserId === null) {
+    throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+  }
+
   try {
-    const createdAt = new Date();
+    const row = await db
+      .insertInto('avatars')
+      .values({
+        class: opts.input.class,
+        id: createId(),
+        name: opts.input.name,
+        userId: opts.context.actingUserId,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
 
-    const avatar: typeof schema.avatars.$inferSelect = {
-      class: input.class,
-      createdAt,
-      id: createId(),
-      level: 1,
-      name: input.name,
-      updatedAt: createdAt,
-      userID: input.userID,
-      xp: 0,
-    };
-
-    await ctx.db.insert(schema.avatars).values(avatar);
-
-    return avatar;
+    return toAvatarData(row);
   } catch (error: unknown) {
-    logger.error(error);
-
-    if (isPGError(error) && isUniqueConstraintError(error, 'avatars_name_unique')) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'An avatar with that name already exists',
-      });
+    if (isUniqueViolation(error)) {
+      throw opts.errors.CONFLICT({ data: {} });
     }
 
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
+    throw error;
   }
 }
 
-export const procedure = t.procedure
-  .input(CreateAvatarInputSchema)
-  .mutation((opts) => createAvatar(opts.input, opts.ctx));
+/** postgres.js surfaces a unique-constraint violation as SQLSTATE 23505. */
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code: unknown }).code === '23505'
+  );
+}

@@ -1,5 +1,4 @@
 ARG BUN_VERSION=1.3.10
-ARG NODE_VERSION=24.18.0
 
 FROM oven/bun:${BUN_VERSION}-slim AS base
 
@@ -15,57 +14,25 @@ COPY . .
 
 RUN turbo prune @vers/service-avatar --docker
 
-# --- full install (with devDependencies) to run the turbo build ---
-FROM base AS installer
-
-COPY --from=pruner /app/out/json/ .
-COPY --from=pruner /app/out/bun.lock ./bun.lock
-
-RUN bun install --frozen-lockfile
-
-# --- bundle the service with esbuild ---
-FROM installer AS builder
-
-COPY --from=pruner /app/out/full/ .
-# turbo prune only copies workspace packages — the shared build driver and
-# the tsconfig every project's tsconfig.json extends live outside any
-# package, so they come straight from the build context
-COPY scripts/build-esbuild.ts scripts/build-esbuild.ts
-COPY tsconfig.base.json tsconfig.base.json
-
-# set up certificates so sentry can make a deployment
-RUN apt-get update && apt-get install -y ca-certificates
-
-ARG COMMIT_SHA
-ENV COMMIT_SHA=$COMMIT_SHA
-
-ARG SENTRY_AUTH_TOKEN
-ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
-
-RUN bun run build --filter=@vers/service-avatar
-
-# --- production-only deps, hoisted so the single esbuild bundle can
-# resolve externals that came from more than one source package ---
+# --- production-only deps: no bundle step, so no hoisting needed ---
 FROM base AS prod-deps
 
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/bun.lock ./bun.lock
 
-RUN bun install --frozen-lockfile --production --linker=hoisted --ignore-scripts
+RUN bun install --frozen-lockfile --production
 
-# --- runtime ---
-FROM node:${NODE_VERSION}-alpine
+# --- runtime: runs the pruned bun source directly, no bundle ---
+FROM base
 
-LABEL fly_launch_runtime="Node.js"
+# the isolated linker nests a `node_modules` under every workspace package, not just the root, so
+# prod-deps' whole tree comes first; out/full then lays real source over its out/json placeholders
+COPY --from=prod-deps /app/ .
+COPY --from=pruner /app/out/full/ .
 
-WORKDIR /app
+WORKDIR /app/projects/service-avatar
 
-ENV NODE_ENV="production"
-
-COPY --from=prod-deps /app/package.json ./package.json
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=builder /app/projects/service-avatar/dist/main.js ./main.js
-COPY --from=builder /app/projects/service-avatar/dist/main.js.map ./main.js.map
-
+USER bun
 EXPOSE 3005
-CMD [ "main.js" ]
+
+CMD ["bun", "run", "src/serve.ts"]

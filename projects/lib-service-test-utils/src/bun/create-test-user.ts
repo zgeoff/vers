@@ -1,9 +1,8 @@
 import { createHash } from 'node:crypto';
-import { createId } from '@paralleldrive/cuid2';
 import type { DB, Users } from '@vers/db';
-import { createSeed } from '@vers/game-utils';
 import bcrypt from 'bcryptjs';
 import type { Insertable, Kysely, Selectable } from 'kysely';
+import { createMockUser } from './factories/create-mock-user';
 
 type TestUserRow = Omit<Insertable<Users>, 'id' | 'passwordHash' | 'passwordResetToken'>;
 
@@ -25,18 +24,16 @@ interface TestUser {
 const LEGACY_BCRYPT_COST_FACTOR = 12;
 
 /**
- * Inserts a user for bun-test suites via kysely. Hashes `password` as
- * argon2id by default, or bcrypt when `passwordAlgorithm: 'bcrypt'` (for
- * legacy-hash regression coverage). A `resetToken` plaintext is hashed with
- * sha256 into `passwordResetToken` and echoed back on the return value for
- * callers that need to present it to a reset flow.
+ * Inserts a user for bun-test suites via kysely, sourcing its defaults from a plain mock row.
+ * Hashes `password` as argon2id by default, or bcrypt when `passwordAlgorithm: 'bcrypt'` (for
+ * legacy-hash regression coverage). A `resetToken` plaintext is hashed with sha256 into
+ * `passwordResetToken` and echoed back on the return value for callers that need to present it to
+ * a reset flow.
  */
 export async function createTestUser(
   db: Kysely<DB>,
   data: Readonly<CreateTestUserData> = {},
 ): Promise<TestUser> {
-  const now = new Date();
-
   let passwordHash = null;
 
   if (data.password !== null) {
@@ -55,19 +52,12 @@ export async function createTestUser(
 
   const { password, passwordAlgorithm, resetToken, ...overrides } = data;
 
-  const row = {
-    createdAt: now,
-    email: 'user@test.com',
-    id: createId(),
-    name: 'Test User',
+  const row = createMockUser({
     passwordHash,
     passwordResetToken,
     passwordResetTokenExpiresAt: null,
-    seed: createSeed(),
-    updatedAt: now,
-    username: 'test_user',
     ...overrides,
-  } satisfies Insertable<Users>;
+  });
 
   const user = await db.insertInto('users').values(row).returningAll().executeTakeFirstOrThrow();
 

@@ -1,74 +1,56 @@
-import { createId } from '@paralleldrive/cuid2';
-import { Class } from '@vers/data';
-import type * as schema from '@vers/postgres-schema';
-import { createTestDB, createTestUser } from '@vers/service-test-utils';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { expect, test } from 'vitest';
-import { router } from '../router';
-import { t } from '../t';
+import { expect, test } from 'bun:test';
+import type { AvatarContract } from '@vers/contract-avatar';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import { createAvatarService } from '../create-avatar-service';
+import { createAvatarRow } from '../test-utils/create-avatar-row';
 
-const createCaller = t.createCallerFactory(router);
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createAvatarService({ db: db.db });
 
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-async function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
-  const user = await createTestUser(config.db);
+test('it updates the name of an owned avatar and reports the updated id', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
+  const created = await client.createAvatar({ class: 'brute', name: 'Renameable' });
 
-  return { caller, user };
-}
+  const result = await client.updateAvatar({ id: created.id, name: 'Renamed' });
 
-test('it updates an avatar name', async () => {
-  await using handle = await createTestDB();
+  expect(result).toStrictEqual({ updatedID: created.id });
 
-  const { db } = handle;
-  const { caller, user } = await setupTest({ db });
+  const row = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', created.id)
+    .executeTakeFirstOrThrow();
 
-  const avatar = await caller.createAvatar({
-    class: Class.Brute,
-    name: 'OriginalName',
-    userID: user.id,
-  });
+  expect(row.name).toBe('Renamed');
+});
 
-  const result = await caller.updateAvatar({
-    id: avatar.id,
-    name: 'UpdatedName',
-    userID: user.id,
-  });
+test('it returns NOT_FOUND updating an avatar the caller does not own', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const other = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const foreign = await createAvatarRow(ctx.db, { name: 'Unrenameable', userId: other.user.id });
 
-  expect(result).toStrictEqual({
-    updatedID: avatar.id,
-  });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
 
-  const updated = await db.query.avatars.findFirst({
-    where: (avatars, operators) => operators.eq(avatars.id, avatars.id),
-  });
-
-  expect(updated).toStrictEqual({
-    ...avatar,
-    name: 'UpdatedName',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    updatedAt: expect.any(Date),
+  expect(client.updateAvatar({ id: foreign.id, name: 'Hijacked' })).rejects.toMatchObject({
+    code: 'NOT_FOUND',
   });
 });
 
-test('it throws an error when avatar is not found', async () => {
-  await using handle = await createTestDB();
+test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-avatar' });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
 
-  const { db } = handle;
-  const { caller, user } = await setupTest({ db });
-
-  await expect(
-    caller.updateAvatar({
-      id: createId(),
-      name: 'NewName',
-      userID: user.id,
-    }),
-  ).rejects.toMatchObject({
-    code: 'NOT_FOUND',
-    message: 'Avatar not found',
+  expect(client.updateAvatar({ id: 'x', name: 'Anonymous' })).rejects.toMatchObject({
+    code: 'UNAUTHORIZED',
+    data: { reason: 'missing-session' },
   });
 });

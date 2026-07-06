@@ -305,7 +305,8 @@
         "projects/lib-contract-session/**",
         "projects/lib-contract-verification/**",
         "projects/lib-contract-avatar/**",
-        "projects/lib-client-test-utils/**"
+        "projects/lib-client-test-utils/**",
+        "projects/service-avatar/**"
       ],
       // vitest plugin only applies to `.test.ts(x)` files — scoping it here
       // (rather than in the top-level `plugins` list) keeps its rules off

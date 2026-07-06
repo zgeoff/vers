@@ -1,10 +1,9 @@
-import type * as schema from '@vers/postgres-schema';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type { z } from 'zod';
-import type { envSchema } from './env';
+/** Payload shape for an authed procedure's UNAUTHORIZED error when no acting user is present. */
+export interface MissingSessionPayload {
+  readonly data: { readonly reason: 'missing-session' };
+}
 
-export type Env = z.infer<typeof envSchema>;
-
-export interface Context {
-  db: PostgresJsDatabase<typeof schema>;
+/** Payload shape for a data-less contract error (CONFLICT/NOT_FOUND). */
+export interface EmptyErrorPayload {
+  readonly data: Record<never, never>;
 }

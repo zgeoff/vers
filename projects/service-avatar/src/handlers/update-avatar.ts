@@ -1,59 +1,37 @@
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { UpdateAvatarPayload } from '@vers/service-types';
-import { AvatarNameSchema } from '@vers/validation';
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 
-const UpdateAvatarInputSchema = z.object({
-  id: z.string(),
-  name: AvatarNameSchema,
-  userID: z.string(),
-});
-
-async function updateAvatar(
-  input: z.infer<typeof UpdateAvatarInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<UpdateAvatarPayload> {
-  try {
-    const [avatar] = await ctx.db
-      .update(schema.avatars)
-      .set({
-        name: input.name,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.avatars.id, input.id))
-      .returning({
-        updatedID: schema.avatars.id,
-      });
-
-    if (!avatar) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Avatar not found',
-      });
-    }
-
-    return { updatedID: avatar.updatedID };
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
-  }
+/** oRPC handler opts for the authed `updateAvatar` procedure. */
+interface UpdateAvatarOpts {
+  readonly context: { readonly actingUserId: null | string };
+  readonly errors: {
+    readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
+    readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
+  };
+  readonly input: { readonly id: string; readonly name: string };
 }
 
-export const procedure = t.procedure
-  .input(UpdateAvatarInputSchema)
-  .mutation((opts) => updateAvatar(opts.input, opts.ctx));
+/** Renames an avatar owned by the acting user; throws NOT_FOUND when they don't own it. */
+export async function updateAvatar(
+  db: Kysely<DB>,
+  opts: UpdateAvatarOpts,
+): Promise<{ updatedID: string }> {
+  if (opts.context.actingUserId === null) {
+    throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+  }
+
+  const row = await db
+    .updateTable('avatars')
+    .set({ name: opts.input.name })
+    .where('id', '=', opts.input.id)
+    .where('userId', '=', opts.context.actingUserId)
+    .returning('id as updatedId')
+    .executeTakeFirst();
+
+  if (row === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  return { updatedID: row.updatedId };
+}

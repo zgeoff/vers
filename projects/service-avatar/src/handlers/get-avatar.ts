@@ -1,42 +1,30 @@
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { GetAvatarPayload } from '@vers/service-types';
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { AvatarData } from '@vers/contract-avatar';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import type { MissingSessionPayload } from '../types';
+import { toAvatarData } from './to-avatar-data';
 
-const GetAvatarInputSchema = z.object({
-  id: z.string(),
-});
-
-async function getAvatar(
-  input: z.infer<typeof GetAvatarInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<GetAvatarPayload> {
-  try {
-    const avatar = await ctx.db.query.avatars.findFirst({
-      where: eq(schema.avatars.id, input.id),
-    });
-
-    return avatar ?? null;
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
-  }
+/** oRPC handler opts for the authed `getAvatar` procedure. */
+interface GetAvatarOpts {
+  readonly context: { readonly actingUserId: null | string };
+  readonly errors: {
+    readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
+  };
+  readonly input: { readonly id: string };
 }
 
-export const procedure = t.procedure
-  .input(GetAvatarInputSchema)
-  .query((opts) => getAvatar(opts.input, opts.ctx));
+/** Returns an avatar owned by the acting user, or null when it doesn't exist or isn't theirs. */
+export async function getAvatar(db: Kysely<DB>, opts: GetAvatarOpts): Promise<AvatarData | null> {
+  if (opts.context.actingUserId === null) {
+    throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+  }
+
+  const row = await db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', opts.input.id)
+    .where('userId', '=', opts.context.actingUserId)
+    .executeTakeFirst();
+
+  return row === undefined ? null : toAvatarData(row);
+}

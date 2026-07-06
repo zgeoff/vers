@@ -1,42 +1,28 @@
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { GetAvatarsPayload } from '@vers/service-types';
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { AvatarData } from '@vers/contract-avatar';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import type { MissingSessionPayload } from '../types';
+import { toAvatarData } from './to-avatar-data';
 
-const GetAvatarsInputSchema = z.object({
-  userID: z.string(),
-});
-
-async function getAvatars(
-  input: z.infer<typeof GetAvatarsInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<GetAvatarsPayload> {
-  try {
-    const avatars = await ctx.db.query.avatars.findMany({
-      where: eq(schema.avatars.userID, input.userID),
-    });
-
-    return avatars;
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
-  }
+/** oRPC handler opts for the authed `getAvatars` procedure. */
+interface GetAvatarsOpts {
+  readonly context: { readonly actingUserId: null | string };
+  readonly errors: {
+    readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
+  };
 }
 
-export const procedure = t.procedure
-  .input(GetAvatarsInputSchema)
-  .query((opts) => getAvatars(opts.input, opts.ctx));
+/** Lists every avatar owned by the acting user. */
+export async function getAvatars(db: Kysely<DB>, opts: GetAvatarsOpts): Promise<Array<AvatarData>> {
+  if (opts.context.actingUserId === null) {
+    throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+  }
+
+  const rows = await db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('userId', '=', opts.context.actingUserId)
+    .execute();
+
+  return rows.map((row) => toAvatarData(row));
+}
