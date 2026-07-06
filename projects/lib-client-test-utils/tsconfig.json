@@ -5,6 +5,6 @@
     "types": ["node", "bun"]
   },
   "files": [],
-  "include": ["augment-bun-test.ts", "src/**/*.ts"],
+  "include": ["augment-bun-test.ts", "test-setup.ts", "src/**/*.ts"],
   "exclude": []
 }

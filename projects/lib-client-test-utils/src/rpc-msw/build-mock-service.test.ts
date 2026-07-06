@@ -1,13 +1,13 @@
-import { afterAll, afterEach, expect, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { factory, primaryKey } from '@mswjs/data';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ContractRouterClient } from '@orpc/contract';
 import { oc } from '@orpc/contract';
 import { implement } from '@orpc/server';
-import { setupServer } from 'msw/node';
 import * as z from 'zod';
 import { buildMockService } from './build-mock-service';
+import { server } from './mocks/server';
 
 const widgetContract = {
   getWidget: oc
@@ -34,18 +34,6 @@ function findWidget(db: WidgetDB, id: string) {
 
   return widget ?? null;
 }
-
-const server = setupServer();
-
-server.listen({ onUnhandledRequest: 'error' });
-
-afterEach(() => {
-  server.resetHandlers();
-});
-
-afterAll(() => {
-  server.close();
-});
 
 test('it serves a stateful value from an @mswjs/data-backed router', async () => {
   const db = buildWidgetDB();

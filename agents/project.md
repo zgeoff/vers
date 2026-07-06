@@ -118,3 +118,31 @@ the _target_ state, not this repo yet:
 
 Don't re-add vitest to converted or new packages to "match" a pre-rebuild neighbour — the direction
 is one runner; follow #266 and the #160 phase plan.
+
+## Testing (bun test, 0-isolation)
+
+`bun test` runs every file in one process with no per-file isolation — lean into it. All lifecycle
+and cleanup is registered once in a package's `bunfig.toml` preload and applies process-wide; test
+files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what keeps the suite fast.
+
+- **MSW is the sanctioned boundary mock** — the one carve-out from the shared partial's "mock-free"
+  rule. Mock at the external HTTP/service boundary with MSW, never internal abstractions. Each
+  package with HTTP tests keeps one shared `server` (`setupServer()`) in a `mocks/` module; its
+  lifecycle (`listen({ onUnhandledRequest: 'error' })`, `resetHandlers`, `close`) is wired globally
+  by `registerMSWLifecycle(server)` (from `@vers/client-test-utils`) in the preload. Tests add
+  per-test handlers with `server.use(...)` — including override and upstream-failure cases. For oRPC
+  procedures, build those handlers with `buildMockService` / `mockService`
+  (`@vers/client-test-utils/rpc-msw`).
+- **Global mock reset** lives in the preload's `afterEach` (`mock.restore()`), never per-test.
+- **jest-extended matchers** come from the `@zgeoff/bun-test-extended` preload; a package-local
+  `augment-bun-test.ts` side-effect import brings their types into `tsc`.
+- `toStrictEqual`, not `toEqual`, for object assertions.
+- Behavioural test names describe observable behaviour and never cite internal identifiers
+  (`it flags the run as invalid`, not `it sets isValid to false`).
+- Declare test data inline per test; no factory builders (`createUser`) and no shared mutable
+  module-level fixtures. One-off helpers stay inline — reusable ones live in `test-utils/`.
+- **React (phases 1–3):** React Testing Library on happy-dom (bootstrapped via
+  `@happy-dom/global-registrator` in the preload); prefer a project `render` util over bare RTL and
+  the utils it returns over the imported `screen`; load data through the centralized MSW handlers +
+  `@mswjs/data` in-memory DB rather than stubbing hooks or poking Zustand; `waitFor` the fetch
+  before asserting.
