@@ -10,6 +10,9 @@ interface RPCTestClientApp {
 interface BuildRPCTestClientOptions {
   readonly headers?: Readonly<Record<string, string>>;
 
+  /** Sent as `Authorization: Bearer <token>`, merged under any explicit `headers`. */
+  readonly token?: string;
+
   /** Base URL the client sends requests to; only the path reaches `app.handle`. Default 'http://test.local/rpc'. */
   readonly url?: string;
 }
@@ -22,9 +25,14 @@ export function buildRPCTestClient<TContract extends AnyContractRouter>(
   app: RPCTestClientApp,
   options?: BuildRPCTestClientOptions,
 ): ContractRouterClient<TContract> {
+  const headers = {
+    ...(options?.token !== undefined && { authorization: `Bearer ${options.token}` }),
+    ...options?.headers,
+  };
+
   const link = new RPCLink<Record<never, never>>({
     fetch: (request) => Promise.resolve(app.handle(request)),
-    ...(options?.headers !== undefined && { headers: options.headers }),
+    ...(Object.keys(headers).length > 0 && { headers }),
     url: options?.url ?? 'http://test.local/rpc',
   });
 
