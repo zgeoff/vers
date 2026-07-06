@@ -4,9 +4,8 @@ import type { Avatars } from '@vers/db';
 import type { Insertable } from 'kysely';
 
 /**
- * A plain, unpersisted avatar row with faker-generated defaults. Never persisted and never
- * requires a parent — `userId` defaults to a random id, not a real user's. `createAvatarRow` is
- * the composite that persists one against a real owner.
+ * A plain, unpersisted avatar row with faker-generated defaults. Never requires a parent —
+ * `userId` defaults to a random id, not a real user's.
  */
 export function createMockAvatar(
   overrides: Partial<Insertable<Avatars>> = {},
