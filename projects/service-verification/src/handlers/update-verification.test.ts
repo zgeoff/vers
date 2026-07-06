@@ -31,6 +31,35 @@ test('it updates a verification record', async () => {
   expect(row.type).toBe('2fa');
 });
 
+test('it leaves the record unchanged when no fields are provided', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const verification = await createVerificationRow(ctx.db, { type: 'onboarding' });
+
+  const result = await client.updateVerification({ id: verification.id });
+
+  expect(result).toStrictEqual({ updatedID: verification.id });
+
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', verification.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.type).toBe('onboarding');
+});
+
+test('it throws NOT_FOUND when no fields are provided and the verification does not exist', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+
+  expect(client.updateVerification({ id: 'does-not-exist' })).rejects.toMatchObject({
+    code: 'NOT_FOUND',
+  });
+});
+
 test('it throws NOT_FOUND when the verification does not exist', async () => {
   await using ctx = await setupTest();
   const { token } = await createAnonymousViewer({ audience: 'service-verification' });

@@ -16,12 +16,26 @@ export async function updateVerification(
   db: Kysely<DB>,
   opts: UpdateVerificationOpts,
 ): Promise<{ updatedID: string }> {
-  const { id, ...update } = opts.input;
+  // every updatable field is optional, so an empty update must not reach the query builder —
+  // an UPDATE with no SET clause is invalid SQL
+  if (opts.input.type === undefined) {
+    const existing = await db
+      .selectFrom('verifications')
+      .select('id')
+      .where('id', '=', opts.input.id)
+      .executeTakeFirst();
+
+    if (existing === undefined) {
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }
+
+    return { updatedID: existing.id };
+  }
 
   const row = await db
     .updateTable('verifications')
-    .set(update)
-    .where('id', '=', id)
+    .set({ type: opts.input.type })
+    .where('id', '=', opts.input.id)
     .returning('id as updatedId')
     .executeTakeFirst();
 
