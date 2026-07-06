@@ -1,11 +1,11 @@
-export { cloneTemplateDatabase, resolveTestDBTarget } from './clone-database';
+export { createDatabaseFromTemplate, resolveTestDBTarget } from './create-database-from-template';
 export { createTestDB } from './create-test-db';
 export { createTestUser } from './create-test-user';
 export { createTestVerification } from './create-test-verification';
-export { defineTestDB } from './define-test-db';
-export type { Isolation } from './define-test-db';
-export { stubEnv, unstubAllEnvs } from './env-stubbing';
+export { removeEnvOverrides, updateEnv } from './env-overrides';
 export { getTestServiceKeyPair } from './get-test-service-key-pair';
+export type { Isolation } from './make-test-db';
+export { makeTestDB } from './make-test-db';
 export { registerBunTestCleanup } from './register-bun-test-cleanup';
 export { setupBunTestDB } from './setup-bun-test-db';
 export { createDatabaseTestDB } from './strategies/database-test-db';

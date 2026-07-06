@@ -396,7 +396,7 @@ standard instead of the inline-data rule above — `service-avatar` is the refer
   `toResolve()`/`toReject()` are the two matchers actually typed as promises, and are `await`ed.
   Test each declared error.
 - **Env.** Permanent env is set in the preload via a direct `process.env` assignment; per-test
-  overrides go through `stubEnv`, restored by `unstubAllEnvs` in the preload's
+  overrides go through `updateEnv`, restored by `removeEnvOverrides` in the preload's
   `registerBunTestCleanup()`.
 - **Auth.** s2s tests use the real verification path: an asymmetric keypair from
   `getTestServiceKeyPair()`, tokens minted with `createServiceToken`.

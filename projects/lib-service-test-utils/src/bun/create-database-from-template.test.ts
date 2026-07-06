@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createDB } from '@vers/db';
-import { cloneTemplateDatabase, resolveTestDBTarget } from './clone-database';
+import { createDatabaseFromTemplate, resolveTestDBTarget } from './create-database-from-template';
 
 test('it resolves the base URI and template db name published by setupBunTestDB', () => {
   const target = resolveTestDBTarget();
@@ -32,8 +32,8 @@ test('it falls back to the fixed test-container defaults when the env vars are u
   }
 });
 
-test('it clones the migrated template into a freshly named, independently connectable database', async () => {
-  const databaseURL = await cloneTemplateDatabase();
+test('it creates a freshly named, independently connectable database from the template', async () => {
+  const databaseURL = await createDatabaseFromTemplate();
 
   expect(databaseURL).toInclude('test_');
 
@@ -43,8 +43,11 @@ test('it clones the migrated template into a freshly named, independently connec
   expect(rows).toBeEmpty();
 });
 
-test('it clones a distinct database on every call', async () => {
-  const [first, second] = await Promise.all([cloneTemplateDatabase(), cloneTemplateDatabase()]);
+test('it creates a distinct database on every call', async () => {
+  const [first, second] = await Promise.all([
+    createDatabaseFromTemplate(),
+    createDatabaseFromTemplate(),
+  ]);
 
   expect(first).not.toBe(second);
 });

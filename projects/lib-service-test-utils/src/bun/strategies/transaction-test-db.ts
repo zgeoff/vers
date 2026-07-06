@@ -1,7 +1,7 @@
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
-import { cloneTemplateDatabase } from '../clone-database';
+import { createDatabaseFromTemplate } from '../create-database-from-template';
 import type { TestDB } from '../test-db-handle';
 
 /**
@@ -33,7 +33,7 @@ function getWorkerDB(): Promise<Kysely<DB>> {
 }
 
 async function buildWorkerDB(): Promise<Kysely<DB>> {
-  const databaseURL = await cloneTemplateDatabase();
+  const databaseURL = await createDatabaseFromTemplate();
 
   return createDB({ databaseURL });
 }

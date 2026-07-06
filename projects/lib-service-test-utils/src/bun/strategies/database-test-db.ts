@@ -1,5 +1,5 @@
 import { createDB } from '@vers/db';
-import { cloneTemplateDatabase } from '../clone-database';
+import { createDatabaseFromTemplate } from '../create-database-from-template';
 import type { TestDB } from '../test-db-handle';
 
 /**
@@ -8,7 +8,7 @@ import type { TestDB } from '../test-db-handle';
  * transaction strategy can't observe.
  */
 export async function createDatabaseTestDB(): Promise<TestDB> {
-  const db = createDB({ databaseURL: await cloneTemplateDatabase() });
+  const db = createDB({ databaseURL: await createDatabaseFromTemplate() });
 
   return { db, [Symbol.asyncDispose]: () => db.destroy() };
 }

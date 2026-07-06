@@ -22,8 +22,8 @@ export function resolveTestDBTarget(): TestDBTarget {
   };
 }
 
-/** Clones the migrated template database into a freshly named database; returns its connection URL. */
-export async function cloneTemplateDatabase(): Promise<string> {
+/** Creates a new database cloned from the migrated template; returns its connection URL. */
+export async function createDatabaseFromTemplate(): Promise<string> {
   const { baseURI, templateDB } = resolveTestDBTarget();
   const admin = postgres(`${baseURI}/postgres`);
   const dbName = `test_${createId()}`;

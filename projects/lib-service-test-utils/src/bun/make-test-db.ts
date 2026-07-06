@@ -19,16 +19,16 @@ const STRATEGIES: Record<Isolation, () => Promise<TestDB>> = {
 };
 
 /**
- * Defines a package's isolated-test-DB factory. Isolation legality is declared, not detected:
+ * Makes a package's isolated-test-DB factory. Isolation legality is declared, not detected:
  * requesting a strategy absent from `config.enabled` throws. The baseline (the migrated template
  * database) is built once by `setupBunTestDB`; this facade only chooses isolation.
  */
-export function defineTestDB(
+export function makeTestDB(
   config: TestDBConfig,
 ): (options?: CreateTestDBOptions) => Promise<TestDB> {
   if (!config.enabled.includes(config.default)) {
     throw new Error(
-      `defineTestDB: default '${config.default}' not in enabled (${config.enabled.join(', ')})`,
+      `makeTestDB: default '${config.default}' not in enabled (${config.enabled.join(', ')})`,
     );
   }
 
