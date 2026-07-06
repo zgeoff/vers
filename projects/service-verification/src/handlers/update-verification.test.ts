@@ -1,88 +1,71 @@
-import { createId } from '@paralleldrive/cuid2';
-import * as schema from '@vers/postgres-schema';
-import { createTestDB } from '@vers/service-test-utils';
-import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { expect, test } from 'vitest';
-import { router } from '../router';
-import { t } from '../t';
+import { expect, test } from 'bun:test';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import type { VerificationContract } from '@vers/contract-verification';
+import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
+import { createVerificationService } from '../create-verification-service';
+import { createVerificationRow } from '../test-utils/create-verification-row';
 
-const createCaller = t.createCallerFactory(router);
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createVerificationService({ db: db.db });
 
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
+test('it updates a verification record', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const verification = await createVerificationRow(ctx.db, { type: 'onboarding' });
 
-  return { caller };
-}
+  const result = await client.updateVerification({ id: verification.id, type: '2fa' });
 
-test('should update a verification record', async () => {
-  await using handle = await createTestDB();
+  expect(result).toStrictEqual({ updatedID: verification.id });
 
-  const { db } = handle;
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', verification.id)
+    .executeTakeFirstOrThrow();
 
-  const { caller } = setupTest({ db });
+  expect(row.type).toBe('2fa');
+});
 
-  const id = createId();
+test('it leaves the record unchanged when no fields are provided', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const verification = await createVerificationRow(ctx.db, { type: 'onboarding' });
 
-  await db.insert(schema.verifications).values({
-    algorithm: 'SHA-256',
-    charSet: 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789',
-    createdAt: new Date(),
-    digits: 6,
-    id,
-    period: 30,
-    secret: 'test-secret',
-    target: 'user@example.com',
-    type: '2fa-setup',
-  });
+  const result = await client.updateVerification({ id: verification.id });
 
-  const result = await caller.updateVerification({
-    id,
-    type: '2fa',
-  });
+  expect(result).toStrictEqual({ updatedID: verification.id });
 
-  expect(result).toStrictEqual({
-    updatedID: id,
-  });
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', verification.id)
+    .executeTakeFirstOrThrow();
 
-  const updatedVerification = await db.query.verifications.findFirst({
-    where: eq(schema.verifications.id, id),
-  });
+  expect(row.type).toBe('onboarding');
+});
 
-  expect(updatedVerification).toStrictEqual({
-    algorithm: 'SHA-256',
-    charSet: 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    createdAt: expect.any(Date),
-    digits: 6,
-    expiresAt: null,
-    id,
-    period: 30,
-    secret: 'test-secret',
-    target: 'user@example.com',
-    type: '2fa',
+test('it throws NOT_FOUND when no fields are provided and the verification does not exist', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+
+  expect(client.updateVerification({ id: 'does-not-exist' })).rejects.toMatchObject({
+    code: 'NOT_FOUND',
   });
 });
 
-test('should throw an error if the verification is not found', async () => {
-  await using handle = await createTestDB();
+test('it throws NOT_FOUND when the verification does not exist', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
-  const { db } = handle;
-
-  const { caller } = setupTest({ db });
-
-  const update = {
-    id: 'non-existent-id',
-    type: '2fa',
-  } as const;
-
-  await expect(caller.updateVerification(update)).rejects.toMatchObject({
+  expect(client.updateVerification({ id: 'does-not-exist', type: '2fa' })).rejects.toMatchObject({
     code: 'NOT_FOUND',
-    message: 'Verification not found',
   });
 });

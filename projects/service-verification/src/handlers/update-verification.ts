@@ -1,56 +1,47 @@
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { UpdateVerificationPayload } from '@vers/service-types';
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { VerificationType } from '@vers/contract-verification';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import type { EmptyErrorPayload } from '../types';
 
-export const UpdateVerificationInputSchema = z.object({
-  id: z.string(),
-  type: z.enum(['2fa', '2fa-setup', 'change-email', 'onboarding']).optional(),
-});
-
-export async function updateVerification(
-  input: z.infer<typeof UpdateVerificationInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<UpdateVerificationPayload> {
-  try {
-    const { id, ...update } = input;
-
-    const [verification] = await ctx.db
-      .update(schema.verifications)
-      .set(update)
-      .where(eq(schema.verifications.id, id))
-      .returning({
-        updatedID: schema.verifications.id,
-      });
-
-    if (!verification) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Verification not found',
-      });
-    }
-
-    return { updatedID: verification.updatedID };
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
-  }
+/** oRPC handler opts for the `updateVerification` procedure. */
+interface UpdateVerificationOpts {
+  readonly errors: {
+    readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
+  };
+  readonly input: { readonly id: string; readonly type?: VerificationType | undefined };
 }
 
-export const procedure = t.procedure
-  .input(UpdateVerificationInputSchema)
-  .mutation((opts) => updateVerification(opts.input, opts.ctx));
+/** Updates a verification record's set fields; throws NOT_FOUND when it doesn't exist. */
+export async function updateVerification(
+  db: Kysely<DB>,
+  opts: UpdateVerificationOpts,
+): Promise<{ updatedID: string }> {
+  // every updatable field is optional, so an empty update must not reach the query builder —
+  // an UPDATE with no SET clause is invalid SQL
+  if (opts.input.type === undefined) {
+    const existing = await db
+      .selectFrom('verifications')
+      .select('id')
+      .where('id', '=', opts.input.id)
+      .executeTakeFirst();
+
+    if (existing === undefined) {
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }
+
+    return { updatedID: existing.id };
+  }
+
+  const row = await db
+    .updateTable('verifications')
+    .set({ type: opts.input.type })
+    .where('id', '=', opts.input.id)
+    .returning('id as updatedId')
+    .executeTakeFirst();
+
+  if (row === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  return { updatedID: row.updatedId };
+}

@@ -1,85 +1,97 @@
 import { verifyTOTP } from '@epic-web/totp';
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { VerifyCodePayload } from '@vers/service-types';
-import { and, eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { VerificationData, VerificationType } from '@vers/contract-verification';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import type { EmptyErrorPayload } from '../types';
+import { toVerificationData } from './to-verification-data';
 
-export const VerifyCodeInputSchema = z.object({
-  code: z.string(),
-  target: z.string(),
-  type: z.enum(['2fa', '2fa-setup', 'change-email', 'onboarding']),
-});
+/** Verification types whose code is consumed once and the row deleted on a successful verify. */
+const DELETING_TYPES: ReadonlySet<VerificationType> = new Set(['change-email', 'onboarding']);
 
-export async function verifyCode(
-  input: z.infer<typeof VerifyCodeInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<VerifyCodePayload> {
-  try {
-    const { code, target, type } = input;
-
-    const verification = await ctx.db.query.verifications.findFirst({
-      where: and(eq(schema.verifications.type, type), eq(schema.verifications.target, target)),
-    });
-
-    if (!verification) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Invalid verification code',
-      });
-    }
-
-    if (verification.expiresAt && verification.expiresAt < new Date()) {
-      await ctx.db.delete(schema.verifications).where(eq(schema.verifications.id, verification.id));
-
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Verification code has expired',
-      });
-    }
-
-    const result = await verifyTOTP({
-      otp: code,
-      ...verification,
-    });
-
-    if (!result) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Invalid verification code',
-      });
-    }
-
-    const is2FAVerification = verification.type === '2fa-setup' || verification.type === '2fa';
-
-    if (!is2FAVerification) {
-      await ctx.db.delete(schema.verifications).where(eq(schema.verifications.id, verification.id));
-    }
-
-    return {
-      id: verification.id,
-      target: verification.target,
-      type: verification.type,
-    };
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
-  }
+/** oRPC handler opts for the `verifyCode` procedure. */
+interface VerifyCodeOpts {
+  readonly errors: {
+    readonly CODE_ALREADY_USED: (payload: EmptyErrorPayload) => Error;
+    readonly CODE_EXPIRED: (payload: EmptyErrorPayload) => Error;
+    readonly INVALID_CODE: (payload: EmptyErrorPayload) => Error;
+  };
+  readonly input: {
+    readonly code: string;
+    readonly target: string;
+    readonly type: VerificationType;
+  };
 }
 
-export const procedure = t.procedure
-  .input(VerifyCodeInputSchema)
-  .mutation((opts) => verifyCode(opts.input, opts.ctx));
+/**
+ * Verifies a TOTP code against its target and type, then guards against replay: deleting types
+ * (`change-email`/`onboarding`) consume the row on success, so a concurrent second verify finds no
+ * row to delete; non-deleting types (`2fa`/`2fa-setup`) record the verified code and timestamp in a
+ * single conditional UPDATE that a concurrent replay's row lock forces to re-evaluate against the
+ * committed value — no explicit transaction required.
+ */
+export async function verifyCode(db: Kysely<DB>, opts: VerifyCodeOpts): Promise<VerificationData> {
+  const { code, target, type } = opts.input;
+
+  const row = await db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('type', '=', type)
+    .where('target', '=', target)
+    .executeTakeFirst();
+
+  if (row === undefined) {
+    throw opts.errors.INVALID_CODE({ data: {} });
+  }
+
+  if (row.expiresAt !== null && row.expiresAt < new Date()) {
+    await db.deleteFrom('verifications').where('id', '=', row.id).execute();
+
+    throw opts.errors.CODE_EXPIRED({ data: {} });
+  }
+
+  const result = await verifyTOTP({
+    algorithm: row.algorithm,
+    charSet: row.charSet,
+    digits: row.digits,
+    otp: code,
+    period: row.period,
+    secret: row.secret,
+  });
+
+  if (result === null) {
+    throw opts.errors.INVALID_CODE({ data: {} });
+  }
+
+  if (DELETING_TYPES.has(type)) {
+    const deleteResult = await db
+      .deleteFrom('verifications')
+      .where('id', '=', row.id)
+      .executeTakeFirst();
+
+    if (deleteResult.numDeletedRows === 0n) {
+      throw opts.errors.CODE_ALREADY_USED({ data: {} });
+    }
+  } else {
+    const replayWindow = new Date(Date.now() - row.period * 2 * 1000);
+
+    const updateResult = await db
+      .updateTable('verifications')
+      .set({ lastVerifiedAt: new Date(), lastVerifiedCode: code })
+      .where('id', '=', row.id)
+      .where((eb) =>
+        eb.or([
+          eb('lastVerifiedCode', 'is', null),
+          eb('lastVerifiedAt', 'is', null),
+          eb('lastVerifiedCode', '!=', code),
+          eb('lastVerifiedAt', '<=', replayWindow),
+        ]),
+      )
+      .executeTakeFirst();
+
+    if (updateResult.numUpdatedRows === 0n) {
+      throw opts.errors.CODE_ALREADY_USED({ data: {} });
+    }
+  }
+
+  return toVerificationData(row);
+}

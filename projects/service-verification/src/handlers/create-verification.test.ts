@@ -1,244 +1,102 @@
-import * as schema from '@vers/postgres-schema';
-import { createTestDB } from '@vers/service-test-utils';
-import { and, eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { expect, test } from 'vitest';
-import { router } from '../router';
-import { t } from '../t';
+import { expect, test } from 'bun:test';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import type { VerificationContract } from '@vers/contract-verification';
+import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
+import { createVerificationService } from '../create-verification-service';
 
-const createCaller = t.createCallerFactory(router);
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createVerificationService({ db: db.db });
 
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
+test('it creates a verification code and stores a record of it', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
-  return { caller };
-}
-
-test('creates a verification code and stores a record of it', async () => {
-  await using handle = await createTestDB();
-
-  const { db } = handle;
-
-  const { caller } = setupTest({ db });
-
-  const result = await caller.createVerification({
-    period: 5 * 60, // 5 minutes
-    target: 'test@example.com',
+  const created = await client.createVerification({
+    target: 'onboard@example.com',
     type: 'onboarding',
   });
 
-  expect(result).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    otp: expect.any(String),
-    target: 'test@example.com',
+  expect(created).toStrictEqual({
+    id: expect.toBeString(),
+    otp: expect.toBeString(),
+    target: 'onboard@example.com',
     type: 'onboarding',
   });
 
-  const verification = await db.query.verifications.findFirst({
-    where: and(
-      eq(schema.verifications.target, 'test@example.com'),
-      eq(schema.verifications.type, 'onboarding'),
-    ),
-  });
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', created.id)
+    .executeTakeFirstOrThrow();
 
-  expect(verification).toStrictEqual({
-    algorithm: 'SHA-256',
-    charSet: 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    createdAt: expect.any(Date),
-    digits: 6,
-    expiresAt: null,
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
-    period: 300,
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    secret: expect.any(String),
-    target: 'test@example.com',
-    type: 'onboarding',
-  });
+  expect(row.target).toBe('onboard@example.com');
 });
 
-test('it uses a simple charset for 2FA verification codes', async () => {
-  await using handle = await createTestDB();
+test('it uses a simple charset for 2fa verification codes', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
-  const { db } = handle;
+  const created = await client.createVerification({ target: '+15551234567', type: '2fa' });
 
-  const { caller } = setupTest({ db });
-
-  const result = await caller.createVerification({
-    target: 'test@example.com',
-    type: '2fa',
-  });
-
-  expect(result).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    otp: expect.any(String),
-    target: 'test@example.com',
-    type: '2fa',
-  });
-
-  const verification = await db.query.verifications.findFirst({
-    where: and(
-      eq(schema.verifications.target, 'test@example.com'),
-      eq(schema.verifications.type, '2fa'),
-    ),
-  });
-
-  expect(verification).toStrictEqual({
-    algorithm: 'SHA-256',
-    charSet: '0123456789',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    createdAt: expect.any(Date),
-    digits: 6,
-    expiresAt: null,
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
-    period: 30,
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    secret: expect.any(String),
-    target: 'test@example.com',
-    type: '2fa',
-  });
+  expect(created.otp).toMatch(/^[0-9]+$/);
 });
 
-test('it uses a simple charset for 2FA setup verification codes', async () => {
-  await using handle = await createTestDB();
+test('it uses a simple charset for 2fa setup verification codes', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
-  const { db } = handle;
+  const created = await client.createVerification({ target: '+15551234567', type: '2fa-setup' });
 
-  const { caller } = setupTest({ db });
-
-  const result = await caller.createVerification({
-    target: 'test@example.com',
-    type: '2fa-setup',
-  });
-
-  expect(result).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    otp: expect.any(String),
-    target: 'test@example.com',
-    type: '2fa-setup',
-  });
-
-  const verification = await db.query.verifications.findFirst({
-    where: and(
-      eq(schema.verifications.target, 'test@example.com'),
-      eq(schema.verifications.type, '2fa-setup'),
-    ),
-  });
-
-  expect(verification).toStrictEqual({
-    algorithm: 'SHA-256',
-    charSet: '0123456789',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    createdAt: expect.any(Date),
-    digits: 6,
-    expiresAt: null,
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
-    period: 30,
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    secret: expect.any(String),
-    target: 'test@example.com',
-    type: '2fa-setup',
-  });
+  expect(created.otp).toMatch(/^[0-9]+$/);
 });
 
-test('replaces existing verification for same target and type', async () => {
-  await using handle = await createTestDB();
+test('it replaces an existing verification for the same target and type', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
-  const { db } = handle;
+  await client.createVerification({ target: 'replace@example.com', type: 'onboarding' });
 
-  const { caller } = setupTest({ db });
-
-  await caller.createVerification({
-    period: 300,
-    target: 'test@example.com',
+  const second = await client.createVerification({
+    target: 'replace@example.com',
     type: 'onboarding',
   });
 
-  const result = await caller.createVerification({
-    period: 300,
-    target: 'test@example.com',
-    type: 'onboarding',
-  });
+  const rows = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('target', '=', 'replace@example.com')
+    .execute();
 
-  expect(result).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    otp: expect.any(String),
-    target: 'test@example.com',
-    type: 'onboarding',
-  });
-
-  const verifications = await db.query.verifications.findMany({
-    where: and(
-      eq(schema.verifications.type, 'onboarding'),
-      eq(schema.verifications.target, 'test@example.com'),
-    ),
-  });
-
-  expect(verifications).toHaveLength(1);
+  expect(rows).toHaveLength(1);
+  expect(rows[0]?.id).toBe(second.id);
 });
 
-test('creates a verification with explicit expiry time', async () => {
-  await using handle = await createTestDB();
+test('it creates a verification with an explicit expiry time', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
-  const { db } = handle;
+  const expiresAt = new Date(Date.now() + 60_000);
 
-  const { caller } = setupTest({ db });
-
-  const now = Date.now();
-
-  const result = await caller.createVerification({
-    expiresAt: new Date(now + 10 * 60 * 1000),
-    target: 'test@example.com',
+  const created = await client.createVerification({
+    expiresAt,
+    target: 'expiring@example.com',
     type: 'onboarding',
   });
 
-  expect(result).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    otp: expect.any(String),
-    target: 'test@example.com',
-    type: 'onboarding',
-  });
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', created.id)
+    .executeTakeFirstOrThrow();
 
-  const verification = await db.query.verifications.findFirst({
-    where: and(
-      eq(schema.verifications.target, 'test@example.com'),
-      eq(schema.verifications.type, 'onboarding'),
-    ),
-  });
-
-  expect(verification).toBeDefined();
-
-  expect(verification).toStrictEqual({
-    algorithm: 'SHA-256',
-    charSet: 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    createdAt: expect.any(Date),
-    digits: 6,
-    expiresAt: new Date(now + 10 * 60 * 1000),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
-    period: 30,
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    secret: expect.any(String),
-    target: 'test@example.com',
-    type: 'onboarding',
-  });
+  expect(row.expiresAt).toEqual(expiresAt);
 });

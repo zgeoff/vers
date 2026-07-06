@@ -1,107 +1,69 @@
-import { createId } from '@paralleldrive/cuid2';
-import * as schema from '@vers/postgres-schema';
-import { createTestDB } from '@vers/service-test-utils';
-import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { expect, test } from 'vitest';
-import { router } from '../router';
-import { t } from '../t';
+import { expect, test } from 'bun:test';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import type { VerificationContract } from '@vers/contract-verification';
+import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
+import { createVerificationService } from '../create-verification-service';
+import { createVerificationRow } from '../test-utils/create-verification-row';
 
-const createCaller = t.createCallerFactory(router);
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createVerificationService({ db: db.db });
 
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
-}
-
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
-
-  return { caller };
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it returns an existing verification', async () => {
-  await using handle = await createTestDB();
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
-  const { db } = handle;
-
-  const { caller } = setupTest({ db });
-
-  const verification = {
-    algorithm: 'sha1',
-    charSet: 'hex',
-    createdAt: new Date(),
-    digits: 6,
-    expiresAt: new Date(Date.now() + 1000 * 60 * 5), // 5 minutes from now
-    id: createId(),
-    period: 300,
-    secret: 'ABC123',
-    target: 'test@example.com',
-    type: 'onboarding',
-  } as const;
-
-  await db.insert(schema.verifications).values(verification);
-
-  const result = await caller.getVerification({
-    target: 'test@example.com',
+  const verification = await createVerificationRow(ctx.db, {
+    target: 'existing@example.com',
     type: 'onboarding',
   });
 
-  expect(result).toStrictEqual({
+  const found = await client.getVerification({
+    target: 'existing@example.com',
+    type: 'onboarding',
+  });
+
+  expect(found).toStrictEqual({
     id: verification.id,
-    target: verification.target,
-    type: verification.type,
+    target: 'existing@example.com',
+    type: 'onboarding',
   });
 });
 
-test('it returns null for non-existent verification', async () => {
-  await using handle = await createTestDB();
+test('it returns null for a non-existent verification', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
-  const { db } = handle;
+  const found = await client.getVerification({ target: 'missing@example.com', type: 'onboarding' });
 
-  const { caller } = setupTest({ db });
-
-  const result = await caller.getVerification({
-    target: 'test@example.com',
-    type: 'onboarding',
-  });
-
-  expect(result).toBeNull();
+  expect(found).toBeNull();
 });
 
-test('it handles and deletes expired verifications', async () => {
-  await using handle = await createTestDB();
+test('it deletes an expired verification and returns null', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
-  const { db } = handle;
-
-  const { caller } = setupTest({ db });
-
-  const verification = {
-    algorithm: 'sha1',
-    charSet: 'hex',
-    createdAt: new Date(),
-    digits: 6,
-    expiresAt: new Date(Date.now() - 1000), // 1 second ago
-    id: createId(),
-    period: 300,
-    secret: 'ABC123',
-    target: 'test@example.com',
-    type: 'onboarding',
-  } as const;
-
-  await db.insert(schema.verifications).values(verification);
-
-  const result = await caller.getVerification({
-    target: 'test@example.com',
+  const verification = await createVerificationRow(ctx.db, {
+    expiresAt: new Date(Date.now() - 60_000),
+    target: 'expired@example.com',
     type: 'onboarding',
   });
 
-  expect(result).toBeNull();
+  const found = await client.getVerification({ target: 'expired@example.com', type: 'onboarding' });
 
-  // verify the record was deleted
-  const verifications = await db.query.verifications.findMany({
-    where: eq(schema.verifications.id, verification.id),
-  });
+  expect(found).toBeNull();
 
-  expect(verifications).toHaveLength(0);
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', verification.id)
+    .executeTakeFirst();
+
+  expect(row).toBeUndefined();
 });

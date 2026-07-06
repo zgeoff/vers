@@ -7,35 +7,30 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "bun ../../scripts/build-esbuild.ts",
-    "dev": "tsx watch src/main.ts",
-    "test": "vitest run",
+    "dev": "bun --watch src/serve.ts",
+    "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@epic-web/totp": "4.0.1",
-    "@hono/node-server": "catalog:",
-    "@hono/sentry": "catalog:",
-    "@hono/trpc-server": "catalog:",
+    "@orpc/server": "1.14.6",
     "@paralleldrive/cuid2": "catalog:",
-    "@trpc/server": "catalog:",
-    "@vers/postgres-schema": "workspace:*",
-    "@vers/service-test-utils": "workspace:*",
-    "@vers/service-types": "workspace:*",
-    "@vers/service-utils": "workspace:*",
-    "drizzle-orm": "catalog:",
-    "hono": "catalog:",
-    "postgres": "catalog:",
-    "superjson": "catalog:",
-    "zod": "catalog:"
+    "@vers/contract-verification": "workspace:*",
+    "@vers/db": "workspace:*",
+    "@vers/service-runtime": "workspace:*",
+    "elysia": "1.4.29",
+    "kysely": "0.29.2",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@sentry/esbuild-plugin": "catalog:",
+    "@faker-js/faker": "catalog:",
+    "@orpc/contract": "1.14.6",
+    "@types/bun": "1.3.14",
     "@types/node": "22.13.10",
+    "@vers/contract-base": "workspace:*",
+    "@vers/service-test-utils": "workspace:*",
+    "@zgeoff/bun-test-extended": "0.0.2",
     "jest-extended": "catalog:",
-    "tiny-invariant": "catalog:",
-    "typescript": "catalog:",
-    "vite": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   }
 }
