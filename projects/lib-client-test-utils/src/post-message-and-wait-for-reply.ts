@@ -9,10 +9,10 @@ interface Message {
   type: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- DOM handle; readonly is semantically meaningless on a live SharedWorker
 export function postMessageAndWaitForReply(worker: SharedWorker, message: Message) {
   return new Promise<MessageEvent<Message>>((resolve) => {
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types, unicorn/prefer-add-event-listener -- assigning onmessage starts MessagePort delivery; addEventListener also needs an explicit port.start(); baseline(#236)
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types, unicorn/prefer-add-event-listener -- assigning onmessage starts MessagePort delivery; addEventListener also needs an explicit port.start(); MessagePort is a live DOM handle with no readonly form
     worker.port.onmessage = (event: MessageEvent<Message>) => {
       resolve(event);
     };

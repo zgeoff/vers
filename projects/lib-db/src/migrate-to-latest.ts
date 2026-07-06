@@ -12,7 +12,7 @@ import { createDB } from './create-db';
 export const migrationsFolder = path.join(import.meta.dirname, '../migrations');
 
 interface MigrateToLatestConfig {
-  databaseURL: string;
+  readonly databaseURL: string;
 }
 
 /**
@@ -21,10 +21,7 @@ interface MigrateToLatestConfig {
  * setup — assumes the drizzle baseline (`db-postgres/migrations`) already
  * ran against the same database.
  */
-export async function migrateToLatest(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  config: MigrateToLatestConfig,
-): Promise<MigrationResultSet> {
+export async function migrateToLatest(config: MigrateToLatestConfig): Promise<MigrationResultSet> {
   const db = createDB({ databaseURL: config.databaseURL });
 
   const migrator = new Migrator({

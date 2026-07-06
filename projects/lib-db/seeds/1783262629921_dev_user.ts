@@ -6,7 +6,6 @@ import type { DB } from '../src/schema.generated';
  * invocation — kysely-ctl has no seed bookkeeping — so this is idempotent
  * via `ON CONFLICT DO NOTHING`.
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function seed(db: Kysely<DB>): Promise<void> {
   await db
     .insertInto('users')

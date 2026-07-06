@@ -19,7 +19,6 @@ declare module 'vitest' {
  * the drizzle baseline (`db-postgres/migrations`) followed by this package's
  * own kysely migrations, then publishes the connection URI to test files.
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function setup(project: TestProject) {
   const container = await new PostgreSqlContainer('postgres:16.2-alpine3.19')
     .withDatabase('test_template')

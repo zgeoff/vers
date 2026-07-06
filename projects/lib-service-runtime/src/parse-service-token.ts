@@ -7,8 +7,8 @@ export type ServiceTokenResolution =
   | { failure: 'invalid-service-token' };
 
 interface ParseServiceTokenOptions {
-  audience: string;
-  publicKey: CryptoKey;
+  readonly audience: string;
+  readonly publicKey: CryptoKey;
 }
 
 /**
@@ -18,9 +18,7 @@ interface ParseServiceTokenOptions {
  * these are a caller's problem to fix, so no detail beyond the failure itself is surfaced.
  */
 export async function parseServiceToken(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   request: Request,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   options: ParseServiceTokenOptions,
 ): Promise<ServiceTokenResolution> {
   const authorization = request.headers.get('authorization');

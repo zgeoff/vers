@@ -5,8 +5,7 @@ interface Props {
   verificationURL: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function WelcomeEmail(props: Props) {
+export function WelcomeEmail(props: Readonly<Props>) {
   return (
     <E.Container>
       <E.Heading as="h1">

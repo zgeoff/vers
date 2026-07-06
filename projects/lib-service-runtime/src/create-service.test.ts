@@ -18,7 +18,7 @@ function buildTestContract() {
   };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- structural map of oRPC contract procedures; framework types with no readonly form
 function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
   const os = implement(contract).$context<ServiceContext>();
 

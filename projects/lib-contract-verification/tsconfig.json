@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "bun"]
+  },
+  "files": [],
+  "include": ["augment-bun-test.ts", "src/**/*.ts"],
+  "exclude": []
+}

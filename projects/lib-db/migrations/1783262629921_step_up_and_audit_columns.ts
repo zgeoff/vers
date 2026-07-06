@@ -12,7 +12,6 @@ import { sql } from 'kysely';
  * trigger supersedes for every writer — kysely queries, ad-hoc SQL, and
  * cross-service writes alike.
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable('pending_transactions')
@@ -86,7 +85,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   `.execute(db);
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function down(db: Kysely<unknown>): Promise<void> {
   await sql`DROP TRIGGER IF EXISTS set_pending_transactions_updated_at ON pending_transactions`.execute(
     db,

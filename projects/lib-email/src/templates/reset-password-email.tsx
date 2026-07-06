@@ -5,8 +5,7 @@ interface Props {
   resetURL: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function ResetPasswordEmail(props: Props): ReactElement {
+export function ResetPasswordEmail(props: Readonly<Props>): ReactElement {
   return (
     <E.Container>
       <E.Heading as="h1">

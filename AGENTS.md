@@ -261,7 +261,14 @@ strings/numbers.
   left off in config — the unused-directive check is the ratchet: fixing a baselined site makes its
   comment stale and lint fails until the comment is deleted. `lib-idle-core`/`lib-aether-core`
   tick/lifecycle handlers that mutate their entity parameter by design carry a real reason instead
-  of the baseline marker; those are permanent.
+  of the baseline marker; those are permanent. `typescript/prefer-readonly-parameter-types` is the
+  one rule new code must never `baseline(#236)`: its own data/config/props/option types are made
+  `readonly` (or the param `Readonly<…>`-wrapped; React props `Readonly<Props>`), and
+  framework/library handles that have no readonly form (a `Kysely`/`Elysia`/`RPCHandler`/`Request`
+  handle, a `Date`, …) are exempted per-type via the rule's `allow` list in `.oxlintrc.json` — never
+  an inline marker. Only a genuinely un-`readonly`-able own type (a generic callback-arg object, a
+  `ZodType`-bearing shape, a React-element wrapper) carries a single honest inline directive stating
+  why; `allow` covers the rest.
 - `bun run format` — `oxfmt .` (`.oxfmtrc.json` at the root), then `format-codemod` (blank-line
   padding) over the whole tree. The codemod has no ignore file, so its `--ignore` flags are what
   keep it off committed codegen output (`app/gql`, panda's `styled-system` dirs, react-router's
@@ -301,10 +308,49 @@ See #160 for the full phase plan (turborepo + bun, spike-gated; shared configs a
 `zgeoff/tools`). This repo is mid-migration — several claims in `agents/shared.md` above describe
 the _target_ state, not this repo yet:
 
-- **`bun test`** — adopted for the new-stack (#164) services via `@zgeoff/bun-test-extended`
-  (jest-extended matchers for bun's runner). Vitest remains for pre-rebuild packages (app-web, the
-  game/idle/aether libs, service-avatar, …) and for `lib-email` (happy-dom template tests) — mixed
-  runners are fine per-project. `vitest.workspace.ts` targets each package's `vitest.config.ts` (or
-  app-web's `vite.config.ts`) explicitly so it never sweeps up `bun:test` files.
+- **`bun test` is the target runner for the entire repo, vitest included.** The vision is one runner
+  everywhere — services, shared libs, and the rebuilt web all test under `bun test` via
+  `@zgeoff/bun-test-extended` (jest-extended matchers), with DOM-bearing packages bootstrapping
+  happy-dom through `@happy-dom/global-registrator` in a package-local `bunfig.toml` preload (bunfig
+  is read from cwd, not merged up). Vitest is **transitional, not a permanent parallel** — it
+  survives only in not-yet-rebuilt packages (app-web, the game/idle/aether libs, service-avatar,
+  lib-email/lib-email-templates) until each is swept. New-stack packages are born on `bun test`;
+  never add vitest to anything new (the #165 rebuild starts the pattern — contracts + client-test-
+  utils in #264). While both runners coexist, `vitest.workspace.ts` globs each vitest package's
+  `vitest.config.ts` explicitly, so deleting that file drops the package from the vitest run. The
+  remaining vitest→bun-test sweep is tracked in #266.
 
-Don't "fix" these to match the shared partial mid-migration — follow the phase plan in #160 instead.
+Don't re-add vitest to converted or new packages to "match" a pre-rebuild neighbour — the direction
+is one runner; follow #266 and the #160 phase plan.
+
+## Testing (bun test, 0-isolation)
+
+`bun test` runs every file in one process with no per-file isolation — lean into it. All lifecycle
+and cleanup is registered once in a package's `bunfig.toml` preload and applies process-wide; test
+files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what keeps the suite fast.
+
+- **MSW is the sanctioned boundary mock** — the one carve-out from the shared partial's "mock-free"
+  rule. Mock at the external HTTP/service boundary with MSW, never internal abstractions. Each
+  package with HTTP tests keeps one shared `server` (`setupServer()`) in a `mocks/` module; its
+  lifecycle (`listen({ onUnhandledRequest: 'error' })`, `resetHandlers`, `close`) is wired globally
+  by `registerMSWLifecycle(server)` (from `@vers/client-test-utils`) in the preload. Tests add
+  per-test handlers with `server.use(...)` — including override and upstream-failure cases. For oRPC
+  procedures, build those handlers with `buildMockService` / `mockService`
+  (`@vers/client-test-utils/rpc-msw`).
+- **Global mock reset** lives in the preload's `afterEach` (`mock.restore()`), never per-test.
+- **jest-extended matchers** come from the `@zgeoff/bun-test-extended` preload; a package-local
+  `augment-bun-test.ts` side-effect import brings their types into `tsc`.
+- `toStrictEqual`, not `toEqual`, for object assertions.
+- Behavioural test names describe observable behaviour and never cite internal identifiers
+  (`it flags the run as invalid`, not `it sets isValid to false`).
+- Declare test data inline per test; no factory builders (`createUser`) and no shared mutable
+  module-level fixtures. One-off helpers stay inline — reusable ones live in `test-utils/`.
+- **Stateful backends** use `@msw/data`: build an in-memory store from a zod schema
+  (`new Collection({ schema: z.object({ … }) })`, `.create()`/`.createMany()`,
+  `.findFirst((q) => q.where(…))`/`.findMany()`, `.defineRelations()`) and read/write it directly
+  from the oRPC mock handlers. Models are zod schemas, not the legacy `factory()` model dictionary.
+- **React (phases 1–3):** React Testing Library on happy-dom (bootstrapped via
+  `@happy-dom/global-registrator` in the preload); prefer a project `render` util over bare RTL and
+  the utils it returns over the imported `screen`; load data through the centralized MSW handlers +
+  `@msw/data` in-memory store rather than stubbing hooks or poking Zustand; `waitFor` the fetch
+  before asserting.

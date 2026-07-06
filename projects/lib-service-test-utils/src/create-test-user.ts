@@ -17,10 +17,8 @@ type TestUserData = Partial<
 >;
 
 export async function createTestUser(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   db: PostgresJsDatabase<typeof schema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  data: TestUserData = {},
+  data: Readonly<TestUserData> = {},
 ): Promise<typeof schema.users.$inferSelect> {
   const now = new Date();
 
