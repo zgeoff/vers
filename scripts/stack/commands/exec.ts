@@ -1,6 +1,6 @@
-import type { ServiceID } from '../../../projects/lib-service-types/src/index';
 import { execa } from '../../utils/execa';
 import { DOCKER_COMPOSE_FILE } from '../consts';
+import type { ServiceID } from '../types';
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function exec(service: ServiceID, command: Array<string>): Promise<void> {

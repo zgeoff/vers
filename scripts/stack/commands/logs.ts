@@ -1,6 +1,6 @@
-import type { ServiceID } from '../../../projects/lib-service-types/src/index';
 import { execa } from '../../utils/execa';
 import { DOCKER_COMPOSE_FILE } from '../consts';
+import type { ServiceID } from '../types';
 
 export async function logs(service?: ServiceID): Promise<void> {
   const args = [];
