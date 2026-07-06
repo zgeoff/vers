@@ -64,20 +64,6 @@ stays simple: shape your avatar, send them into danger, recover power, and push 
 Avatars are embodied people, not disposable drones. They can be augmented, equipped, specialized,
 injured, defeated, recovered, ranked, and eventually set against other avatars.
 
-### Defeat Stakes
-
-Defeat ends the activity — an expedition, or any future instanced undertaking. Avatars are always
-recovered, never permanently lost.
-
-Defeat costs progress, not the avatar: experience toward the next level is lost but levels are never
-removed; yield from the run that was not already extracted is lost; and any investment in the
-activity instance is lost — the instance resets to baseline. Extraction is the player's mid-run
-banking decision: yield stays at risk until it is pulled out. Extraction is set as policy, not
-performed by hand — automated rules (extract at a yield threshold, or when defenses degrade) are
-intended, so unattended runs bank deliberately.
-
-Exact loss rates, floors, and extraction mechanics belong to the progression and economy notes.
-
 ### Institutions & Factions
 
 Factions run on two axes: the institutions inside Respite, and what remains of the other habitats
@@ -128,6 +114,20 @@ a shared market, ladders, and eventually direct PvP. Loot is tradeable, and drop
 currency design should assume a player economy from the start. Direct PvP is build against build —
 two players' planning resolved in a fight both can study — and arrives after the PvE loop is proven.
 Competition over regions is comparative (who pushes farther, faster), not territorial.
+
+### Defeat Stakes
+
+Defeat ends the activity — an expedition, or any future instanced undertaking. Avatars are always
+recovered, never permanently lost.
+
+Defeat costs progress, not the avatar: experience toward the next level is lost but levels are never
+removed; yield from the run that was not already extracted is lost; and any investment in the
+activity instance is lost — the instance resets to baseline. Extraction is the player's mid-run
+banking decision: yield stays at risk until it is pulled out. Extraction is set as policy, not
+performed by hand — automated rules (extract at a yield threshold, or when defenses degrade) are
+intended, so unattended runs bank deliberately.
+
+Exact loss rates, floors, and extraction mechanics belong to the progression and economy notes.
 
 ## Pillars
 
