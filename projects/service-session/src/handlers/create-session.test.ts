@@ -1,77 +1,74 @@
-import type * as schema from '@vers/postgres-schema';
-import { createTestDB, createTestUser } from '@vers/service-test-utils';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { expect, test } from 'vitest';
-import { router } from '../router';
-import { t } from '../t';
+import { expect, test } from 'bun:test';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import type { SessionContract } from '@vers/contract-session';
+import { createAnonymousViewer, createTestDB, createTestUser } from '@vers/service-test-utils/bun';
+import { createSessionService } from '../create-session-service';
 
-const createCaller = t.createCallerFactory(router);
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createSessionService({ db: db.db });
 
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-async function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
+test('it creates an unverified session with the short duration by default', async () => {
+  await using ctx = await setupTest();
+  const { user } = await createTestUser(ctx.db);
+  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  const user = await createTestUser(config.db);
+  const before = Date.now();
+  const session = await client.createSession({ ipAddress: '127.0.0.1', userID: user.id });
 
-  return { caller, user };
-}
-
-test('it creates a session with a short session duration', async () => {
-  await using handle = await createTestDB();
-
-  const { db } = handle;
-
-  const { caller, user } = await setupTest({ db });
-
-  const result = await caller.createSession({
+  expect(session).toStrictEqual({
+    createdAt: expect.toBeDate(),
+    expiresAt: expect.toBeDate(),
+    id: expect.toBeString(),
     ipAddress: '127.0.0.1',
-    rememberMe: false,
-    userID: user.id,
-  });
-
-  expect(result).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    createdAt: expect.any(Date),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    expiresAt: expect.any(Date),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
-    ipAddress: '127.0.0.1',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    updatedAt: expect.any(Date),
+    updatedAt: expect.toBeDate(),
     userID: user.id,
     verified: false,
   });
+
+  expect(session.expiresAt.getTime() - before).toBeWithin(
+    24 * 60 * 60 * 1000 - 5000,
+    24 * 60 * 60 * 1000 + 5000,
+  );
 });
 
-test('it creates a session with a long session duration', async () => {
-  await using handle = await createTestDB();
+test('it creates a session with the long duration when rememberMe is set', async () => {
+  await using ctx = await setupTest();
+  const { user } = await createTestUser(ctx.db);
+  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  const { db } = handle;
+  const before = Date.now();
 
-  const { caller, user } = await setupTest({ db });
-
-  const result = await caller.createSession({
+  const session = await client.createSession({
     ipAddress: '127.0.0.1',
     rememberMe: true,
     userID: user.id,
   });
 
-  expect(result).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    createdAt: expect.any(Date),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    expiresAt: expect.any(Date),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
+  expect(session.expiresAt.getTime() - before).toBeWithin(
+    7 * 24 * 60 * 60 * 1000 - 5000,
+    7 * 24 * 60 * 60 * 1000 + 5000,
+  );
+});
+
+test('it honors an explicit expiresAt over the default duration', async () => {
+  await using ctx = await setupTest();
+  const { user } = await createTestUser(ctx.db);
+  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+  const session = await client.createSession({
+    expiresAt,
     ipAddress: '127.0.0.1',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    updatedAt: expect.any(Date),
     userID: user.id,
-    verified: false,
   });
+
+  expect(session.expiresAt).toStrictEqual(expiresAt);
 });

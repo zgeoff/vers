@@ -12,38 +12,53 @@ async function setupTest() {
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-test('it only returns sessions belonging to the acting user', async () => {
+test('it deletes an owned session', async () => {
   await using ctx = await setupTest();
   const { token, user } = await createViewer({ audience: 'service-session', db: ctx.db });
-  const other = await createViewer({ audience: 'service-session', db: ctx.db });
-  const owned = await createSessionRow(ctx.db, { userId: user.id });
-
-  await createSessionRow(ctx.db, { userId: other.user.id });
-
+  const session = await createSessionRow(ctx.db, { userId: user.id });
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
-  const found = await client.getSessions({});
 
-  expect(found).toStrictEqual([
-    {
-      createdAt: owned.createdAt,
-      expiresAt: owned.expiresAt,
-      id: owned.id,
-      ipAddress: owned.ipAddress,
-      updatedAt: owned.updatedAt,
-      userID: user.id,
-      verified: owned.verified,
-    },
-  ]);
+  const result = await client.deleteSession({ id: session.id });
+
+  expect(result).toStrictEqual({});
+
+  const row = await ctx.db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('id', '=', session.id)
+    .executeTakeFirst();
+
+  expect(row).toBeUndefined();
 });
 
-test('it returns an empty array when the acting user has no sessions', async () => {
+test('it does not delete a session owned by a different user', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createViewer({ audience: 'service-session', db: ctx.db });
+  const other = await createViewer({ audience: 'service-session', db: ctx.db });
+  const foreign = await createSessionRow(ctx.db, { userId: other.user.id });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+
+  const result = await client.deleteSession({ id: foreign.id });
+
+  expect(result).toStrictEqual({});
+
+  const row = await ctx.db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('id', '=', foreign.id)
+    .executeTakeFirst();
+
+  expect(row).not.toBeUndefined();
+});
+
+test('it silently no-ops for a session that does not exist', async () => {
   await using ctx = await setupTest();
   const { token } = await createViewer({ audience: 'service-session', db: ctx.db });
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  const found = await client.getSessions({});
+  const result = await client.deleteSession({ id: 'does-not-exist' });
 
-  expect(found).toBeEmpty();
+  expect(result).toStrictEqual({});
 });
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
@@ -51,7 +66,7 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   const { token } = await createAnonymousViewer({ audience: 'service-session' });
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  expect(client.getSessions({})).rejects.toMatchObject({
+  expect(client.deleteSession({ id: 'x' })).rejects.toMatchObject({
     code: 'UNAUTHORIZED',
     data: { reason: 'missing-session' },
   });

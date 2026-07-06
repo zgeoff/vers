@@ -1,11 +1,9 @@
-import type { SessionData } from '@vers/contract-session';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { MissingSessionPayload } from '../types';
-import { toSessionData } from './to-session-data';
 
-/** oRPC handler opts for the authed `getSession` procedure. */
-interface GetSessionOpts {
+/** oRPC handler opts for the authed `deleteSession` procedure. */
+interface RemoveSessionOpts {
   readonly context: { readonly actingUserId: null | string };
   readonly errors: {
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
@@ -13,21 +11,24 @@ interface GetSessionOpts {
   readonly input: { readonly id: string };
 }
 
-/** Returns a session owned by the acting user, or null when it doesn't exist or isn't theirs. */
-export async function getSession(
+/**
+ * Removes a session owned by the acting user. A foreign or already-missing id is a silent
+ * no-op (#147) — the contract declares no NOT_FOUND, so ownership can't be probed by inspecting
+ * the response.
+ */
+export async function removeSession(
   db: Kysely<DB>,
-  opts: GetSessionOpts,
-): Promise<SessionData | null> {
+  opts: RemoveSessionOpts,
+): Promise<Record<never, never>> {
   if (opts.context.actingUserId === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const row = await db
-    .selectFrom('sessions')
-    .selectAll()
+  await db
+    .deleteFrom('sessions')
     .where('id', '=', opts.input.id)
     .where('userId', '=', opts.context.actingUserId)
-    .executeTakeFirst();
+    .execute();
 
-  return row === undefined ? null : toSessionData(row);
+  return {};
 }

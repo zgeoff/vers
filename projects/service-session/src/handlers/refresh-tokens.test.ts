@@ -1,154 +1,133 @@
-import { createId } from '@paralleldrive/cuid2';
-import * as schema from '@vers/postgres-schema';
-import { createTestDB, createTestUser } from '@vers/service-test-utils';
-import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { afterEach, expect, test, vi } from 'vitest';
-import * as consts from '../consts';
-import { router } from '../router';
-import { t } from '../t';
-import { createJWT } from '../utils/create-jwt';
+import { expect, test } from 'bun:test';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import type { SessionContract } from '@vers/contract-session';
+import { createAnonymousViewer, createTestDB, createTestUser } from '@vers/service-test-utils/bun';
+import { SESSION_DURATION_SHORT } from '../consts';
+import { createSessionService } from '../create-session-service';
+import { createSessionRow } from '../test-utils/create-session-row';
 
-vi.mock(import('../utils/create-jwt'));
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createSessionService({ db: db.db });
 
-const createCaller = t.createCallerFactory(router);
-
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-async function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
+test('it returns the same refresh token within the grace window', async () => {
+  await using ctx = await setupTest();
+  const { user } = await createTestUser(ctx.db);
+  const session = await createSessionRow(ctx.db, { refreshToken: 'fresh-token', userId: user.id });
+  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  const user = await createTestUser(config.db);
+  const result = await client.refreshTokens({ id: session.id, refreshToken: 'fresh-token' });
 
-  return { caller, user };
-}
-
-afterEach(() => {
-  vi.clearAllMocks();
+  expect(result).toStrictEqual({ accessToken: expect.toBeString(), refreshToken: 'fresh-token' });
 });
 
-test('it refreshes tokens for a young session without rotating the refresh token', async () => {
-  await using handle = await createTestDB();
+test('it rotates the refresh token after the grace window and records the previous one', async () => {
+  await using ctx = await setupTest();
+  const { user } = await createTestUser(ctx.db);
 
-  const { db } = handle;
+  const createdAt = new Date(Date.now() - SESSION_DURATION_SHORT - 1000);
 
-  const { caller, user } = await setupTest({ db });
-
-  const session = {
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + consts.SESSION_DURATION_LONG),
-    id: createId(),
-    ipAddress: '127.0.0.1',
-    refreshToken: 'existing-refresh-token',
-    userID: user.id,
-  };
-
-  await db.insert(schema.sessions).values(session);
-
-  vi.mocked(createJWT).mockResolvedValueOnce('new-access-token');
-
-  const result = await caller.refreshTokens({
-    id: session.id,
-    refreshToken: session.refreshToken,
+  const session = await createSessionRow(ctx.db, {
+    createdAt,
+    refreshToken: 'old-token',
+    userId: user.id,
   });
 
-  expect(result).toStrictEqual({
-    accessToken: 'new-access-token',
-    refreshToken: session.refreshToken,
-  });
+  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  expect(createJWT).toHaveBeenCalledOnce();
+  const result = await client.refreshTokens({ id: session.id, refreshToken: 'old-token' });
+
+  expect(result.refreshToken).not.toBe('old-token');
+
+  const row = await ctx.db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('id', '=', session.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.refreshToken).toBe(result.refreshToken);
+  expect(row.previousRefreshToken).toBe('old-token');
 });
 
-test('it rotates the refresh token if the provided one is older than our short refresh duration', async () => {
-  await using handle = await createTestDB();
+test('it revokes the session and throws REFRESH_TOKEN_REUSED when a superseded refresh token is presented', async () => {
+  await using ctx = await setupTest();
+  const { user } = await createTestUser(ctx.db);
 
-  const { db } = handle;
+  const createdAt = new Date(Date.now() - SESSION_DURATION_SHORT - 1000);
 
-  const { caller, user } = await setupTest({ db });
-
-  const session = {
-    createdAt: new Date(Date.now() - consts.SESSION_DURATION_SHORT - 1000),
-    expiresAt: new Date(Date.now() + consts.SESSION_DURATION_LONG),
-    id: createId(),
-    ipAddress: '127.0.0.1',
-    refreshToken: 'existing-refresh-token',
-    userID: user.id,
-  };
-
-  await db.insert(schema.sessions).values(session);
-
-  vi.mocked(createJWT)
-    .mockResolvedValueOnce('new-refresh-token')
-    .mockResolvedValueOnce('new-access-token');
-
-  const result = await caller.refreshTokens({
-    id: session.id,
-    refreshToken: session.refreshToken,
+  const session = await createSessionRow(ctx.db, {
+    createdAt,
+    refreshToken: 'old-token',
+    userId: user.id,
   });
 
-  expect(result).toStrictEqual({
-    accessToken: 'new-access-token',
-    refreshToken: 'new-refresh-token',
-  });
+  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  expect(createJWT).toHaveBeenCalledTimes(2);
+  await client.refreshTokens({ id: session.id, refreshToken: 'old-token' });
+
+  expect(client.refreshTokens({ id: session.id, refreshToken: 'old-token' })).rejects.toMatchObject(
+    { code: 'REFRESH_TOKEN_REUSED' },
+  );
+
+  const row = await ctx.db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('id', '=', session.id)
+    .executeTakeFirst();
+
+  expect(row).toBeUndefined();
 });
 
-test('it throws an error for an expired session', async () => {
-  await using handle = await createTestDB();
+test('it deletes the session and throws SESSION_EXPIRED for an expired session', async () => {
+  await using ctx = await setupTest();
+  const { user } = await createTestUser(ctx.db);
 
-  const { db } = handle;
-
-  const { caller, user } = await setupTest({ db });
-
-  const session = {
-    createdAt: new Date(),
+  const session = await createSessionRow(ctx.db, {
     expiresAt: new Date(Date.now() - 1000),
-    id: createId(),
-    ipAddress: '127.0.0.1',
-    refreshToken: 'existing-refresh-token',
-    userID: user.id,
-  };
-
-  await db.insert(schema.sessions).values(session);
-
-  await expect(
-    caller.refreshTokens({
-      id: session.id,
-      refreshToken: session.refreshToken,
-    }),
-  ).rejects.toMatchObject({
-    code: 'BAD_REQUEST',
-    message: 'Session expired',
+    refreshToken: 'expired-token',
+    userId: user.id,
   });
 
-  // verify the session was deleted
-  const [deletedSession] = await db
-    .select()
-    .from(schema.sessions)
-    .where(eq(schema.sessions.id, session.id));
+  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  expect(deletedSession).toBeUndefined();
+  expect(
+    client.refreshTokens({ id: session.id, refreshToken: 'expired-token' }),
+  ).rejects.toMatchObject({ code: 'SESSION_EXPIRED' });
+
+  const row = await ctx.db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('id', '=', session.id)
+    .executeTakeFirst();
+
+  expect(row).toBeUndefined();
 });
 
-test('it throws an error for an invalid refresh token', async () => {
-  await using handle = await createTestDB();
+test('it throws NOT_FOUND for a session that does not exist', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  const { db } = handle;
+  expect(
+    client.refreshTokens({ id: 'does-not-exist', refreshToken: 'anything' }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+});
 
-  const { caller } = await setupTest({ db });
+test('it throws NOT_FOUND when the presented refresh token does not match', async () => {
+  await using ctx = await setupTest();
+  const { user } = await createTestUser(ctx.db);
+  const session = await createSessionRow(ctx.db, { refreshToken: 'real-token', userId: user.id });
+  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
-  await expect(
-    caller.refreshTokens({
-      id: createId(),
-      refreshToken: 'invalid-token',
-    }),
-  ).rejects.toMatchObject({
-    code: 'NOT_FOUND',
-    message: 'Session not found',
-  });
+  expect(
+    client.refreshTokens({ id: session.id, refreshToken: 'wrong-token' }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 });
