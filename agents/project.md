@@ -157,8 +157,11 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
 - `toStrictEqual`, not `toEqual`, for object assertions.
 - Behavioural test names describe observable behaviour and never cite internal identifiers
   (`it flags the run as invalid`, not `it sets isValid to false`).
-- Declare test data inline per test; no factory builders (`createUser`) and no shared mutable
-  module-level fixtures. One-off helpers stay inline — reusable ones live in `test-utils/`.
+- Declare test data inline per test for MSW-mocked packages (a client hitting a mocked service, or
+  app-web): no factory builders (`createUser`) and no shared mutable module-level fixtures. One-off
+  helpers stay inline — reusable ones live in `test-utils/`. Service/app/DB packages that hit a real
+  database follow the factory-and-composite rule below instead — the two are scoped to different
+  boundaries, not in tension.
 - **Stateful backends** use `@msw/data`: build an in-memory store from a zod schema
   (`new Collection({ schema: z.object({ … }) })`, `.create()`/`.createMany()`,
   `.findFirst((q) => q.where(…))`/`.findMany()`, `.defineRelations()`) and read/write it directly
@@ -168,3 +171,35 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
   the utils it returns over the imported `screen`; load data through the centralized MSW handlers +
   `@msw/data` in-memory store rather than stubbing hooks or poking Zustand; `waitFor` the fetch
   before asserting.
+
+### Real-database services (service/app/DB packages)
+
+Services, apps, and DB-backed libraries that exercise a real postgres instead of MSW follow this
+standard instead of the inline-data rule above — `service-avatar` is the reference example.
+
+- **Isolation strategy.** Acquire the database through `@vers/service-test-utils/bun`:
+  `createTestDB()` returns an `await using` handle; `transaction` isolation (rollback on dispose) is
+  the default, `database` isolation (a real, committed clone) is the opt-out for code that commits
+  mid-op, takes advisory locks, or asserts something that only fires at COMMIT. Inject the handle's
+  `db` into the code under test — for a service, through its `buildRouter` — since code that opens
+  its own connection bypasses the rollback.
+- **`setupTest()`, not `beforeEach`.** A local environment builder: typed config in, named props
+  out, no `if`, declarative wiring — it builds an environment, not a scenario.
+- **Test data — factories + composites, always.** Every domain entity/DTO gets a faker-defaulted
+  `create-mock-*.ts` factory in `test-utils/factories/` (a plain object, never persisted, never
+  requiring a parent), each with its own test. Persisted or wired data goes through a
+  composite/entity-util (`create-*.ts`, no `-mock-`) that sources its defaults from the factory.
+- **Naming.** Behavioural, plain English, never citing internal identifiers. Prefix `#procedureName`
+  only when one file holds several procedures' tests; plain `it …` when a file covers one unit. No
+  HTTP-verb prefix.
+- **Failure paths are contract.** Assert on the rejection directly —
+  `expect(promise).rejects.toMatchObject({ code })` — never try/catch. Bun's own matcher types
+  declare every `.rejects`/`.resolves` chain synchronous (`void`), matching its own doc examples, so
+  these calls are not `await`ed; awaiting one is exactly what oxlint's type-aware rules flag.
+  `toResolve()`/`toReject()` are the two matchers actually typed as promises, and are `await`ed.
+  Test each declared error.
+- **Env.** Permanent env is set in the preload via a direct `process.env` assignment; per-test
+  overrides go through `stubEnv`, restored by `unstubAllEnvs` in the preload's
+  `registerBunTestCleanup()`.
+- **Auth.** s2s tests use the real verification path: an asymmetric keypair from
+  `getTestServiceKeyPair()`, tokens minted with `createServiceToken`.
