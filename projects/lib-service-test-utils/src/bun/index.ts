@@ -1,3 +1,5 @@
+export { createAnonymousViewer } from './composites/create-anonymous-viewer';
+export { createViewer } from './composites/create-viewer';
 export { createDatabaseFromTemplate } from './create-database-from-template';
 export { createTestDB } from './create-test-db';
 export { createTestUser } from './create-test-user';
