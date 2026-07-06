@@ -1,54 +1,32 @@
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { GetUserPayload } from '@vers/service-types';
-import { eq, or } from 'drizzle-orm';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { UserData } from '@vers/contract-user';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import { toUserData } from './to-user-data';
 
-export const GetUserInputSchema = z
-  .object({
-    email: z.string().email().optional(),
-    id: z.string().optional(),
-  })
-  .refine((data) => Boolean(data.email) || Boolean(data.id), {
-    message: 'Either email or ID must be provided',
-  });
-
-export async function getUser(
-  input: z.infer<typeof GetUserInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<GetUserPayload> {
-  try {
-    const where = [
-      // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-      input.email ? eq(schema.users.email, input.email) : undefined,
-      // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-      input.id ? eq(schema.users.id, input.id) : undefined,
-    ].filter(Boolean);
-
-    const user = await ctx.db.query.users.findFirst({
-      where: or(...where),
-    });
-
-    return user ?? null;
-  } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
-  }
+/** oRPC handler opts for the `getUser` procedure. */
+interface GetUserOpts {
+  readonly input: { readonly email?: string | undefined; readonly id?: string | undefined };
 }
 
-export const procedure = t.procedure
-  .input(GetUserInputSchema)
-  .query((opts) => getUser(opts.input, opts.ctx));
+/** Looks up a user matching the provided id or email; null when neither is provided or matches. */
+export async function getUser(db: Kysely<DB>, opts: GetUserOpts): Promise<UserData | null> {
+  const row = await db
+    .selectFrom('users')
+    .selectAll()
+    .where((eb) => {
+      const conditions = [];
+
+      if (opts.input.email !== undefined) {
+        conditions.push(eb('email', '=', opts.input.email));
+      }
+
+      if (opts.input.id !== undefined) {
+        conditions.push(eb('id', '=', opts.input.id));
+      }
+
+      return eb.or(conditions);
+    })
+    .executeTakeFirst();
+
+  return row === undefined ? null : toUserData(row);
+}

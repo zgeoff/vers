@@ -1,61 +1,79 @@
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { UpdateUserPayload } from '@vers/service-types';
-import { NameSchema, UsernameSchema } from '@vers/validation';
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import type { EmptyErrorPayload, FieldConflictPayload, MissingSessionPayload } from '../types';
 
-export const UpdateUserInputSchema = z.object({
-  id: z.string(),
-  name: NameSchema.optional(),
-  username: UsernameSchema.optional(),
-});
+/** oRPC handler opts for the authed `updateUser` procedure. */
+interface UpdateUserOpts {
+  readonly context: { readonly actingUserId: null | string };
+  readonly errors: {
+    readonly CONFLICT: (payload: FieldConflictPayload<'username'>) => Error;
+    readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
+    readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
+  };
+  readonly input: { readonly name?: string | undefined; readonly username?: string | undefined };
+}
 
+/**
+ * Updates the acting user's own name/username; throws CONFLICT when the username is taken and
+ * NOT_FOUND when the account is gone.
+ */
 export async function updateUser(
-  input: z.infer<typeof UpdateUserInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<UpdateUserPayload> {
+  db: Kysely<DB>,
+  opts: UpdateUserOpts,
+): Promise<{ updatedID: string }> {
+  if (opts.context.actingUserId === null) {
+    throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+  }
+
+  // every updatable field is optional, so an empty update must not reach the query builder —
+  // an UPDATE with no SET clause is invalid SQL
+  if (opts.input.name === undefined && opts.input.username === undefined) {
+    const existing = await db
+      .selectFrom('users')
+      .select('id')
+      .where('id', '=', opts.context.actingUserId)
+      .executeTakeFirst();
+
+    if (existing === undefined) {
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }
+
+    return { updatedID: existing.id };
+  }
+
   try {
-    const { id, ...update } = input;
-
-    const [user] = await ctx.db
-      .update(schema.users)
+    const row = await db
+      .updateTable('users')
       .set({
-        ...update,
-        updatedAt: new Date(),
+        ...(opts.input.name !== undefined && { name: opts.input.name }),
+        ...(opts.input.username !== undefined && { username: opts.input.username }),
       })
-      .where(eq(schema.users.id, id))
-      .returning({
-        updatedID: schema.users.id,
-      });
+      .where('id', '=', opts.context.actingUserId)
+      .returning('id as updatedId')
+      .executeTakeFirst();
 
-    if (!user) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'User not found',
-      });
+    if (row === undefined) {
+      throw opts.errors.NOT_FOUND({ data: {} });
     }
 
-    return { updatedID: user.updatedID };
+    return { updatedID: row.updatedId };
   } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
+    if (isUsernameViolation(error)) {
+      throw opts.errors.CONFLICT({ data: { field: 'username' } });
     }
 
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
+    throw error;
   }
 }
 
-export const procedure = t.procedure
-  .input(UpdateUserInputSchema)
-  .mutation((opts) => updateUser(opts.input, opts.ctx));
+/** postgres.js surfaces a unique-constraint violation as SQLSTATE 23505, naming the constraint. */
+function isUsernameViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code: unknown }).code === '23505' &&
+    'constraint_name' in error &&
+    (error as { constraint_name: unknown }).constraint_name === 'users_username_unique'
+  );
+}

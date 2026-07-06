@@ -1,106 +1,120 @@
-import * as schema from '@vers/postgres-schema';
-import { createTestDB, createTestUser } from '@vers/service-test-utils';
-import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { expect, test } from 'vitest';
-import { router } from '../router';
-import { t } from '../t';
+import { expect, test } from 'bun:test';
+import { buildRPCTestClient } from '@vers/contract-base/test-utils';
+import type { UserContract } from '@vers/contract-user';
+import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import { createUserService } from '../create-user-service';
 
-const createCaller = t.createCallerFactory(router);
+async function setupTest() {
+  const db = await createTestDB();
+  const { app } = await createUserService({ db: db.db });
 
-interface TestConfig {
-  db: PostgresJsDatabase<typeof schema>;
+  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-function setupTest(config: TestConfig) {
-  const caller = createCaller({ db: config.db });
+test('it updates the acting user name and username', async () => {
+  await using ctx = await setupTest();
+  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  return { caller };
-}
-
-test('it updates the provided user', async () => {
-  await using handle = await createTestDB();
-
-  const { db } = handle;
-
-  const user = await createTestUser(db);
-
-  const { caller } = setupTest({ db });
-
-  const update = {
-    name: 'Updated Name',
-    username: 'updated_username',
-  };
-
-  const result = await caller.updateUser({
-    id: user.id,
-    ...update,
-  });
+  const result = await client.updateUser({ name: 'Updated Name', username: 'updated_username' });
 
   expect(result).toStrictEqual({ updatedID: user.id });
 
-  const updatedUser = await db.query.users.findFirst({
-    where: eq(schema.users.id, user.id),
-  });
+  const row = await ctx.db
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', user.id)
+    .executeTakeFirstOrThrow();
 
-  expect(updatedUser).toStrictEqual({
-    ...user,
-    name: 'Updated Name',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    updatedAt: expect.any(Date),
-    username: 'updated_username',
-  });
-
-  expect(updatedUser?.updatedAt.getTime()).toBeGreaterThan(user.updatedAt.getTime());
+  expect(row.name).toBe('Updated Name');
+  expect(row.username).toBe('updated_username');
 });
 
 test('it allows partial updating', async () => {
-  await using handle = await createTestDB();
+  await using ctx = await setupTest();
+  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  const { db } = handle;
-
-  const user = await createTestUser(db);
-
-  const { caller } = setupTest({ db });
-
-  const update = {
-    name: 'Updated Name',
-  };
-
-  const result = await caller.updateUser({
-    id: user.id,
-    ...update,
-  });
-
-  const updatedUser = await db.query.users.findFirst({
-    where: eq(schema.users.id, user.id),
-  });
+  const result = await client.updateUser({ name: 'Updated Name' });
 
   expect(result).toStrictEqual({ updatedID: user.id });
 
-  expect(updatedUser).toStrictEqual({
-    ...user,
-    name: 'Updated Name',
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    updatedAt: expect.any(Date),
+  const row = await ctx.db
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', user.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.name).toBe('Updated Name');
+  expect(row.username).toBe(user.username);
+});
+
+test('it leaves the record unchanged when no fields are provided', async () => {
+  await using ctx = await setupTest();
+  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+
+  const result = await client.updateUser({});
+
+  expect(result).toStrictEqual({ updatedID: user.id });
+
+  const row = await ctx.db
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', user.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.name).toBe(user.name);
+  expect(row.username).toBe(user.username);
+});
+
+test('it throws NOT_FOUND when no fields are provided and the user does not exist', async () => {
+  await using ctx = await setupTest();
+  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+
+  await ctx.db.deleteFrom('users').where('id', '=', user.id).execute();
+
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+
+  expect(client.updateUser({})).rejects.toMatchObject({ code: 'NOT_FOUND' });
+});
+
+test('it throws NOT_FOUND when the acting user no longer exists', async () => {
+  await using ctx = await setupTest();
+  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+
+  await ctx.db.deleteFrom('users').where('id', '=', user.id).execute();
+
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+
+  expect(client.updateUser({ name: 'Updated Name' })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+});
+
+test('it throws CONFLICT with field username when the username is taken', async () => {
+  await using ctx = await setupTest();
+
+  await createViewer({
+    audience: 'service-user',
+    db: ctx.db,
+    user: { username: 'taken_username' },
+  });
+
+  const { token } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+
+  expect(client.updateUser({ username: 'taken_username' })).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { field: 'username' },
   });
 });
 
-test('should throw an error if the user is not found', async () => {
-  await using handle = await createTestDB();
+test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
+  await using ctx = await setupTest();
+  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
-  const { db } = handle;
-
-  const { caller } = setupTest({ db });
-
-  const update = {
-    id: 'non-existent-id',
-    name: 'Updated Name',
-  } as const;
-
-  await expect(caller.updateUser(update)).rejects.toMatchObject({
-    code: 'NOT_FOUND',
-    message: 'User not found',
+  expect(client.updateUser({ name: 'Anonymous' })).rejects.toMatchObject({
+    code: 'UNAUTHORIZED',
+    data: { reason: 'missing-session' },
   });
 });

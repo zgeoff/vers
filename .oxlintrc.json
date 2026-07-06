@@ -308,6 +308,7 @@
         "projects/lib-client-test-utils/**",
         "projects/service-avatar/**",
         "projects/service-session/**",
+        "projects/service-user/**",
         "projects/service-verification/**"
       ],
       // vitest plugin only applies to `.test.ts(x)` files — scoping it here

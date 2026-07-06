@@ -1,91 +1,75 @@
-import { TRPCError } from '@trpc/server';
-import * as schema from '@vers/postgres-schema';
-import type { UpdateEmailPayload } from '@vers/service-types';
-import { UserEmailSchema } from '@vers/validation';
-import { and, eq, or } from 'drizzle-orm';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import type { EmptyErrorPayload, FieldConflictPayload, MissingSessionPayload } from '../types';
 
-export const UpdateEmailInputSchema = z.object({
-  email: UserEmailSchema,
-  id: z.string(),
-});
+/** oRPC handler opts for the authed `updateEmail` procedure. */
+interface UpdateEmailOpts {
+  readonly context: { readonly actingUserId: null | string };
+  readonly errors: {
+    readonly CONFLICT: (payload: FieldConflictPayload<'email'>) => Error;
+    readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
+    readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
+  };
+  readonly input: { readonly email: string };
+}
 
+/**
+ * Changes the acting user's email, repointing any in-progress 2FA verification at the old email
+ * to the new one in the same statement; throws CONFLICT when the email is taken.
+ */
 export async function updateEmail(
-  input: z.infer<typeof UpdateEmailInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<UpdateEmailPayload> {
+  db: Kysely<DB>,
+  opts: UpdateEmailOpts,
+): Promise<{ updatedID: string }> {
+  const { actingUserId } = opts.context;
+
+  if (actingUserId === null) {
+    throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+  }
+
+  const user = await db
+    .selectFrom('users')
+    .select('email')
+    .where('id', '=', actingUserId)
+    .executeTakeFirst();
+
+  if (user === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
   try {
-    const { email, id } = input;
+    await db
+      .with('updated', (qb) =>
+        qb
+          .updateTable('users')
+          .set({ email: opts.input.email })
+          .where('id', '=', actingUserId)
+          .returningAll(),
+      )
+      .updateTable('verifications')
+      .set({ target: opts.input.email })
+      .where('target', '=', user.email)
+      .where('type', 'in', ['2fa', '2fa-setup'])
+      .execute();
 
-    const user = await ctx.db.query.users.findFirst({
-      where: eq(schema.users.id, id),
-    });
-
-    if (!user) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'User not found',
-      });
-    }
-
-    const updatedID = await ctx.db.transaction(async (tx) => {
-      const [updated] = await tx
-        .update(schema.users)
-        .set({
-          email,
-          updatedAt: new Date(),
-        })
-        .where(eq(schema.users.id, id))
-        .returning({ updatedID: schema.users.id });
-
-      if (!updated) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'User not found',
-        });
-      }
-
-      const twoFactorTypeCondition = or(
-        eq(schema.verifications.type, '2fa'),
-        eq(schema.verifications.type, '2fa-setup'),
-      );
-
-      const twoFactorAuth = await tx.query.verifications.findFirst({
-        where: and(eq(schema.verifications.target, user.email), twoFactorTypeCondition),
-      });
-
-      // if we have 2FA enabled or setup in progress, we need to update the
-      // verification target to the new email
-      if (twoFactorAuth) {
-        await tx
-          .update(schema.verifications)
-          .set({ target: email })
-          .where(eq(schema.verifications.id, twoFactorAuth.id));
-      }
-
-      return updated.updatedID;
-    });
-
-    return { updatedID };
+    return { updatedID: actingUserId };
   } catch (error: unknown) {
-    logger.error(error);
-
-    if (error instanceof TRPCError) {
-      throw error;
+    if (isEmailViolation(error)) {
+      throw opts.errors.CONFLICT({ data: { field: 'email' } });
     }
 
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
+    throw error;
   }
 }
 
-export const procedure = t.procedure
-  .input(UpdateEmailInputSchema)
-  .mutation((opts) => updateEmail(opts.input, opts.ctx));
+/** postgres.js surfaces a unique-constraint violation as SQLSTATE 23505, naming the constraint. */
+function isEmailViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code: unknown }).code === '23505' &&
+    'constraint_name' in error &&
+    (error as { constraint_name: unknown }).constraint_name === 'users_email_unique'
+  );
+}

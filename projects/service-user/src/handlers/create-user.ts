@@ -1,89 +1,75 @@
 import { createId } from '@paralleldrive/cuid2';
-import { TRPCError } from '@trpc/server';
+import type { UserData } from '@vers/contract-user';
+import type { DB } from '@vers/db';
 import { createSeed } from '@vers/game-utils';
-import * as schema from '@vers/postgres-schema';
-import type { CreateUserPayload } from '@vers/service-types';
-import { hashPassword, isPGError, isUniqueConstraintError } from '@vers/service-utils';
-import { NameSchema, PasswordSchema, UserEmailSchema, UsernameSchema } from '@vers/validation';
-import { z } from 'zod';
-import { logger } from '../logger';
-import { t } from '../t';
-import type { Context } from '../types';
+import type { Kysely } from 'kysely';
+import type { FieldConflictPayload } from '../types';
+import { toUserData } from './to-user-data';
 
-const CreateUserInputSchema = z.object({
-  email: UserEmailSchema,
-  name: NameSchema,
-  password: PasswordSchema,
-  username: UsernameSchema,
-});
+/** oRPC handler opts for the `createUser` procedure. */
+interface CreateUserOpts {
+  readonly errors: {
+    readonly CONFLICT: (payload: FieldConflictPayload<'email' | 'username'>) => Error;
+  };
+  readonly input: {
+    readonly email: string;
+    readonly name: string;
+    readonly password: string;
+    readonly username: string;
+  };
+}
 
-async function createUser(
-  input: z.infer<typeof CreateUserInputSchema>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  ctx: Context,
-): Promise<CreateUserPayload> {
+/** Creates a user with an argon2id-hashed password; throws CONFLICT when the email or username is taken. */
+export async function createUser(db: Kysely<DB>, opts: CreateUserOpts): Promise<UserData> {
+  const passwordHash = await Bun.password.hash(opts.input.password, 'argon2id');
+
   try {
-    const { email, name, password, username } = input;
+    const row = await db
+      .insertInto('users')
+      .values({
+        email: opts.input.email,
+        id: createId(),
+        name: opts.input.name,
+        passwordHash,
+        seed: createSeed(),
+        username: opts.input.username,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
 
-    const createdAt = new Date();
-
-    const passwordHash = await hashPassword(password);
-
-    const user: typeof schema.users.$inferSelect = {
-      createdAt,
-      email,
-      id: createId(),
-      name,
-      passwordHash,
-      passwordResetToken: null,
-      passwordResetTokenExpiresAt: null,
-      seed: createSeed(),
-      updatedAt: createdAt,
-      username,
-    };
-
-    await ctx.db.insert(schema.users).values(user);
-
-    return {
-      createdAt: user.createdAt,
-      email: user.email,
-      id: user.id,
-      name: user.name,
-      seed: user.seed,
-      updatedAt: user.updatedAt,
-      username: user.username,
-    };
+    return toUserData(row);
   } catch (error: unknown) {
-    logger.error(error);
+    const field = findViolatedField(error);
 
-    if (isPGError(error)) {
-      if (isUniqueConstraintError(error, 'users_email_unique')) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'A user with that email already exists',
-        });
-      }
-
-      if (isUniqueConstraintError(error, 'users_username_unique')) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'A user with that username already exists',
-        });
-      }
-    }
-
-    if (error instanceof TRPCError) {
+    if (field === undefined) {
       throw error;
     }
 
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unknown error occurred',
-    });
+    throw opts.errors.CONFLICT({ data: { field } });
   }
 }
 
-export const procedure = t.procedure
-  .input(CreateUserInputSchema)
-  .mutation((opts) => createUser(opts.input, opts.ctx));
+/** postgres.js surfaces a unique-constraint violation as SQLSTATE 23505, naming the constraint. */
+function findViolatedField(error: unknown): 'email' | 'username' | undefined {
+  if (
+    typeof error !== 'object' ||
+    error === null ||
+    !('code' in error) ||
+    (error as { code: unknown }).code !== '23505' ||
+    !('constraint_name' in error)
+  ) {
+    return undefined;
+  }
+
+  const constraintName = (error as { constraint_name: unknown }).constraint_name;
+
+  if (constraintName === 'users_email_unique') {
+    return 'email';
+  }
+
+  if (constraintName === 'users_username_unique') {
+    return 'username';
+  }
+
+  return undefined;
+}
