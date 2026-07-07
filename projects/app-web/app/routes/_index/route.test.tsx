@@ -50,11 +50,11 @@ function setupTest(config: TestConfig) {
 }
 
 test('it renders a sign up button that navigates to the signup route when clicked', async () => {
-  const setup = setupTest({ isAuthed: false });
+  const ctx = setupTest({ isAuthed: false });
 
   const signUpButton = await screen.findByRole('link', { name: 'Signup' });
 
-  await waitFor(() => setup.user.click(signUpButton));
+  await waitFor(() => ctx.user.click(signUpButton));
 
   const loggedOutMessage = await screen.findByText('SIGN_UP_ROUTE');
 
@@ -62,11 +62,11 @@ test('it renders a sign up button that navigates to the signup route when clicke
 });
 
 test('it renders a log in button that navigates to the log in route when clicked', async () => {
-  const setup = setupTest({ isAuthed: false });
+  const ctx = setupTest({ isAuthed: false });
 
   const logInButton = await screen.findByRole('link', { name: 'Login' });
 
-  await waitFor(() => setup.user.click(logInButton));
+  await waitFor(() => ctx.user.click(logInButton));
 
   const loggedOutMessage = await screen.findByText('LOGIN_ROUTE');
 

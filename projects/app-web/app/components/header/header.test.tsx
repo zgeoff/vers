@@ -30,11 +30,11 @@ function setupTest() {
 }
 
 test('it renders a button that toggles the side navigation', async () => {
-  const setup = setupTest();
+  const ctx = setupTest();
 
   expect(screen.getByText('closed')).toBeInTheDocument();
 
-  await setup.user.click(screen.getByRole('button', { name: /toggle navigation/i }));
+  await ctx.user.click(screen.getByRole('button', { name: /toggle navigation/i }));
 
   expect(screen.getByText('open')).toBeInTheDocument();
 });

@@ -92,7 +92,7 @@ test('it renders the reset password form with accessible elements', async () => 
 });
 
 test('it shows validation errors for mismatched passwords', async () => {
-  const setup = await setupTest({
+  const ctx = await setupTest({
     initialPath: '/?email=test@example.com&token=test_reset_token',
   });
 
@@ -100,9 +100,9 @@ test('it shows validation errors for mismatched passwords', async () => {
   const confirmPasswordInput = screen.getByLabelText('Confirm Password');
   const submitButton = screen.getByRole('button', { name: 'Reset Password' });
 
-  await setup.user.type(newPasswordInput, 'password123');
-  await setup.user.type(confirmPasswordInput, 'password456');
-  await setup.user.click(submitButton);
+  await ctx.user.type(newPasswordInput, 'password123');
+  await ctx.user.type(confirmPasswordInput, 'password456');
+  await ctx.user.click(submitButton);
 
   const errorText = await screen.findByText('The passwords must match');
 
@@ -110,7 +110,7 @@ test('it shows validation errors for mismatched passwords', async () => {
 });
 
 test('it shows validation errors for invalid password', async () => {
-  const setup = await setupTest({
+  const ctx = await setupTest({
     initialPath: '/?email=test@example.com&token=test_reset_token',
   });
 
@@ -118,9 +118,9 @@ test('it shows validation errors for invalid password', async () => {
   const confirmPasswordInput = screen.getByLabelText('Confirm Password');
   const submitButton = screen.getByRole('button', { name: 'Reset Password' });
 
-  await setup.user.type(newPasswordInput, 'weak');
-  await setup.user.type(confirmPasswordInput, 'weak');
-  await setup.user.click(submitButton);
+  await ctx.user.type(newPasswordInput, 'weak');
+  await ctx.user.type(confirmPasswordInput, 'weak');
+  await ctx.user.click(submitButton);
 
   const errorText = await screen.findAllByText('Password must be 8+ characters');
 
@@ -128,7 +128,7 @@ test('it shows validation errors for invalid password', async () => {
 });
 
 test('it redirects to login on successful password reset', async () => {
-  const setup = await setupTest({
+  const ctx = await setupTest({
     initialPath: '/?email=test@example.com&token=test_reset_token',
   });
 
@@ -141,9 +141,9 @@ test('it redirects to login on successful password reset', async () => {
   const confirmPasswordInput = screen.getByLabelText('Confirm Password');
   const submitButton = screen.getByRole('button', { name: 'Reset Password' });
 
-  await setup.user.type(newPasswordInput, 'newpassword123');
-  await setup.user.type(confirmPasswordInput, 'newpassword123');
-  await setup.user.click(submitButton);
+  await ctx.user.type(newPasswordInput, 'newpassword123');
+  await ctx.user.type(confirmPasswordInput, 'newpassword123');
+  await ctx.user.click(submitButton);
 
   const loginRoute = await screen.findByText('LOGIN_ROUTE');
 
@@ -167,7 +167,7 @@ test('it redirects to login if the email is missing from the params', async () =
 });
 
 test('it passes the transaction token if 2FA was required for the reset', async () => {
-  const setup = await setupTest({
+  const ctx = await setupTest({
     initialPath: '/?email=test@example.com&token=test_reset_token',
     transactionToken: 'valid_transaction_token',
   });
@@ -186,9 +186,9 @@ test('it passes the transaction token if 2FA was required for the reset', async 
   const confirmPasswordInput = screen.getByLabelText('Confirm Password');
   const submitButton = screen.getByRole('button', { name: 'Reset Password' });
 
-  await setup.user.type(newPasswordInput, 'newpassword123');
-  await setup.user.type(confirmPasswordInput, 'newpassword123');
-  await setup.user.click(submitButton);
+  await ctx.user.type(newPasswordInput, 'newpassword123');
+  await ctx.user.type(confirmPasswordInput, 'newpassword123');
+  await ctx.user.click(submitButton);
 
   const loginRoute = await screen.findByText('LOGIN_ROUTE');
 
@@ -210,7 +210,7 @@ test('it shows a generic error if the mutation fails', async () => {
     }),
   );
 
-  const setup = await setupTest({
+  const ctx = await setupTest({
     initialPath: '/?email=test@example.com&token=test_reset_token',
   });
 
@@ -218,9 +218,9 @@ test('it shows a generic error if the mutation fails', async () => {
   const confirmPasswordInput = screen.getByLabelText('Confirm Password');
   const submitButton = screen.getByRole('button', { name: 'Reset Password' });
 
-  await setup.user.type(newPasswordInput, 'newpassword123');
-  await setup.user.type(confirmPasswordInput, 'newpassword123');
-  await setup.user.click(submitButton);
+  await ctx.user.type(newPasswordInput, 'newpassword123');
+  await ctx.user.type(confirmPasswordInput, 'newpassword123');
+  await ctx.user.click(submitButton);
 
   const error = await screen.findByText('Something went wrong');
 

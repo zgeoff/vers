@@ -77,13 +77,13 @@ test('it renders the nexus when authenticated and a user has an avatar', async (
 });
 
 test('it renders a call to action when a user does not have an avatar', async () => {
-  const setup = setupTest({ isAuthed: true, user: { id: 'user_id' } });
+  const ctx = setupTest({ isAuthed: true, user: { id: 'user_id' } });
 
   const callToAction = await screen.findByText('Awaken your Avatar');
 
   expect(callToAction).toBeInTheDocument();
 
-  await setup.user.click(callToAction);
+  await ctx.user.click(callToAction);
 
   const avatarCreateRoute = await screen.findByText('AVATAR_CREATE_ROUTE');
 
