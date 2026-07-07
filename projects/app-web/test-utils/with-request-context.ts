@@ -1,4 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
+import { runWithStartContext } from '@tanstack/start-storage-context';
 import type { FakeSession } from './request-context-holder';
 import { requestContextHolder } from './request-context-holder';
 
@@ -19,7 +20,10 @@ export interface RequestContextOutcome<T> {
 /**
  * Drives an async call inside a faked `@tanstack/react-start/server` ambient request: the preload
  * installs a stub of that module's request/cookie-session reads and writes, and this util is the
- * only place a test may set what those reads see or seed a pre-existing cookie session.
+ * only place a test may set what those reads see or seed a pre-existing cookie session. Also
+ * establishes the Start framework's own request-scoped `AsyncLocalStorage` context, so a real
+ * `createServerFn`-wrapped export (not just its handler body) can dispatch under `bun test`, which
+ * never runs the compiler pass that would otherwise supply it.
  */
 export async function withRequestContext<T>(
   init: Readonly<RequestContextInit>,
@@ -39,7 +43,19 @@ export async function withRequestContext<T>(
   };
 
   try {
-    const value = await run();
+    const value = await runWithStartContext(
+      {
+        contextAfterGlobalMiddlewares: {},
+        executedRequestMiddlewares: new Set(),
+        getRouter: () => {
+          throw new Error('getRouter is not available under withRequestContext');
+        },
+        handlerType: 'serverFn',
+        request: new Request(init.url ?? 'http://localhost/'),
+        startOptions: {},
+      },
+      run,
+    );
 
     return { cookies: snapshotCookies(sessions), value };
   } finally {

@@ -2,10 +2,9 @@ import { redirect } from '@tanstack/react-router';
 import { getRequestIP } from '@tanstack/react-start/server';
 import type { z } from 'zod';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
+import { completeSessionSignIn } from '../../lib/auth/complete-session-sign-in';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { SpamError } from '../../lib/auth/spam-error';
-import { toSafeRedirectPath } from '../../lib/auth/to-safe-redirect-path';
-import { updateAuthSession } from '../../lib/auth/update-auth-session';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
@@ -64,8 +63,6 @@ export async function loginHandler(formData: FormData): Promise<LoginResult | Re
     userID: user.id,
   });
 
-  const sessionBearerHeaders = { authorization: `Bearer ${session.id}` };
-
   const twoFactorVerification = await verificationClient.getVerification({
     target: user.id,
     type: '2fa',
@@ -83,31 +80,11 @@ export async function loginHandler(formData: FormData): Promise<LoginResult | Re
     throw redirect({ href: `/verify-otp?${searchParams.toString()}` });
   }
 
-  const otherSessions = await sessionClient.getSessions(
-    {},
-    { context: { headers: sessionBearerHeaders } },
-  );
-
-  if (otherSessions.some((other) => other.id !== session.id)) {
-    await updateVerifySession({
-      'loginLogout#email': submission.data.email,
-      'loginLogout#sessionID': session.id,
-    });
-
-    throw redirect({ href: '/login/force-logout' });
-  }
-
-  const tokens = await sessionClient.verifySession(
-    { id: session.id },
-    { context: { headers: sessionBearerHeaders } },
-  );
-
-  await updateAuthSession(
-    { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, sessionID: session.id },
-    { expiresAt: session.expiresAt },
-  );
-
-  throw redirect({ href: toSafeRedirectPath(submission.data.redirectTo, '/') });
+  return completeSessionSignIn({
+    email: submission.data.email,
+    redirectTo: submission.data.redirectTo,
+    session,
+  });
 }
 
 function toFieldErrors(error: z.ZodError): Partial<Record<'email' | 'password', string>> {

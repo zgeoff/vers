@@ -5,6 +5,7 @@ import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
 import { login } from './login';
+import type { LoginResult } from './login-result';
 
 interface LoginFormProps {
   readonly redirectTo?: string | undefined;
@@ -36,7 +37,13 @@ export function LoginForm(props: LoginFormProps) {
     setFieldErrors({});
 
     try {
-      const result = await loginFn({ data: formData });
+      // a successful or 2FA/force-logout-bound submission ends in a redirect that useServerFn
+      // already navigated to, resolving this call with no value — there's no further UI to show
+      const result: LoginResult | Response | undefined = await loginFn({ data: formData });
+
+      if (result === undefined) {
+        return;
+      }
 
       if (result instanceof Response) {
         setFormError('Something went wrong. Please try again.');
