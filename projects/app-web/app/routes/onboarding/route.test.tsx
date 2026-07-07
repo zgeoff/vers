@@ -140,13 +140,13 @@ test('it renders the onboarding form', async () => {
 });
 
 test('it shows validation errors for missing required fields', async () => {
-  const { user } = setupTest({ isAuthed: false, isOnboarding: true });
+  const setup = setupTest({ isAuthed: false, isOnboarding: true });
 
   const createAccountButton = await screen.findByRole('button', {
     name: 'Create an Account',
   });
 
-  await user.click(createAccountButton);
+  await setup.user.click(createAccountButton);
 
   const usernameError = await screen.findByText('Username is required');
   const nameError = screen.getByText('Name is required');
@@ -163,7 +163,7 @@ test('it shows validation errors for missing required fields', async () => {
 });
 
 test('it shows validation error for mismatched passwords', async () => {
-  const { user } = setupTest({ isAuthed: false, isOnboarding: true });
+  const setup = setupTest({ isAuthed: false, isOnboarding: true });
 
   const passwordInput = await screen.findByLabelText('Password');
   const confirmPasswordInput = screen.getByLabelText('Confirm Password');
@@ -172,9 +172,9 @@ test('it shows validation error for mismatched passwords', async () => {
     name: 'Create an Account',
   });
 
-  await user.type(passwordInput, 'password123');
-  await user.type(confirmPasswordInput, 'password456');
-  await user.click(createAccountButton);
+  await setup.user.type(passwordInput, 'password123');
+  await setup.user.type(confirmPasswordInput, 'password456');
+  await setup.user.click(createAccountButton);
 
   const passwordError = await screen.findByText('The passwords must match');
 
@@ -182,7 +182,7 @@ test('it shows validation error for mismatched passwords', async () => {
 });
 
 test('it redirects to the nexus on successful account creation', async () => {
-  const { user } = setupTest({ isAuthed: false, isOnboarding: true });
+  const setup = setupTest({ isAuthed: false, isOnboarding: true });
 
   const usernameInput = await screen.findByLabelText('Username');
   const nameInput = screen.getByLabelText('Name');
@@ -197,12 +197,12 @@ test('it redirects to the nexus on successful account creation', async () => {
     name: 'Agree to terms',
   });
 
-  await user.type(usernameInput, 'testuser');
-  await user.type(nameInput, 'Test User');
-  await user.type(passwordInput, 'password123');
-  await user.type(confirmPasswordInput, 'password123');
-  await user.click(agreeToTermsCheckbox);
-  await user.click(createAccountButton);
+  await setup.user.type(usernameInput, 'testuser');
+  await setup.user.type(nameInput, 'Test User');
+  await setup.user.type(passwordInput, 'password123');
+  await setup.user.type(confirmPasswordInput, 'password123');
+  await setup.user.click(agreeToTermsCheckbox);
+  await setup.user.click(createAccountButton);
 
   const nexusRoute = await screen.findByText('NEXUS_ROUTE');
 

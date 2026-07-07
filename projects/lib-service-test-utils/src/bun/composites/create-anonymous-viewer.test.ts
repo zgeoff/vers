@@ -5,15 +5,15 @@ import { getTestServiceKeyPair } from '../get-test-service-key-pair';
 import { createAnonymousViewer } from './create-anonymous-viewer';
 
 test('it mints a valid token carrying no acting subject', async () => {
-  const { publicKeyPEM } = await getTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
-  const { token } = await createAnonymousViewer({ audience: 'create-anonymous-viewer-spec' });
+  const viewer = await createAnonymousViewer({ audience: 'create-anonymous-viewer-spec' });
 
-  const publicKey = await jose.importSPKI(publicKeyPEM, TOKEN_ALGORITHM);
+  const publicKey = await jose.importSPKI(keyPair.publicKeyPEM, TOKEN_ALGORITHM);
 
-  const { payload } = await jose.jwtVerify(token, publicKey, {
+  const verified = await jose.jwtVerify(viewer.token, publicKey, {
     audience: 'create-anonymous-viewer-spec',
   });
 
-  expect(payload.sub).toBeUndefined();
+  expect(verified.payload.sub).toBeUndefined();
 });

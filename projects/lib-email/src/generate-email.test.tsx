@@ -10,14 +10,14 @@ function TestEmail() {
 }
 
 test('it generates both HTML and plain text versions of the email', async () => {
-  const { html, plainText } = await generateEmail({
+  const email = await generateEmail({
     component: <TestEmail />,
   });
 
-  expect(html).toStartWith('<!DOCTYPE html');
-  expect(html).toContain('Test Email');
-  expect(html).not.toBe(plainText);
+  expect(email.html).toStartWith('<!DOCTYPE html');
+  expect(email.html).toContain('Test Email');
+  expect(email.html).not.toBe(email.plainText);
 
-  expect(plainText).toContain('TEST EMAIL');
-  expect(plainText).not.toStartWith('<!DOCTYPE html');
+  expect(email.plainText).toContain('TEST EMAIL');
+  expect(email.plainText).not.toStartWith('<!DOCTYPE html');
 });

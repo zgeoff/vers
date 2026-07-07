@@ -4,17 +4,17 @@ import { toggleAxesHelper } from './toggle-axes-helper';
 import { useIsAxesHelperVisible } from './use-is-axes-helper-visible';
 
 test('it toggles axes helper visibility', () => {
-  const { rerender, result } = renderHook(() => useIsAxesHelperVisible());
+  const rendered = renderHook(() => useIsAxesHelperVisible());
 
-  expect(result.current).toBeFalse();
-
-  toggleAxesHelper();
-  rerender();
-
-  expect(result.current).toBeTrue();
+  expect(rendered.result.current).toBeFalse();
 
   toggleAxesHelper();
-  rerender();
+  rendered.rerender();
 
-  expect(result.current).toBeFalse();
+  expect(rendered.result.current).toBeTrue();
+
+  toggleAxesHelper();
+  rendered.rerender();
+
+  expect(rendered.result.current).toBeFalse();
 });

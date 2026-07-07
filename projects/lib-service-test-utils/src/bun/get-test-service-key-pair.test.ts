@@ -13,14 +13,14 @@ test('it memoizes the same keypair across repeated calls within a process', asyn
 });
 
 test('it returns a public PEM that verifies tokens signed with the private key', async () => {
-  const { privateKey, publicKeyPEM } = await getTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   const token = await createServiceToken({
     audience: 'get-test-service-key-pair-spec',
-    privateKey,
+    privateKey: keyPair.privateKey,
   });
 
-  const publicKey = await jose.importSPKI(publicKeyPEM, TOKEN_ALGORITHM);
+  const publicKey = await jose.importSPKI(keyPair.publicKeyPEM, TOKEN_ALGORITHM);
 
   await expect(
     jose.jwtVerify(token, publicKey, { audience: 'get-test-service-key-pair-spec' }),

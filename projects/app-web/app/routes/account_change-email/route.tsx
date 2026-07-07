@@ -57,7 +57,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
 
   invariant(userResult.data, 'if no error, there must be data');
 
-  const { getCurrentUser: user } = userResult.data;
+  const user = userResult.data.getCurrentUser;
 
   // if the user doesn't have 2FA enabled, return early
   if (!user.is2FAEnabled) {

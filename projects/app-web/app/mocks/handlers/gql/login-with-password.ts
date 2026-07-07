@@ -19,12 +19,10 @@ export const LoginWithPassword = graphql.mutation<
   LoginWithPasswordResponse,
   LoginWithPasswordVariables
 >('LoginWithPassword', (opts) => {
-  const { email, password } = opts.variables.input;
-
   const user = db.user.findFirst({
     where: {
       email: {
-        equals: email,
+        equals: opts.variables.input.email,
       },
     },
   });
@@ -39,7 +37,7 @@ export const LoginWithPassword = graphql.mutation<
     });
   }
 
-  if (user.password !== password) {
+  if (user.password !== opts.variables.input.password) {
     return HttpResponse.json({
       data: {
         loginWithPassword: {
@@ -64,7 +62,7 @@ export const LoginWithPassword = graphql.mutation<
 
   const is2FAEnabled = db.verification.findFirst({
     where: {
-      target: { equals: email },
+      target: { equals: opts.variables.input.email },
       type: { equals: '2fa' },
     },
   });

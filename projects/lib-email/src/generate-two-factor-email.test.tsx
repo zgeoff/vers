@@ -6,11 +6,11 @@ test('it generates a two-factor email with the provided configuration', async ()
     verificationCode: '123456',
   };
 
-  const { html, plainText } = await generateTwoFactorEmail(config);
+  const email = await generateTwoFactorEmail(config);
 
-  expect(html).include('Your two-factor sign-in code');
-  expect(html).include(config.verificationCode);
+  expect(email.html).include('Your two-factor sign-in code');
+  expect(email.html).include(config.verificationCode);
 
-  expect(plainText).include('YOUR TWO-FACTOR SIGN-IN CODE');
-  expect(plainText).include(config.verificationCode);
+  expect(email.plainText).include('YOUR TWO-FACTOR SIGN-IN CODE');
+  expect(email.plainText).include(config.verificationCode);
 });

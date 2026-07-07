@@ -16,7 +16,7 @@ test('it returns the currently hovered node', () => {
 
   setHoveredNode(node);
 
-  const { result } = renderHook(() => useHoveredNode());
+  const result = renderHook(() => useHoveredNode()).result;
 
   expect(result.current).toStrictEqual({
     connections: [null, null, null, null],

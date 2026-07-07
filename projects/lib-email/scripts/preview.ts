@@ -19,11 +19,11 @@ async function writePreviews(outDir: string): Promise<void> {
 
   await Promise.all(
     previews.map(async (preview) => {
-      const { html, plainText } = await preview.render();
+      const rendered = await preview.render();
 
       await Promise.all([
-        writeFile(path.join(outDir, `${preview.name}.html`), html),
-        writeFile(path.join(outDir, `${preview.name}.txt`), plainText),
+        writeFile(path.join(outDir, `${preview.name}.html`), rendered.html),
+        writeFile(path.join(outDir, `${preview.name}.txt`), rendered.plainText),
       ]);
     }),
   );

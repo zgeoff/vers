@@ -23,13 +23,13 @@ afterEach(async () => {
 });
 
 test('it initializes the worker connection', () => {
-  const { rerender, result, unmount } = renderHook(() => useSimulationWorker());
+  const hook = renderHook(() => useSimulationWorker());
 
-  rerender();
+  hook.rerender();
 
-  expect(result.current).toBeInstanceOf(SharedWorker);
+  expect(hook.result.current).toBeInstanceOf(SharedWorker);
 
-  unmount();
+  hook.unmount();
 });
 
 test('it returns an existing worker instead of creating a new one', () => {
@@ -37,25 +37,25 @@ test('it returns an existing worker instead of creating a new one', () => {
 
   setSimulationWorker(worker);
 
-  const { result } = renderHook(() => useSimulationWorker());
+  const hook = renderHook(() => useSimulationWorker());
 
-  expect(result.current).toBe(worker);
+  expect(hook.result.current).toBe(worker);
 });
 
 test('it handles state updates from worker', async () => {
-  const { rerender, result } = renderHook(() => useSimulationWorker());
+  const hook = renderHook(() => useSimulationWorker());
 
-  rerender();
+  hook.rerender();
 
-  expect(result.current).toBeInstanceOf(SharedWorker);
+  expect(hook.result.current).toBeInstanceOf(SharedWorker);
 
-  invariant(result.current, 'Worker not initialized');
+  invariant(hook.result.current, 'Worker not initialized');
 
   const initializeMessage: InitializeMessage = {
     type: ClientMessageType.Initialize,
   };
 
-  const firstEvent = await postMessageAndWaitForReply(result.current, initializeMessage);
+  const firstEvent = await postMessageAndWaitForReply(hook.result.current, initializeMessage);
 
   expect(firstEvent.data.type).toBe(WorkerMessageType.InitialState);
 
@@ -65,7 +65,7 @@ test('it handles state updates from worker', async () => {
     type: ClientMessageType.SetActivity,
   };
 
-  const secondEvent = await postMessageAndWaitForReply(result.current, setActivityMessage);
+  const secondEvent = await postMessageAndWaitForReply(hook.result.current, setActivityMessage);
 
   expect(secondEvent.data.type).toBe(WorkerMessageType.SimulationUpdate);
 });

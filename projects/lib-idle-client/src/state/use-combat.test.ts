@@ -11,9 +11,9 @@ test('it provides the combat state', () => {
 
   setCombat(combat);
 
-  const { result } = renderHook(() => useCombat());
+  const hook = renderHook(() => useCombat());
 
-  expect(result.current).toStrictEqual({
+  expect(hook.result.current).toStrictEqual({
     elapsed: 1000,
   });
 });

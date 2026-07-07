@@ -21,12 +21,10 @@ export const FinishLoginWith2FA = graphql.mutation<
   FinishLoginWith2FAResponse,
   FinishLoginWith2FAVariables
 >('FinishLoginWith2FA', (opts) => {
-  const { target, transactionToken } = opts.variables.input;
-
   const user = db.user.findFirst({
     where: {
       email: {
-        equals: target,
+        equals: opts.variables.input.target,
       },
     },
   });
@@ -41,7 +39,7 @@ export const FinishLoginWith2FA = graphql.mutation<
     });
   }
 
-  if (!isValidTransactionToken(transactionToken)) {
+  if (!isValidTransactionToken(opts.variables.input.transactionToken)) {
     return HttpResponse.json({
       data: {
         finishLoginWith2FA: {

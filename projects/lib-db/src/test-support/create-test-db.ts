@@ -11,10 +11,10 @@ import { createDB } from '../create-db';
  * @returns - The test database client.
  */
 export async function createTestDB() {
-  const { inject } = await import('vitest');
+  const vitestModule = await import('vitest');
 
-  const dbURI = inject('dbURI');
-  const templateDB = inject('templateDB');
+  const dbURI = vitestModule.inject('dbURI');
+  const templateDB = vitestModule.inject('templateDB');
   const setupClient = postgres(`${dbURI}/postgres`);
 
   const dbName = `test_${createId()}`;

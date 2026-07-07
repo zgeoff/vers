@@ -58,11 +58,11 @@ afterEach(() => {
 });
 
 test('it redirects to index page and deletes the session', async () => {
-  const { user } = setupTest({ sessionID: 'test-session-id' });
+  const setup = setupTest({ sessionID: 'test-session-id' });
 
   const logoutButton = screen.getByRole('button', { name: 'Logout' });
 
-  await user.click(logoutButton);
+  await setup.user.click(logoutButton);
 
   const indexRoute = await screen.findByText('INDEX_ROUTE');
 
@@ -86,11 +86,11 @@ test('it still redirects to index page when session deletion fails', async () =>
     }),
   );
 
-  const { user } = setupTest({});
+  const setup = setupTest({});
 
   const logoutButton = screen.getByRole('button', { name: 'Logout' });
 
-  await user.click(logoutButton);
+  await setup.user.click(logoutButton);
 
   const indexRoute = await screen.findByText('INDEX_ROUTE');
 

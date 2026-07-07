@@ -7,32 +7,35 @@ import { createViewer } from './create-viewer';
 
 test('it persists a user and mints a token carrying that user as the acting subject', async () => {
   await using testDB = await createTestDB();
-  const { publicKeyPEM } = await getTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
-  const { token, user } = await createViewer({ audience: 'create-viewer-spec', db: testDB.db });
+  const viewer = await createViewer({ audience: 'create-viewer-spec', db: testDB.db });
 
-  const publicKey = await jose.importSPKI(publicKeyPEM, TOKEN_ALGORITHM);
-  const { payload } = await jose.jwtVerify(token, publicKey, { audience: 'create-viewer-spec' });
+  const publicKey = await jose.importSPKI(keyPair.publicKeyPEM, TOKEN_ALGORITHM);
 
-  expect(payload.sub).toBe(user.id);
+  const verified = await jose.jwtVerify(viewer.token, publicKey, {
+    audience: 'create-viewer-spec',
+  });
+
+  expect(verified.payload.sub).toBe(viewer.user.id);
 
   const row = await testDB.db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', user.id)
+    .where('id', '=', viewer.user.id)
     .executeTakeFirstOrThrow();
 
-  expect(row.id).toBe(user.id);
+  expect(row.id).toBe(viewer.user.id);
 });
 
 test('it applies the given user overrides', async () => {
   await using testDB = await createTestDB();
 
-  const { user } = await createViewer({
+  const viewer = await createViewer({
     audience: 'create-viewer-spec',
     db: testDB.db,
     user: { email: 'viewer-override@test.com' },
   });
 
-  expect(user.email).toBe('viewer-override@test.com');
+  expect(viewer.user.email).toBe('viewer-override@test.com');
 });

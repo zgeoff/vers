@@ -54,7 +54,13 @@ const plugin = {
       'Accept the parameter whole instead of destructuring it in the signature.',
       [
         ':matches(FunctionDeclaration, FunctionExpression, ArrowFunctionExpression) > ObjectPattern.params',
+        ':matches(FunctionDeclaration, FunctionExpression, ArrowFunctionExpression) > AssignmentPattern.params > ObjectPattern',
       ],
+    ),
+    'no-pick-destructuring': banSelectors(
+      'suggestion',
+      'Use direct member access; destructure an object only with a rest element to omit properties.',
+      ['VariableDeclarator > ObjectPattern:not(:has(> RestElement))'],
     ),
     'no-ternary-args': banSelectors(
       'suggestion',

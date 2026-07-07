@@ -192,7 +192,7 @@ test('it renders the form when 2FA is enabled and a transaction token is in the 
 });
 
 test('it shows validation errors for invalid form submission', async () => {
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     user: {
       email: 'test@example.com',
@@ -208,10 +208,10 @@ test('it shows validation errors for invalid form submission', async () => {
   const confirmPasswordInput = screen.getByLabelText('Confirm New Password');
   const submitButton = screen.getByRole('button', { name: 'Change Password' });
 
-  await user.type(currentPasswordInput, 'current');
-  await user.type(newPasswordInput, 'new');
-  await user.type(confirmPasswordInput, 'different');
-  await user.click(submitButton);
+  await setup.user.type(currentPasswordInput, 'current');
+  await setup.user.type(newPasswordInput, 'new');
+  await setup.user.type(confirmPasswordInput, 'different');
+  await setup.user.click(submitButton);
 
   const errorMessage = await screen.findByText('The passwords must match');
 
@@ -219,7 +219,7 @@ test('it shows validation errors for invalid form submission', async () => {
 });
 
 test('it handles a successful password change without 2FA', async () => {
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     user: {
       email: 'test@example.com',
@@ -236,10 +236,10 @@ test('it handles a successful password change without 2FA', async () => {
   const confirmPasswordInput = screen.getByLabelText('Confirm New Password');
   const submitButton = screen.getByRole('button', { name: 'Change Password' });
 
-  await user.type(currentPasswordInput, 'current_password');
-  await user.type(newPasswordInput, 'new_password');
-  await user.type(confirmPasswordInput, 'new_password');
-  await user.click(submitButton);
+  await setup.user.type(currentPasswordInput, 'current_password');
+  await setup.user.type(newPasswordInput, 'new_password');
+  await setup.user.type(confirmPasswordInput, 'new_password');
+  await setup.user.click(submitButton);
 
   const accountRoute = await screen.findByText('ACCOUNT_ROUTE');
 
@@ -247,7 +247,7 @@ test('it handles a successful password change without 2FA', async () => {
 });
 
 test('it handles a successful password change with 2FA enabled and a transaction token in the session', async () => {
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     transactionToken: 'valid_token',
     user: {
@@ -265,10 +265,10 @@ test('it handles a successful password change with 2FA enabled and a transaction
   const confirmPasswordInput = screen.getByLabelText('Confirm New Password');
   const submitButton = screen.getByRole('button', { name: 'Change Password' });
 
-  await user.type(currentPasswordInput, 'current_password');
-  await user.type(newPasswordInput, 'new_password');
-  await user.type(confirmPasswordInput, 'new_password');
-  await user.click(submitButton);
+  await setup.user.type(currentPasswordInput, 'current_password');
+  await setup.user.type(newPasswordInput, 'new_password');
+  await setup.user.type(confirmPasswordInput, 'new_password');
+  await setup.user.click(submitButton);
 
   const accountRoute = await screen.findByText('ACCOUNT_ROUTE');
 
@@ -287,7 +287,7 @@ test('it shows an error when the password change fails', async () => {
     }),
   );
 
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     user: {
       email: 'test@example.com',
@@ -303,10 +303,10 @@ test('it shows an error when the password change fails', async () => {
   const confirmPasswordInput = screen.getByLabelText('Confirm New Password');
   const submitButton = screen.getByRole('button', { name: 'Change Password' });
 
-  await user.type(currentPasswordInput, 'wrong_password');
-  await user.type(newPasswordInput, 'new_password');
-  await user.type(confirmPasswordInput, 'new_password');
-  await user.click(submitButton);
+  await setup.user.type(currentPasswordInput, 'wrong_password');
+  await setup.user.type(newPasswordInput, 'new_password');
+  await setup.user.type(confirmPasswordInput, 'new_password');
+  await setup.user.click(submitButton);
 
   const errorMessage = await screen.findByText('Something went wrong');
 

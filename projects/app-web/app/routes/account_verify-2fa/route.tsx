@@ -74,7 +74,7 @@ export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const action = withErrorHandling(async (args: Route.ActionArgs) => {
-  const { sessionID } = await requireAuth(args.request);
+  const auth = await requireAuth(args.request);
 
   const formData = await args.request.formData();
 
@@ -104,7 +104,7 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
   const verifyOTPResult = await args.context.client.mutation(VerifyOTPMutation, {
     input: {
       code: submission.value.code,
-      sessionID,
+      sessionID: auth.sessionID,
       target: submission.value.target,
       transactionID,
       type: VerificationType.TwoFactorAuthSetup,

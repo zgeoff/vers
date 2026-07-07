@@ -71,7 +71,7 @@ test('it renders the forgot password form with accessible elements', async () =>
 });
 
 test('it shows validation errors for invalid email', async () => {
-  const { user } = setupTest();
+  const setup = setupTest();
 
   const emailInput = await screen.findByRole('textbox', { name: 'Email' });
 
@@ -79,8 +79,8 @@ test('it shows validation errors for invalid email', async () => {
     name: 'Reset Password',
   });
 
-  await user.type(emailInput, 'invalid-email');
-  await user.click(submitButton);
+  await setup.user.type(emailInput, 'invalid-email');
+  await setup.user.click(submitButton);
 
   const errorText = await screen.findByText('Email is invalid');
 
@@ -88,7 +88,7 @@ test('it shows validation errors for invalid email', async () => {
 });
 
 test('it redirects to the reset password started route after submitting a valid email', async () => {
-  const { user } = setupTest();
+  const setup = setupTest();
 
   const emailInput = await screen.findByRole('textbox', { name: 'Email' });
 
@@ -96,8 +96,8 @@ test('it redirects to the reset password started route after submitting a valid 
     name: 'Reset Password',
   });
 
-  await user.type(emailInput, 'test@example.com');
-  await user.click(submitButton);
+  await setup.user.type(emailInput, 'test@example.com');
+  await setup.user.click(submitButton);
 
   const resetPasswordStartedRoute = await screen.findByText('RESET_PASSWORD_STARTED_ROUTE');
 
@@ -111,7 +111,7 @@ test('it shows a generic error if the mutation fails', async () => {
     }),
   );
 
-  const { user } = setupTest();
+  const setup = setupTest();
 
   const emailInput = await screen.findByRole('textbox', { name: 'Email' });
 
@@ -119,8 +119,8 @@ test('it shows a generic error if the mutation fails', async () => {
     name: 'Reset Password',
   });
 
-  await user.type(emailInput, 'test@example.com');
-  await user.click(submitButton);
+  await setup.user.type(emailInput, 'test@example.com');
+  await setup.user.click(submitButton);
 
   const errorText = await screen.findByText('Something went wrong');
 

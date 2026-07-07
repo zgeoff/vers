@@ -96,8 +96,9 @@ function buildMalformedInputCase(
   rpcPrefix: string,
   anonymousHeaders: ConformanceHeaders,
 ): ConformanceCase | undefined {
+  const procedureDef = getProcedureDef(entry.procedure);
   // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-  const { inputSchema } = getProcedureDef(entry.procedure);
+  const inputSchema = procedureDef.inputSchema;
 
   // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!inputSchema) {

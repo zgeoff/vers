@@ -91,13 +91,13 @@ test('it renders the signup form with accessible elements', async () => {
 });
 
 test('it shows validation error for invalid email', async () => {
-  const { user } = setupTest({ isAuthed: false });
+  const setup = setupTest({ isAuthed: false });
 
   const emailInput = await screen.findByRole('textbox', { name: /email/i });
   const submitButton = screen.getByRole('button', { name: /signup/i });
 
-  await user.type(emailInput, 'invalid-email');
-  await user.click(submitButton);
+  await setup.user.type(emailInput, 'invalid-email');
+  await setup.user.click(submitButton);
 
   const errorMessage = await screen.findByText('Email is invalid');
 
@@ -105,11 +105,11 @@ test('it shows validation error for invalid email', async () => {
 });
 
 test('it shows validation error when email is missing', async () => {
-  const { user } = setupTest({ isAuthed: false });
+  const setup = setupTest({ isAuthed: false });
 
   const submitButton = await screen.findByRole('button', { name: /signup/i });
 
-  await user.click(submitButton);
+  await setup.user.click(submitButton);
 
   const errorMessage = await screen.findByText('Email is required');
 
@@ -117,13 +117,13 @@ test('it shows validation error when email is missing', async () => {
 });
 
 test('it redirects to verify OTP page on successful signup', async () => {
-  const { user } = setupTest({ isAuthed: false });
+  const setup = setupTest({ isAuthed: false });
 
   const emailInput = await screen.findByRole('textbox', { name: /email/i });
   const submitButton = screen.getByRole('button', { name: /signup/i });
 
-  await user.type(emailInput, 'test@example.com');
-  await user.click(submitButton);
+  await setup.user.type(emailInput, 'test@example.com');
+  await setup.user.click(submitButton);
 
   const verifyOTPRoute = await screen.findByText('VERIFY_OTP_ROUTE');
 
@@ -141,13 +141,13 @@ test('it shows a generic error if the mutation fails', async () => {
     }),
   );
 
-  const { user } = setupTest({ isAuthed: false });
+  const setup = setupTest({ isAuthed: false });
 
   const emailInput = await screen.findByRole('textbox', { name: /email/i });
   const submitButton = screen.getByRole('button', { name: /signup/i });
 
-  await user.type(emailInput, 'test@example.com');
-  await user.click(submitButton);
+  await setup.user.type(emailInput, 'test@example.com');
+  await setup.user.click(submitButton);
 
   const errorMessage = await screen.findByText('Something went wrong');
 

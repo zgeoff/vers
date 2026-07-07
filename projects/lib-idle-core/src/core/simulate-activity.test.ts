@@ -30,7 +30,8 @@ test('it immediately generates a started checkpoint', async () => {
 
   const generator = simulateActivity(executor, activity, avatar, ctx);
 
-  const { value: firstCheckpoint } = await generator.next();
+  const firstResult = await generator.next();
+  const firstCheckpoint = firstResult.value;
 
   expect(firstCheckpoint).toStrictEqual({
     // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
@@ -75,8 +76,10 @@ test('it generates enemy group killed checkpoints', async () => {
   // skip the started checkpoint
   await generator.next(1000);
 
-  const { value: secondCheckpoint } = await generator.next(1000);
-  const { value: thirdCheckpoint } = await generator.next(1000);
+  const secondResult = await generator.next(1000);
+  const secondCheckpoint = secondResult.value;
+  const thirdResult = await generator.next(1000);
+  const thirdCheckpoint = thirdResult.value;
 
   await generator.next(1000);
 

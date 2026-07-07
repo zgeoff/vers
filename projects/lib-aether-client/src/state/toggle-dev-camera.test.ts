@@ -4,17 +4,17 @@ import { toggleDevCamera } from './toggle-dev-camera';
 import { useIsDevCameraActive } from './use-is-dev-camera-active';
 
 test('it toggles dev camera state from false to true', () => {
-  const { rerender, result } = renderHook(() => useIsDevCameraActive());
+  const rendered = renderHook(() => useIsDevCameraActive());
 
-  expect(result.current).toBeFalse();
-
-  toggleDevCamera();
-  rerender();
-
-  expect(result.current).toBeTrue();
+  expect(rendered.result.current).toBeFalse();
 
   toggleDevCamera();
-  rerender();
+  rendered.rerender();
 
-  expect(result.current).toBeFalse();
+  expect(rendered.result.current).toBeTrue();
+
+  toggleDevCamera();
+  rendered.rerender();
+
+  expect(rendered.result.current).toBeFalse();
 });

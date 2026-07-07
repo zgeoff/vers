@@ -104,7 +104,7 @@ test('it renders the account page with user information when authenticated', asy
 });
 
 test('it takes the user to the change email route when they click the change email link', async () => {
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     user: {
       email: 'test@example.com',
@@ -115,7 +115,7 @@ test('it takes the user to the change email route when they click the change ema
 
   const changeEmailLink = await screen.findByText('Change Email');
 
-  await user.click(changeEmailLink);
+  await setup.user.click(changeEmailLink);
 
   const changeEmailRoute = await screen.findByText('CHANGE_EMAIL_ROUTE');
 
@@ -123,7 +123,7 @@ test('it takes the user to the change email route when they click the change ema
 });
 
 test('it takes the user to the change password route when they click the change password link', async () => {
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     user: {
       email: 'test@example.com',
@@ -134,7 +134,7 @@ test('it takes the user to the change password route when they click the change 
 
   const changePasswordLink = await screen.findByText('Change Password');
 
-  await user.click(changePasswordLink);
+  await setup.user.click(changePasswordLink);
 
   const changePasswordRoute = await screen.findByText('CHANGE_PASSWORD_ROUTE');
 
@@ -185,7 +185,7 @@ test('it shows a generic error if the enable 2FA mutation fails', async () => {
     }),
   );
 
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     user: {
       email: 'test@example.com',
@@ -198,7 +198,7 @@ test('it shows a generic error if the enable 2FA mutation fails', async () => {
     name: 'Enable 2FA',
   });
 
-  await user.click(enable2FAButton);
+  await setup.user.click(enable2FAButton);
 
   const error = await screen.findByText('Something went wrong');
 
@@ -212,7 +212,7 @@ test('it shows a generic error if the disable 2FA mutation fails', async () => {
     }),
   );
 
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     user: {
       email: 'test@example.com',
@@ -225,7 +225,7 @@ test('it shows a generic error if the disable 2FA mutation fails', async () => {
     name: 'Disable 2FA',
   });
 
-  await user.click(disable2FAButton);
+  await setup.user.click(disable2FAButton);
 
   const error = await screen.findByText('Something went wrong');
 
@@ -233,7 +233,7 @@ test('it shows a generic error if the disable 2FA mutation fails', async () => {
 });
 
 test('it renders a log out button that redirects to the logout route when pressed', async () => {
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     user: {
       email: 'test@example.com',
@@ -244,7 +244,7 @@ test('it renders a log out button that redirects to the logout route when presse
 
   const logoutButton = await screen.findByRole('button', { name: 'Logout' });
 
-  await user.click(logoutButton);
+  await setup.user.click(logoutButton);
 
   const loggedOutMessage = await screen.findByText('LOGOUT_ROUTE');
 

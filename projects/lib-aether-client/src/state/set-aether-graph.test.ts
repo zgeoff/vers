@@ -21,7 +21,7 @@ test('it updates the aether graph in the store', () => {
 
   setAetherGraph(graph);
 
-  const { result } = renderHook(() => useAetherGraphStore((state) => state));
+  const result = renderHook(() => useAetherGraphStore((state) => state)).result;
 
   expect(result.current).toStrictEqual(graph);
 });

@@ -23,9 +23,9 @@ interface LogoutOptions {
 export async function logout(request: Request, options: LogoutOptions = {}): Promise<never> {
   // the gql client module imports this one for its 401 handling, so a static
   // import here completes a cycle — deferring the import breaks it
-  const { createGQLClient } = await import('./create-gql-client.server');
+  const createGQLClientModule = await import('./create-gql-client.server');
 
-  const client = await createGQLClient(request);
+  const client = await createGQLClientModule.createGQLClient(request);
 
   const authSession = await authSessionStorage.getSession(request.headers.get('cookie'));
 

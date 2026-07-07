@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env['BASE_URL'] ?? 'http://localhost:4000';
 
-const { port } = new URL(baseURL);
+const parsedBaseURL = new URL(baseURL);
 
 // having a million issues trying to use __dirname to establish a reliable path
 // so it's easier to do this to handle the case when this file gets parsed for
@@ -53,7 +53,7 @@ export default defineConfig({
       // lifts the rate-limit caps for test traffic — the server otherwise
       // 429s parallel workers arriving from one address
       PLAYWRIGHT_TEST_BASE_URL: baseURL,
-      PORT: port,
+      PORT: parsedBaseURL.port,
       SESSION_SECRET: 'e2e-session-secret',
     },
     // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)

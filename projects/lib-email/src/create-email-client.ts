@@ -33,9 +33,13 @@ export function createEmailClient(config: Readonly<CreateEmailClientConfig>): Em
 
   return {
     sendEmail: async (input) => {
-      const { html, plainText, subject, to } = input;
-
-      const result = await resend.emails.send({ from, html, subject, text: plainText, to });
+      const result = await resend.emails.send({
+        from,
+        html: input.html,
+        subject: input.subject,
+        text: input.plainText,
+        to: input.to,
+      });
 
       if (result.error) {
         throw new Error(`failed to send email: ${result.error.message}`, { cause: result.error });

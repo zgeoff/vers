@@ -188,7 +188,7 @@ function mountORPCHandler(
         return response;
       }
 
-      const { matched, response } = await handler.handle(context.request, {
+      const handled = await handler.handle(context.request, {
         context: {
           actingUserId: resolution.actingUserId,
           logger: deps.logger.child({ requestId }),
@@ -197,7 +197,9 @@ function mountORPCHandler(
         prefix,
       });
 
-      const finalResponse = matched ? response : new Response('not found', { status: 404 });
+      const finalResponse = handled.matched
+        ? handled.response
+        : new Response('not found', { status: 404 });
 
       finalResponse.headers.set('x-request-id', requestId);
 

@@ -37,12 +37,12 @@ export function buildMockService<
     http.all(`${options.baseUrl}${RPC_PREFIX}/*`, async (info) => {
       const context = await options.resolveContext(info.request);
 
-      const { matched, response } = await rpcHandler.handle(info.request, {
+      const handled = await rpcHandler.handle(info.request, {
         context,
         prefix: RPC_PREFIX,
       });
 
-      return matched ? response : new Response(null, { status: 404 });
+      return handled.matched ? handled.response : new Response(null, { status: 404 });
     }),
   ];
 }

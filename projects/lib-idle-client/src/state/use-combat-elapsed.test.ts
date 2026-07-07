@@ -11,7 +11,7 @@ test('it provides the elapsed combat time', () => {
 
   setCombat(combat);
 
-  const { result } = renderHook(() => useCombatElapsed());
+  const hook = renderHook(() => useCombatElapsed());
 
-  expect(result.current).toBe(1000);
+  expect(hook.result.current).toBe(1000);
 });

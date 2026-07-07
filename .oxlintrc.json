@@ -26,6 +26,7 @@
     "local/no-bare-named-exports": "error",
     "local/no-inline-param-object-types": "error",
     "local/no-destructured-params": "error",
+    "local/no-pick-destructuring": "error",
     "local/no-ternary-args": "error",
     "local/no-await-args": "error",
 
@@ -82,13 +83,13 @@
       { "argsIgnorePattern": "^_", "ignoreRestSiblings": true, "varsIgnorePattern": "^_" }
     ],
 
-    // destructuring reads well at declaration sites, but satisfying it on
-    // assignments forces the parenthesized `({ x } = y)` form — plain member
-    // assignment instead
+    // arrays: destructure instead of indexing; objects: house style is direct
+    // member access, so never required (the omit-via-rest exception lives in
+    // local/no-pick-destructuring)
     "prefer-destructuring": [
       "error",
       {
-        "VariableDeclarator": { "array": true, "object": true },
+        "VariableDeclarator": { "array": true, "object": false },
         "AssignmentExpression": { "array": false, "object": false }
       }
     ],

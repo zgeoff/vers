@@ -135,7 +135,7 @@ test('it logs the user in and redirects to the nexus if the user confirms the di
     userID: 'user_id',
   });
 
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: false,
     sessionData: {
       'loginLogout#email': 'test@test.com',
@@ -145,7 +145,7 @@ test('it logs the user in and redirects to the nexus if the user confirms the di
 
   const confirmButton = await screen.findByRole('button', { name: 'Confirm' });
 
-  await user.click(confirmButton);
+  await setup.user.click(confirmButton);
 
   const nexusRoute = await screen.findByText('NEXUS_ROUTE');
 
@@ -162,7 +162,7 @@ test('it cancels the force logout flow if the user clicks the cancel button', as
     email: 'test@test.com',
   });
 
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: false,
     sessionData: {
       'loginLogout#email': 'test@test.com',
@@ -172,7 +172,7 @@ test('it cancels the force logout flow if the user clicks the cancel button', as
 
   const cancelButton = await screen.findByRole('button', { name: 'Cancel' });
 
-  await user.click(cancelButton);
+  await setup.user.click(cancelButton);
 
   const indexRoute = await screen.findByText('INDEX_ROUTE');
 

@@ -9,7 +9,7 @@ test('it returns a reference to the current camera', () => {
 
   setCamera(camera);
 
-  const { result } = renderHook(() => useCamera());
+  const result = renderHook(() => useCamera()).result;
 
   expect(result.current).toBe(camera);
 });

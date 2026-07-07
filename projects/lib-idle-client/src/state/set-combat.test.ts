@@ -11,9 +11,9 @@ test('it updates the combat state', () => {
 
   setCombat(combat);
 
-  const { result } = renderHook(() => useCombatStore((state) => state.combat));
+  const hook = renderHook(() => useCombatStore((state) => state.combat));
 
-  expect(result.current).toStrictEqual({
+  expect(hook.result.current).toStrictEqual({
     elapsed: 1000,
   });
 });

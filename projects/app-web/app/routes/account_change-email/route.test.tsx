@@ -183,7 +183,7 @@ test('it renders the form when 2FA is enabled and a transaction token is in the 
 });
 
 test('it shows validation errors for invalid form submission', async () => {
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     transactionToken: 'valid_token',
     user: {
@@ -198,8 +198,8 @@ test('it shows validation errors for invalid form submission', async () => {
   const emailInput = screen.getByLabelText('New Email Address');
   const submitButton = screen.getByRole('button', { name: 'Change Email' });
 
-  await user.type(emailInput, 'invalid-email');
-  await user.click(submitButton);
+  await setup.user.type(emailInput, 'invalid-email');
+  await setup.user.click(submitButton);
 
   const errorMessage = await screen.findByText('Email is invalid');
 
@@ -207,7 +207,7 @@ test('it shows validation errors for invalid form submission', async () => {
 });
 
 test('it handles a successful email change submission', async () => {
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     transactionToken: 'valid_token',
     user: {
@@ -222,8 +222,8 @@ test('it handles a successful email change submission', async () => {
   const emailInput = screen.getByLabelText('New Email Address');
   const submitButton = screen.getByRole('button', { name: 'Change Email' });
 
-  await user.type(emailInput, 'new-email@example.com');
-  await user.click(submitButton);
+  await setup.user.type(emailInput, 'new-email@example.com');
+  await setup.user.click(submitButton);
 
   const verifyOTPRoute = await screen.findByText('VERIFY_OTP_ROUTE');
 
@@ -249,7 +249,7 @@ test('it shows an error when the email change fails', async () => {
     ),
   );
 
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     transactionToken: 'valid_token',
     user: {
@@ -264,8 +264,8 @@ test('it shows an error when the email change fails', async () => {
   const emailInput = screen.getByLabelText('New Email Address');
   const submitButton = screen.getByRole('button', { name: 'Change Email' });
 
-  await user.type(emailInput, 'existing-email@example.com');
-  await user.click(submitButton);
+  await setup.user.type(emailInput, 'existing-email@example.com');
+  await setup.user.click(submitButton);
 
   const errorMessage = await screen.findByText('Something went wrong');
 
@@ -289,7 +289,7 @@ test('it shows a specific error when the mutation returns an error payload', asy
     ),
   );
 
-  const { user } = setupTest({
+  const setup = setupTest({
     isAuthed: true,
     transactionToken: 'valid_token',
     user: {
@@ -304,8 +304,8 @@ test('it shows a specific error when the mutation returns an error payload', asy
   const emailInput = screen.getByLabelText('New Email Address');
   const submitButton = screen.getByRole('button', { name: 'Change Email' });
 
-  await user.type(emailInput, 'existing-email@example.com');
-  await user.click(submitButton);
+  await setup.user.type(emailInput, 'existing-email@example.com');
+  await setup.user.click(submitButton);
 
   const errorMessage = await screen.findByText('Email already in use');
 

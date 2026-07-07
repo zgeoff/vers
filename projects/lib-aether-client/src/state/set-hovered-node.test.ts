@@ -16,7 +16,7 @@ test('it updates the hovered node in the store', () => {
 
   setHoveredNode(node);
 
-  const { result } = renderHook(() => useHoveredNodeStore((state) => state));
+  const result = renderHook(() => useHoveredNodeStore((state) => state)).result;
 
   expect(result.current).toStrictEqual({
     node,

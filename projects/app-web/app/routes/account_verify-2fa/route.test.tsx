@@ -124,7 +124,7 @@ test('it renders the 2FA setup page with QR code and form', async () => {
 });
 
 test('it redirects to the account page on successful 2FA setup', async () => {
-  const { user } = await setupTest({
+  const setup = await setupTest({
     isAuthed: true,
     transactionID: 'test-transaction-id',
     user: {
@@ -140,8 +140,8 @@ test('it redirects to the account page on successful 2FA setup', async () => {
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: 'Submit' });
 
-  await user.type(codeInput, '999999');
-  await user.click(submitButton);
+  await setup.user.type(codeInput, '999999');
+  await setup.user.click(submitButton);
 
   const accountRoute = await screen.findByText('ACCOUNT_ROUTE');
 
@@ -149,7 +149,7 @@ test('it redirects to the account page on successful 2FA setup', async () => {
 });
 
 test('it shows validation errors for invalid code', async () => {
-  const { user } = await setupTest({
+  const setup = await setupTest({
     isAuthed: true,
     transactionID: 'test-transaction-id',
     user: {
@@ -166,8 +166,8 @@ test('it shows validation errors for invalid code', async () => {
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: 'Submit' });
 
-  await user.type(codeInput, '12345');
-  await user.click(submitButton);
+  await setup.user.type(codeInput, '12345');
+  await setup.user.click(submitButton);
 
   const errorMessage = await screen.findByText('Invalid code');
 
@@ -175,7 +175,7 @@ test('it shows validation errors for invalid code', async () => {
 });
 
 test('it shows an error message when verification fails', async () => {
-  const { user } = await setupTest({
+  const setup = await setupTest({
     isAuthed: true,
     transactionID: 'test-transaction-id',
     user: {
@@ -191,8 +191,8 @@ test('it shows an error message when verification fails', async () => {
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: 'Submit' });
 
-  await user.type(codeInput, '123456');
-  await user.click(submitButton);
+  await setup.user.type(codeInput, '123456');
+  await setup.user.click(submitButton);
 
   const errorMessage = await screen.findByText('Invalid verification code');
 

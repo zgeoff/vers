@@ -96,15 +96,15 @@ test('it renders the avatar create form when authenticated', async () => {
 });
 
 test('it creates an avatar when the form is submitted and redirects to the avatar route', async () => {
-  const { user } = setupTest({ isAuthed: true, user: { id: 'user_id' } });
+  const setup = setupTest({ isAuthed: true, user: { id: 'user_id' } });
 
   const bruteClass = await screen.findByText('Brute');
   const nameInput = screen.getByLabelText('Name');
   const submitButton = screen.getByRole('button', { name: 'Create Avatar' });
 
-  await user.click(bruteClass);
-  await user.type(nameInput, 'TestAvatar');
-  await user.click(submitButton);
+  await setup.user.click(bruteClass);
+  await setup.user.type(nameInput, 'TestAvatar');
+  await setup.user.click(submitButton);
 
   const avatarRoute = await screen.findByText('AVATAR_ROUTE');
 
@@ -121,15 +121,15 @@ test('it creates an avatar when the form is submitted and redirects to the avata
 });
 
 test('it prevents adding spaces, numbers, and special characters to the name', async () => {
-  const { user } = setupTest({ isAuthed: true, user: { id: 'user_id' } });
+  const setup = setupTest({ isAuthed: true, user: { id: 'user_id' } });
 
   const nameInput = await screen.findByLabelText('Name');
   const scholarClass = screen.getByRole('radio', { name: /Scholar/ });
   const submitButton = screen.getByRole('button', { name: 'Create Avatar' });
 
-  await user.type(nameInput, 'Test123_ Avatar#(');
-  await user.click(scholarClass);
-  await user.click(submitButton);
+  await setup.user.type(nameInput, 'Test123_ Avatar#(');
+  await setup.user.click(scholarClass);
+  await setup.user.click(submitButton);
 
   const avatarRoute = await screen.findByText('AVATAR_ROUTE');
 
@@ -152,15 +152,15 @@ test('it displays an ambiguous error when the api call fails', async () => {
     }),
   );
 
-  const { user } = setupTest({ isAuthed: true, user: { id: 'user_id' } });
+  const setup = setupTest({ isAuthed: true, user: { id: 'user_id' } });
 
   const nameInput = await screen.findByLabelText('Name');
   const scholarClass = screen.getByRole('radio', { name: /Scholar/ });
   const submitButton = screen.getByRole('button', { name: 'Create Avatar' });
 
-  await user.type(nameInput, 'TestAvatar');
-  await user.click(scholarClass);
-  await user.click(submitButton);
+  await setup.user.type(nameInput, 'TestAvatar');
+  await setup.user.click(scholarClass);
+  await setup.user.click(submitButton);
 
   const error = await screen.findByText('Something went wrong');
 
@@ -180,15 +180,15 @@ test('it displays the mutation error if one is returned', async () => {
     ),
   );
 
-  const { user } = setupTest({ isAuthed: true, user: { id: 'user_id' } });
+  const setup = setupTest({ isAuthed: true, user: { id: 'user_id' } });
 
   const nameInput = await screen.findByLabelText('Name');
   const scoundrelClass = screen.getByRole('radio', { name: /Scoundrel/ });
   const submitButton = screen.getByRole('button', { name: 'Create Avatar' });
 
-  await user.type(nameInput, 'TestAvatar');
-  await user.click(scoundrelClass);
-  await user.click(submitButton);
+  await setup.user.type(nameInput, 'TestAvatar');
+  await setup.user.click(scoundrelClass);
+  await setup.user.click(submitButton);
 
   const error = await screen.findByText('An Avatar with this name already exists.');
 

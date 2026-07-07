@@ -95,7 +95,7 @@ test('it returns false when no form submission is pending', () => {
 });
 
 test('it returns true when form submission matches the action and method', async () => {
-  const { user } = setupTest({
+  const setup = setupTest({
     formAction: '/test',
     formMethod: 'post',
     isPendingAction: '/test',
@@ -104,14 +104,14 @@ test('it returns true when form submission matches the action and method', async
 
   const submitButton = screen.getByRole('button');
 
-  await user.click(submitButton);
+  await setup.user.click(submitButton);
 
   expect(submitButton).toHaveTextContent('Submitting...');
   expect(submitButton).toBeDisabled();
 });
 
 test('it returns false when form submission uses a different method', async () => {
-  const { user } = setupTest({
+  const setup = setupTest({
     formAction: '/test',
     formMethod: 'get',
     isPendingAction: '/test',
@@ -120,14 +120,14 @@ test('it returns false when form submission uses a different method', async () =
 
   const submitButton = screen.getByRole('button');
 
-  await user.click(submitButton);
+  await setup.user.click(submitButton);
 
   expect(submitButton).toHaveTextContent('Submit');
   expect(submitButton).not.toBeDisabled();
 });
 
 test('it returns false when form submission uses a different action', async () => {
-  const { user } = setupTest({
+  const setup = setupTest({
     formAction: '/other',
     formMethod: 'post',
     isPendingAction: '/test',
@@ -136,14 +136,14 @@ test('it returns false when form submission uses a different action', async () =
 
   const submitButton = screen.getByRole('button');
 
-  await user.click(submitButton);
+  await setup.user.click(submitButton);
 
   expect(submitButton).toHaveTextContent('Submit');
   expect(submitButton).not.toBeDisabled();
 });
 
 test('it returns true when form submission matches a custom action and method', async () => {
-  const { user } = setupTest({
+  const setup = setupTest({
     formAction: '/custom',
     formMethod: 'put',
     isPendingAction: '/custom',
@@ -152,7 +152,7 @@ test('it returns true when form submission matches a custom action and method', 
 
   const submitButton = screen.getByRole('button');
 
-  await user.click(submitButton);
+  await setup.user.click(submitButton);
 
   expect(submitButton).toHaveTextContent('Submitting...');
   expect(submitButton).toBeDisabled();

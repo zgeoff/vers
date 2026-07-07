@@ -23,7 +23,7 @@ test('it renders all dev tool controls', () => {
 });
 
 test('it toggles the axes helper visibility', async () => {
-  const { user } = setupTest();
+  const user = setupTest().user;
 
   const axesHelperCheckbox = screen.getByLabelText('Axes Helper');
 
@@ -39,7 +39,7 @@ test('it toggles the axes helper visibility', async () => {
 });
 
 test('it toggles the dev camera', async () => {
-  const { user } = setupTest();
+  const user = setupTest().user;
 
   const devCameraCheckbox = screen.getByLabelText('Dev Camera');
 

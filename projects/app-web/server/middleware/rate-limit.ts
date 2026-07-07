@@ -45,10 +45,9 @@ const strictRoutes = [
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function rateLimit(ctx: Context<object, string>, next: Next) {
   const path = ctx.req.url;
-  const { method } = ctx.req;
 
   const isStrictRoute = strictRoutes.some((p) => path.includes(p));
-  const isSecureMethod = method !== 'GET' && method !== 'HEAD';
+  const isSecureMethod = ctx.req.method !== 'GET' && ctx.req.method !== 'HEAD';
 
   if (isStrictRoute && isSecureMethod) {
     return strictRateLimit(ctx, next);

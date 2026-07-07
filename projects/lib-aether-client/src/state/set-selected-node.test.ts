@@ -19,7 +19,7 @@ test('it updates the selected node in the store', () => {
 
   setSelectedNode(node, ref);
 
-  const { result } = renderHook(() => useSelectedNodeStore((state) => state));
+  const result = renderHook(() => useSelectedNodeStore((state) => state)).result;
 
   expect(result.current).toStrictEqual({
     node,

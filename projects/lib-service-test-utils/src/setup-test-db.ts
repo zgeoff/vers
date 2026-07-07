@@ -10,9 +10,11 @@ import { migrateToLatest } from '@vers/db';
 export async function setupTestDB(container: StartedPostgreSqlContainer) {
   const connectionURI = container.getConnectionUri();
 
-  const { error } = await migrateToLatest({ databaseURL: connectionURI });
+  const result = await migrateToLatest({ databaseURL: connectionURI });
 
-  if (error !== undefined) {
-    throw error instanceof Error ? error : new Error('kysely migration failed', { cause: error });
+  if (result.error !== undefined) {
+    throw result.error instanceof Error
+      ? result.error
+      : new Error('kysely migration failed', { cause: result.error });
   }
 }

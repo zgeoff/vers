@@ -30,9 +30,9 @@ test('it updates the avatar state', () => {
 
   setAvatar(avatar);
 
-  const { result } = renderHook(() => useAvatarStore((state) => state.avatar));
+  const hook = renderHook(() => useAvatarStore((state) => state.avatar));
 
-  expect(result.current).toStrictEqual({
+  expect(hook.result.current).toStrictEqual({
     behaviours: {
       avatarWeaponAttack: {
         lastAttackTime: 0,

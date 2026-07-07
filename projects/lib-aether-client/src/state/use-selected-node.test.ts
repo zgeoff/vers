@@ -19,7 +19,7 @@ test('it returns the current selected node and object3D', () => {
 
   setSelectedNode(node, ref);
 
-  const { result } = renderHook(() => useSelectedNode());
+  const result = renderHook(() => useSelectedNode()).result;
 
   expect(result.current).toStrictEqual({
     node: {

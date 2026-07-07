@@ -92,13 +92,15 @@ async function resetDevDB() {
     text: 'Applying kysely migrations...',
   };
 
-  const { error } = await oraPromise(
+  const migrationResult = await oraPromise(
     migrateToLatest({ databaseURL: env.DATABASE_URL }),
     kyselyMigrationSpinnerConfig,
   );
 
-  if (error !== undefined) {
-    throw error instanceof Error ? error : new Error('kysely migration failed', { cause: error });
+  if (migrationResult.error !== undefined) {
+    throw migrationResult.error instanceof Error
+      ? migrationResult.error
+      : new Error('kysely migration failed', { cause: migrationResult.error });
   }
 
   process.exit(0);
