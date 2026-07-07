@@ -12,7 +12,8 @@
     "vite.config.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "mocks/**/*.ts"
+    "mocks/**/*.ts",
+    "test-utils/**/*.ts"
   ],
   "exclude": []
 }

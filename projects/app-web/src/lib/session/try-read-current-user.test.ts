@@ -22,6 +22,7 @@ test('it returns the signed-in user for a live forwarded session', async () => {
     email: 'try-read-current-user@vers.test',
     id: createId(),
     name: 'Try Read Current User',
+    password: 'password123',
     seed: 0,
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     username: 'try-read-current-user',
@@ -34,6 +35,8 @@ test('it returns the signed-in user for a live forwarded session', async () => {
     expiresAt: new Date(Date.now() + 60_000),
     id: sessionID,
     ipAddress: '127.0.0.1',
+    previousRefreshToken: null,
+    refreshToken: null,
     updatedAt: new Date(),
     userID: user.id,
     verified: true,
@@ -41,5 +44,16 @@ test('it returns the signed-in user for a live forwarded session', async () => {
 
   const result = await tryReadCurrentUser({ authorization: `Bearer ${sessionID}` });
 
-  expect(result).toStrictEqual({ authenticated: true, user });
+  expect(result).toStrictEqual({
+    authenticated: true,
+    user: {
+      createdAt: user.createdAt,
+      email: user.email,
+      id: user.id,
+      name: user.name,
+      seed: user.seed,
+      updatedAt: user.updatedAt,
+      username: user.username,
+    },
+  });
 });

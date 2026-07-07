@@ -5,7 +5,7 @@ export const getSession = os.getSession.handler((opts) => {
   const actingUserId = opts.context.actingUserId;
 
   if (actingUserId === null) {
-    throw new Error('not wired in the phase 0b mock backend');
+    throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
   const session = sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
