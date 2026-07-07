@@ -19,7 +19,7 @@ interface SessionBadgeFragmentProps {
  * `getRequestHeaders` throws outside the live server runtime's `AsyncLocalStorage` context, and
  * `createCompositeComponent` resolves to a client-build stub that unconditionally throws, since
  * `bun test` resolves package exports without the `react-server` condition. Message selection is
- * proven separately by `pickSessionBadgeMessage`'s own tests.
+ * extracted into a pure unit with its own direct tests.
  */
 export const getSessionBadgeFragment = createServerFn({ method: 'GET' }).handler(async () => {
   const result = await readCurrentUserResult(pickSessionHeaders(getRequestHeaders()));
