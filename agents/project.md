@@ -13,7 +13,7 @@ sentence can't be simplified without losing it.
 
 ## Monorepo layout
 
-27 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
+25 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
 `package.json` named `@vers/<name>`: internal deps use the `workspace:*` protocol, and versions
 shared by 5+ projects live in the root manifest's `workspaces.catalog` (referenced as `catalog:`).
 Libraries are consumed as TypeScript source (`exports` → `./src/index.ts`); there are no per-library
@@ -43,8 +43,8 @@ those directories.
 
 Every importable workspace package lives in a `lib-`-prefixed folder. A package's name is its folder
 name minus the taxonomy prefix: `lib-` and `app-` strip (`lib-validation` → `@vers/validation`,
-`app-web` → `@vers/web`); `service-` and `db-` are part of the name and carry through
-(`@vers/service-user`, `@vers/db-postgres`).
+`app-web` → `@vers/web`); `service-` is part of the name and carries through (`service-user` →
+`@vers/service-user`).
 
 ## Styling
 
@@ -112,7 +112,7 @@ its own PR and promotes it into `lib-design-system` when a second consumer appea
 
 ## Docker
 
-Each deployable (`app-web`, `db-postgres`, the 4 services) has a multi-stage Dockerfile around
+Each deployable (`app-web`, the 4 services) has a multi-stage Dockerfile around
 `turbo prune <pkg> --docker`:
 
 1. **pruner** — a standalone `turbo` binary prunes to the target's dependency graph: `out/json`

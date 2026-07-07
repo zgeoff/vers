@@ -122,7 +122,6 @@ Applications & services:
 
 - `app-web` - TanStack Start web app; the trust edge and only public deployment
 - `app-web-e2e` - e2e test suite for the web app
-- `db-postgres` - postgres migration runner (Kysely migrations against Neon)
 - `service-activities` - game activity event store (Emmett streams of checkpoint batches)
 - `service-avatar` - avatar domain service
 - `service-session` - session domain service
@@ -138,14 +137,13 @@ Libraries:
 - `lib-contract-<service>` - one per service: that service's oRPC API declaration
 - `lib-contract-base` - shared contract error taxonomy, base builders, and conformance-test helper
 - `lib-data` - core static game data
-- `lib-db` - kysely connection helper, post-drizzle migrations, and generated database types
+- `lib-db` - kysely connection helper, migrations, and generated database types
 - `lib-design-system` - ui component library (Ark UI primitives + Panda recipes)
 - `lib-email` - Resend wrapper and react-email template factories
 - `lib-game-utils` - shared game logic (encounter derivation, rewards)
 - `lib-idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
 - `lib-idle-core` - deterministic seeded simulation engine
 - `lib-panda-preset` - design tokens & panda css config
-- `lib-postgres-schema` - postgres table definitions & Kysely database types
 - `lib-service-runtime` - Elysia service runtime: createService, s2s auth, health, logging,
   OTel/Sentry wiring
 - `lib-service-test-utils` - postgres test container & mock data utils

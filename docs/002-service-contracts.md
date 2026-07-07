@@ -35,8 +35,8 @@ The per-package boilerplate this creates is exactly what the service scaffold te
 Folder and package naming, repo-wide: `lib-` prefixes every importable workspace package — contracts
 included, since services and the web app all import them. **A package's name is its folder name
 minus the taxonomy prefix**: `lib-` and `app-` strip (`lib-contract-user` → `@vers/contract-user`,
-`app-web` → `@vers/web`) because they group folders without naming the thing; `service-` and `db-`
-are part of the name and carry through (`@vers/service-user`, `@vers/db-postgres`).
+`app-web` → `@vers/web`) because they group folders without naming the thing; `service-` is part of
+the name and carries through (`service-user` → `@vers/service-user`).
 
 ## Anatomy of a contract package
 
