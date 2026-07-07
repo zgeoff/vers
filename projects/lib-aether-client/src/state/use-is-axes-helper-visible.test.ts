@@ -3,7 +3,7 @@ import { expect, test } from 'vitest';
 import { useIsAxesHelperVisible } from './use-is-axes-helper-visible';
 
 test('it returns the current axes helper visibility state', () => {
-  const result = renderHook(() => useIsAxesHelperVisible()).result;
+  const hook = renderHook(() => useIsAxesHelperVisible());
 
-  expect(result.current).toBeFalse();
+  expect(hook.result.current).toBeFalse();
 });

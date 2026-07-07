@@ -19,9 +19,9 @@ test('it updates the selected node in the store', () => {
 
   setSelectedNode(node, ref);
 
-  const result = renderHook(() => useSelectedNodeStore((state) => state)).result;
+  const hook = renderHook(() => useSelectedNodeStore((state) => state));
 
-  expect(result.current).toStrictEqual({
+  expect(hook.result.current).toStrictEqual({
     node,
     object3D: ref,
   });

@@ -332,6 +332,8 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
 - **jest-extended matchers** come from the `@zgeoff/bun-test-extended` preload; a package-local
   `augment-bun-test.ts` side-effect import brings their types into `tsc`.
 - `toStrictEqual`, not `toEqual`, for object assertions.
+- Bound test-result names: `ctx` for a `setupTest(…)` result, `hook` for `renderHook(…)`, `rendered`
+  for RTL `render(…)` — member-access off them, never pick properties into loose consts.
 - Behavioural test names describe observable behaviour and never cite internal identifiers
   (`it flags the run as invalid`, not `it sets isValid to false`).
 - Declare test data inline per test for MSW-mocked packages (a client hitting a mocked service, or

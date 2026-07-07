@@ -21,7 +21,7 @@ test('it returns the current aether graph state', () => {
 
   setAetherGraph(graph);
 
-  const result = renderHook(() => useAetherGraph()).result;
+  const hook = renderHook(() => useAetherGraph());
 
-  expect(result.current).toStrictEqual(graph);
+  expect(hook.result.current).toStrictEqual(graph);
 });
