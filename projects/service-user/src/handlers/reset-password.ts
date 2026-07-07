@@ -52,17 +52,31 @@ export async function resetPassword(
 
   const passwordHash = await Bun.password.hash(opts.input.password, 'argon2id');
 
-  await db
+  // the users update only applies while the row still holds the token hash validated above, so
+  // a concurrent reset that consumed the token first leaves this one matching zero rows; the
+  // session purge is keyed off that same CTE, so it only fires when this call's reset won the race
+  const result = await db
     .with('updated', (qb) =>
       qb
         .updateTable('users')
         .set({ passwordHash, passwordResetToken: null, passwordResetTokenExpiresAt: null })
         .where('id', '=', opts.input.id)
-        .returningAll(),
+        .where('passwordResetToken', '=', user.passwordResetToken)
+        .returning('id'),
     )
-    .deleteFrom('sessions')
-    .where('userId', '=', opts.input.id)
+    .with('purged', (qb) =>
+      qb
+        .deleteFrom('sessions')
+        .where('userId', 'in', (eb) => eb.selectFrom('updated').select('id'))
+        .returning('id'),
+    )
+    .selectFrom('updated')
+    .select('id')
     .execute();
+
+  if (result.length === 0) {
+    throw opts.errors.INVALID_RESET_TOKEN({ data: {} });
+  }
 
   return {};
 }

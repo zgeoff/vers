@@ -6,9 +6,9 @@ import { createVerificationService } from './create-verification-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createVerificationService({ db: db.db });
+  const service = await createVerificationService({ db: db.db });
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 // Each call acquires its own transaction-isolated handle from the same shared worker database
@@ -17,8 +17,8 @@ async function setupTest() {
 
 test('it creates a verification visible within this test', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   await client.createVerification({ target: 'isolation-proof@example.com', type: 'onboarding' });
 

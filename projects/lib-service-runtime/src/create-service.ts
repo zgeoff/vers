@@ -25,7 +25,7 @@ interface ServiceRuntime<TEnvShape extends z.ZodRawShape> {
 }
 
 export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
-  readonly buildRouter: (runtime: ServiceRuntime<TEnvShape>) => AnyRouter;
+  readonly buildRouter: (runtime: ServiceRuntime<TEnvShape>) => AnyRouter | Promise<AnyRouter>;
   readonly contract: AnyContractRouter;
   readonly envShape: TEnvShape;
   readonly name: string;
@@ -57,7 +57,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
     sentry.init({ dsn: env.SENTRY_DSN });
   }
 
-  const router = config.buildRouter({ env, logger });
+  const router = await config.buildRouter({ env, logger });
   const document = await buildOpenAPIDocument(config.contract, config.name);
 
   const app = new Elysia();

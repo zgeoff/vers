@@ -6,9 +6,9 @@ import { createAvatarService } from './create-avatar-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createAvatarService({ db: db.db });
+  const service = await createAvatarService({ db: db.db });
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 // Each call acquires its own transaction-isolated handle from the same shared worker database
@@ -17,8 +17,8 @@ async function setupTest() {
 
 test('it creates an avatar visible within this test', async () => {
   await using ctx = await setupTest();
-  const { token } = await createViewer({ audience: 'service-avatar', db: ctx.db });
-  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
+  const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
   await client.createAvatar({ class: 'brute', name: 'IsolationProof' });
 

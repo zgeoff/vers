@@ -69,7 +69,7 @@ export async function refreshTokens(
     return { accessToken, refreshToken: row.refreshToken };
   }
 
-  const [refreshToken, accessToken] = await Promise.all([
+  const rotatedTokens = await Promise.all([
     createJWT({
       apiIdentifier: deps.apiIdentifier,
       expiresAt: row.expiresAt,
@@ -86,7 +86,7 @@ export async function refreshTokens(
 
   const updateResult = await db
     .updateTable('sessions')
-    .set({ previousRefreshToken: row.refreshToken, refreshToken })
+    .set({ previousRefreshToken: row.refreshToken, refreshToken: rotatedTokens[0] })
     .where('id', '=', row.id)
     .where('refreshToken', '=', row.refreshToken)
     .executeTakeFirst();
@@ -97,5 +97,5 @@ export async function refreshTokens(
     throw opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
   }
 
-  return { accessToken, refreshToken };
+  return { accessToken: rotatedTokens[1], refreshToken: rotatedTokens[0] };
 }

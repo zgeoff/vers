@@ -6,15 +6,15 @@ import { createVerificationService } from '../create-verification-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createVerificationService({ db: db.db });
+  const service = await createVerificationService({ db: db.db });
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it creates a verification code and stores a record of it', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const created = await client.createVerification({
     target: 'onboard@example.com',
@@ -39,8 +39,8 @@ test('it creates a verification code and stores a record of it', async () => {
 
 test('it uses a simple charset for 2fa verification codes', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const created = await client.createVerification({ target: '+15551234567', type: '2fa' });
 
@@ -49,8 +49,8 @@ test('it uses a simple charset for 2fa verification codes', async () => {
 
 test('it uses a simple charset for 2fa setup verification codes', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const created = await client.createVerification({ target: '+15551234567', type: '2fa-setup' });
 
@@ -59,8 +59,8 @@ test('it uses a simple charset for 2fa setup verification codes', async () => {
 
 test('it replaces an existing verification for the same target and type', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   await client.createVerification({ target: 'replace@example.com', type: 'onboarding' });
 
@@ -79,10 +79,40 @@ test('it replaces an existing verification for the same target and type', async 
   expect(rows[0]?.id).toBe(second.id);
 });
 
+test('it clears the replay guard when a verification is recreated', async () => {
+  await using ctx = await setupTest();
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
+
+  const created = await client.createVerification({ target: '+15551234599', type: '2fa' });
+
+  await client.verifyCode({ code: created.otp, target: '+15551234599', type: '2fa' });
+
+  const verified = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('target', '=', '+15551234599')
+    .executeTakeFirstOrThrow();
+
+  expect(verified.lastVerifiedCode).toBe(created.otp);
+  expect(verified.lastVerifiedAt).toBeValidDate();
+
+  await client.createVerification({ target: '+15551234599', type: '2fa' });
+
+  const recreated = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('target', '=', '+15551234599')
+    .executeTakeFirstOrThrow();
+
+  expect(recreated.lastVerifiedCode).toBeNull();
+  expect(recreated.lastVerifiedAt).toBeNull();
+});
+
 test('it creates a verification with an explicit expiry time', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const expiresAt = new Date(Date.now() + 60_000);
 

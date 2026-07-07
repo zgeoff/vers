@@ -6,37 +6,37 @@ import { createUserService } from '../create-user-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createUserService({ db: db.db });
+  const service = await createUserService({ db: db.db });
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it changes the acting user password', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   const result = await client.changePassword({ password: 'newpassword123' });
 
-  expect(result).toStrictEqual({ updatedID: user.id });
+  expect(result).toStrictEqual({ updatedID: viewer.user.id });
 
   const row = await ctx.db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', user.id)
+    .where('id', '=', viewer.user.id)
     .executeTakeFirstOrThrow();
 
-  expect(row.passwordHash).not.toBe(user.passwordHash);
+  expect(row.passwordHash).not.toBe(viewer.user.passwordHash);
   expect(row.passwordHash).toStartWith('$argon2id$');
 });
 
 test('it throws NOT_FOUND when the acting user no longer exists', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
 
-  await ctx.db.deleteFrom('users').where('id', '=', user.id).execute();
+  await ctx.db.deleteFrom('users').where('id', '=', viewer.user.id).execute();
 
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(client.changePassword({ password: 'newpassword123' })).rejects.toMatchObject({
     code: 'NOT_FOUND',
@@ -45,8 +45,8 @@ test('it throws NOT_FOUND when the acting user no longer exists', async () => {
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(client.changePassword({ password: 'newpassword123' })).rejects.toMatchObject({
     code: 'UNAUTHORIZED',

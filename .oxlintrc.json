@@ -215,7 +215,7 @@
             "name": ["CryptoKey", "Request", "Response"],
             "package": "@types/node"
           },
-          { "from": "lib", "name": ["Request", "Response", "Date", "Promise"] }
+          { "from": "lib", "name": ["Request", "Response", "Date"] }
         ]
       }
     ],

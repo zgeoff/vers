@@ -6,17 +6,17 @@ import { createUserService } from './create-user-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createUserService({ db: db.db });
+  const service = await createUserService({ db: db.db });
 
-  return { app, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it passes every conformance case collected from its contract', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
 
   const cases = collectConformanceCases(userContract, {
-    anonymousHeaders: { authorization: `Bearer ${token}` },
+    anonymousHeaders: { authorization: `Bearer ${viewer.token}` },
     authedSamples: {
       changePassword: { password: 'ConformancePassw0rd' },
       getCurrentUser: {},

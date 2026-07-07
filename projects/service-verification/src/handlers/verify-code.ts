@@ -26,17 +26,17 @@ interface VerifyCodeOpts {
  * Verifies a TOTP code against its target and type, then guards against replay: deleting types
  * (`change-email`/`onboarding`) consume the row on success, so a concurrent second verify finds no
  * row to delete; non-deleting types (`2fa`/`2fa-setup`) record the verified code and timestamp in a
- * single conditional UPDATE that a concurrent replay's row lock forces to re-evaluate against the
- * committed value — no explicit transaction required.
+ * conditional UPDATE that re-validates its predicate against the row under its row lock, so a
+ * concurrent replay matches zero rows. `orderBy('createdAt', 'desc')` is defense-in-depth against
+ * any pre-`(target, type)`-constraint duplicate rows.
  */
 export async function verifyCode(db: Kysely<DB>, opts: VerifyCodeOpts): Promise<VerificationData> {
-  const { code, target, type } = opts.input;
-
   const row = await db
     .selectFrom('verifications')
     .selectAll()
-    .where('type', '=', type)
-    .where('target', '=', target)
+    .where('type', '=', opts.input.type)
+    .where('target', '=', opts.input.target)
+    .orderBy('createdAt', 'desc')
     .executeTakeFirst();
 
   if (row === undefined) {
@@ -53,7 +53,7 @@ export async function verifyCode(db: Kysely<DB>, opts: VerifyCodeOpts): Promise<
     algorithm: row.algorithm,
     charSet: row.charSet,
     digits: row.digits,
-    otp: code,
+    otp: opts.input.code,
     period: row.period,
     secret: row.secret,
   });
@@ -62,7 +62,7 @@ export async function verifyCode(db: Kysely<DB>, opts: VerifyCodeOpts): Promise<
     throw opts.errors.INVALID_CODE({ data: {} });
   }
 
-  if (DELETING_TYPES.has(type)) {
+  if (DELETING_TYPES.has(opts.input.type)) {
     const deleteResult = await db
       .deleteFrom('verifications')
       .where('id', '=', row.id)
@@ -76,13 +76,13 @@ export async function verifyCode(db: Kysely<DB>, opts: VerifyCodeOpts): Promise<
 
     const updateResult = await db
       .updateTable('verifications')
-      .set({ lastVerifiedAt: new Date(), lastVerifiedCode: code })
+      .set({ lastVerifiedAt: new Date(), lastVerifiedCode: opts.input.code })
       .where('id', '=', row.id)
       .where((eb) =>
         eb.or([
           eb('lastVerifiedCode', 'is', null),
           eb('lastVerifiedAt', 'is', null),
-          eb('lastVerifiedCode', '!=', code),
+          eb('lastVerifiedCode', '!=', opts.input.code),
           eb('lastVerifiedAt', '<=', replayWindow),
         ]),
       )

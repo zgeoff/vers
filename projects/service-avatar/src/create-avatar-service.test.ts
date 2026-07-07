@@ -6,9 +6,9 @@ import { createAvatarService } from './create-avatar-service';
 
 test('it wires an injected db into the router instead of building one from env', async () => {
   await using db = await createTestDB();
-  const { app } = await createAvatarService({ db: db.db });
-  const { token } = await createViewer({ audience: 'service-avatar', db: db.db });
-  const client = buildRPCTestClient<AvatarContract>(app, { token });
+  const service = await createAvatarService({ db: db.db });
+  const viewer = await createViewer({ audience: 'service-avatar', db: db.db });
+  const client = buildRPCTestClient<AvatarContract>(service.app, { token: viewer.token });
 
   await client.createAvatar({ class: 'brute', name: 'Wired' });
 

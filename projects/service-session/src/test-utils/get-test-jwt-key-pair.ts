@@ -17,14 +17,14 @@ export function getTestJWTKeyPair(): Promise<TestJWTKeyPair> {
 }
 
 async function createTestJWTKeyPair(): Promise<TestJWTKeyPair> {
-  const { privateKey, publicKey } = await jose.generateKeyPair('RS256', { extractable: true });
+  const keyPair = await jose.generateKeyPair('RS256', { extractable: true });
 
-  const [privateKeyPEM, publicKeyPEM] = await Promise.all([
-    jose.exportPKCS8(privateKey),
-    jose.exportSPKI(publicKey),
+  const pemPair = await Promise.all([
+    jose.exportPKCS8(keyPair.privateKey),
+    jose.exportSPKI(keyPair.publicKey),
   ]);
 
-  return { privateKeyPEM, publicKeyPEM };
+  return { privateKeyPEM: pemPair[0], publicKeyPEM: pemPair[1] };
 }
 
 let cached: Promise<TestJWTKeyPair> | undefined;

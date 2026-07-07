@@ -4,9 +4,9 @@ import { createSessionRow } from './create-session-row';
 
 test('it inserts a session row owned by the given user', async () => {
   await using testDB = await createTestDB();
-  const { user } = await createTestUser(testDB.db);
+  const created = await createTestUser(testDB.db);
 
-  const session = await createSessionRow(testDB.db, { userId: user.id });
+  const session = await createSessionRow(testDB.db, { userId: created.user.id });
 
   const row = await testDB.db
     .selectFrom('sessions')
@@ -14,16 +14,16 @@ test('it inserts a session row owned by the given user', async () => {
     .where('id', '=', session.id)
     .executeTakeFirstOrThrow();
 
-  expect(row.userId).toBe(user.id);
+  expect(row.userId).toBe(created.user.id);
 });
 
 test('it applies overrides on top of the faker-generated defaults', async () => {
   await using testDB = await createTestDB();
-  const { user } = await createTestUser(testDB.db);
+  const created = await createTestUser(testDB.db);
 
   const createdAt = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const session = await createSessionRow(testDB.db, { createdAt, userId: user.id });
+  const session = await createSessionRow(testDB.db, { createdAt, userId: created.user.id });
 
   expect(session).toMatchObject({ createdAt });
 });

@@ -19,29 +19,25 @@ import { verifySession } from './handlers/verify-session';
 interface BuildSessionRouterDeps {
   readonly apiIdentifier: string;
   readonly db: Kysely<DB>;
-  readonly signingKey: Promise<CryptoKey>;
+  readonly signingKey: CryptoKey;
 }
 
 /** Assembles the session service's oRPC router, closing each handler over the shared db client. */
 export function buildSessionRouter(deps: Readonly<BuildSessionRouterDeps>) {
   const os = implement(sessionContract).$context<ServiceContext>();
 
-  const signingDeps = async () => {
-    const signingKey = await deps.signingKey;
-
-    return { apiIdentifier: deps.apiIdentifier, signingKey };
-  };
-
   return {
     createSession: os.createSession.handler((opts) => createSession(deps.db, opts)),
     deleteSession: os.deleteSession.handler((opts) => removeSession(deps.db, opts)),
     getSession: os.getSession.handler((opts) => getSession(deps.db, opts)),
     getSessions: os.getSessions.handler((opts) => getSessions(deps.db, opts)),
-    refreshTokens: os.refreshTokens.handler(async (opts) => {
-      const signing = await signingDeps();
-
-      return refreshTokens(deps.db, signing, opts);
-    }),
+    refreshTokens: os.refreshTokens.handler((opts) =>
+      refreshTokens(
+        deps.db,
+        { apiIdentifier: deps.apiIdentifier, signingKey: deps.signingKey },
+        opts,
+      ),
+    ),
     stepUp: {
       consumePendingTransaction: os.stepUp.consumePendingTransaction.handler((opts) =>
         consumePendingTransaction(deps.db, opts),
@@ -59,11 +55,13 @@ export function buildSessionRouter(deps: Readonly<BuildSessionRouterDeps>) {
         recordFailedAttempt(deps.db, opts),
       ),
     },
-    verifySession: os.verifySession.handler(async (opts) => {
-      const signing = await signingDeps();
-
-      return verifySession(deps.db, signing, opts);
-    }),
+    verifySession: os.verifySession.handler((opts) =>
+      verifySession(
+        deps.db,
+        { apiIdentifier: deps.apiIdentifier, signingKey: deps.signingKey },
+        opts,
+      ),
+    ),
   };
 }
 

@@ -7,15 +7,15 @@ import { createVerificationRow } from '../test-utils/create-verification-row';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createVerificationService({ db: db.db });
+  const service = await createVerificationService({ db: db.db });
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it returns an existing verification', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const verification = await createVerificationRow(ctx.db, {
     target: 'existing@example.com',
@@ -36,8 +36,8 @@ test('it returns an existing verification', async () => {
 
 test('it returns null for a non-existent verification', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const found = await client.getVerification({ target: 'missing@example.com', type: 'onboarding' });
 
@@ -46,8 +46,8 @@ test('it returns null for a non-existent verification', async () => {
 
 test('it deletes an expired verification and returns null', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const verification = await createVerificationRow(ctx.db, {
     expiresAt: new Date(Date.now() - 60_000),

@@ -6,15 +6,15 @@ import { createAvatarService } from '../create-avatar-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createAvatarService({ db: db.db });
+  const service = await createAvatarService({ db: db.db });
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it creates an avatar owned by the acting user', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-avatar', db: ctx.db });
-  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
+  const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
   const avatar = await client.createAvatar({ class: 'brute', name: 'Brutus' });
 
@@ -25,15 +25,15 @@ test('it creates an avatar owned by the acting user', async () => {
     level: 1,
     name: 'Brutus',
     updatedAt: expect.toBeValidDate(),
-    userID: user.id,
+    userID: viewer.user.id,
     xp: 0,
   });
 });
 
 test('it rejects a second avatar with a duplicate name with CONFLICT', async () => {
   await using ctx = await setupTest();
-  const { token } = await createViewer({ audience: 'service-avatar', db: ctx.db });
-  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
+  const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
   await client.createAvatar({ class: 'brute', name: 'Duplicatus' });
 
@@ -44,8 +44,8 @@ test('it rejects a second avatar with a duplicate name with CONFLICT', async () 
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-avatar' });
-  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-avatar' });
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
   expect(client.createAvatar({ class: 'brute', name: 'Anonymous' })).rejects.toMatchObject({
     code: 'UNAUTHORIZED',

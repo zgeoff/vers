@@ -35,7 +35,7 @@ export async function verifySession(
 
   const accessTokenExpiresAt = new Date(Date.now() + ACCESS_TOKEN_DURATION);
 
-  const [refreshToken, accessToken] = await Promise.all([
+  const tokenPair = await Promise.all([
     createJWT({
       apiIdentifier: deps.apiIdentifier,
       expiresAt: session.expiresAt,
@@ -52,7 +52,7 @@ export async function verifySession(
 
   const updateResult = await db
     .updateTable('sessions')
-    .set({ refreshToken, verified: true })
+    .set({ refreshToken: tokenPair[0], verified: true })
     .where('id', '=', session.id)
     .where('verified', '=', false)
     .executeTakeFirst();
@@ -61,5 +61,5 @@ export async function verifySession(
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  return { accessToken, refreshToken };
+  return { accessToken: tokenPair[1], refreshToken: tokenPair[0] };
 }

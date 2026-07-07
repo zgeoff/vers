@@ -7,15 +7,15 @@ import { createPendingTransactionRow } from '../test-utils/create-pending-transa
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createSessionService({ db: db.db });
+  const service = await createSessionService({ db: db.db });
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it creates a pending transaction under the given id', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const result = await client.stepUp.createPendingTransaction({
     action: 'TwoFactorAuth',
@@ -40,8 +40,8 @@ test('it throws CONFLICT when the id is already in use', async () => {
   await using ctx = await setupTest();
   await createPendingTransactionRow(ctx.db, { id: 'taken' });
 
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   // a rejected insert aborts the shared transaction handle — this must be the test's last query
   expect(
@@ -63,8 +63,8 @@ test('it sweeps expired pending transactions before creating a new one', async (
     id: 'expired',
   });
 
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   await client.stepUp.createPendingTransaction({
     action: 'TwoFactorAuth',

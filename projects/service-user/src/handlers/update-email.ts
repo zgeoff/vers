@@ -15,13 +15,18 @@ interface UpdateEmailOpts {
 
 /**
  * Changes the acting user's email, repointing any in-progress 2FA verification at the old email
- * to the new one in the same statement; throws CONFLICT when the email is taken.
+ * to the new one in the same statement; throws CONFLICT when the email is taken. The users update
+ * only applies while the row still holds the old email read just before it, and the verifications
+ * repoint targets that same old email — pinning both edits to the row this call observed. In the
+ * exotic case of a concurrent email change racing this one, the guarded update matches zero rows
+ * and the call retries once against the row's current email before giving up.
  */
 export async function updateEmail(
   db: Kysely<DB>,
   opts: UpdateEmailOpts,
 ): Promise<{ updatedID: string }> {
-  const { actingUserId } = opts.context;
+  // oxlint-disable-next-line prefer-destructuring -- narrowed capture: TS narrowing does not cross the closure boundary
+  const actingUserId = opts.context.actingUserId;
 
   if (actingUserId === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
@@ -38,19 +43,32 @@ export async function updateEmail(
   }
 
   try {
-    await db
-      .with('updated', (qb) =>
-        qb
-          .updateTable('users')
-          .set({ email: opts.input.email })
-          .where('id', '=', actingUserId)
-          .returningAll(),
-      )
-      .updateTable('verifications')
-      .set({ target: opts.input.email })
-      .where('target', '=', user.email)
-      .where('type', 'in', ['2fa', '2fa-setup'])
-      .execute();
+    const matched = await runGuardedEmailUpdate(db, actingUserId, user.email, opts.input.email);
+
+    if (matched) {
+      return { updatedID: actingUserId };
+    }
+
+    const retryUser = await db
+      .selectFrom('users')
+      .select('email')
+      .where('id', '=', actingUserId)
+      .executeTakeFirst();
+
+    if (retryUser === undefined) {
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }
+
+    const retryMatched = await runGuardedEmailUpdate(
+      db,
+      actingUserId,
+      retryUser.email,
+      opts.input.email,
+    );
+
+    if (!retryMatched) {
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }
 
     return { updatedID: actingUserId };
   } catch (error: unknown) {
@@ -60,6 +78,41 @@ export async function updateEmail(
 
     throw error;
   }
+}
+
+/**
+ * Runs one guarded attempt of the users+verifications email rewrite in a single statement: the
+ * users update is predicated on the row still holding `oldEmail`, and the verifications repoint
+ * targets that same `oldEmail`. Returns whether the users predicate matched.
+ */
+async function runGuardedEmailUpdate(
+  db: Kysely<DB>,
+  actingUserId: string,
+  oldEmail: string,
+  newEmail: string,
+): Promise<boolean> {
+  const result = await db
+    .with('updated', (qb) =>
+      qb
+        .updateTable('users')
+        .set({ email: newEmail })
+        .where('id', '=', actingUserId)
+        .where('email', '=', oldEmail)
+        .returning('id'),
+    )
+    .with('repointed', (qb) =>
+      qb
+        .updateTable('verifications')
+        .set({ target: newEmail })
+        .where('target', '=', oldEmail)
+        .where('type', 'in', ['2fa', '2fa-setup'])
+        .returning('id'),
+    )
+    .selectFrom('updated')
+    .select('id')
+    .execute();
+
+  return result.length > 0;
 }
 
 /** postgres.js surfaces a unique-constraint violation as SQLSTATE 23505, naming the constraint. */

@@ -107,6 +107,39 @@ test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugi
   ).toResolve();
 });
 
+test('it serves a router built by an async buildRouter', async () => {
+  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+
+  const contract = buildTestContract();
+
+  const { app } = await createService({
+    buildRouter: async () => {
+      await Promise.resolve();
+
+      return buildTestRouter(contract);
+    },
+    contract,
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const token = await createServiceToken({
+    actingUserId: 'user-1',
+    audience: 'test-service',
+    privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  await expect(client.getThing({ id: 'thing-1' })).resolves.toStrictEqual({
+    id: 'thing-1',
+  });
+});
+
 test('it rejects an /rpc call with no Authorization header with a plain 401', async () => {
   const { publicKeyPEM } = await createServiceKeyPair();
 
