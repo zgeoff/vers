@@ -40,10 +40,11 @@ Each service is its own Fly deployment, scale-to-zero, reachable only on the pri
 ## Data
 
 One database, two shapes. Both live in the same Postgres on Neon, which scales to zero when nobody
-is playing.
+is playing. Provisioning, connection rules, and where the secrets live:
+[database](./003-database.md).
 
 - **Relational identity data** — users, sessions, verifications, avatars — accessed through Kysely,
-  migrated by `db-postgres`.
+  migrated by kysely-ctl in `lib-db`.
 - **Event-store checkpoints** — via Emmett, one stream per activity. The workload is append-heavy
   checkpoint batches, point reads for "latest progress", and rare full replays — a natural fit for
   indexed Postgres, with optimistic concurrency (`UNIQUE(stream_id, version)`) backing the
