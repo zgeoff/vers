@@ -7,11 +7,11 @@ export async function createServiceKeyPair(): Promise<{
   privateKey: CryptoKey;
   publicKeyPEM: string;
 }> {
-  const { privateKey, publicKey } = await jose.generateKeyPair(TOKEN_ALGORITHM, {
+  const keyPair = await jose.generateKeyPair(TOKEN_ALGORITHM, {
     extractable: true,
   });
 
-  const publicKeyPEM = await jose.exportSPKI(publicKey);
+  const publicKeyPEM = await jose.exportSPKI(keyPair.publicKey);
 
-  return { privateKey, publicKeyPEM };
+  return { privateKey: keyPair.privateKey, publicKeyPEM };
 }

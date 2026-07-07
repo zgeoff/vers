@@ -28,16 +28,13 @@ export function withAuthedUser<Args extends DataFnArgs, Data>(
   config: Config = {},
 ) {
   return async (args: Args): Promise<Data> => {
-    const { accessToken, refreshToken, session } = await createAuthedUser(
-      config.user ?? {},
-      config.sessionID,
-    );
+    const authedUser = await createAuthedUser(config.user ?? {}, config.sessionID);
 
     const authSession = await authSessionStorage.getSession(args.request.headers.get('cookie'));
 
-    authSession.set('accessToken', accessToken);
-    authSession.set('refreshToken', refreshToken);
-    authSession.set('sessionID', session.id);
+    authSession.set('accessToken', authedUser.accessToken);
+    authSession.set('refreshToken', authedUser.refreshToken);
+    authSession.set('sessionID', authedUser.session.id);
 
     const setCookieHeader = await authSessionStorage.commitSession(authSession);
 

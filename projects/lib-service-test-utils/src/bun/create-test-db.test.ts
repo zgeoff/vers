@@ -5,7 +5,7 @@ import { createTestUser } from './create-test-user';
 
 test('it defaults to transaction isolation: writes roll back once disposed', async () => {
   const written = await createTestDB();
-  const { user } = await createTestUser(written.db, { email: 'repo-default@test.com' });
+  const created = await createTestUser(written.db, { email: 'repo-default@test.com' });
 
   await written[Symbol.asyncDispose]();
 
@@ -14,7 +14,7 @@ test('it defaults to transaction isolation: writes roll back once disposed', asy
   const row = await verify.db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', user.id)
+    .where('id', '=', created.user.id)
     .executeTakeFirst();
 
   expect(row).toBeUndefined();

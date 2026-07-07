@@ -22,9 +22,9 @@ export const streamTimeout = 5000;
 // the build mode (not just the flag) keeps a stray VITE_ENABLE_MSW out of a
 // production bundle
 if (import.meta.env.MODE !== 'production' && import.meta.env.VITE_ENABLE_MSW === 'true') {
-  const { server } = await import('./mocks/node');
+  const nodeMocks = await import('./mocks/node');
 
-  server.listen();
+  nodeMocks.server.listen();
 }
 
 // if we're in dev mode, load our local environment variables which should include our server secrets
@@ -67,7 +67,7 @@ export default function handleRequest(
     // and will not include suspended components and deferred loaders
     const timings = createTimings('render', 'renderToPipeableStream');
 
-    const { abort, pipe } = renderToPipeableStream(
+    const pipeableStream = renderToPipeableStream(
       <NonceProvider value={loadContext.cspNonce}>
         <ServerRouter context={reactRouterContext} nonce={loadContext.cspNonce} url={request.url} />
       </NonceProvider>,
@@ -85,7 +85,7 @@ export default function handleRequest(
             }),
           );
 
-          pipe(body);
+          pipeableStream.pipe(body);
         },
         nonce: loadContext.cspNonce,
         onError: () => {
@@ -98,7 +98,9 @@ export default function handleRequest(
       },
     );
 
-    setTimeout(abort, streamTimeout + 5000);
+    setTimeout(() => {
+      pipeableStream.abort();
+    }, streamTimeout + 5000);
   });
 }
 

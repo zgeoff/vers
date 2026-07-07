@@ -9,7 +9,9 @@ interface CreateAnonymousViewerConfig {
 export async function createAnonymousViewer(
   config: Readonly<CreateAnonymousViewerConfig>,
 ): Promise<{ token: string }> {
-  const { privateKey } = await getTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
-  return { token: await createServiceToken({ audience: config.audience, privateKey }) };
+  return {
+    token: await createServiceToken({ audience: config.audience, privateKey: keyPair.privateKey }),
+  };
 }

@@ -9,9 +9,9 @@ test('it sets a reference to the camera in the store', () => {
 
   setCamera(camera);
 
-  const { result } = renderHook(() => useCameraStore((state) => state));
+  const hook = renderHook(() => useCameraStore((state) => state));
 
-  expect(result.current).toStrictEqual({
+  expect(hook.result.current).toStrictEqual({
     camera,
   });
 });

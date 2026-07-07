@@ -7,13 +7,13 @@ test('it generates a welcome email with the provided configuration', async () =>
     verificationURL: 'https://versidle.com/verification?token=123456',
   };
 
-  const { html, plainText } = await generateWelcomeEmail(config);
+  const email = await generateWelcomeEmail(config);
 
-  expect(html).include('Welcome to vers');
-  expect(html).include(config.verificationCode);
-  expect(html).include(config.verificationURL);
+  expect(email.html).include('Welcome to vers');
+  expect(email.html).include(config.verificationCode);
+  expect(email.html).include(config.verificationURL);
 
-  expect(plainText).include('WELCOME TO VERS');
-  expect(plainText).include(config.verificationCode);
-  expect(plainText).include(config.verificationURL);
+  expect(email.plainText).include('WELCOME TO VERS');
+  expect(email.plainText).include(config.verificationCode);
+  expect(email.plainText).include(config.verificationURL);
 });

@@ -14,14 +14,14 @@ interface CreateViewerConfig {
 export async function createViewer(
   config: Readonly<CreateViewerConfig>,
 ): Promise<{ token: string; user: Selectable<Users> }> {
-  const { privateKey } = await getTestServiceKeyPair();
-  const { user } = await createTestUser(config.db, config.user);
+  const keyPair = await getTestServiceKeyPair();
+  const created = await createTestUser(config.db, config.user);
 
   const token = await createServiceToken({
-    actingUserId: user.id,
+    actingUserId: created.user.id,
     audience: config.audience,
-    privateKey,
+    privateKey: keyPair.privateKey,
   });
 
-  return { token, user };
+  return { token, user: created.user };
 }

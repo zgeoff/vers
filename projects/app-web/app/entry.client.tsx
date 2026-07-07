@@ -6,9 +6,9 @@ import { HydratedRouter } from 'react-router/dom';
 if (import.meta.env.PROD && import.meta.env['SENTRY_DSN']) {
   // oxlint-disable-next-line unicorn/prefer-top-level-await -- sentry init is deliberately fire-and-forget so it never delays hydration
   void (async () => {
-    const { initSentry } = await import('./utils/init-sentry.client');
+    const initSentryModule = await import('./utils/init-sentry.client');
 
-    initSentry();
+    initSentryModule.initSentry();
   })();
 }
 
@@ -29,9 +29,9 @@ const SILENCED_UNHANDLED_URLS = [
 if (import.meta.env.MODE !== 'production' && import.meta.env.VITE_ENABLE_MSW === 'true') {
   // oxlint-disable-next-line unicorn/prefer-top-level-await -- msw worker start is deliberately fire-and-forget so it never delays hydration
   void (async () => {
-    const { worker } = await import('./mocks/browser');
+    const browserMocks = await import('./mocks/browser');
 
-    await worker.start({
+    await browserMocks.worker.start({
       onUnhandledRequest: (req, print) => {
         if (SILENCED_UNHANDLED_URLS.some((url) => req.url.includes(url))) {
           return;

@@ -50,50 +50,50 @@ test('it throws at boot when SERVICE_AUTH_PUBLIC_KEY is missing', async () => {
 });
 
 test('it applies default PORT and LOG_LEVEL when unset', async () => {
-  const { publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
   vi.stubEnv('LOG_LEVEL', undefined);
   vi.stubEnv('PORT', undefined);
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { env } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: {},
     name: 'test-service',
   });
 
-  expect(env.PORT).toBe(3000);
-  expect(env.LOG_LEVEL).toBe('info');
+  expect(service.env.PORT).toBe(3000);
+  expect(service.env.LOG_LEVEL).toBe('info');
 });
 
 test('it parses a service-specific envShape variable onto env', async () => {
-  const { publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
   vi.stubEnv('CUSTOM_GREETING', 'hi there');
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { env } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: { CUSTOM_GREETING: z.string() },
     name: 'test-service',
   });
 
-  expectTypeOf(env.PORT).toEqualTypeOf<number>();
-  expectTypeOf(env.CUSTOM_GREETING).toEqualTypeOf<string>();
-  expect(env.CUSTOM_GREETING).toBe('hi there');
+  expectTypeOf(service.env.PORT).toEqualTypeOf<number>();
+  expectTypeOf(service.env.CUSTOM_GREETING).toEqualTypeOf<string>();
+  expect(service.env.CUSTOM_GREETING).toBe('hi there');
 });
 
 test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugin at boot', async () => {
-  const { publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
   vi.stubEnv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://127.0.0.1:1/');
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -108,13 +108,13 @@ test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugi
 });
 
 test('it serves a router built by an async buildRouter', async () => {
-  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { app } = await createService({
+  const service = await createService({
     buildRouter: async () => {
       await Promise.resolve();
 
@@ -128,10 +128,10 @@ test('it serves a router built by an async buildRouter', async () => {
   const token = await createServiceToken({
     actingUserId: 'user-1',
     audience: 'test-service',
-    privateKey,
+    privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(app, {
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -141,20 +141,20 @@ test('it serves a router built by an async buildRouter', async () => {
 });
 
 test('it rejects an /rpc call with no Authorization header with a plain 401', async () => {
-  const { publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { app } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: {},
     name: 'test-service',
   });
 
-  const response = await app.handle(
+  const response = await service.app.handle(
     new Request('http://test.local/rpc/ping', {
       headers: { 'x-request-id': 'abc' },
       method: 'POST',
@@ -170,20 +170,20 @@ test('it rejects an /rpc call with no Authorization header with a plain 401', as
 });
 
 test('it rejects an /rpc call with a garbage token with a plain 401', async () => {
-  const { publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { app } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: {},
     name: 'test-service',
   });
 
-  const response = await app.handle(
+  const response = await service.app.handle(
     new Request('http://test.local/rpc/ping', {
       headers: { authorization: 'Bearer not-a-real-token' },
       method: 'POST',
@@ -198,13 +198,13 @@ test('it rejects an /rpc call with a garbage token with a plain 401', async () =
 });
 
 test('it rejects an /rpc call with an expired token with a plain 401', async () => {
-  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { app } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: {},
@@ -214,10 +214,10 @@ test('it rejects an /rpc call with an expired token with a plain 401', async () 
   const token = await createServiceToken({
     audience: 'test-service',
     expiresIn: '-1s',
-    privateKey,
+    privateKey: keyPair.privateKey,
   });
 
-  const response = await app.handle(
+  const response = await service.app.handle(
     new Request('http://test.local/rpc/ping', {
       headers: { authorization: `Bearer ${token}` },
       method: 'POST',
@@ -232,13 +232,13 @@ test('it rejects an /rpc call with an expired token with a plain 401', async () 
 });
 
 test('it rejects an /rpc call with a wrong-audience token with a plain 401', async () => {
-  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { app } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: {},
@@ -247,10 +247,10 @@ test('it rejects an /rpc call with a wrong-audience token with a plain 401', asy
 
   const token = await createServiceToken({
     audience: 'some-other-service',
-    privateKey,
+    privateKey: keyPair.privateKey,
   });
 
-  const response = await app.handle(
+  const response = await service.app.handle(
     new Request('http://test.local/rpc/ping', {
       headers: { authorization: `Bearer ${token}` },
       method: 'POST',
@@ -265,13 +265,13 @@ test('it rejects an /rpc call with a wrong-audience token with a plain 401', asy
 });
 
 test('it returns data from an authed procedure given a valid token naming an acting user', async () => {
-  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { app } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: {},
@@ -281,10 +281,10 @@ test('it returns data from an authed procedure given a valid token naming an act
   const token = await createServiceToken({
     actingUserId: 'user-1',
     audience: 'test-service',
-    privateKey,
+    privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(app, {
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -294,13 +294,13 @@ test('it returns data from an authed procedure given a valid token naming an act
 });
 
 test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a valid anonymous token', async () => {
-  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { app } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: {},
@@ -309,10 +309,10 @@ test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a v
 
   const token = await createServiceToken({
     audience: 'test-service',
-    privateKey,
+    privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(app, {
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -323,20 +323,20 @@ test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a v
 });
 
 test('it serves /health without any token', async () => {
-  const { publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { app } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: {},
     name: 'test-service',
   });
 
-  const response = await app.handle(new Request('http://test.local/health'));
+  const response = await service.app.handle(new Request('http://test.local/health'));
 
   expect(response.status).toBe(200);
 
@@ -347,24 +347,24 @@ test('it serves /health without any token', async () => {
 });
 
 test('it echoes a supplied x-request-id and mints one when absent', async () => {
-  const { publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { app } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: {},
     name: 'test-service',
   });
 
-  const withoutHeader = await app.handle(new Request('http://test.local/health'));
+  const withoutHeader = await service.app.handle(new Request('http://test.local/health'));
 
   expect(withoutHeader.headers.get('x-request-id')).toBeString();
 
-  const withHeader = await app.handle(
+  const withHeader = await service.app.handle(
     new Request('http://test.local/health', {
       headers: { 'x-request-id': 'abc' },
     }),
@@ -374,20 +374,20 @@ test('it echoes a supplied x-request-id and mints one when absent', async () => 
 });
 
 test('it serves /spec.json declaring the 401 response for the authed route', async () => {
-  const { publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { app } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: {},
     name: 'test-service',
   });
 
-  const response = await app.handle(new Request('http://test.local/spec.json'));
+  const response = await service.app.handle(new Request('http://test.local/spec.json'));
 
   expect(response.status).toBe(200);
 
@@ -401,13 +401,13 @@ test('it serves /spec.json declaring the 401 response for the authed route', asy
 });
 
 test('it serves the authed route over /api given a valid token', async () => {
-  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { app } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: {},
@@ -417,10 +417,10 @@ test('it serves the authed route over /api given a valid token', async () => {
   const token = await createServiceToken({
     actingUserId: 'user-1',
     audience: 'test-service',
-    privateKey,
+    privateKey: keyPair.privateKey,
   });
 
-  const response = await app.handle(
+  const response = await service.app.handle(
     new Request('http://test.local/api/things?id=thing-1', {
       headers: { authorization: `Bearer ${token}`, 'x-request-id': 'abc' },
     }),
@@ -432,13 +432,13 @@ test('it serves the authed route over /api given a valid token', async () => {
 });
 
 test('it passes every conformance case collected from its own contract', async () => {
-  const { privateKey, publicKeyPEM } = await createServiceKeyPair();
+  const keyPair = await createServiceKeyPair();
 
-  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', publicKeyPEM);
+  vi.stubEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
-  const { app } = await createService({
+  const service = await createService({
     buildRouter: () => buildTestRouter(contract),
     contract,
     envShape: {},
@@ -447,7 +447,7 @@ test('it passes every conformance case collected from its own contract', async (
 
   const anonymousToken = await createServiceToken({
     audience: 'test-service',
-    privateKey,
+    privateKey: keyPair.privateKey,
   });
 
   const cases = collectConformanceCases(contract, {
@@ -456,6 +456,6 @@ test('it passes every conformance case collected from its own contract', async (
   });
 
   for (const conformanceCase of cases) {
-    await expect(conformanceCase.run(app)).toResolve();
+    await expect(conformanceCase.run(service.app)).toResolve();
   }
 });

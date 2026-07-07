@@ -50,14 +50,14 @@ export function meta(): ReturnType<Route.MetaFunction> {
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const loader = withErrorHandling(async (args: Route.LoaderArgs) => {
-  const { email } = await requireOnboardingSession(args.request);
+  const onboardingSession = await requireOnboardingSession(args.request);
 
-  return { email };
+  return { email: onboardingSession.email };
 });
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export const action = withErrorHandling(async (args: Route.ActionArgs) => {
-  const { email, transactionToken } = await requireOnboardingSession(args.request);
+  const onboardingSession = await requireOnboardingSession(args.request);
 
   const formData = await args.request.formData();
 
@@ -74,11 +74,11 @@ export const action = withErrorHandling(async (args: Route.ActionArgs) => {
 
   const result = await args.context.client.mutation(FinishEmailSignupMutation, {
     input: {
-      email,
+      email: onboardingSession.email,
       name: submission.value.name,
       password: submission.value.password,
       rememberMe: submission.value.rememberMe,
-      transactionToken,
+      transactionToken: onboardingSession.transactionToken,
       username: submission.value.username,
     },
   });

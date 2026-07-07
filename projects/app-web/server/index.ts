@@ -17,9 +17,9 @@ import { setSecureHeaders } from './middleware/set-secure-headers';
 if (env.isProduction && env.SENTRY_DSN) {
   // oxlint-disable-next-line unicorn/prefer-top-level-await -- sentry init is deliberately fire-and-forget so it never delays server startup
   void (async () => {
-    const { initSentry } = await import('./utils/init-sentry');
+    const initSentryModule = await import('./utils/init-sentry');
 
-    initSentry();
+    initSentryModule.initSentry();
   })();
 }
 

@@ -19,9 +19,9 @@ test('it returns the current selected node and object3D', () => {
 
   setSelectedNode(node, ref);
 
-  const { result } = renderHook(() => useSelectedNode());
+  const hook = renderHook(() => useSelectedNode());
 
-  expect(result.current).toStrictEqual({
+  expect(hook.result.current).toStrictEqual({
     node: {
       connections: [null, null, null, null],
       difficulty: 1,

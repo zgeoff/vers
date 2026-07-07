@@ -25,7 +25,6 @@ export async function updateEmail(
   db: Kysely<DB>,
   opts: UpdateEmailOpts,
 ): Promise<{ updatedID: string }> {
-  // oxlint-disable-next-line prefer-destructuring -- narrowed capture: TS narrowing does not cross the closure boundary
   const actingUserId = opts.context.actingUserId;
 
   if (actingUserId === null) {

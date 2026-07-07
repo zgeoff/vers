@@ -9,14 +9,14 @@ import { getTestJWTKeyPair } from './src/test-utils/get-test-jwt-key-pair';
 
 await setupBunTestDB();
 
-const { publicKeyPEM } = await getTestServiceKeyPair();
+const serviceKeyPair = await getTestServiceKeyPair();
 
-process.env['SERVICE_AUTH_PUBLIC_KEY'] = publicKeyPEM;
+process.env['SERVICE_AUTH_PUBLIC_KEY'] = serviceKeyPair.publicKeyPEM;
 
-const { privateKeyPEM } = await getTestJWTKeyPair();
+const jwtKeyPair = await getTestJWTKeyPair();
 
 process.env['API_IDENTIFIER'] = 'service-session-test';
-process.env['JWT_SIGNING_PRIVKEY'] = privateKeyPEM;
+process.env['JWT_SIGNING_PRIVKEY'] = jwtKeyPair.privateKeyPEM;
 
 // parsed by `envShape` but never read: each suite injects its transaction-bound db directly
 process.env['DATABASE_URL'] = `${resolveTestDBTarget().baseURI}/postgres`;

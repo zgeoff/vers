@@ -4,13 +4,13 @@ import { setSimulationInitialized } from './set-simulation-initialized';
 import { useSimulationInitialized } from './use-simulation-initialized';
 
 test('it updates the simulation initialized state', () => {
-  const { rerender, result } = renderHook(() => useSimulationInitialized());
+  const hook = renderHook(() => useSimulationInitialized());
 
-  expect(result.current).toBeFalse();
+  expect(hook.result.current).toBeFalse();
 
   setSimulationInitialized(true);
 
-  rerender();
+  hook.rerender();
 
-  expect(result.current).toBeTrue();
+  expect(hook.result.current).toBeTrue();
 });

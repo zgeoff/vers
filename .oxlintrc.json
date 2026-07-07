@@ -1,14 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": ["./node_modules/@zgeoff/oxlint-config/oxlintrc.json"],
   "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "react", "jsx-a11y"],
-  "jsPlugins": ["./oxlint-local-plugin.js", "@stylistic/eslint-plugin"],
-  "categories": {
-    "correctness": "error",
-    "suspicious": "error",
-    "perf": "error",
-    "pedantic": "error",
-    "style": "error"
-  },
   "env": {
     "browser": true,
     "node": true,
@@ -20,24 +13,9 @@
     }
   },
   "rules": {
-    // repo-specific AST rules from oxlint-local-plugin.js
-    "local/no-top-level-arrow": "error",
-    "local/no-nested-function-declaration": "error",
-    "local/no-bare-named-exports": "error",
-    "local/no-inline-param-object-types": "error",
-    "local/no-destructured-params": "error",
-    "local/no-ternary-args": "error",
-    "local/no-await-args": "error",
-
-    // enforced comment style — line comments unless JSDoc or exclamation
-    "@stylistic/multiline-comment-style": [
-      "error",
-      "separate-lines",
-      { "checkJSDoc": false, "checkExclamation": false }
-    ],
-
-    // own-line comments get a blank line above so they don't crowd the
-    // previous statement; comments opening a block/object/class/etc are exempt
+    // the shared config's version minus ignorePattern — baseline(#236)
+    // disable directives sit on their own line above the flagged site, and
+    // demanding a blank line above them separates them from it
     "@stylistic/lines-around-comment": [
       "error",
       {
@@ -55,26 +33,11 @@
       }
     ],
 
-    // restriction-category cherry-picks
-    "typescript/no-explicit-any": "error",
-    "typescript/no-non-null-assertion": "error",
-    "import/no-cycle": "error",
-
-    "no-shadow": "error",
-
-    // separate type-only imports from value imports
-    "typescript/consistent-type-imports": [
-      "error",
-      { "prefer": "type-imports", "fixStyle": "separate-type-imports" }
-    ],
     // matches the array-type option the former eslint config carried —
     // existing code already writes `Array<T>` throughout
     "typescript/array-type": ["error", { "default": "generic" }],
-    "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }],
-    // oxfmt's sortImports owns import declaration order; lint only member order
-    "sort-imports": ["error", { "ignoreDeclarationSort": true }],
 
-    // allows destructuring for omitting properties; a leading underscore
+    // beyond the shared config's rest-sibling allowance, a leading underscore
     // marks a deliberately unused binding (interface-mandated parameters,
     // placeholder args)
     "no-unused-vars": [
@@ -82,53 +45,7 @@
       { "argsIgnorePattern": "^_", "ignoreRestSiblings": true, "varsIgnorePattern": "^_" }
     ],
 
-    // destructuring reads well at declaration sites, but satisfying it on
-    // assignments forces the parenthesized `({ x } = y)` form — plain member
-    // assignment instead
-    "prefer-destructuring": [
-      "error",
-      {
-        "VariableDeclarator": { "array": true, "object": true },
-        "AssignmentExpression": { "array": false, "object": false }
-      }
-    ],
-
-    // consistent function syntax — declarations top level, arrows for inside
-    // blocks and callbacks
-    "func-style": ["error", "declaration", { "allowArrowFunctions": true }],
-    "no-inner-declarations": ["error", "functions"],
-    "prefer-arrow-callback": ["error", { "allowNamedFunctions": false, "allowUnboundThis": false }],
-
-    // stylistic
-    "curly": ["error", "all"],
-    "unicorn/prefer-ternary": ["error", "only-single-line"],
-    "unicorn/prefer-node-protocol": "error",
-    "unicorn/no-array-sort": "error",
-    "unicorn/no-nested-ternary": "off",
-    "unicorn/no-useless-undefined": ["error", { "checkArguments": false }],
-    "unicorn/no-null": "off",
-    "unicorn/number-literal-case": "off",
     "unicorn/numeric-separators-style": ["error", { "hexadecimal": { "minimumDigits": 10 } }],
-    "unicorn/filename-case": "off",
-
-    // category-enabled rules that contradict this repo's style: inline named
-    // export declarations are the convention (group-exports demands the exact
-    // form no-bare-named-exports bans), keys group by meaning not alphabet,
-    // comments stay lowercase, short identifiers and literal numbers are fine
-    "import/prefer-default-export": "off",
-    "import/no-named-export": "off",
-    "import/exports-last": "off",
-    "import/group-exports": "off",
-    "sort-keys": "off",
-    "capitalized-comments": "off",
-    "id-length": "off",
-    "no-magic-numbers": "off",
-    // prefer-ternary (only-single-line, above) wants ternaries where they fit
-    // on one line; no-ternary would ban the same code
-    "no-ternary": "off",
-    // this repo runs node/bun on the server and bundles for the browser —
-    // node builtins are fine on the server side
-    "import/no-nodejs-modules": "off",
 
     // preload-style modules (matcher registration, stylesheets) are
     // side-effect imports by design
@@ -144,13 +61,6 @@
         ]
       }
     ],
-
-    // disable import rules that duplicate work TypeScript's compiler already
-    // does
-    "import/namespace": "off",
-    "import/named": "off",
-    "import/default": "off",
-    "import/no-named-as-default-member": "off",
 
     // these type-aware rules need real type info (oxlint + tsgolint via
     // `--type-aware --type-check`) -- the non-type-aware engine skips them
@@ -362,25 +272,12 @@
       }
     },
     {
-      "files": ["**/*.js", "**/*.cjs", "**/*.mjs"],
-      // untyped JS is `any` end to end, so the unsafe-* rules flag every
-      // expression
-      "rules": {
-        "typescript/no-unsafe-argument": "off",
-        "typescript/no-unsafe-assignment": "off",
-        "typescript/no-unsafe-call": "off",
-        "typescript/no-unsafe-member-access": "off",
-        "typescript/no-unsafe-return": "off",
-        "typescript/no-unsafe-type-assertion": "off"
-      }
-    },
-    {
       // playwright resolves fixtures by statically parsing the destructure
       // pattern in a test callback's first parameter — a plain parameter
       // fails at collection, so the framework convention wins here
       "files": ["**/projects/app-web-e2e/src/**"],
       "rules": {
-        "local/no-destructured-params": "off"
+        "zgeoff/no-destructured-params": "off"
       }
     },
     {

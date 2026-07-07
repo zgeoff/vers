@@ -65,25 +65,23 @@ const checkboxFieldRecipe = sva({
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function CheckboxField(props: Props) {
-  const { checked, defaultChecked, disabled, form, id, name, onClick, required } =
-    props.checkboxProps;
-
   const [firstError] = props.errors;
+  const onClick = props.checkboxProps.onClick;
   const styles = checkboxFieldRecipe();
 
   return (
     <Field.Root className={styles.root} invalid={props.errors.length > 0}>
       <Checkbox.Root
-        checked={checked}
+        checked={props.checkboxProps.checked}
         className={styles.checkbox}
-        defaultChecked={defaultChecked}
-        disabled={disabled}
-        form={form}
+        defaultChecked={props.checkboxProps.defaultChecked}
+        disabled={props.checkboxProps.disabled}
+        form={props.checkboxProps.form}
         // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-        ids={id ? { hiddenInput: id } : undefined}
+        ids={props.checkboxProps.id ? { hiddenInput: props.checkboxProps.id } : undefined}
         invalid={props.errors.length > 0}
-        name={name}
-        required={required}
+        name={props.checkboxProps.name}
+        required={props.checkboxProps.required}
       >
         <Checkbox.Control className={styles.control}>
           <Checkbox.Indicator className={styles.indicator}>

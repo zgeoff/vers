@@ -14,20 +14,18 @@ enum Token {
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function logger(ctx: Context, next: Next): Promise<void> {
   const start = performance.now();
-  const { method } = ctx.req;
   const url = getURL(new URL(ctx.req.url));
 
-  appLogger.info(`${Token.Bold}[<---]${Token.Reset} ${method} ${url} processing...`);
+  appLogger.info(`${Token.Bold}[<---]${Token.Reset} ${ctx.req.method} ${url} processing...`);
 
   await next();
 
   const duration = performance.now() - start;
-  const { status } = ctx.res;
 
-  const methodStyled = `${Token.Bold}${method === 'GET' ? Token.Green : Token.Yellow}${method}${Token.Reset}`;
-  const statusColor = getStatusColor(status);
-  const statusStyled = `${statusColor}${status}${Token.Reset}`;
-  const statusLabel = getStatusLabel(status);
+  const methodStyled = `${Token.Bold}${ctx.req.method === 'GET' ? Token.Green : Token.Yellow}${ctx.req.method}${Token.Reset}`;
+  const statusColor = getStatusColor(ctx.res.status);
+  const statusStyled = `${statusColor}${ctx.res.status}${Token.Reset}`;
+  const statusLabel = getStatusLabel(ctx.res.status);
   const formattedDuration = formatDuration(duration);
 
   appLogger.info(

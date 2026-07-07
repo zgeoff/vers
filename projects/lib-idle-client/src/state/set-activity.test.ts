@@ -17,9 +17,9 @@ test('it updates the activity state', () => {
 
   setActivity(activity);
 
-  const { result } = renderHook(() => useActivityStore((state) => state.activity));
+  const hook = renderHook(() => useActivityStore((state) => state.activity));
 
-  expect(result.current).toStrictEqual({
+  expect(hook.result.current).toStrictEqual({
     currentEnemyGroup: null,
     elapsed: 0,
     enemiesRemaining: 20,

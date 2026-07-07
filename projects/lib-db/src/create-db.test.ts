@@ -4,7 +4,7 @@ import { createTestDB } from './test-support/create-test-db';
 test('it round-trips a row through camelCase-mapped columns', async () => {
   await using handle = await createTestDB();
 
-  const { db } = handle;
+  const db = handle.db;
 
   const inserted = await db
     .insertInto('users')

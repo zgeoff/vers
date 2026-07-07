@@ -134,9 +134,9 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
 
     const prevState = getAppState(state);
 
-    const { done, value: checkpoint } = await _generator.next(timestep);
+    const next = await _generator.next(timestep);
 
-    _done = done;
+    _done = next.done;
 
     // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (_done) {
@@ -153,7 +153,7 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
 
     _elapsed += timestep;
 
-    return checkpoint;
+    return next.value;
   };
 
   return {

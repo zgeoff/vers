@@ -124,15 +124,15 @@ test('it renders the verify OTP form with accessible elements', async () => {
 });
 
 test('it shows validation errors for invalid code', async () => {
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath: '/verify-otp?type=TWO_FACTOR_AUTH&target=test@example.com',
   });
 
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: /verify/i });
 
-  await user.type(codeInput, '12345'); // Too short
-  await user.click(submitButton);
+  await ctx.user.type(codeInput, '12345'); // Too short
+  await ctx.user.click(submitButton);
 
   const errorText = await screen.findByText(/invalid code/i);
 
@@ -140,7 +140,7 @@ test('it shows validation errors for invalid code', async () => {
 });
 
 test('it handles resetting password and redirects to the reset password route on success', async () => {
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath:
       '/verify-otp?type=RESET_PASSWORD&target=test@example.com&redirect=/reset-password?token=test_reset_token',
     sessionData: {
@@ -156,8 +156,8 @@ test('it handles resetting password and redirects to the reset password route on
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: /verify/i });
 
-  await user.type(codeInput, '999999');
-  await user.click(submitButton);
+  await ctx.user.type(codeInput, '999999');
+  await ctx.user.click(submitButton);
 
   const resetPasswordRoute = await screen.findByText('RESET_PASSWORD_ROUTE');
 
@@ -170,7 +170,7 @@ test('it handles resetting password and redirects to the reset password route on
 });
 
 test('it handles onboarding and redirects to the onboarding route on success', async () => {
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath: '/verify-otp?type=ONBOARDING&target=test@example.com',
     sessionData: {
       'onboarding#transactionID': 'test_transaction_id',
@@ -185,8 +185,8 @@ test('it handles onboarding and redirects to the onboarding route on success', a
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: /verify/i });
 
-  await user.type(codeInput, '999999');
-  await user.click(submitButton);
+  await ctx.user.type(codeInput, '999999');
+  await ctx.user.click(submitButton);
 
   const onboardingRoute = await screen.findByText('ONBOARDING_ROUTE');
 
@@ -200,7 +200,7 @@ test('it handles onboarding and redirects to the onboarding route on success', a
 });
 
 test('it handles 2FA setup and throws an error', async () => {
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath: '/verify-otp?type=TWO_FACTOR_AUTH_SETUP&target=test@example.com',
     sessionData: {
       'enable2FA#transactionID': 'test_transaction_id',
@@ -215,8 +215,8 @@ test('it handles 2FA setup and throws an error', async () => {
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: /verify/i });
 
-  await user.type(codeInput, '999999');
-  await user.click(submitButton);
+  await ctx.user.type(codeInput, '999999');
+  await ctx.user.click(submitButton);
 
   const errorBoundary = await screen.findByText(/ERROR_BOUNDARY/i);
 
@@ -224,7 +224,7 @@ test('it handles 2FA setup and throws an error', async () => {
 });
 
 test('it handles 2FA disabling and redirects to the account route on success', async () => {
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath: '/verify-otp?type=TWO_FACTOR_AUTH_DISABLE&target=test@example.com',
     isAuthed: true,
     sessionData: {
@@ -243,8 +243,8 @@ test('it handles 2FA disabling and redirects to the account route on success', a
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: /verify/i });
 
-  await user.type(codeInput, '999999');
-  await user.click(submitButton);
+  await ctx.user.type(codeInput, '999999');
+  await ctx.user.click(submitButton);
 
   const accountRoute = await screen.findByText('ACCOUNT_ROUTE');
 
@@ -287,7 +287,7 @@ test('it handles 2FA login and redirects to the nexus on success', async () => {
     userID: 'user_id',
   });
 
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath: '/verify-otp?type=TWO_FACTOR_AUTH&target=test@example.com',
     sessionData: {
       'login2FA#sessionID': 'test_unverified_session_id',
@@ -298,8 +298,8 @@ test('it handles 2FA login and redirects to the nexus on success', async () => {
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: /verify/i });
 
-  await user.type(codeInput, '999999');
-  await user.click(submitButton);
+  await ctx.user.type(codeInput, '999999');
+  await ctx.user.click(submitButton);
 
   const nexusRoute = await screen.findByText('NEXUS_ROUTE');
 
@@ -332,7 +332,7 @@ test('it handles 2FA login and redirects to the logout sessions route when a pre
     type: '2fa',
   });
 
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath: '/verify-otp?type=TWO_FACTOR_AUTH&target=test@example.com',
     sessionData: {
       'login2FA#sessionID': 'test_unverified_session_id',
@@ -343,8 +343,8 @@ test('it handles 2FA login and redirects to the logout sessions route when a pre
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: /verify/i });
 
-  await user.type(codeInput, '999999');
-  await user.click(submitButton);
+  await ctx.user.type(codeInput, '999999');
+  await ctx.user.click(submitButton);
 
   const forceLogoutRoute = await screen.findByText('FORCE_LOGOUT_ROUTE');
 
@@ -358,7 +358,7 @@ test('it handles 2FA login and redirects to the logout sessions route when a pre
 });
 
 test('it handles changing email and redirects to the change email route on success', async () => {
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath: '/verify-otp?type=CHANGE_EMAIL&target=test@example.com',
     sessionData: {
       'changeEmail#transactionID': 'test_transaction_id',
@@ -373,8 +373,8 @@ test('it handles changing email and redirects to the change email route on succe
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: /verify/i });
 
-  await user.type(codeInput, '999999');
-  await user.click(submitButton);
+  await ctx.user.type(codeInput, '999999');
+  await ctx.user.click(submitButton);
 
   const changeEmailRoute = await screen.findByText('CHANGE_EMAIL_ROUTE');
 
@@ -387,7 +387,7 @@ test('it handles changing email and redirects to the change email route on succe
 });
 
 test('it handles changed email verification and redirects to the account route on success', async () => {
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath: '/verify-otp?type=CHANGE_EMAIL_CONFIRMATION&target=test@example.com',
     isAuthed: true,
     sessionData: {
@@ -403,8 +403,8 @@ test('it handles changed email verification and redirects to the account route o
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: /verify/i });
 
-  await user.type(codeInput, '999999');
-  await user.click(submitButton);
+  await ctx.user.type(codeInput, '999999');
+  await ctx.user.click(submitButton);
 
   const accountRoute = await screen.findByText('ACCOUNT_ROUTE');
 
@@ -416,7 +416,7 @@ test('it handles changed email verification and redirects to the account route o
 });
 
 test('it handles change password verification and redirects to the change password route on success', async () => {
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath: '/verify-otp?type=CHANGE_PASSWORD&target=test@example.com',
     isAuthed: true,
     sessionData: {
@@ -432,8 +432,8 @@ test('it handles change password verification and redirects to the change passwo
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: /verify/i });
 
-  await user.type(codeInput, '999999');
-  await user.click(submitButton);
+  await ctx.user.type(codeInput, '999999');
+  await ctx.user.click(submitButton);
 
   const changeUserPasswordRoute = await screen.findByText('CHANGE_PASSWORD_ROUTE');
 
@@ -446,7 +446,7 @@ test('it handles change password verification and redirects to the change passwo
 });
 
 test('it shows error for invalid verification code', async () => {
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath: '/verify-otp?type=TWO_FACTOR_AUTH&target=test@example.com',
     sessionData: {
       'login2FA#transactionID': 'test_transaction_id',
@@ -461,8 +461,8 @@ test('it shows error for invalid verification code', async () => {
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: /verify/i });
 
-  await user.type(codeInput, '654321'); // Wrong code
-  await user.click(submitButton);
+  await ctx.user.type(codeInput, '654321'); // Wrong code
+  await ctx.user.click(submitButton);
 
   const errorText = await screen.findByText(/invalid verification code/i);
 
@@ -476,7 +476,7 @@ test('it shows a generic error if the mutation fails', async () => {
     }),
   );
 
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath: '/verify-otp?type=TWO_FACTOR_AUTH&target=test@example.com',
     sessionData: {
       'login2FA#transactionID': 'test_transaction_id',
@@ -486,8 +486,8 @@ test('it shows a generic error if the mutation fails', async () => {
   const codeInput = await screen.findByTestId('otp-input');
   const submitButton = screen.getByRole('button', { name: /verify/i });
 
-  await user.type(codeInput, '999999');
-  await user.click(submitButton);
+  await ctx.user.type(codeInput, '999999');
+  await ctx.user.click(submitButton);
 
   const error = await screen.findByText('Something went wrong');
 

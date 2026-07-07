@@ -167,7 +167,7 @@ function buildProcedureHandler(
 
     const rpcHandler = new RPCHandler(router);
 
-    const { matched, response } = await rpcHandler.handle(info.request, {
+    const handled = await rpcHandler.handle(info.request, {
       context,
       prefix: RPC_PREFIX,
     });
@@ -176,7 +176,7 @@ function buildProcedureHandler(
       return rawResponse;
     }
 
-    return matched ? response : new Response(null, { status: 404 });
+    return handled.matched ? handled.response : new Response(null, { status: 404 });
   });
 }
 

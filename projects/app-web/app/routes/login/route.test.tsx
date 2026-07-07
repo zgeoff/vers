@@ -118,13 +118,13 @@ test('it renders the login form', async () => {
 });
 
 test('it shows validation errors for an invalid email', async () => {
-  const { user } = setupTest({ isAuthed: false });
+  const ctx = setupTest({ isAuthed: false });
 
   const emailInput = await screen.findByLabelText('Email');
   const submitButton = screen.getByRole('button', { name: 'Login' });
 
-  await user.type(emailInput, 'invalid-email');
-  await user.click(submitButton);
+  await ctx.user.type(emailInput, 'invalid-email');
+  await ctx.user.click(submitButton);
 
   const error = await screen.findByText('Email is invalid');
 
@@ -132,13 +132,13 @@ test('it shows validation errors for an invalid email', async () => {
 });
 
 test('it shows validation errors for a short password', async () => {
-  const { user } = setupTest({ isAuthed: false });
+  const ctx = setupTest({ isAuthed: false });
 
   const passwordInput = await screen.findByLabelText('Password');
   const submitButton = screen.getByRole('button', { name: 'Login' });
 
-  await user.type(passwordInput, 'short');
-  await user.click(submitButton);
+  await ctx.user.type(passwordInput, 'short');
+  await ctx.user.click(submitButton);
 
   const error = await screen.findByText('Password must be 8+ characters');
 
@@ -146,11 +146,11 @@ test('it shows validation errors for a short password', async () => {
 });
 
 test('it navigates to signup page when clicking the signup link', async () => {
-  const { user } = setupTest({ isAuthed: false });
+  const ctx = setupTest({ isAuthed: false });
 
   const signupLink = await screen.findByRole('link', { name: 'Signup' });
 
-  await user.click(signupLink);
+  await ctx.user.click(signupLink);
 
   const signupRoute = await screen.findByText('SIGNUP_ROUTE');
 
@@ -163,15 +163,15 @@ test('it redirects to the nexus on successful login', async () => {
     password: 'password123',
   });
 
-  const { user } = setupTest({ isAuthed: false });
+  const ctx = setupTest({ isAuthed: false });
 
   const emailInput = await screen.findByLabelText('Email');
   const passwordInput = screen.getByLabelText('Password');
   const submitButton = screen.getByRole('button', { name: 'Login' });
 
-  await user.type(emailInput, 'test@example.com');
-  await user.type(passwordInput, 'password123');
-  await user.click(submitButton);
+  await ctx.user.type(emailInput, 'test@example.com');
+  await ctx.user.type(passwordInput, 'password123');
+  await ctx.user.click(submitButton);
 
   const nexusRoute = await screen.findByText('NEXUS_ROUTE');
 
@@ -189,15 +189,15 @@ test('it redirects to verify-otp when 2FA is required', async () => {
     type: '2fa',
   });
 
-  const { user } = setupTest({ isAuthed: false });
+  const ctx = setupTest({ isAuthed: false });
 
   const emailInput = await screen.findByLabelText('Email');
   const passwordInput = screen.getByLabelText('Password');
   const submitButton = screen.getByRole('button', { name: 'Login' });
 
-  await user.type(emailInput, 'test@example.com');
-  await user.type(passwordInput, 'password123');
-  await user.click(submitButton);
+  await ctx.user.type(emailInput, 'test@example.com');
+  await ctx.user.type(passwordInput, 'password123');
+  await ctx.user.click(submitButton);
 
   const verifyOtpRoute = await screen.findByText('VERIFY_OTP_ROUTE');
 
@@ -220,15 +220,15 @@ test('it redirects to the force logout sessions route when a previous session ex
     userID: 'user_id',
   });
 
-  const { user } = setupTest({ isAuthed: false });
+  const ctx = setupTest({ isAuthed: false });
 
   const emailInput = await screen.findByLabelText('Email');
   const passwordInput = screen.getByLabelText('Password');
   const submitButton = screen.getByRole('button', { name: 'Login' });
 
-  await user.type(emailInput, 'test@example.com');
-  await user.type(passwordInput, 'password123');
-  await user.click(submitButton);
+  await ctx.user.type(emailInput, 'test@example.com');
+  await ctx.user.type(passwordInput, 'password123');
+  await ctx.user.click(submitButton);
 
   const forceLogoutRoute = await screen.findByText('FORCE_LOGOUT_ROUTE');
 
@@ -246,7 +246,7 @@ test('it redirects to the specified route when provided', async () => {
     password: 'password123',
   });
 
-  const { user } = setupTest({
+  const ctx = setupTest({
     initialPath: '/?redirect=/custom-redirect-route',
     isAuthed: false,
   });
@@ -255,9 +255,9 @@ test('it redirects to the specified route when provided', async () => {
   const passwordInput = screen.getByLabelText('Password');
   const submitButton = screen.getByRole('button', { name: 'Login' });
 
-  await user.type(emailInput, 'test@example.com');
-  await user.type(passwordInput, 'password123');
-  await user.click(submitButton);
+  await ctx.user.type(emailInput, 'test@example.com');
+  await ctx.user.type(passwordInput, 'password123');
+  await ctx.user.click(submitButton);
 
   const redirectRoute = await screen.findByText('CUSTOM_REDIRECT_ROUTE');
 
@@ -265,15 +265,15 @@ test('it redirects to the specified route when provided', async () => {
 });
 
 test('it shows error message for invalid credentials', async () => {
-  const { user } = setupTest({ isAuthed: false });
+  const ctx = setupTest({ isAuthed: false });
 
   const emailInput = await screen.findByLabelText('Email');
   const passwordInput = screen.getByLabelText('Password');
   const submitButton = screen.getByRole('button', { name: 'Login' });
 
-  await user.type(emailInput, 'nonexistent@example.com');
-  await user.type(passwordInput, 'password123');
-  await user.click(submitButton);
+  await ctx.user.type(emailInput, 'nonexistent@example.com');
+  await ctx.user.type(passwordInput, 'password123');
+  await ctx.user.click(submitButton);
 
   const error = await screen.findByText('Wrong email or password');
 
@@ -287,15 +287,15 @@ test('it shows a generic error if the mutation fails', async () => {
     }),
   );
 
-  const { user } = setupTest({ isAuthed: false });
+  const ctx = setupTest({ isAuthed: false });
 
   const emailInput = await screen.findByLabelText('Email');
   const passwordInput = screen.getByLabelText('Password');
   const submitButton = screen.getByRole('button', { name: 'Login' });
 
-  await user.type(emailInput, 'test@example.com');
-  await user.type(passwordInput, 'password123');
-  await user.click(submitButton);
+  await ctx.user.type(emailInput, 'test@example.com');
+  await ctx.user.type(passwordInput, 'password123');
+  await ctx.user.click(submitButton);
 
   const error = await screen.findByText('Something went wrong');
 

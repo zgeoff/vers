@@ -8,15 +8,15 @@ test('it generates a verification email with the provided configuration', async 
     verificationURL: 'https://example.com/verify?code=123456',
   };
 
-  const { html, plainText } = await generateChangeEmailVerificationEmail(config);
+  const email = await generateChangeEmailVerificationEmail(config);
 
-  expect(html).toContain('Verify your new email address');
-  expect(html).toContain(config.newEmail);
-  expect(html).toContain(config.verificationCode);
-  expect(html).toContain(config.verificationURL);
+  expect(email.html).toContain('Verify your new email address');
+  expect(email.html).toContain(config.newEmail);
+  expect(email.html).toContain(config.verificationCode);
+  expect(email.html).toContain(config.verificationURL);
 
-  expect(plainText).toContain('VERIFY YOUR NEW EMAIL ADDRESS');
-  expect(plainText).toContain(config.newEmail);
-  expect(plainText).toContain(config.verificationCode);
-  expect(plainText).toContain(config.verificationURL);
+  expect(email.plainText).toContain('VERIFY YOUR NEW EMAIL ADDRESS');
+  expect(email.plainText).toContain(config.newEmail);
+  expect(email.plainText).toContain(config.verificationCode);
+  expect(email.plainText).toContain(config.verificationURL);
 });

@@ -3,9 +3,9 @@ import { expect, test } from 'vitest';
 import { FormErrorList } from './form-error-list';
 
 test('it renders nothing when there are no errors', () => {
-  const { container } = render(<FormErrorList errors={[]} id="test-errors" />);
+  const rendered = render(<FormErrorList errors={[]} id="test-errors" />);
 
-  expect(container).toBeEmptyDOMElement();
+  expect(rendered.container).toBeEmptyDOMElement();
 });
 
 test('it displays error messages', () => {

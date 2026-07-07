@@ -21,12 +21,12 @@ test('it clones a fresh database on every acquisition', async () => {
 
 test('it round-trips a real, committed write through the handle', async () => {
   await using testDB = await createDatabaseTestDB();
-  const { user } = await createTestUser(testDB.db, { email: 'committed@test.com' });
+  const created = await createTestUser(testDB.db, { email: 'committed@test.com' });
 
   const row = await testDB.db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', user.id)
+    .where('id', '=', created.user.id)
     .executeTakeFirstOrThrow();
 
   expect(row.email).toBe('committed@test.com');

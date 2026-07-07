@@ -155,7 +155,7 @@ export function Account(props: Route.ComponentProps) {
 
   const submitButtonStatus = isFormPending ? StatusButton.Status.Pending : StatusButton.Status.Idle;
 
-  const { user } = props.loaderData;
+  const user = props.loaderData.user;
 
   return (
     <ContentContainer>

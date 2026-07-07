@@ -17,9 +17,9 @@ test('it provides activity state', () => {
 
   setActivity(activity);
 
-  const { result } = renderHook(() => useActivity());
+  const hook = renderHook(() => useActivity());
 
-  expect(result.current).toStrictEqual({
+  expect(hook.result.current).toStrictEqual({
     currentEnemyGroup: null,
     elapsed: 0,
     enemiesRemaining: 20,

@@ -3,4 +3,5 @@ import { tooltip } from './tooltip.styles';
 
 const styleContext = createStyleContext(tooltip);
 
-export const { withContext, withProvider } = styleContext;
+export const withContext = styleContext.withContext;
+export const withProvider = styleContext.withProvider;

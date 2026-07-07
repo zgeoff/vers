@@ -3,30 +3,21 @@ import { Button } from '../button/button';
 import { StatusButton } from './status-button';
 
 export function Default() {
-  const {
-    handleSubmit: handleSubmitSuccess,
-    resetStatus: resetStatusSuccess,
-    status: statusSuccess,
-  } = useEmulateSubmit({ success: true });
-
-  const {
-    handleSubmit: handleSubmitError,
-    resetStatus: resetStatusError,
-    status: statusError,
-  } = useEmulateSubmit({ success: false });
+  const success = useEmulateSubmit({ success: true });
+  const error = useEmulateSubmit({ success: false });
 
   return (
     <>
-      <StatusButton status={statusSuccess} variant="primary" onClick={handleSubmitSuccess}>
+      <StatusButton status={success.status} variant="primary" onClick={success.handleSubmit}>
         Success
       </StatusButton>
-      <StatusButton status={statusError} variant="primary" onClick={handleSubmitError}>
+      <StatusButton status={error.status} variant="primary" onClick={error.handleSubmit}>
         Error
       </StatusButton>
       <Button
         onClick={() => {
-          resetStatusSuccess();
-          resetStatusError();
+          success.resetStatus();
+          error.resetStatus();
         }}
       >
         Reset State

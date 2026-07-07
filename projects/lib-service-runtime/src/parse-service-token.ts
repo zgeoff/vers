@@ -31,14 +31,14 @@ export async function parseServiceToken(
   const token = authorization.slice('Bearer '.length);
 
   try {
-    const { payload } = await jose.jwtVerify(token, options.publicKey, {
+    const verification = await jose.jwtVerify(token, options.publicKey, {
       algorithms: [TOKEN_ALGORITHM],
       audience: options.audience,
       issuer: TOKEN_ISSUER,
     });
 
     return {
-      actingUserId: typeof payload.sub === 'string' ? payload.sub : null,
+      actingUserId: typeof verification.payload.sub === 'string' ? verification.payload.sub : null,
     };
   } catch {
     return { failure: 'invalid-service-token' };

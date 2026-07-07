@@ -101,13 +101,13 @@ afterEach(() => {
 });
 
 test('it authorizes a valid token and extracts the payload and user ID', async () => {
-  const { app, token } = await setupTest({ isAuthRequired: true });
+  const ctx = await setupTest({ isAuthRequired: true });
 
   const req = new Request('http://localhost/test');
 
-  req.headers.set('Authorization', `Bearer ${token}`);
+  req.headers.set('Authorization', `Bearer ${ctx.token}`);
 
-  const res = await app.request(req);
+  const res = await ctx.app.request(req);
 
   expect(testHandlerSpy).toHaveBeenCalledOnce();
 
@@ -120,11 +120,11 @@ test('it authorizes a valid token and extracts the payload and user ID', async (
 });
 
 test('it returns a 401 if no token is provided', async () => {
-  const { app } = await setupTest({ isAuthRequired: true });
+  const ctx = await setupTest({ isAuthRequired: true });
 
   const req = new Request('http://localhost/test');
 
-  const res = await app.request(req);
+  const res = await ctx.app.request(req);
 
   expect(testHandlerSpy).not.toHaveBeenCalled();
 
@@ -134,13 +134,13 @@ test('it returns a 401 if no token is provided', async () => {
 });
 
 test('it rejects an invalid authorization header', async () => {
-  const { app } = await setupTest({ isAuthRequired: true });
+  const ctx = await setupTest({ isAuthRequired: true });
 
   const req = new Request('http://localhost/test');
 
   req.headers.set('Authorization', `Bearer`);
 
-  const res = await app.request(req);
+  const res = await ctx.app.request(req);
 
   expect(testHandlerSpy).not.toHaveBeenCalled();
 
@@ -154,13 +154,13 @@ test('it rejects an invalid authorization header', async () => {
 });
 
 test('it rejects an invalid token', async () => {
-  const { app } = await setupTest({ isAuthRequired: true });
+  const ctx = await setupTest({ isAuthRequired: true });
 
   const req = new Request('http://localhost/test');
 
   req.headers.set('Authorization', `Bearer abcd1234`);
 
-  const res = await app.request(req);
+  const res = await ctx.app.request(req);
 
   expect(testHandlerSpy).not.toHaveBeenCalled();
 
@@ -174,24 +174,24 @@ test('it rejects an invalid token', async () => {
 });
 
 test('it allows requests without auth header when auth is optional', async () => {
-  const { app } = await setupTest({ isAuthRequired: false });
+  const ctx = await setupTest({ isAuthRequired: false });
 
   const req = new Request('http://localhost/test');
 
-  const res = await app.request(req);
+  const res = await ctx.app.request(req);
 
   expect(testHandlerSpy).toHaveBeenCalledOnce();
   expect(res.status).toBe(200);
 });
 
 test('it validates token when provided even if auth is optional', async () => {
-  const { app } = await setupTest({ isAuthRequired: false });
+  const ctx = await setupTest({ isAuthRequired: false });
 
   const req = new Request('http://localhost/test');
 
   req.headers.set('Authorization', 'Bearer invalid_token');
 
-  const res = await app.request(req);
+  const res = await ctx.app.request(req);
 
   expect(testHandlerSpy).not.toHaveBeenCalled();
 
@@ -205,13 +205,13 @@ test('it validates token when provided even if auth is optional', async () => {
 });
 
 test('it processes valid token when auth is optional', async () => {
-  const { app, token } = await setupTest({ isAuthRequired: false });
+  const ctx = await setupTest({ isAuthRequired: false });
 
   const req = new Request('http://localhost/test');
 
-  req.headers.set('Authorization', `Bearer ${token}`);
+  req.headers.set('Authorization', `Bearer ${ctx.token}`);
 
-  const res = await app.request(req);
+  const res = await ctx.app.request(req);
 
   expect(testHandlerSpy).toHaveBeenCalledOnce();
   expect(res.status).toBe(200);
@@ -223,11 +223,11 @@ test('it processes valid token when auth is optional', async () => {
 });
 
 test('it defaults to optional auth when isAuthRequired is not provided', async () => {
-  const { app } = await setupTest();
+  const ctx = await setupTest();
 
   const req = new Request('http://localhost/test');
 
-  const res = await app.request(req);
+  const res = await ctx.app.request(req);
 
   expect(testHandlerSpy).toHaveBeenCalledOnce();
   expect(res.status).toBe(200);

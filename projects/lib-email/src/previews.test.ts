@@ -20,9 +20,9 @@ test('it has a preview entry for every template generator', () => {
 
 test('it renders html and plain text for every preview entry', async () => {
   for (const preview of previews) {
-    const { html, plainText } = await preview.render();
+    const rendered = await preview.render();
 
-    expect(html).include('<html');
-    expect(plainText).not.toBe('');
+    expect(rendered.html).include('<html');
+    expect(rendered.plainText).not.toBe('');
   }
 });

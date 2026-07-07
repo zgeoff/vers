@@ -11,7 +11,7 @@ interface SelectedNodeInfoProps {
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function SelectedNodeInfo(props: SelectedNodeInfoProps) {
-  const { node } = useSelectedNode();
+  const node = useSelectedNode().node;
 
   if (!node) {
     return null;

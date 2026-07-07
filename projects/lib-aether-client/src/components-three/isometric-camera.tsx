@@ -29,7 +29,7 @@ export function IsometricCamera() {
   const cameraRigRef = useRef<Group | null>(null);
   const camera = useCamera();
   const isDevCameraActive = useIsDevCameraActive();
-  const { object3D } = useSelectedNode();
+  const selectedNode = useSelectedNode();
 
   const spring = useSpring({
     config: {
@@ -37,7 +37,7 @@ export function IsometricCamera() {
       clamp: true,
       precision: 0.001,
     },
-    position: getNodeCameraPosition(object3D),
+    position: getNodeCameraPosition(selectedNode.object3D),
   });
 
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)

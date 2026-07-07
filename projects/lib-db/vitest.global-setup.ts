@@ -27,10 +27,12 @@ export async function setup(project: TestProject) {
 
   const connectionURI = container.getConnectionUri();
 
-  const { error } = await migrateToLatest({ databaseURL: connectionURI });
+  const migrationResult = await migrateToLatest({ databaseURL: connectionURI });
 
-  if (error !== undefined) {
-    throw error instanceof Error ? error : new Error('kysely migration failed', { cause: error });
+  if (migrationResult.error !== undefined) {
+    throw migrationResult.error instanceof Error
+      ? migrationResult.error
+      : new Error('kysely migration failed', { cause: migrationResult.error });
   }
 
   const dbURI = `postgres://${container.getUsername()}:${container.getPassword()}@${container.getHost()}:${container.getFirstMappedPort()}`;

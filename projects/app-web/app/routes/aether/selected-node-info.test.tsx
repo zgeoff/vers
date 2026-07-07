@@ -60,11 +60,11 @@ test('it redirects to the aether node route when the start button is clicked', a
 
   setSelectedNode(node, null);
 
-  const { user } = setupTest();
+  const ctx = setupTest();
 
   const startButton = screen.getByRole('link', { name: 'Click to start' });
 
-  await user.click(startButton);
+  await ctx.user.click(startButton);
 
   expect(screen.getByText('AETHER_NODE_ROUTE')).toBeInTheDocument();
 });
