@@ -19,18 +19,21 @@ export function buildAuthenticatedFetch(): (
   init: ServiceFetchInit,
 ) => Promise<Response> {
   return async (request, init) => {
+    // the retry needs its own untouched body: cloning after `fetch` consumes `request` throws,
+    // since a `Request` with a body can only be read once
+    const retryable = request.clone();
     const response = await fetch(request, init);
 
     if (response.status !== 401) {
       return response;
     }
 
-    return tryRefreshAndRetry(request, init, response).catch(() => response);
+    return tryRefreshAndRetry(retryable, init, response).catch(() => response);
   };
 }
 
 async function tryRefreshAndRetry(
-  request: Request,
+  retryable: Request,
   init: ServiceFetchInit,
   originalResponse: Response,
 ): Promise<Response> {
@@ -59,9 +62,9 @@ async function tryRefreshAndRetry(
 
   await updateAuthSession({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
 
-  const retryHeaders = new Headers(request.headers);
+  const retryHeaders = new Headers(retryable.headers);
 
   retryHeaders.set('authorization', `Bearer ${tokens.accessToken}`);
 
-  return fetch(new Request(request, { headers: retryHeaders }), init);
+  return fetch(new Request(retryable, { headers: retryHeaders }), init);
 }
