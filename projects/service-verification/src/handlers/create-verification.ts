@@ -42,9 +42,9 @@ export async function createVerification(
   opts: CreateVerificationOpts,
 ): Promise<VerificationData & { otp: string }> {
   const expiresAt = opts.input.expiresAt ?? null;
-  const { period } = opts.input;
-  const { target } = opts.input;
-  const { type } = opts.input;
+  const period = opts.input.period;
+  const target = opts.input.target;
+  const type = opts.input.type;
 
   const { otp, ...totpConfig } = await generateTOTP({
     algorithm: 'SHA-256',

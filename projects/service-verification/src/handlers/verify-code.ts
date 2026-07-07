@@ -31,9 +31,9 @@ interface VerifyCodeOpts {
  * any pre-`(target, type)`-constraint duplicate rows.
  */
 export async function verifyCode(db: Kysely<DB>, opts: VerifyCodeOpts): Promise<VerificationData> {
-  const { code } = opts.input;
-  const { target } = opts.input;
-  const { type } = opts.input;
+  const code = opts.input.code;
+  const target = opts.input.target;
+  const type = opts.input.type;
 
   const row = await db
     .selectFrom('verifications')
