@@ -13,7 +13,7 @@ sentence can't be simplified without losing it.
 
 ## Monorepo layout
 
-29 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
+34 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
 `package.json` named `@vers/<name>`: internal deps use the `workspace:*` protocol, and versions
 shared by 5+ projects live in the root manifest's `workspaces.catalog` (referenced as `catalog:`).
 Libraries are consumed as TypeScript source (`exports` → `./src/index.ts`); there are no per-library
@@ -48,54 +48,37 @@ name minus the taxonomy prefix: `lib-` and `app-` strip (`lib-validation` → `@
 
 ## Styling
 
-Panda CSS is 2.0.0-beta.8 across all four consumers (lib-panda-preset, lib-styled-system,
-lib-design-system, app-web) — no stable release exists yet, so the packages are pinned through
-`bunfig.toml`'s `minimumReleaseAgeExcludes` with a removal issue tracking the jump to stable.
-lib-panda-preset composes `presets: [presetBase, presetPanda]` from `@pandacss/preset-base` and
-`@pandacss/preset-panda` (2.0 dropped the bundled `@pandacss/dev/presets` default). CSS values that
-aren't theme tokens need the bracket escape hatch (`cursor: '[pointer]'`, `borderWidth: '[1px]'`) —
-2.0 tightened `SystemStyleObject`'s value types to stop silently accepting arbitrary
-strings/numbers.
+Panda CSS 2.0 spans all four consumers (lib-panda-preset, lib-styled-system, lib-design-system,
+app-web). lib-panda-preset composes `presets: [presetBase, presetPanda]` from
+`@pandacss/preset-base` and `@pandacss/preset-panda` (2.0 dropped the bundled
+`@pandacss/dev/presets` default). CSS values that aren't theme tokens need the bracket escape hatch
+(`cursor: '[pointer]'`, `borderWidth: '[1px]'`) — 2.0 tightened `SystemStyleObject`'s value types to
+stop silently accepting arbitrary strings/numbers.
 
-### Screens are functional-first until the final design language lands
-
-The current visual direction is round 1; a second Claude Design pass (#245) supersedes it once game
-design matures, and the design system gets rebuilt to that final language (#246). Until #246 closes,
-screens and routes are built workable-only: compose existing `lib-design-system` components and
-semantic tokens (`bg.*`, `text.*`, `border.*`, `accent.*`) — no bespoke visual styling beyond
-layout, no new one-off colors/fonts/animations, no polish passes. The semantic-token layer is the
-stable contract; the re-skin lands in #246 under unchanged token names, so screens that stick to it
-adapt for free. A screen needing a component that doesn't exist yet builds the minimal version in
-its own PR and promotes it into `lib-design-system` when a second consumer appears.
-
-## Running things today
+## Running things
 
 - `bun install` — whole workspace (`--frozen-lockfile` in CI; `bun.lock` is committed).
 - `bun run typecheck` — `turbo run typecheck` (per-project `tsc --noEmit`); one project via
   `--filter=@vers/<name>`.
-- `bun run test` — `turbo run test` (per-project `vitest run` or `bun test`, per package); one
-  project via `--filter`. Postgres-backed suites need `bun run pg:test-container:start` first.
-  bun-test packages each carry their own `bunfig.toml` (bunfig is read from cwd, not merged up) —
-  root-invoked `bun test <file>` still resolves jest-extended matchers from the root preload.
+- `bun run test` — `turbo run test` (per-project `bun test`); one project via `--filter`.
+  Postgres-backed suites need `bun run pg:test-container:start` first. Each package carries its own
+  `bunfig.toml` (bunfig is read from cwd, not merged up) — root-invoked `bun test <file>` still
+  resolves jest-extended matchers from the root preload.
 - `bun run lint` / `bun run lint:fix` — `turbo run codegen typegen`, then
   `oxlint --type-aware --type-check --report-unused-disable-directives-severity error` over the
   whole tree (`.oxlintrc.json` at the root; oxlint-tsgolint underneath, needs the TS7 toolchain —
   ~5s wall with warm caches). The codegen leg is required: without generated output (panda's
   `styled-system`, react-router's `+types`) those imports degrade to `any` and the unsafe-\* rules
   report hundreds of false violations. Every type-aware rule is on; `only-throw-error`'s app-web
-  override is the one permanent, documented exception. The pre-#236 backlog (~1,047 sites) is
-  baselined inline with `// oxlint-disable-next-line <rule> -- baseline(#236)` comments rather than
-  left off in config — the unused-directive check is the ratchet: fixing a baselined site makes its
-  comment stale and lint fails until the comment is deleted. `lib-idle-core`/`lib-aether-core`
-  tick/lifecycle handlers that mutate their entity parameter by design carry a real reason instead
-  of the baseline marker; those are permanent. `typescript/prefer-readonly-parameter-types` is the
-  one rule new code must never `baseline(#236)`: its own data/config/props/option types are made
-  `readonly` (or the param `Readonly<…>`-wrapped; React props `Readonly<Props>`), and
-  framework/library handles that have no readonly form (a `Kysely`/`Elysia`/`RPCHandler`/`Request`
-  handle, a `Date`, …) are exempted per-type via the rule's `allow` list in `.oxlintrc.json` — never
-  an inline marker. Only a genuinely un-`readonly`-able own type (a generic callback-arg object, a
-  `ZodType`-bearing shape, a React-element wrapper) carries a single honest inline directive stating
-  why; `allow` covers the rest.
+  override is the one permanent, documented exception, and `lib-idle-core`/`lib-aether-core`
+  tick/lifecycle handlers that mutate their entity parameter by design carry a real inline reason —
+  also permanent. For `typescript/prefer-readonly-parameter-types`, a function's own
+  data/config/props/option types are made `readonly` (or the param `Readonly<…>`-wrapped; React
+  props `Readonly<Props>`), and framework/library handles that have no readonly form (a
+  `Kysely`/`Elysia`/`RPCHandler`/`Request` handle, a `Date`, …) are exempted per-type via the rule's
+  `allow` list in `.oxlintrc.json` — never an inline marker. Only a genuinely un-`readonly`-able own
+  type (a generic callback-arg object, a `ZodType`-bearing shape, a React-element wrapper) carries a
+  single honest inline directive stating why; `allow` covers the rest.
 - `bun run format` — `oxfmt .` (`.oxfmtrc.json` at the root), then `format-codemod` (blank-line
   padding) over the whole tree. The codemod has no ignore file, so its `--ignore` flags are what
   keep it off committed codegen output (`app/gql`, panda's `styled-system` dirs, react-router's
@@ -112,8 +95,9 @@ its own PR and promotes it into `lib-design-system` when a second consumer appea
 
 ## Docker
 
-Each deployable (`app-web`, the 4 services) has a multi-stage Dockerfile around
-`turbo prune <pkg> --docker`:
+Each server deployable (`app-web`; `service-avatar`, `service-session`, `service-user`,
+`service-verification`) has a multi-stage Dockerfile around `turbo prune <pkg> --docker`
+(`app-design-reference` ships as a plain static-nginx image outside this pattern):
 
 1. **pruner** — a standalone `turbo` binary prunes to the target's dependency graph: `out/json`
    (manifests only, for layer caching), `out/full` (source), a pruned `out/bun.lock`.
@@ -126,29 +110,7 @@ Each deployable (`app-web`, the 4 services) has a multi-stage Dockerfile around
 5. **runtime** — `node:24.18.0-alpine` with the prod-deps `node_modules` and built output only.
 
 app-web's builder runs its `codegen`/`typegen`/`build` scripts directly instead of
-`turbo run build`. `app/gql/**` and root `schema.graphql` are frozen, committed artifacts — the
-GraphQL gateway that used to generate them is deleted, and both die with #165's web-shell rebuild.
-
-## Tooling migration in progress
-
-See #160 for the full phase plan (turborepo + bun, spike-gated; shared configs and AGENTS.md from
-`zgeoff/tools`). This repo is mid-migration — several claims in `agents/shared.md` above describe
-the _target_ state, not this repo yet:
-
-- **`bun test` is the target runner for the entire repo, vitest included.** The vision is one runner
-  everywhere — services, shared libs, and the rebuilt web all test under `bun test` via
-  `@zgeoff/bun-test-extended` (jest-extended matchers), with DOM-bearing packages bootstrapping
-  happy-dom through `@happy-dom/global-registrator` in a package-local `bunfig.toml` preload (bunfig
-  is read from cwd, not merged up). Vitest is **transitional, not a permanent parallel** — it
-  survives only in not-yet-rebuilt packages (app-web, the game/idle/aether libs, service-avatar,
-  lib-email/lib-email-templates) until each is swept. New-stack packages are born on `bun test`;
-  never add vitest to anything new (the #165 rebuild starts the pattern — contracts + client-test-
-  utils in #264). While both runners coexist, `vitest.workspace.ts` globs each vitest package's
-  `vitest.config.ts` explicitly, so deleting that file drops the package from the vitest run. The
-  remaining vitest→bun-test sweep is tracked in #266.
-
-Don't re-add vitest to converted or new packages to "match" a pre-rebuild neighbour — the direction
-is one runner; follow #266 and the #160 phase plan.
+`turbo run build`.
 
 ## Testing (bun test, 0-isolation)
 
@@ -179,11 +141,10 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
   (`new Collection({ schema: z.object({ … }) })`, `.create()`/`.createMany()`,
   `.findFirst((q) => q.where(…))`/`.findMany()`, `.defineRelations()`) and read/write it directly
   from the oRPC mock handlers. Models are zod schemas, not the legacy `factory()` model dictionary.
-- **React (phases 1–3):** React Testing Library on happy-dom (bootstrapped via
-  `@happy-dom/global-registrator` in the preload); prefer a project `render` util over bare RTL and
-  the utils it returns over the imported `screen`; load data through the centralized MSW handlers +
-  `@msw/data` in-memory store rather than stubbing hooks or poking Zustand; `waitFor` the fetch
-  before asserting.
+- **React:** React Testing Library on happy-dom (bootstrapped via `@happy-dom/global-registrator` in
+  the preload); prefer a project `render` util over bare RTL and the utils it returns over the
+  imported `screen`; load data through the centralized MSW handlers + `@msw/data` in-memory store
+  rather than stubbing hooks or poking Zustand; `waitFor` the fetch before asserting.
 
 ### Real-database services (service/app/DB packages)
 
@@ -238,3 +199,36 @@ standard instead of the inline-data rule above — `service-avatar` is the refer
   `registerBunTestCleanup()`.
 - **Auth.** s2s tests use the real verification path: an asymmetric keypair from
   `getTestServiceKeyPair()`, tokens minted with `createServiceToken`.
+
+## TO BE CLEANED UP
+
+Everything above reads as final-state. The gaps between that and today's tree live here, each with
+its tracking issue — delete a bullet when its issue closes.
+
+- **Vitest survives in unswept packages (#266).** The single runner is `bun test`; a package is on
+  vitest exactly when it has a `vitest.config.ts` (the root `vitest.workspace.ts` globs those, and
+  `turbo run test` uses each package's own runner meanwhile — deleting the config drops the package
+  from the vitest run). app-web converts as #165 ports it. Never add vitest to anything new, and
+  don't re-add it to a converted package to "match" a still-on-vitest neighbour. Where
+  `agents/shared.md` assumes bun test everywhere (e.g. "run `bun test` from the repo root"),
+  still-on-vitest packages follow their own config until swept.
+- **Lint baseline backlog (#236).** ~550 legacy sites are baselined inline with
+  `// oxlint-disable-next-line <rule> -- baseline(#236)` comments rather than turned off in config;
+  the unused-directive check is the ratchet — fixing a baselined site makes its comment stale and
+  lint fails until the comment is deleted. `typescript/prefer-readonly-parameter-types` is never
+  baselined; new code follows the readonly rules above.
+- **Panda CSS is a beta pin.** 2.0.0-beta.8 — no stable release exists yet, so the packages are
+  pinned through `bunfig.toml`'s `minimumReleaseAgeExcludes`, with a removal issue tracking the jump
+  to stable.
+- **Screens are functional-first until the final design language lands (#245 → #246).** The current
+  visual direction is round 1; a second Claude Design pass (#245) supersedes it once game design
+  matures, and the design system gets rebuilt to that final language (#246). Until #246 closes,
+  screens and routes are built workable-only: compose existing `lib-design-system` components and
+  semantic tokens (`bg.*`, `text.*`, `border.*`, `accent.*`) — no bespoke visual styling beyond
+  layout, no new one-off colors/fonts/animations, no polish passes. The semantic-token layer is the
+  stable contract; the re-skin lands in #246 under unchanged token names, so screens that stick to
+  it adapt for free. A screen needing a component that doesn't exist yet builds the minimal version
+  in its own PR and promotes it into `lib-design-system` when a second consumer appears.
+- **app-web still carries frozen GraphQL artifacts (#165).** `app/gql/**` and root `schema.graphql`
+  are committed artifacts of a deleted gateway — never regenerate or edit them; both die with #165's
+  web-shell rebuild.
