@@ -391,6 +391,12 @@ standard instead of the inline-data rule above — `service-avatar` is the refer
   owning its `createService` config; the production entrypoint and every test call that same
   factory. `db` is injected only in tests, for transaction isolation — never clone the
   `createService` config into tests.
+- **Single-statement atomicity is the default.** A conditional `UPDATE`/`DELETE ... RETURNING`,
+  `INSERT ... ON CONFLICT`, or a data-modifying CTE claims a single-row invariant and survives a
+  serverless process kill with no orphaned transaction state. Reach for an interactive
+  `db.transaction()` only for a genuine multi-row invariant that doesn't reduce to one statement —
+  and give that handler's suite `database` isolation (`createTestDB('database')`), since the
+  default transaction-isolation handle cannot nest.
 - **Isolation strategy.** Acquire the database through `@vers/service-test-utils/bun`:
   `createTestDB()` returns an `await using` handle; `transaction` isolation (rollback on dispose) is
   the default, `database` isolation (a real, committed clone) is the opt-out for code that commits
