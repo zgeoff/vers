@@ -13,7 +13,7 @@ sentence can't be simplified without losing it.
 
 ## Monorepo layout
 
-29 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
+34 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
 `package.json` named `@vers/<name>`: internal deps use the `workspace:*` protocol, and versions
 shared by 5+ projects live in the root manifest's `workspaces.catalog` (referenced as `catalog:`).
 Libraries are consumed as TypeScript source (`exports` → `./src/index.ts`); there are no per-library
@@ -83,19 +83,19 @@ its own PR and promotes it into `lib-design-system` when a second consumer appea
   ~5s wall with warm caches). The codegen leg is required: without generated output (panda's
   `styled-system`, react-router's `+types`) those imports degrade to `any` and the unsafe-\* rules
   report hundreds of false violations. Every type-aware rule is on; `only-throw-error`'s app-web
-  override is the one permanent, documented exception. The pre-#236 backlog (~1,047 sites) is
-  baselined inline with `// oxlint-disable-next-line <rule> -- baseline(#236)` comments rather than
-  left off in config — the unused-directive check is the ratchet: fixing a baselined site makes its
-  comment stale and lint fails until the comment is deleted. `lib-idle-core`/`lib-aether-core`
-  tick/lifecycle handlers that mutate their entity parameter by design carry a real reason instead
-  of the baseline marker; those are permanent. `typescript/prefer-readonly-parameter-types` is the
-  one rule new code must never `baseline(#236)`: its own data/config/props/option types are made
-  `readonly` (or the param `Readonly<…>`-wrapped; React props `Readonly<Props>`), and
-  framework/library handles that have no readonly form (a `Kysely`/`Elysia`/`RPCHandler`/`Request`
-  handle, a `Date`, …) are exempted per-type via the rule's `allow` list in `.oxlintrc.json` — never
-  an inline marker. Only a genuinely un-`readonly`-able own type (a generic callback-arg object, a
-  `ZodType`-bearing shape, a React-element wrapper) carries a single honest inline directive stating
-  why; `allow` covers the rest.
+  override is the one permanent, documented exception. The legacy backlog (#236, ~550 sites
+  remaining) is baselined inline with `// oxlint-disable-next-line <rule> -- baseline(#236)`
+  comments rather than left off in config — the unused-directive check is the ratchet: fixing a
+  baselined site makes its comment stale and lint fails until the comment is deleted.
+  `lib-idle-core`/`lib-aether-core` tick/lifecycle handlers that mutate their entity parameter by
+  design carry a real reason instead of the baseline marker; those are permanent.
+  `typescript/prefer-readonly-parameter-types` is the one rule new code must never `baseline(#236)`:
+  its own data/config/props/option types are made `readonly` (or the param `Readonly<…>`-wrapped;
+  React props `Readonly<Props>`), and framework/library handles that have no readonly form (a
+  `Kysely`/`Elysia`/`RPCHandler`/`Request` handle, a `Date`, …) are exempted per-type via the rule's
+  `allow` list in `.oxlintrc.json` — never an inline marker. Only a genuinely un-`readonly`-able own
+  type (a generic callback-arg object, a `ZodType`-bearing shape, a React-element wrapper) carries a
+  single honest inline directive stating why; `allow` covers the rest.
 - `bun run format` — `oxfmt .` (`.oxfmtrc.json` at the root), then `format-codemod` (blank-line
   padding) over the whole tree. The codemod has no ignore file, so its `--ignore` flags are what
   keep it off committed codegen output (`app/gql`, panda's `styled-system` dirs, react-router's
@@ -112,8 +112,9 @@ its own PR and promotes it into `lib-design-system` when a second consumer appea
 
 ## Docker
 
-Each deployable (`app-web`, the 4 services) has a multi-stage Dockerfile around
-`turbo prune <pkg> --docker`:
+Each server deployable (`app-web`; `service-avatar`, `service-session`, `service-user`,
+`service-verification`) has a multi-stage Dockerfile around `turbo prune <pkg> --docker`
+(`app-design-reference` ships as a plain static-nginx image outside this pattern):
 
 1. **pruner** — a standalone `turbo` binary prunes to the target's dependency graph: `out/json`
    (manifests only, for layer caching), `out/full` (source), a pruned `out/bun.lock`.
@@ -129,26 +130,20 @@ app-web's builder runs its `codegen`/`typegen`/`build` scripts directly instead 
 `turbo run build`. `app/gql/**` and root `schema.graphql` are frozen, committed artifacts — the
 GraphQL gateway that used to generate them is deleted, and both die with #165's web-shell rebuild.
 
-## Tooling migration in progress
+## Test runners
 
-See #160 for the full phase plan (turborepo + bun, spike-gated; shared configs and AGENTS.md from
-`zgeoff/tools`). This repo is mid-migration — several claims in `agents/shared.md` above describe
-the _target_ state, not this repo yet:
+`bun test` is the runner for the entire repo, vitest included — services, shared libs, and the
+rebuilt web all test under `bun test` via `@zgeoff/bun-test-extended` (jest-extended matchers), with
+DOM-bearing packages bootstrapping happy-dom through `@happy-dom/global-registrator` in a
+package-local `bunfig.toml` preload (bunfig is read from cwd, not merged up). Vitest is
+transitional, not a permanent parallel: a package is on vitest exactly when it has a
+`vitest.config.ts` — the root `vitest.workspace.ts` globs those, so deleting the config drops the
+package from the vitest run. The remaining sweep is tracked in #266 (app-web converts as #165 ports
+it). New packages are born on `bun test`: never add vitest to anything new, and don't re-add it to a
+converted package to "match" a still-on-vitest neighbour.
 
-- **`bun test` is the target runner for the entire repo, vitest included.** The vision is one runner
-  everywhere — services, shared libs, and the rebuilt web all test under `bun test` via
-  `@zgeoff/bun-test-extended` (jest-extended matchers), with DOM-bearing packages bootstrapping
-  happy-dom through `@happy-dom/global-registrator` in a package-local `bunfig.toml` preload (bunfig
-  is read from cwd, not merged up). Vitest is **transitional, not a permanent parallel** — it
-  survives only in not-yet-rebuilt packages (app-web, the game/idle/aether libs, service-avatar,
-  lib-email/lib-email-templates) until each is swept. New-stack packages are born on `bun test`;
-  never add vitest to anything new (the #165 rebuild starts the pattern — contracts + client-test-
-  utils in #264). While both runners coexist, `vitest.workspace.ts` globs each vitest package's
-  `vitest.config.ts` explicitly, so deleting that file drops the package from the vitest run. The
-  remaining vitest→bun-test sweep is tracked in #266.
-
-Don't re-add vitest to converted or new packages to "match" a pre-rebuild neighbour — the direction
-is one runner; follow #266 and the #160 phase plan.
+Where `agents/shared.md` above assumes bun test everywhere (e.g. "run `bun test` from the repo
+root"), still-on-vitest packages follow their own `vitest.config.ts` until swept.
 
 ## Testing (bun test, 0-isolation)
 
