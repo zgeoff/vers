@@ -1,18 +1,14 @@
-import path from 'node:path';
 import { createId } from '@paralleldrive/cuid2';
-import * as schema from '@vers/postgres-schema';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import { expect, inject, test } from 'vitest';
 import { createDB } from './create-db';
 import { migrateToLatest } from './migrate-to-latest';
 
 /**
- * Creates a database carrying only the frozen drizzle baseline — the state
- * `migrateToLatest` expects to find before it has ever run.
+ * Creates a freshly minted, unmigrated database — the state `migrateToLatest`
+ * expects to find before it has ever run.
  */
-async function createDrizzleBaselineDB() {
+async function createEmptyDB() {
   const dbURI = inject('dbURI');
   const dbName = `test_${createId()}`;
 
@@ -21,21 +17,11 @@ async function createDrizzleBaselineDB() {
   await setupClient.unsafe(/* SQL */ `CREATE DATABASE ${dbName}`);
   await setupClient.end();
 
-  const databaseURL = `${dbURI}/${dbName}`;
-
-  const drizzleClient = postgres(databaseURL);
-
-  await migrate(drizzle(drizzleClient, { schema }), {
-    migrationsFolder: path.join(import.meta.dirname, '../../db-postgres/migrations'),
-  });
-
-  await drizzleClient.end();
-
-  return databaseURL;
+  return `${dbURI}/${dbName}`;
 }
 
 test('it applies pending migrations once and is a no-op the second time', async () => {
-  const databaseURL = await createDrizzleBaselineDB();
+  const databaseURL = await createEmptyDB();
 
   const first = await migrateToLatest({ databaseURL });
 
@@ -49,7 +35,7 @@ test('it applies pending migrations once and is a no-op the second time', async 
 });
 
 test('it creates the pending_transactions table with defaults applied', async () => {
-  const databaseURL = await createDrizzleBaselineDB();
+  const databaseURL = await createEmptyDB();
 
   await migrateToLatest({ databaseURL });
 
@@ -75,7 +61,7 @@ test('it creates the pending_transactions table with defaults applied', async ()
 });
 
 test('it adds the consumed-transaction-token table and audit columns', async () => {
-  const databaseURL = await createDrizzleBaselineDB();
+  const databaseURL = await createEmptyDB();
 
   await migrateToLatest({ databaseURL });
 
@@ -130,7 +116,7 @@ test('it adds the consumed-transaction-token table and audit columns', async () 
 });
 
 test('it bumps updated_at through the set_updated_at trigger on update', async () => {
-  const databaseURL = await createDrizzleBaselineDB();
+  const databaseURL = await createEmptyDB();
 
   await migrateToLatest({ databaseURL });
 

@@ -16,10 +16,9 @@ interface MigrateToLatestConfig {
 }
 
 /**
- * Applies every pending kysely migration in `migrationsFolder`, in order.
- * The single programmatic composition point for dev resets and test-DB
- * setup — assumes the drizzle baseline (`db-postgres/migrations`) already
- * ran against the same database.
+ * Applies every pending kysely migration in `migrationsFolder`, in order,
+ * starting from an empty database. The single programmatic composition
+ * point for dev resets and test-DB setup.
  */
 export async function migrateToLatest(config: MigrateToLatestConfig): Promise<MigrationResultSet> {
   const db = createDB({ databaseURL: config.databaseURL });
