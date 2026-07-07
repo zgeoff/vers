@@ -32,7 +32,8 @@ what tooling can't check.
   they may sit just above it).
 - Acronyms stay uppercase in identifiers (`runCLI`, `parseCLIArgs`, `ASTNode`, `pkgURL`,
   `isPackageJSON`) — except when one starts a camelCase name, where it lowercases whole (`cliPath`,
-  `astNode`). File names are unaffected: kebab-case lowercases everything (`parse-cli-args.ts`
+  `astNode`). ID counts as an acronym: `userID`, `sessionID` — never `userId` — and `idToken` when
+  it starts a name. File names are unaffected: kebab-case lowercases everything (`parse-cli-args.ts`
   exports `parseCLIArgs`).
 
 ### Comments
