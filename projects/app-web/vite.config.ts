@@ -22,12 +22,6 @@ export default defineConfig({
   server: { port: 3000 },
 });
 
-interface MockBackendModule {
-  readonly server: {
-    readonly listen: (options: Readonly<{ onUnhandledRequest: 'bypass' }>) => void;
-  };
-}
-
 /**
  * Starts the shared MSW server for `vite dev` only — `configureServer` never fires for
  * `vite build` — so dev boot runs entirely against the mock backend. Goes through `ssrLoadModule`
@@ -39,12 +33,31 @@ function buildMockBackendPlugin(): Plugin {
   return {
     name: 'vers:mock-backend',
     async configureServer(viteServer) {
-      const mocks = await viteServer.ssrLoadModule('/mocks/node.ts');
+      const mocks: Record<string, unknown> = await viteServer.ssrLoadModule('/mocks/node.ts');
 
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- ssrLoadModule's return type is Vite's own `Record<string, any>`; no safer typed accessor exists for a dynamically loaded module
-      const server = (mocks as MockBackendModule).server;
+      if (!isMockBackendServer(mocks['server'])) {
+        throw new Error('/mocks/node.ts must export an MSW server as `server`');
+      }
 
-      server.listen({ onUnhandledRequest: 'bypass' });
+      mocks['server'].listen({ onUnhandledRequest: 'bypass' });
     },
   };
+}
+
+interface MockBackendServer {
+  readonly listen: (options: Readonly<{ onUnhandledRequest: 'bypass' }>) => void;
+}
+
+/**
+ * Structural check rather than `instanceof msw/node`'s server class: the bundled config and the
+ * ssr-loaded mock module each get their own copy of msw, so class identity fails across that
+ * boundary even for a genuine server.
+ */
+function isMockBackendServer(value: unknown): value is MockBackendServer {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'listen' in value &&
+    typeof value.listen === 'function'
+  );
 }
