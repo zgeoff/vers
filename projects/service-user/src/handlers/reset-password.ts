@@ -52,9 +52,9 @@ export async function resetPassword(
 
   const passwordHash = await Bun.password.hash(opts.input.password, 'argon2id');
 
-  // the users update is CAS'd on the stored token hash already validated above, so a concurrent
-  // reset that consumed the token first leaves this one matching zero rows; the session purge is
-  // keyed off that same CTE, so it only fires when this call's reset actually won the race
+  // the users update only applies while the row still holds the token hash validated above, so
+  // a concurrent reset that consumed the token first leaves this one matching zero rows; the
+  // session purge is keyed off that same CTE, so it only fires when this call's reset won the race
   const result = await db
     .with('updated', (qb) =>
       qb

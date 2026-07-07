@@ -16,10 +16,10 @@ interface UpdateEmailOpts {
 /**
  * Changes the acting user's email, repointing any in-progress 2FA verification at the old email
  * to the new one in the same statement; throws CONFLICT when the email is taken. The users update
- * is CAS'd on the old email read just before it, and the verifications repoint targets that same
- * old email — pinning both edits to the row this call observed. On the exotic case of a
- * concurrent email change racing this one, the CAS misses zero rows and the call retries once
- * against the row's current email before giving up.
+ * only applies while the row still holds the old email read just before it, and the verifications
+ * repoint targets that same old email — pinning both edits to the row this call observed. In the
+ * exotic case of a concurrent email change racing this one, the guarded update matches zero rows
+ * and the call retries once against the row's current email before giving up.
  */
 export async function updateEmail(
   db: Kysely<DB>,
@@ -43,7 +43,7 @@ export async function updateEmail(
   }
 
   try {
-    const matched = await runEmailUpdateCAS(db, actingUserId, user.email, opts.input.email);
+    const matched = await runGuardedEmailUpdate(db, actingUserId, user.email, opts.input.email);
 
     if (matched) {
       return { updatedID: actingUserId };
@@ -59,7 +59,7 @@ export async function updateEmail(
       throw opts.errors.NOT_FOUND({ data: {} });
     }
 
-    const retryMatched = await runEmailUpdateCAS(
+    const retryMatched = await runGuardedEmailUpdate(
       db,
       actingUserId,
       retryUser.email,
@@ -81,11 +81,11 @@ export async function updateEmail(
 }
 
 /**
- * Runs one CAS'd attempt of the users+verifications email rewrite in a single statement: the
+ * Runs one guarded attempt of the users+verifications email rewrite in a single statement: the
  * users update is predicated on the row still holding `oldEmail`, and the verifications repoint
  * targets that same `oldEmail`. Returns whether the users predicate matched.
  */
-async function runEmailUpdateCAS(
+async function runGuardedEmailUpdate(
   db: Kysely<DB>,
   actingUserId: string,
   oldEmail: string,
