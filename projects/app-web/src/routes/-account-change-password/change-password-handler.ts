@@ -7,8 +7,10 @@ import { ChangePasswordFormSchema } from './change-password-form-schema';
 import type { ChangePasswordResult } from './types';
 
 /**
- * Runs the change-password form's submission: field validation, a step-up gate for a 2FA-enabled
- * caller, then a current-password check before the new password is applied.
+ * Runs the change-password form's submission: field validation, a current-password check, then a
+ * step-up gate for a 2FA-enabled caller before the new password is applied. The password check
+ * runs before the step-up gate so a mistyped password fails fast instead of burning a single-use
+ * step-up challenge.
  */
 export async function changePasswordHandler(formData: FormData): Promise<ChangePasswordResult> {
   await requireAuth();
@@ -35,6 +37,15 @@ export async function changePasswordHandler(formData: FormData): Promise<ChangeP
 
   const user = await userClient.getCurrentUser({});
 
+  const verified = await userClient.verifyPassword({
+    email: user.email,
+    password: submission.data.currentPassword,
+  });
+
+  if (!verified.success) {
+    return { formError: 'Current password is incorrect', status: 'invalid-credentials' };
+  }
+
   const stepUp = await checkStepUp({
     action: 'ChangePassword',
     target: user.id,
@@ -43,15 +54,6 @@ export async function changePasswordHandler(formData: FormData): Promise<ChangeP
 
   if (stepUp.status === 'required') {
     return { status: 'step-up-required', target: user.id, transactionID: stepUp.transactionID };
-  }
-
-  const verified = await userClient.verifyPassword({
-    email: user.email,
-    password: submission.data.currentPassword,
-  });
-
-  if (!verified.success) {
-    return { formError: 'Current password is incorrect', status: 'invalid-credentials' };
   }
 
   await userClient.changePassword({ password: submission.data.password });
