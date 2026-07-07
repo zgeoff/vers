@@ -1,5 +1,13 @@
+import { avatarCollection } from '../../db/avatar-collection';
 import { os } from './os';
 
-export const getAvatars = os.getAvatars.handler(() => {
-  throw new Error('not wired in the phase 0b mock backend');
+/** Lists every avatar owned by the acting user. */
+export const getAvatars = os.getAvatars.handler((opts) => {
+  const actingUserId = opts.context.actingUserId;
+
+  if (actingUserId === null) {
+    throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+  }
+
+  return avatarCollection.findMany((q) => q.where({ userID: actingUserId }));
 });

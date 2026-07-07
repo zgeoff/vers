@@ -48,6 +48,7 @@ async function tryRefreshAndRetry(
   retryable: Request,
   init: ServiceFetchInit,
   originalResponse: Response,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the in-flight refresh cache is deliberately mutated (.set/.delete) by both this function and resolveRefreshedTokens; a readonly-wrapped Map would drop those methods
   inFlightRefreshes: Map<string, Promise<RefreshedTokens | undefined>>,
 ): Promise<Response> {
   const session = await getAuthSession();
@@ -81,6 +82,7 @@ async function tryRefreshAndRetry(
 async function resolveRefreshedTokens(
   sessionID: string,
   refreshToken: string,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the in-flight refresh cache is deliberately mutated (.set/.delete); a readonly-wrapped Map would drop those methods
   inFlightRefreshes: Map<string, Promise<RefreshedTokens | undefined>>,
 ): Promise<RefreshedTokens | undefined> {
   const existing = inFlightRefreshes.get(sessionID);
