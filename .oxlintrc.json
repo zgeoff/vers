@@ -124,7 +124,8 @@
             "name": ["CryptoKey", "Request", "Response"],
             "package": "@types/node"
           },
-          { "from": "lib", "name": ["Request", "Response", "Date"] }
+          { "from": "lib", "name": ["Request", "Response", "Date", "Headers"] },
+          { "from": "package", "name": "ReactNode", "package": "react" }
         ]
       }
     ],
@@ -217,7 +218,8 @@
         "projects/service-avatar/**",
         "projects/service-session/**",
         "projects/service-user/**",
-        "projects/service-verification/**"
+        "projects/service-verification/**",
+        "projects/app-web/**"
       ],
       // vitest plugin only applies to `.test.ts(x)` files — scoping it here
       // (rather than in the top-level `plugins` list) keeps its rules off

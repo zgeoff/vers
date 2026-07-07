@@ -1,24 +1,18 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
-    "types": ["@react-router/node", "vitest", "vitest/importMeta", "vite/client", "node"],
-    "rootDirs": [".", "./.react-router/types"]
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["node", "bun", "vite/client"]
   },
   "files": [],
   "include": [
-    ".react-router/types/**/*",
+    "augment-bun-test.ts",
+    "test-setup.ts",
     "panda.config.ts",
-    "react-router.config.ts",
     "vite.config.ts",
-    "vitest.config.ts",
-    "vitest.setup.ts",
-    "app/**/*.ts",
-    "app/**/*.tsx",
-    "app/mocks/**/*.ts",
-    "server/**/*.ts",
-    "server/**/*.tsx",
-    "../lib-data/src/classes/data.ts",
-    "../lib-data/src/classes/types.ts"
-  ]
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "mocks/**/*.ts"
+  ],
+  "exclude": []
 }
