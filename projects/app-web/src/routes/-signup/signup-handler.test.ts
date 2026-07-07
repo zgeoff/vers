@@ -50,7 +50,7 @@ test('it reports a field error for an invalid email', async () => {
   });
 });
 
-test('it reports a field error for an email already in use', async () => {
+test('it redirects to verify-otp without creating a verification for an email already in use', async () => {
   await userCollection.create({
     createdAt: new Date(),
     email: 'signup-existing@vers.test',
@@ -62,14 +62,23 @@ test('it reports a field error for an email already in use', async () => {
     username: 'signup-existing',
   });
 
-  const outcome = await withRequestContext({}, () =>
-    signupHandler(buildSignupFormData({ email: 'signup-existing@vers.test' })),
+  const outcome = await withRequestContext({}, async () => {
+    const redirectHref = await signupHandler(
+      buildSignupFormData({ email: 'signup-existing@vers.test' }),
+    )
+      .then(() => null)
+      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+
+    return redirectHref;
+  });
+
+  expect(outcome.value).toBe('/verify-otp?target=signup-existing%40vers.test&type=onboarding');
+
+  const verification = verificationCollection.findFirst((q) =>
+    q.where({ target: 'signup-existing@vers.test', type: 'onboarding' }),
   );
 
-  expect(outcome.value).toStrictEqual({
-    fieldErrors: { email: 'An account with this email already exists' },
-    status: 'invalid-fields',
-  });
+  expect(verification).toBeUndefined();
 });
 
 test('it creates an onboarding verification and redirects to verify-otp', async () => {
