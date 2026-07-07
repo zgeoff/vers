@@ -6,9 +6,12 @@ import { createSessionService } from './create-session-service';
 
 test('it wires an injected db into the router instead of building one from env', async () => {
   await using db = await createTestDB();
-  const { app } = await createSessionService({ db: db.db });
-  const { user } = await createTestUser(db.db);
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const service = await createSessionService({ db: db.db });
+  const app = service.app;
+  const created = await createTestUser(db.db);
+  const user = created.user;
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(app, { token });
 
   await client.createSession({ ipAddress: '127.0.0.1', userID: user.id });

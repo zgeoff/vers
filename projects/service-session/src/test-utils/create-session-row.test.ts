@@ -4,7 +4,8 @@ import { createSessionRow } from './create-session-row';
 
 test('it inserts a session row owned by the given user', async () => {
   await using testDB = await createTestDB();
-  const { user } = await createTestUser(testDB.db);
+  const created = await createTestUser(testDB.db);
+  const user = created.user;
 
   const session = await createSessionRow(testDB.db, { userId: user.id });
 
@@ -19,7 +20,8 @@ test('it inserts a session row owned by the given user', async () => {
 
 test('it applies overrides on top of the faker-generated defaults', async () => {
   await using testDB = await createTestDB();
-  const { user } = await createTestUser(testDB.db);
+  const created = await createTestUser(testDB.db);
+  const user = created.user;
 
   const createdAt = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 

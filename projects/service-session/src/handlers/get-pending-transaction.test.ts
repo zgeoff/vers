@@ -7,7 +7,8 @@ import { createPendingTransactionRow } from '../test-utils/create-pending-transa
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createSessionService({ db: db.db });
+  const service = await createSessionService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
@@ -15,7 +16,8 @@ async function setupTest() {
 test('it returns an existing pending transaction by id', async () => {
   await using ctx = await setupTest();
   const transaction = await createPendingTransactionRow(ctx.db);
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   const found = await client.stepUp.getPendingTransaction({ id: transaction.id });
@@ -33,7 +35,8 @@ test('it returns an existing pending transaction by id', async () => {
 
 test('it returns null for an id that does not exist', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   const found = await client.stepUp.getPendingTransaction({ id: 'does-not-exist' });
@@ -48,7 +51,8 @@ test('it lazy-deletes and returns null for an expired transaction', async () => 
     expiresAt: new Date(Date.now() - 1000),
   });
 
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   const found = await client.stepUp.getPendingTransaction({ id: transaction.id });
@@ -67,7 +71,8 @@ test('it lazy-deletes and returns null for an expired transaction', async () => 
 test('it never increments attempts while reading', async () => {
   await using ctx = await setupTest();
   const transaction = await createPendingTransactionRow(ctx.db);
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   await client.stepUp.getPendingTransaction({ id: transaction.id });

@@ -4,7 +4,8 @@ import { createAvatarRow } from './create-avatar-row';
 
 test('it inserts an avatar row owned by the given user', async () => {
   await using testDB = await createTestDB();
-  const { user } = await createTestUser(testDB.db);
+  const created = await createTestUser(testDB.db);
+  const user = created.user;
 
   const avatar = await createAvatarRow(testDB.db, { userId: user.id });
 
@@ -19,7 +20,8 @@ test('it inserts an avatar row owned by the given user', async () => {
 
 test('it applies overrides on top of the faker-generated defaults', async () => {
   await using testDB = await createTestDB();
-  const { user } = await createTestUser(testDB.db);
+  const created = await createTestUser(testDB.db);
+  const user = created.user;
 
   const avatar = await createAvatarRow(testDB.db, {
     class: 'scholar',

@@ -6,7 +6,8 @@ import { createUserService } from './create-user-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createUserService({ db: db.db });
+  const service = await createUserService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
@@ -17,7 +18,8 @@ async function setupTest() {
 
 test('it creates a user visible within this test', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   await client.createUser({

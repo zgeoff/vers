@@ -6,14 +6,17 @@ import { createUserService } from '../create-user-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createUserService({ db: db.db });
+  const service = await createUserService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it returns the acting user', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
+  const token = viewer.token;
+  const user = viewer.user;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.getCurrentUser({});
@@ -31,7 +34,9 @@ test('it returns the acting user', async () => {
 
 test('it throws UNAUTHORIZED when the acting user no longer exists', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
+  const token = viewer.token;
+  const user = viewer.user;
 
   await ctx.db.deleteFrom('users').where('id', '=', user.id).execute();
 
@@ -45,7 +50,8 @@ test('it throws UNAUTHORIZED when the acting user no longer exists', async () =>
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   expect(client.getCurrentUser({})).rejects.toMatchObject({

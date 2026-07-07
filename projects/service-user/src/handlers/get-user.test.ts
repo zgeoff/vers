@@ -6,15 +6,18 @@ import { createUserService } from '../create-user-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createUserService({ db: db.db });
+  const service = await createUserService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it gets a user by id', async () => {
   await using ctx = await setupTest();
-  const { user } = await createTestUser(ctx.db);
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const created = await createTestUser(ctx.db);
+  const user = created.user;
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.getUser({ id: user.id });
@@ -32,8 +35,10 @@ test('it gets a user by id', async () => {
 
 test('it gets a user by email', async () => {
   await using ctx = await setupTest();
-  const { user } = await createTestUser(ctx.db);
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const created = await createTestUser(ctx.db);
+  const user = created.user;
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.getUser({ email: user.email });
@@ -43,7 +48,8 @@ test('it gets a user by email', async () => {
 
 test('it returns null for a non-existent user', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.getUser({ id: 'non-existent-id' });
@@ -55,7 +61,8 @@ test('it returns null when neither id nor email is provided', async () => {
   await using ctx = await setupTest();
   await createTestUser(ctx.db);
 
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.getUser({});

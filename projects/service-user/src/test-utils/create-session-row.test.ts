@@ -4,7 +4,8 @@ import { createSessionRow } from './create-session-row';
 
 test('it inserts a session row for a given owner with faker-generated defaults', async () => {
   await using testDB = await createTestDB();
-  const { user } = await createTestUser(testDB.db);
+  const created = await createTestUser(testDB.db);
+  const user = created.user;
 
   const session = await createSessionRow(testDB.db, { userId: user.id });
 

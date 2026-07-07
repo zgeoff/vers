@@ -6,14 +6,16 @@ import { createSessionService } from '../create-session-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createSessionService({ db: db.db });
+  const service = await createSessionService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it reports consumed=true the first time a jti is presented', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   const result = await client.stepUp.consumeTransactionToken({
@@ -26,7 +28,8 @@ test('it reports consumed=true the first time a jti is presented', async () => {
 
 test('it reports consumed=false the second time the same jti is presented', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   const expiresAt = new Date(Date.now() + 60 * 1000);
@@ -50,7 +53,8 @@ test('it still blocks a jti more than five minutes after first use', async () =>
     })
     .execute();
 
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   const result = await client.stepUp.consumeTransactionToken({
@@ -69,7 +73,8 @@ test('it sweeps expired consumed-token rows before checking for a replay', async
     .values({ expiresAt: new Date(Date.now() - 1000), jti: 'already-expired' })
     .execute();
 
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   await client.stepUp.consumeTransactionToken({

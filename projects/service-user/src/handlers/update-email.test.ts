@@ -11,14 +11,17 @@ import { createUserService } from '../create-user-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createUserService({ db: db.db });
+  const service = await createUserService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it updates the acting user email', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
+  const token = viewer.token;
+  const user = viewer.user;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.updateEmail({ email: 'updated@test.com' });
@@ -37,11 +40,13 @@ test('it updates the acting user email', async () => {
 test('it repoints an in-progress 2fa verification to the new email', async () => {
   await using ctx = await setupTest();
 
-  const { token } = await createViewer({
+  const viewer = await createViewer({
     audience: 'service-user',
     db: ctx.db,
     user: { email: 'current@test.com' },
   });
+
+  const token = viewer.token;
 
   const verification = await createTestVerification(ctx.db, {
     target: 'current@test.com',
@@ -64,11 +69,13 @@ test('it repoints an in-progress 2fa verification to the new email', async () =>
 test('it repoints an in-progress 2fa-setup verification to the new email', async () => {
   await using ctx = await setupTest();
 
-  const { token } = await createViewer({
+  const viewer = await createViewer({
     audience: 'service-user',
     db: ctx.db,
     user: { email: 'current@test.com' },
   });
+
+  const token = viewer.token;
 
   const verification = await createTestVerification(ctx.db, {
     target: 'current@test.com',
@@ -90,7 +97,9 @@ test('it repoints an in-progress 2fa-setup verification to the new email', async
 
 test('it throws NOT_FOUND when the acting user no longer exists', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
+  const token = viewer.token;
+  const user = viewer.user;
 
   await ctx.db.deleteFrom('users').where('id', '=', user.id).execute();
 
@@ -110,7 +119,8 @@ test('it throws CONFLICT with field email when the email is taken', async () => 
     user: { email: 'taken@test.com' },
   });
 
-  const { token } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   expect(client.updateEmail({ email: 'taken@test.com' })).rejects.toMatchObject({
@@ -121,7 +131,8 @@ test('it throws CONFLICT with field email when the email is taken', async () => 
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   expect(client.updateEmail({ email: 'anonymous@test.com' })).rejects.toMatchObject({

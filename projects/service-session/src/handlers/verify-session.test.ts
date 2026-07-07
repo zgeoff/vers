@@ -9,16 +9,19 @@ import { getTestJWTKeyPair } from '../test-utils/get-test-jwt-key-pair';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createSessionService({ db: db.db });
+  const service = await createSessionService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it verifies an unverified session and returns a token pair', async () => {
   await using ctx = await setupTest();
-  const { user } = await createTestUser(ctx.db);
+  const created = await createTestUser(ctx.db);
+  const user = created.user;
   const session = await createSessionRow(ctx.db, { userId: user.id, verified: false });
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   const result = await client.verifySession({ id: session.id });
@@ -40,19 +43,23 @@ test('it verifies an unverified session and returns a token pair', async () => {
 
 test("it mints tokens verifiable with the signing key's public half", async () => {
   await using ctx = await setupTest();
-  const { user } = await createTestUser(ctx.db);
+  const created = await createTestUser(ctx.db);
+  const user = created.user;
 
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
   const session = await createSessionRow(ctx.db, { expiresAt, userId: user.id, verified: false });
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   const result = await client.verifySession({ id: session.id });
 
-  const { publicKeyPEM } = await getTestJWTKeyPair();
+  const keyPair = await getTestJWTKeyPair();
+  const publicKeyPEM = keyPair.publicKeyPEM;
   const publicKey = await jose.importSPKI(publicKeyPEM, 'RS256');
-  const { payload } = await jose.jwtVerify(result.accessToken, publicKey);
+  const accessVerification = await jose.jwtVerify(result.accessToken, publicKey);
+  const payload = accessVerification.payload;
 
   expect(payload.sub).toBe(user.id);
   expect(payload.iss).toBe('service-session-test');
@@ -63,14 +70,16 @@ test("it mints tokens verifiable with the signing key's public half", async () =
     Math.floor((Date.now() + 15 * 60 * 1000 + 5000) / 1000),
   );
 
-  const { payload: refreshPayload } = await jose.jwtVerify(result.refreshToken, publicKey);
+  const refreshVerification = await jose.jwtVerify(result.refreshToken, publicKey);
+  const refreshPayload = refreshVerification.payload;
 
   expect(refreshPayload.exp).toBe(Math.floor(expiresAt.getTime() / 1000));
 });
 
 test('it throws NOT_FOUND for a session that does not exist', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   expect(client.verifySession({ id: 'does-not-exist' })).rejects.toMatchObject({
@@ -80,9 +89,11 @@ test('it throws NOT_FOUND for a session that does not exist', async () => {
 
 test('it throws NOT_FOUND for a session that is already verified', async () => {
   await using ctx = await setupTest();
-  const { user } = await createTestUser(ctx.db);
+  const created = await createTestUser(ctx.db);
+  const user = created.user;
   const session = await createSessionRow(ctx.db, { userId: user.id, verified: true });
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   expect(client.verifySession({ id: session.id })).rejects.toMatchObject({

@@ -7,14 +7,16 @@ import { createAvatarRow } from '../test-utils/create-avatar-row';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createAvatarService({ db: db.db });
+  const service = await createAvatarService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it returns an owned avatar by id', async () => {
   await using ctx = await setupTest();
-  const { token } = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const token = viewer.token;
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
   const created = await client.createAvatar({ class: 'brute', name: 'Findable' });
 
@@ -25,7 +27,8 @@ test('it returns an owned avatar by id', async () => {
 
 test('it returns null for an avatar owned by another user', async () => {
   await using ctx = await setupTest();
-  const { token } = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const token = viewer.token;
   const other = await createViewer({ audience: 'service-avatar', db: ctx.db });
   const foreign = await createAvatarRow(ctx.db, { name: 'Foreign', userId: other.user.id });
 
@@ -37,7 +40,8 @@ test('it returns null for an avatar owned by another user', async () => {
 
 test('it returns null for an id that does not exist', async () => {
   await using ctx = await setupTest();
-  const { token } = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+  const token = viewer.token;
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
 
   const found = await client.getAvatar({ id: 'does-not-exist' });
@@ -47,7 +51,8 @@ test('it returns null for an id that does not exist', async () => {
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-avatar' });
+  const viewer = await createAnonymousViewer({ audience: 'service-avatar' });
+  const token = viewer.token;
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token });
 
   expect(client.getAvatar({ id: 'x' })).rejects.toMatchObject({

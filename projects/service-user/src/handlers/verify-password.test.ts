@@ -6,15 +6,18 @@ import { createUserService } from '../create-user-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createUserService({ db: db.db });
+  const service = await createUserService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it verifies a correct password', async () => {
   await using ctx = await setupTest();
-  const { user } = await createTestUser(ctx.db, { password: 'password123' });
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const created = await createTestUser(ctx.db, { password: 'password123' });
+  const user = created.user;
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.verifyPassword({ email: user.email, password: 'password123' });
@@ -24,8 +27,10 @@ test('it verifies a correct password', async () => {
 
 test('it returns success=false for an incorrect password', async () => {
   await using ctx = await setupTest();
-  const { user } = await createTestUser(ctx.db, { password: 'password123' });
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const created = await createTestUser(ctx.db, { password: 'password123' });
+  const user = created.user;
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.verifyPassword({ email: user.email, password: 'wrongpassword' });
@@ -35,7 +40,8 @@ test('it returns success=false for an incorrect password', async () => {
 
 test('it returns success=false for an unknown email without revealing user existence', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.verifyPassword({
@@ -48,8 +54,10 @@ test('it returns success=false for an unknown email without revealing user exist
 
 test('it returns success=false for a user without a password set', async () => {
   await using ctx = await setupTest();
-  const { user } = await createTestUser(ctx.db, { password: null });
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const created = await createTestUser(ctx.db, { password: null });
+  const user = created.user;
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.verifyPassword({ email: user.email, password: 'password123' });
@@ -60,12 +68,15 @@ test('it returns success=false for a user without a password set', async () => {
 test('it verifies a legacy bcrypt hash and rehashes it as argon2id on success', async () => {
   await using ctx = await setupTest();
 
-  const { user } = await createTestUser(ctx.db, {
+  const created = await createTestUser(ctx.db, {
     password: 'password123',
     passwordAlgorithm: 'bcrypt',
   });
 
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const user = created.user;
+
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.verifyPassword({ email: user.email, password: 'password123' });
@@ -84,12 +95,15 @@ test('it verifies a legacy bcrypt hash and rehashes it as argon2id on success', 
 test('it leaves a legacy bcrypt hash untouched on a failed attempt', async () => {
   await using ctx = await setupTest();
 
-  const { user } = await createTestUser(ctx.db, {
+  const created = await createTestUser(ctx.db, {
     password: 'password123',
     passwordAlgorithm: 'bcrypt',
   });
 
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const user = created.user;
+
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.verifyPassword({ email: user.email, password: 'wrongpassword' });

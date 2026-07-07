@@ -6,7 +6,8 @@ import { createVerificationService } from './create-verification-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createVerificationService({ db: db.db });
+  const service = await createVerificationService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
@@ -17,7 +18,8 @@ async function setupTest() {
 
 test('it creates a verification visible within this test', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-verification' });
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+  const token = viewer.token;
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
 
   await client.createVerification({ target: 'isolation-proof@example.com', type: 'onboarding' });

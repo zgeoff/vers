@@ -6,14 +6,17 @@ import { createUserService } from '../create-user-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createUserService({ db: db.db });
+  const service = await createUserService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it updates the acting user name and username', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
+  const token = viewer.token;
+  const user = viewer.user;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.updateUser({ name: 'Updated Name', username: 'updated_username' });
@@ -32,7 +35,9 @@ test('it updates the acting user name and username', async () => {
 
 test('it allows partial updating', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
+  const token = viewer.token;
+  const user = viewer.user;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.updateUser({ name: 'Updated Name' });
@@ -51,7 +56,9 @@ test('it allows partial updating', async () => {
 
 test('it leaves the record unchanged when no fields are provided', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
+  const token = viewer.token;
+  const user = viewer.user;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   const result = await client.updateUser({});
@@ -70,7 +77,9 @@ test('it leaves the record unchanged when no fields are provided', async () => {
 
 test('it throws NOT_FOUND when no fields are provided and the user does not exist', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
+  const token = viewer.token;
+  const user = viewer.user;
 
   await ctx.db.deleteFrom('users').where('id', '=', user.id).execute();
 
@@ -81,7 +90,9 @@ test('it throws NOT_FOUND when no fields are provided and the user does not exis
 
 test('it throws NOT_FOUND when the acting user no longer exists', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
+  const token = viewer.token;
+  const user = viewer.user;
 
   await ctx.db.deleteFrom('users').where('id', '=', user.id).execute();
 
@@ -99,7 +110,8 @@ test('it throws CONFLICT with field username when the username is taken', async 
     user: { username: 'taken_username' },
   });
 
-  const { token } = await createViewer({ audience: 'service-user', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-user', db: ctx.db });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   expect(client.updateUser({ username: 'taken_username' })).rejects.toMatchObject({
@@ -110,7 +122,8 @@ test('it throws CONFLICT with field username when the username is taken', async 
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(ctx.app, { token });
 
   expect(client.updateUser({ name: 'Anonymous' })).rejects.toMatchObject({

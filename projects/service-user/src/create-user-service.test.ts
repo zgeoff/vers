@@ -6,8 +6,10 @@ import { createUserService } from './create-user-service';
 
 test('it wires an injected db into the router instead of building one from env', async () => {
   await using db = await createTestDB();
-  const { app } = await createUserService({ db: db.db });
-  const { token } = await createAnonymousViewer({ audience: 'service-user' });
+  const service = await createUserService({ db: db.db });
+  const app = service.app;
+  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const token = viewer.token;
   const client = buildRPCTestClient<UserContract>(app, { token });
 
   await client.createUser({

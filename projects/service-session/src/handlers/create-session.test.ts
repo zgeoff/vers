@@ -6,15 +6,18 @@ import { createSessionService } from '../create-session-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createSessionService({ db: db.db });
+  const service = await createSessionService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it creates an unverified session with the short duration by default', async () => {
   await using ctx = await setupTest();
-  const { user } = await createTestUser(ctx.db);
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const created = await createTestUser(ctx.db);
+  const user = created.user;
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   const before = Date.now();
@@ -38,8 +41,10 @@ test('it creates an unverified session with the short duration by default', asyn
 
 test('it creates a session with the long duration when rememberMe is set', async () => {
   await using ctx = await setupTest();
-  const { user } = await createTestUser(ctx.db);
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const created = await createTestUser(ctx.db);
+  const user = created.user;
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   const before = Date.now();
@@ -58,8 +63,10 @@ test('it creates a session with the long duration when rememberMe is set', async
 
 test('it honors an explicit expiresAt over the default duration', async () => {
   await using ctx = await setupTest();
-  const { user } = await createTestUser(ctx.db);
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const created = await createTestUser(ctx.db);
+  const user = created.user;
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);

@@ -7,14 +7,17 @@ import { createSessionRow } from '../test-utils/create-session-row';
 
 async function setupTest() {
   const db = await createTestDB();
-  const { app } = await createSessionService({ db: db.db });
+  const service = await createSessionService({ db: db.db });
+  const app = service.app;
 
   return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it only returns sessions belonging to the acting user', async () => {
   await using ctx = await setupTest();
-  const { token, user } = await createViewer({ audience: 'service-session', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-session', db: ctx.db });
+  const token = viewer.token;
+  const user = viewer.user;
   const other = await createViewer({ audience: 'service-session', db: ctx.db });
   const owned = await createSessionRow(ctx.db, { userId: user.id });
 
@@ -38,7 +41,8 @@ test('it only returns sessions belonging to the acting user', async () => {
 
 test('it returns an empty array when the acting user has no sessions', async () => {
   await using ctx = await setupTest();
-  const { token } = await createViewer({ audience: 'service-session', db: ctx.db });
+  const viewer = await createViewer({ audience: 'service-session', db: ctx.db });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   const found = await client.getSessions({});
@@ -48,7 +52,8 @@ test('it returns an empty array when the acting user has no sessions', async () 
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   await using ctx = await setupTest();
-  const { token } = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const token = viewer.token;
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
 
   expect(client.getSessions({})).rejects.toMatchObject({
