@@ -24,13 +24,13 @@ export function createSessionService(
   config: CreateSessionServiceConfig = {},
 ): Promise<Service<typeof SESSION_ENV_SHAPE>> {
   return createService({
-    buildRouter: (runtime) =>
+    buildRouter: async (runtime) =>
       buildSessionRouter({
         apiIdentifier: runtime.env.API_IDENTIFIER,
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
 
-        // imported once at boot, not per request: every handler awaits this same promise
-        signingKey: jose.importPKCS8(runtime.env.JWT_SIGNING_PRIVKEY, 'RS256'),
+        // imported once at boot, not per request: every handler reuses this same resolved key
+        signingKey: await jose.importPKCS8(runtime.env.JWT_SIGNING_PRIVKEY, 'RS256'),
       }),
     contract: sessionContract,
     envShape: SESSION_ENV_SHAPE,
