@@ -352,10 +352,10 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
 
 ### RSC and server-function testing (phases 1+)
 
-- Server functions are thin ambient shells: they read request context (`getRequestHeaders`,
-  cookies) and fetch, then delegate to a pure component or handler that takes data as explicit
-  props/args. If a unit needs ambient server context to test, the ambient read is in the wrong
-  place — move it up to the shell.
+- Server functions are thin ambient shells: they read request context (`getRequestHeaders`, cookies)
+  and fetch, then delegate to a pure component or handler that takes data as explicit props/args. If
+  a unit needs ambient server context to test, the ambient read is in the wrong place — move it up
+  to the shell.
 - Pure server components (props in, no ambient/server-only imports) are tested with RTL on happy-dom
   like any component: render per state, assert visible behaviour. Branch selection is covered by
   these render tests — never by asserting which element a function returned.
