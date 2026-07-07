@@ -17,12 +17,13 @@ export function getTestJWTKeyPair(): Promise<TestJWTKeyPair> {
 }
 
 async function createTestJWTKeyPair(): Promise<TestJWTKeyPair> {
-  const { privateKey, publicKey } = await jose.generateKeyPair('RS256', { extractable: true });
+  const keyPair = await jose.generateKeyPair('RS256', { extractable: true });
+  const privateKey = keyPair.privateKey;
+  const publicKey = keyPair.publicKey;
 
-  const [privateKeyPEM, publicKeyPEM] = await Promise.all([
-    jose.exportPKCS8(privateKey),
-    jose.exportSPKI(publicKey),
-  ]);
+  const pemPair = await Promise.all([jose.exportPKCS8(privateKey), jose.exportSPKI(publicKey)]);
+  const privateKeyPEM = pemPair[0];
+  const publicKeyPEM = pemPair[1];
 
   return { privateKeyPEM, publicKeyPEM };
 }

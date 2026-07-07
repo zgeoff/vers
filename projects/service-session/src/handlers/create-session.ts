@@ -17,7 +17,10 @@ interface CreateSessionOpts {
 
 /** Creates an unverified session for a login, its expiry set by `rememberMe` unless overridden. */
 export async function createSession(db: Kysely<DB>, opts: CreateSessionOpts): Promise<SessionData> {
-  const { expiresAt, ipAddress, rememberMe, userID } = opts.input;
+  const expiresAt = opts.input.expiresAt;
+  const ipAddress = opts.input.ipAddress;
+  const rememberMe = opts.input.rememberMe;
+  const userID = opts.input.userID;
 
   const sessionDuration = rememberMe === true ? SESSION_DURATION_LONG : SESSION_DURATION_SHORT;
   const sessionExpiresAt = expiresAt ?? new Date(Date.now() + sessionDuration);

@@ -35,7 +35,7 @@ export async function verifySession(
 
   const accessTokenExpiresAt = new Date(Date.now() + ACCESS_TOKEN_DURATION);
 
-  const [refreshToken, accessToken] = await Promise.all([
+  const tokenPair = await Promise.all([
     createJWT({
       apiIdentifier: deps.apiIdentifier,
       expiresAt: session.expiresAt,
@@ -49,6 +49,9 @@ export async function verifySession(
       userID: session.userId,
     }),
   ]);
+
+  const refreshToken = tokenPair[0];
+  const accessToken = tokenPair[1];
 
   const updateResult = await db
     .updateTable('sessions')

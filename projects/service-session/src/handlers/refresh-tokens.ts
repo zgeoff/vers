@@ -69,7 +69,7 @@ export async function refreshTokens(
     return { accessToken, refreshToken: row.refreshToken };
   }
 
-  const [refreshToken, accessToken] = await Promise.all([
+  const rotatedTokens = await Promise.all([
     createJWT({
       apiIdentifier: deps.apiIdentifier,
       expiresAt: row.expiresAt,
@@ -83,6 +83,9 @@ export async function refreshTokens(
       userID: row.userId,
     }),
   ]);
+
+  const refreshToken = rotatedTokens[0];
+  const accessToken = rotatedTokens[1];
 
   const updateResult = await db
     .updateTable('sessions')
