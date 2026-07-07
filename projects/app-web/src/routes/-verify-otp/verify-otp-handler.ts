@@ -2,7 +2,7 @@ import { safe } from '@orpc/client';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { SpamError } from '../../lib/auth/spam-error';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
-import { handleVerification } from './handle-verification';
+import { runVerification } from './run-verification';
 import { VerifyOTPFormSchema } from './verify-otp-form-schema';
 import type { VerifyOTPResult } from './verify-otp-result';
 
@@ -45,7 +45,7 @@ export async function verifyOTPHandler(formData: FormData): Promise<VerifyOTPRes
     return { formError: 'Invalid or expired code', status: 'invalid-fields' };
   }
 
-  return handleVerification(submission.data.type, {
+  return runVerification(submission.data.type, {
     redirectTo: submission.data.redirect,
     target: submission.data.target,
   });

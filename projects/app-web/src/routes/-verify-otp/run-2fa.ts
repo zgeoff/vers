@@ -4,13 +4,13 @@ import { getVerifySession } from '../../lib/auth/get-verify-session';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
-import type { HandleVerificationContext } from './handle-verification-context';
+import type { RunVerificationContext } from './run-verification-context';
 
 /**
  * Completes a 2FA-gated login: the pending session id login-handler stashed is looked up
  * alongside the account it belongs to, then finished exactly like a direct login would.
  */
-export async function handle2FA(ctx: Readonly<HandleVerificationContext>): Promise<never> {
+export async function run2FA(ctx: Readonly<RunVerificationContext>): Promise<never> {
   const verifySession = await getVerifySession();
   const sessionID = verifySession['login2FA#sessionID'];
 
