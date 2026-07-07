@@ -26,17 +26,21 @@ interface VerifyCodeOpts {
  * Verifies a TOTP code against its target and type, then guards against replay: deleting types
  * (`change-email`/`onboarding`) consume the row on success, so a concurrent second verify finds no
  * row to delete; non-deleting types (`2fa`/`2fa-setup`) record the verified code and timestamp in a
- * single conditional UPDATE that a concurrent replay's row lock forces to re-evaluate against the
- * committed value — no explicit transaction required.
+ * conditional UPDATE that re-validates its predicate against the row under its row lock, so a
+ * concurrent replay matches zero rows. `orderBy('createdAt', 'desc')` is defense-in-depth against
+ * any pre-`(target, type)`-constraint duplicate rows.
  */
 export async function verifyCode(db: Kysely<DB>, opts: VerifyCodeOpts): Promise<VerificationData> {
-  const { code, target, type } = opts.input;
+  const { code } = opts.input;
+  const { target } = opts.input;
+  const { type } = opts.input;
 
   const row = await db
     .selectFrom('verifications')
     .selectAll()
     .where('type', '=', type)
     .where('target', '=', target)
+    .orderBy('createdAt', 'desc')
     .executeTakeFirst();
 
   if (row === undefined) {

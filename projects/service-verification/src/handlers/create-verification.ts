@@ -31,12 +31,20 @@ interface CreateVerificationOpts {
 /**
  * Creates a TOTP-backed verification code for a target, replacing any existing code of the same
  * type and target in one statement so a stale code can never be verified alongside a fresh one.
+ * The `(target, type)` unique constraint makes this a single `INSERT ... ON CONFLICT`: a
+ * concurrent create for the same pair serializes on the row instead of racing an insert against a
+ * delete. The row's id stays stable across a replace — its identity is the target+type pair, not
+ * the id — but the replay guard (`lastVerifiedCode`/`lastVerifiedAt`) always resets, since a
+ * recreated verification must not inherit the previous code's replay window.
  */
 export async function createVerification(
   db: Kysely<DB>,
   opts: CreateVerificationOpts,
 ): Promise<VerificationData & { otp: string }> {
-  const { expiresAt, period, target, type } = opts.input;
+  const expiresAt = opts.input.expiresAt ?? null;
+  const { period } = opts.input;
+  const { target } = opts.input;
+  const { type } = opts.input;
 
   const { otp, ...totpConfig } = await generateTOTP({
     algorithm: 'SHA-256',
@@ -45,15 +53,21 @@ export async function createVerification(
   });
 
   const row = await db
-    .with('replaced', (qb) =>
-      qb
-        .deleteFrom('verifications')
-        .where('target', '=', target)
-        .where('type', '=', type)
-        .returningAll(),
-    )
     .insertInto('verifications')
-    .values({ id: createId(), target, type, expiresAt: expiresAt ?? null, ...totpConfig })
+    .values({ id: createId(), target, type, expiresAt, ...totpConfig })
+    .onConflict((oc) =>
+      oc.columns(['target', 'type']).doUpdateSet({
+        algorithm: totpConfig.algorithm,
+        charSet: totpConfig.charSet,
+        createdAt: new Date(),
+        digits: totpConfig.digits,
+        expiresAt,
+        lastVerifiedAt: null,
+        lastVerifiedCode: null,
+        period: totpConfig.period,
+        secret: totpConfig.secret,
+      }),
+    )
     .returningAll()
     .executeTakeFirstOrThrow();
 
