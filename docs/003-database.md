@@ -39,24 +39,33 @@ Two hosts per endpoint: **direct** (`ep-<endpoint>.<region>.aws.neon.tech`) and 
 
 Three consumers, three stores — the string never lives in the repo:
 
-| Consumer                       | String | Store                                                              |
-| ------------------------------ | ------ | ------------------------------------------------------------------ |
-| Services at runtime (Fly)      | direct | `fly secrets set DATABASE_URL=…` per app, at provisioning time     |
-| CI migrations (`main.yml`)     | direct | `DATABASE_URL` repository Actions secret                           |
-| Local dev (kysely-ctl, ad hoc) | direct | `projects/lib-db/.env.local` (gitignored; bun auto-loads from cwd) |
+| Consumer                       | String | Store                                                          |
+| ------------------------------ | ------ | -------------------------------------------------------------- |
+| Services at runtime (Fly)      | direct | `fly secrets set DATABASE_URL=…` per app, at provisioning time |
+| CI migrations (`main.yml`)     | direct | `DATABASE_URL` repository Actions secret                       |
+| Local dev (kysely-ctl, ad hoc) | direct | `projects/lib-db/.env.local` (gitignored)                      |
 
-Migrations run as a single pre-deploy CI job, not a Fly `release_command`: several services share
-the one database, and a per-service release command would run the same migrations once per deploy,
-redundantly and concurrently. The migrate job gates the deploy jobs.
+Migrations run as a single `main.yml` step on a fully green run, not a Fly `release_command`:
+several services share the one database, and a per-service release command would run the same
+migrations once per deploy, redundantly and concurrently. Deploy jobs (#207) order after the migrate
+step.
 
 Services never read `process.env` for this themselves — each service's `envShape` declares
 `DATABASE_URL` and its factory passes the parsed value to `createDB` (`@vers/db`).
 
 ## Local dev
 
-`projects/lib-db/.env.local` holds `DATABASE_URL` pointing at the Neon `main` branch. bun loads it
-automatically for any `bun run` from that package, which covers the kysely-ctl scripts
-(`db:migrate`, `db:codegen`, `db:seed`, `db:rollback`).
+`projects/lib-db/.env.local` holds `DATABASE_URL` pointing at the Neon `main` branch. Pass it
+explicitly when running the kysely-ctl scripts — bun's automatic `.env` loading covers bun's own
+process but does not reach the node-shebang `kysely` binary a package script spawns:
+
+```sh
+cd projects/lib-db
+bun --env-file=.env.local run db:migrate   # also db:seed, db:rollback
+```
+
+`db:codegen` is currently broken under the workspace's TypeScript 7 (#282); regenerate through an
+isolated kysely-codegen + TS5 install until that closes.
 
 For isolated experiments, branch the database instead of sharing `main`:
 
@@ -80,5 +89,6 @@ neonctl connection-string main --project-id <new-id> --database-name vers
 # then: rewrite sslmode to verify-full, drop channel_binding, and distribute per the table above
 ```
 
-After provisioning, `bun run --cwd projects/lib-db db:migrate` then `db:seed` brings the schema and
-dev seed data up from zero.
+After provisioning, write the string into `projects/lib-db/.env.local`, then `db:migrate` and
+`db:seed` (invoked as under Local dev) bring the schema and dev seed data up from zero. Update the
+`DATABASE_URL` Actions secret and each Fly app's secret to the new string.
