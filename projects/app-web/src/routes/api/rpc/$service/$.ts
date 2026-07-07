@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { forwardRPCRequest } from '../../../../lib/proxy/forward-rpc-request';
+import { sendRPCRequest } from '../../../../lib/proxy/send-rpc-request';
 import type { ServiceName } from '../../../../lib/rpc/service-urls';
 import { SERVICE_URLS } from '../../../../lib/rpc/service-urls';
 
@@ -17,7 +17,7 @@ export const Route = createFileRoute('/api/rpc/$service/$')({
           return new Response(null, { status: 404 });
         }
 
-        return forwardRPCRequest(opts.request, opts.params.service);
+        return sendRPCRequest(opts.request, opts.params.service);
       },
     },
   },

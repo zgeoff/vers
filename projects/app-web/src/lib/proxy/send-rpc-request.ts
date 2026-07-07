@@ -7,7 +7,7 @@ import { SERVICE_URLS } from '../rpc/service-urls';
  * production), so it always round-trips through this same-origin proxy; cookies ride along
  * because the browser's own call to this route is same-origin.
  */
-export async function forwardRPCRequest(request: Request, service: ServiceName): Promise<Response> {
+export async function sendRPCRequest(request: Request, service: ServiceName): Promise<Response> {
   const incoming = new URL(request.url);
 
   const prefix = `/api/rpc/${service}`;

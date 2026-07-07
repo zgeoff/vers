@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { HttpResponse, http } from 'msw';
 import { server } from '../../../mocks/node';
-import { forwardRPCRequest } from './forward-rpc-request';
+import { sendRPCRequest } from './send-rpc-request';
 
 test('it rewrites the proxied path from /api/rpc/<service> to /rpc on the service origin', async () => {
   let capturedURL = '';
@@ -14,7 +14,7 @@ test('it rewrites the proxied path from /api/rpc/<service> to /rpc on the servic
     }),
   );
 
-  await forwardRPCRequest(
+  await sendRPCRequest(
     new Request('http://app.test/api/rpc/user/getCurrentUser?foo=bar', { method: 'POST' }),
     'user',
   );
@@ -39,7 +39,7 @@ test('it forwards the method, headers, and body to the target service', async ()
     }),
   );
 
-  await forwardRPCRequest(
+  await sendRPCRequest(
     new Request('http://app.test/api/rpc/user/updateEmail', {
       body: JSON.stringify({ email: 'new@vers.test' }),
       headers: { authorization: 'Bearer dev-session' },
@@ -64,7 +64,7 @@ test('it forwards a bodyless GET request without a body', async () => {
     }),
   );
 
-  const response = await forwardRPCRequest(
+  const response = await sendRPCRequest(
     new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }),
     'user',
   );
