@@ -120,22 +120,24 @@ Development:
 
 Applications & services:
 
+- `app-design-reference` - static host for the exported visual-direction design pages
 - `app-web` - TanStack Start web app; the trust edge and only public deployment
 - `app-web-e2e` - e2e test suite for the web app
-- `service-activities` - game activity event store (Emmett streams of checkpoint batches)
 - `service-avatar` - avatar domain service
 - `service-session` - session domain service
 - `service-user` - user domain service
 - `service-verification` - OTP/TOTP verification domain service
-- `service-verifier` - queue-fed checkpoint-replay verification worker
 
 Libraries:
 
 - `lib-aether-client` - client code (react, three, zustand) for the aether star map
 - `lib-aether-core` - platform-agnostic aether graph generation
 - `lib-client-test-utils` - react & web worker testing utilities
-- `lib-contract-<service>` - one per service: that service's oRPC API declaration
+- `lib-contract-avatar` - oRPC API declaration for the avatar service
 - `lib-contract-base` - shared contract error taxonomy, base builders, and conformance-test helper
+- `lib-contract-session` - oRPC API declaration for the session service
+- `lib-contract-user` - oRPC API declaration for the user service
+- `lib-contract-verification` - oRPC API declaration for the verification service
 - `lib-data` - core static game data
 - `lib-db` - kysely connection helper, migrations, and generated database types
 - `lib-design-system` - ui component library (Ark UI primitives + Panda recipes)
@@ -147,6 +149,8 @@ Libraries:
 - `lib-service-runtime` - Elysia service runtime: createService, s2s auth, health, logging,
   OTel/Sentry wiring
 - `lib-service-test-utils` - postgres test container & mock data utils
+- `lib-service-utils` - shared Elysia middleware (auth, logging, remote address) and service env
+  schemas
 - `lib-styled-system` - generated code for panda css design system
 - `lib-utils` - low-level platform-agnostic utils
 - `lib-validation` - shared zod schemas
