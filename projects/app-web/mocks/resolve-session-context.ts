@@ -27,7 +27,6 @@ export function resolveSessionContext(request: Request): MockContext {
   return { actingUserId: session.userID };
 }
 
-/** Reads a session id from either the `authorization` bearer token or a `session` cookie. */
 function findSessionID(request: Request): string | null {
   const authorization = request.headers.get('authorization');
 

@@ -3,7 +3,6 @@ import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanst
 import type { ReactNode } from 'react';
 import type { OrpcQueryUtils } from '../lib/rpc/query-utils';
 
-/** Router context every route can read: the SSR-hydrated query client and namespaced oRPC utils. */
 export interface RouterAppContext {
   readonly orpc: OrpcQueryUtils;
   readonly queryClient: QueryClient;
@@ -28,7 +27,6 @@ function RootComponent() {
   );
 }
 
-/** The routed page content mounted inside the document shell. */
 interface RootDocumentProps {
   readonly children: ReactNode;
 }

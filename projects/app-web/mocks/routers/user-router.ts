@@ -3,11 +3,6 @@ import { userContract } from '@vers/contract-user';
 import { userCollection } from '../db/user-collection';
 import type { MockContext } from '../resolve-session-context';
 
-/**
- * The mock user service's full router. Only `getCurrentUser` carries real behaviour for this
- * phase's gate (auth-state-aware server render); every other procedure is a placeholder until its
- * flow phase lands real business logic, per #259's scope.
- */
 export function buildMockUserRouter() {
   const os = implement(userContract).$context<MockContext>();
 

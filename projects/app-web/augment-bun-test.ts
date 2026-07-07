@@ -7,8 +7,8 @@ import '@zgeoff/bun-test-extended';
 import type { TestingLibraryMatchers } from '@testing-library/jest-dom/matchers';
 
 /**
- * Brings `@testing-library/jest-dom`'s matcher types into `bun:test`'s own `expect` — `test-setup`
- * registers the runtime matchers via `expect.extend`, this only supplies the corresponding types.
+ * Brings `@testing-library/jest-dom`'s matcher types into `bun:test`'s own `expect`; only the
+ * types — the runtime matchers are registered separately via `expect.extend` in the preload.
  */
 declare module 'bun:test' {
   // oxlint-disable-next-line typescript/no-empty-interface -- module augmentation, emptiness is the point

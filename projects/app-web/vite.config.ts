@@ -22,7 +22,6 @@ export default defineConfig({
   server: { port: 3000 },
 });
 
-/** The one export `mocks/node.ts` has to expose to this config file's dynamic load. */
 interface MockBackendModule {
   readonly server: {
     readonly listen: (options: Readonly<{ onUnhandledRequest: 'bypass' }>) => void;
@@ -30,11 +29,11 @@ interface MockBackendModule {
 }
 
 /**
- * Starts the shared MSW server for `vite dev` only (never `vite build`, which this hook doesn't
- * fire for) — real services aren't integrated until a later phase (#165), so dev boot runs
- * entirely against the mock backend. Goes through `ssrLoadModule` rather than a plain top-level
- * import: `vite.config.ts` itself loads outside Vite's own resolver, and this app's workspace
- * packages (`@vers/contract-*`) are extensionless-TS source that only that resolver handles.
+ * Starts the shared MSW server for `vite dev` only — `configureServer` never fires for
+ * `vite build` — so dev boot runs entirely against the mock backend. Goes through `ssrLoadModule`
+ * rather than a plain top-level import: this config file loads outside Vite's own resolver, and
+ * this app's workspace packages (`@vers/contract-*`) are extensionless-TS source that only that
+ * resolver handles.
  */
 function buildMockBackendPlugin(): Plugin {
   return {

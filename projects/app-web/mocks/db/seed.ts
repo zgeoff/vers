@@ -6,9 +6,8 @@ import { userCollection } from './user-collection';
 export const DEMO_SESSION_ID = 'dev-session';
 
 /**
- * Seeds the demo signed-in identity every mock-backed dev/test run needs once: a user plus a live
- * session, so the auth-state-aware server render has a real "signed in" path to prove without a
- * login flow existing yet (that lands in phase 1).
+ * Seeds the demo signed-in identity: a user plus a live session, giving the auth-state-aware
+ * server render a real "signed in" path to prove without a login flow existing yet.
  */
 export async function createDemoSeed(): Promise<void> {
   const demoUserID = createId();

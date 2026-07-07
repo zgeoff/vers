@@ -2,11 +2,6 @@ import { isDefinedError } from '@orpc/client';
 import { useQuery } from '@tanstack/react-query';
 import type { OrpcQueryUtils } from '../lib/rpc/query-utils';
 
-/**
- * The client-lane counterpart to the index route's server-rendered auth state: the same
- * `getCurrentUser` procedure, read through the isomorphic `RPCLink` + TanStack Query instead of a
- * server function, proving the client lane's plumbing end to end.
- */
 interface CurrentUserPanelProps {
   readonly orpc: OrpcQueryUtils;
 }

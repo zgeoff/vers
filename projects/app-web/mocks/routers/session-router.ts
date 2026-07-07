@@ -3,11 +3,6 @@ import { sessionContract } from '@vers/contract-session';
 import { sessionCollection } from '../db/session-collection';
 import type { MockContext } from '../resolve-session-context';
 
-/**
- * The mock session service's full router. Only `getSession` carries real behaviour for this
- * phase's gate (the acting user's session read behind `getCurrentUser`'s auth check); every other
- * procedure is a placeholder until its flow phase lands real business logic, per #259's scope.
- */
 export function buildMockSessionRouter() {
   const os = implement(sessionContract).$context<MockContext>();
 

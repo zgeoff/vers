@@ -14,7 +14,6 @@ import { buildMockVerificationRouter } from './routers/verification-router';
 
 await createDemoSeed();
 
-/** MSW handlers backing every service contract, wired against the shared in-memory mock DB. */
 export const handlers: Array<HttpHandler> = [
   ...buildMockService({
     baseUrl: SERVICE_URLS.user,

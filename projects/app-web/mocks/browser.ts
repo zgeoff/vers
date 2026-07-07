@@ -2,9 +2,8 @@ import { setupWorker } from 'msw/browser';
 import { handlers } from './handlers';
 
 /**
- * The browser-side counterpart to `node.ts`'s server, for any flow that issues a request the
- * browser can see directly rather than through the `/api/rpc/$service` proxy (e.g. future
- * client-only tooling). Not started by this phase's boot path — the proxy route covers every
- * client-lane call today.
+ * Browser-side MSW worker, for any flow that issues a request the browser sees directly rather
+ * than through the `/api/rpc/$service` proxy. Not started by the current boot path — every
+ * client-lane call round-trips through that proxy, so the server-side worker covers all traffic.
  */
 export const worker = setupWorker(...handlers);
