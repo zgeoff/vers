@@ -1,22 +1,9 @@
-import { expect, mock, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import { setSelectedNode } from '@vers/aether-client';
 import type { ActivityAppState } from '@vers/idle-core';
 import { withIdleWorkerHandle } from '../../../test-utils/with-idle-worker-handle';
-
-/**
- * Stubs the codex slot itself: it goes through the same untestable-under-`bun test` Flight
- * pipeline `get-aether-node-codex-fragment.tsx`'s own comment documents, so this file asserts the
- * activity-readiness wiring above it instead of that fragment's content.
- */
-void mock.module('../../components/aether-node-codex-slot', () => ({
-  AetherNodeCodexSlot: () => <p data-testid="aether-node-codex-stub">CODEX</p>,
-}));
-
-// imported after the mock above is registered, so its own module graph never reaches the real
-// codex slot
-const aetherCurrentPanelModule = await import('./aether-current-panel');
-const AetherCurrentPanel = aetherCurrentPanelModule.AetherCurrentPanel;
+import { AetherCurrentPanel } from './aether-current-panel';
 
 interface SetActivityMessage {
   readonly activity: { readonly id: string };
