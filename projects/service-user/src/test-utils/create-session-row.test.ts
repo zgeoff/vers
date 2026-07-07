@@ -5,9 +5,8 @@ import { createSessionRow } from './create-session-row';
 test('it inserts a session row for a given owner with faker-generated defaults', async () => {
   await using testDB = await createTestDB();
   const created = await createTestUser(testDB.db);
-  const user = created.user;
 
-  const session = await createSessionRow(testDB.db, { userId: user.id });
+  const session = await createSessionRow(testDB.db, { userId: created.user.id });
 
   const row = await testDB.db
     .selectFrom('sessions')
@@ -15,5 +14,5 @@ test('it inserts a session row for a given owner with faker-generated defaults',
     .where('id', '=', session.id)
     .executeTakeFirstOrThrow();
 
-  expect(row.userId).toBe(user.id);
+  expect(row.userId).toBe(created.user.id);
 });

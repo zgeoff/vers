@@ -50,12 +50,9 @@ export async function verifySession(
     }),
   ]);
 
-  const refreshToken = tokenPair[0];
-  const accessToken = tokenPair[1];
-
   const updateResult = await db
     .updateTable('sessions')
-    .set({ refreshToken, verified: true })
+    .set({ refreshToken: tokenPair[0], verified: true })
     .where('id', '=', session.id)
     .where('verified', '=', false)
     .executeTakeFirst();
@@ -64,5 +61,5 @@ export async function verifySession(
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  return { accessToken, refreshToken };
+  return { accessToken: tokenPair[1], refreshToken: tokenPair[0] };
 }

@@ -8,18 +8,15 @@ import { createSessionRow } from '../test-utils/create-session-row';
 async function setupTest() {
   const db = await createTestDB();
   const service = await createSessionService({ db: db.db });
-  const app = service.app;
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it returns an owned session by id', async () => {
   await using ctx = await setupTest();
   const viewer = await createViewer({ audience: 'service-session', db: ctx.db });
-  const token = viewer.token;
-  const user = viewer.user;
-  const session = await createSessionRow(ctx.db, { userId: user.id });
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const session = await createSessionRow(ctx.db, { userId: viewer.user.id });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const found = await client.getSession({ id: session.id });
 
@@ -29,7 +26,7 @@ test('it returns an owned session by id', async () => {
     id: session.id,
     ipAddress: session.ipAddress,
     updatedAt: session.updatedAt,
-    userID: user.id,
+    userID: viewer.user.id,
     verified: session.verified,
   });
 });
@@ -37,10 +34,9 @@ test('it returns an owned session by id', async () => {
 test('it returns null when the session belongs to a different user', async () => {
   await using ctx = await setupTest();
   const viewer = await createViewer({ audience: 'service-session', db: ctx.db });
-  const token = viewer.token;
   const other = await createViewer({ audience: 'service-session', db: ctx.db });
   const foreign = await createSessionRow(ctx.db, { userId: other.user.id });
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const found = await client.getSession({ id: foreign.id });
 
@@ -50,8 +46,7 @@ test('it returns null when the session belongs to a different user', async () =>
 test('it returns null for an id that does not exist', async () => {
   await using ctx = await setupTest();
   const viewer = await createViewer({ audience: 'service-session', db: ctx.db });
-  const token = viewer.token;
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const found = await client.getSession({ id: 'does-not-exist' });
 
@@ -61,8 +56,7 @@ test('it returns null for an id that does not exist', async () => {
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   expect(client.getSession({ id: 'x' })).rejects.toMatchObject({
     code: 'UNAUTHORIZED',

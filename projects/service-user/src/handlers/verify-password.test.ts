@@ -7,20 +7,20 @@ import { createUserService } from '../create-user-service';
 async function setupTest() {
   const db = await createTestDB();
   const service = await createUserService({ db: db.db });
-  const app = service.app;
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it verifies a correct password', async () => {
   await using ctx = await setupTest();
   const created = await createTestUser(ctx.db, { password: 'password123' });
-  const user = created.user;
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
-  const result = await client.verifyPassword({ email: user.email, password: 'password123' });
+  const result = await client.verifyPassword({
+    email: created.user.email,
+    password: 'password123',
+  });
 
   expect(result).toStrictEqual({ success: true });
 });
@@ -28,12 +28,13 @@ test('it verifies a correct password', async () => {
 test('it returns success=false for an incorrect password', async () => {
   await using ctx = await setupTest();
   const created = await createTestUser(ctx.db, { password: 'password123' });
-  const user = created.user;
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
-  const result = await client.verifyPassword({ email: user.email, password: 'wrongpassword' });
+  const result = await client.verifyPassword({
+    email: created.user.email,
+    password: 'wrongpassword',
+  });
 
   expect(result).toStrictEqual({ success: false });
 });
@@ -41,8 +42,7 @@ test('it returns success=false for an incorrect password', async () => {
 test('it returns success=false for an unknown email without revealing user existence', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   const result = await client.verifyPassword({
     email: 'nonexistent@test.com',
@@ -55,12 +55,13 @@ test('it returns success=false for an unknown email without revealing user exist
 test('it returns success=false for a user without a password set', async () => {
   await using ctx = await setupTest();
   const created = await createTestUser(ctx.db, { password: null });
-  const user = created.user;
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
-  const result = await client.verifyPassword({ email: user.email, password: 'password123' });
+  const result = await client.verifyPassword({
+    email: created.user.email,
+    password: 'password123',
+  });
 
   expect(result).toStrictEqual({ success: false });
 });
@@ -73,20 +74,20 @@ test('it verifies a legacy bcrypt hash and rehashes it as argon2id on success', 
     passwordAlgorithm: 'bcrypt',
   });
 
-  const user = created.user;
-
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
-  const result = await client.verifyPassword({ email: user.email, password: 'password123' });
+  const result = await client.verifyPassword({
+    email: created.user.email,
+    password: 'password123',
+  });
 
   expect(result).toStrictEqual({ success: true });
 
   const row = await ctx.db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', user.id)
+    .where('id', '=', created.user.id)
     .executeTakeFirstOrThrow();
 
   expect(row.passwordHash).toStartWith('$argon2');
@@ -100,21 +101,21 @@ test('it leaves a legacy bcrypt hash untouched on a failed attempt', async () =>
     passwordAlgorithm: 'bcrypt',
   });
 
-  const user = created.user;
-
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
-  const result = await client.verifyPassword({ email: user.email, password: 'wrongpassword' });
+  const result = await client.verifyPassword({
+    email: created.user.email,
+    password: 'wrongpassword',
+  });
 
   expect(result).toStrictEqual({ success: false });
 
   const row = await ctx.db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', user.id)
+    .where('id', '=', created.user.id)
     .executeTakeFirstOrThrow();
 
-  expect(row.passwordHash).toBe(user.passwordHash);
+  expect(row.passwordHash).toBe(created.user.passwordHash);
 });

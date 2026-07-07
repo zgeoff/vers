@@ -8,21 +8,18 @@ import { createSessionRow } from '../test-utils/create-session-row';
 async function setupTest() {
   const db = await createTestDB();
   const service = await createUserService({ db: db.db });
-  const app = service.app;
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it accepts the plaintext token whose hash is stored', async () => {
   await using ctx = await setupTest();
   const created = await createTestUser(ctx.db, { resetToken: 'plaintext-token' });
-  const user = created.user;
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   const result = await client.resetPassword({
-    id: user.id,
+    id: created.user.id,
     password: 'newpassword123',
     resetToken: 'plaintext-token',
   });
@@ -32,7 +29,7 @@ test('it accepts the plaintext token whose hash is stored', async () => {
   const row = await ctx.db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', user.id)
+    .where('id', '=', created.user.id)
     .executeTakeFirstOrThrow();
 
   expect(row.passwordHash).toStartWith('$argon2id$');
@@ -43,17 +40,15 @@ test('it accepts the plaintext token whose hash is stored', async () => {
 test("it deletes all of the user's sessions when the password is reset", async () => {
   await using ctx = await setupTest();
   const created = await createTestUser(ctx.db, { resetToken: 'plaintext-token' });
-  const user = created.user;
 
-  await createSessionRow(ctx.db, { userId: user.id });
-  await createSessionRow(ctx.db, { userId: user.id });
+  await createSessionRow(ctx.db, { userId: created.user.id });
+  await createSessionRow(ctx.db, { userId: created.user.id });
 
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   await client.resetPassword({
-    id: user.id,
+    id: created.user.id,
     password: 'newpassword123',
     resetToken: 'plaintext-token',
   });
@@ -61,7 +56,7 @@ test("it deletes all of the user's sessions when the password is reset", async (
   const sessions = await ctx.db
     .selectFrom('sessions')
     .selectAll()
-    .where('userId', '=', user.id)
+    .where('userId', '=', created.user.id)
     .execute();
 
   expect(sessions).toBeEmpty();
@@ -70,14 +65,12 @@ test("it deletes all of the user's sessions when the password is reset", async (
 test('it rejects a password that fails the password policy', async () => {
   await using ctx = await setupTest();
   const created = await createTestUser(ctx.db, { resetToken: 'plaintext-token' });
-  const user = created.user;
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(
     client.resetPassword({
-      id: user.id,
+      id: created.user.id,
       password: 'short',
       resetToken: 'plaintext-token',
     }),
@@ -87,8 +80,7 @@ test('it rejects a password that fails the password policy', async () => {
 test('it throws NOT_FOUND when the user does not exist', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(
     client.resetPassword({
@@ -102,14 +94,12 @@ test('it throws NOT_FOUND when the user does not exist', async () => {
 test('it rejects a wrong token with INVALID_RESET_TOKEN', async () => {
   await using ctx = await setupTest();
   const created = await createTestUser(ctx.db, { resetToken: 'plaintext-token' });
-  const user = created.user;
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(
     client.resetPassword({
-      id: user.id,
+      id: created.user.id,
       password: 'newpassword123',
       resetToken: 'wrong-token',
     }),
@@ -119,14 +109,12 @@ test('it rejects a wrong token with INVALID_RESET_TOKEN', async () => {
 test('it rejects a request when no reset token has been requested', async () => {
   await using ctx = await setupTest();
   const created = await createTestUser(ctx.db);
-  const user = created.user;
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(
     client.resetPassword({
-      id: user.id,
+      id: created.user.id,
       password: 'newpassword123',
       resetToken: 'any-token',
     }),
@@ -141,15 +129,12 @@ test('it rejects an expired reset token with RESET_TOKEN_EXPIRED', async () => {
     resetToken: 'plaintext-token',
   });
 
-  const user = created.user;
-
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(
     client.resetPassword({
-      id: user.id,
+      id: created.user.id,
       password: 'newpassword123',
       resetToken: 'plaintext-token',
     }),

@@ -42,19 +42,22 @@ export async function createVerification(
   opts: CreateVerificationOpts,
 ): Promise<VerificationData & { otp: string }> {
   const expiresAt = opts.input.expiresAt ?? null;
-  const period = opts.input.period;
-  const target = opts.input.target;
-  const type = opts.input.type;
 
   const { otp, ...totpConfig } = await generateTOTP({
     algorithm: 'SHA-256',
-    charSet: VERIFICATION_TYPE_TO_CHARSET[type],
-    ...(period !== undefined && { period }),
+    charSet: VERIFICATION_TYPE_TO_CHARSET[opts.input.type],
+    ...(opts.input.period !== undefined && { period: opts.input.period }),
   });
 
   const row = await db
     .insertInto('verifications')
-    .values({ id: createId(), target, type, expiresAt, ...totpConfig })
+    .values({
+      id: createId(),
+      target: opts.input.target,
+      type: opts.input.type,
+      expiresAt,
+      ...totpConfig,
+    })
     .onConflict((oc) =>
       oc.columns(['target', 'type']).doUpdateSet({
         algorithm: totpConfig.algorithm,

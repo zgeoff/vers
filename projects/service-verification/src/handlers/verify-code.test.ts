@@ -8,16 +8,14 @@ import { createVerificationRow } from '../test-utils/create-verification-row';
 async function setupTest() {
   const db = await createTestDB();
   const service = await createVerificationService({ db: db.db });
-  const app = service.app;
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it verifies a valid code', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const created = await client.createVerification({
     target: 'onboard@example.com',
@@ -48,8 +46,7 @@ test('it verifies a valid code', async () => {
 test('it rejects an invalid code with INVALID_CODE', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   await createVerificationRow(ctx.db, { target: 'invalid@example.com', type: 'onboarding' });
 
@@ -61,8 +58,7 @@ test('it rejects an invalid code with INVALID_CODE', async () => {
 test('it rejects an expired code with CODE_EXPIRED and deletes it', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const verification = await createVerificationRow(ctx.db, {
     expiresAt: new Date(Date.now() - 60_000),
@@ -86,8 +82,7 @@ test('it rejects an expired code with CODE_EXPIRED and deletes it', async () => 
 test('it does not delete a 2fa setup verification', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
   const created = await client.createVerification({ target: '+15551234567', type: '2fa-setup' });
 
   await client.verifyCode({ code: created.otp, target: '+15551234567', type: '2fa-setup' });
@@ -104,8 +99,7 @@ test('it does not delete a 2fa setup verification', async () => {
 test('it does not delete a 2fa verification', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
   const created = await client.createVerification({ target: '+15551234568', type: '2fa' });
 
   await client.verifyCode({ code: created.otp, target: '+15551234568', type: '2fa' });
@@ -122,8 +116,7 @@ test('it does not delete a 2fa verification', async () => {
 test('it rejects an immediately replayed 2fa code with CODE_ALREADY_USED', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
   const created = await client.createVerification({ target: '+15551234569', type: '2fa' });
 
   await client.verifyCode({ code: created.otp, target: '+15551234569', type: '2fa' });
@@ -136,8 +129,7 @@ test('it rejects an immediately replayed 2fa code with CODE_ALREADY_USED', async
 test('it records the verified code and timestamp on a successful 2fa verification', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
   const created = await client.createVerification({ target: '+15551234570', type: '2fa' });
 
   await client.verifyCode({ code: created.otp, target: '+15551234570', type: '2fa' });
@@ -155,8 +147,7 @@ test('it records the verified code and timestamp on a successful 2fa verificatio
 test('it accepts the same 2fa code again once the replay window has passed', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const created = await client.createVerification({
     period: 300,

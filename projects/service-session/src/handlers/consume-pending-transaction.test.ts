@@ -8,9 +8,8 @@ import { createPendingTransactionRow } from '../test-utils/create-pending-transa
 async function setupTest() {
   const db = await createTestDB();
   const service = await createSessionService({ db: db.db });
-  const app = service.app;
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it consumes a matching pending transaction and returns its data', async () => {
@@ -24,8 +23,7 @@ test('it consumes a matching pending transaction and returns its data', async ()
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const result = await client.stepUp.consumePendingTransaction({
     action: 'TwoFactorAuth',
@@ -50,8 +48,7 @@ test('it throws NOT_FOUND when consuming the same pending transaction twice', as
   await using ctx = await setupTest();
   const transaction = await createPendingTransactionRow(ctx.db);
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   await client.stepUp.consumePendingTransaction({
     action: 'TwoFactorAuth',
@@ -81,8 +78,7 @@ test('it throws TRANSACTION_MISMATCH and still burns the transaction when a fiel
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   expect(
     client.stepUp.consumePendingTransaction({
@@ -106,8 +102,7 @@ test('it throws TRANSACTION_MISMATCH and still burns the transaction when a fiel
 test('it throws NOT_FOUND for a transaction that does not exist', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   expect(
     client.stepUp.consumePendingTransaction({

@@ -7,9 +7,8 @@ import { createUserService } from './create-user-service';
 async function setupTest() {
   const db = await createTestDB();
   const service = await createUserService({ db: db.db });
-  const app = service.app;
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 // Each call acquires its own transaction-isolated handle from the same shared worker database
@@ -19,8 +18,7 @@ async function setupTest() {
 test('it creates a user visible within this test', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   await client.createUser({
     email: 'isolation-proof@example.com',

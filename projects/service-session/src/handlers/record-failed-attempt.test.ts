@@ -8,17 +8,15 @@ import { createPendingTransactionRow } from '../test-utils/create-pending-transa
 async function setupTest() {
   const db = await createTestDB();
   const service = await createSessionService({ db: db.db });
-  const app = service.app;
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it leaves the pending transaction intact through the fourth failure', async () => {
   await using ctx = await setupTest();
   const transaction = await createPendingTransactionRow(ctx.db);
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   let result;
 
@@ -41,8 +39,7 @@ test('it deletes the pending transaction after the fifth failed attempt', async 
   await using ctx = await setupTest();
   const transaction = await createPendingTransactionRow(ctx.db);
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   let result;
 
@@ -64,8 +61,7 @@ test('it deletes the pending transaction after the fifth failed attempt', async 
 test('it throws NOT_FOUND for a transaction that does not exist', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   expect(client.stepUp.recordFailedAttempt({ id: 'does-not-exist' })).rejects.toMatchObject({
     code: 'NOT_FOUND',
@@ -80,8 +76,7 @@ test('it throws NOT_FOUND for an expired transaction', async () => {
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<SessionContract>(ctx.app, { token });
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   expect(client.stepUp.recordFailedAttempt({ id: transaction.id })).rejects.toMatchObject({
     code: 'NOT_FOUND',

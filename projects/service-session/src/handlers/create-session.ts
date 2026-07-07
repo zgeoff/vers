@@ -17,23 +17,20 @@ interface CreateSessionOpts {
 
 /** Creates an unverified session for a login, its expiry set by `rememberMe` unless overridden. */
 export async function createSession(db: Kysely<DB>, opts: CreateSessionOpts): Promise<SessionData> {
-  const expiresAt = opts.input.expiresAt;
-  const ipAddress = opts.input.ipAddress;
-  const rememberMe = opts.input.rememberMe;
-  const userID = opts.input.userID;
+  const sessionDuration =
+    opts.input.rememberMe === true ? SESSION_DURATION_LONG : SESSION_DURATION_SHORT;
 
-  const sessionDuration = rememberMe === true ? SESSION_DURATION_LONG : SESSION_DURATION_SHORT;
-  const sessionExpiresAt = expiresAt ?? new Date(Date.now() + sessionDuration);
+  const sessionExpiresAt = opts.input.expiresAt ?? new Date(Date.now() + sessionDuration);
 
   const row = await db
     .insertInto('sessions')
     .values({
       expiresAt: sessionExpiresAt,
       id: createId(),
-      ipAddress,
+      ipAddress: opts.input.ipAddress,
       previousRefreshToken: null,
       refreshToken: null,
-      userId: userID,
+      userId: opts.input.userID,
       verified: false,
     })
     .returningAll()

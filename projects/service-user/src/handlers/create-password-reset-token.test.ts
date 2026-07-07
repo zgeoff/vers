@@ -8,27 +8,24 @@ import { createUserService } from '../create-user-service';
 async function setupTest() {
   const db = await createTestDB();
   const service = await createUserService({ db: db.db });
-  const app = service.app;
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it creates a password reset token for an existing user', async () => {
   await using ctx = await setupTest();
   const created = await createTestUser(ctx.db);
-  const user = created.user;
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
-  const result = await client.createPasswordResetToken({ id: user.id });
+  const result = await client.createPasswordResetToken({ id: created.user.id });
 
   expect(result).toStrictEqual({ resetToken: expect.toBeString() });
 
   const row = await ctx.db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', user.id)
+    .where('id', '=', created.user.id)
     .executeTakeFirstOrThrow();
 
   expect(row.passwordResetTokenExpiresAt).toBeAfter(new Date());
@@ -38,17 +35,15 @@ test('it creates a password reset token for an existing user', async () => {
 test('it stores only a hash of the reset token at rest', async () => {
   await using ctx = await setupTest();
   const created = await createTestUser(ctx.db);
-  const user = created.user;
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
-  const result = await client.createPasswordResetToken({ id: user.id });
+  const result = await client.createPasswordResetToken({ id: created.user.id });
 
   const row = await ctx.db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', user.id)
+    .where('id', '=', created.user.id)
     .executeTakeFirstOrThrow();
 
   expect(row.passwordResetToken).not.toBe(result.resetToken);
@@ -58,20 +53,18 @@ test('it stores only a hash of the reset token at rest', async () => {
 test('it replaces the previous reset token when called again', async () => {
   await using ctx = await setupTest();
   const created = await createTestUser(ctx.db);
-  const user = created.user;
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
-  const first = await client.createPasswordResetToken({ id: user.id });
-  const second = await client.createPasswordResetToken({ id: user.id });
+  const first = await client.createPasswordResetToken({ id: created.user.id });
+  const second = await client.createPasswordResetToken({ id: created.user.id });
 
   expect(first.resetToken).not.toBe(second.resetToken);
 
   const row = await ctx.db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', user.id)
+    .where('id', '=', created.user.id)
     .executeTakeFirstOrThrow();
 
   expect(row.passwordResetToken).toBe(createHash('sha256').update(second.resetToken).digest('hex'));
@@ -80,8 +73,7 @@ test('it replaces the previous reset token when called again', async () => {
 test('it throws NOT_FOUND when the user does not exist', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(client.createPasswordResetToken({ id: 'nonexistent-id' })).rejects.toMatchObject({
     code: 'NOT_FOUND',
@@ -91,12 +83,10 @@ test('it throws NOT_FOUND when the user does not exist', async () => {
 test('it throws NO_PASSWORD for a user without a password', async () => {
   await using ctx = await setupTest();
   const created = await createTestUser(ctx.db, { password: null });
-  const user = created.user;
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
-  expect(client.createPasswordResetToken({ id: user.id })).rejects.toMatchObject({
+  expect(client.createPasswordResetToken({ id: created.user.id })).rejects.toMatchObject({
     code: 'NO_PASSWORD',
   });
 });

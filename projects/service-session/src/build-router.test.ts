@@ -7,18 +7,16 @@ import { createSessionService } from './create-session-service';
 async function setupTest() {
   const db = await createTestDB();
   const service = await createSessionService({ db: db.db });
-  const app = service.app;
 
-  return { app, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it passes every conformance case collected from its contract', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
-  const token = viewer.token;
 
   const cases = collectConformanceCases(sessionContract, {
-    anonymousHeaders: { authorization: `Bearer ${token}` },
+    anonymousHeaders: { authorization: `Bearer ${viewer.token}` },
     authedSamples: {
       deleteSession: { id: 'x' },
       getSession: { id: 'x' },

@@ -8,16 +8,14 @@ import { createVerificationRow } from '../test-utils/create-verification-row';
 async function setupTest() {
   const db = await createTestDB();
   const service = await createVerificationService({ db: db.db });
-  const app = service.app;
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it returns a TOTP auth URI for a pending 2fa setup', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   await createVerificationRow(ctx.db, { target: 'setup@example.com', type: '2fa-setup' });
 
@@ -29,8 +27,7 @@ test('it returns a TOTP auth URI for a pending 2fa setup', async () => {
 test('it throws NOT_FOUND when no 2fa setup verification exists for the target', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token });
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   expect(client.get2FAVerificationURI({ target: 'missing@example.com' })).rejects.toMatchObject({
     code: 'NOT_FOUND',

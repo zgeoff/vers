@@ -282,23 +282,6 @@
   },
   "overrides": [
     {
-      "files": [
-        "projects/service-avatar/**",
-        "projects/service-session/**",
-        "projects/service-user/**",
-        "projects/service-verification/**"
-      ],
-      // maintainer style rule (2026-07-07): in these four shape-identical
-      // services, destructuring is reserved for splitting an object (a
-      // rest-spread pulls the remainder off a named property); every other
-      // body destructure is a plain property reassignment instead, which the
-      // repo-wide rule below would otherwise force back into destructured
-      // form
-      "rules": {
-        "prefer-destructuring": "off"
-      }
-    },
-    {
       "files": ["**/*.test.ts", "**/*.test.tsx"],
       // ergonomics for every co-located suite, whichever runner it targets: one
       // suite per module with inline test data means file length scales with

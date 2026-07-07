@@ -7,10 +7,8 @@ import { createVerificationService } from './create-verification-service';
 test('it wires an injected db into the router instead of building one from env', async () => {
   await using db = await createTestDB();
   const service = await createVerificationService({ db: db.db });
-  const app = service.app;
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<VerificationContract>(app, { token });
+  const client = buildRPCTestClient<VerificationContract>(service.app, { token: viewer.token });
 
   await client.createVerification({ target: 'wired@example.com', type: 'onboarding' });
 

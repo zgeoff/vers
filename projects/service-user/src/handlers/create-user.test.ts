@@ -7,16 +7,14 @@ import { createUserService } from '../create-user-service';
 async function setupTest() {
   const db = await createTestDB();
   const service = await createUserService({ db: db.db });
-  const app = service.app;
 
-  return { app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it creates a user with an argon2id-hashed password', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   const result = await client.createUser({
     email: 'user@test.com',
@@ -49,8 +47,7 @@ test('it creates a user with an argon2id-hashed password', async () => {
 test('it throws CONFLICT with field email when a user with that email already exists', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   await client.createUser({
     email: 'duplicate@test.com',
@@ -75,8 +72,7 @@ test('it throws CONFLICT with field email when a user with that email already ex
 test('it throws CONFLICT with field username when a user with that username already exists', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
-  const token = viewer.token;
-  const client = buildRPCTestClient<UserContract>(ctx.app, { token });
+  const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   await client.createUser({
     email: 'user1@test.com',

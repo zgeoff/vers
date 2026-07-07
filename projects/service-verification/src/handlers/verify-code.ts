@@ -31,15 +31,11 @@ interface VerifyCodeOpts {
  * any pre-`(target, type)`-constraint duplicate rows.
  */
 export async function verifyCode(db: Kysely<DB>, opts: VerifyCodeOpts): Promise<VerificationData> {
-  const code = opts.input.code;
-  const target = opts.input.target;
-  const type = opts.input.type;
-
   const row = await db
     .selectFrom('verifications')
     .selectAll()
-    .where('type', '=', type)
-    .where('target', '=', target)
+    .where('type', '=', opts.input.type)
+    .where('target', '=', opts.input.target)
     .orderBy('createdAt', 'desc')
     .executeTakeFirst();
 
@@ -57,7 +53,7 @@ export async function verifyCode(db: Kysely<DB>, opts: VerifyCodeOpts): Promise<
     algorithm: row.algorithm,
     charSet: row.charSet,
     digits: row.digits,
-    otp: code,
+    otp: opts.input.code,
     period: row.period,
     secret: row.secret,
   });
@@ -66,7 +62,7 @@ export async function verifyCode(db: Kysely<DB>, opts: VerifyCodeOpts): Promise<
     throw opts.errors.INVALID_CODE({ data: {} });
   }
 
-  if (DELETING_TYPES.has(type)) {
+  if (DELETING_TYPES.has(opts.input.type)) {
     const deleteResult = await db
       .deleteFrom('verifications')
       .where('id', '=', row.id)
@@ -80,13 +76,13 @@ export async function verifyCode(db: Kysely<DB>, opts: VerifyCodeOpts): Promise<
 
     const updateResult = await db
       .updateTable('verifications')
-      .set({ lastVerifiedAt: new Date(), lastVerifiedCode: code })
+      .set({ lastVerifiedAt: new Date(), lastVerifiedCode: opts.input.code })
       .where('id', '=', row.id)
       .where((eb) =>
         eb.or([
           eb('lastVerifiedCode', 'is', null),
           eb('lastVerifiedAt', 'is', null),
-          eb('lastVerifiedCode', '!=', code),
+          eb('lastVerifiedCode', '!=', opts.input.code),
           eb('lastVerifiedAt', '<=', replayWindow),
         ]),
       )

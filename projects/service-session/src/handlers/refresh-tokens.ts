@@ -84,12 +84,9 @@ export async function refreshTokens(
     }),
   ]);
 
-  const refreshToken = rotatedTokens[0];
-  const accessToken = rotatedTokens[1];
-
   const updateResult = await db
     .updateTable('sessions')
-    .set({ previousRefreshToken: row.refreshToken, refreshToken })
+    .set({ previousRefreshToken: row.refreshToken, refreshToken: rotatedTokens[0] })
     .where('id', '=', row.id)
     .where('refreshToken', '=', row.refreshToken)
     .executeTakeFirst();
@@ -100,5 +97,5 @@ export async function refreshTokens(
     throw opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
   }
 
-  return { accessToken, refreshToken };
+  return { accessToken: rotatedTokens[1], refreshToken: rotatedTokens[0] };
 }

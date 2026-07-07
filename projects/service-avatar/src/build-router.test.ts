@@ -7,18 +7,16 @@ import { createAvatarService } from './create-avatar-service';
 async function setupTest() {
   const db = await createTestDB();
   const service = await createAvatarService({ db: db.db });
-  const app = service.app;
 
-  return { app, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  return { app: service.app, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it passes every conformance case collected from its contract', async () => {
   await using ctx = await setupTest();
   const viewer = await createAnonymousViewer({ audience: 'service-avatar' });
-  const token = viewer.token;
 
   const cases = collectConformanceCases(avatarContract, {
-    anonymousHeaders: { authorization: `Bearer ${token}` },
+    anonymousHeaders: { authorization: `Bearer ${viewer.token}` },
     authedSamples: {
       createAvatar: { class: 'brute', name: 'Conformance' },
       deleteAvatar: { id: 'x' },
