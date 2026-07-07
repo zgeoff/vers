@@ -2,7 +2,7 @@ import { sessionCollection } from '../../db/session-collection';
 import { os } from './os';
 
 export const getSession = os.getSession.handler((opts) => {
-  const { actingUserId } = opts.context;
+  const actingUserId = opts.context.actingUserId;
 
   if (actingUserId === null) {
     throw new Error('not wired in the phase 0b mock backend');

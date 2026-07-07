@@ -2,7 +2,7 @@ import { userCollection } from '../../db/user-collection';
 import { os } from './os';
 
 export const getCurrentUser = os.getCurrentUser.handler((opts) => {
-  const { actingUserId } = opts.context;
+  const actingUserId = opts.context.actingUserId;
 
   if (actingUserId === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
