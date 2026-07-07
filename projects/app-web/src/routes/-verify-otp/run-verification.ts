@@ -5,7 +5,7 @@ import { runOnboarding } from './run-onboarding';
 import { runUnsupported } from './run-unsupported';
 import type { RunVerificationContext } from './types';
 
-type VerificationHandler = (ctx: Readonly<RunVerificationContext>) => Promise<never>;
+type VerificationHandler = (ctx: Readonly<RunVerificationContext>) => Promise<void>;
 
 const RUN_VERIFICATION_TYPE_STRATEGY: Record<VerificationType, VerificationHandler> = {
   '2fa': run2FA,
@@ -14,10 +14,14 @@ const RUN_VERIFICATION_TYPE_STRATEGY: Record<VerificationType, VerificationHandl
   onboarding: runOnboarding,
 };
 
-/** Runs a verification type's post-verify continuation: a redirect target and session mutation. */
+/**
+ * Runs a verification type's post-verify continuation. Every type but `change-email` ends its own
+ * handler in a thrown redirect; `change-email` applies its mutation and returns instead, so its
+ * caller can report success without relying on a server-issued redirect.
+ */
 export function runVerification(
   type: VerificationType,
   ctx: Readonly<RunVerificationContext>,
-): Promise<never> {
+): Promise<void> {
   return RUN_VERIFICATION_TYPE_STRATEGY[type](ctx);
 }

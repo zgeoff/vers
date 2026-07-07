@@ -64,8 +64,11 @@ export async function verifyOTPHandler(formData: FormData): Promise<VerifyOTPRes
     return { formError: 'Invalid or expired code', status: 'invalid-fields' };
   }
 
-  return runVerification(submission.data.type, {
+  // every type but `change-email` throws its own redirect before this line is reached
+  await runVerification(submission.data.type, {
     redirectTo: submission.data.redirect,
     target,
   });
+
+  return { status: 'change-email-applied' };
 }
