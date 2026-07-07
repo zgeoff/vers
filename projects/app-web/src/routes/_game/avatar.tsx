@@ -1,17 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
 import { css } from '@vers/styled-system/css';
-import { requireAuth } from '../lib/auth/require-auth';
-import { getAvatarContent } from '../lib/avatar/get-avatar-content';
+import { getAvatarContent } from '../../lib/avatar/get-avatar-content';
 
-const requireAuthFn = createServerFn({ method: 'GET' }).handler(() => requireAuth());
-
-export const Route = createFileRoute('/avatar')({
+export const Route = createFileRoute('/_game/avatar')({
   component: AvatarPage,
   head: () => ({ meta: [{ title: 'vers | Avatar' }] }),
   loader: async () => {
-    await requireAuthFn();
-
     const avatarContent = await getAvatarContent();
 
     return { Content: avatarContent.Renderable };

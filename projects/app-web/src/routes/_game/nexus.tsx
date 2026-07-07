@@ -1,15 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
 import { css } from '@vers/styled-system/css';
-import { requireAuth } from '../lib/auth/require-auth';
-import { NexusPanel } from './-nexus/nexus-panel';
+import { NexusPanel } from '../-nexus/nexus-panel';
 
-const requireAuthFn = createServerFn({ method: 'GET' }).handler(() => requireAuth());
-
-export const Route = createFileRoute('/nexus')({
+export const Route = createFileRoute('/_game/nexus')({
   component: NexusPage,
   head: () => ({ meta: [{ title: 'vers | Nexus' }] }),
-  loader: () => requireAuthFn(),
 });
 
 function NexusPage() {
