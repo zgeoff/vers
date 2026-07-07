@@ -8,14 +8,14 @@ import { sessionBadgeQueryOptions } from '../lib/session/session-badge-query-opt
  */
 export function SessionBadgeSlot() {
   const queryClient = useQueryClient();
-  const { data } = useSuspenseQuery(sessionBadgeQueryOptions);
+  const result = useSuspenseQuery(sessionBadgeQueryOptions);
 
   const refresh = () => {
     void queryClient.refetchQueries({ queryKey: sessionBadgeQueryOptions.queryKey });
   };
 
   return (
-    <CompositeComponent src={data.src}>
+    <CompositeComponent src={result.data.src}>
       <button data-testid="session-badge-refresh" onClick={refresh} type="button">
         Refresh
       </button>

@@ -42,7 +42,7 @@ function buildMockBackendPlugin(): Plugin {
       const mocks = await viteServer.ssrLoadModule('/mocks/node.ts');
 
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- ssrLoadModule's return type is Vite's own `Record<string, any>`; no safer typed accessor exists for a dynamically loaded module
-      const { server } = mocks as MockBackendModule;
+      const server = (mocks as MockBackendModule).server;
 
       server.listen({ onUnhandledRequest: 'bypass' });
     },

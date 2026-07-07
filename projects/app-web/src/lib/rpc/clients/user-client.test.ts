@@ -25,7 +25,7 @@ function setupTest(config: Readonly<{ actingUserId?: string | null }>) {
 }
 
 test('it reads getCurrentUser through the isomorphic client against a mocked service', async () => {
-  const { mockUser } = setupTest({ actingUserId: null });
+  const ctx = setupTest({ actingUserId: null });
 
   const user = {
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -37,7 +37,7 @@ test('it reads getCurrentUser through the isomorphic client against a mocked ser
     username: 'clients-test',
   };
 
-  server.use(mockUser.getCurrentUser.handler(user));
+  server.use(ctx.mockUser.getCurrentUser.handler(user));
 
   const result = await userClient.getCurrentUser({}, { context: { headers: {} } });
 
@@ -45,15 +45,15 @@ test('it reads getCurrentUser through the isomorphic client against a mocked ser
 });
 
 test('it reports the typed UNAUTHORIZED error for a signed-out call', async () => {
-  const { mockUser } = setupTest({ actingUserId: null });
+  const ctx = setupTest({ actingUserId: null });
 
   server.use(
-    mockUser.getCurrentUser.handler((opts) => {
+    ctx.mockUser.getCurrentUser.handler((opts) => {
       throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
     }),
   );
 
-  const { error, isDefined } = await safe(
+  const [error, , isDefined] = await safe(
     userClient.getCurrentUser({}, { context: { headers: {} } }),
   );
 

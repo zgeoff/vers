@@ -17,7 +17,7 @@ export type CurrentUserResult =
 export async function tryReadCurrentUser(
   headers: Readonly<Record<string, string>>,
 ): Promise<CurrentUserResult> {
-  const { data, error, isDefined } = await safe(
+  const [error, data, isDefined] = await safe(
     userClient.getCurrentUser({}, { context: { headers } }),
   );
 

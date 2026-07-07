@@ -24,13 +24,13 @@ export const Route = createFileRoute('/')({
 });
 
 function HomePage() {
-  const { Content } = Route.useLoaderData();
-  const { orpc } = Route.useRouteContext();
+  const data = Route.useLoaderData();
+  const ctx = Route.useRouteContext();
 
   return (
     <main className={css({ display: 'flex', flexDirection: 'column', gap: '4', padding: '6' })}>
-      {Content}
-      <CurrentUserPanel orpc={orpc} />
+      {data.Content}
+      <CurrentUserPanel orpc={ctx.orpc} />
       <Suspense fallback={<p data-testid="session-badge-loading">Loading session badge…</p>}>
         <SessionBadgeSlot />
       </Suspense>
