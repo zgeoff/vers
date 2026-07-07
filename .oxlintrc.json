@@ -82,16 +82,9 @@
       { "argsIgnorePattern": "^_", "ignoreRestSiblings": true, "varsIgnorePattern": "^_" }
     ],
 
-    // destructuring reads well at declaration sites, but satisfying it on
-    // assignments forces the parenthesized `({ x } = y)` form — plain member
-    // assignment instead
-    "prefer-destructuring": [
-      "error",
-      {
-        "VariableDeclarator": { "array": true, "object": true },
-        "AssignmentExpression": { "array": false, "object": false }
-      }
-    ],
+    // house style is direct member access; "off" because the "style" category
+    // default would otherwise re-enable this with stock options
+    "prefer-destructuring": "off",
 
     // consistent function syntax — declarations top level, arrows for inside
     // blocks and callbacks
