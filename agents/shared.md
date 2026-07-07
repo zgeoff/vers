@@ -38,12 +38,17 @@ what tooling can't check.
 ### Comments
 
 - Comments that document a declaration (function, class, interface, member, module-scope const) are
-  JSDoc blocks (`/** … */`) so editors surface them on hover; `//` is for statement-level commentary
-  inside bodies. Attach the block to the declaration it describes — a doc above the wrong `const`
-  binds to that const.
-- Comments describe the code as it is. Never reference its history ("the old implementation",
-  "previously", "now uses") or the change that produced it — that context lives in commit messages
-  and goes stale the moment it merges.
+  JSDoc blocks — always multi-line (`/**` alone, one `*`-prefixed line per point, `*/` alone; never
+  a single-line `/** … */`) — so editors surface them on hover; `//` is for statement-level
+  commentary inside bodies. Attach the block to the declaration it describes — a doc above the wrong
+  `const` binds to that const.
+- Comment a declaration only if it states a fact this file doesn't already show — an invariant,
+  cross-file/runtime behavior, or why a choice is necessary, not just what it does. If the body
+  shows both the mechanics and the reason, skip it. A comment that only restates the name or
+  signature in different words is a defect — delete it.
+- Comments describe the code as it is now — never its history ("the old implementation",
+  "previously", "now uses") or the project's current state (issue numbers, phase/milestone labels,
+  "not wired yet"). Both belong in the commit message and rot the moment they're stale.
 - Comments don't name other declarations — renames silently strand the reference. State the role or
   contract instead: "callers must pass edits sorted last-to-first", not "(buildEditsFromAST's
   contract)". A declaration's own parameters and signature types are fine to name in its doc.
