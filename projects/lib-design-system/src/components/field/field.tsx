@@ -73,8 +73,7 @@ export function Field(props: Props) {
   return (
     <ArkField.Root
       className={cx(styles.root, props.className)}
-      // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-      ids={id ? { control: id } : undefined}
+      id={id}
       invalid={props.errors.length > 0}
     >
       <ArkField.Label
