@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { createRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
-import { orpc } from './lib/rpc/query-utils';
+import { orpc } from './lib/rpc/orpc';
 import { routeTree } from './routeTree.gen';
 
 /** Builds a fresh router + query client pair for each request (SSR) or the one browser session. */

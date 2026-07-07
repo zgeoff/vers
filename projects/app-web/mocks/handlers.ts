@@ -5,12 +5,12 @@ import { userContract } from '@vers/contract-user';
 import { verificationContract } from '@vers/contract-verification';
 import type { HttpHandler } from 'msw';
 import { SERVICE_URLS } from '../src/lib/rpc/service-urls';
-import { createDemoSeed } from './db/seed';
+import { createDemoSeed } from './db/create-demo-seed';
 import { resolveSessionContext } from './resolve-session-context';
-import { buildMockAvatarRouter } from './routers/avatar-router';
-import { buildMockSessionRouter } from './routers/session-router';
-import { buildMockUserRouter } from './routers/user-router';
-import { buildMockVerificationRouter } from './routers/verification-router';
+import { avatarRouter } from './routers/avatar/avatar-router';
+import { sessionRouter } from './routers/session/session-router';
+import { userRouter } from './routers/user/user-router';
+import { verificationRouter } from './routers/verification/verification-router';
 
 await createDemoSeed();
 
@@ -19,24 +19,24 @@ export const handlers: Array<HttpHandler> = [
     baseUrl: SERVICE_URLS.user,
     contract: userContract,
     resolveContext: resolveSessionContext,
-    router: buildMockUserRouter(),
+    router: userRouter,
   }),
   ...buildMockService({
     baseUrl: SERVICE_URLS.session,
     contract: sessionContract,
     resolveContext: resolveSessionContext,
-    router: buildMockSessionRouter(),
+    router: sessionRouter,
   }),
   ...buildMockService({
     baseUrl: SERVICE_URLS.verification,
     contract: verificationContract,
     resolveContext: resolveSessionContext,
-    router: buildMockVerificationRouter(),
+    router: verificationRouter,
   }),
   ...buildMockService({
     baseUrl: SERVICE_URLS.avatar,
     contract: avatarContract,
     resolveContext: resolveSessionContext,
-    router: buildMockAvatarRouter(),
+    router: avatarRouter,
   }),
 ];

@@ -1,6 +1,6 @@
 const SESSION_HEADER_NAMES = ['authorization', 'cookie'] as const;
 
-export function pickSessionHeaders(incoming: Headers): Record<string, string> {
+export function toSessionHeaders(incoming: Headers): Record<string, string> {
   const picked: Record<string, string> = {};
 
   for (const name of SESSION_HEADER_NAMES) {

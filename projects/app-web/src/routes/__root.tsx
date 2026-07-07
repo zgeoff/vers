@@ -1,7 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
-import type { OrpcQueryUtils } from '../lib/rpc/query-utils';
+import type { OrpcQueryUtils } from '../lib/rpc/orpc';
 
 export interface RouterAppContext {
   readonly orpc: OrpcQueryUtils;

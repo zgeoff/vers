@@ -148,6 +148,28 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
   imported `screen`; load data through the centralized MSW handlers + `@msw/data` in-memory store
   rather than stubbing hooks or poking Zustand; `waitFor` the fetch before asserting.
 
+### RSC and server-function testing (phases 1+)
+
+- Server functions are thin ambient shells: they read request context (`getRequestHeaders`, cookies)
+  and fetch, then delegate to a pure component or handler that takes data as explicit props/args. If
+  a unit needs ambient server context to test, the ambient read is in the wrong place — move it up
+  to the shell.
+- Pure server components (props in, no ambient/server-only imports) are tested with RTL on happy-dom
+  like any component: render per state, assert visible behaviour. Branch selection is covered by
+  these render tests — never by asserting which element a function returned.
+- `pick*` selectors return data (strings, unions), never React elements.
+- The Flight pipeline (`renderServerComponent`, composite components) and ambient reads are not
+  unit-testable under bun test (single module graph, no `react-server` export condition). Their
+  coverage is the real-runtime smoke suite, not unit tests.
+- **Ambient-context mock (cautious carve-out, alongside MSW):** `@tanstack/react-start/server`'s
+  ambient request APIs may be stubbed in tests — installed once in the preload behind a mutable
+  holder, driven per-test through the shared `withRequestContext` util. Rules: only Start's ambient
+  request APIs, never RSC/render APIs and never modules we own; tests use the util, a direct
+  `mock.module` in a test file is a review finding; every stub-covered ambient path must also be
+  crossed by the real-runtime smoke; explicit args stay preferred where free. Server-fn bodies are
+  written as named exported handlers that `createServerFn` wraps, so tests call the body directly.
+  (Util lands with phase 1.)
+
 ### Real-database services (service/app/DB packages)
 
 Services, apps, and DB-backed libraries that exercise a real postgres instead of MSW follow this

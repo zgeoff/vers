@@ -1,12 +1,12 @@
 import { isDefinedError } from '@orpc/client';
 import { useQuery } from '@tanstack/react-query';
-import type { OrpcQueryUtils } from '../lib/rpc/query-utils';
+import type { OrpcQueryUtils } from '../lib/rpc/orpc';
 
 interface CurrentUserPanelProps {
   readonly orpc: OrpcQueryUtils;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- @orpc/tanstack-query's generated query-utils shape carries its own function-valued members; no deeply-readonly form exists
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- @orpc/tanstack-query's query-utils shape nests anonymous mapped-object layers with mutable function-valued members; no named type and no deeply-readonly form the rule's allow list can match
 export function CurrentUserPanel(props: CurrentUserPanelProps) {
   const query = useQuery(props.orpc.user.getCurrentUser.queryOptions({ input: {}, retry: false }));
 

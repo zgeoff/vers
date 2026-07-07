@@ -1,43 +1,30 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
+import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, http } from 'msw';
 import { server } from '../../../mocks/node';
 import { sendRPCRequest } from './send-rpc-request';
 
 test('it rewrites the proxied path from /api/rpc/<service> to /rpc on the service origin', async () => {
-  let capturedURL = '';
+  const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(
-    http.post('http://localhost:3003/rpc/getCurrentUser', (info) => {
-      capturedURL = info.request.url;
-
-      return HttpResponse.json({});
-    }),
-  );
+  server.use(http.post('http://localhost:3003/rpc/getCurrentUser', resolver));
 
   await sendRPCRequest(
     new Request('http://app.test/api/rpc/user/getCurrentUser?foo=bar', { method: 'POST' }),
     'user',
   );
 
-  expect(capturedURL).toBe('http://localhost:3003/rpc/getCurrentUser?foo=bar');
+  expect(resolver).toHaveBeenCalledOnce();
+
+  expect(resolver.mock.calls[0]?.[0].request.url).toBe(
+    'http://localhost:3003/rpc/getCurrentUser?foo=bar',
+  );
 });
 
 test('it forwards the method, headers, and body to the target service', async () => {
-  const captured: { authorization: null | string; body: string; method: string } = {
-    authorization: null,
-    body: '',
-    method: '',
-  };
+  const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(
-    http.post('http://localhost:3003/rpc/updateEmail', async (info) => {
-      captured.method = info.request.method;
-      captured.authorization = info.request.headers.get('authorization');
-      captured.body = await info.request.text();
-
-      return HttpResponse.json({});
-    }),
-  );
+  server.use(http.post('http://localhost:3003/rpc/updateEmail', resolver));
 
   await sendRPCRequest(
     new Request('http://app.test/api/rpc/user/updateEmail', {
@@ -48,27 +35,27 @@ test('it forwards the method, headers, and body to the target service', async ()
     'user',
   );
 
-  expect(captured.method).toBe('POST');
-  expect(captured.authorization).toBe('Bearer dev-session');
-  expect(captured.body).toBe(JSON.stringify({ email: 'new@vers.test' }));
+  expect(resolver).toHaveBeenCalledOnce();
+
+  const request = resolver.mock.calls[0]?.[0].request;
+  const body = await request?.text();
+
+  expect(request?.method).toBe('POST');
+  expect(request?.headers.get('authorization')).toBe('Bearer dev-session');
+  expect(body).toBe(JSON.stringify({ email: 'new@vers.test' }));
 });
 
 test('it forwards a bodyless GET request without a body', async () => {
-  let capturedMethod = '';
+  const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(
-    http.get('http://localhost:3003/rpc/getUser', (info) => {
-      capturedMethod = info.request.method;
-
-      return HttpResponse.json({});
-    }),
-  );
+  server.use(http.get('http://localhost:3003/rpc/getUser', resolver));
 
   const response = await sendRPCRequest(
     new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }),
     'user',
   );
 
-  expect(capturedMethod).toBe('GET');
+  expect(resolver).toHaveBeenCalledOnce();
+  expect(resolver.mock.calls[0]?.[0].request.method).toBe('GET');
   expect(response.status).toBe(200);
 });

@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { CurrentUserPanel } from '../components/current-user-panel';
 import { SessionBadgeSlot } from '../components/session-badge-slot';
 import { getHomeContent } from '../lib/session/get-home-content';
-import { sessionBadgeQueryOptions } from '../lib/session/session-badge-query';
+import { sessionBadgeQueryOptions } from '../lib/session/session-badge-query-options';
 
 export const Route = createFileRoute('/')({
   component: HomePage,

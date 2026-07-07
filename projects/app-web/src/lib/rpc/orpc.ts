@@ -1,5 +1,8 @@
 import { createTanstackQueryUtils } from '@orpc/tanstack-query';
-import { avatarClient, sessionClient, userClient, verificationClient } from './clients';
+import { avatarClient } from './clients/avatar-client';
+import { sessionClient } from './clients/session-client';
+import { userClient } from './clients/user-client';
+import { verificationClient } from './clients/verification-client';
 
 export const orpc = {
   avatar: createTanstackQueryUtils(avatarClient),

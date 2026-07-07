@@ -2,9 +2,9 @@ import { createServerFn } from '@tanstack/react-start';
 import { createCompositeComponent } from '@tanstack/react-start/rsc';
 import { getRequestHeaders } from '@tanstack/react-start/server';
 import type { ReactNode } from 'react';
-import { pickSessionHeaders } from '../rpc/pick-session-headers';
+import { toSessionHeaders } from '../rpc/to-session-headers';
 import { pickSessionBadgeMessage } from './pick-session-badge-message';
-import { readCurrentUserResult } from './read-current-user-result';
+import { tryReadCurrentUser } from './try-read-current-user';
 
 /** The session-badge fragment's one client slot: a free-form refresh control. */
 interface SessionBadgeFragmentProps {
@@ -22,7 +22,7 @@ interface SessionBadgeFragmentProps {
  * extracted into a pure unit with its own direct tests.
  */
 export const getSessionBadgeFragment = createServerFn({ method: 'GET' }).handler(async () => {
-  const result = await readCurrentUserResult(pickSessionHeaders(getRequestHeaders()));
+  const result = await tryReadCurrentUser(toSessionHeaders(getRequestHeaders()));
   const message = pickSessionBadgeMessage(result);
 
   const src = await createCompositeComponent((props: SessionBadgeFragmentProps) => (
