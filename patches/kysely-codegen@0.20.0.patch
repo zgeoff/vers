@@ -1,0 +1,20 @@
+diff --git a/dist/generator/parser/type-expression-parser.js b/dist/generator/parser/type-expression-parser.js
+index 4ad30a0204710b29a9d6d257b7b6b8636abc2ade..16d8dccce95271276aeb3d90069c6f2a73cdaca2 100644
+--- a/dist/generator/parser/type-expression-parser.js
++++ b/dist/generator/parser/type-expression-parser.js
+@@ -16,7 +16,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
+ var _TypeExpressionParser_instances, _TypeExpressionParser_sourceFile, _TypeExpressionParser_collectTypeReferences, _TypeExpressionParser_convertTypeNode;
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.typeExpressionParser = exports.TypeExpressionParser = void 0;
+-const typescript_1 = __importDefault(require("typescript"));
++// Lazily load typescript: it is only needed to parse type-override strings,
++// and an eager require crashes under typescript >= 7 (no CJS entrypoint).
++let _typescript;
++const typescript_1 = {
++    get default() {
++        return (_typescript ??= __importDefault(require("typescript")).default);
++    },
++};
+ const generic_expression_node_1 = require("../ast/generic-expression-node");
+ const identifier_node_1 = require("../ast/identifier-node");
+ const literal_node_1 = require("../ast/literal-node");

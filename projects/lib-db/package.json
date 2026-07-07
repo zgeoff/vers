@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "db:codegen": "kysely-codegen --camel-case --out-file src/schema.generated.ts",
+    "db:codegen": "kysely-codegen --camel-case --out-file src/schema.generated.ts && oxfmt src/schema.generated.ts",
     "db:migrate": "kysely migrate:latest",
     "db:migrate:make": "kysely migrate:make",
     "db:rollback": "kysely migrate:down",
