@@ -129,7 +129,8 @@
             "name": ["Request", "Response", "Date", "Headers", "FormData", "HTMLFormElement"]
           },
           { "from": "package", "name": "ReactNode", "package": "react" },
-          { "from": "package", "name": "ZodError", "package": "zod" }
+          { "from": "package", "name": "ZodError", "package": "zod" },
+          { "from": "package", "name": "JWTPayload", "package": "jose" }
         ]
       }
     ],
