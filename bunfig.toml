@@ -12,7 +12,7 @@ minimumReleaseAge = 604800
 # panda 2.0 is still in beta with no stable ETA published — remove these excludes
 # once @pandacss/dev goes stable (#222)
 # @zgeoff/bun-test-extended 0.0.2 ages past the 7-day gate ~2026-07-11 — remove then (#257)
-# @zgeoff/oxlint-config 0.0.1 ages past the 7-day gate ~2026-07-14 — remove then
+# @zgeoff/oxlint-config 0.0.1 ages past the 7-day gate ~2026-07-14 — remove then (#292)
 minimumReleaseAgeExcludes = [
   "@zgeoff/format-codemod",
   "@zgeoff/bun-test-extended",
