@@ -190,7 +190,6 @@
         "ignoreInferredTypes": true,
         "allow": [
           { "from": "package", "name": "Kysely", "package": "kysely" },
-          { "from": "package", "name": "PostgresJsDatabase", "package": "drizzle-orm" },
           { "from": "package", "name": "Logger", "package": "pino" },
           { "from": "package", "name": "TestProject", "package": "vitest" },
           {
@@ -233,9 +232,8 @@
     //
     // React 19's automatic JSX runtime doesn't require React in scope
     "react/react-in-jsx-scope": "off",
-    // schema/style/vendor modules are imported wholesale on purpose
-    // (`import * as schema from '@vers/postgres-schema'`, vanilla-extract
-    // `*.styles` modules, `jest-extended` matchers)
+    // style/vendor modules are imported wholesale on purpose
+    // (vanilla-extract `*.styles` modules, `jest-extended` matchers)
     "import/no-namespace": "off",
     // leading underscores mark closure-private state in factory functions
     // (`create-simulation.ts`'s `_rng`, `_avatar`, ...) — not accidental

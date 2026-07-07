@@ -111,19 +111,6 @@ jobs:
           echo "${affected}" >> "${GITHUB_OUTPUT}"
           echo "${delimiter}" >> "${GITHUB_OUTPUT}"
 
-      - name: Build db-postgres Image
-        if:
-          ${{ !cancelled() && (contains(steps.record-affected-projects.outputs.affected-projects,
-          '<@vers/db-postgres>') ||
-          contains(steps.record-affected-projects.outputs.affected-projects,
-          '<@vers/postgres-schema>')) }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: projects/db-postgres/Dockerfile
-          tags: vers/db-postgres:latest
-          push: false
-
       - name: Build Avatar Service Image
         if:
           ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,

@@ -1,18 +1,18 @@
-import type { verifications } from '@vers/postgres-schema';
 import { VerificationType } from '../../../../gql/graphql';
+
+/** Mirrors the `verification_type` database enum. */
+type DBVerificationType = '2fa' | '2fa-setup' | 'onboarding' | 'change-email';
 
 /**
  * Maps GraphQL enum values to database enum values for verification types
  *
  * Mirrors our backend implementation.
  */
-export function resolveVerificationType(
-  type: VerificationType,
-): (typeof verifications.type.enumValues)[number] {
+export function resolveVerificationType(type: VerificationType): DBVerificationType {
   return VERIFICATION_TYPE_MAP[type];
 }
 
-type VerificationTypeMap = Record<VerificationType, (typeof verifications.type.enumValues)[number]>;
+type VerificationTypeMap = Record<VerificationType, DBVerificationType>;
 
 const VERIFICATION_TYPE_MAP: VerificationTypeMap = {
   [VerificationType.ChangeEmail]: '2fa',

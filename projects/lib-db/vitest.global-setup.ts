@@ -1,9 +1,4 @@
-import path from 'node:path';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
-import * as schema from '@vers/postgres-schema';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import postgres from 'postgres';
 import type { TestProject } from 'vitest/node';
 import { migrateToLatest } from './src/migrate-to-latest';
 
@@ -16,8 +11,8 @@ declare module 'vitest' {
 
 /**
  * Starts (or reuses) the workspace's shared postgres test container, applies
- * the drizzle baseline (`db-postgres/migrations`) followed by this package's
- * own kysely migrations, then publishes the connection URI to test files.
+ * every `@vers/db` kysely migration to the empty template database, then
+ * publishes the connection URI to test files.
  */
 export async function setup(project: TestProject) {
   const container = await new PostgreSqlContainer('postgres:16.2-alpine3.19')
@@ -31,14 +26,6 @@ export async function setup(project: TestProject) {
     .start();
 
   const connectionURI = container.getConnectionUri();
-
-  const drizzleClient = postgres(connectionURI);
-
-  await migrate(drizzle(drizzleClient, { schema }), {
-    migrationsFolder: path.join(import.meta.dirname, '../db-postgres/migrations'),
-  });
-
-  await drizzleClient.end();
 
   const { error } = await migrateToLatest({ databaseURL: connectionURI });
 

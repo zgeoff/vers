@@ -2,15 +2,9 @@ import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
 /**
- * Adds the step-up/audit surface consumed by the service-session port
- * (#154, #151): pending step-up transactions, a durable one-time-use token
- * ledger, refresh-token reuse detection, and a TOTP replay guard.
- *
- * Also installs a `set_updated_at()` trigger on `users`, `sessions`, and
- * `pending_transactions`. `users.updated_at` and `sessions.updated_at`
- * previously relied on drizzle's application-level `$onUpdate`, which this
- * trigger supersedes for every writer — kysely queries, ad-hoc SQL, and
- * cross-service writes alike.
+ * Creates the step-up transaction surface: a durable pending-transaction
+ * table for step-up confirmation flows, and a one-time-use token ledger
+ * that blocks replay of consumed step-up tokens.
  */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
@@ -45,38 +39,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .column('expires_at')
     .execute();
 
-  await db.schema.alterTable('sessions').addColumn('previous_refresh_token', 'text').execute();
-
-  await db.schema
-    .alterTable('verifications')
-    .addColumn('last_verified_code', 'text')
-    .addColumn('last_verified_at', 'timestamp')
-    .execute();
-
-  await sql`
-    CREATE OR REPLACE FUNCTION set_updated_at()
-    RETURNS trigger AS $$
-    BEGIN
-      NEW.updated_at = now();
-      RETURN NEW;
-    END;
-    $$ LANGUAGE plpgsql;
-  `.execute(db);
-
-  await sql`
-    CREATE TRIGGER set_users_updated_at
-    BEFORE UPDATE ON users
-    FOR EACH ROW
-    EXECUTE FUNCTION set_updated_at();
-  `.execute(db);
-
-  await sql`
-    CREATE TRIGGER set_sessions_updated_at
-    BEFORE UPDATE ON sessions
-    FOR EACH ROW
-    EXECUTE FUNCTION set_updated_at();
-  `.execute(db);
-
   await sql`
     CREATE TRIGGER set_pending_transactions_updated_at
     BEFORE UPDATE ON pending_transactions
@@ -89,18 +51,6 @@ export async function down(db: Kysely<unknown>): Promise<void> {
   await sql`DROP TRIGGER IF EXISTS set_pending_transactions_updated_at ON pending_transactions`.execute(
     db,
   );
-
-  await sql`DROP TRIGGER IF EXISTS set_sessions_updated_at ON sessions`.execute(db);
-  await sql`DROP TRIGGER IF EXISTS set_users_updated_at ON users`.execute(db);
-  await sql`DROP FUNCTION IF EXISTS set_updated_at()`.execute(db);
-
-  await db.schema
-    .alterTable('verifications')
-    .dropColumn('last_verified_at')
-    .dropColumn('last_verified_code')
-    .execute();
-
-  await db.schema.alterTable('sessions').dropColumn('previous_refresh_token').execute();
 
   await db.schema.dropTable('consumed_transaction_tokens').execute();
   await db.schema.dropTable('pending_transactions').execute();

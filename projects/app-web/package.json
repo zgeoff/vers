@@ -42,7 +42,6 @@
     "@vers/idle-client": "workspace:*",
     "@vers/idle-core": "workspace:*",
     "@vers/panda-preset": "workspace:*",
-    "@vers/postgres-schema": "workspace:*",
     "@vers/service-utils": "workspace:*",
     "@vers/styled-system": "workspace:*",
     "@vers/utils": "workspace:*",

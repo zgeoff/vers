@@ -1,18 +1,12 @@
 #!/usr/bin/env node
 
-import { sql } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { oraPromise } from 'ora';
 import { migrateToLatest } from '../projects/lib-db/src/migrate-to-latest';
-import * as schema from '../projects/lib-postgres-schema/src/index';
 import { env } from './postgres/env';
 import { pg } from './postgres/pg';
 
-export const db = drizzle(pg, { schema });
-
 async function resetDevDB() {
-  const query = sql`
+  const query = `
     -- Suppress NOTICE messages
     SET client_min_messages TO WARNING;
 
@@ -88,22 +82,7 @@ async function resetDevDB() {
     text: 'Cleaning up database...',
   };
 
-  await oraPromise(db.execute(query), cleanupSpinnerConfig);
-
-  const migrationStart = Date.now();
-
-  const migrationSpinnerConfig = {
-    failText: () => `Database migration failed in ${Date.now() - migrationStart}ms`,
-    successText: () => `Database migration completed in ${Date.now() - migrationStart}ms`,
-    text: 'Migrating database...',
-  };
-
-  await oraPromise(
-    migrate(db, {
-      migrationsFolder: './projects/db-postgres/migrations',
-    }),
-    migrationSpinnerConfig,
-  );
+  await oraPromise(pg.unsafe(query), cleanupSpinnerConfig);
 
   const kyselyMigrationStart = Date.now();
 

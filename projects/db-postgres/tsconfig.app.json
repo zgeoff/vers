@@ -1,9 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "types": ["node"]
-  },
-  "files": [],
-  "include": ["src/**/*.ts", "migrate.ts"],
-  "exclude": ["src/**/*.test.ts"]
-}

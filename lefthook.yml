@@ -25,9 +25,6 @@ pre-commit:
     - name: codegen:styles
       glob: 'projects/**/*.{ts,tsx}'
       run: bun run codegen:styles
-    - name: pg:migrations-generate
-      glob: 'projects/lib-postgres-schema/**/*.ts'
-      run: bun run pg:migrations-generate && git add projects/db-postgres/migrations
     - name: graphql-format
       glob: '**/*.graphql'
       run: bun run format
