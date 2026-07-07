@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { sendIdleInitialize, useIdleWorkerHandle } from '../../lib/idle/idle-worker-handle';
+import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
+import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 
 /**
  * Mounts the idle simulation's SharedWorker for every game route: sends the one-time Initialize
