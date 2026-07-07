@@ -1,0 +1,103 @@
+import { expect, test } from 'bun:test';
+import { createId } from '@paralleldrive/cuid2';
+import { isRedirect } from '@tanstack/react-router';
+import { sessionCollection } from '../../../mocks/db/session-collection';
+import { withRequestContext } from '../../../test-utils/with-request-context';
+import { forceLogoutHandler } from './force-logout-handler';
+
+function buildIntentFormData(intent: string): FormData {
+  const formData = new FormData();
+
+  formData.set('intent', intent);
+
+  return formData;
+}
+
+test('it clears the pending session and redirects home on cancel', async () => {
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_verification: {
+          'loginLogout#email': 'x@vers.test',
+          'loginLogout#sessionID': 'session-1',
+        },
+      },
+    },
+    async () => {
+      const redirectHref = await forceLogoutHandler(buildIntentFormData('cancel'))
+        .then(() => null)
+        .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+
+      return redirectHref;
+    },
+  );
+
+  expect(outcome.value).toBe('/');
+  expect(outcome.cookies['en_verification']).toStrictEqual({});
+});
+
+test('it redirects home without acting when there is no pending session to confirm', async () => {
+  const outcome = await withRequestContext({}, async () => {
+    const redirectHref = await forceLogoutHandler(buildIntentFormData('confirm'))
+      .then(() => null)
+      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+
+    return redirectHref;
+  });
+
+  expect(outcome.value).toBe('/');
+});
+
+test('it signs out every other live session and completes sign-in on confirm', async () => {
+  const userID = createId();
+  const pendingSessionID = createId();
+  const otherSessionID = createId();
+
+  await sessionCollection.create({
+    createdAt: new Date(),
+    expiresAt: new Date(Date.now() + 60_000),
+    id: pendingSessionID,
+    ipAddress: '127.0.0.1',
+    previousRefreshToken: null,
+    refreshToken: null,
+    updatedAt: new Date(),
+    userID,
+    verified: false,
+  });
+
+  await sessionCollection.create({
+    createdAt: new Date(),
+    expiresAt: new Date(Date.now() + 60_000),
+    id: otherSessionID,
+    ipAddress: '127.0.0.1',
+    previousRefreshToken: null,
+    refreshToken: null,
+    updatedAt: new Date(),
+    userID,
+    verified: true,
+  });
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_verification: {
+          'loginLogout#email': 'force-logout-confirm@vers.test',
+          'loginLogout#sessionID': pendingSessionID,
+        },
+      },
+    },
+    async () => {
+      const redirectHref = await forceLogoutHandler(buildIntentFormData('confirm'))
+        .then(() => null)
+        .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+
+      return redirectHref;
+    },
+  );
+
+  expect(outcome.value).toBe('/');
+  expect(outcome.cookies['en_verification']).toStrictEqual({});
+  expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
+  expect(sessionCollection.findFirst((q) => q.where({ id: otherSessionID }))).toBeUndefined();
+  expect(sessionCollection.findFirst((q) => q.where({ id: pendingSessionID }))).toBeDefined();
+});

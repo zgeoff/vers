@@ -71,7 +71,15 @@ function fakeUpdateSession(
   const partial = typeof update === 'function' ? update(session.data) : update;
 
   if (partial !== undefined) {
+    // mirrors the real module's seal/unseal round-trip, which serializes through JSON and so
+    // drops any key an update set to `undefined` rather than keeping it as an empty value
     Object.assign(session.data, partial);
+
+    for (const [key, value] of Object.entries(partial)) {
+      if (value === undefined) {
+        delete session.data[key];
+      }
+    }
   }
 
   return Promise.resolve(session);
