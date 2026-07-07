@@ -37,7 +37,7 @@ test('it requires a fresh pending transaction for a 2FA-enabled caller with no t
   ).toMatchObject({ action: 'ChangeEmail', target: signedIn.userID });
 });
 
-test('it verifies a valid transaction token minted for the same action and target', async () => {
+test('it verifies a valid transaction token minted for the same action, target, and session', async () => {
   const signedIn = await createSignedInUser();
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
@@ -45,7 +45,7 @@ test('it verifies a valid transaction token minted for the same action and targe
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({
       action: 'ChangePassword',
-      sessionID: null,
+      sessionID: signedIn.sessionID,
       target: signedIn.userID,
     });
 
@@ -67,7 +67,29 @@ test('it requires a new pending transaction for a token minted for a different a
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({
       action: 'ChangePassword',
-      sessionID: null,
+      sessionID: signedIn.sessionID,
+      target: signedIn.userID,
+    });
+
+    return checkStepUp({
+      action: 'ChangeEmail',
+      target: signedIn.userID,
+      token: minted.token,
+    });
+  });
+
+  expect(outcome.value.status).toBe('required');
+});
+
+test('it requires a new pending transaction for a token minted under a different session', async () => {
+  const signedIn = await createSignedInUser('mismatched-session@vers.test');
+
+  await verificationCollection.create({ id: createId(), target: signedIn.userID, type: '2fa' });
+
+  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const minted = await mintStepUpTransactionToken({
+      action: 'ChangeEmail',
+      sessionID: createId(),
       target: signedIn.userID,
     });
 
@@ -89,7 +111,7 @@ test('it requires a new pending transaction when the same token is replayed', as
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({
       action: 'ChangeEmail',
-      sessionID: null,
+      sessionID: signedIn.sessionID,
       target: signedIn.userID,
     });
 

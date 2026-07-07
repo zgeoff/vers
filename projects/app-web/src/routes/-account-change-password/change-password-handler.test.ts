@@ -43,6 +43,27 @@ test('it reports invalid credentials for the wrong current password', async () =
   });
 });
 
+test('it reports invalid credentials for the wrong current password before gating on step-up', async () => {
+  const signedIn = await createSignedInUser();
+
+  await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
+
+  const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
+    changePasswordHandler(
+      buildFormData({ currentPassword: 'not-the-real-password', ...validNewPassword }),
+    ),
+  );
+
+  expect(outcome.value).toStrictEqual({
+    formError: 'Current password is incorrect',
+    status: 'invalid-credentials',
+  });
+
+  expect(
+    db.pendingTransactionCollection.findFirst((q) => q.where({ target: signedIn.userID })),
+  ).toBeUndefined();
+});
+
 test('it changes the password and redirects to account for a caller with no 2FA', async () => {
   const signedIn = await createSignedInUser({ password: 'original-password' });
 
@@ -85,7 +106,7 @@ test('it changes the password once a valid step-up token is attached', async () 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({
       action: 'ChangePassword',
-      sessionID: null,
+      sessionID: signedIn.sessionID,
       target: signedIn.userID,
     });
 
