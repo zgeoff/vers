@@ -97,6 +97,16 @@ jobs:
           include-hidden-files: true
           path: projects/app-web-e2e/.test-results
 
+      - name: Run Database Migrations
+        # only on a fully green run, and exactly once per push — several
+        # services share the one database, so migrations never run
+        # per-service. Idempotent: kysely-ctl no-ops when up to date.
+        # Deploy jobs (#207) must order after this step.
+        if: ${{ success() }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: bun run --cwd projects/lib-db db:migrate
+
       - name: Record Affected Projects
         id: record-affected-projects
         # runs even when e2e fails so a flaky suite can't skip the image builds
