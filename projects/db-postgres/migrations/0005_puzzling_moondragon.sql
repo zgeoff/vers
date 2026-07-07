@@ -1,2 +1,0 @@
-CREATE TYPE "public"."verification_type" AS ENUM('2fa', 'change-email', 'onboarding', 'reset-password');--> statement-breakpoint
-ALTER TABLE "verifications" ALTER COLUMN "type" SET DATA TYPE verification_type USING "type"::verification_type;

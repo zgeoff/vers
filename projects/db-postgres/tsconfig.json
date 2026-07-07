@@ -1,9 +1,0 @@
-{
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "types": ["node"]
-  },
-  "files": [],
-  "include": ["drizzle.config.ts", "migrate.ts", "src/**/*.ts"],
-  "exclude": []
-}

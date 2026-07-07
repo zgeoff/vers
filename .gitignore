@@ -52,7 +52,6 @@ Thumbs.db
 # secrets & keys
 privkey.pem
 pubkey.crt
-projects/db-postgres/.env.production
 projects/service-*/.env.production
 projects/app-web-e2e/.env
 projects/**/.env*.local

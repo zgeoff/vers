@@ -28,13 +28,6 @@ yarn stack start
 # rebuild full backend
 yarn stack build
 
-# generate and run our postgres migrations
-yarn pg:migrations-generate
-yarn pg:migrations-run:dev
-
-# update our postgres migrations after updating drizzle
-yarn pg:migrations-update
-
 # install e2e browsers
 yarn playwright install
 
