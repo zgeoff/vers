@@ -48,8 +48,8 @@ is playing. Provisioning, connection rules, and where the secrets live:
 - **Event-store checkpoints** — via Emmett, one stream per activity. The workload is append-heavy
   checkpoint batches, point reads for "latest progress", and rare full replays — a natural fit for
   indexed Postgres, with optimistic concurrency (`UNIQUE(stream_id, version)`) backing the
-  checkpoint hash chain. Emmett is backend-agnostic, so a purpose-built event store remains a
-  drop-in swap if one is ever warranted.
+  checkpoint hash chain. Emmett is backend-agnostic, so a purpose-built event store would be a
+  drop-in swap.
 
 ## Game layer
 

@@ -23,7 +23,7 @@ Why one contract package per service rather than a single `@vers/contracts` with
 
 - **Precise affected detection.** The task graph invalidates work at package granularity. With one
   shared package, every contract edit would re-run CI for every service; per-service packages re-run
-  only the true consumers. Contract edits are frequent during a rebuild — this cost is daily.
+  only the true consumers.
 - **Coupling stays visible.** Inside one package, a contract borrowing another service's schema is
   an innocuous relative import that nothing flags. Across packages, it is an explicit dependency
   edit in `package.json` — reviewable, and the dependency graph stays honest.
@@ -71,9 +71,9 @@ them. Entity schemas live in the contract package that owns the entity — not i
 package, even at some duplication cost — because sharing entity schemas across contracts would
 couple services through the back door.
 
-Contract packages pin zod 4 directly (not the workspace catalog, which holds zod 3 for the
-pre-rebuild projects). `@vers/validation` is one of those zod 3 packages, so its schemas are not
-consumable from contracts — any schema a contract needs lives in the contract package itself.
+Contract packages pin zod 4 directly — never the workspace catalog, which holds zod 3.
+`@vers/validation` is one of the zod 3 packages, so its schemas are not consumable from contracts —
+any schema a contract needs lives in the contract package itself.
 
 ## The service side
 
@@ -92,14 +92,14 @@ const getCurrentUser = os.getCurrentUser.handler(({ context, errors }) => {
 
 Every handler is typechecked against its declaration — inputs, outputs, and error payloads. The
 router mounts on Elysia three ways from the same implementation: the RPC protocol under `/rpc` (what
-typed clients speak), an OpenAPI-shaped REST surface under `/api`, and a generated OpenAPI 3.1
-document at `/spec.json`. The spec is generated from the _contract_, never the implementation, which
-is what keeps clients contract-only.
+typed clients speak), an OpenAPI-shaped REST API under `/api`, and a generated OpenAPI 3.1 document
+at `/spec.json`. The spec is generated from the _contract_, never the implementation, which is what
+keeps clients contract-only.
 
 `@vers/service-runtime` provides the shell around this — a `createService(...)` entry composing the
-Elysia plugins listed above — so a new service is roughly: a contract package, handlers, and one
-`createService` call. OpenTelemetry is wired here from day one (Grafana-flavored sink) so
-rebuild-wide gauges (#182) light up as each service comes online.
+runtime's Elysia plugins — so a new service is roughly: a contract package, handlers, and one
+`createService` call. OpenTelemetry is part of the shell (Grafana-flavored sink; the shared service
+gauges are tracked in #182).
 
 ## The client side
 
@@ -115,7 +115,7 @@ services are not reachable from the public internet.
 
 ## Errors and the trust boundary
 
-Authentication has two distinct failure classes, kept deliberately separate (#146):
+Authentication has two distinct failure classes, kept deliberately separate:
 
 1. **The user's session is bad** — missing or expired. This is the _caller's_ problem and the caller
    can act on it (sign in again). It is a contract error: `UNAUTHORIZED` with a typed `data.reason`
@@ -124,7 +124,7 @@ Authentication has two distinct failure classes, kept deliberately separate (#14
    token minted at the edge, naming the acting user. If that token fails verification, something is
    misconfigured or someone is probing — never something a browser user can fix. This is _not_ a
    contract error: middleware in `@vers/service-runtime` rejects it with a plain 401 before any
-   handler runs, and the edge surfaces it as a 5xx plus alerting.
+   handler runs, and the edge reports it as a 5xx plus alerting.
 
 Because the edge validates sessions and mints the token, services never see cookies. The handler
 context is simply:
@@ -135,14 +135,14 @@ interface ServiceContext {
 }
 ```
 
-A subtlety worth stating: the contract describes what the **caller** can receive, not what the
-service emits. When a session expires, the edge itself replies with the contract-shaped
+The contract describes what the **caller** can receive, not what the service emits. When a session
+expires, the edge itself replies with the contract-shaped
 `UNAUTHORIZED { reason: 'expired-session' }` without calling the service at all; services themselves
 only ever throw `missing-session` (defense in depth, when an authed procedure is reached without an
 acting user). The shared enum is caller-facing vocabulary, not an inventory of who throws what.
 
-`FORBIDDEN` is declared with an empty `data` payload until a permission model exists — fields are
-added additively when it lands.
+`FORBIDDEN` is declared with an empty `data` payload — no permission model exists, and any fields a
+permission model needs arrive additively.
 
 ## Change discipline
 
