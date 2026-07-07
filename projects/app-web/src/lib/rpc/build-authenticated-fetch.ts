@@ -14,21 +14,25 @@ interface RefreshedTokens {
 }
 
 /**
+ * Concurrent 401s for the same session share one in-flight refresh instead of each calling
+ * `refreshTokens` — racing that call trips the service's refresh-token reuse detection and revokes
+ * the session. Every service link this process builds (`buildAuthenticatedFetch` is called once per
+ * `buildServiceLink`) shares this one module-scoped map, since a 401 from one service and a 401 from
+ * another can both be racing a refresh for the same session.
+ */
+const inFlightRefreshes = new Map<string, Promise<RefreshedTokens | undefined>>();
+
+/**
  * Wraps a service call's underlying fetch with transparent token refresh: a `401` triggers a
  * refresh-and-retry using the `en_session` cookie's refresh token. A refresh that itself fails, or
  * that can't even be attempted (no cookie session, or no ambient request at all), clears the cookie
  * if one exists and returns the original `401` unchanged — the caller's own guard redirects to
- * login on its next request. Concurrent 401s for the same session share one in-flight refresh
- * (`inFlightRefreshes`, scoped to this closure so it spans every request this server process
- * handles) instead of each calling `refreshTokens` — racing that call trips the service's
- * refresh-token reuse detection and revokes the session.
+ * login on its next request.
  */
 export function buildAuthenticatedFetch(): (
   request: Request,
   init: ServiceFetchInit,
 ) => Promise<Response> {
-  const inFlightRefreshes = new Map<string, Promise<RefreshedTokens | undefined>>();
-
   return async (request, init) => {
     // the retry needs its own untouched body: cloning after `fetch` consumes `request` throws,
     // since a `Request` with a body can only be read once
@@ -40,7 +44,7 @@ export function buildAuthenticatedFetch(): (
       return response;
     }
 
-    return tryRefreshAndRetry(retryable, init, response, inFlightRefreshes).catch(() => response);
+    return tryRefreshAndRetry(retryable, init, response).catch(() => response);
   };
 }
 
@@ -48,8 +52,6 @@ async function tryRefreshAndRetry(
   retryable: Request,
   init: ServiceFetchInit,
   originalResponse: Response,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the in-flight refresh cache is deliberately mutated (.set/.delete) by both this function and resolveRefreshedTokens; a readonly-wrapped Map would drop those methods
-  inFlightRefreshes: Map<string, Promise<RefreshedTokens | undefined>>,
 ): Promise<Response> {
   const session = await getAuthSession();
 
@@ -57,11 +59,7 @@ async function tryRefreshAndRetry(
     return originalResponse;
   }
 
-  const tokens = await resolveRefreshedTokens(
-    session.sessionID,
-    session.refreshToken,
-    inFlightRefreshes,
-  );
+  const tokens = await resolveRefreshedTokens(session.sessionID, session.refreshToken);
 
   if (tokens === undefined) {
     return originalResponse;
@@ -82,8 +80,6 @@ async function tryRefreshAndRetry(
 async function resolveRefreshedTokens(
   sessionID: string,
   refreshToken: string,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the in-flight refresh cache is deliberately mutated (.set/.delete); a readonly-wrapped Map would drop those methods
-  inFlightRefreshes: Map<string, Promise<RefreshedTokens | undefined>>,
 ): Promise<RefreshedTokens | undefined> {
   const existing = inFlightRefreshes.get(sessionID);
 
