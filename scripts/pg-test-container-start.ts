@@ -2,8 +2,6 @@ import { createPostgresContainer, setupTestDB } from '../projects/lib-service-te
 
 const container = await createPostgresContainer();
 
-await setupTestDB(container, {
-  migrationsFolder: './projects/db-postgres/migrations',
-});
+await setupTestDB(container);
 
 console.log('⚡ postgres test container started');
