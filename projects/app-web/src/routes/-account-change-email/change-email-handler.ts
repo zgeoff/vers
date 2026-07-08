@@ -5,7 +5,7 @@ import { requireAuth } from '../../lib/auth/require-auth';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import { ChangeEmailFormSchema } from './change-email-form-schema';
-import type { ChangeEmailResult } from './change-email-result';
+import type { ChangeEmailResult } from './types';
 
 /**
  * Runs the change-email form's submission: field validation, then a step-up gate for a

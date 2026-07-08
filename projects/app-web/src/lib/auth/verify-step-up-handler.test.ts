@@ -9,17 +9,9 @@ test('it records a failed attempt and reports the remaining count for an incorre
   const target = createId();
   const transactionID = createId();
 
-  await verificationCollection.create({ id: createId(), code: '123456', target, type: '2fa' });
+  await verificationCollection.create({ target, type: '2fa' });
 
-  await pendingTransactionCollection.create({
-    action: 'ChangeEmail',
-    attempts: 0,
-    expiresAt: new Date(Date.now() + 60_000),
-    id: transactionID,
-    ipAddress: '127.0.0.1',
-    sessionID: null,
-    target,
-  });
+  await pendingTransactionCollection.create({ action: 'ChangeEmail', id: transactionID });
 
   const outcome = await withRequestContext({}, () =>
     verifyStepUpHandler({ action: 'ChangeEmail', code: '000000', target, transactionID }),
@@ -32,16 +24,12 @@ test('it abandons the pending transaction once attempts run out', async () => {
   const target = createId();
   const transactionID = createId();
 
-  await verificationCollection.create({ id: createId(), code: '123456', target, type: '2fa' });
+  await verificationCollection.create({ target, type: '2fa' });
 
   await pendingTransactionCollection.create({
     action: 'ChangeEmail',
     attempts: 4,
-    expiresAt: new Date(Date.now() + 60_000),
     id: transactionID,
-    ipAddress: '127.0.0.1',
-    sessionID: null,
-    target,
   });
 
   const outcome = await withRequestContext({}, () =>
@@ -59,12 +47,10 @@ test('it consumes the pending transaction and mints a redeemable token for a cor
   const target = createId();
   const transactionID = createId();
 
-  await verificationCollection.create({ id: createId(), code: '123456', target, type: '2fa' });
+  await verificationCollection.create({ target, type: '2fa' });
 
   await pendingTransactionCollection.create({
     action: 'ChangePassword',
-    attempts: 0,
-    expiresAt: new Date(Date.now() + 60_000),
     id: transactionID,
     ipAddress: '127.0.0.1',
     sessionID: 'session-1',
@@ -96,16 +82,12 @@ test('it rejects a correct code once the pending transaction has expired', async
   const target = createId();
   const transactionID = createId();
 
-  await verificationCollection.create({ id: createId(), code: '123456', target, type: '2fa' });
+  await verificationCollection.create({ target, type: '2fa' });
 
   await pendingTransactionCollection.create({
     action: 'ChangeEmail',
-    attempts: 0,
     expiresAt: new Date(Date.now() - 1000),
     id: transactionID,
-    ipAddress: '127.0.0.1',
-    sessionID: null,
-    target,
   });
 
   const promise = withRequestContext({ ip: '127.0.0.1' }, () =>

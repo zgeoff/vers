@@ -3,38 +3,20 @@ import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
 import { mintStepUpTransactionToken } from '../../lib/auth/step-up-transaction-token';
 import { sessionCollection, userCollection, verificationCollection } from '../../mocks/db';
+import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { disableTwoFactorAuthHandler } from './disable-two-factor-auth-handler';
 
-async function createSignedInUser(email: string): Promise<{
+async function createSignedInUser(): Promise<{
   readonly cookies: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   readonly userID: string;
 }> {
   const userID = createId();
   const sessionID = createId();
 
-  await userCollection.create({
-    createdAt: new Date(),
-    email,
-    id: userID,
-    name: 'Disable 2FA',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: email.split('@')[0] ?? 'disable-2fa',
-  });
+  await userCollection.create({ id: userID });
 
-  await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: sessionID,
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: null,
-    updatedAt: new Date(),
-    userID,
-    verified: true,
-  });
+  await sessionCollection.create({ id: sessionID, userID });
 
   return {
     cookies: { en_session: { accessToken: sessionID, refreshToken: 'refresh', sessionID } },
@@ -42,18 +24,8 @@ async function createSignedInUser(email: string): Promise<{
   };
 }
 
-function buildFormData(fields: Readonly<Record<string, string>>): FormData {
-  const formData = new FormData();
-
-  for (const [key, value] of Object.entries(fields)) {
-    formData.set(key, value);
-  }
-
-  return formData;
-}
-
 test('it reports an error when 2FA is not enabled', async () => {
-  const signedIn = await createSignedInUser('not-enabled@vers.test');
+  const signedIn = await createSignedInUser();
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     disableTwoFactorAuthHandler(buildFormData({})),
@@ -66,9 +38,9 @@ test('it reports an error when 2FA is not enabled', async () => {
 });
 
 test('it reports step-up-required with no transaction token', async () => {
-  const signedIn = await createSignedInUser('gated-disable@vers.test');
+  const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ id: createId(), target: signedIn.userID, type: '2fa' });
+  await verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     disableTwoFactorAuthHandler(buildFormData({})),
@@ -78,9 +50,9 @@ test('it reports step-up-required with no transaction token', async () => {
 });
 
 test('it removes the 2FA verification and redirects to account once a valid token is attached', async () => {
-  const signedIn = await createSignedInUser('token-disable@vers.test');
+  const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ id: createId(), target: signedIn.userID, type: '2fa' });
+  await verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({

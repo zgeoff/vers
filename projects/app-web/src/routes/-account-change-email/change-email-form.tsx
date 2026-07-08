@@ -4,7 +4,7 @@ import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { StepUpChallengeForm } from '../../components/step-up-challenge-form';
 import { changeEmail } from './change-email';
-import type { ChangeEmailResult } from './change-email-result';
+import type { ChangeEmailResult } from './types';
 
 interface StepUpChallenge {
   readonly target: string;

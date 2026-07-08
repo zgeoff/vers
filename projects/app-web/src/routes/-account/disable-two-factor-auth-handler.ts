@@ -4,7 +4,7 @@ import { findStepUpToken } from '../../lib/auth/find-step-up-token';
 import { requireAuth } from '../../lib/auth/require-auth';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
-import type { DisableTwoFactorAuthResult } from './disable-two-factor-auth-result';
+import type { DisableTwoFactorAuthResult } from './types';
 
 /**
  * Runs the account hub's disable-2FA action: a step-up gate (2FA is live by definition here),

@@ -4,7 +4,7 @@ import { findStepUpToken } from '../../lib/auth/find-step-up-token';
 import { requireAuth } from '../../lib/auth/require-auth';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { ChangePasswordFormSchema } from './change-password-form-schema';
-import type { ChangePasswordResult } from './change-password-result';
+import type { ChangePasswordResult } from './types';
 
 /**
  * Runs the change-password form's submission: field validation, a step-up gate for a 2FA-enabled

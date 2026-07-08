@@ -3,8 +3,8 @@ import { Heading, OTPField, SingleLineCode, StatusButton, Text } from '@vers/des
 import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
 import type { TwoFactorSetupData } from './two-factor-setup-loader';
+import type { VerifyTwoFactorSetupResult } from './types';
 import { verifyTwoFactorSetup } from './verify-two-factor-setup';
-import type { VerifyTwoFactorSetupResult } from './verify-two-factor-setup-result';
 
 const sectionStyles = css({
   display: 'flex',

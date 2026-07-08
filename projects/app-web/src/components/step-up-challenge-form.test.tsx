@@ -5,12 +5,9 @@ import { withRequestContext } from '../test-utils/with-request-context';
 import { StepUpChallengeForm } from './step-up-challenge-form';
 
 /**
- * `verify-step-up-handler.test.ts` drives every `VerifyStepUpResult` branch (invalid code with
- * attempts remaining, lockout, a verified token) against the handler body directly. This
- * component's submit never throws a redirect — every outcome is a plain result object — and an
- * uncompiled `createServerFn` export under `bun test` only relays a thrown redirect back to its
- * caller, so no submission branch is observable here; this file is limited to the initial render,
- * with the rest left to the handler-level tests plus the real-runtime smoke suite.
+ * This form's submit never throws a redirect — every outcome is a plain result object handled
+ * inline — so no submission branch round-trips to be observed here, and this file is limited to
+ * the initial render.
  */
 test('it renders the code entry field and submit button', async () => {
   await withRequestContext({}, async () => {

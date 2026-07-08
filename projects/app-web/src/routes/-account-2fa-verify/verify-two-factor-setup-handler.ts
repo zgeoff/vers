@@ -2,8 +2,8 @@ import { safe } from '@orpc/client';
 import { redirect } from '@tanstack/react-router';
 import { requireAuth } from '../../lib/auth/require-auth';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
+import type { VerifyTwoFactorSetupResult } from './types';
 import { VerifyTwoFactorSetupFormSchema } from './verify-two-factor-setup-form-schema';
-import type { VerifyTwoFactorSetupResult } from './verify-two-factor-setup-result';
 
 /**
  * Runs the 2FA-setup verify form's submission: a code check against the pending `2fa-setup`

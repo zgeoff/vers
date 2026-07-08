@@ -5,35 +5,16 @@ import { sessionCollection, userCollection, verificationCollection } from '../..
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { twoFactorSetupLoader } from './two-factor-setup-loader';
 
-async function createSignedInUser(email: string): Promise<{
+async function createSignedInUser(): Promise<{
   readonly cookies: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   readonly userID: string;
 }> {
   const userID = createId();
   const sessionID = createId();
 
-  await userCollection.create({
-    createdAt: new Date(),
-    email,
-    id: userID,
-    name: 'Two Factor Setup',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: email.split('@')[0] ?? 'two-factor-setup',
-  });
+  await userCollection.create({ id: userID });
 
-  await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: sessionID,
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: null,
-    updatedAt: new Date(),
-    userID,
-    verified: true,
-  });
+  await sessionCollection.create({ id: sessionID, userID });
 
   return {
     cookies: { en_session: { accessToken: sessionID, refreshToken: 'refresh', sessionID } },
@@ -42,9 +23,9 @@ async function createSignedInUser(email: string): Promise<{
 }
 
 test('it redirects to account when 2FA is already enabled', async () => {
-  const signedIn = await createSignedInUser('already-enabled@vers.test');
+  const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ id: createId(), target: signedIn.userID, type: '2fa' });
+  await verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const redirectHref = await twoFactorSetupLoader()
@@ -58,7 +39,7 @@ test('it redirects to account when 2FA is already enabled', async () => {
 });
 
 test('it creates a pending 2fa-setup verification and returns its QR data for a fresh caller', async () => {
-  const signedIn = await createSignedInUser('fresh-setup@vers.test');
+  const signedIn = await createSignedInUser();
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     twoFactorSetupLoader(),
@@ -76,10 +57,9 @@ test('it creates a pending 2fa-setup verification and returns its QR data for a 
 });
 
 test('it reuses an existing pending 2fa-setup verification instead of rotating it', async () => {
-  const signedIn = await createSignedInUser('existing-setup@vers.test');
+  const signedIn = await createSignedInUser();
 
   await verificationCollection.create({
-    id: createId(),
     code: 'existing-code',
     target: signedIn.userID,
     type: '2fa-setup',

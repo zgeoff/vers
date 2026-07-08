@@ -4,7 +4,7 @@ import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { StepUpChallengeForm } from '../../components/step-up-challenge-form';
 import { changePassword } from './change-password';
-import type { ChangePasswordResult } from './change-password-result';
+import type { ChangePasswordResult } from './types';
 
 interface StepUpChallenge {
   readonly target: string;

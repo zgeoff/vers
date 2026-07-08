@@ -4,12 +4,6 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { TwoFactorSetupForm } from './two-factor-setup-form';
 
-/**
- * `verify-two-factor-setup-handler.test.ts` drives every `VerifyTwoFactorSetupResult` branch
- * against the handler body directly — a plain result object never round-trips through an
- * uncompiled `createServerFn` export under `bun test`, so this file is limited to the initial
- * render.
- */
 test('it renders the QR code, manual entry code, and code field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(

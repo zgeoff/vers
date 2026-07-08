@@ -10,46 +10,25 @@ import { withRequestContext } from '../../test-utils/with-request-context';
 import { checkStepUp } from './check-step-up';
 import { mintStepUpTransactionToken } from './step-up-transaction-token';
 
-async function createSignedInUser(email: string): Promise<{
+async function createSignedInUser(): Promise<{
   readonly cookies: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   readonly userID: string;
 }> {
   const userID = createId();
   const sessionID = createId();
 
-  await userCollection.create({
-    createdAt: new Date(),
-    email,
-    id: userID,
-    name: 'Step Up',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: email.split('@')[0] ?? 'step-up',
-  });
+  await userCollection.create({ id: userID });
 
-  await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: sessionID,
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: null,
-    updatedAt: new Date(),
-    userID,
-    verified: true,
-  });
+  await sessionCollection.create({ id: sessionID, userID });
 
   return {
-    cookies: {
-      en_session: { accessToken: sessionID, refreshToken: 'refresh', sessionID },
-    },
+    cookies: { en_session: { accessToken: sessionID, refreshToken: 'refresh', sessionID } },
     userID,
   };
 }
 
 test('it reports not-needed for a caller with no 2FA enabled', async () => {
-  const signedIn = await createSignedInUser('no-2fa@vers.test');
+  const signedIn = await createSignedInUser();
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     checkStepUp({ action: 'ChangeEmail', target: signedIn.userID, token: undefined }),
@@ -59,9 +38,9 @@ test('it reports not-needed for a caller with no 2FA enabled', async () => {
 });
 
 test('it requires a fresh pending transaction for a 2FA-enabled caller with no token', async () => {
-  const signedIn = await createSignedInUser('gated@vers.test');
+  const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ id: createId(), target: signedIn.userID, type: '2fa' });
+  await verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     checkStepUp({ action: 'ChangeEmail', target: signedIn.userID, token: undefined }),
@@ -81,9 +60,9 @@ test('it requires a fresh pending transaction for a 2FA-enabled caller with no t
 });
 
 test('it verifies a valid transaction token minted for the same action and target', async () => {
-  const signedIn = await createSignedInUser('valid-token@vers.test');
+  const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ id: createId(), target: signedIn.userID, type: '2fa' });
+  await verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({
@@ -103,9 +82,9 @@ test('it verifies a valid transaction token minted for the same action and targe
 });
 
 test('it requires a new pending transaction for a token minted for a different action', async () => {
-  const signedIn = await createSignedInUser('mismatched-action@vers.test');
+  const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ id: createId(), target: signedIn.userID, type: '2fa' });
+  await verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({
@@ -125,9 +104,9 @@ test('it requires a new pending transaction for a token minted for a different a
 });
 
 test('it requires a new pending transaction when the same token is replayed', async () => {
-  const signedIn = await createSignedInUser('replay@vers.test');
+  const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ id: createId(), target: signedIn.userID, type: '2fa' });
+  await verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({
