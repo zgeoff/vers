@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
 import { sessionContract } from '@vers/contract-session';
@@ -7,6 +7,7 @@ import { SERVICE_URLS } from '../../lib/rpc/service-urls';
 import * as db from '../../mocks/db';
 import { server } from '../../mocks/node';
 import { resolveSessionContext } from '../../mocks/resolve-session-context';
+import { assertEventually } from '../../test-utils/assert-eventually';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ForceLogoutForm } from './force-logout-form';
@@ -60,16 +61,24 @@ test('it disables both buttons while confirming, then re-enables them', async ()
 
       await user.click(confirmButton);
 
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
-        expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+      await assertEventually(() => {
+        if (
+          !screen.getByRole('button', { name: 'Confirm' }).hasAttribute('disabled') ||
+          !screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled')
+        ) {
+          throw new Error('the buttons are not disabled yet');
+        }
       });
 
       lookupGate.resolve();
 
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Confirm' })).not.toBeDisabled();
-        expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
+      await assertEventually(() => {
+        if (
+          screen.getByRole('button', { name: 'Confirm' }).hasAttribute('disabled') ||
+          screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled')
+        ) {
+          throw new Error('the buttons are still disabled');
+        }
       });
     },
   );
@@ -85,9 +94,13 @@ test('it completes a cancel without leaving the buttons stuck disabled', async (
 
     await user.click(cancelButton);
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Confirm' })).not.toBeDisabled();
-      expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
+    await assertEventually(() => {
+      if (
+        screen.getByRole('button', { name: 'Confirm' }).hasAttribute('disabled') ||
+        screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled')
+      ) {
+        throw new Error('the buttons are still disabled');
+      }
     });
   });
 });
