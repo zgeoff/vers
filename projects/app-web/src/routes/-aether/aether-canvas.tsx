@@ -15,10 +15,8 @@ setAetherGraph(aetherGraph);
 setSelectedNode(firstNode, null);
 
 /**
- * The aether map's three.js scene: dynamically imported by `AetherPanel`'s code-split boundary so
- * three.js and the R3F canvas never land in the initial bundle. Untestable end to end under
- * `bun test` — `happy-dom` has no WebGL context — so R3F/three internals stay lib-covered; the
- * wiring this module owns (the graph load and initial selection above) has no branches to assert.
+ * The aether map's three.js scene: dynamically imported through a code-split boundary so three.js
+ * and the R3F canvas never land in the initial bundle.
  */
 export function AetherCanvas() {
   return (
