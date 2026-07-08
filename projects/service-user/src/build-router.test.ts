@@ -13,6 +13,7 @@ async function setupTest() {
 
 test('it passes every conformance case collected from its contract', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
 
   const cases = collectConformanceCases(userContract, {

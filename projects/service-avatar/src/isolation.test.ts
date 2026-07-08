@@ -17,7 +17,9 @@ async function setupTest() {
 
 test('it creates an avatar visible within this test', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
   await client.createAvatar({ class: 'brute', name: 'IsolationProof' });

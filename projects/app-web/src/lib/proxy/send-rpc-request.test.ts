@@ -38,6 +38,7 @@ test('it forwards the method, headers, and body to the target service', async ()
   expect(resolver).toHaveBeenCalledOnce();
 
   const request = resolver.mock.calls[0]?.[0].request;
+
   const body = await request?.text();
 
   expect(request?.method).toBe('POST');

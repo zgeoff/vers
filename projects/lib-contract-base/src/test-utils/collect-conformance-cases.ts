@@ -116,6 +116,7 @@ function buildMalformedInputCase(
     run: async (app) => {
       const client = buildConformanceClient(app, rpcPrefix, anonymousHeaders);
       const call = getClientProcedure(client, entry.dotPath);
+
       const error = await runRejectingCall(() => call(probe));
 
       assert.equal(error.code, 'BAD_REQUEST');
@@ -208,6 +209,7 @@ function buildAnonymousRejectionCase(
     run: async (app) => {
       const client = buildConformanceClient(app, rpcPrefix, options.anonymousHeaders);
       const call = getClientProcedure(client, entry.dotPath);
+
       const error = await runRejectingCall(() => call(sample));
 
       assert.equal(error.code, 'UNAUTHORIZED');

@@ -14,8 +14,11 @@ async function setupTest() {
 
 test('it deletes a verification record', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
+
   const verification = await createVerificationRow(ctx.db);
 
   const result = await client.deleteVerification({ id: verification.id });
@@ -33,7 +36,9 @@ test('it deletes a verification record', async () => {
 
 test('it throws NOT_FOUND when the verification does not exist', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   expect(client.deleteVerification({ id: 'does-not-exist' })).rejects.toMatchObject({

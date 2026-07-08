@@ -14,7 +14,9 @@ async function setupTest() {
 
 test('it lists only the acting user avatars', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
   await client.createAvatar({ class: 'brute', name: 'OwnerAvatarOne' });
@@ -30,12 +32,14 @@ test('it lists only the acting user avatars', async () => {
 
 test('it excludes avatars owned by another user', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
   const other = await createViewer({ audience: 'service-avatar', db: ctx.db });
 
   await createAvatarRow(ctx.db, { name: 'NotYours', userId: other.user.id });
 
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
+
   const avatars = await client.getAvatars({});
 
   expect(avatars).toBeEmpty();
@@ -43,7 +47,9 @@ test('it excludes avatars owned by another user', async () => {
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-avatar' });
+
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
   expect(client.getAvatars({})).rejects.toMatchObject({

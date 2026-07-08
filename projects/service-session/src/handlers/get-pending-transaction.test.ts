@@ -14,8 +14,10 @@ async function setupTest() {
 
 test('it returns an existing pending transaction by id', async () => {
   await using ctx = await setupTest();
+
   const transaction = await createPendingTransactionRow(ctx.db);
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const found = await client.stepUp.getPendingTransaction({ id: transaction.id });
@@ -33,7 +35,9 @@ test('it returns an existing pending transaction by id', async () => {
 
 test('it returns null for an id that does not exist', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const found = await client.stepUp.getPendingTransaction({ id: 'does-not-exist' });
@@ -49,6 +53,7 @@ test('it lazy-deletes and returns null for an expired transaction', async () => 
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const found = await client.stepUp.getPendingTransaction({ id: transaction.id });
@@ -66,8 +71,10 @@ test('it lazy-deletes and returns null for an expired transaction', async () => 
 
 test('it never increments attempts while reading', async () => {
   await using ctx = await setupTest();
+
   const transaction = await createPendingTransactionRow(ctx.db);
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   await client.stepUp.getPendingTransaction({ id: transaction.id });

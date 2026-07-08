@@ -13,7 +13,9 @@ async function setupTest() {
 
 test('it creates a user with an argon2id-hashed password', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   const result = await client.createUser({
@@ -46,7 +48,9 @@ test('it creates a user with an argon2id-hashed password', async () => {
 // further queries run on ctx.db past the assertion
 test('it throws CONFLICT with field email when a user with that email already exists', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   await client.createUser({
@@ -71,7 +75,9 @@ test('it throws CONFLICT with field email when a user with that email already ex
 
 test('it throws CONFLICT with field username when a user with that username already exists', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   await client.createUser({

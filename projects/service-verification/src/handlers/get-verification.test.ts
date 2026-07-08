@@ -14,7 +14,9 @@ async function setupTest() {
 
 test('it returns an existing verification', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const verification = await createVerificationRow(ctx.db, {
@@ -36,7 +38,9 @@ test('it returns an existing verification', async () => {
 
 test('it returns null for a non-existent verification', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const found = await client.getVerification({ target: 'missing@example.com', type: 'onboarding' });
@@ -46,7 +50,9 @@ test('it returns null for a non-existent verification', async () => {
 
 test('it deletes an expired verification and returns null', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const verification = await createVerificationRow(ctx.db, {

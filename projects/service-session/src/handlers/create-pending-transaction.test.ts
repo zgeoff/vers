@@ -14,7 +14,9 @@ async function setupTest() {
 
 test('it creates a pending transaction under the given id', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const result = await client.stepUp.createPendingTransaction({
@@ -38,9 +40,11 @@ test('it creates a pending transaction under the given id', async () => {
 
 test('it throws CONFLICT when the id is already in use', async () => {
   await using ctx = await setupTest();
+
   await createPendingTransactionRow(ctx.db, { id: 'taken' });
 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   // a rejected insert aborts the shared transaction handle — this must be the test's last query
@@ -64,6 +68,7 @@ test('it sweeps expired pending transactions before creating a new one', async (
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   await client.stepUp.createPendingTransaction({

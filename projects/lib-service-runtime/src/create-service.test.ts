@@ -428,6 +428,7 @@ test('it serves the authed route over /api given a valid token', async () => {
 
   expect(response.status).toBe(200);
   expect(response.headers.get('x-request-id')).toBe('abc');
+
   await expect(response.json()).resolves.toStrictEqual({ id: 'thing-1' });
 });
 

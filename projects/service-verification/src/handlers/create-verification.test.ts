@@ -13,7 +13,9 @@ async function setupTest() {
 
 test('it creates a verification code and stores a record of it', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const created = await client.createVerification({
@@ -39,7 +41,9 @@ test('it creates a verification code and stores a record of it', async () => {
 
 test('it uses a simple charset for 2fa verification codes', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const created = await client.createVerification({ target: '+15551234567', type: '2fa' });
@@ -49,7 +53,9 @@ test('it uses a simple charset for 2fa verification codes', async () => {
 
 test('it uses a simple charset for 2fa setup verification codes', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const created = await client.createVerification({ target: '+15551234567', type: '2fa-setup' });
@@ -59,7 +65,9 @@ test('it uses a simple charset for 2fa setup verification codes', async () => {
 
 test('it replaces an existing verification for the same target and type', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   await client.createVerification({ target: 'replace@example.com', type: 'onboarding' });
@@ -81,7 +89,9 @@ test('it replaces an existing verification for the same target and type', async 
 
 test('it clears the replay guard when a verification is recreated', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const created = await client.createVerification({ target: '+15551234599', type: '2fa' });
@@ -111,7 +121,9 @@ test('it clears the replay guard when a verification is recreated', async () => 
 
 test('it creates a verification with an explicit expiry time', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const expiresAt = new Date(Date.now() + 60_000);

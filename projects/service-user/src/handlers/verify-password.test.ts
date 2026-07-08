@@ -13,8 +13,10 @@ async function setupTest() {
 
 test('it verifies a correct password', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db, { password: 'password123' });
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   const result = await client.verifyPassword({
@@ -27,8 +29,10 @@ test('it verifies a correct password', async () => {
 
 test('it returns success=false for an incorrect password', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db, { password: 'password123' });
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   const result = await client.verifyPassword({
@@ -41,7 +45,9 @@ test('it returns success=false for an incorrect password', async () => {
 
 test('it returns success=false for an unknown email without revealing user existence', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   const result = await client.verifyPassword({
@@ -54,8 +60,10 @@ test('it returns success=false for an unknown email without revealing user exist
 
 test('it returns success=false for a user without a password set', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db, { password: null });
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   const result = await client.verifyPassword({
@@ -75,6 +83,7 @@ test('it verifies a legacy bcrypt hash and rehashes it as argon2id on success', 
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   const result = await client.verifyPassword({
@@ -102,6 +111,7 @@ test('it leaves a legacy bcrypt hash untouched on a failed attempt', async () =>
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   const result = await client.verifyPassword({

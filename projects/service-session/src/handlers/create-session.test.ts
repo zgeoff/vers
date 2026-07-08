@@ -13,11 +13,14 @@ async function setupTest() {
 
 test('it creates an unverified session with the short duration by default', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const before = Date.now();
+
   const session = await client.createSession({ ipAddress: '127.0.0.1', userID: created.user.id });
 
   expect(session).toStrictEqual({
@@ -38,8 +41,10 @@ test('it creates an unverified session with the short duration by default', asyn
 
 test('it creates a session with the long duration when rememberMe is set', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const before = Date.now();
@@ -58,8 +63,10 @@ test('it creates a session with the long duration when rememberMe is set', async
 
 test('it honors an explicit expiresAt over the default duration', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
