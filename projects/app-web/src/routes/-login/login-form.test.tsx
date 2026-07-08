@@ -74,8 +74,10 @@ test('it disables the submit button while the login request is pending', async (
     await user.type(screen.getByLabelText('Password'), 'password123');
     await user.click(screen.getByRole('button', { name: 'Login' }));
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Login' })).toBeDisabled();
+    await assertEventually(() => {
+      if (!screen.getByRole('button', { name: 'Login' }).hasAttribute('disabled')) {
+        throw new Error('the login button is not disabled yet');
+      }
     });
 
     lookupGate.resolve();
