@@ -17,7 +17,9 @@ async function setupTest() {
 
 test('it creates a verification visible within this test', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   await client.createVerification({ target: 'isolation-proof@example.com', type: 'onboarding' });

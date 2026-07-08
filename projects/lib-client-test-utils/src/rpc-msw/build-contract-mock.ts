@@ -157,6 +157,7 @@ function buildProcedureHandler(
 
   return http.all(url, async (info) => {
     const context = await options.resolveContext(info.request);
+
     let rawResponse: Response | undefined;
 
     const leaf = buildMockProcedure(options.contract, path, info.request, mock, (output) => {

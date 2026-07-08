@@ -14,7 +14,9 @@ async function setupTest() {
 
 test('it returns a TOTP auth URI for a pending 2fa setup', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   await createVerificationRow(ctx.db, { target: 'setup@example.com', type: '2fa-setup' });
@@ -26,7 +28,9 @@ test('it returns a TOTP auth URI for a pending 2fa setup', async () => {
 
 test('it throws NOT_FOUND when no 2fa setup verification exists for the target', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   expect(client.get2FAVerificationURI({ target: 'missing@example.com' })).rejects.toMatchObject({

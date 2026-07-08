@@ -14,8 +14,10 @@ async function setupTest() {
 
 test('it accepts the plaintext token whose hash is stored', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db, { resetToken: 'plaintext-token' });
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   const result = await client.resetPassword({
@@ -39,12 +41,14 @@ test('it accepts the plaintext token whose hash is stored', async () => {
 
 test("it deletes all of the user's sessions when the password is reset", async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db, { resetToken: 'plaintext-token' });
 
   await createSessionRow(ctx.db, { userId: created.user.id });
   await createSessionRow(ctx.db, { userId: created.user.id });
 
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   await client.resetPassword({
@@ -64,8 +68,10 @@ test("it deletes all of the user's sessions when the password is reset", async (
 
 test('it rejects a password that fails the password policy', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db, { resetToken: 'plaintext-token' });
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(
@@ -79,7 +85,9 @@ test('it rejects a password that fails the password policy', async () => {
 
 test('it throws NOT_FOUND when the user does not exist', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(
@@ -93,8 +101,10 @@ test('it throws NOT_FOUND when the user does not exist', async () => {
 
 test('it rejects a wrong token with INVALID_RESET_TOKEN', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db, { resetToken: 'plaintext-token' });
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(
@@ -108,8 +118,10 @@ test('it rejects a wrong token with INVALID_RESET_TOKEN', async () => {
 
 test('it rejects a request when no reset token has been requested', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(
@@ -130,6 +142,7 @@ test('it rejects an expired reset token with RESET_TOKEN_EXPIRED', async () => {
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(

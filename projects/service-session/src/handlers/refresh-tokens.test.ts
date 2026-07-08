@@ -15,6 +15,7 @@ async function setupTest() {
 
 test('it returns the same refresh token within the grace window', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
 
   const session = await createSessionRow(ctx.db, {
@@ -23,6 +24,7 @@ test('it returns the same refresh token within the grace window', async () => {
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const result = await client.refreshTokens({ id: session.id, refreshToken: 'fresh-token' });
@@ -32,6 +34,7 @@ test('it returns the same refresh token within the grace window', async () => {
 
 test('it rotates the refresh token after the grace window and records the previous one', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
 
   const createdAt = new Date(Date.now() - SESSION_DURATION_SHORT - 1000);
@@ -43,6 +46,7 @@ test('it rotates the refresh token after the grace window and records the previo
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const result = await client.refreshTokens({ id: session.id, refreshToken: 'old-token' });
@@ -61,6 +65,7 @@ test('it rotates the refresh token after the grace window and records the previo
 
 test('it revokes the session and throws REFRESH_TOKEN_REUSED when a superseded refresh token is presented', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
 
   const createdAt = new Date(Date.now() - SESSION_DURATION_SHORT - 1000);
@@ -72,6 +77,7 @@ test('it revokes the session and throws REFRESH_TOKEN_REUSED when a superseded r
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   await client.refreshTokens({ id: session.id, refreshToken: 'old-token' });
@@ -91,6 +97,7 @@ test('it revokes the session and throws REFRESH_TOKEN_REUSED when a superseded r
 
 test('it deletes the session and throws SESSION_EXPIRED for an expired session', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
 
   const session = await createSessionRow(ctx.db, {
@@ -100,6 +107,7 @@ test('it deletes the session and throws SESSION_EXPIRED for an expired session',
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   expect(
@@ -117,7 +125,9 @@ test('it deletes the session and throws SESSION_EXPIRED for an expired session',
 
 test('it throws NOT_FOUND for a session that does not exist', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   expect(
@@ -127,6 +137,7 @@ test('it throws NOT_FOUND for a session that does not exist', async () => {
 
 test('it throws NOT_FOUND when the presented refresh token does not match', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
 
   const session = await createSessionRow(ctx.db, {
@@ -135,6 +146,7 @@ test('it throws NOT_FOUND when the presented refresh token does not match', asyn
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   expect(

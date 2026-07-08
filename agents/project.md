@@ -78,10 +78,11 @@ CSS values that aren't theme tokens need the bracket escape hatch (`cursor: '[po
   type (a generic callback-arg object, a `ZodType`-bearing shape, a React-element wrapper) carries a
   single honest inline directive stating why; `allow` covers the rest.
 - `bun run format` — `oxfmt .` (`.oxfmtrc.json` at the root), then `format-codemod` (blank-line
-  padding) over the whole tree. The codemod has no ignore file, so its `--ignore` flags are what
-  keep it off committed codegen output (panda's `styled-system` dirs, router typegen) and nested
-  checkouts — oxfmt covers the same set through `.oxfmtrc.json` plus `.gitignore`. The chain is
-  idempotent: a second run is byte-identical.
+  padding) over the whole tree. The codemod's exclusions live in the root `.formatignore` (one glob
+  per line, `#` comments) — that file keeps it off committed codegen output (panda's `styled-system`
+  dirs, router typegen) and nested checkouts, and it is read from the working directory, so run
+  format from the repo root. oxfmt covers the same set through `.oxfmtrc.json` plus `.gitignore`.
+  The chain is idempotent: a second run is byte-identical.
 - `bun run format:check` — both tools' check legs (`oxfmt --check .`, then `format-codemod --check`
   with the same ignores).
 - `bun run build` — `turbo run build`; one project via `--filter`.

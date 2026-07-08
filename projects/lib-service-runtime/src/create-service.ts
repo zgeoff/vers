@@ -48,6 +48,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
 ): Promise<Service<TEnvShape>> {
   const env = parseServiceEnv(config.envShape);
   const logger = createLogger({ level: env.LOG_LEVEL, name: config.name });
+
   const publicKey = await jose.importSPKI(env.SERVICE_AUTH_PUBLIC_KEY, TOKEN_ALGORITHM);
 
   // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)

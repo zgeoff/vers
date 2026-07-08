@@ -14,8 +14,10 @@ async function setupTest() {
 
 test('it deletes an owned session', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createViewer({ audience: 'service-session', db: ctx.db });
   const session = await createSessionRow(ctx.db, { userId: viewer.user.id });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const result = await client.deleteSession({ id: session.id });
@@ -33,9 +35,11 @@ test('it deletes an owned session', async () => {
 
 test('it does not delete a session owned by a different user', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createViewer({ audience: 'service-session', db: ctx.db });
   const other = await createViewer({ audience: 'service-session', db: ctx.db });
   const foreign = await createSessionRow(ctx.db, { userId: other.user.id });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const result = await client.deleteSession({ id: foreign.id });
@@ -53,7 +57,9 @@ test('it does not delete a session owned by a different user', async () => {
 
 test('it silently no-ops for a session that does not exist', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createViewer({ audience: 'service-session', db: ctx.db });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const result = await client.deleteSession({ id: 'does-not-exist' });
@@ -63,7 +69,9 @@ test('it silently no-ops for a session that does not exist', async () => {
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   expect(client.deleteSession({ id: 'x' })).rejects.toMatchObject({

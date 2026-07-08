@@ -8,6 +8,7 @@ test('it creates a freshly named, independently connectable database from the te
   expect(databaseURL).toInclude('test_');
 
   await using db = createDB({ databaseURL });
+
   const rows = await db.selectFrom('users').selectAll().execute();
 
   expect(rows).toBeEmpty();

@@ -17,8 +17,10 @@ async function setupTest() {
 
 test('it creates a session visible within this test', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   await client.createSession({ ipAddress: '127.0.0.1', userID: created.user.id });

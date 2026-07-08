@@ -16,9 +16,11 @@ async function setupTest() {
 
 test('it verifies an unverified session and returns a token pair', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
   const session = await createSessionRow(ctx.db, { userId: created.user.id, verified: false });
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const result = await client.verifySession({ id: session.id });
@@ -40,6 +42,7 @@ test('it verifies an unverified session and returns a token pair', async () => {
 
 test("it mints tokens verifiable with the signing key's public half", async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
 
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
@@ -51,6 +54,7 @@ test("it mints tokens verifiable with the signing key's public half", async () =
   });
 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const result = await client.verifySession({ id: session.id });
@@ -75,7 +79,9 @@ test("it mints tokens verifiable with the signing key's public half", async () =
 
 test('it throws NOT_FOUND for a session that does not exist', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   expect(client.verifySession({ id: 'does-not-exist' })).rejects.toMatchObject({
@@ -85,9 +91,11 @@ test('it throws NOT_FOUND for a session that does not exist', async () => {
 
 test('it throws NOT_FOUND for a session that is already verified', async () => {
   await using ctx = await setupTest();
+
   const created = await createTestUser(ctx.db);
   const session = await createSessionRow(ctx.db, { userId: created.user.id, verified: true });
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   expect(client.verifySession({ id: session.id })).rejects.toMatchObject({

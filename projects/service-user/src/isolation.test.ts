@@ -17,7 +17,9 @@ async function setupTest() {
 
 test('it creates a user visible within this test', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-user' });
+
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   await client.createUser({

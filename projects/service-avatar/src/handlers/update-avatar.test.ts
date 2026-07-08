@@ -14,8 +14,11 @@ async function setupTest() {
 
 test('it updates the name of an owned avatar and reports the updated id', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
+
   const created = await client.createAvatar({ class: 'brute', name: 'Renameable' });
 
   const result = await client.updateAvatar({ id: created.id, name: 'Renamed' });
@@ -33,6 +36,7 @@ test('it updates the name of an owned avatar and reports the updated id', async 
 
 test('it returns NOT_FOUND updating an avatar the caller does not own', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
   const other = await createViewer({ audience: 'service-avatar', db: ctx.db });
   const foreign = await createAvatarRow(ctx.db, { name: 'Unrenameable', userId: other.user.id });
@@ -46,7 +50,9 @@ test('it returns NOT_FOUND updating an avatar the caller does not own', async ()
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   await using ctx = await setupTest();
+
   const viewer = await createAnonymousViewer({ audience: 'service-avatar' });
+
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
   expect(client.updateAvatar({ id: 'x', name: 'Anonymous' })).rejects.toMatchObject({

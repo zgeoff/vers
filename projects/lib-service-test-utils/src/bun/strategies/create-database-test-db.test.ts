@@ -21,6 +21,7 @@ test('it clones a fresh database on every acquisition', async () => {
 
 test('it round-trips a real, committed write through the handle', async () => {
   await using testDB = await createDatabaseTestDB();
+
   const created = await createTestUser(testDB.db, { email: 'committed@test.com' });
 
   const row = await testDB.db

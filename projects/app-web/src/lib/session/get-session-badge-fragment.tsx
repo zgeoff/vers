@@ -23,6 +23,7 @@ interface SessionBadgeFragmentProps {
  */
 export const getSessionBadgeFragment = createServerFn({ method: 'GET' }).handler(async () => {
   const result = await tryReadCurrentUser(toSessionHeaders(getRequestHeaders()));
+
   const message = pickSessionBadgeMessage(result);
 
   const src = await createCompositeComponent((props: SessionBadgeFragmentProps) => (

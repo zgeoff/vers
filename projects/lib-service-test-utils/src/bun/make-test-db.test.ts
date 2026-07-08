@@ -20,6 +20,7 @@ test('it acquires the declared default isolation when none is requested', async 
   });
 
   await using testDB = await createTestDB();
+
   const rows = await testDB.db.selectFrom('users').selectAll().execute();
 
   expect(rows).toBeArray();
@@ -32,6 +33,7 @@ test('it acquires an explicitly requested isolation from those enabled', async (
   });
 
   await using testDB = await createTestDB({ isolation: 'database' });
+
   const rows = await testDB.db.selectFrom('users').selectAll().execute();
 
   expect(rows).toBeArray();
