@@ -1,11 +1,10 @@
 import { expect, test } from 'bun:test';
-import { createId } from '@paralleldrive/cuid2';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
 import { userContract } from '@vers/contract-user';
 import { SERVICE_URLS } from '../../lib/rpc/service-urls';
-import { userCollection } from '../../mocks/db/user-collection';
+import { userCollection } from '../../mocks/db';
 import { server } from '../../mocks/node';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -54,14 +53,8 @@ test('it disables the submit button while the login request is pending', async (
   const user = userEvent.setup();
 
   const foundUser = await userCollection.create({
-    createdAt: new Date(),
     email: 'login-form-pending@vers.test',
-    id: createId(),
-    name: 'Login Form Pending',
     password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'login-form-pending',
   });
 
   const mockUser = buildContractMock({

@@ -1,9 +1,7 @@
 import { expect, test } from 'bun:test';
-import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
-import { userCollection } from '../../mocks/db/user-collection';
-import { verificationCollection } from '../../mocks/db/verification-collection';
+import { userCollection, verificationCollection } from '../../mocks/db';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { signupHandler } from './signup-handler';
 
@@ -51,16 +49,7 @@ test('it reports a field error for an invalid email', async () => {
 });
 
 test('it redirects to verify-otp without creating a verification for an email already in use', async () => {
-  await userCollection.create({
-    createdAt: new Date(),
-    email: 'signup-existing@vers.test',
-    id: createId(),
-    name: 'Signup Existing',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'signup-existing',
-  });
+  await userCollection.create({ email: 'signup-existing@vers.test' });
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await signupHandler(

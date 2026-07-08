@@ -1,9 +1,7 @@
 import { expect, test } from 'bun:test';
-import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
-import { sessionCollection } from '../../mocks/db/session-collection';
-import { userCollection } from '../../mocks/db/user-collection';
+import { sessionCollection, userCollection } from '../../mocks/db';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { resetPasswordHandler } from './reset-password-handler';
 
@@ -72,16 +70,7 @@ test('it reports a form error for an email with no matching account', async () =
 });
 
 test('it reports a form error for a stale or invalid reset token', async () => {
-  await userCollection.create({
-    createdAt: new Date(),
-    email: 'reset-password-bad-token@vers.test',
-    id: createId(),
-    name: 'Reset Password Bad Token',
-    password: 'old-password',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'reset-password-bad-token',
-  });
+  await userCollection.create({ email: 'reset-password-bad-token@vers.test' });
 
   const outcome = await withRequestContext({}, () =>
     resetPasswordHandler(
@@ -102,29 +91,11 @@ test('it reports a form error for a stale or invalid reset token', async () => {
 
 test('it resets the password, signs the caller out everywhere, and redirects to login', async () => {
   const user = await userCollection.create({
-    createdAt: new Date(),
     email: 'reset-password-success@vers.test',
-    id: createId(),
-    name: 'Reset Password Success',
-    password: 'old-password',
     passwordResetToken: 'the-right-token',
-    passwordResetTokenExpiresAt: new Date(Date.now() + 60_000),
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'reset-password-success',
   });
 
-  await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: createId(),
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: createId(),
-    updatedAt: new Date(),
-    userID: user.id,
-    verified: true,
-  });
+  await sessionCollection.create({ userID: user.id });
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await resetPasswordHandler(

@@ -1,8 +1,7 @@
 import { expect, test } from 'bun:test';
-import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
-import { userCollection } from '../../mocks/db/user-collection';
+import { userCollection } from '../../mocks/db';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { forgotPasswordHandler } from './forgot-password-handler';
 
@@ -50,16 +49,7 @@ test('it reports a field error for an invalid email', async () => {
 });
 
 test('it mints a reset token for a matching account and redirects', async () => {
-  const user = await userCollection.create({
-    createdAt: new Date(),
-    email: 'forgot-password-existing@vers.test',
-    id: createId(),
-    name: 'Forgot Password Existing',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'forgot-password-existing',
-  });
+  const user = await userCollection.create({ email: 'forgot-password-existing@vers.test' });
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await forgotPasswordHandler(

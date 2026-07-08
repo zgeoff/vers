@@ -1,12 +1,10 @@
 import { expect, test } from 'bun:test';
-import { createId } from '@paralleldrive/cuid2';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
 import { sessionContract } from '@vers/contract-session';
 import { SERVICE_URLS } from '../../lib/rpc/service-urls';
-import { sessionCollection } from '../../mocks/db/session-collection';
-import { userCollection } from '../../mocks/db/user-collection';
+import { sessionCollection, userCollection } from '../../mocks/db';
 import { server } from '../../mocks/node';
 import { resolveSessionContext } from '../../mocks/resolve-session-context';
 import { renderWithRouter } from '../../test-utils/render-with-router';
@@ -22,25 +20,10 @@ import { ForceLogoutForm } from './force-logout-form';
 test('it disables both buttons while confirming, then re-enables them', async () => {
   const user = userEvent.setup();
 
-  const pendingUser = await userCollection.create({
-    createdAt: new Date(),
-    email: 'force-logout-form-confirm@vers.test',
-    id: createId(),
-    name: 'Force Logout Form Confirm',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'force-logout-form-confirm',
-  });
+  const pendingUser = await userCollection.create({});
 
   await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
     id: 'force-logout-form-session',
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: null,
-    updatedAt: new Date(),
     userID: pendingUser.id,
     verified: false,
   });

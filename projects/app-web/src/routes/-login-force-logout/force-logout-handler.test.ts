@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
-import { sessionCollection } from '../../mocks/db/session-collection';
+import { sessionCollection } from '../../mocks/db';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { forceLogoutHandler } from './force-logout-handler';
 
@@ -53,29 +53,9 @@ test('it signs out every other live session and completes sign-in on confirm', a
   const pendingSessionID = createId();
   const otherSessionID = createId();
 
-  await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: pendingSessionID,
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: null,
-    updatedAt: new Date(),
-    userID,
-    verified: false,
-  });
+  await sessionCollection.create({ id: pendingSessionID, userID, verified: false });
 
-  await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: otherSessionID,
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: null,
-    updatedAt: new Date(),
-    userID,
-    verified: true,
-  });
+  await sessionCollection.create({ id: otherSessionID, userID });
 
   const outcome = await withRequestContext(
     {

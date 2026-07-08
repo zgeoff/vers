@@ -1,10 +1,7 @@
 import { expect, test } from 'bun:test';
-import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
-import { sessionCollection } from '../../mocks/db/session-collection';
-import { userCollection } from '../../mocks/db/user-collection';
-import { verificationCollection } from '../../mocks/db/verification-collection';
+import { sessionCollection, userCollection, verificationCollection } from '../../mocks/db';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { verifyOTPHandler } from './verify-otp-handler';
 
@@ -43,7 +40,6 @@ test('it reports a form error for a code with the wrong length', async () => {
 test('it reports a form error for a code that fails verification', async () => {
   await verificationCollection.create({
     code: '654321',
-    id: createId(),
     target: 'verify-otp-wrong-code@vers.test',
     type: 'onboarding',
   });
@@ -67,7 +63,6 @@ test('it reports a form error for a code that fails verification', async () => {
 test('it records the verified email and redirects to onboarding', async () => {
   await verificationCollection.create({
     code: '222222',
-    id: createId(),
     target: 'verify-otp-onboarding@vers.test',
     type: 'onboarding',
   });
@@ -96,7 +91,6 @@ test('it records the verified email and redirects to onboarding', async () => {
 test('it bounces back to login when a 2FA verify has no pending session', async () => {
   await verificationCollection.create({
     code: '333333',
-    id: createId(),
     target: 'user_no_pending_session',
     type: '2fa',
   });
@@ -119,35 +113,11 @@ test('it bounces back to login when a 2FA verify has no pending session', async 
 });
 
 test('it completes a pending 2FA login and clears the redirect target', async () => {
-  const user = await userCollection.create({
-    createdAt: new Date(),
-    email: 'verify-otp-2fa@vers.test',
-    id: createId(),
-    name: 'Verify OTP 2FA',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'verify-otp-2fa',
-  });
+  const user = await userCollection.create({});
 
-  await verificationCollection.create({
-    code: '444444',
-    id: createId(),
-    target: user.id,
-    type: '2fa',
-  });
+  await verificationCollection.create({ code: '444444', target: user.id, type: '2fa' });
 
-  const pendingSession = await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: createId(),
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: null,
-    updatedAt: new Date(),
-    userID: user.id,
-    verified: false,
-  });
+  const pendingSession = await sessionCollection.create({ userID: user.id, verified: false });
 
   const outcome = await withRequestContext(
     {
@@ -177,46 +147,12 @@ test('it completes a pending 2FA login and clears the redirect target', async ()
 });
 
 test('it rejects a 2FA login carrying a target other than the pending session owner', async () => {
-  const victim = await userCollection.create({
-    createdAt: new Date(),
-    email: 'verify-otp-2fa-victim@vers.test',
-    id: createId(),
-    name: 'Verify OTP 2FA Victim',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'verify-otp-2fa-victim',
-  });
+  const victim = await userCollection.create({});
+  const attacker = await userCollection.create({});
 
-  const attacker = await userCollection.create({
-    createdAt: new Date(),
-    email: 'verify-otp-2fa-attacker@vers.test',
-    id: createId(),
-    name: 'Verify OTP 2FA Attacker',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'verify-otp-2fa-attacker',
-  });
+  await verificationCollection.create({ code: '777777', target: attacker.id, type: '2fa' });
 
-  await verificationCollection.create({
-    code: '777777',
-    id: createId(),
-    target: attacker.id,
-    type: '2fa',
-  });
-
-  const victimSession = await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: createId(),
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: null,
-    updatedAt: new Date(),
-    userID: victim.id,
-    verified: false,
-  });
+  const victimSession = await sessionCollection.create({ userID: victim.id, verified: false });
 
   const outcome = await withRequestContext(
     {
@@ -242,7 +178,6 @@ test('it rejects a 2FA login carrying a target other than the pending session ow
 test('it throws for a 2fa-setup verify, which this route does not support', async () => {
   await verificationCollection.create({
     code: '555555',
-    id: createId(),
     target: 'user_2fa_setup',
     type: '2fa-setup',
   });
@@ -260,32 +195,11 @@ test('it throws for a 2fa-setup verify, which this route does not support', asyn
 });
 
 test('it applies a confirmed email change for the signed-in caller', async () => {
-  const user = await userCollection.create({
-    createdAt: new Date(),
-    email: 'verify-otp-change-email-old@vers.test',
-    id: createId(),
-    name: 'Verify OTP Change Email',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'verify-otp-change-email',
-  });
-
-  const session = await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: createId(),
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: createId(),
-    updatedAt: new Date(),
-    userID: user.id,
-    verified: true,
-  });
+  const user = await userCollection.create({ email: 'verify-otp-change-email-old@vers.test' });
+  const session = await sessionCollection.create({ userID: user.id });
 
   await verificationCollection.create({
     code: '666666',
-    id: createId(),
     target: 'verify-otp-change-email-new@vers.test',
     type: 'change-email',
   });

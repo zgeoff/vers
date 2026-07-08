@@ -1,10 +1,7 @@
 import { expect, test } from 'bun:test';
-import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
-import { sessionCollection } from '../../mocks/db/session-collection';
-import { userCollection } from '../../mocks/db/user-collection';
-import { verificationCollection } from '../../mocks/db/verification-collection';
+import { sessionCollection, userCollection, verificationCollection } from '../../mocks/db';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { loginHandler } from './login-handler';
 
@@ -60,16 +57,7 @@ test('it reports invalid credentials for an unknown email', async () => {
 });
 
 test('it reports invalid credentials for the wrong password', async () => {
-  await userCollection.create({
-    createdAt: new Date(),
-    email: 'wrong-password@vers.test',
-    id: createId(),
-    name: 'Wrong Password',
-    password: 'the-real-password',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'wrong-password',
-  });
+  await userCollection.create({ email: 'wrong-password@vers.test', password: 'the-real-password' });
 
   const outcome = await withRequestContext({}, () =>
     loginHandler(
@@ -82,17 +70,11 @@ test('it reports invalid credentials for the wrong password', async () => {
 
 test('it redirects to verify-otp and stores the pending session for a 2FA-enabled account', async () => {
   const user = await userCollection.create({
-    createdAt: new Date(),
     email: 'two-factor@vers.test',
-    id: createId(),
-    name: 'Two Factor',
     password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'two-factor',
   });
 
-  await verificationCollection.create({ id: createId(), target: user.id, type: '2fa' });
+  await verificationCollection.create({ target: user.id, type: '2fa' });
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await loginHandler(
@@ -111,27 +93,11 @@ test('it redirects to verify-otp and stores the pending session for a 2FA-enable
 
 test('it redirects to force-logout and stores the pending session when another session is live', async () => {
   const user = await userCollection.create({
-    createdAt: new Date(),
     email: 'force-logout@vers.test',
-    id: createId(),
-    name: 'Force Logout',
     password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'force-logout',
   });
 
-  await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: createId(),
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: null,
-    updatedAt: new Date(),
-    userID: user.id,
-    verified: true,
-  });
+  await sessionCollection.create({ userID: user.id });
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await loginHandler(
@@ -152,16 +118,7 @@ test('it redirects to force-logout and stores the pending session when another s
 });
 
 test('it signs a first-time caller in directly and clears their redirect target', async () => {
-  await userCollection.create({
-    createdAt: new Date(),
-    email: 'first-login@vers.test',
-    id: createId(),
-    name: 'First Login',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'first-login',
-  });
+  await userCollection.create({ email: 'first-login@vers.test', password: 'password123' });
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await loginHandler(

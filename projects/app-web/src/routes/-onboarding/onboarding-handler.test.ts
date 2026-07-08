@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
-import { userCollection } from '../../mocks/db/user-collection';
+import { userCollection } from '../../mocks/db';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { onboardingHandler } from './onboarding-handler';
 
@@ -64,16 +64,7 @@ test('it reports field errors for a mismatched password confirmation', async () 
 });
 
 test('it reports a field error for a username already in use', async () => {
-  await userCollection.create({
-    createdAt: new Date(),
-    email: 'onboard-username-taken-existing@vers.test',
-    id: 'onboard-username-taken-existing',
-    name: 'Existing User',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'john_smith13',
-  });
+  await userCollection.create({ username: 'john_smith13' });
 
   const outcome = await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboard-username-taken@vers.test' } } },
