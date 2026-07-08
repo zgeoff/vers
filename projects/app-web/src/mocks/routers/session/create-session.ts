@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { sessionCollection } from '../../db/session-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 /** Default session lifetime for a login without `rememberMe`, mirroring the session service. */
@@ -14,7 +14,7 @@ export const createSession = os.createSession.handler(async (opts) => {
 
   const now = new Date();
 
-  const session = await sessionCollection.create({
+  const session = await db.sessionCollection.create({
     createdAt: now,
     expiresAt: opts.input.expiresAt ?? new Date(Date.now() + sessionDuration),
     id: createId(),

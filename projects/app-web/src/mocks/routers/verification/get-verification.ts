@@ -1,8 +1,8 @@
-import { verificationCollection } from '../../db/verification-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 export const getVerification = os.getVerification.handler((opts) => {
-  const verification = verificationCollection.findFirst((q) =>
+  const verification = db.verificationCollection.findFirst((q) =>
     q.where({ target: opts.input.target, type: opts.input.type }),
   );
 

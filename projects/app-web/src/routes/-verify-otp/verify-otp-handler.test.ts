@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
-import { sessionCollection, userCollection, verificationCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { verifyOTPHandler } from './verify-otp-handler';
@@ -29,7 +29,7 @@ test('it reports a form error for a code with the wrong length', async () => {
 });
 
 test('it reports a form error for a code that fails verification', async () => {
-  await verificationCollection.create({
+  await db.verificationCollection.create({
     code: '654321',
     target: 'verify-otp-wrong-code@vers.test',
     type: 'onboarding',
@@ -52,7 +52,7 @@ test('it reports a form error for a code that fails verification', async () => {
 });
 
 test('it records the verified email and redirects to onboarding', async () => {
-  await verificationCollection.create({
+  await db.verificationCollection.create({
     code: '222222',
     target: 'verify-otp-onboarding@vers.test',
     type: 'onboarding',
@@ -80,7 +80,7 @@ test('it records the verified email and redirects to onboarding', async () => {
 });
 
 test('it bounces back to login when a 2FA verify has no pending session', async () => {
-  await verificationCollection.create({
+  await db.verificationCollection.create({
     code: '333333',
     target: 'user_no_pending_session',
     type: '2fa',
@@ -104,11 +104,11 @@ test('it bounces back to login when a 2FA verify has no pending session', async 
 });
 
 test('it completes a pending 2FA login and clears the redirect target', async () => {
-  const user = await userCollection.create({});
+  const user = await db.userCollection.create({});
 
-  await verificationCollection.create({ code: '444444', target: user.id, type: '2fa' });
+  await db.verificationCollection.create({ code: '444444', target: user.id, type: '2fa' });
 
-  const pendingSession = await sessionCollection.create({ userID: user.id, verified: false });
+  const pendingSession = await db.sessionCollection.create({ userID: user.id, verified: false });
 
   const outcome = await withRequestContext(
     {
@@ -138,12 +138,12 @@ test('it completes a pending 2FA login and clears the redirect target', async ()
 });
 
 test('it rejects a 2FA login carrying a target other than the pending session owner', async () => {
-  const victim = await userCollection.create({});
-  const attacker = await userCollection.create({});
+  const victim = await db.userCollection.create({});
+  const attacker = await db.userCollection.create({});
 
-  await verificationCollection.create({ code: '777777', target: attacker.id, type: '2fa' });
+  await db.verificationCollection.create({ code: '777777', target: attacker.id, type: '2fa' });
 
-  const victimSession = await sessionCollection.create({ userID: victim.id, verified: false });
+  const victimSession = await db.sessionCollection.create({ userID: victim.id, verified: false });
 
   const outcome = await withRequestContext(
     {
@@ -164,7 +164,7 @@ test('it rejects a 2FA login carrying a target other than the pending session ow
 });
 
 test('it throws for a 2fa-setup verify, which this route does not support', async () => {
-  await verificationCollection.create({
+  await db.verificationCollection.create({
     code: '555555',
     target: 'user_2fa_setup',
     type: '2fa-setup',
@@ -183,10 +183,10 @@ test('it throws for a 2fa-setup verify, which this route does not support', asyn
 });
 
 test('it applies a confirmed email change for the signed-in caller', async () => {
-  const user = await userCollection.create({ email: 'verify-otp-change-email-old@vers.test' });
-  const session = await sessionCollection.create({ userID: user.id });
+  const user = await db.userCollection.create({ email: 'verify-otp-change-email-old@vers.test' });
+  const session = await db.sessionCollection.create({ userID: user.id });
 
-  await verificationCollection.create({
+  await db.verificationCollection.create({
     code: '666666',
     target: 'verify-otp-change-email-new@vers.test',
     type: 'change-email',
@@ -211,7 +211,7 @@ test('it applies a confirmed email change for the signed-in caller', async () =>
 
   expect(outcome.value).toBe('/account');
 
-  const updated = userCollection.findFirst((q) => q.where({ id: user.id }));
+  const updated = db.userCollection.findFirst((q) => q.where({ id: user.id }));
 
   expect(updated?.email).toBe('verify-otp-change-email-new@vers.test');
 });

@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { sessionCollection } from '../../db/session-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 /**
@@ -7,14 +7,14 @@ import { os } from './os';
  * the token rotated away from (`previousRefreshToken`) revokes the whole session.
  */
 export const refreshTokens = os.refreshTokens.handler(async (opts) => {
-  const session = sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
+  const session = db.sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
 
   if (session === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
   if (session.expiresAt.getTime() <= Date.now()) {
-    sessionCollection.delete(session);
+    db.sessionCollection.delete(session);
 
     throw opts.errors.SESSION_EXPIRED({ data: {} });
   }
@@ -23,7 +23,7 @@ export const refreshTokens = os.refreshTokens.handler(async (opts) => {
     session.previousRefreshToken !== null &&
     opts.input.refreshToken === session.previousRefreshToken
   ) {
-    sessionCollection.delete(session);
+    db.sessionCollection.delete(session);
 
     throw opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
   }
@@ -34,7 +34,7 @@ export const refreshTokens = os.refreshTokens.handler(async (opts) => {
 
   const rotatedRefreshToken = createId();
 
-  await sessionCollection.update(session, {
+  await db.sessionCollection.update(session, {
     data(record) {
       record.previousRefreshToken = session.refreshToken;
       record.refreshToken = rotatedRefreshToken;

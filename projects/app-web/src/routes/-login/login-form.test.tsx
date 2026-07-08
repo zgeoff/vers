@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
 import { userContract } from '@vers/contract-user';
 import { SERVICE_URLS } from '../../lib/rpc/service-urls';
-import { userCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { server } from '../../mocks/node';
 import { assertEventually } from '../../test-utils/assert-eventually';
 import { renderWithRouter } from '../../test-utils/render-with-router';
@@ -44,7 +44,7 @@ test('it shows a generic failure message for a rejected submission', async () =>
 test('it disables the submit button while the login request is pending', async () => {
   const user = userEvent.setup();
 
-  const foundUser = await userCollection.create({
+  const foundUser = await db.userCollection.create({
     email: 'login-form-pending@vers.test',
     password: 'password123',
   });

@@ -1,4 +1,4 @@
-import { userCollection } from '../../db/user-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 export const getCurrentUser = os.getCurrentUser.handler((opts) => {
@@ -8,7 +8,7 @@ export const getCurrentUser = os.getCurrentUser.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const user = userCollection.findFirst((q) => q.where({ id: actingUserId }));
+  const user = db.userCollection.findFirst((q) => q.where({ id: actingUserId }));
 
   if (user === undefined) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });

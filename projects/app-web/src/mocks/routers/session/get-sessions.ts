@@ -1,4 +1,4 @@
-import { sessionCollection } from '../../db/session-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 export const getSessions = os.getSessions.handler((opts) => {
@@ -8,5 +8,5 @@ export const getSessions = os.getSessions.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  return sessionCollection.findMany((q) => q.where({ userID: actingUserId }));
+  return db.sessionCollection.findMany((q) => q.where({ userID: actingUserId }));
 });

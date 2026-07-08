@@ -1,9 +1,8 @@
-import { sessionCollection } from '../../db/session-collection';
-import { userCollection } from '../../db/user-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 export const resetPassword = os.resetPassword.handler(async (opts) => {
-  const user = userCollection.findFirst((q) => q.where({ id: opts.input.id }));
+  const user = db.userCollection.findFirst((q) => q.where({ id: opts.input.id }));
 
   if (user === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
@@ -24,7 +23,7 @@ export const resetPassword = os.resetPassword.handler(async (opts) => {
     throw opts.errors.INVALID_RESET_TOKEN({ data: {} });
   }
 
-  await userCollection.update(user, {
+  await db.userCollection.update(user, {
     data(record) {
       record.password = opts.input.password;
       record.passwordResetToken = null;
@@ -32,8 +31,8 @@ export const resetPassword = os.resetPassword.handler(async (opts) => {
     },
   });
 
-  for (const session of sessionCollection.findMany((q) => q.where({ userID: user.id }))) {
-    sessionCollection.delete(session);
+  for (const session of db.sessionCollection.findMany((q) => q.where({ userID: user.id }))) {
+    db.sessionCollection.delete(session);
   }
 
   return {};

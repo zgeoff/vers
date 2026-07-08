@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
-import { userCollection, verificationCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { signupHandler } from './signup-handler';
@@ -40,7 +40,7 @@ test('it reports a field error for an invalid email', async () => {
 });
 
 test('it redirects to verify-otp without creating a verification for an email already in use', async () => {
-  await userCollection.create({ email: 'signup-existing@vers.test' });
+  await db.userCollection.create({ email: 'signup-existing@vers.test' });
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await signupHandler(buildFormData({ email: 'signup-existing@vers.test' }))
@@ -52,7 +52,7 @@ test('it redirects to verify-otp without creating a verification for an email al
 
   expect(outcome.value).toBe('/verify-otp?target=signup-existing%40vers.test&type=onboarding');
 
-  const verification = verificationCollection.findFirst((q) =>
+  const verification = db.verificationCollection.findFirst((q) =>
     q.where({ target: 'signup-existing@vers.test', type: 'onboarding' }),
   );
 
@@ -70,7 +70,7 @@ test('it creates an onboarding verification and redirects to verify-otp', async 
 
   expect(outcome.value).toBe('/verify-otp?target=signup-new%40vers.test&type=onboarding');
 
-  const verification = verificationCollection.findFirst((q) =>
+  const verification = db.verificationCollection.findFirst((q) =>
     q.where({ target: 'signup-new@vers.test', type: 'onboarding' }),
   );
 

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
-import { sessionCollection, userCollection, verificationCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { loginHandler } from './login-handler';
@@ -48,7 +48,10 @@ test('it reports invalid credentials for an unknown email', async () => {
 });
 
 test('it reports invalid credentials for the wrong password', async () => {
-  await userCollection.create({ email: 'wrong-password@vers.test', password: 'the-real-password' });
+  await db.userCollection.create({
+    email: 'wrong-password@vers.test',
+    password: 'the-real-password',
+  });
 
   const outcome = await withRequestContext({}, () =>
     loginHandler(buildFormData({ email: 'wrong-password@vers.test', password: 'not-it-either' })),
@@ -58,12 +61,12 @@ test('it reports invalid credentials for the wrong password', async () => {
 });
 
 test('it redirects to verify-otp and stores the pending session for a 2FA-enabled account', async () => {
-  const user = await userCollection.create({
+  const user = await db.userCollection.create({
     email: 'two-factor@vers.test',
     password: 'password123',
   });
 
-  await verificationCollection.create({ target: user.id, type: '2fa' });
+  await db.verificationCollection.create({ target: user.id, type: '2fa' });
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await loginHandler(
@@ -81,12 +84,12 @@ test('it redirects to verify-otp and stores the pending session for a 2FA-enable
 });
 
 test('it redirects to force-logout and stores the pending session when another session is live', async () => {
-  const user = await userCollection.create({
+  const user = await db.userCollection.create({
     email: 'force-logout@vers.test',
     password: 'password123',
   });
 
-  await sessionCollection.create({ userID: user.id });
+  await db.sessionCollection.create({ userID: user.id });
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await loginHandler(
@@ -107,7 +110,7 @@ test('it redirects to force-logout and stores the pending session when another s
 });
 
 test('it signs a first-time caller in directly and clears their redirect target', async () => {
-  await userCollection.create({ email: 'first-login@vers.test', password: 'password123' });
+  await db.userCollection.create({ email: 'first-login@vers.test', password: 'password123' });
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await loginHandler(

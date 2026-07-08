@@ -1,4 +1,4 @@
-import { sessionCollection } from '../../db/session-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 /**
@@ -11,10 +11,10 @@ export const deleteSession = os.deleteSession.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const session = sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
+  const session = db.sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
 
   if (session !== undefined && session.userID === opts.context.actingUserId) {
-    sessionCollection.delete(session);
+    db.sessionCollection.delete(session);
   }
 
   return {};

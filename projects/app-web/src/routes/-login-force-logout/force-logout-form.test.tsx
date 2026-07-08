@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
 import { sessionContract } from '@vers/contract-session';
 import { SERVICE_URLS } from '../../lib/rpc/service-urls';
-import { sessionCollection, userCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { server } from '../../mocks/node';
 import { resolveSessionContext } from '../../mocks/resolve-session-context';
 import { renderWithRouter } from '../../test-utils/render-with-router';
@@ -14,9 +14,9 @@ import { ForceLogoutForm } from './force-logout-form';
 test('it disables both buttons while confirming, then re-enables them', async () => {
   const user = userEvent.setup();
 
-  const pendingUser = await userCollection.create({});
+  const pendingUser = await db.userCollection.create({});
 
-  await sessionCollection.create({
+  await db.sessionCollection.create({
     id: 'force-logout-form-session',
     userID: pendingUser.id,
     verified: false,
@@ -40,7 +40,7 @@ test('it disables both buttons while confirming, then re-enables them', async ()
         throw new Error('expected a resolved acting user for the test session bearer token');
       }
 
-      return sessionCollection.findMany((q) => q.where({ userID: actingUserId }));
+      return db.sessionCollection.findMany((q) => q.where({ userID: actingUserId }));
     }),
   );
 

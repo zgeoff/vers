@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { verificationCollection } from '../../db/verification-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 /**
@@ -8,17 +8,17 @@ import { os } from './os';
  * alongside the fresh one.
  */
 export const createVerification = os.createVerification.handler(async (opts) => {
-  const existing = verificationCollection.findFirst((q) =>
+  const existing = db.verificationCollection.findFirst((q) =>
     q.where({ target: opts.input.target, type: opts.input.type }),
   );
 
   if (existing !== undefined) {
-    verificationCollection.delete(existing);
+    db.verificationCollection.delete(existing);
   }
 
   const code = buildMockCode();
 
-  const row = await verificationCollection.create({
+  const row = await db.verificationCollection.create({
     id: createId(),
     code,
     expiresAt: opts.input.expiresAt ?? null,

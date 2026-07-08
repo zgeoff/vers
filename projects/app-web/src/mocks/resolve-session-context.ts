@@ -1,4 +1,4 @@
-import { sessionCollection } from './db/session-collection';
+import * as db from './db';
 
 /** The context every mocked contract handler receives; mirrors the real services' shape. */
 export interface MockContext extends Record<string, unknown> {
@@ -18,7 +18,7 @@ export function resolveSessionContext(request: Request): MockContext {
     return { actingUserId: null };
   }
 
-  const session = sessionCollection.findFirst((q) => q.where({ id: sessionID }));
+  const session = db.sessionCollection.findFirst((q) => q.where({ id: sessionID }));
 
   if (session === undefined || session.expiresAt.getTime() <= Date.now()) {
     return { actingUserId: null };

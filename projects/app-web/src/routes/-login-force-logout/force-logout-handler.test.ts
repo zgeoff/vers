@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
-import { sessionCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { forceLogoutHandler } from './force-logout-handler';
@@ -46,9 +46,9 @@ test('it signs out every other live session and completes sign-in on confirm', a
   const pendingSessionID = createId();
   const otherSessionID = createId();
 
-  await sessionCollection.create({ id: pendingSessionID, userID, verified: false });
+  await db.sessionCollection.create({ id: pendingSessionID, userID, verified: false });
 
-  await sessionCollection.create({ id: otherSessionID, userID });
+  await db.sessionCollection.create({ id: otherSessionID, userID });
 
   const outcome = await withRequestContext(
     {
@@ -71,6 +71,6 @@ test('it signs out every other live session and completes sign-in on confirm', a
   expect(outcome.value).toBe('/');
   expect(outcome.cookies['en_verification']).toStrictEqual({});
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
-  expect(sessionCollection.findFirst((q) => q.where({ id: otherSessionID }))).toBeUndefined();
-  expect(sessionCollection.findFirst((q) => q.where({ id: pendingSessionID }))).toBeDefined();
+  expect(db.sessionCollection.findFirst((q) => q.where({ id: otherSessionID }))).toBeUndefined();
+  expect(db.sessionCollection.findFirst((q) => q.where({ id: pendingSessionID }))).toBeDefined();
 });

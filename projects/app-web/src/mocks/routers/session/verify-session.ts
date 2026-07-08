@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { sessionCollection } from '../../db/session-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 /**
@@ -7,7 +7,7 @@ import { os } from './os';
  * session's own id, matching `resolveSessionContext`'s bearer-as-session-id lookup.
  */
 export const verifySession = os.verifySession.handler(async (opts) => {
-  const session = sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
+  const session = db.sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
 
   if (session === undefined || session.verified) {
     throw opts.errors.NOT_FOUND({ data: {} });
@@ -15,7 +15,7 @@ export const verifySession = os.verifySession.handler(async (opts) => {
 
   const refreshToken = createId();
 
-  await sessionCollection.update(session, {
+  await db.sessionCollection.update(session, {
     data(record) {
       record.refreshToken = refreshToken;
       record.verified = true;

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
-import { userCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { forgotPasswordHandler } from './forgot-password-handler';
@@ -40,7 +40,7 @@ test('it reports a field error for an invalid email', async () => {
 });
 
 test('it mints a reset token for a matching account and redirects', async () => {
-  const user = await userCollection.create({ email: 'forgot-password-existing@vers.test' });
+  const user = await db.userCollection.create({ email: 'forgot-password-existing@vers.test' });
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await forgotPasswordHandler(
@@ -54,7 +54,7 @@ test('it mints a reset token for a matching account and redirects', async () => 
 
   expect(outcome.value).toBe('/reset-password-started');
 
-  const updated = userCollection.findFirst((q) => q.where({ id: user.id }));
+  const updated = db.userCollection.findFirst((q) => q.where({ id: user.id }));
 
   expect(updated?.passwordResetToken).toBeString();
 });

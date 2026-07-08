@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
-import { sessionCollection, userCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { resetPasswordHandler } from './reset-password-handler';
@@ -61,7 +61,7 @@ test('it reports a form error for an email with no matching account', async () =
 });
 
 test('it reports a form error for a stale or invalid reset token', async () => {
-  await userCollection.create({ email: 'reset-password-bad-token@vers.test' });
+  await db.userCollection.create({ email: 'reset-password-bad-token@vers.test' });
 
   const outcome = await withRequestContext({}, () =>
     resetPasswordHandler(
@@ -81,12 +81,12 @@ test('it reports a form error for a stale or invalid reset token', async () => {
 });
 
 test('it resets the password, signs the caller out everywhere, and redirects to login', async () => {
-  const user = await userCollection.create({
+  const user = await db.userCollection.create({
     email: 'reset-password-success@vers.test',
     passwordResetToken: 'the-right-token',
   });
 
-  await sessionCollection.create({ userID: user.id });
+  await db.sessionCollection.create({ userID: user.id });
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await resetPasswordHandler(
@@ -104,12 +104,12 @@ test('it resets the password, signs the caller out everywhere, and redirects to 
 
   expect(outcome.value).toBe('/login');
 
-  const updated = userCollection.findFirst((q) => q.where({ id: user.id }));
+  const updated = db.userCollection.findFirst((q) => q.where({ id: user.id }));
 
   expect(updated?.password).toBe('new-password123');
   expect(updated?.passwordResetToken).toBeNull();
 
-  const remainingSessions = sessionCollection.findMany((q) => q.where({ userID: user.id }));
+  const remainingSessions = db.sessionCollection.findMany((q) => q.where({ userID: user.id }));
 
   expect(remainingSessions).toStrictEqual([]);
 });

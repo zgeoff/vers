@@ -1,4 +1,4 @@
-import { userCollection } from '../../db/user-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 export const updateEmail = os.updateEmail.handler(async (opts) => {
@@ -8,17 +8,17 @@ export const updateEmail = os.updateEmail.handler(async (opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const user = userCollection.findFirst((q) => q.where({ id: actingUserId }));
+  const user = db.userCollection.findFirst((q) => q.where({ id: actingUserId }));
 
   if (user === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  if (userCollection.findFirst((q) => q.where({ email: opts.input.email })) !== undefined) {
+  if (db.userCollection.findFirst((q) => q.where({ email: opts.input.email })) !== undefined) {
     throw opts.errors.CONFLICT({ data: { field: 'email' } });
   }
 
-  await userCollection.update(user, {
+  await db.userCollection.update(user, {
     data(record) {
       record.email = opts.input.email;
     },

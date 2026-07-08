@@ -1,4 +1,4 @@
-import { sessionCollection } from '../../db/session-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 export const getSession = os.getSession.handler((opts) => {
@@ -8,7 +8,7 @@ export const getSession = os.getSession.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const session = sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
+  const session = db.sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
 
   if (session === undefined || session.userID !== actingUserId) {
     return null;

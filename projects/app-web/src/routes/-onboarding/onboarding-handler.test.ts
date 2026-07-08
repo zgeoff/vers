@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
-import { userCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { onboardingHandler } from './onboarding-handler';
@@ -53,7 +53,7 @@ test('it reports field errors for a mismatched password confirmation', async () 
 });
 
 test('it reports a field error for a username already in use', async () => {
-  await userCollection.create({ username: 'john_smith13' });
+  await db.userCollection.create({ username: 'john_smith13' });
 
   const outcome = await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboard-username-taken@vers.test' } } },
@@ -84,7 +84,9 @@ test('it creates the account, signs the caller in, and clears the onboarding ses
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
   expect(outcome.cookies['en_verification']).toStrictEqual({});
 
-  const created = userCollection.findFirst((q) => q.where({ email: 'onboard-success@vers.test' }));
+  const created = db.userCollection.findFirst((q) =>
+    q.where({ email: 'onboard-success@vers.test' }),
+  );
 
   expect(created?.username).toBe('onboard_success_user');
 });
