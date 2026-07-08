@@ -7,7 +7,7 @@ import { mock } from 'bun:test';
  * content.
  */
 export function registerAetherNodeCodexSlotMock(): void {
-  void mock.module('../src/components/aether-node-codex-slot', () => ({
+  void mock.module('../components/aether-node-codex-slot', () => ({
     AetherNodeCodexSlot: () => <p data-testid="aether-node-codex-stub">CODEX</p>,
   }));
 }

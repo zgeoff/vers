@@ -12,23 +12,23 @@ import { idleWorkerHandleHolder } from './idle-worker-handle-holder';
  * asserting on its fake worker's calls observes the real wiring contract.
  */
 export function registerIdleWorkerHandleMock(): void {
-  void mock.module('../src/lib/idle/use-idle-worker-handle', () => ({
+  void mock.module('../lib/idle/use-idle-worker-handle', () => ({
     useIdleWorkerHandle: () => idleWorkerHandleHolder.current,
   }));
 
-  void mock.module('../src/lib/idle/send-idle-initialize', () => ({
+  void mock.module('../lib/idle/send-idle-initialize', () => ({
     sendIdleInitialize: (worker: FakeSimulationWorker) => {
       worker.port.postMessage({ type: 'initialize' });
     },
   }));
 
-  void mock.module('../src/lib/idle/send-idle-set-activity', () => ({
+  void mock.module('../lib/idle/send-idle-set-activity', () => ({
     sendIdleSetActivity: (worker: FakeSimulationWorker, activity: unknown, avatar: unknown) => {
       worker.port.postMessage({ activity, avatar, type: 'set-activity' });
     },
   }));
 
-  void mock.module('../src/lib/idle/idle-aether-node', () => ({
+  void mock.module('../lib/idle/idle-aether-node', () => ({
     IdleAetherNode: () => 'IDLE_AETHER_NODE',
   }));
 }

@@ -4,8 +4,8 @@ import { Field, Heading, StatusButton } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { avatarCreate } from './avatar-create';
-import type { AvatarCreateResult } from './avatar-create-result';
 import { ClassSelectionField } from './class-selection-field';
+import type { AvatarCreateResult } from './types';
 
 const formStyles = css({
   display: 'flex',

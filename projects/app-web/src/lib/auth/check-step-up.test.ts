@@ -82,9 +82,9 @@ test('it requires a new pending transaction for a token minted for a different a
 });
 
 test('it requires a new pending transaction for a token minted under a different session', async () => {
-  const signedIn = await createSignedInUser('mismatched-session@vers.test');
+  const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ id: createId(), target: signedIn.userID, type: '2fa' });
+  await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({

@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { avatarCollection } from '../../db/avatar-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 /** Creates an avatar owned by the acting user; mirrors the service's global name uniqueness. */
@@ -10,13 +10,13 @@ export const createAvatar = os.createAvatar.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  if (avatarCollection.findFirst((q) => q.where({ name: opts.input.name })) !== undefined) {
+  if (db.avatarCollection.findFirst((q) => q.where({ name: opts.input.name })) !== undefined) {
     throw opts.errors.CONFLICT({ data: {} });
   }
 
   const now = new Date();
 
-  return avatarCollection.create({
+  return db.avatarCollection.create({
     class: opts.input.class,
     createdAt: now,
     id: createId(),

@@ -1,4 +1,4 @@
-import { avatarCollection } from '../../db/avatar-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 /** Lists every avatar owned by the acting user. */
@@ -9,5 +9,5 @@ export const getAvatars = os.getAvatars.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  return avatarCollection.findMany((q) => q.where({ userID: actingUserId }));
+  return db.avatarCollection.findMany((q) => q.where({ userID: actingUserId }));
 });

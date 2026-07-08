@@ -60,17 +60,7 @@ test('it retries a 401 with the refreshed access token and the original body int
 });
 
 test('it single-flights concurrent refreshes for the same session', async () => {
-  const session = await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: createId(),
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: 'refresh-1',
-    updatedAt: new Date(),
-    userID: createId(),
-    verified: true,
-  });
+  const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
 
   const probeUrlA = 'http://localhost:3999/probe-concurrent-a';
   const probeUrlB = 'http://localhost:3999/probe-concurrent-b';
@@ -123,23 +113,13 @@ test('it single-flights concurrent refreshes for the same session', async () => 
     `Bearer ${session.id}`,
   ]);
 
-  expect(sessionCollection.findFirst((q) => q.where({ id: session.id }))).toMatchObject({
+  expect(db.sessionCollection.findFirst((q) => q.where({ id: session.id }))).toMatchObject({
     previousRefreshToken: 'refresh-1',
   });
 });
 
 test('it single-flights concurrent refreshes for the same session across separate service links', async () => {
-  const session = await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: createId(),
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: 'refresh-1',
-    updatedAt: new Date(),
-    userID: createId(),
-    verified: true,
-  });
+  const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
 
   const probeUrlA = 'http://localhost:3999/probe-cross-service-a';
   const probeUrlB = 'http://localhost:3999/probe-cross-service-b';
@@ -196,7 +176,7 @@ test('it single-flights concurrent refreshes for the same session across separat
     `Bearer ${session.id}`,
   ]);
 
-  expect(sessionCollection.findFirst((q) => q.where({ id: session.id }))).toMatchObject({
+  expect(db.sessionCollection.findFirst((q) => q.where({ id: session.id }))).toMatchObject({
     previousRefreshToken: 'refresh-1',
   });
 });

@@ -1,4 +1,4 @@
-import { avatarCollection } from '../../db/avatar-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 /** Renames an avatar owned by the acting user; throws NOT_FOUND when they don't own it. */
@@ -9,7 +9,7 @@ export const updateAvatar = os.updateAvatar.handler(async (opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const avatar = avatarCollection.findFirst((q) =>
+  const avatar = db.avatarCollection.findFirst((q) =>
     q.where({ id: opts.input.id, userID: actingUserId }),
   );
 
@@ -17,7 +17,7 @@ export const updateAvatar = os.updateAvatar.handler(async (opts) => {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  await avatarCollection.update(avatar, {
+  await db.avatarCollection.update(avatar, {
     data(record) {
       record.name = opts.input.name;
 

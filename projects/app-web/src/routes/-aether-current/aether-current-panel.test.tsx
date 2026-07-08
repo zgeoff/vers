@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import { setSelectedNode } from '@vers/aether-client';
 import type { ActivityAppState } from '@vers/idle-core';
-import { withIdleWorkerHandle } from '../../../test-utils/with-idle-worker-handle';
+import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
 import { AetherCurrentPanel } from './aether-current-panel';
 
 interface SetActivityMessage {

@@ -1,12 +1,10 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { screen } from '@testing-library/react';
-import { avatarCollection } from '../../../mocks/db/avatar-collection';
-import { sessionCollection } from '../../../mocks/db/session-collection';
-import { userCollection } from '../../../mocks/db/user-collection';
-import { renderWithRouter } from '../../../test-utils/render-with-router';
-import { withRequestContext } from '../../../test-utils/with-request-context';
 import { orpc } from '../../lib/rpc/orpc';
+import * as db from '../../mocks/db';
+import { renderWithRouter } from '../../test-utils/render-with-router';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { NexusPanel } from './nexus-panel';
 
 async function createSignedInUser(): Promise<{
@@ -16,28 +14,9 @@ async function createSignedInUser(): Promise<{
   const userID = createId();
   const sessionID = createId();
 
-  await userCollection.create({
-    createdAt: new Date(),
-    email: 'nexus-panel@vers.test',
-    id: userID,
-    name: 'Nexus Panel',
-    password: 'password123',
-    seed: 0,
-    updatedAt: new Date(),
-    username: 'nexus-panel',
-  });
+  await db.userCollection.create({ id: userID });
 
-  await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: sessionID,
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: null,
-    updatedAt: new Date(),
-    userID,
-    verified: true,
-  });
+  await db.sessionCollection.create({ id: sessionID, userID });
 
   return {
     cookies: { en_session: { accessToken: sessionID, refreshToken: 'refresh', sessionID } },
@@ -61,16 +40,7 @@ test('it shows a call to action for a caller with no avatar', async () => {
 test('it shows the nexus hud for a caller with an avatar', async () => {
   const signedIn = await createSignedInUser();
 
-  await avatarCollection.create({
-    class: 'brute',
-    createdAt: new Date(),
-    id: createId(),
-    level: 1,
-    name: 'Karnak',
-    updatedAt: new Date(),
-    userID: signedIn.userID,
-    xp: 0,
-  });
+  await db.avatarCollection.create({ name: 'Karnak', userID: signedIn.userID });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderWithRouter(<NexusPanel orpc={orpc} />);

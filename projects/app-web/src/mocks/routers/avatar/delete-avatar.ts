@@ -1,4 +1,4 @@
-import { avatarCollection } from '../../db/avatar-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 /** Removes an avatar owned by the acting user; throws NOT_FOUND when they don't own it. */
@@ -9,7 +9,7 @@ export const deleteAvatar = os.deleteAvatar.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const avatar = avatarCollection.findFirst((q) =>
+  const avatar = db.avatarCollection.findFirst((q) =>
     q.where({ id: opts.input.id, userID: actingUserId }),
   );
 
@@ -17,7 +17,7 @@ export const deleteAvatar = os.deleteAvatar.handler((opts) => {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  avatarCollection.delete(avatar);
+  db.avatarCollection.delete(avatar);
 
   return { deletedID: avatar.id };
 });

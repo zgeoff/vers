@@ -1,4 +1,5 @@
-import { attachAuthHeaders } from '../rpc/attach-auth-headers';
+import { getAuthSession } from '../auth/get-auth-session';
+import { buildAuthHeaders } from '../rpc/build-auth-headers';
 import type { ServiceName } from '../rpc/service-urls';
 import { SERVICE_URLS } from '../rpc/service-urls';
 
@@ -24,7 +25,9 @@ export async function sendRPCRequest(request: Request, service: ServiceName): Pr
 
   const headers = new Headers(request.headers);
 
-  const authHeaders = await attachAuthHeaders();
+  const session = await getAuthSession();
+
+  const authHeaders = buildAuthHeaders(session);
 
   for (const [name, value] of Object.entries(authHeaders)) {
     headers.set(name, value);

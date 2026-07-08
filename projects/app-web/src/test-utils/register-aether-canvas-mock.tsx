@@ -7,7 +7,7 @@ import { mock } from 'bun:test';
  * the canvas's own internals.
  */
 export function registerAetherCanvasMock(): void {
-  void mock.module('../src/routes/-aether/aether-canvas', () => ({
+  void mock.module('../routes/-aether/aether-canvas', () => ({
     AetherCanvas: () => <p data-testid="aether-canvas-stub">AETHER_CANVAS</p>,
   }));
 }

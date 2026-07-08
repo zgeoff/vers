@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { render } from '@testing-library/react';
-import { withIdleWorkerHandle } from '../../../test-utils/with-idle-worker-handle';
+import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
 import { GameSimulationMount } from './game-simulation-mount';
 
 test('it sends the initialize message once a worker connects that has not reported state yet', async () => {

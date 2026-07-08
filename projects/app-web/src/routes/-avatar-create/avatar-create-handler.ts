@@ -4,7 +4,7 @@ import type { z } from 'zod';
 import { requireAuth } from '../../lib/auth/require-auth';
 import { avatarClient } from '../../lib/rpc/clients/avatar-client';
 import { AvatarCreateFormSchema } from './avatar-create-form-schema';
-import type { AvatarCreateResult } from './avatar-create-result';
+import type { AvatarCreateResult } from './types';
 
 /**
  * Runs the avatar-create form's submission: field validation, then creation for the acting user.

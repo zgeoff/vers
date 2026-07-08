@@ -2,7 +2,7 @@ import { expect, mock, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, http } from 'msw';
-import { sessionCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { server } from '../../mocks/node';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { sendRPCRequest } from './send-rpc-request';
@@ -71,17 +71,7 @@ test('it attaches the caller own bearer header from their cookie session, overri
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
   const sessionID = createId();
 
-  await sessionCollection.create({
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-    id: sessionID,
-    ipAddress: '127.0.0.1',
-    previousRefreshToken: null,
-    refreshToken: null,
-    updatedAt: new Date(),
-    userID: createId(),
-    verified: true,
-  });
+  await db.sessionCollection.create({ id: sessionID, userID: createId() });
 
   server.use(http.get('http://localhost:3005/rpc/getAvatars', resolver));
 

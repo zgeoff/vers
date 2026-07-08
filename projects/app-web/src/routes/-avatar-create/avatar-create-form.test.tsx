@@ -1,16 +1,10 @@
 import { expect, test } from 'bun:test';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithRouter } from '../../../test-utils/render-with-router';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { renderWithRouter } from '../../test-utils/render-with-router';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { AvatarCreateForm } from './avatar-create-form';
 
-/**
- * `avatar-create-handler.test.ts` drives every `AvatarCreateResult` branch against the handler
- * body directly — a plain result object never round-trips through an uncompiled `createServerFn`
- * export under `bun test`, so this file is limited to the initial render and the class-selection
- * island's own client-side state.
- */
 test('it renders the class options and name field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(<AvatarCreateForm />);
