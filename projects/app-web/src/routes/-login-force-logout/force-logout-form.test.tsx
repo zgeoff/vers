@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
 import { sessionContract } from '@vers/contract-session';
@@ -11,12 +11,6 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ForceLogoutForm } from './force-logout-form';
 
-/**
- * `force-logout-handler.test.ts` drives every branch of the handler body directly. Every branch
- * here ends in a thrown redirect, which `useServerFn` catches and hands to a real
- * `router.navigate` — `waitFor`'s `act()` wrapping never observes that settling, so a plain delay
- * stands in for it below.
- */
 test('it disables both buttons while confirming, then re-enables them', async () => {
   const user = userEvent.setup();
 
@@ -34,11 +28,11 @@ test('it disables both buttons while confirming, then re-enables them', async ()
     resolveContext: resolveSessionContext,
   });
 
+  const lookupGate = Promise.withResolvers<void>();
+
   server.use(
     mockSession.getSessions.handler(async (opts) => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 50);
-      });
+      await lookupGate.promise;
 
       const actingUserId = opts.context.actingUserId;
 
@@ -66,15 +60,17 @@ test('it disables both buttons while confirming, then re-enables them', async ()
 
       await user.click(confirmButton);
 
-      expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
-
-      await new Promise((resolve) => {
-        setTimeout(resolve, 300);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
       });
 
-      expect(screen.getByRole('button', { name: 'Confirm' })).not.toBeDisabled();
-      expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
+      lookupGate.resolve();
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Confirm' })).not.toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
+      });
     },
   );
 });
@@ -89,12 +85,10 @@ test('it completes a cancel without leaving the buttons stuck disabled', async (
 
     await user.click(cancelButton);
 
-    await new Promise((resolve) => {
-      setTimeout(resolve, 300);
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Confirm' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
     });
-
-    expect(screen.getByRole('button', { name: 'Confirm' })).not.toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
   });
 });
 

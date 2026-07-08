@@ -6,19 +6,11 @@ import { userContract } from '@vers/contract-user';
 import { SERVICE_URLS } from '../../lib/rpc/service-urls';
 import { userCollection } from '../../mocks/db';
 import { server } from '../../mocks/node';
+import { assertEventually } from '../../test-utils/assert-eventually';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { LoginForm } from './login-form';
 
-/**
- * `login-handler.test.ts` drives every `LoginResult` branch (field errors, invalid credentials,
- * 2FA, force-logout, success) against the handler body directly. The two branches that return a
- * plain result object instead of throwing a redirect or returning a `Response` can't be observed
- * here: an uncompiled `createServerFn` export (what `bun test` runs, with no compiler pass to swap
- * in the real client/server split) only relays a `Response` or a thrown error/redirect back to its
- * caller, so this file covers the branches that round-trip that way and leaves the rest to the
- * handler-level tests plus the real-runtime smoke suite.
- */
 test('it shows a generic failure message for a rejected submission', async () => {
   const user = userEvent.setup();
 
@@ -63,11 +55,11 @@ test('it disables the submit button while the login request is pending', async (
     resolveContext: () => ({ actingUserId: null }),
   });
 
+  const lookupGate = Promise.withResolvers<void>();
+
   server.use(
     mockUser.getUser.handler(async () => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 50);
-      });
+      await lookupGate.promise;
 
       return foundUser;
     }),
@@ -82,16 +74,19 @@ test('it disables the submit button while the login request is pending', async (
     await user.type(screen.getByLabelText('Password'), 'password123');
     await user.click(screen.getByRole('button', { name: 'Login' }));
 
-    expect(screen.getByRole('button', { name: 'Login' })).toBeDisabled();
-
-    // a completed submission here ends in `useServerFn` catching a thrown redirect and calling
-    // `router.navigate` itself, which `waitFor`'s `act()` wrapping never observes settling — a
-    // plain delay is used instead
-    await new Promise((resolve) => {
-      setTimeout(resolve, 300);
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Login' })).toBeDisabled();
     });
 
-    expect(screen.getByRole('button', { name: 'Login' })).not.toBeDisabled();
+    lookupGate.resolve();
+
+    // the re-enable lands only after the thrown redirect's navigation settles, which act-wrapped
+    // waitFor cannot observe here
+    await assertEventually(() => {
+      if (screen.getByRole('button', { name: 'Login' }).hasAttribute('disabled')) {
+        throw new Error('the login button is still disabled');
+      }
+    });
   });
 });
 
