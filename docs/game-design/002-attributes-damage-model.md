@@ -1,14 +1,13 @@
 # Attributes & Damage Model
 
-This note defines the first stable combat stat and damage-system spine for Vers. It should support
-PoE-like long-term build complexity without front-loading that complexity into the first playable
-loop.
+This note defines the combat stats and damage model for Vers. It supports PoE-like long-term build
+complexity without front-loading that complexity into the first playable loop.
 
 ## Damage Types
 
-Vers starts with seven damage types, each named for its mechanism of harm. The set is intentionally
-wider than a traditional fantasy ARPG element spread, so itemisation should not expect every build
-to cover every offensive or defensive type equally.
+Vers has seven damage types, each named for its mechanism of harm. The set is intentionally wider
+than a traditional fantasy ARPG element spread, so itemisation should not expect every build to
+cover every offensive or defensive type equally.
 
 ### Physical
 
@@ -81,8 +80,7 @@ status effects, skills, enemies, or item modifiers.
 Status effects are secondary outcomes caused by damage types, skills, enemies, regions, or item
 modifiers. They may impair, amplify, control, reveal, weaken, protect, or otherwise alter combat.
 
-Status effects should not be fully enumerated in the first pass. The damage model only needs enough
-structure to support them later.
+Status effects are not enumerated here; the damage model carries only the structure they need.
 
 ## Defensive Layers
 
@@ -97,25 +95,28 @@ Dodge; the defensive-archetypes note defines them.
 ### Interception
 
 Interception reduces a connected hit before mitigation. Its forms are Block and Deflect; the
-defensive-archetypes note defines them. Interception stays distinct from avoidance: avoidance stops
-connection, interception handles a connected event.
+defensive-archetypes note defines them.
 
 ### Mitigation
 
-Mitigation reduces the impact of damage that was not avoided or fully blocked. It includes
+Mitigation reduces the impact of damage that was not avoided or fully intercepted. It includes
 type-appropriate defenses and other reductions that make incoming damage smaller.
+
+### Buffer
+
+Buffer defers damage: a portion of a qualifying hit lands as decaying damage over following beats
+instead of instantly. The defensive-archetypes note defines it.
 
 ### Barrier
 
-Barrier is recoverable protection consumed before Life. It fits the synthetic-world premise better
-than a fantasy shield while still giving builds a recoverable layer above Life.
+Barrier is recoverable protection consumed before Life.
 
 ### Life
 
-Life is the avatar's health. Reaching zero life causes defeat or activity failure according to the
-surrounding activity rules.
+Life is the avatar's health. Reaching zero Life ends the activity; the core note owns the defeat
+rules.
 
-## Resolution Spine
+## Resolution Order
 
 The default resolution order is:
 
@@ -124,15 +125,16 @@ The default resolution order is:
 3. Interception may reduce a connected hit.
 4. A connected hit may resolve as critical, scaling its damage.
 5. Mitigation reduces remaining damage.
-6. Barrier absorbs damage before life.
-7. Life is reduced by unabsorbed damage.
-8. Status effects and secondary outcomes are checked from the resolved event.
+6. Buffer may defer a portion of the remaining damage across following beats.
+7. Barrier absorbs damage before Life.
+8. Life is reduced by unabsorbed damage.
+9. Status effects and secondary outcomes are checked from the resolved event.
 
-This order is a design spine, not a final formula. Individual skills, items, enemies, and regions
+This order is the default shape, not a final formula. Individual skills, items, enemies, and regions
 may alter it when a specific build or encounter needs a rule-breaking hook.
 
 The order is also the structure of expedition reporting: each defensive layer consumed is
-escalation, and a hit that reaches life is a close call worth reporting. Reporting carries both a
+escalation, and a hit that reaches Life is a close call worth reporting. Reporting carries both a
 high-level summary and the drill-down that explains it — including what failed on defeat; its own
 design note owns the specifics.
 
@@ -144,17 +146,17 @@ for the types its target regions deal. Physical is not resistable — it is the 
 type, handled through the other defensive layers rather than a resistance stat.
 
 Regions are weighted toward a dominant damage type but never deal it exclusively. Type mitigation is
-specced against a region's mix, and the type-agnostic layers — Avoidance, Interception, Barrier —
-are the floor under whatever a build has not covered.
+specced against a region's mix; Avoidance, Interception, and Barrier work against every damage type
+and catch what a build has not covered.
 
-Every damage type has at least one region or faction that expresses it. The strange types are
-progression-gated: Cognitive appears later, and Null is endgame. The type spectrum deepens as
-avatars push farther from Respite.
+Every damage type has at least one region or faction that expresses it. The strange types arrive
+with progression: Cognitive appears later, and Null is endgame. The type spectrum deepens as avatars
+push farther from Respite.
 
-Enemies use the same defensive layers as avatars, including Physical mitigation of their own — so
-Physical is universal pressure in both directions, not a strictly-best attacking type. Layer
-distribution across enemy families is a tuning choice (heavily avoidance-stacked enemies are rarely
-fun), and no mechanic converts incoming Physical into a resistable type.
+Enemies use the same defensive layers as avatars, including Physical mitigation of their own —
+Physical is universal pressure in both directions. Layer distribution across enemy families is a
+tuning choice (heavily avoidance-stacked enemies are rarely fun), and incoming damage never converts
+between types.
 
 A region's damage mix is also its history: mechanical drift reads as Physical, Heat, Cold, and
 Electric; ecological drift as Toxic; human drift as Cognitive; total drift as Null. Reading a threat
@@ -169,8 +171,8 @@ over that cadence. Skills relate to it in one of three ways:
 - **Free** skills fire on their beat at no cost. They are the baseline lane: a starved avatar
   degrades to its free skills instead of stalling.
 - **Costed** skills spend Reserve to fire. A costed skill that cannot pay skips its beat rather than
-  blocking the avatar — free skills hold the rotation's floor, and the real tax is the output gap
-  between that floor and what the costed beat would have added. A costed skill should be stronger
+  blocking the avatar — free skills keep the rotation firing, and the real tax is the output gap
+  between that baseline and what the costed beat would have added. A costed skill should be stronger
   per beat than a free one by roughly the value of its cost, and the build question is whether
   regeneration can sustain it.
 - **Optional-cost** skills fire either way and consume Reserve for a stronger outcome when it is
@@ -179,17 +181,18 @@ over that cadence. Skills relate to it in one of three ways:
   build outcome worth reporting to the player.
 
 Cost shape is a skill property, not a class rule. Archetypes may still skew the flow — heavy
-spenders, or generators that build Reserve by acting or being hit — through skills and passives.
-Generation is a skill behaviour orthogonal to cost shape, not a fourth shape.
+spenders, or generators that build Reserve by acting or being hit — through skills and passives;
+generation is a behaviour a skill carries, orthogonal to its cost shape. Some abilities recur on
+cooldowns longer than a beat; the skills note owns cooldown design.
 
-Reserve regeneration and capacity are first-class build stats. Specific regeneration, cost,
+Reserve regeneration and capacity are stats worth building around. Specific regeneration, cost,
 capacity, and on-full/on-empty investment stays in itemisation and skills.
 
 ## Attribute Layers
 
 Vers uses two attribute layers: the Compass, which positions an avatar, and metagame attributes,
-which are persistent player progression. They should not compete for the same item budget or
-progression choices.
+which are persistent player progression. They should not compete for the same items or progression
+choices.
 
 The Compass is local to an avatar and determines what equipment and skills the avatar qualifies for.
 Metagame attributes can appear on metagame passive trees, idol-like systems, account progression, or
@@ -198,60 +201,59 @@ from the world.
 
 ## The Compass
 
-The Compass is the avatar attribute system: three bipolar axes on which a build holds a position
-rather than accumulating a quantity. A fresh avatar sits at dead center.
+The Compass is the avatar attribute system: three axes, each with two poles, on which a build holds
+a position rather than accumulating a quantity. A fresh avatar sits at dead center.
 
 ### Axes
 
 - **Melee ↔ Ranged** — where the avatar fights: contact technique, or delivery from distance.
 - **Light ↔ Heavy** — the avatar's rhythm: fast beats at small magnitudes, or slow beats that land
   massively.
-- **Innate ↔ Altered** — what the avatar fights with: the inborn capacity, conditioned and
-  sharpened, or acquired systems — implants, interfaces, and instruments that operate on the world's
-  stranger terms. Altered equipment and skills lean toward direct delivery, Barrier-led defense, and
-  the strange damage types; innate ones toward material force and bodily technique.
+- **Innate ↔ Altered** — how the avatar's power behaves: innate technique is immediate and
+  self-contained — decisive beats, cooldown-driven bursts, effects that resolve on the spot; altered
+  instruments linger — durations, ailments, and effects that keep working after the beat that placed
+  them. The axis names the behaviour, never a damage type or a defense; what any item or skill asks
+  for is its own choice.
 
 ### Position
 
-Position comes from the passive tree. Nodes carry directional weight — positive, negative, split
-between poles, or none — and an avatar's position on each axis is the sum of the weight along its
-allocated path. Augments that reweight regions of the tree are a sanctioned extension.
+Position comes from the passive tree. Nodes carry directional weight — toward a pole, away from one,
+split across axes, or none — and an avatar's position on each axis is the sum of the weight along
+its allocated path. Augments may reweight regions of the tree.
 
 Specialization is an avatar's distance from center. It is emergent — no system assigns it — and it
 distinguishes committed builds (far from center in their chosen directions) from deliberate
 generalists (near it).
 
-### Gates
+### Requirements
 
-The Compass gates; it does not scale. Position qualifies equipment and skills and never grants stats
-directly.
+The Compass sets requirements; it never grants stats. Position qualifies equipment and skills.
 
-- **Pole gates** require a minimum position toward a pole ("requires heavy 60"). They mark identity
-  equipment, and exist only where the item's nature earns them.
-- **Center gates** require Specialization at or below a threshold. They mark adaptive equipment that
-  demands an uncommitted chassis — staying centered is a build choice with its own exclusive kit,
-  not a default.
+- **Pole requirements** demand a minimum position toward a pole ("requires heavy 60"). They mark
+  identity equipment, and exist only where the item's nature earns them.
+- **Center requirements** demand Specialization at or below a threshold. They mark adaptive
+  equipment that wants an uncommitted chassis — staying centered is a build choice with its own
+  exclusive kit.
 
-Staple equipment is ungated. A gate is the admission ticket to identity gear, never a power tax on
-basics: a build that cannot equip ordinary equipment marks a misdesigned item, not a misbuilt
-avatar.
+Staple equipment carries no requirements: a requirement is the admission ticket to identity gear,
+never a power tax on basics, and a build that cannot equip ordinary equipment marks a misdesigned
+item, not a misbuilt avatar. Identity equipment enables rather than outscales: passing a requirement
+changes what a build can do, never just how big its numbers are.
 
 ### Fingerprints
 
-Enemies and regions hold positions on the same axes. Builds, enemy families, and regions each render
-as a silhouette on a six-spoke chart — opposing spokes per axis, at most one lit per axis,
-Specialization visible as the silhouette's size — and a matchup reads as the overlap of two
-silhouettes.
+Enemies and regions hold positions on the same axes, and their fingerprints carry more: damage mix,
+hit deliveries, and attack rhythm. A build renders as a silhouette on a six-spoke chart — opposing
+spokes per axis, at most one lit per axis, Specialization visible as the silhouette's size. Enemy
+and region silhouettes show what they emit, so both poles of an axis may light, and a matchup reads
+offense against defense: their deliveries and rhythm against a build's answers.
 
 ## Metagame Attributes
 
 ### Discipline
 
-Discipline is consistency. It represents stable progression, reduced friction, safer outcomes, and
-less variance across repeated expeditions.
-
-Discipline's variance reduction is non-combat only — yield spread, extraction reliability,
-progression friction — never incoming damage or defeat chance. Survival stays with the avatar's own
+Discipline is consistency across the metagame: yield spread, extraction reliability, progression
+friction — stable outcomes across repeated expeditions. Survival stays with the avatar's own
 defenses.
 
 ### Insight
@@ -266,29 +268,26 @@ long-term tools that turn resources into better outcomes.
 
 Each metagame attribute sits between two of Respite's institutions: Discipline between the authority
 and the industry, Insight between the authority and the market, and Aptitude between the industry
-and the market. Later alignment mechanics may draw on that geometry.
+and the market. Alignment mechanics may draw on that geometry.
 
 ## Scaling Philosophy
 
-No avatar attribute grants combat stats: the Compass gates, and action rate, recovery, and damage
-scaling live in gear, skills, and passives.
+Action rate, recovery, and damage scaling live in gear, skills, and passives.
 
-Build archetypes should come primarily from skills, gear, passives, damage types, status effects,
-summons, region interactions, and defensive-layer investment. Compass position shapes which of those
-choices a build can make; it never substitutes for them.
+Build archetypes come primarily from skills, gear, passives, damage types, status effects, summons,
+region interactions, and defensive-layer investment.
 
 Archetype is a per-system term, not a single system: skills, defenses, classes, and specializations
-each carry their own archetypes, and build archetypes emerge from combining them. Classes are
-intended, including a later chosen divergence into a specialized class tier — its name and design
-belong to the base-classes note.
+each carry their own archetypes, and build archetypes emerge from combining them. Classes —
+including a chosen divergence into a specialized class tier — belong to the base-classes note.
 
-The damage model should support long-term complexity through item, skill, passive, enemy, and region
-interactions. The first implementation should expose a small stable core, then add specialized rules
-only when they create meaningful build or encounter identity.
+The damage model supports long-term complexity through item, skill, passive, enemy, and region
+interactions. The model exposes a small stable core; specialized rules exist only where they create
+meaningful build or encounter identity.
 
 ## Non-Goals
 
-This note does not define exact formulas, ailment lists, resistance caps, block math, avoidance
-math, critical chance or magnitude baselines, Reserve cost or regeneration baselines, Compass gate
-thresholds or weight magnitudes, or complete itemisation rules. Those belong in downstream combat,
-itemisation, enemy, and progression notes.
+This note does not define exact formulas, ailment lists, resistance caps, interception math,
+avoidance math, critical chance or magnitude baselines, Reserve cost or regeneration baselines,
+Compass requirement thresholds or weight magnitudes, or complete itemisation rules. Those belong in
+downstream combat, itemisation, enemy, and progression notes.
