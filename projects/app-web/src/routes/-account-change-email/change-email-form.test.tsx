@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { screen } from '@testing-library/react';
-import { renderWithRouter } from '../../../test-utils/render-with-router';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { renderWithRouter } from '../../test-utils/render-with-router';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { ChangeEmailForm } from './change-email-form';
 
 /**

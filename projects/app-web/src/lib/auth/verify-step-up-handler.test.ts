@@ -1,8 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
-import { pendingTransactionCollection } from '../../../mocks/db/pending-transaction-collection';
-import { verificationCollection } from '../../../mocks/db/verification-collection';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { pendingTransactionCollection, verificationCollection } from '../../mocks/db';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { verifyStepUpTransactionToken } from './step-up-transaction-token';
 import { verifyStepUpHandler } from './verify-step-up-handler';
 

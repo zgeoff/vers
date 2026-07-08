@@ -1,11 +1,9 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
-import { sessionCollection } from '../../../mocks/db/session-collection';
-import { userCollection } from '../../../mocks/db/user-collection';
-import { verificationCollection } from '../../../mocks/db/verification-collection';
-import { withRequestContext } from '../../../test-utils/with-request-context';
 import { mintStepUpTransactionToken } from '../../lib/auth/step-up-transaction-token';
+import { sessionCollection, userCollection, verificationCollection } from '../../mocks/db';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { disableTwoFactorAuthHandler } from './disable-two-factor-auth-handler';
 
 async function createSignedInUser(email: string): Promise<{

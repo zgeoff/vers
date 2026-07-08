@@ -1,10 +1,12 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
-import { pendingTransactionCollection } from '../../../mocks/db/pending-transaction-collection';
-import { sessionCollection } from '../../../mocks/db/session-collection';
-import { userCollection } from '../../../mocks/db/user-collection';
-import { verificationCollection } from '../../../mocks/db/verification-collection';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import {
+  pendingTransactionCollection,
+  sessionCollection,
+  userCollection,
+  verificationCollection,
+} from '../../mocks/db';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { checkStepUp } from './check-step-up';
 import { mintStepUpTransactionToken } from './step-up-transaction-token';
 

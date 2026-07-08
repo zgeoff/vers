@@ -1,10 +1,8 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
-import { sessionCollection } from '../../../mocks/db/session-collection';
-import { userCollection } from '../../../mocks/db/user-collection';
-import { verificationCollection } from '../../../mocks/db/verification-collection';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { sessionCollection, userCollection, verificationCollection } from '../../mocks/db';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { twoFactorSetupLoader } from './two-factor-setup-loader';
 
 async function createSignedInUser(email: string): Promise<{
