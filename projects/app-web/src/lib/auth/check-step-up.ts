@@ -64,6 +64,7 @@ async function tryConsumeStepUpToken(
 
 async function createPendingStepUpTransaction(opts: Readonly<CheckStepUpOptions>): Promise<string> {
   const authSession = await getAuthSession();
+
   const transactionID = createId();
 
   await sessionClient.stepUp.createPendingTransaction({

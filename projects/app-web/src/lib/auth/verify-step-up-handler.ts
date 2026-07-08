@@ -39,6 +39,7 @@ export async function verifyStepUpHandler(input: VerifyStepUpInput): Promise<Ver
   }
 
   const authSession = await getAuthSession();
+
   const sessionID = authSession.sessionID ?? null;
 
   await sessionClient.stepUp.consumePendingTransaction({

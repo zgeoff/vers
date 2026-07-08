@@ -33,6 +33,7 @@ export async function mintStepUpTransactionToken(
   claims: Readonly<Pick<StepUpTransactionClaims, 'action' | 'sessionID' | 'target'>>,
 ): Promise<MintedStepUpTransactionToken> {
   const keyPair = await getStepUpTransactionKeyPair();
+
   const jti = createId();
 
   const expiresAt = new Date(Date.now() + TRANSACTION_TOKEN_TTL_MS);
