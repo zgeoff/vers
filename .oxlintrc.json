@@ -133,7 +133,8 @@
               "Headers",
               "FormData",
               "HTMLFormElement",
-              "SharedWorker"
+              "SharedWorker",
+              "URL"
             ]
           },
           { "from": "package", "name": "ReactNode", "package": "react" },

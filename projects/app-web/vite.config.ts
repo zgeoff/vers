@@ -13,6 +13,21 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
     buildMockBackendPlugin(),
   ],
+  environments: {
+    // tanstack start names its server environment `ssr` (kept for compatibility with vite plugins
+    // predating the environment API), not `server`.
+    ssr: {
+      build: {
+        rollupOptions: {
+          // pino's transport/worker mechanism spawns a real worker_thread from a file on disk;
+          // bundling it strips that file out from under it (breaking on `__dirname`, among other
+          // things), so it — and the transports it loads by module name at runtime — stay external
+          // and get resolved from node_modules instead.
+          external: ['pino', 'pino-pretty', 'pino-sentry-transport', 'thread-stream'],
+        },
+      },
+    },
+  },
   resolve: {
     // `lib-design-system`/`lib-styled-system` pin `react` through the workspace catalog, one
     // minor behind this app's own RSC-required pin — dedupe forces every environment onto this

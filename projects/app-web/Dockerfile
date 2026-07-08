@@ -41,13 +41,10 @@ RUN \
   # without removing dev/test env files, vite loads the wrong one in our prod
   # bundle — doesn't reproduce outside docker, not worth chasing further
   rm -f .env.development .env.test && \
-  # the graphql client (app/gql/**) is a frozen, committed artifact rather
-  # than build-time generated here — the graphql gateway that used to
-  # produce it is gone; both die with #165's web-shell rebuild
   bun run codegen && \
   bun run typegen && \
   bun run build --mode production && \
-  rm -f build/client/mockServiceWorker.js
+  rm -f dist/client/mockServiceWorker.js
 
 # --- production-only deps, hoisted so the SSR bundle can resolve every
 # runtime import from one flat node_modules regardless of directory depth ---
@@ -70,7 +67,7 @@ ENV NODE_ENV="production"
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/projects/app-web/package.json ./package.json
 COPY --from=builder /app/projects/app-web/server.mjs ./server.mjs
-COPY --from=builder /app/projects/app-web/build ./build
+COPY --from=builder /app/projects/app-web/dist ./dist
 
 EXPOSE 3000
 CMD [ "server.mjs" ]
