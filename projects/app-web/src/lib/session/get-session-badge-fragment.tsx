@@ -12,14 +12,7 @@ interface SessionBadgeFragmentProps {
 }
 
 /**
- * Renders the session-badge fragment server-side and hands back a Composite Component source: a
- * server-rendered summary of the acting session with a client-fillable slot for the refresh
- * control. Query owns this fragment's cache, independent of the index route's own server-rendered
- * content. Untestable end to end under `bun test`:
- * `getRequestHeaders` throws outside the live server runtime's `AsyncLocalStorage` context, and
- * `createCompositeComponent` resolves to a client-build stub that unconditionally throws, since
- * `bun test` resolves package exports without the `react-server` condition. Message selection is
- * extracted into a pure unit with its own direct tests.
+ * Query owns this fragment's cache, independent of the index route's own server-rendered content.
  */
 export const getSessionBadgeFragment = createServerFn({ method: 'GET' }).handler(async () => {
   const result = await tryReadCurrentUser(toSessionHeaders(getRequestHeaders()));
