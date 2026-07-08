@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { requireResetPasswordAccess } from './require-reset-password-access';
 
 test('it redirects home for an already signed-in caller', () => {

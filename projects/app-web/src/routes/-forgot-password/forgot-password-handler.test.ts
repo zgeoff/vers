@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
-import { userCollection } from '../../../mocks/db/user-collection';
-import { withRequestContext } from '../../../test-utils/with-request-context';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
+import { userCollection } from '../../mocks/db/user-collection';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { forgotPasswordHandler } from './forgot-password-handler';
 
 function buildForgotPasswordFormData(fields: Readonly<Record<string, string>>): FormData {

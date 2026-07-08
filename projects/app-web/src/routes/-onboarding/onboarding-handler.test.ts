@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
-import { userCollection } from '../../../mocks/db/user-collection';
-import { withRequestContext } from '../../../test-utils/with-request-context';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
+import { userCollection } from '../../mocks/db/user-collection';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { onboardingHandler } from './onboarding-handler';
 
 function buildOnboardingFormData(fields: Readonly<Record<string, string>>): FormData {

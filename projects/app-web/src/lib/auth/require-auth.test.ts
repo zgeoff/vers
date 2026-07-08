@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { requireAuth } from './require-auth';
 
 test('it returns the session tokens for a signed-in caller', async () => {

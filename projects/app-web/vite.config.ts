@@ -33,10 +33,10 @@ function buildMockBackendPlugin(): Plugin {
   return {
     name: 'vers:mock-backend',
     async configureServer(viteServer) {
-      const mocks: Record<string, unknown> = await viteServer.ssrLoadModule('/mocks/node.ts');
+      const mocks: Record<string, unknown> = await viteServer.ssrLoadModule('/src/mocks/node.ts');
 
       if (!isMockBackendServer(mocks['server'])) {
-        throw new Error('/mocks/node.ts must export an MSW server as `server`');
+        throw new Error('/src/mocks/node.ts must export an MSW server as `server`');
       }
 
       mocks['server'].listen({ onUnhandledRequest: 'bypass' });

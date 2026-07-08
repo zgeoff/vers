@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { attachAuthHeaders } from './attach-auth-headers';
 
 test('it builds bearer and session-id headers from a live cookie session', async () => {

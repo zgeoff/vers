@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { requireAnonymous } from './require-anonymous';
 
 test('it resolves without redirecting for a signed-out caller', async () => {

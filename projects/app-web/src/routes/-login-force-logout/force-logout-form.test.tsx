@@ -4,13 +4,13 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
 import { sessionContract } from '@vers/contract-session';
-import { sessionCollection } from '../../../mocks/db/session-collection';
-import { userCollection } from '../../../mocks/db/user-collection';
-import { server } from '../../../mocks/node';
-import { resolveSessionContext } from '../../../mocks/resolve-session-context';
-import { renderWithRouter } from '../../../test-utils/render-with-router';
-import { withRequestContext } from '../../../test-utils/with-request-context';
 import { SERVICE_URLS } from '../../lib/rpc/service-urls';
+import { sessionCollection } from '../../mocks/db/session-collection';
+import { userCollection } from '../../mocks/db/user-collection';
+import { server } from '../../mocks/node';
+import { resolveSessionContext } from '../../mocks/resolve-session-context';
+import { renderWithRouter } from '../../test-utils/render-with-router';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { ForceLogoutForm } from './force-logout-form';
 
 /**

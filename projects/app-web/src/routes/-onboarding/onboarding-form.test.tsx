@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithRouter } from '../../../test-utils/render-with-router';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { renderWithRouter } from '../../test-utils/render-with-router';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { OnboardingForm } from './onboarding-form';
 
 test('it renders every field the account-creation form collects', async () => {

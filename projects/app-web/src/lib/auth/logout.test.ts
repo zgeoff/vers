@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { getAuthSession } from './get-auth-session';
 import { logout } from './logout';
 

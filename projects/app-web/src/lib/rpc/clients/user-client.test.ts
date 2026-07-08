@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { isDefinedError, safe } from '@orpc/client';
 import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
 import { userContract } from '@vers/contract-user';
-import { server } from '../../../../mocks/node';
+import { server } from '../../../mocks/node';
 import { SERVICE_URLS } from '../service-urls';
 import { userClient } from './user-client';
 

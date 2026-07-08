@@ -4,7 +4,7 @@ import { sessionContract } from '@vers/contract-session';
 import { userContract } from '@vers/contract-user';
 import { verificationContract } from '@vers/contract-verification';
 import type { HttpHandler } from 'msw';
-import { SERVICE_URLS } from '../src/lib/rpc/service-urls';
+import { SERVICE_URLS } from '../lib/rpc/service-urls';
 import { createDemoSeed } from './db/create-demo-seed';
 import { resolveSessionContext } from './resolve-session-context';
 import { avatarRouter } from './routers/avatar/avatar-router';

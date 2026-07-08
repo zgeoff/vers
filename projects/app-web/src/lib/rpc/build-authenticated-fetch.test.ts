@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { HttpResponse, http } from 'msw';
-import { sessionCollection } from '../../../mocks/db/session-collection';
-import { server } from '../../../mocks/node';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { sessionCollection } from '../../mocks/db/session-collection';
+import { server } from '../../mocks/node';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { buildAuthenticatedFetch } from './build-authenticated-fetch';
 
 test('it retries a 401 with the refreshed access token and the original body intact', async () => {

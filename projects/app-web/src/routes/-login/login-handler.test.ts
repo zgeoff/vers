@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
-import { sessionCollection } from '../../../mocks/db/session-collection';
-import { userCollection } from '../../../mocks/db/user-collection';
-import { verificationCollection } from '../../../mocks/db/verification-collection';
-import { withRequestContext } from '../../../test-utils/with-request-context';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
+import { sessionCollection } from '../../mocks/db/session-collection';
+import { userCollection } from '../../mocks/db/user-collection';
+import { verificationCollection } from '../../mocks/db/verification-collection';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { loginHandler } from './login-handler';
 
 function buildLoginFormData(fields: Readonly<Record<string, string>>): FormData {

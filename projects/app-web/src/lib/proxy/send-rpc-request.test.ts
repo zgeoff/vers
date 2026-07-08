@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'bun:test';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, http } from 'msw';
-import { server } from '../../../mocks/node';
+import { server } from '../../mocks/node';
 import { sendRPCRequest } from './send-rpc-request';
 
 test('it rewrites the proxied path from /api/rpc/<service> to /rpc on the service origin', async () => {

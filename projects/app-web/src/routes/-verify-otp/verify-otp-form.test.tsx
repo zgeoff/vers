@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithRouter } from '../../../test-utils/render-with-router';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { renderWithRouter } from '../../test-utils/render-with-router';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { VerifyOTPForm } from './verify-otp-form';
 
 test('it shows the 2FA heading and instructions for a login verification', async () => {

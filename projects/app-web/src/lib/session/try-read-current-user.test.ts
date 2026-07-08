@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
-import { sessionCollection } from '../../../mocks/db/session-collection';
-import { userCollection } from '../../../mocks/db/user-collection';
+import { sessionCollection } from '../../mocks/db/session-collection';
+import { userCollection } from '../../mocks/db/user-collection';
 import { tryReadCurrentUser } from './try-read-current-user';
 
 test('it reports the anon reason when no session header is forwarded', async () => {

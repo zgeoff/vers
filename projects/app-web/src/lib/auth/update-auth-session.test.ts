@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { getAuthSession } from './get-auth-session';
 import { updateAuthSession } from './update-auth-session';
 

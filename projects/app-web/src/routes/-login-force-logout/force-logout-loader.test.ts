@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { forceLogoutLoader } from './force-logout-loader';
 
 test('it resolves when a pending force-logout is present', async () => {

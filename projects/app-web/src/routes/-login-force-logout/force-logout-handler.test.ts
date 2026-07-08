@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
-import { sessionCollection } from '../../../mocks/db/session-collection';
-import { withRequestContext } from '../../../test-utils/with-request-context';
+import { sessionCollection } from '../../mocks/db/session-collection';
+import { withRequestContext } from '../../test-utils/with-request-context';
 import { forceLogoutHandler } from './force-logout-handler';
 
 function buildIntentFormData(intent: string): FormData {
