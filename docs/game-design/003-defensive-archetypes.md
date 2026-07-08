@@ -143,7 +143,9 @@ Recovery styles are separate investments, never one stat:
 - **Encounter-start effects** — recovery or resources granted at the start of every encounter after
   an activity's first. This is the only between-fight recovery in the game.
 
-Defensive uptime never depends on spendable Aether: a starved avatar keeps its defenses.
+The defensive layers cost no Aether to run: a starved avatar keeps its defenses. Aether-costed
+defensive skills, cooldowns, or pools are an option the skills and itemisation notes may take up,
+not a rule here.
 
 ## Azimuth Interaction
 
