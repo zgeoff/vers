@@ -56,7 +56,7 @@ Two properties of an activity decide what defense matters:
 
 - **Encounter count** decides how much sustain matters: short activities reward per-encounter
   survival; long chains reward leech, regeneration, and encounter-start investment.
-- **Encounter density** — monsters per encounter — decides how much hit volume matters: dense packs
+- **Encounter density** — enemies per encounter — decides how much hit volume matters: dense packs
   feed avoidance and armour, sparse elites feed interception.
 
 Carried debuffs make persistent-leaning regions genuinely attritional: the avatar wears down across
