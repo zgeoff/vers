@@ -1,4 +1,4 @@
-import { pendingTransactionCollection } from '../../../db/pending-transaction-collection';
+import * as db from '../../../db';
 import { os } from '../os';
 import { findLivePendingTransaction } from './find-live-pending-transaction';
 
@@ -30,7 +30,7 @@ export const consumePendingTransaction = os.stepUp.consumePendingTransaction.han
     throw opts.errors.TRANSACTION_MISMATCH({ data: { field: 'target' } });
   }
 
-  pendingTransactionCollection.delete(row);
+  db.pendingTransactionCollection.delete(row);
 
   return row;
 });

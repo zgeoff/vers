@@ -1,4 +1,4 @@
-import { usedTransactionTokenCollection } from '../../../db/used-transaction-token-collection';
+import * as db from '../../../db';
 import { os } from '../os';
 
 /**
@@ -7,7 +7,7 @@ import { os } from '../os';
  * succeeds twice even if its original expiry has since passed.
  */
 export const consumeTransactionToken = os.stepUp.consumeTransactionToken.handler(async (opts) => {
-  const existing = usedTransactionTokenCollection.findFirst((q) =>
+  const existing = db.usedTransactionTokenCollection.findFirst((q) =>
     q.where({ jti: opts.input.jti }),
   );
 
@@ -15,7 +15,7 @@ export const consumeTransactionToken = os.stepUp.consumeTransactionToken.handler
     return { consumed: false };
   }
 
-  await usedTransactionTokenCollection.create({
+  await db.usedTransactionTokenCollection.create({
     expiresAt: opts.input.expiresAt,
     jti: opts.input.jti,
   });

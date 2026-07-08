@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
-import { sessionCollection, userCollection, verificationCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { verifyTwoFactorSetupHandler } from './verify-two-factor-setup-handler';
@@ -13,9 +13,9 @@ async function createSignedInUser(): Promise<{
   const userID = createId();
   const sessionID = createId();
 
-  await userCollection.create({ id: userID });
+  await db.userCollection.create({ id: userID });
 
-  await sessionCollection.create({ id: sessionID, userID });
+  await db.sessionCollection.create({ id: sessionID, userID });
 
   return {
     cookies: { en_session: { accessToken: sessionID, refreshToken: 'refresh', sessionID } },
@@ -36,7 +36,7 @@ test('it reports invalid code for a malformed submission', async () => {
 test('it reports invalid code for an incorrect code', async () => {
   const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({
+  await db.verificationCollection.create({
     code: '654321',
     target: signedIn.userID,
     type: '2fa-setup',
@@ -55,7 +55,7 @@ test('it reports invalid code for an incorrect code', async () => {
 test('it flips the verification to 2fa and redirects to account for a correct code', async () => {
   const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ target: signedIn.userID, type: '2fa-setup' });
+  await db.verificationCollection.create({ target: signedIn.userID, type: '2fa-setup' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const redirectHref = await verifyTwoFactorSetupHandler(
@@ -70,6 +70,6 @@ test('it flips the verification to 2fa and redirects to account for a correct co
   expect(outcome.value).toBe('/account');
 
   expect(
-    verificationCollection.findFirst((q) => q.where({ target: signedIn.userID })),
+    db.verificationCollection.findFirst((q) => q.where({ target: signedIn.userID })),
   ).toMatchObject({ type: '2fa' });
 });

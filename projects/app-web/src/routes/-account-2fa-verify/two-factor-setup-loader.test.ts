@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
-import { sessionCollection, userCollection, verificationCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { twoFactorSetupLoader } from './two-factor-setup-loader';
 
@@ -12,9 +12,9 @@ async function createSignedInUser(): Promise<{
   const userID = createId();
   const sessionID = createId();
 
-  await userCollection.create({ id: userID });
+  await db.userCollection.create({ id: userID });
 
-  await sessionCollection.create({ id: sessionID, userID });
+  await db.sessionCollection.create({ id: sessionID, userID });
 
   return {
     cookies: { en_session: { accessToken: sessionID, refreshToken: 'refresh', sessionID } },
@@ -25,7 +25,7 @@ async function createSignedInUser(): Promise<{
 test('it redirects to account when 2FA is already enabled', async () => {
   const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ target: signedIn.userID, type: '2fa' });
+  await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const redirectHref = await twoFactorSetupLoader()
@@ -50,7 +50,7 @@ test('it creates a pending 2fa-setup verification and returns its QR data for a 
   expect(outcome.value.qrCodeDataURL).toStartWith('data:image/png;base64,');
 
   expect(
-    verificationCollection.findFirst((q) =>
+    db.verificationCollection.findFirst((q) =>
       q.where({ target: signedIn.userID, type: '2fa-setup' }),
     ),
   ).toBeDefined();
@@ -59,7 +59,7 @@ test('it creates a pending 2fa-setup verification and returns its QR data for a 
 test('it reuses an existing pending 2fa-setup verification instead of rotating it', async () => {
   const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({
+  await db.verificationCollection.create({
     code: 'existing-code',
     target: signedIn.userID,
     type: '2fa-setup',
@@ -68,7 +68,7 @@ test('it reuses an existing pending 2fa-setup verification instead of rotating i
   await withRequestContext({ cookies: signedIn.cookies }, () => twoFactorSetupLoader());
 
   expect(
-    verificationCollection.findFirst((q) =>
+    db.verificationCollection.findFirst((q) =>
       q.where({ target: signedIn.userID, type: '2fa-setup' }),
     ),
   ).toMatchObject({ code: 'existing-code' });

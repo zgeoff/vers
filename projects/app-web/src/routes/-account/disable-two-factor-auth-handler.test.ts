@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
 import { mintStepUpTransactionToken } from '../../lib/auth/step-up-transaction-token';
-import { sessionCollection, userCollection, verificationCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { disableTwoFactorAuthHandler } from './disable-two-factor-auth-handler';
@@ -14,9 +14,9 @@ async function createSignedInUser(): Promise<{
   const userID = createId();
   const sessionID = createId();
 
-  await userCollection.create({ id: userID });
+  await db.userCollection.create({ id: userID });
 
-  await sessionCollection.create({ id: sessionID, userID });
+  await db.sessionCollection.create({ id: sessionID, userID });
 
   return {
     cookies: { en_session: { accessToken: sessionID, refreshToken: 'refresh', sessionID } },
@@ -40,7 +40,7 @@ test('it reports an error when 2FA is not enabled', async () => {
 test('it reports step-up-required with no transaction token', async () => {
   const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ target: signedIn.userID, type: '2fa' });
+  await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     disableTwoFactorAuthHandler(buildFormData({})),
@@ -52,7 +52,7 @@ test('it reports step-up-required with no transaction token', async () => {
 test('it removes the 2FA verification and redirects to account once a valid token is attached', async () => {
   const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ target: signedIn.userID, type: '2fa' });
+  await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({
@@ -73,6 +73,6 @@ test('it removes the 2FA verification and redirects to account once a valid toke
   expect(outcome.value).toBe('/account');
 
   expect(
-    verificationCollection.findFirst((q) => q.where({ target: signedIn.userID, type: '2fa' })),
+    db.verificationCollection.findFirst((q) => q.where({ target: signedIn.userID, type: '2fa' })),
   ).toBeUndefined();
 });

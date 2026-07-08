@@ -1,8 +1,8 @@
-import { verificationCollection } from '../../db/verification-collection';
+import * as db from '../../db';
 import { os } from './os';
 
 export const get2FAVerificationURI = os.get2FAVerificationURI.handler((opts) => {
-  const verification = verificationCollection.findFirst((q) =>
+  const verification = db.verificationCollection.findFirst((q) =>
     q.where({ target: opts.input.target, type: '2fa-setup' }),
   );
 

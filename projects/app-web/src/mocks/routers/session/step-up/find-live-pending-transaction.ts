@@ -1,4 +1,4 @@
-import { pendingTransactionCollection } from '../../../db/pending-transaction-collection';
+import * as db from '../../../db';
 
 /**
  * Looks up a pending step-up transaction by id, treating one past its `expiresAt` the same as
@@ -6,15 +6,15 @@ import { pendingTransactionCollection } from '../../../db/pending-transaction-co
  */
 export function findLivePendingTransaction(
   id: string,
-): ReturnType<typeof pendingTransactionCollection.findFirst> {
-  const row = pendingTransactionCollection.findFirst((q) => q.where({ id }));
+): ReturnType<typeof db.pendingTransactionCollection.findFirst> {
+  const row = db.pendingTransactionCollection.findFirst((q) => q.where({ id }));
 
   if (row === undefined) {
     return undefined;
   }
 
   if (row.expiresAt.getTime() <= Date.now()) {
-    pendingTransactionCollection.delete(row);
+    db.pendingTransactionCollection.delete(row);
 
     return undefined;
   }

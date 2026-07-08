@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
 import { mintStepUpTransactionToken } from '../../lib/auth/step-up-transaction-token';
-import { sessionCollection, userCollection, verificationCollection } from '../../mocks/db';
+import * as db from '../../mocks/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { changePasswordHandler } from './change-password-handler';
@@ -14,9 +14,9 @@ async function createSignedInUser(): Promise<{
   const userID = createId();
   const sessionID = createId();
 
-  await userCollection.create({ id: userID, password: 'original-password' });
+  await db.userCollection.create({ id: userID, password: 'original-password' });
 
-  await sessionCollection.create({ id: sessionID, userID });
+  await db.sessionCollection.create({ id: sessionID, userID });
 
   return {
     cookies: { en_session: { accessToken: sessionID, refreshToken: 'refresh', sessionID } },
@@ -75,7 +75,7 @@ test('it changes the password and redirects to account for a caller with no 2FA'
 
   expect(outcome.value).toBe('/account');
 
-  expect(userCollection.findFirst((q) => q.where({ id: signedIn.userID }))).toMatchObject({
+  expect(db.userCollection.findFirst((q) => q.where({ id: signedIn.userID }))).toMatchObject({
     password: 'new-password123',
   });
 });
@@ -83,7 +83,7 @@ test('it changes the password and redirects to account for a caller with no 2FA'
 test('it reports step-up-required for a 2FA-enabled caller with no transaction token', async () => {
   const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ target: signedIn.userID, type: '2fa' });
+  await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     changePasswordHandler(
@@ -97,7 +97,7 @@ test('it reports step-up-required for a 2FA-enabled caller with no transaction t
 test('it changes the password once a valid step-up token is attached', async () => {
   const signedIn = await createSignedInUser();
 
-  await verificationCollection.create({ target: signedIn.userID, type: '2fa' });
+  await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({

@@ -1,4 +1,4 @@
-import { pendingTransactionCollection } from '../../../db/pending-transaction-collection';
+import * as db from '../../../db';
 import { os } from '../os';
 import { findLivePendingTransaction } from './find-live-pending-transaction';
 
@@ -21,9 +21,9 @@ export const recordFailedAttempt = os.stepUp.recordFailedAttempt.handler(async (
   const attemptsRemaining = Math.max(0, MAX_STEP_UP_ATTEMPTS - attempts);
 
   if (attemptsRemaining === 0) {
-    pendingTransactionCollection.delete(row);
+    db.pendingTransactionCollection.delete(row);
   } else {
-    await pendingTransactionCollection.update(row, {
+    await db.pendingTransactionCollection.update(row, {
       data(record) {
         record.attempts = attempts;
       },
