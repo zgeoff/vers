@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Exercises the game surfaces added by #262 against a live dev server, logging in as the seeded
+ * Exercises the game surfaces against a live dev server, logging in as the seeded
  * `e2e-game@vers.test` account (its own login, distinct from `home-smoke.spec.ts`'s `dev-session`
  * — signing in as that account instead would force out its already-live session): none of
  * nexus's client-lane Query read, avatar's server-component page, or aether's R3F code-split
@@ -30,8 +30,8 @@ test('it renders nexus, avatar, and aether for a signed-in caller without consol
   await page.getByLabel('Email').fill('e2e-game@vers.test');
   await page.getByLabel('Password').fill('password123');
 
-  // the honeypot rejects any submission under 1.5s old as bot-paced (`buildHoneypotValidFrom`) —
-  // real typing naturally clears it, a scripted fill+click doesn't
+  // the honeypot rejects any submission under 1.5s old as bot-paced — real typing naturally
+  // clears it, a scripted fill+click doesn't
   await page.waitForTimeout(1600);
 
   await page.getByRole('button', { exact: true, name: 'Login' }).click();

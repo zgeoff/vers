@@ -18,7 +18,8 @@ const dotEnvFile = path.join(projectRoot, '.env');
 try {
   process.loadEnvFile(dotEnvFile);
 } catch {
-  // no .env locally (CI writes one from a secret) — the phase 1 smoke spec needs no secrets
+  // no .env locally (CI writes one from a secret) — the smoke spec that runs without a .env
+  // needs no secrets
 }
 
 export default defineConfig({
