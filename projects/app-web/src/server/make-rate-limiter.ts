@@ -3,7 +3,7 @@ import type { Middleware } from './middleware';
 
 /**
  * Routes carrying auth-sensitive mutations or account state; matched against the request
- * pathname, mirroring the old Hono middleware's route classification.
+ * pathname to select the stricter rate-limit tiers.
  */
 const STRICT_ROUTES: ReadonlyArray<string> = [
   '/login',
@@ -35,9 +35,9 @@ export interface MakeRateLimiterOptions {
 }
 
 /**
- * Builds the tiered, in-memory rate limiter the old Hono middleware enforced: a strict per-IP
- * budget for mutating requests against auth-sensitive routes, a stronger budget for read access to
- * those same routes, and a generous default budget for everything else.
+ * Builds a tiered, in-memory per-IP rate limiter: a strict budget for mutating requests against
+ * auth-sensitive routes, a stronger budget for read access to those same routes, and a generous
+ * default budget for everything else.
  */
 export function makeRateLimiter(options: MakeRateLimiterOptions): Middleware {
   const windows = new Map<string, RateLimitWindow>();

@@ -19,8 +19,8 @@ export interface RequestLoggerSink {
 
 /**
  * Builds the request-lifecycle logging middleware: one line as a request starts, one line with
- * its status and duration once it finishes, colorized the way the old Hono middleware's console
- * output was.
+ * its status and duration once it finishes, both colorized by method and status for readable
+ * console output.
  */
 export function makeRequestLogger(logger: RequestLoggerSink): Middleware {
   return async (request, next) => {

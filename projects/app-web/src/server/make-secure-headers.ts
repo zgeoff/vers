@@ -4,9 +4,9 @@ import { CSP_NONCE_HEADER } from './csp-nonce-header';
 import type { Middleware } from './middleware';
 
 /**
- * Fixed (non-CSP) security headers applied to every HTML response, matching the old Hono
- * `secureHeaders()` defaults except Cross-Origin-Embedder-Policy (left unset — this app embeds
- * cross-origin subresources it doesn't control) and Referrer-Policy (tightened to same-origin).
+ * Fixed (non-CSP) security headers applied to every HTML response. Cross-Origin-Embedder-Policy is
+ * intentionally left unset — this app embeds cross-origin subresources it doesn't control — and
+ * Referrer-Policy is set to same-origin.
  */
 const FIXED_SECURE_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ['Cross-Origin-Resource-Policy', 'same-origin'],
