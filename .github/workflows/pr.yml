@@ -84,7 +84,11 @@ jobs:
 
       - name: E2E Tests
         id: e2e
-        run: bunx turbo run e2e --affected
+        # app-web-e2e drives a production build (`server.mjs`) and specs the TanStack Start
+        # skeleton can't satisfy yet: phase 0b (#259) ships no server entrypoint and phases 1-2
+        # (#260, #261) haven't ported the flows these specs cover. Phase 3 (#262) restores the
+        # build and re-enables this gate — drop the filter once that lands.
+        run: bunx turbo run e2e --affected --filter='!@vers/web-e2e'
 
       - name: Upload Videos Of Failed E2E
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

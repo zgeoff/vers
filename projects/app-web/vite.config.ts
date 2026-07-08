@@ -1,80 +1,63 @@
-import pandacss from '@pandacss/dev/postcss';
-import { reactRouter } from '@react-router/dev/vite';
-import { sentryVitePlugin } from '@sentry/vite-plugin';
-import autoprefixer from 'autoprefixer';
-import { reactRouterHonoServer } from 'react-router-hono-server/dev';
-import { defineConfig, loadEnv, searchForWorkspaceRoot } from 'vite';
+import babel from '@rolldown/plugin-babel';
+import { tanstackStart } from '@tanstack/react-start/plugin/vite';
+import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react';
+import rsc from '@vitejs/plugin-rsc';
+import type { Plugin } from 'vite';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  build: {
-    sourcemap: true,
-  },
-  css: {
-    postcss: {
-      plugins: [pandacss, autoprefixer],
-    },
-  },
-  // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
   plugins: [
-    reactRouterHonoServer({ serverEntryPoint: './server/index.ts' }),
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    !process.env['VITEST'] && reactRouter(),
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    process.env['SENTRY_AUTH_TOKEN']
-      ? sentryVitePlugin({
-          authToken: process.env['SENTRY_AUTH_TOKEN'],
-          disable: process.env['NODE_ENV'] !== 'production',
-          org: 'vers-idle',
-          project: 'app-web',
-          release: {
-            ...(process.env['COMMIT_SHA'] !== undefined && {
-              name: process.env['COMMIT_SHA'],
-            }),
-            setCommits: {
-              auto: true,
-            },
-          },
-          sourcemaps: {
-            filesToDeleteAfterUpload: ['./build/**/*.map', '.server-build/**/*.map'],
-          },
-        })
-      : null,
+    tanstackStart({ rsc: { enabled: true } }),
+    rsc(),
+    viteReact(),
+    babel({ presets: [reactCompilerPreset()] }),
+    buildMockBackendPlugin(),
   ],
-  preview: {
-    host: 'localhost',
-    port: 4300,
+  resolve: {
+    // `lib-design-system`/`lib-styled-system` pin `react` through the workspace catalog, one
+    // minor behind this app's own RSC-required pin — dedupe forces every environment onto this
+    // single physical copy so a design-system import never drags in a second React instance.
+    dedupe: ['react', 'react-dom'],
   },
-  root: import.meta.dirname,
-  server: {
-    fs: {
-      allow: [
-        // vite's default workspace root detection behaviour
-        searchForWorkspaceRoot(process.cwd()),
-      ],
-    },
-    host: 'localhost',
-    port: 4000,
-    ...(process.env['VITEST'] === 'true' && { ws: false }),
-  },
-  test: {
-    coverage: {
-      provider: 'v8',
-      reportsDirectory: '../../coverage/apps/app-web',
-    },
-    env: {
-      ...loadEnv('test', import.meta.dirname, ''),
-
-      // set secret env vars here so we don't need to load a `.local` env file in tests
-      SESSION_SECRET: 'secret',
-    },
-    environment: 'happy-dom',
-    include: ['app/**/*.test.{ts,tsx}'],
-    passWithNoTests: true,
-    reporters: ['default'],
-    setupFiles: ['@vitest/web-worker', 'vitest.setup.ts'],
-    watch: false,
-  },
-  worker: {
-    plugins: () => [],
-  },
+  server: { port: 3000 },
 });
+
+/**
+ * Starts the shared MSW server for `vite dev` only — `configureServer` never fires for
+ * `vite build` — so dev boot runs entirely against the mock backend. Goes through `ssrLoadModule`
+ * rather than a plain top-level import: this config file loads outside Vite's own resolver, and
+ * this app's workspace packages (`@vers/contract-*`) are extensionless-TS source that only that
+ * resolver handles.
+ */
+function buildMockBackendPlugin(): Plugin {
+  return {
+    name: 'vers:mock-backend',
+    async configureServer(viteServer) {
+      const mocks: Record<string, unknown> = await viteServer.ssrLoadModule('/mocks/node.ts');
+
+      if (!isMockBackendServer(mocks['server'])) {
+        throw new Error('/mocks/node.ts must export an MSW server as `server`');
+      }
+
+      mocks['server'].listen({ onUnhandledRequest: 'bypass' });
+    },
+  };
+}
+
+interface MockBackendServer {
+  readonly listen: (options: Readonly<{ onUnhandledRequest: 'bypass' }>) => void;
+}
+
+/**
+ * Structural check rather than `instanceof msw/node`'s server class: the bundled config and the
+ * ssr-loaded mock module each get their own copy of msw, so class identity fails across that
+ * boundary even for a genuine server.
+ */
+function isMockBackendServer(value: unknown): value is MockBackendServer {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'listen' in value &&
+    typeof value.listen === 'function'
+  );
+}

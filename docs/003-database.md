@@ -28,12 +28,12 @@ Two hosts per endpoint: **direct** (`ep-<endpoint>.<region>.aws.neon.tech`) and 
 
 - Always pin `sslmode=verify-full`. Neon hands out `sslmode=require` by default, which trips a
   deprecation warning in `pg-connection-string` (used by kysely-codegen's introspection), and
-  `verify-full` is what we actually want anyway — Neon's certificates chain to public CAs, so no
+  `verify-full` is the correct setting regardless — Neon's certificates chain to public CAs, so no
   extra CA bundle is needed.
 - Drop the `channel_binding=require` parameter neonctl appends — postgres.js does not understand it.
-- Everything uses the **direct** host today. The pooled host requires `prepare: false` in
-  postgres.js (PgBouncer transaction mode breaks prepared statements); switch to it only if
-  connection pressure appears, and set that option when doing so.
+- Everything uses the **direct** host. The pooled host requires `prepare: false` in postgres.js
+  (PgBouncer transaction mode breaks prepared statements); switch to it only if connection pressure
+  appears, and set that option when doing so.
 
 ## Who connects, and where the string lives
 
@@ -47,8 +47,7 @@ Three consumers, three stores — the string never lives in the repo:
 
 Migrations run as a single `main.yml` step on a fully green run, not a Fly `release_command`:
 several services share the one database, and a per-service release command would run the same
-migrations once per deploy, redundantly and concurrently. Deploy jobs (#207) order after the migrate
-step.
+migrations once per deploy, redundantly and concurrently. Deploy jobs order after the migrate step.
 
 Services never read `process.env` for this themselves — each service's `envShape` declares
 `DATABASE_URL` and its factory passes the parsed value to `createDB` (`@vers/db`).
@@ -64,8 +63,8 @@ cd projects/lib-db
 bun --env-file=.env.local run db:migrate   # also db:seed, db:rollback
 ```
 
-`db:codegen` is currently broken under the workspace's TypeScript 7 (#282); regenerate through an
-isolated kysely-codegen + TS5 install until that closes.
+`db:codegen` is broken under the workspace's TypeScript 7 (#282); regenerate through an isolated
+kysely-codegen + TS5 install until that closes.
 
 For isolated experiments, branch the database instead of sharing `main`:
 
@@ -86,9 +85,9 @@ neonctl projects create --name vers --region-id aws-ap-southeast-2 \
   --org-id org-long-snow-12176298 --pg-version 17
 neonctl databases create --project-id <new-id> --name vers --owner-name neondb_owner
 neonctl connection-string main --project-id <new-id> --database-name vers
-# then: rewrite sslmode to verify-full, drop channel_binding, and distribute per the table above
+# then: rewrite sslmode to verify-full, drop channel_binding, and distribute to the consumer stores
 ```
 
 After provisioning, write the string into `projects/lib-db/.env.local`, then `db:migrate` and
-`db:seed` (invoked as under Local dev) bring the schema and dev seed data up from zero. Update the
-`DATABASE_URL` Actions secret and each Fly app's secret to the new string.
+`db:seed` (run with `--env-file=.env.local`) bring the schema and dev seed data up from zero. Update
+the `DATABASE_URL` Actions secret and each Fly app's secret to the new string.

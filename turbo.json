@@ -48,7 +48,7 @@
       "outputs": ["styled-system/**", "src/styled-system/**", "app/styled-system/**"]
     },
     "typegen": {
-      "outputs": [".react-router/types/**"]
+      "outputs": ["src/routeTree.gen.ts"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck", "codegen", "typegen"],

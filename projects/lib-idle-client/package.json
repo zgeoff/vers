@@ -25,7 +25,7 @@
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/node": "22.13.10",
-    "@types/react": "19.0.12",
+    "@types/react": "19.2.17",
     "@vitest/web-worker": "3.0.9",
     "happy-dom": "catalog:",
     "jest-extended": "catalog:",

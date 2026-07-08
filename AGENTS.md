@@ -21,8 +21,8 @@
 
 ## Code style
 
-Mechanically enforced rules (oxfmt, oxlint, format-codemod) aren't repeated here — this file covers
-what tooling can't check.
+Mechanically enforced rules (oxfmt, oxlint, format-codemod) aren't repeated — these are the rules
+tooling can't check.
 
 - One primary export per file, and the file name kebab-cases that export (`with-jest-context.ts`
   exports `withJestContext`). Exceptions: `index.ts` entrypoints, `types.ts` for a package's shared
@@ -58,7 +58,7 @@ what tooling can't check.
 
 ### Function naming
 
-Every function name starts with a prefix from the closed list below: pick from it, or extend this
+Every function name starts with a prefix from this closed taxonomy: pick from it, or extend this
 file in the same PR that introduces the new verb. The prefix is a contract — a reader should know
 the function's shape without opening it.
 
@@ -122,7 +122,7 @@ the function's shape without opening it.
 | `with<X>` | HOF that runs a callback inside a context | `withJestContext` |
 | `make<X>` | factory whose result is itself a function | `makeExcluder`    |
 
-**Framework conventions** — where the ecosystem's prefix is load-bearing, it wins:
+**Framework conventions** — where the ecosystem depends on the prefix, it wins:
 
 | Prefix          | Contract                                                                                                                | Example          |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------- |
@@ -131,7 +131,7 @@ the function's shape without opening it.
 | `handle<Event>` | local implementation passed to an `on<Event>` prop — the idiomatic React pair; the `handle` ban applies everywhere else | `handleRowClick` |
 
 **Banned** — each is a vaguer or synonymous form of a listed verb; use that one instead: `handle`
-(except React's `handle<Event>`, above), `process`, `manage`, `do`, `perform` (say what it does),
+(except React's `handle<Event>` pair), `process`, `manage`, `do`, `perform` (say what it does),
 `execute` (→ `run`), `compute` (→ `build`), `fetch` (→ `read`), `save`/`store` (→ `write`), `delete`
 (→ `remove`), `search`/`lookup` (→ `find`/`get`).
 
@@ -190,7 +190,7 @@ implementing that algorithm — forcing list verbs onto textbook terms hides the
     - `toThrowWithMessage`
     - `toResolve` (returns a promise — always `await`)
     - `toReject` (returns a promise — always `await`)
-- Matchers also work asymmetrically inside `toEqual`/`toMatchObject`
+- Matchers work asymmetrically inside `toEqual`/`toMatchObject`
   (`status: expect.toBeOneOf([…])`).
 - Known gaps: `expect.pass`/`expect.fail` are unimplemented upstream and excluded from our types.
   It's `toEqualCaseInsensitive` — not `…Insensitively` as some docs claim; unknown matcher names
@@ -216,22 +216,21 @@ sentence can't be simplified without losing it.
 
 ## Monorepo layout
 
-34 projects live under `projects/*` (the sole bun workspace glob). Every project has its own
-`package.json` named `@vers/<name>`: internal deps use the `workspace:*` protocol, and versions
-shared by 5+ projects live in the root manifest's `workspaces.catalog` (referenced as `catalog:`).
-Libraries are consumed as TypeScript source (`exports` → `./src/index.ts`); there are no per-library
-build steps. `bun install` uses the isolated linker (pnpm-style symlinks, no phantom deps) with
-exact pins and a 7-day `minimumReleaseAge` — see `bunfig.toml`. Turborepo drives the task graph:
-root `turbo.json` declares the `build`/`typecheck`/`test`/`codegen`/`typegen`/`e2e` pipelines
-(ordering inferred from each project's `workspace:*` deps). Per-project `turbo.json` files exist
-only to declare `boundaries` tags. CI's changed-project detection is `turbo run --affected`. See
-`docs/000-overview.md` for the project list.
+Projects live under `projects/*` (the sole bun workspace glob); `docs/000-overview.md` lists them.
+Every project has its own `package.json` named `@vers/<name>`: internal deps use the `workspace:*`
+protocol, and versions shared by 5+ projects live in the root manifest's `workspaces.catalog`
+(referenced as `catalog:`). Libraries are consumed as TypeScript source (`exports` →
+`./src/index.ts`); there are no per-library build steps. `bun install` uses the isolated linker
+(pnpm-style symlinks, no phantom deps) with exact pins and a 7-day `minimumReleaseAge` — see
+`bunfig.toml`. Turborepo drives the task graph: root `turbo.json` declares the
+`build`/`typecheck`/`test`/`codegen`/`typegen`/`e2e` pipelines (ordering inferred from each
+project's `workspace:*` deps). Per-project `turbo.json` files exist only to declare `boundaries`
+tags. CI's changed-project detection is `turbo run --affected`.
 
-TypeScript is 7.0.1-rc (catalog), which dropped `baseUrl` and the classic Compiler API entirely —
-every project's tsconfig lost its `baseUrl`/`paths` block and every former `~/*` import is a
-relative import instead. There is no path-alias convention here; write new imports relative to the
-importing file. Node is 24.18.0 everywhere (CI, every service's Dockerfile, app-web's `engines`
-field) — panda 2.0's floor and the ES2024 `lib` target both need it.
+TypeScript is 7.0.1-rc (catalog). TS7 has no `baseUrl` and no classic Compiler API, and there is no
+path-alias convention here — write imports relative to the importing file. Node is 24.18.0
+everywhere (CI, every service's Dockerfile, app-web's `engines` field) — panda 2.0's floor and the
+ES2024 `lib` target both need it.
 
 ## Boundaries
 
@@ -253,10 +252,9 @@ name minus the taxonomy prefix: `lib-` and `app-` strip (`lib-validation` → `@
 
 Panda CSS 2.0 spans all four consumers (lib-panda-preset, lib-styled-system, lib-design-system,
 app-web). lib-panda-preset composes `presets: [presetBase, presetPanda]` from
-`@pandacss/preset-base` and `@pandacss/preset-panda` (2.0 dropped the bundled
-`@pandacss/dev/presets` default). CSS values that aren't theme tokens need the bracket escape hatch
-(`cursor: '[pointer]'`, `borderWidth: '[1px]'`) — 2.0 tightened `SystemStyleObject`'s value types to
-stop silently accepting arbitrary strings/numbers.
+`@pandacss/preset-base` and `@pandacss/preset-panda` — Panda 2.0 ships no bundled default preset.
+CSS values that aren't theme tokens need the bracket escape hatch (`cursor: '[pointer]'`,
+`borderWidth: '[1px]'`) — 2.0's `SystemStyleObject` value types reject arbitrary strings/numbers.
 
 ## Running things
 
@@ -271,11 +269,11 @@ stop silently accepting arbitrary strings/numbers.
   `oxlint --type-aware --type-check --report-unused-disable-directives-severity error` over the
   whole tree (`.oxlintrc.json` at the root; oxlint-tsgolint underneath, needs the TS7 toolchain —
   ~5s wall with warm caches). The codegen leg is required: without generated output (panda's
-  `styled-system`, react-router's `+types`) those imports degrade to `any` and the unsafe-\* rules
-  report hundreds of false violations. Every type-aware rule is on; `only-throw-error`'s app-web
-  override is the one permanent, documented exception, and `lib-idle-core`/`lib-aether-core`
-  tick/lifecycle handlers that mutate their entity parameter by design carry a real inline reason —
-  also permanent. For `typescript/prefer-readonly-parameter-types`, a function's own
+  `styled-system`, router typegen) those imports degrade to `any` and the unsafe-\* rules report
+  hundreds of false violations. Every type-aware rule is on. Two exceptions are permanent:
+  `only-throw-error`'s documented app-web override, and the inline directives on
+  `lib-idle-core`/`lib-aether-core` tick/lifecycle handlers that mutate their entity parameter by
+  design. For `typescript/prefer-readonly-parameter-types`, a function's own
   data/config/props/option types are made `readonly` (or the param `Readonly<…>`-wrapped; React
   props `Readonly<Props>`), and framework/library handles that have no readonly form (a
   `Kysely`/`Elysia`/`RPCHandler`/`Request` handle, a `Date`, …) are exempted per-type via the rule's
@@ -284,9 +282,9 @@ stop silently accepting arbitrary strings/numbers.
   single honest inline directive stating why; `allow` covers the rest.
 - `bun run format` — `oxfmt .` (`.oxfmtrc.json` at the root), then `format-codemod` (blank-line
   padding) over the whole tree. The codemod has no ignore file, so its `--ignore` flags are what
-  keep it off committed codegen output (`app/gql`, panda's `styled-system` dirs, react-router's
-  typegen) and nested checkouts — oxfmt covers the same set through `.oxfmtrc.json` plus
-  `.gitignore`. The chain is idempotent: a second run is byte-identical.
+  keep it off committed codegen output (panda's `styled-system` dirs, router typegen) and nested
+  checkouts — oxfmt covers the same set through `.oxfmtrc.json` plus `.gitignore`. The chain is
+  idempotent: a second run is byte-identical.
 - `bun run format:check` — both tools' check legs (`oxfmt --check .`, then `format-codemod --check`
   with the same ignores).
 - `bun run build` — `turbo run build`; one project via `--filter`.
@@ -299,8 +297,8 @@ stop silently accepting arbitrary strings/numbers.
 ## Docker
 
 Each server deployable (`app-web`; `service-avatar`, `service-session`, `service-user`,
-`service-verification`) has a multi-stage Dockerfile around `turbo prune <pkg> --docker`
-(`app-design-reference` ships as a plain static-nginx image outside this pattern):
+`service-verification`) has a multi-stage Dockerfile around `turbo prune <pkg> --docker`;
+`app-design-reference` ships as a plain static-nginx image:
 
 1. **pruner** — a standalone `turbo` binary prunes to the target's dependency graph: `out/json`
    (manifests only, for layer caching), `out/full` (source), a pruned `out/bun.lock`.
@@ -312,8 +310,7 @@ Each server deployable (`app-web`; `service-avatar`, `service-session`, `service
    bundle's own location — only a flat `node_modules` serves them all.
 5. **runtime** — `node:24.18.0-alpine` with the prod-deps `node_modules` and built output only.
 
-app-web's builder runs its `codegen`/`typegen`/`build` scripts directly instead of
-`turbo run build`.
+app-web's builder runs its `codegen`/`typegen`/`build` scripts directly, not `turbo run build`.
 
 ## Testing (bun test, 0-isolation)
 
@@ -321,14 +318,13 @@ app-web's builder runs its `codegen`/`typegen`/`build` scripts directly instead 
 and cleanup is registered once in a package's `bunfig.toml` preload and applies process-wide; test
 files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what keeps the suite fast.
 
-- **MSW is the sanctioned boundary mock** — the one carve-out from the shared partial's "mock-free"
-  rule. Mock at the external HTTP/service boundary with MSW, never internal abstractions. Each
-  package with HTTP tests keeps one shared `server` (`setupServer()`) in a `mocks/` module; its
-  lifecycle (`listen({ onUnhandledRequest: 'error' })`, `resetHandlers`, `close`) is wired globally
-  by `registerMSWLifecycle(server)` (from `@vers/client-test-utils`) in the preload. Tests add
-  per-test handlers with `server.use(...)` — including override and upstream-failure cases. For oRPC
-  procedures, build those handlers with `buildMockService` / `mockService`
-  (`@vers/client-test-utils/rpc-msw`).
+- **MSW is the sanctioned mock at the external HTTP/service boundary** — mock there, never internal
+  abstractions. Each package with HTTP tests keeps one shared `server` (`setupServer()`) in a
+  `mocks/` module; its lifecycle (`listen({ onUnhandledRequest: 'error' })`, `resetHandlers`,
+  `close`) is wired globally by `registerMSWLifecycle(server)` (from `@vers/client-test-utils`) in
+  the preload. Tests add per-test handlers with `server.use(...)` — including override and
+  upstream-failure cases. For oRPC procedures, build those handlers with `buildMockService` /
+  `mockService` (`@vers/client-test-utils/rpc-msw`).
 - **Global mock reset** lives in the preload's `afterEach` (`mock.restore()`), never per-test.
 - **jest-extended matchers** come from the `@zgeoff/bun-test-extended` preload; a package-local
   `augment-bun-test.ts` side-effect import brings their types into `tsc`.
@@ -337,24 +333,44 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
   for RTL `render(…)` — member-access off them, never pick properties into loose consts.
 - Behavioural test names describe observable behaviour and never cite internal identifiers
   (`it flags the run as invalid`, not `it sets isValid to false`).
-- Declare test data inline per test for MSW-mocked packages (a client hitting a mocked service, or
+- Declare test data inline per test in MSW-mocked packages (a client hitting a mocked service, or
   app-web): no factory builders (`createUser`) and no shared mutable module-level fixtures. One-off
-  helpers stay inline — reusable ones live in `test-utils/`. Service/app/DB packages that hit a real
-  database follow the factory-and-composite rule below instead — the two are scoped to different
-  boundaries, not in tension.
+  helpers stay inline — reusable ones live in `test-utils/`. Packages whose tests exercise a real
+  postgres follow the real-database factories-and-composites standard.
 - **Stateful backends** use `@msw/data`: build an in-memory store from a zod schema
   (`new Collection({ schema: z.object({ … }) })`, `.create()`/`.createMany()`,
   `.findFirst((q) => q.where(…))`/`.findMany()`, `.defineRelations()`) and read/write it directly
-  from the oRPC mock handlers. Models are zod schemas, not the legacy `factory()` model dictionary.
+  from the oRPC mock handlers. Models are zod schemas — never `@msw/data`'s `factory()` model
+  dictionary.
 - **React:** React Testing Library on happy-dom (bootstrapped via `@happy-dom/global-registrator` in
   the preload); prefer a project `render` util over bare RTL and the utils it returns over the
   imported `screen`; load data through the centralized MSW handlers + `@msw/data` in-memory store
   rather than stubbing hooks or poking Zustand; `waitFor` the fetch before asserting.
 
+### RSC and server functions
+
+- Server functions are thin ambient shells: they read request context (`getRequestHeaders`, cookies)
+  and load data, then delegate to a pure component or handler that takes that data as explicit
+  props/args. A unit that needs ambient server context in a test has its ambient read in the wrong
+  place — move the read up to the shell.
+- A function that returns React elements is a component: write it as one and test it by rendering.
+  Pure server components (props in, no ambient or server-only imports) render under RTL + happy-dom
+  like any component — render per state, assert visible behaviour; that covers branch selection.
+- Server-fn bodies are named exported handlers that `createServerFn` wraps, so tests call the body
+  directly.
+- The Flight pipeline (`renderServerComponent`, composite components) and ambient reads cannot run
+  under bun test (one module graph, no `react-server` export condition). Their coverage is the
+  real-runtime smoke suite, not unit tests.
+- **Ambient request context** (`@tanstack/react-start/server`) is a mockable boundary: stub it only
+  through the shared `withRequestContext` util, installed once in the preload behind a mutable
+  holder. Never Start's RSC/render APIs, never modules we own; a direct `mock.module` in a test file
+  is a review finding. Every stubbed ambient path is also crossed by the smoke suite. Explicit args
+  stay preferred where they cost nothing.
+
 ### Real-database services (service/app/DB packages)
 
-Services, apps, and DB-backed libraries that exercise a real postgres instead of MSW follow this
-standard instead of the inline-data rule above — `service-avatar` is the reference example.
+Services, apps, and DB-backed libraries whose tests exercise a real postgres follow this standard —
+`service-avatar` is the reference example.
 
 - **Production service factory.** A service exposes one `create<Service>Service({ db? })` in `src/`,
   owning its `createService` config; the production entrypoint and every test call that same
@@ -389,8 +405,7 @@ standard instead of the inline-data rule above — `service-avatar` is the refer
   …) for whole-shape assertions; a single-field `.toBe` after a mutation is fine.
 - **Naming.** Behavioural, plain English, never citing internal identifiers. Prefix `#procedureName`
   only when one file holds several procedures' tests; plain `it …` when a file covers one unit.
-- **One export per file, filename = its kebab-cased export.** `types.ts`/`index.ts` excepted — hold
-  this line on new files; it's the violation reviewers keep catching.
+- **One export per file, filename = its kebab-cased export.** `types.ts`/`index.ts` excepted.
 - **Comments.** No JSDoc that only restates a name/signature; document only genuinely non-obvious
   contract; never name another declaration in a comment.
 - **Failure paths are contract.** Assert on the rejection directly —
@@ -407,33 +422,32 @@ standard instead of the inline-data rule above — `service-avatar` is the refer
 
 ## TO BE CLEANED UP
 
-Everything above reads as final-state. The gaps between that and today's tree live here, each with
-its tracking issue — delete a bullet when its issue closes.
+Temporary states of the tree, each tagged with the issue that retires it — delete a bullet when its
+issue closes.
 
-- **Vitest survives in unswept packages (#266).** The single runner is `bun test`; a package is on
-  vitest exactly when it has a `vitest.config.ts` (the root `vitest.workspace.ts` globs those, and
-  `turbo run test` uses each package's own runner meanwhile — deleting the config drops the package
-  from the vitest run). app-web converts as #165 ports it. Never add vitest to anything new, and
-  don't re-add it to a converted package to "match" a still-on-vitest neighbour. Where
-  `agents/shared.md` assumes bun test everywhere (e.g. "run `bun test` from the repo root"),
-  still-on-vitest packages follow their own config until swept.
-- **Lint baseline backlog (#236).** ~550 legacy sites are baselined inline with
+- **Vitest survives in unswept packages (#266).** The repo's test runner is `bun test`; a package is
+  on vitest exactly when it has a `vitest.config.ts` (the root `vitest.workspace.ts` globs those,
+  `turbo run test` uses each package's own runner, and deleting the config drops the package from
+  the vitest run). Never add vitest to a new package, and never re-add it to a converted one to
+  "match" a still-on-vitest neighbour. Where `agents/shared.md` assumes bun test everywhere (e.g.
+  "run `bun test` from the repo root"), still-on-vitest packages follow their own config until
+  swept.
+- **Lint baseline backlog (#236).** ~550 pre-existing sites are baselined inline with
   `// oxlint-disable-next-line <rule> -- baseline(#236)` comments rather than turned off in config;
   the unused-directive check is the ratchet — fixing a baselined site makes its comment stale and
   lint fails until the comment is deleted. `typescript/prefer-readonly-parameter-types` is never
-  baselined; new code follows the readonly rules above.
-- **Panda CSS is a beta pin.** 2.0.0-beta.8 — no stable release exists yet, so the packages are
-  pinned through `bunfig.toml`'s `minimumReleaseAgeExcludes`, with a removal issue tracking the jump
-  to stable.
-- **Screens are functional-first until the final design language lands (#245 → #246).** The current
-  visual direction is round 1; a second Claude Design pass (#245) supersedes it once game design
-  matures, and the design system gets rebuilt to that final language (#246). Until #246 closes,
-  screens and routes are built workable-only: compose existing `lib-design-system` components and
-  semantic tokens (`bg.*`, `text.*`, `border.*`, `accent.*`) — no bespoke visual styling beyond
-  layout, no new one-off colors/fonts/animations, no polish passes. The semantic-token layer is the
-  stable contract; the re-skin lands in #246 under unchanged token names, so screens that stick to
-  it adapt for free. A screen needing a component that doesn't exist yet builds the minimal version
-  in its own PR and promotes it into `lib-design-system` when a second consumer appears.
-- **app-web still carries frozen GraphQL artifacts (#165).** `app/gql/**` and root `schema.graphql`
-  are committed artifacts of a deleted gateway — never regenerate or edit them; both die with #165's
-  web-shell rebuild.
+  baselined: new code makes its own types `readonly` and exempts framework handles via the rule's
+  `allow` list.
+- **Panda CSS is a beta pin.** 2.0.0-beta.8 — no stable release exists, so the packages are pinned
+  through `bunfig.toml`'s `minimumReleaseAgeExcludes`, with a removal issue tracking the jump to
+  stable.
+- **Screens are functional-first until the design-system rebuild (#246, fed by the #245 design pass)
+  closes.** Screens and routes are built workable-only: compose existing `lib-design-system`
+  components and semantic tokens (`bg.*`, `text.*`, `border.*`, `accent.*`) — no bespoke visual
+  styling beyond layout, no new one-off colors/fonts/animations, no polish passes. The
+  semantic-token layer is the stable contract: the #246 re-skin keeps token names unchanged, so
+  screens that stick to it adapt for free. A screen needing a component that doesn't exist yet
+  builds the minimal version in its own PR and promotes it into `lib-design-system` when a second
+  consumer appears.
+- **The root `schema.graphql` is a frozen artifact (#165).** It is a committed artifact of a deleted
+  gateway — never regenerate or edit it; #165's web-shell rebuild removes it.

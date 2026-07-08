@@ -1,58 +1,46 @@
 # Auth
 
-## Context
+The authentication and authorization system has five components:
 
-Our application requires secure authentication and authorization mechanisms that protect sensitive
-operations while maintaining a good user experience.
+1. **Basic authentication** — username/password as the first authentication factor.
+2. **Two-factor authentication (2FA)** — optional TOTP-based 2FA for additional account security.
+3. **Transaction tokens** — short-lived, single-use tokens that bind TOTP verification to secure
+   operations.
+4. **Step-up authentication** — additional verification for sensitive operations.
+5. **Password reset** — secure, one-time-use tokens.
 
-## Decision
+## TOTP
 
-We will implement a comprehensive authentication and authorization system with the following
-components:
+Time-based One-Time Passwords (TOTP) verify:
 
-1. **Basic Authentication**: Username/password authentication as the first authentication factor
-2. **Two-Factor Authentication (2FA)**: Optional TOTP-based 2FA for additional account security
-3. **Transaction Token System**: Short-lived, single-use tokens to bind TOTP verification to secure
-   operations
-4. **Step-up Authentication**: Additional verification for sensitive operations
-5. **Password Reset Mechanism**: Secure, one-time-use tokens for password resets
+- email verification during sign-up
+- email change verification
+- two-factor authentication during login
+- step-up authentication for sensitive operations
 
-### Implementation Details
+## Transaction tokens
 
-#### TOTP Authentication
+A secure operation that requires additional verification runs as:
 
-- Time-based One-Time Password (TOTP) will be used for:
-  - Email verification during sign-up
-  - Email change verification
-  - Two-factor authentication during login
-  - Step-up authentication for sensitive operations
+1. A pending transaction record is created in a short-lived (5-minute) server cache, holding the
+   intended operation type, session information, and user context.
+2. A unique transaction ID is returned to the client.
+3. The client submits the transaction ID with a valid TOTP to complete the operation.
+4. On successful verification, a short-lived (5-minute), one-time-use transaction token is issued,
+   carrying an `action` claim that names the authorized operation.
+5. The pending transaction is removed from the cache to prevent replay attacks.
 
-#### Transaction Token System
+## Security measures
 
-- When initiating a secure operation that requires additional verification:
-  1. A pending transaction record is created and stored in a short-lived (5 minutes) server cache
-  2. The record contains metadata including:
-     - The intended operation type
-     - Session information
-     - User context
-  3. A unique transaction ID is returned to the client
-  4. The client must submit this transaction ID with a valid TOTP to complete the operation
-  5. Upon successful verification, a short-lived (5 minutes), one-time-use "transaction token" is
-     issued
-  6. The transaction token contains an `action` claim specifying the authorized operation
-  7. The pending transaction is removed from cache to prevent replay attacks
-
-#### Security Measures
-
-- Failed TOTP verification attempts against a pending transaction are limited to 5 attempts
-- After 5 failed attempts, the pending transaction is purged to prevent brute force attacks
-- One-time-use tokens are enforced using a JTI (JWT ID) blocklist
-- All sensitive tokens have a maximum lifetime of 5 minutes
-- Password reset tokens are only exposed via URLs in related emails
+- Failed TOTP verification attempts against a pending transaction are limited to 5; after 5 failed
+  attempts the pending transaction is purged to prevent brute force.
+- One-time use is enforced with a JTI (JWT ID) blocklist.
+- All sensitive tokens have a maximum lifetime of 5 minutes.
+- Password reset tokens are exposed only via URLs in the reset emails.
 - Step-up authentication is required for sensitive operations (e.g., email change, security
-  settings)
+  settings).
 
-## Authentication Flow Diagram
+## Authentication flow
 
 ```mermaid
 sequenceDiagram

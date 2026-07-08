@@ -1,9 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "types": ["vitest", "vitest/importMeta", "vite/client", "node"]
-  },
-  "files": [],
-  "include": ["vitest.setup.ts", "app/**/*.test.tsx", "mocks/**/*.ts", "server/**/*.test.tsx"],
-  "exclude": []
-}

@@ -19,8 +19,8 @@
 
 ## Code style
 
-Mechanically enforced rules (oxfmt, oxlint, format-codemod) aren't repeated here — this file covers
-what tooling can't check.
+Mechanically enforced rules (oxfmt, oxlint, format-codemod) aren't repeated — these are the rules
+tooling can't check.
 
 - One primary export per file, and the file name kebab-cases that export (`with-jest-context.ts`
   exports `withJestContext`). Exceptions: `index.ts` entrypoints, `types.ts` for a package's shared
@@ -56,7 +56,7 @@ what tooling can't check.
 
 ### Function naming
 
-Every function name starts with a prefix from the closed list below: pick from it, or extend this
+Every function name starts with a prefix from this closed taxonomy: pick from it, or extend this
 file in the same PR that introduces the new verb. The prefix is a contract — a reader should know
 the function's shape without opening it.
 
@@ -120,7 +120,7 @@ the function's shape without opening it.
 | `with<X>` | HOF that runs a callback inside a context | `withJestContext` |
 | `make<X>` | factory whose result is itself a function | `makeExcluder`    |
 
-**Framework conventions** — where the ecosystem's prefix is load-bearing, it wins:
+**Framework conventions** — where the ecosystem depends on the prefix, it wins:
 
 | Prefix          | Contract                                                                                                                | Example          |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------- |
@@ -129,7 +129,7 @@ the function's shape without opening it.
 | `handle<Event>` | local implementation passed to an `on<Event>` prop — the idiomatic React pair; the `handle` ban applies everywhere else | `handleRowClick` |
 
 **Banned** — each is a vaguer or synonymous form of a listed verb; use that one instead: `handle`
-(except React's `handle<Event>`, above), `process`, `manage`, `do`, `perform` (say what it does),
+(except React's `handle<Event>` pair), `process`, `manage`, `do`, `perform` (say what it does),
 `execute` (→ `run`), `compute` (→ `build`), `fetch` (→ `read`), `save`/`store` (→ `write`), `delete`
 (→ `remove`), `search`/`lookup` (→ `find`/`get`).
 
@@ -188,7 +188,7 @@ implementing that algorithm — forcing list verbs onto textbook terms hides the
     - `toThrowWithMessage`
     - `toResolve` (returns a promise — always `await`)
     - `toReject` (returns a promise — always `await`)
-- Matchers also work asymmetrically inside `toEqual`/`toMatchObject`
+- Matchers work asymmetrically inside `toEqual`/`toMatchObject`
   (`status: expect.toBeOneOf([…])`).
 - Known gaps: `expect.pass`/`expect.fail` are unimplemented upstream and excluded from our types.
   It's `toEqualCaseInsensitive` — not `…Insensitively` as some docs claim; unknown matcher names

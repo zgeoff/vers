@@ -13,6 +13,9 @@ minimumReleaseAge = 604800
 # once @pandacss/dev goes stable (#222)
 # @zgeoff/bun-test-extended 0.0.2 ages past the 7-day gate ~2026-07-11 — remove then (#257)
 # @zgeoff/oxlint-config 0.0.2 ages past the 7-day gate ~2026-07-14 — remove then (#292)
+# TanStack Start's RSC support is experimental and churns fast (#259) — the router/start/vite
+# ecosystem it pins ships new versions inside the 7-day window routinely; excluded per-package
+# rather than dropping the gate repo-wide.
 minimumReleaseAgeExcludes = [
   "@zgeoff/format-codemod",
   "@zgeoff/bun-test-extended",
@@ -35,6 +38,20 @@ minimumReleaseAgeExcludes = [
   "@pandacss/compiler-win32-x64-msvc",
   "@pandacss/compiler-win32-arm64-msvc",
   "@pandacss/compiler-wasm32-wasi",
+  "vite",
+  "@tanstack/react-start",
+  "@tanstack/react-start-client",
+  "@tanstack/react-start-rsc",
+  "@tanstack/react-start-server",
+  "@tanstack/start-client-core",
+  "@tanstack/start-plugin-core",
+  "@tanstack/start-server-core",
+  "@tanstack/react-router",
+  "@tanstack/router-core",
+  "@tanstack/router-cli",
+  "@tanstack/start-storage-context",
+  "@tanstack/router-generator",
+  "@tanstack/router-plugin",
 ]
 
 [test]
