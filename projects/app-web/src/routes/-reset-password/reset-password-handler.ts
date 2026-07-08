@@ -1,9 +1,9 @@
 import { safe } from '@orpc/client';
 import { redirect } from '@tanstack/react-router';
-import type { z } from 'zod';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { SpamError } from '../../lib/auth/spam-error';
+import { toFieldErrors } from '../../lib/forms/to-field-errors';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { ResetPasswordFormSchema } from './reset-password-form-schema';
 import type { ResetPasswordResult } from './types';
@@ -41,7 +41,10 @@ export async function resetPasswordHandler(
   });
 
   if (!submission.success) {
-    return { fieldErrors: toFieldErrors(submission.error), status: 'invalid-fields' };
+    return {
+      fieldErrors: toFieldErrors(submission.error, ['confirmPassword', 'password']),
+      status: 'invalid-fields',
+    };
   }
 
   const user = await userClient.getUser({ email: submission.data.email });
@@ -63,18 +66,4 @@ export async function resetPasswordHandler(
   }
 
   throw redirect({ href: '/login' });
-}
-
-function toFieldErrors(error: z.ZodError): Partial<Record<'confirmPassword' | 'password', string>> {
-  const fieldErrors: Partial<Record<'confirmPassword' | 'password', string>> = {};
-
-  for (const issue of error.issues) {
-    const [field] = issue.path;
-
-    if ((field === 'confirmPassword' || field === 'password') && !(field in fieldErrors)) {
-      fieldErrors[field] = issue.message;
-    }
-  }
-
-  return fieldErrors;
 }

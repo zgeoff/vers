@@ -1,17 +1,15 @@
 import { isDefinedError, safe } from '@orpc/client';
 import { getRequestIP } from '@tanstack/react-start/server';
-import type { z } from 'zod';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { completeSessionSignIn } from '../../lib/auth/complete-session-sign-in';
 import { SpamError } from '../../lib/auth/spam-error';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
+import { toFieldErrors } from '../../lib/forms/to-field-errors';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { OnboardingFormSchema } from './onboarding-form-schema';
 import { requireOnboardingSession } from './require-onboarding-session';
 import type { OnboardingResult } from './types';
-
-type OnboardingFieldErrors = OnboardingResult['fieldErrors'];
 
 /**
  * Runs the onboarding form's submission: honeypot then field validation, then account creation
@@ -40,7 +38,16 @@ export async function onboardingHandler(formData: FormData): Promise<OnboardingR
   });
 
   if (!submission.success) {
-    return { fieldErrors: toFieldErrors(submission.error), status: 'invalid-fields' };
+    return {
+      fieldErrors: toFieldErrors(submission.error, [
+        'agreeToTerms',
+        'confirmPassword',
+        'name',
+        'password',
+        'username',
+      ]),
+      status: 'invalid-fields',
+    };
   }
 
   const [error, user] = await safe(
@@ -72,18 +79,4 @@ export async function onboardingHandler(formData: FormData): Promise<OnboardingR
   await updateVerifySession({ 'onboarding#email': undefined });
 
   return completeSessionSignIn({ email: user.email, session });
-}
-
-function toFieldErrors(error: z.ZodError): OnboardingFieldErrors {
-  const fieldErrors: Record<string, string> = {};
-
-  for (const issue of error.issues) {
-    const [field] = issue.path;
-
-    if (typeof field === 'string' && !(field in fieldErrors)) {
-      fieldErrors[field] = issue.message;
-    }
-  }
-
-  return fieldErrors;
 }

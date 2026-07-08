@@ -1,11 +1,11 @@
 import { redirect } from '@tanstack/react-router';
 import { getRequestIP } from '@tanstack/react-start/server';
-import type { z } from 'zod';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { completeSessionSignIn } from '../../lib/auth/complete-session-sign-in';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { SpamError } from '../../lib/auth/spam-error';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
+import { toFieldErrors } from '../../lib/forms/to-field-errors';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
@@ -39,7 +39,10 @@ export async function loginHandler(formData: FormData): Promise<LoginResult | Re
   });
 
   if (!submission.success) {
-    return { fieldErrors: toFieldErrors(submission.error), status: 'invalid-fields' };
+    return {
+      fieldErrors: toFieldErrors(submission.error, ['email', 'password']),
+      status: 'invalid-fields',
+    };
   }
 
   const user = await userClient.getUser({ email: submission.data.email });
@@ -88,18 +91,4 @@ export async function loginHandler(formData: FormData): Promise<LoginResult | Re
     redirectTo: submission.data.redirectTo,
     session,
   });
-}
-
-function toFieldErrors(error: z.ZodError): Partial<Record<'email' | 'password', string>> {
-  const fieldErrors: Partial<Record<'email' | 'password', string>> = {};
-
-  for (const issue of error.issues) {
-    const [field] = issue.path;
-
-    if ((field === 'email' || field === 'password') && !(field in fieldErrors)) {
-      fieldErrors[field] = issue.message;
-    }
-  }
-
-  return fieldErrors;
 }
