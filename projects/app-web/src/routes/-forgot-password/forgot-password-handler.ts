@@ -4,7 +4,7 @@ import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { SpamError } from '../../lib/auth/spam-error';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { ForgotPasswordFormSchema } from './forgot-password-form-schema';
-import type { ForgotPasswordResult } from './forgot-password-result';
+import type { ForgotPasswordResult } from './types';
 
 /**
  * Runs the forgot-password form's submission: honeypot then field validation, then — for a

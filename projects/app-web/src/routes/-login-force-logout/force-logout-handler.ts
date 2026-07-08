@@ -1,9 +1,9 @@
 import { redirect } from '@tanstack/react-router';
 import { getVerifySession } from '../../lib/auth/get-verify-session';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
+import type { VerifySessionUpdate } from '../../lib/auth/types';
 import { updateAuthSession } from '../../lib/auth/update-auth-session';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
-import type { VerifySessionUpdate } from '../../lib/auth/verify-session-data';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 
 const CLEAR_PENDING_SESSION: VerifySessionUpdate = {

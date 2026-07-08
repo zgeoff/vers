@@ -5,8 +5,8 @@ import { getVerifySession } from '../../lib/auth/get-verify-session';
 import { SpamError } from '../../lib/auth/spam-error';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import { runVerification } from './run-verification';
+import type { VerifyOTPResult } from './types';
 import { VerifyOTPFormSchema } from './verify-otp-form-schema';
-import type { VerifyOTPResult } from './verify-otp-result';
 
 /**
  * Runs the verify-otp form's submission: honeypot then field validation, a code check, and the

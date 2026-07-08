@@ -5,7 +5,7 @@ import { SpamError } from '../../lib/auth/spam-error';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import { SignupFormSchema } from './signup-form-schema';
-import type { SignupResult } from './signup-result';
+import type { SignupResult } from './types';
 
 /**
  * Runs the signup form's submission: honeypot then field validation, then — for a caller with no

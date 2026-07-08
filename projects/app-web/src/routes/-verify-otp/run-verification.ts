@@ -3,7 +3,7 @@ import { run2FA } from './run-2fa';
 import { runChangeEmail } from './run-change-email';
 import { runOnboarding } from './run-onboarding';
 import { runUnsupported } from './run-unsupported';
-import type { RunVerificationContext } from './run-verification-context';
+import type { RunVerificationContext } from './types';
 
 type VerificationHandler = (ctx: Readonly<RunVerificationContext>) => Promise<never>;
 

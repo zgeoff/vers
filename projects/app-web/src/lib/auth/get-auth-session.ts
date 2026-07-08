@@ -1,9 +1,9 @@
 import { getSession } from '@tanstack/react-start/server';
-import type { AuthSessionData } from './auth-session-data';
 import {
   AUTH_SESSION_READ_MAX_AGE_SECONDS,
   buildAuthSessionConfig,
 } from './build-auth-session-config';
+import type { AuthSessionData } from './types';
 
 /**
  * Reads the caller's auth session. Never throws for a missing or expired cookie — an absent

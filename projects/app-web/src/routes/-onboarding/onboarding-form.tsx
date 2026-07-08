@@ -5,7 +5,7 @@ import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
 import { onboarding } from './onboarding';
-import type { OnboardingResult } from './onboarding-result';
+import type { OnboardingResult } from './types';
 
 const pageInfo = css({ marginBottom: '8', textAlign: 'center' });
 

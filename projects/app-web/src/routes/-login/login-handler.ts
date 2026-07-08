@@ -10,7 +10,7 @@ import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import { LoginFormSchema } from './login-form-schema';
-import type { LoginResult } from './login-result';
+import type { LoginResult } from './types';
 
 /**
  * Runs the login form's submission: honeypot then field validation, a credential check, and — for

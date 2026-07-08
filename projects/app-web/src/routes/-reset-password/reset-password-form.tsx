@@ -5,7 +5,7 @@ import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
 import { resetPassword } from './reset-password';
-import type { ResetPasswordResult } from './reset-password-result';
+import type { ResetPasswordResult } from './types';
 
 interface ResetPasswordFormProps {
   readonly email: string;

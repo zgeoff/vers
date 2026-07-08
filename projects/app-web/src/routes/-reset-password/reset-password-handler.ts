@@ -6,7 +6,7 @@ import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { SpamError } from '../../lib/auth/spam-error';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { ResetPasswordFormSchema } from './reset-password-form-schema';
-import type { ResetPasswordResult } from './reset-password-result';
+import type { ResetPasswordResult } from './types';
 
 const INVALID_LINK_RESULT: ResetPasswordResult = {
   fieldErrors: {},

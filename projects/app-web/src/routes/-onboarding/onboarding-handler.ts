@@ -8,8 +8,8 @@ import { updateVerifySession } from '../../lib/auth/update-verify-session';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { OnboardingFormSchema } from './onboarding-form-schema';
-import type { OnboardingResult } from './onboarding-result';
 import { requireOnboardingSession } from './require-onboarding-session';
+import type { OnboardingResult } from './types';
 
 type OnboardingFieldErrors = OnboardingResult['fieldErrors'];
 

@@ -4,7 +4,7 @@ import { getVerifySession } from '../../lib/auth/get-verify-session';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
-import type { RunVerificationContext } from './run-verification-context';
+import type { RunVerificationContext } from './types';
 
 /**
  * Completes a 2FA-gated login: the pending session id login-handler stashed is looked up

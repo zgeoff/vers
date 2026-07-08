@@ -5,8 +5,8 @@ import { Brand, Heading, OTPField, StatusButton, Text } from '@vers/design-syste
 import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
+import type { VerifyOTPResult } from './types';
 import { verifyOTP } from './verify-otp';
-import type { VerifyOTPResult } from './verify-otp-result';
 
 interface VerifyOTPFormProps {
   readonly redirectTo?: string | undefined;

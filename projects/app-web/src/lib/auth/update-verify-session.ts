@@ -1,6 +1,6 @@
 import { updateSession } from '@tanstack/react-start/server';
 import { buildVerifySessionConfig } from './build-verify-session-config';
-import type { VerifySessionData, VerifySessionUpdate } from './verify-session-data';
+import type { VerifySessionData, VerifySessionUpdate } from './types';
 
 /** Writes to the in-flight verification state; an explicit `undefined` value clears that key. */
 export async function updateVerifySession(update: VerifySessionUpdate): Promise<VerifySessionData> {

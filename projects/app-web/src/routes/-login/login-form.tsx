@@ -5,7 +5,7 @@ import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
 import { login } from './login';
-import type { LoginResult } from './login-result';
+import type { LoginResult } from './types';
 
 interface LoginFormProps {
   readonly redirectTo?: string | undefined;

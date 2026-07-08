@@ -5,7 +5,7 @@ import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
 import { forgotPassword } from './forgot-password';
-import type { ForgotPasswordResult } from './forgot-password-result';
+import type { ForgotPasswordResult } from './types';
 
 const pageInfo = css({ marginBottom: '8', textAlign: 'center' });
 
