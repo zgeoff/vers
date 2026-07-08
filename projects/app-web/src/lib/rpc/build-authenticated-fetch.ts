@@ -2,6 +2,7 @@ import { safe } from '@orpc/client';
 import { clearAuthSession } from '../auth/clear-auth-session';
 import { getAuthSession } from '../auth/get-auth-session';
 import { updateAuthSession } from '../auth/update-auth-session';
+import { sessionRefreshClient } from './clients/session-refresh-client';
 
 interface ServiceFetchInit {
   readonly redirect?: RequestRedirect;
@@ -44,12 +45,8 @@ async function tryRefreshAndRetry(
     return originalResponse;
   }
 
-  // a dynamic import breaks the static cycle back through `build-service-link.ts`, which is what
-  // constructs `sessionClient` in the first place
-  const sessionClientModule = await import('./clients/session-client');
-
   const [error, tokens] = await safe(
-    sessionClientModule.sessionClient.refreshTokens(
+    sessionRefreshClient.refreshTokens(
       { id: session.sessionID, refreshToken: session.refreshToken },
       { context: { headers: { authorization: `Bearer ${session.sessionID}` } } },
     ),
