@@ -240,14 +240,6 @@ never a power tax on basics, and a build that cannot equip ordinary equipment ma
 item, not a misbuilt avatar. Identity equipment enables rather than outscales: passing a requirement
 changes what a build can do, never just how big its numbers are.
 
-### Fingerprints
-
-Enemies and regions hold positions on the same axes, and their fingerprints carry more: damage mix
-and hit deliveries. A build renders as a silhouette on a six-spoke chart — opposing spokes per axis,
-at most one lit per axis, distance from center visible as the silhouette's size. Enemy and region
-silhouettes show what they emit, so both poles of an axis may light, and a matchup reads offense
-against defense: their damage and deliveries against a build's answers.
-
 ## Metagame Attributes
 
 ### Discipline
