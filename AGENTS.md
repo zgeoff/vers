@@ -374,9 +374,9 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
   like any component — render per state, assert visible behaviour; that covers branch selection.
 - Server-fn bodies are named exported handlers that `createServerFn` wraps, so tests call the body
   directly.
-- An uncompiled `createServerFn` dispatch relays only a `Response` or a thrown redirect/error to
-  its caller; a plain result object resolves as `undefined`. Component tests cover the branches
-  that round-trip that way — plain-object branches are asserted at the handler layer.
+- An uncompiled `createServerFn` dispatch relays only a `Response` or a thrown redirect/error to its
+  caller; a plain result object resolves as `undefined`. Component tests cover the branches that
+  round-trip that way — plain-object branches are asserted at the handler layer.
 - The Flight pipeline (`renderServerComponent`, composite components) and ambient reads cannot run
   under bun test (one module graph, no `react-server` export condition). Their coverage is the
   real-runtime smoke suite, not unit tests.
