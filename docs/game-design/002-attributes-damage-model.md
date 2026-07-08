@@ -6,24 +6,28 @@ loop.
 
 ## Damage Types
 
-Vers starts with six damage types. The set is intentionally wider than a traditional fantasy ARPG
-element spread, so itemisation should not expect every build to cover every offensive or defensive
-type equally.
+Vers starts with seven damage types, each named for its mechanism of harm. The set is intentionally
+wider than a traditional fantasy ARPG element spread, so itemisation should not expect every build
+to cover every offensive or defensive type equally.
 
-### Kinetic
+### Physical
 
-Kinetic damage is physical force: impact, rupture, blades, ballistics, crushing pressure, and other
+Physical damage is material force: impact, rupture, blades, ballistics, crushing pressure, and other
 direct material trauma.
 
-### Thermal
+### Heat
 
-Thermal damage is temperature stress: heat, cold, plasma, burning, freezing, and extreme energetic
-transfer.
+Heat damage is destructive temperature gain: burning, plasma, friction, and radiant transfer.
 
-### Voltaic
+### Cold
 
-Voltaic damage is charge and overload: electricity, arcs, signal disruption, shorting, and hostile
-energy flow through bodies or systems.
+Cold damage is destructive temperature loss: freezing, thermal shock, coolant exposure, and the
+failure of tissue and systems in deep cold.
+
+### Electric
+
+Electric damage is charge and overload: current, arcs, shorting, and hostile energy flow through
+bodies or systems.
 
 ### Toxic
 
@@ -87,14 +91,14 @@ expression.
 
 ### Avoidance
 
-Avoidance is the chance or condition that prevents a hostile action from connecting. It is the broad
-layer name; future mechanics may express it through evasion, misdirection, prediction, interference,
-or other sources.
+Avoidance is the chance that prevents a hostile action from connecting. Its forms are Evasion and
+Dodge; the defensive-archetypes note defines them.
 
-### Block
+### Interception
 
-Block intercepts a connected hit and reduces, changes, or negates its impact. It should remain
-distinct from avoidance: avoidance stops connection, block handles a connected event.
+Interception reduces a connected hit before mitigation. Its forms are Block and Deflect; the
+defensive-archetypes note defines them. Interception stays distinct from avoidance: avoidance stops
+connection, interception handles a connected event.
 
 ### Mitigation
 
@@ -103,8 +107,8 @@ type-appropriate defenses and other reductions that make incoming damage smaller
 
 ### Barrier
 
-Barrier is recoverable protection consumed before life. It fits the synthetic-world premise better
-than a fantasy shield while still giving builds a clear buffer layer.
+Barrier is recoverable protection consumed before Life. It fits the synthetic-world premise better
+than a fantasy shield while still giving builds a recoverable layer above Life.
 
 ### Life
 
@@ -117,7 +121,7 @@ The default resolution order is:
 
 1. A hostile action attempts to connect.
 2. Avoidance may prevent connection.
-3. Block may intercept a connected hit.
+3. Interception may reduce a connected hit.
 4. A connected hit may resolve as critical, scaling its damage.
 5. Mitigation reduces remaining damage.
 6. Barrier absorbs damage before life.
@@ -134,27 +138,27 @@ design note owns the specifics.
 
 ## Threat Mix & Coverage
 
-Five of the six damage types are resistable: type-specific mitigation exists for Thermal, Voltaic,
-Toxic, Cognitive, and Null, and an endgame avatar is expected to reach the mitigation cap for the
-types its target regions deal. Kinetic is not resistable — it is the universal pressure type,
-handled through the other defensive layers rather than a resistance stat.
+Six of the seven damage types are resistable: type-specific mitigation exists for Heat, Cold,
+Electric, Toxic, Cognitive, and Null, and an endgame avatar is expected to reach the mitigation cap
+for the types its target regions deal. Physical is not resistable — it is the universal pressure
+type, handled through the other defensive layers rather than a resistance stat.
 
 Regions are weighted toward a dominant damage type but never deal it exclusively. Type mitigation is
-specced against a region's mix, and the type-agnostic layers — Avoidance, Block, Barrier — are the
-floor under whatever a build has not covered.
+specced against a region's mix, and the type-agnostic layers — Avoidance, Interception, Barrier —
+are the floor under whatever a build has not covered.
 
 Every damage type has at least one region or faction that expresses it. The strange types are
 progression-gated: Cognitive appears later, and Null is endgame. The type spectrum deepens as
 avatars push farther from Respite.
 
-Enemies use the same defensive layers as avatars, including Kinetic mitigation of their own — so
-Kinetic is universal pressure in both directions, not a strictly-best attacking type. Layer
+Enemies use the same defensive layers as avatars, including Physical mitigation of their own — so
+Physical is universal pressure in both directions, not a strictly-best attacking type. Layer
 distribution across enemy families is a tuning choice (heavily avoidance-stacked enemies are rarely
-fun), and no mechanic converts incoming Kinetic into a resistable type.
+fun), and no mechanic converts incoming Physical into a resistable type.
 
-A region's damage mix is also its history: mechanical drift reads as Kinetic, Voltaic, and Thermal;
-ecological drift as Toxic; human drift as Cognitive; total drift as Null. Reading a threat table is
-reading the region's biography.
+A region's damage mix is also its history: mechanical drift reads as Physical, Heat, Cold, and
+Electric; ecological drift as Toxic; human drift as Cognitive; total drift as Null. Reading a threat
+table is reading the region's biography.
 
 ## Resource
 
@@ -178,49 +182,66 @@ Cost shape is a skill property, not a class rule. Archetypes may still skew the 
 spenders, or generators that build Reserve by acting or being hit — through skills and passives.
 Generation is a skill behaviour orthogonal to cost shape, not a fourth shape.
 
-Reserve regeneration falls under Vigor's global-regeneration mandate, and Reserve regeneration and
-capacity are first-class build stats. Specific regeneration, cost, capacity, and on-full/on-empty
-investment stays in itemisation and skills, as with every attribute.
+Reserve regeneration and capacity are first-class build stats. Specific regeneration, cost,
+capacity, and on-full/on-empty investment stays in itemisation and skills.
 
 ## Attribute Layers
 
-Vers uses two attribute layers: avatar attributes and metagame attributes. They should not compete
-for the same item budget or progression choices.
+Vers uses two attribute layers: the Compass, which positions an avatar, and metagame attributes,
+which are persistent player progression. They should not compete for the same item budget or
+progression choices.
 
-Avatar attributes are local to an avatar. They can appear on gear, avatar passives, class systems,
-and other character-power systems. They determine how an avatar survives and performs inside
-regions.
+The Compass is local to an avatar and determines what equipment and skills the avatar qualifies for.
+Metagame attributes can appear on metagame passive trees, idol-like systems, account progression, or
+other long-term systems; they determine how the player stabilizes, discovers, and extracts value
+from the world.
 
-Metagame attributes are persistent player/world progression. They can appear on metagame passive
-trees, idol-like systems, account progression, or other long-term systems. They determine how the
-player stabilizes, discovers, and extracts value from the world.
+## The Compass
 
-## Avatar Attributes
+The Compass is the avatar attribute system: three bipolar axes on which a build holds a position
+rather than accumulating a quantity. A fresh avatar sits at dead center.
 
-### Focus
+### Axes
 
-Focus is cadence. It governs action rate: how quickly an avatar's skill beats recur. It is not an
-attack- or cast-speed modifier — speed of execution stays specific itemisation.
+- **Melee ↔ Ranged** — where the avatar fights: contact technique, or delivery from distance.
+- **Light ↔ Heavy** — the avatar's rhythm: fast beats at small magnitudes, or slow beats that land
+  massively.
+- **Innate ↔ Altered** — what the avatar fights with: the inborn capacity, conditioned and
+  sharpened, or acquired systems — implants, interfaces, and instruments that operate on the world's
+  stranger terms. Altered equipment and skills lean toward direct delivery, Barrier-led defense, and
+  the strange damage types; innate ones toward material force and bodily technique.
 
-Focus should improve how often an avatar can act, but it should not replace specific attack-speed,
-cooldown, or trigger itemisation.
+### Position
 
-### Vigor
+Position comes from the passive tree. Nodes carry directional weight — positive, negative, split
+between poles, or none — and an avatar's position on each axis is the sum of the weight along its
+allocated path. Augments that reweight regions of the tree are a sanctioned extension.
 
-Vigor is sustain. It governs the global regeneration rate: Life, Barrier, and Reserve all recover
-faster under Vigor. Because one stat touches all three pools its power is deliberately curbed — and
-long-form idle combat keeps even curbed regeneration useful.
+Specialization is an avatar's distance from center. It is emergent — no system assigns it — and it
+distinguishes committed builds (far from center in their chosen directions) from deliberate
+generalists (near it).
 
-Vigor should improve an avatar's broad staying power, but it should not replace specific investment
-into Life, Barrier, Block, recovery, or other defensive mechanics.
+### Gates
 
-### Will
+The Compass gates; it does not scale. Position qualifies equipment and skills and never grants stats
+directly.
 
-Will is effect. It represents the avatar's capacity to impose outcomes on the world.
+- **Pole gates** require a minimum position toward a pole ("requires heavy 60"). They mark identity
+  equipment, and exist only where the item's nature earns them.
+- **Center gates** require Specialization at or below a threshold. They mark adaptive equipment that
+  demands an uncommitted chassis — staying centered is a build choice with its own exclusive kit,
+  not a default.
 
-Will can scale damage, healing, shielding, control, summons, persistent effects, and other applied
-combat outcomes. It should provide broad baseline pressure without replacing specific investment
-into damage types, skills, ailments, minions, or other archetype-defining systems.
+Staple equipment is ungated. A gate is the admission ticket to identity gear, never a power tax on
+basics: a build that cannot equip ordinary equipment marks a misdesigned item, not a misbuilt
+avatar.
+
+### Fingerprints
+
+Enemies and regions hold positions on the same axes. Builds, enemy families, and regions each render
+as a silhouette on a six-spoke chart — opposing spokes per axis, at most one lit per axis,
+Specialization visible as the silhouette's size — and a matchup reads as the overlap of two
+silhouettes.
 
 ## Metagame Attributes
 
@@ -249,13 +270,12 @@ and the market. Later alignment mechanics may draw on that geometry.
 
 ## Scaling Philosophy
 
-Focus, Vigor, and Will should be universally useful but modest. They provide broad pressure,
-sustain, and effect so every avatar benefits from them, but they should not become the only stats
-that matter.
+No avatar attribute grants combat stats: the Compass gates, and action rate, recovery, and damage
+scaling live in gear, skills, and passives.
 
 Build archetypes should come primarily from skills, gear, passives, damage types, status effects,
-summons, region interactions, and defensive-layer investment. Attribute stacking can exist, but it
-should not erase those more specific choices.
+summons, region interactions, and defensive-layer investment. Compass position shapes which of those
+choices a build can make; it never substitutes for them.
 
 Archetype is a per-system term, not a single system: skills, defenses, classes, and specializations
 each carry their own archetypes, and build archetypes emerge from combining them. Classes are
@@ -269,5 +289,6 @@ only when they create meaningful build or encounter identity.
 ## Non-Goals
 
 This note does not define exact formulas, ailment lists, resistance caps, block math, avoidance
-math, critical chance or magnitude baselines, Reserve cost or regeneration baselines, or complete
-itemisation rules. Those belong in downstream combat, itemisation, enemy, and progression notes.
+math, critical chance or magnitude baselines, Reserve cost or regeneration baselines, Compass gate
+thresholds or weight magnitudes, or complete itemisation rules. Those belong in downstream combat,
+itemisation, enemy, and progression notes.

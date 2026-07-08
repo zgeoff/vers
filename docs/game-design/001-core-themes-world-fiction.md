@@ -181,8 +181,8 @@ itself.
 ## Vocabulary Register
 
 The register covers world vocabulary and cross-cutting provisional terms. System vocabulary — damage
-types, defensive layers, attributes — is defined in the damage-model note and is canonical under the
-naming grammar's first rule.
+types, hit deliveries, defensive layers, the Compass — is defined in the damage-model and
+defensive-archetypes notes and is canonical under the naming grammar's first rule.
 
 | Term       | Status      | Notes                                                                            |
 | ---------- | ----------- | -------------------------------------------------------------------------------- |
@@ -195,5 +195,5 @@ naming grammar's first rule.
 | loot       | Keep        | Core ARPG promise.                                                               |
 | power      | Keep        | Umbrella term for rewards that help the player push farther or more efficiently. |
 | Reserve    | Provisional | The single avatar skill resource; name open until itemisation settles.           |
-| buffer     | Reserved    | Held for a future deferred-damage defensive mechanic; distinct from Barrier.     |
+| Buffer     | Canonical   | Deferred-damage defensive layer; defined in the defensive-archetypes note.       |
 | glyph      | Not canon   | Visual candidate for mythic systems, not yet a world rule.                       |
