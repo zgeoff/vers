@@ -344,10 +344,8 @@
     "**/*timestamp*.mjs",
     "**/mockServiceWorker.js",
     "**/projects/app-design-reference/public/**",
-    "**/projects/app-web/app/gql/**",
     "**/.react-router/**",
     "**/styled-system/**",
-    "schema.graphql",
     "**/.ladle/**"
   ]
 }

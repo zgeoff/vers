@@ -468,5 +468,3 @@ issue closes.
   screens that stick to it adapt for free. A screen needing a component that doesn't exist yet
   builds the minimal version in its own PR and promotes it into `lib-design-system` when a second
   consumer appears.
-- **The root `schema.graphql` is a frozen artifact (#165).** It is a committed artifact of a deleted
-  gateway — never regenerate or edit it; #165's web-shell rebuild removes it.

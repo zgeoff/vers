@@ -1,5 +1,4 @@
 # committed codegen
-projects/app-web/app/gql/**
 projects/app-design-reference/public/**
 **/styled-system/**
 **/.react-router/**
