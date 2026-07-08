@@ -2,16 +2,9 @@ import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
 import { sessionCollection } from '../../mocks/db';
+import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { forceLogoutHandler } from './force-logout-handler';
-
-function buildIntentFormData(intent: string): FormData {
-  const formData = new FormData();
-
-  formData.set('intent', intent);
-
-  return formData;
-}
 
 test('it clears the pending session and redirects home on cancel', async () => {
   const outcome = await withRequestContext(
@@ -24,7 +17,7 @@ test('it clears the pending session and redirects home on cancel', async () => {
       },
     },
     async () => {
-      const redirectHref = await forceLogoutHandler(buildIntentFormData('cancel'))
+      const redirectHref = await forceLogoutHandler(buildFormData({ intent: 'cancel' }))
         .then(() => null)
         .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
 
@@ -38,7 +31,7 @@ test('it clears the pending session and redirects home on cancel', async () => {
 
 test('it redirects home without acting when there is no pending session to confirm', async () => {
   const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await forceLogoutHandler(buildIntentFormData('confirm'))
+    const redirectHref = await forceLogoutHandler(buildFormData({ intent: 'confirm' }))
       .then(() => null)
       .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
 
@@ -67,7 +60,7 @@ test('it signs out every other live session and completes sign-in on confirm', a
       },
     },
     async () => {
-      const redirectHref = await forceLogoutHandler(buildIntentFormData('confirm'))
+      const redirectHref = await forceLogoutHandler(buildFormData({ intent: 'confirm' }))
         .then(() => null)
         .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
 

@@ -2,29 +2,20 @@ import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
 import { userCollection } from '../../mocks/db';
+import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { forgotPasswordHandler } from './forgot-password-handler';
 
-function buildForgotPasswordFormData(fields: Readonly<Record<string, string>>): FormData {
-  const formData = new FormData();
-
-  for (const [key, value] of Object.entries(fields)) {
-    formData.set(key, value);
-  }
-
-  return formData;
-}
-
 test('it redirects home for an already signed-in caller', () => {
   const promise = withRequestContext({ cookies: { en_session: { sessionID: 'session-1' } } }, () =>
-    forgotPasswordHandler(buildForgotPasswordFormData({ email: 'x@vers.test' })),
+    forgotPasswordHandler(buildFormData({ email: 'x@vers.test' })),
   );
 
   expect(promise).rejects.toMatchObject({ options: { href: '/' } });
 });
 
 test('it rejects a submission with a filled-in honeypot field', async () => {
-  const formData = buildForgotPasswordFormData({ email: 'x@vers.test' });
+  const formData = buildFormData({ email: 'x@vers.test' });
 
   formData.set(HONEYPOT_FIELD_NAME, 'filled in by a bot');
 
@@ -39,7 +30,7 @@ test('it rejects a submission with a filled-in honeypot field', async () => {
 
 test('it reports a field error for an invalid email', async () => {
   const outcome = await withRequestContext({}, () =>
-    forgotPasswordHandler(buildForgotPasswordFormData({ email: 'not-an-email' })),
+    forgotPasswordHandler(buildFormData({ email: 'not-an-email' })),
   );
 
   expect(outcome.value).toStrictEqual({
@@ -53,7 +44,7 @@ test('it mints a reset token for a matching account and redirects', async () => 
 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await forgotPasswordHandler(
-      buildForgotPasswordFormData({ email: 'forgot-password-existing@vers.test' }),
+      buildFormData({ email: 'forgot-password-existing@vers.test' }),
     )
       .then(() => null)
       .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
@@ -71,7 +62,7 @@ test('it mints a reset token for a matching account and redirects', async () => 
 test('it redirects the same way for an email with no matching account', async () => {
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await forgotPasswordHandler(
-      buildForgotPasswordFormData({ email: 'forgot-password-unknown@vers.test' }),
+      buildFormData({ email: 'forgot-password-unknown@vers.test' }),
     )
       .then(() => null)
       .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));

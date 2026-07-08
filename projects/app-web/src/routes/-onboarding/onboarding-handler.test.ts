@@ -2,18 +2,9 @@ import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
 import { userCollection } from '../../mocks/db';
+import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { onboardingHandler } from './onboarding-handler';
-
-function buildOnboardingFormData(fields: Readonly<Record<string, string>>): FormData {
-  const formData = new FormData();
-
-  for (const [key, value] of Object.entries(fields)) {
-    formData.set(key, value);
-  }
-
-  return formData;
-}
 
 const validFields = {
   agreeToTerms: 'on',
@@ -24,15 +15,13 @@ const validFields = {
 };
 
 test('it redirects to signup when there is no pending onboarding session', () => {
-  const promise = withRequestContext({}, () =>
-    onboardingHandler(buildOnboardingFormData(validFields)),
-  );
+  const promise = withRequestContext({}, () => onboardingHandler(buildFormData(validFields)));
 
   expect(promise).rejects.toMatchObject({ options: { href: '/signup' } });
 });
 
 test('it rejects a submission with a filled-in honeypot field', async () => {
-  const formData = buildOnboardingFormData(validFields);
+  const formData = buildFormData(validFields);
 
   formData.set(HONEYPOT_FIELD_NAME, 'filled in by a bot');
 
@@ -53,7 +42,7 @@ test('it reports field errors for a mismatched password confirmation', async () 
     { cookies: { en_verification: { 'onboarding#email': 'onboard-mismatch@vers.test' } } },
     () =>
       onboardingHandler(
-        buildOnboardingFormData({ ...validFields, confirmPassword: 'not-the-same-password' }),
+        buildFormData({ ...validFields, confirmPassword: 'not-the-same-password' }),
       ),
   );
 
@@ -68,7 +57,7 @@ test('it reports a field error for a username already in use', async () => {
 
   const outcome = await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboard-username-taken@vers.test' } } },
-    () => onboardingHandler(buildOnboardingFormData(validFields)),
+    () => onboardingHandler(buildFormData(validFields)),
   );
 
   expect(outcome.value).toStrictEqual({
@@ -82,7 +71,7 @@ test('it creates the account, signs the caller in, and clears the onboarding ses
     { cookies: { en_verification: { 'onboarding#email': 'onboard-success@vers.test' } } },
     async () => {
       const redirectHref = await onboardingHandler(
-        buildOnboardingFormData({ ...validFields, username: 'onboard_success_user' }),
+        buildFormData({ ...validFields, username: 'onboard_success_user' }),
       )
         .then(() => null)
         .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
