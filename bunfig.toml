@@ -8,7 +8,7 @@ exact = true
 # supply-chain guard: only install versions published >= 7 days ago
 minimumReleaseAge = 604800
 
-# format-codemod 0.0.2 ages past the gate ~2026-07-12 — remove its exclude then (#219)
+# format-codemod 0.0.5 (published 2026-07-08) ages past the gate ~2026-07-15 — remove its exclude then (#219)
 # panda 2.0 is still in beta with no stable ETA published — remove these excludes
 # once @pandacss/dev goes stable (#222)
 # @zgeoff/bun-test-extended 0.0.2 ages past the 7-day gate ~2026-07-11 — remove then (#257)

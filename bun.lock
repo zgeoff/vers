@@ -24,7 +24,7 @@
         "@vitest/coverage-v8": "3.0.8",
         "@vitest/ui": "3.0.8",
         "@zgeoff/bun-test-extended": "0.0.2",
-        "@zgeoff/format-codemod": "0.0.2",
+        "@zgeoff/format-codemod": "0.0.5",
         "@zgeoff/oxlint-config": "0.0.2",
         "esbuild": "0.25.1",
         "lefthook": "2.1.9",
@@ -1991,7 +1991,7 @@
 
     "@zgeoff/bun-test-extended": ["@zgeoff/bun-test-extended@0.0.2", "", { "dependencies": { "jest-extended": "7.0.0", "jest-matcher-utils": "30.4.1" } }, "sha512-NHWr/WxwfAZOWxlyvAa68Dg0dc0C/vD76AqQLFoaVoTlIHFfUwNLsKZ7KLra4kESi0Brw87444bVKsri2NKb1Q=="],
 
-    "@zgeoff/format-codemod": ["@zgeoff/format-codemod@0.0.2", "", { "dependencies": { "oxc-parser": "0.137.0" }, "bin": { "format-codemod": "dist/cli.js" } }, "sha512-nYmpaiijnU23TJzreOpsZYMjNUaSzV9hENNMH8f2IQtCOiW02OyjE8cz55cEJcKDTQ622+m+lDlkJe8w9BnElw=="],
+    "@zgeoff/format-codemod": ["@zgeoff/format-codemod@0.0.5", "", { "dependencies": { "oxc-parser": "0.137.0" }, "bin": { "format-codemod": "dist/cli.js" } }, "sha512-YYyXMc9IPjCgcVGkWsXkrLfFFozpvMDgm1EUAVBuW4TyOxZpkIw4pIyg7SWdOgJ2AX0MANMoaPLC7LQdaWpG4w=="],
 
     "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.0.2", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.71.0" } }, "sha512-H/GP7joUR2a5tuiqkjN//UoafqMug4khijcafAE4EI718NTKYd3DoIlbuB84tAG6UIlXWmuJFPp23NxMYheeOg=="],
 

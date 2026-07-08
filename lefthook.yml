@@ -16,11 +16,7 @@ pre-commit:
       stage_fixed: true
     - name: format-codemod
       glob: '*.{ts,tsx}'
-      run:
-        bunx format-codemod --quiet --ignore 'projects/app-web/app/gql/**' --ignore
-        'projects/app-design-reference/public/**' --ignore '**/styled-system/**' --ignore
-        '**/.react-router/**' --ignore '**/dist/**' --ignore '**/build/**' --ignore '**/coverage/**'
-        --ignore '.worktrees/**' --ignore '.claude/**' {staged_files}
+      run: bunx format-codemod --quiet {staged_files}
       stage_fixed: true
     - name: codegen:styles
       glob: 'projects/**/*.{ts,tsx}'

@@ -1,0 +1,15 @@
+# committed codegen
+projects/app-web/app/gql/**
+projects/app-design-reference/public/**
+**/styled-system/**
+**/.react-router/**
+**/routeTree.gen.ts
+
+# build output
+**/dist/**
+**/build/**
+**/coverage/**
+
+# nested checkouts and agent scratch
+.worktrees/**
+.claude/**
