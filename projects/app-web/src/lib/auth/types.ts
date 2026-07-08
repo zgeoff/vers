@@ -17,7 +17,5 @@ export type VerifySessionKey =
   | 'loginLogout#sessionID'
   | 'onboarding#email';
 
-export type VerifySessionData = Partial<Record<VerifySessionKey, string>>;
-
-/** An update to the verify session: an explicit `undefined` clears that key. */
-export type VerifySessionUpdate = Partial<Record<VerifySessionKey, string | undefined>>;
+/** A write with an explicit `undefined` value clears that key. */
+export type VerifySessionData = Partial<Record<VerifySessionKey, string | undefined>>;
