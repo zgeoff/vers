@@ -167,10 +167,11 @@ make that competition explicit, but the core pressure starts with the world itse
 ## Naming Grammar
 
 1. **Two registers.** System vocabulary (damage types, hit deliveries, defensive layers, the
-   Compass) is clinical and stable — it lives in tables and logs. World vocabulary (places,
+   Azimuth) is clinical and stable — it lives in tables and logs. World vocabulary (places,
    factions, enemies, items) is worn and human. Never swap them.
 2. **The worn-name pattern.** World things carry an official designation and the vernacular name
-   that won: Habitat Nine → Respite. The pattern is the template, not a one-off.
+   that won: Habitat Nine → Respite, Formulation Eight → Aether. The pattern is the template, not a
+   one-off.
 3. **Numbers are history.** Serials and indices read as accumulated record, not decoration.
 4. **Institutions are called what citizens call them**, never their charter name.
 5. **Register bans.** No fantasy-magic words in either vocabulary. No console words (`root`,
@@ -178,18 +179,19 @@ make that competition explicit, but the core pressure starts with the world itse
 
 ## Vocabulary Register
 
-The register covers world vocabulary and cross-cutting provisional terms. System vocabulary lives in
-the damage-model and defensive-archetypes notes.
+The register covers world vocabulary and cross-cutting terms. System vocabulary lives in the
+damage-model and defensive-archetypes notes.
 
-| Term       | Status      | Notes                                                                            |
-| ---------- | ----------- | -------------------------------------------------------------------------------- |
-| Vers       | Keep        | Carries universe and versus: world exploration plus competition.                 |
-| avatar     | Canonical   | Enhanced human shaped by the player and sent into dangerous regions.             |
-| Respite    | Canonical   | The largest human center; officially Habitat Nine — the vernacular name won.     |
-| world      | Keep        | The broad play space and fiction layer; not just a menu.                         |
-| region     | Provisional | Neutral term for world-map areas.                                                |
-| expedition | Provisional | The core activity: outfit an avatar, send it out, recover what returns.          |
-| loot       | Keep        | Core ARPG promise.                                                               |
-| power      | Keep        | Umbrella term for rewards that help the player push farther or more efficiently. |
-| Reserve    | Provisional | The single avatar skill resource; name open until itemisation settles.           |
-| glyph      | Not canon   | Visual candidate for mythic systems, not yet a world rule.                       |
+| Term       | Status      | Notes                                                                                                                           |
+| ---------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Vers       | Keep        | Carries universe and versus: world exploration plus competition.                                                                |
+| avatar     | Canonical   | Enhanced human shaped by the player and sent into dangerous regions.                                                            |
+| Respite    | Canonical   | The largest human center; officially Habitat Nine — the vernacular name won.                                                    |
+| world      | Keep        | The broad play space and fiction layer; not just a menu.                                                                        |
+| region     | Provisional | Neutral term for world-map areas.                                                                                               |
+| expedition | Provisional | The core activity: outfit an avatar, send it out, recover what returns.                                                         |
+| loot       | Keep        | Core ARPG promise.                                                                                                              |
+| power      | Keep        | Umbrella term for rewards that help the player push farther or more efficiently.                                                |
+| Aether     | Canonical   | The single avatar skill resource: the medium avatars are infused with. Officially Formulation Eight — the old physics word won. |
+| commitment | Provisional | UI label for a build's distance from center; prose uses committed and centered as plain descriptions.                           |
+| glyph      | Not canon   | Visual candidate for mythic systems, not yet a world rule.                                                                      |

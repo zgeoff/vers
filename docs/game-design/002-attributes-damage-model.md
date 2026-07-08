@@ -165,43 +165,43 @@ table is reading the region's biography.
 ## Resource
 
 Avatars act on cadence: attacks, skills, and recovery run on their own beats, and idle play means
-those beats fire without piloting. Reserve (provisional name) is the single avatar resource layered
-over that cadence. Skills relate to it in one of three ways:
+those beats fire without piloting. Aether — the medium an avatar is infused with — is the single
+avatar resource layered over that cadence. Skills relate to it in one of three ways:
 
 - **Free** skills fire on their beat at no cost. They are the baseline lane: a starved avatar
   degrades to its free skills instead of stalling.
-- **Costed** skills spend Reserve to fire. A costed skill that cannot pay skips its beat rather than
+- **Costed** skills spend Aether to fire. A costed skill that cannot pay skips its beat rather than
   blocking the avatar — free skills keep the rotation firing, and the real tax is the output gap
   between that baseline and what the costed beat would have added. A costed skill should be stronger
   per beat than a free one by roughly the value of its cost, and the build question is whether
   regeneration can sustain it.
-- **Optional-cost** skills fire either way and consume Reserve for a stronger outcome when it is
-  available. Empowerment converts Reserve less efficiently than a costed skill's cost does —
+- **Optional-cost** skills fire either way and consume Aether for a stronger outcome when it is
+  available. Empowerment converts Aether less efficiently than a costed skill's cost does —
   flexibility is taxed, so costed skills remain the efficient way to spend. Empowerment uptime is a
   build outcome worth reporting to the player.
 
 Cost shape is a skill property, not a class rule. Archetypes may still skew the flow — heavy
-spenders, or generators that build Reserve by acting or being hit — through skills and passives;
+spenders, or generators that build Aether by acting or being hit — through skills and passives;
 generation is a behaviour a skill carries, orthogonal to its cost shape. Some abilities recur on
 cooldowns longer than a beat; the skills note owns cooldown design.
 
-Reserve regeneration and capacity are stats worth building around. Specific regeneration, cost,
+Aether regeneration and capacity are stats worth building around. Specific regeneration, cost,
 capacity, and on-full/on-empty investment stays in itemisation and skills.
 
 ## Attribute Layers
 
-Vers uses two attribute layers: the Compass, which positions an avatar, and metagame attributes,
+Vers uses two attribute layers: the Azimuth, which positions an avatar, and metagame attributes,
 which are persistent player progression. They should not compete for the same items or progression
 choices.
 
-The Compass is local to an avatar and determines what equipment and skills the avatar qualifies for.
+The Azimuth is local to an avatar and determines what equipment and skills the avatar qualifies for.
 Metagame attributes can appear on metagame passive trees, idol-like systems, account progression, or
 other long-term systems; they determine how the player stabilizes, discovers, and extracts value
 from the world.
 
-## The Compass
+## The Azimuth
 
-The Compass is the avatar attribute system: three axes, each with two poles, on which a build holds
+The Azimuth is the avatar attribute system: three axes, each with two poles, on which a build holds
 a position rather than accumulating a quantity. A fresh avatar sits at dead center.
 
 ### Axes
@@ -221,17 +221,17 @@ Position comes from the passive tree. Nodes carry directional weight — toward 
 split across axes, or none — and an avatar's position on each axis is the sum of the weight along
 its allocated path. Augments may reweight regions of the tree.
 
-Specialization is an avatar's distance from center. It is emergent — no system assigns it — and it
-distinguishes committed builds (far from center in their chosen directions) from deliberate
-generalists (near it).
+An avatar's distance from center is emergent — no system assigns it — and it distinguishes committed
+builds (far from center in their chosen directions) from deliberate generalists (near it). The
+distance is not a named stat; committed and centered are descriptions of position.
 
 ### Requirements
 
-The Compass sets requirements; it never grants stats. Position qualifies equipment and skills.
+The Azimuth sets requirements; it never grants stats. Position qualifies equipment and skills.
 
 - **Pole requirements** demand a minimum position toward a pole ("requires heavy 60"). They mark
   identity equipment, and exist only where the item's nature earns them.
-- **Center requirements** demand Specialization at or below a threshold. They mark adaptive
+- **Center requirements** demand a position within a threshold of center. They mark adaptive
   equipment that wants an uncommitted chassis — staying centered is a build choice with its own
   exclusive kit.
 
@@ -244,7 +244,7 @@ changes what a build can do, never just how big its numbers are.
 
 Enemies and regions hold positions on the same axes, and their fingerprints carry more: damage mix
 and hit deliveries. A build renders as a silhouette on a six-spoke chart — opposing spokes per axis,
-at most one lit per axis, Specialization visible as the silhouette's size. Enemy and region
+at most one lit per axis, distance from center visible as the silhouette's size. Enemy and region
 silhouettes show what they emit, so both poles of an axis may light, and a matchup reads offense
 against defense: their damage and deliveries against a build's answers.
 
@@ -272,7 +272,7 @@ and the market. Alignment mechanics may draw on that geometry.
 
 ## Scaling Philosophy
 
-The Compass positions a build without scaling it: action rate, recovery, and damage scaling live in
+The Azimuth positions a build without scaling it: action rate, recovery, and damage scaling live in
 gear, skills, and passives.
 
 Build archetypes come primarily from skills, gear, passives, damage types, status effects, summons,
@@ -289,6 +289,6 @@ meaningful build or encounter identity.
 ## Non-Goals
 
 This note does not define exact formulas, ailment lists, resistance caps, interception math,
-avoidance math, critical chance or magnitude baselines, Reserve cost or regeneration baselines,
-Compass requirement thresholds or weight magnitudes, or complete itemisation rules. Those belong in
+avoidance math, critical chance or magnitude baselines, Aether cost or regeneration baselines,
+Azimuth requirement thresholds or weight magnitudes, or complete itemisation rules. Those belong in
 downstream combat, itemisation, enemy, and progression notes.

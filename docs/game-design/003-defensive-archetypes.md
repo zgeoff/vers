@@ -138,16 +138,16 @@ Life is the final pool; reaching zero ends the activity under the defeat rules o
 Recovery styles are separate investments, never one stat:
 
 - **Regeneration** — steady per-beat recovery of a pool.
-- **Leech** — recovery from damage dealt, invested separately for Life, Barrier, and Reserve.
+- **Leech** — recovery from damage dealt, invested separately for Life, Barrier, and Aether.
 - **On-intercept effects** — recovery or charge effects triggered by a successful Block or Deflect.
 - **Encounter-start effects** — recovery or resources granted at the start of every encounter after
   an activity's first. This is the only between-fight recovery in the game.
 
-Defensive uptime never depends on spendable Reserve: a starved avatar keeps its defenses.
+Defensive uptime never depends on spendable Aether: a starved avatar keeps its defenses.
 
-## Compass Interaction
+## Azimuth Interaction
 
-Compass position sets requirements for identity equipment on every axis, defensive pieces included;
+Azimuth position sets requirements for identity equipment on every axis, defensive pieces included;
 no position strengthens a defensive layer directly. Melee-side builds live in strike delivery and
 lean on Evasion and Block; ranged-side builds live in projectile exposure and lean on Dodge and
 Deflect. Equipment bases that carry layer identities are an option the itemisation note may take up,
