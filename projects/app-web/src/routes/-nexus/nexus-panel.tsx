@@ -13,7 +13,6 @@ interface NexusPanelProps {
  * action for one who doesn't and the (currently placeholder) HUD for one who does. Client lane
  * end to end per the two-lane rule — this is where tick-driven HUD state will land.
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- @orpc/tanstack-query's query-utils shape nests anonymous mapped-object layers with mutable function-valued members; no named type and no deeply-readonly form the rule's allow list can match
 export function NexusPanel(props: NexusPanelProps) {
   const query = useQuery(props.orpc.avatar.getAvatars.queryOptions({ input: {}, retry: false }));
 

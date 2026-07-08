@@ -6,7 +6,6 @@ interface CurrentUserPanelProps {
   readonly orpc: OrpcQueryUtils;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- @orpc/tanstack-query's query-utils shape nests anonymous mapped-object layers with mutable function-valued members; no named type and no deeply-readonly form the rule's allow list can match
 export function CurrentUserPanel(props: CurrentUserPanelProps) {
   const query = useQuery(props.orpc.user.getCurrentUser.queryOptions({ input: {}, retry: false }));
 
