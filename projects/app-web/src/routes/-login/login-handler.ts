@@ -69,7 +69,10 @@ export async function loginHandler(formData: FormData): Promise<LoginResult | Re
   });
 
   if (twoFactorVerification !== null) {
-    await updateVerifySession({ 'login2FA#sessionID': session.id });
+    await updateVerifySession({
+      'login2FA#sessionID': session.id,
+      'login2FA#target': user.id,
+    });
 
     const searchParams = new URLSearchParams({ target: user.id, type: '2fa' });
 

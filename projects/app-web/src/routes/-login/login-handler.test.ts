@@ -106,6 +106,7 @@ test('it redirects to verify-otp and stores the pending session for a 2FA-enable
 
   expect(outcome.value).toStartWith('/verify-otp?');
   expect(outcome.cookies['en_verification']).toContainKey('login2FA#sessionID');
+  expect(outcome.cookies['en_verification']).toContainEntry(['login2FA#target', user.id]);
 });
 
 test('it redirects to force-logout and stores the pending session when another session is live', async () => {

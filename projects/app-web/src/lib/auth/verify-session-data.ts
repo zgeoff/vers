@@ -4,6 +4,7 @@
  */
 export type VerifySessionKey =
   | 'login2FA#sessionID'
+  | 'login2FA#target'
   | 'loginLogout#email'
   | 'loginLogout#sessionID'
   | 'onboarding#email';

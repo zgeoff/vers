@@ -1,5 +1,7 @@
 import { safe } from '@orpc/client';
+import { redirect } from '@tanstack/react-router';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
+import { getVerifySession } from '../../lib/auth/get-verify-session';
 import { SpamError } from '../../lib/auth/spam-error';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import { runVerification } from './run-verification';
@@ -33,10 +35,26 @@ export async function verifyOTPHandler(formData: FormData): Promise<VerifyOTPRes
     return { formError: 'Invalid code', status: 'invalid-fields' };
   }
 
+  // the 2fa login target must come from the pending session, not the form: a caller holding any
+  // 2fa-enabled account could otherwise pass a code for that account while the session being
+  // completed belongs to a different user
+  let target = submission.data.target;
+
+  if (submission.data.type === '2fa') {
+    const verifySession = await getVerifySession();
+    const boundTarget = verifySession['login2FA#target'];
+
+    if (boundTarget === undefined) {
+      throw redirect({ href: '/login' });
+    }
+
+    target = boundTarget;
+  }
+
   const [verifyError] = await safe(
     verificationClient.verifyCode({
       code: submission.data.code,
-      target: submission.data.target,
+      target,
       type: submission.data.type,
     }),
   );
@@ -47,6 +65,6 @@ export async function verifyOTPHandler(formData: FormData): Promise<VerifyOTPRes
 
   return runVerification(submission.data.type, {
     redirectTo: submission.data.redirect,
-    target: submission.data.target,
+    target,
   });
 }

@@ -25,11 +25,14 @@ export async function run2FA(ctx: Readonly<RunVerificationContext>): Promise<nev
     sessionClient.getSession({ id: sessionID }, { context: { headers: sessionBearerHeaders } }),
   ]);
 
-  if (user === null || session === null) {
+  if (user === null || session === null || session.userID !== ctx.target) {
     throw redirect({ href: '/login' });
   }
 
-  await updateVerifySession({ 'login2FA#sessionID': undefined });
+  await updateVerifySession({
+    'login2FA#sessionID': undefined,
+    'login2FA#target': undefined,
+  });
 
   return completeSessionSignIn({ email: user.email, redirectTo: ctx.redirectTo, session });
 }

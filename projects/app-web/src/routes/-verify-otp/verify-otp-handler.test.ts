@@ -150,7 +150,11 @@ test('it completes a pending 2FA login and clears the redirect target', async ()
   });
 
   const outcome = await withRequestContext(
-    { cookies: { en_verification: { 'login2FA#sessionID': pendingSession.id } } },
+    {
+      cookies: {
+        en_verification: { 'login2FA#sessionID': pendingSession.id, 'login2FA#target': user.id },
+      },
+    },
     async () => {
       const redirectHref = await verifyOTPHandler(
         buildVerifyOTPFormData({
@@ -170,6 +174,69 @@ test('it completes a pending 2FA login and clears the redirect target', async ()
   expect(outcome.value).toBe('/nexus');
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
   expect(outcome.cookies['en_verification']).toStrictEqual({});
+});
+
+test('it rejects a 2FA login carrying a target other than the pending session owner', async () => {
+  const victim = await userCollection.create({
+    createdAt: new Date(),
+    email: 'verify-otp-2fa-victim@vers.test',
+    id: createId(),
+    name: 'Verify OTP 2FA Victim',
+    password: 'password123',
+    seed: 0,
+    updatedAt: new Date(),
+    username: 'verify-otp-2fa-victim',
+  });
+
+  const attacker = await userCollection.create({
+    createdAt: new Date(),
+    email: 'verify-otp-2fa-attacker@vers.test',
+    id: createId(),
+    name: 'Verify OTP 2FA Attacker',
+    password: 'password123',
+    seed: 0,
+    updatedAt: new Date(),
+    username: 'verify-otp-2fa-attacker',
+  });
+
+  await verificationCollection.create({
+    code: '777777',
+    id: createId(),
+    target: attacker.id,
+    type: '2fa',
+  });
+
+  const victimSession = await sessionCollection.create({
+    createdAt: new Date(),
+    expiresAt: new Date(Date.now() + 60_000),
+    id: createId(),
+    ipAddress: '127.0.0.1',
+    previousRefreshToken: null,
+    refreshToken: null,
+    updatedAt: new Date(),
+    userID: victim.id,
+    verified: false,
+  });
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_verification: {
+          'login2FA#sessionID': victimSession.id,
+          'login2FA#target': victim.id,
+        },
+      },
+    },
+    () =>
+      verifyOTPHandler(
+        buildVerifyOTPFormData({ code: '777777', target: attacker.id, type: '2fa' }),
+      ),
+  );
+
+  expect(outcome.value).toStrictEqual({
+    formError: 'Invalid or expired code',
+    status: 'invalid-fields',
+  });
 });
 
 test('it throws for a 2fa-setup verify, which this route does not support', async () => {
