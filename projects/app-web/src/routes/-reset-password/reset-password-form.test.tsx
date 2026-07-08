@@ -27,12 +27,6 @@ test('it renders the hidden email and reset-token fields', async () => {
   });
 });
 
-/**
- * `reset-password-handler.test.ts` drives every `ResetPasswordResult` branch directly. Those
- * branches return a plain result object, which an uncompiled `createServerFn` export (what
- * `bun test` runs) can't relay back to its caller — only a `Response` or a thrown redirect
- * round-trips, so this file sticks to the honeypot's `Response` branch.
- */
 test('it shows a generic failure message for a rejected submission', async () => {
   const user = userEvent.setup();
 

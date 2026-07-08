@@ -23,12 +23,6 @@ test('it renders every field the account-creation form collects', async () => {
   );
 });
 
-/**
- * `onboarding-handler.test.ts` drives every `OnboardingResult` branch directly. The field-error
- * branches return a plain result object, which an uncompiled `createServerFn` export (what
- * `bun test` runs) can't relay back to its caller — only a `Response` or a thrown redirect
- * round-trips, so this file sticks to the honeypot's `Response` branch.
- */
 test('it shows a generic failure message for a rejected submission', async () => {
   const user = userEvent.setup();
 

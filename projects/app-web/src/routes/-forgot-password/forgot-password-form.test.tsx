@@ -5,12 +5,6 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ForgotPasswordForm } from './forgot-password-form';
 
-/**
- * `forgot-password-handler.test.ts` drives every `ForgotPasswordResult` branch directly. The
- * field-error branch returns a plain result object, which an uncompiled `createServerFn` export
- * (what `bun test` runs) can't relay back to its caller — only a `Response` or a thrown redirect
- * round-trips, so this file sticks to the honeypot's `Response` branch.
- */
 test('it shows a generic failure message for a rejected submission', async () => {
   const user = userEvent.setup();
 

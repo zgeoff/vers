@@ -24,6 +24,11 @@ export interface RequestContextOutcome<T> {
  * establishes the Start framework's own request-scoped `AsyncLocalStorage` context, so a real
  * `createServerFn`-wrapped export (not just its handler body) can dispatch under `bun test`, which
  * never runs the compiler pass that would otherwise supply it.
+ *
+ * That uncompiled dispatch relays only a `Response` or a thrown redirect/error back to the caller —
+ * a handler's plain result object resolves as `undefined`. Component tests therefore cover the
+ * branches that round-trip that way; plain-object branches are asserted at the handler layer, and
+ * the real compiled pipeline is the smoke suite's to cover.
  */
 export async function withRequestContext<T>(
   init: Readonly<RequestContextInit>,
