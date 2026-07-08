@@ -147,14 +147,6 @@ The defensive layers cost no Aether to run: a starved avatar keeps its defenses.
 defensive skills, cooldowns, or pools are an option the skills and itemisation notes may take up,
 not a rule here.
 
-## Azimuth Interaction
-
-Azimuth position sets requirements for identity equipment on every axis, defensive pieces included;
-no position strengthens a defensive layer directly. Melee-side builds live in strike delivery and
-lean on Evasion and Block; ranged-side builds live in projectile exposure and lean on Dodge and
-Deflect. Equipment bases that carry layer identities are an option the itemisation note may take up,
-not a rule here.
-
 ## Non-Goals
 
 This note does not define avoidance or interception math, smoothing functions, the armour curve,
