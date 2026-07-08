@@ -2,9 +2,6 @@ name: PR
 
 on:
   pull_request:
-    branches:
-      - main
-      - 'rebuild/**'
 
 permissions:
   actions: read
