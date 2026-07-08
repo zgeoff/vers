@@ -272,7 +272,8 @@ and the market. Alignment mechanics may draw on that geometry.
 
 ## Scaling Philosophy
 
-Action rate, recovery, and damage scaling live in gear, skills, and passives.
+The Compass positions a build without scaling it: action rate, recovery, and damage scaling live in
+gear, skills, and passives.
 
 Build archetypes come primarily from skills, gear, passives, damage types, status effects, summons,
 region interactions, and defensive-layer investment.

@@ -55,9 +55,10 @@ without making lore the main activity.
 
 An avatar is an enhanced human shaped by the player and capable of entering regions that ordinary
 people cannot survive. "Avatar" is the worn remnant of a longer phrase — avatar _of_ something — and
-what filled the blank is lost, contested knowledge. What is known: the capacity is inborn, appearing
-by chance in some and not others, and no institution can manufacture it. The player-facing fantasy
-stays simple — the contract, embodied in one person.
+what filled the blank is lost; rival accounts contest what it was. What is known: the capacity is
+inborn, appearing by chance in some and not others, and no institution can manufacture it. The
+player-facing fantasy stays simple: shape your avatar, send them into danger, recover power, push
+deeper — the contract, embodied in one person.
 
 Avatars are embodied people, not disposable drones. They can be augmented, equipped, specialized,
 injured, defeated, recovered, ranked, and eventually set against other avatars.
@@ -81,8 +82,8 @@ Three institutions anchor Respite, each defined by what it wants from an avatar'
 Each institution owns the screens that express it: a major screen reads as an artifact of the
 institution behind it, so each feels distinct and inhabited. These are thematic anchors: downstream
 notes attach mechanics to them as they need a licensor, a market, or a fabricator, and institution
-names follow the world's naming grammar. Institutions are built to bear player alignment and perks;
-that design belongs to its own note.
+names follow the world's naming grammar. Institutions are designed to carry player alignment and
+perks; that design belongs to its own note.
 
 The other habitats are the external axis. Records are incomplete: some habitats fell and are ruin,
 some still run with no one left inside, some broke away and became societies Respite no longer

@@ -59,7 +59,8 @@ Two properties of an activity decide what defense matters:
 - **Encounter density** — monsters per encounter — decides how much hit volume matters: dense packs
   feed avoidance and armour, sparse elites feed interception.
 
-Carried debuffs make persistent-leaning regions genuinely attritional — that is their identity.
+Carried debuffs make persistent-leaning regions genuinely attritional: the avatar wears down across
+the encounter chain, and that attrition is those regions' identity.
 
 ## Avoidance: Evasion & Dodge
 
