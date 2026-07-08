@@ -16,7 +16,7 @@ test('it stamps a csp nonce header onto the request before calling next', async 
   });
 
   expect(seenNonce).toBeString();
-  expect(seenNonce).not.toBeEmpty();
+  expect(seenNonce).not.toBe('');
 });
 
 test('it applies the csp and fixed security headers to an html response', async () => {
