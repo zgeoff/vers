@@ -20,7 +20,7 @@ export function checkHoneypot(formData: FormData): void {
   const validFrom = formData.get(HONEYPOT_VALID_FROM_FIELD_NAME);
   const validFromMs = typeof validFrom === 'string' ? Number(validFrom) : Number.NaN;
 
-  if (!Number.isFinite(validFromMs) || Date.now() < validFromMs) {
+  if (!Number.isFinite(validFromMs) || validFromMs <= 0 || Date.now() < validFromMs) {
     throw new SpamError('Form not submitted properly');
   }
 }

@@ -22,6 +22,28 @@ test('it flags a submission with a filled-in honeypot field', () => {
   }).toThrowWithMessage(Error, 'Form not submitted properly');
 });
 
+test('it flags a submission whose valid-from field is an empty string outside test mode', () => {
+  const formData = new FormData();
+
+  formData.set(HONEYPOT_VALID_FROM_FIELD_NAME, '');
+
+  const previousNodeEnv = process.env.NODE_ENV;
+
+  process.env.NODE_ENV = 'production';
+
+  try {
+    expect(() => {
+      checkHoneypot(formData);
+    }).toThrowWithMessage(Error, 'Form not submitted properly');
+  } finally {
+    if (previousNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = previousNodeEnv;
+    }
+  }
+});
+
 test('it flags a submission arriving before its form-render valid-from timestamp outside test mode', () => {
   const formData = new FormData();
 
