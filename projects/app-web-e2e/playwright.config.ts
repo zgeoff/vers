@@ -1,9 +1,7 @@
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env['BASE_URL'] ?? 'http://localhost:4000';
-
-const parsedBaseURL = new URL(baseURL);
+const baseURL = process.env['BASE_URL'] ?? 'http://localhost:3000';
 
 // having a million issues trying to use __dirname to establish a reliable path
 // so it's easier to do this to handle the case when this file gets parsed for
@@ -16,7 +14,11 @@ const appWebRoot = path.resolve(projectRoot, '..', 'app-web');
 
 const dotEnvFile = path.join(projectRoot, '.env');
 
-process.loadEnvFile(dotEnvFile);
+try {
+  process.loadEnvFile(dotEnvFile);
+} catch {
+  // no .env locally (CI writes one from a secret) — the phase 1 smoke spec needs no secrets
+}
 
 export default defineConfig({
   expect: {
@@ -42,18 +44,13 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    // the suite runs against the production build: the e2e vite mode bakes
-    // VITE_ENABLE_MSW in so the mock layer and seed ship in the bundle, and
-    // the server process runs as NODE_ENV=production like a real deploy
-    command: 'bunx turbo run build:e2e --filter=@vers/web && node ./server.mjs',
+    // boots the dev server: its own vite plugin starts the mock backend (see
+    // app-web/vite.config.ts), giving specs a real request/response cycle without a production
+    // build
+    command: 'bun run dev',
     cwd: appWebRoot,
     env: {
-      NODE_ENV: 'production',
-
-      // lifts the rate-limit caps for test traffic — the server otherwise
-      // 429s parallel workers arriving from one address
       PLAYWRIGHT_TEST_BASE_URL: baseURL,
-      PORT: parsedBaseURL.port,
       SESSION_SECRET: 'e2e-session-secret',
     },
     // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)

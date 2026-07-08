@@ -1,0 +1,115 @@
+import { expect, test } from 'bun:test';
+import { isRedirect } from '@tanstack/react-router';
+import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
+import * as db from '../../mocks/db';
+import { buildFormData } from '../../test-utils/build-form-data';
+import { withRequestContext } from '../../test-utils/with-request-context';
+import { resetPasswordHandler } from './reset-password-handler';
+
+const validFields = {
+  confirmPassword: 'new-password123',
+  email: 'reset-password@vers.test',
+  password: 'new-password123',
+  resetToken: 'a-reset-token',
+};
+
+test('it redirects home for an already signed-in caller', () => {
+  const promise = withRequestContext({ cookies: { en_session: { sessionID: 'session-1' } } }, () =>
+    resetPasswordHandler(buildFormData(validFields)),
+  );
+
+  expect(promise).rejects.toMatchObject({ options: { href: '/' } });
+});
+
+test('it rejects a submission with a filled-in honeypot field', async () => {
+  const formData = buildFormData(validFields);
+
+  formData.set(HONEYPOT_FIELD_NAME, 'filled in by a bot');
+
+  const outcome = await withRequestContext({}, () => resetPasswordHandler(formData));
+
+  if (!(outcome.value instanceof Response)) {
+    throw new Error('expected a Response');
+  }
+
+  expect(outcome.value.status).toBe(400);
+});
+
+test('it reports a field error for a mismatched password confirmation', async () => {
+  const outcome = await withRequestContext({}, () =>
+    resetPasswordHandler(
+      buildFormData({ ...validFields, confirmPassword: 'not-the-same-password' }),
+    ),
+  );
+
+  expect(outcome.value).toStrictEqual({
+    fieldErrors: { confirmPassword: 'The passwords must match' },
+    status: 'invalid-fields',
+  });
+});
+
+test('it reports a form error for an email with no matching account', async () => {
+  const outcome = await withRequestContext({}, () =>
+    resetPasswordHandler(buildFormData(validFields)),
+  );
+
+  expect(outcome.value).toStrictEqual({
+    fieldErrors: {},
+    formError: 'This reset link is invalid or has expired.',
+    status: 'invalid-fields',
+  });
+});
+
+test('it reports a form error for a stale or invalid reset token', async () => {
+  await db.userCollection.create({ email: 'reset-password-bad-token@vers.test' });
+
+  const outcome = await withRequestContext({}, () =>
+    resetPasswordHandler(
+      buildFormData({
+        ...validFields,
+        email: 'reset-password-bad-token@vers.test',
+        resetToken: 'the-wrong-token',
+      }),
+    ),
+  );
+
+  expect(outcome.value).toStrictEqual({
+    fieldErrors: {},
+    formError: 'This reset link is invalid or has expired.',
+    status: 'invalid-fields',
+  });
+});
+
+test('it resets the password, signs the caller out everywhere, and redirects to login', async () => {
+  const user = await db.userCollection.create({
+    email: 'reset-password-success@vers.test',
+    passwordResetToken: 'the-right-token',
+  });
+
+  await db.sessionCollection.create({ userID: user.id });
+
+  const outcome = await withRequestContext({}, async () => {
+    const redirectHref = await resetPasswordHandler(
+      buildFormData({
+        ...validFields,
+        email: 'reset-password-success@vers.test',
+        resetToken: 'the-right-token',
+      }),
+    )
+      .then(() => null)
+      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+
+    return redirectHref;
+  });
+
+  expect(outcome.value).toBe('/login');
+
+  const updated = db.userCollection.findFirst((q) => q.where({ id: user.id }));
+
+  expect(updated?.password).toBe('new-password123');
+  expect(updated?.passwordResetToken).toBeNull();
+
+  const remainingSessions = db.sessionCollection.findMany((q) => q.where({ userID: user.id }));
+
+  expect(remainingSessions).toStrictEqual([]);
+});

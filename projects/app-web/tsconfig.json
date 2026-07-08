@@ -11,8 +11,7 @@
     "panda.config.ts",
     "vite.config.ts",
     "src/**/*.ts",
-    "src/**/*.tsx",
-    "mocks/**/*.ts"
+    "src/**/*.tsx"
   ],
   "exclude": []
 }

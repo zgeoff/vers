@@ -1,3 +1,14 @@
+## Type-only modules
+
+A module whose exports are all types or interfaces is a defect: those exports belong in the
+directory's `types.ts`, one per directory, holding every type its files share.
+
+## Invariants
+
+Express a true invariant — a condition only a bug can break — with `tiny-invariant`
+(`invariant(value, 'message')`) rather than a hand-rolled `if`/`throw`. A condition real input can
+trigger is ordinary control flow, not an invariant.
+
 ## Writing
 
 ### Banned words
@@ -132,14 +143,18 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
 - Behavioural test names describe observable behaviour and never cite internal identifiers
   (`it flags the run as invalid`, not `it sets isValid to false`).
 - Declare test data inline per test in MSW-mocked packages (a client hitting a mocked service, or
-  app-web): no factory builders (`createUser`) and no shared mutable module-level fixtures. One-off
-  helpers stay inline — reusable ones live in `test-utils/`. Packages whose tests exercise a real
-  postgres follow the real-database factories-and-composites standard.
+  app-web): each test states the fields its behavior and assertions depend on and leans on the
+  collection schemas' defaults for the rest — no factory builders (`createUser`), no shared mutable
+  module-level fixtures, no restating a default. One-off helpers stay inline — reusable ones live in
+  `test-utils/`. Packages whose tests exercise a real postgres follow the real-database
+  factories-and-composites standard.
 - **Stateful backends** use `@msw/data`: build an in-memory store from a zod schema
   (`new Collection({ schema: z.object({ … }) })`, `.create()`/`.createMany()`,
   `.findFirst((q) => q.where(…))`/`.findMany()`, `.defineRelations()`) and read/write it directly
   from the oRPC mock handlers. Models are zod schemas — never `@msw/data`'s `factory()` model
-  dictionary.
+  dictionary. Every field of a row schema carries a `.default()` — faker-driven where the value is
+  arbitrary — except a discriminator whose value gives a row its meaning; the preload seeds faker
+  once so runs are reproducible.
 - **React:** React Testing Library on happy-dom (bootstrapped via `@happy-dom/global-registrator` in
   the preload); prefer a project `render` util over bare RTL and the utils it returns over the
   imported `screen`; load data through the centralized MSW handlers + `@msw/data` in-memory store
@@ -156,6 +171,9 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
   like any component — render per state, assert visible behaviour; that covers branch selection.
 - Server-fn bodies are named exported handlers that `createServerFn` wraps, so tests call the body
   directly.
+- An uncompiled `createServerFn` dispatch relays only a `Response` or a thrown redirect/error to its
+  caller; a plain result object resolves as `undefined`. Component tests cover the branches that
+  round-trip that way — plain-object branches are asserted at the handler layer.
 - The Flight pipeline (`renderServerComponent`, composite components) and ambient reads cannot run
   under bun test (one module graph, no `react-server` export condition). Their coverage is the
   real-runtime smoke suite, not unit tests.
