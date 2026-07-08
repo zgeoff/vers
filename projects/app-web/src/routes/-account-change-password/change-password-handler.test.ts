@@ -1,33 +1,16 @@
 import { expect, test } from 'bun:test';
-import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
 import { mintStepUpTransactionToken } from '../../lib/auth/step-up-transaction-token';
 import * as db from '../../mocks/db';
 import { buildFormData } from '../../test-utils/build-form-data';
+import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { changePasswordHandler } from './change-password-handler';
-
-async function createSignedInUser(): Promise<{
-  readonly cookies: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
-  readonly userID: string;
-}> {
-  const userID = createId();
-  const sessionID = createId();
-
-  await db.userCollection.create({ id: userID, password: 'original-password' });
-
-  await db.sessionCollection.create({ id: sessionID, userID });
-
-  return {
-    cookies: { en_session: { accessToken: sessionID, refreshToken: 'refresh', sessionID } },
-    userID,
-  };
-}
 
 const validNewPassword = { confirmPassword: 'new-password123', password: 'new-password123' };
 
 test('it reports a field error when the new passwords do not match', async () => {
-  const signedIn = await createSignedInUser();
+  const signedIn = await createSignedInUser({ password: 'original-password' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     changePasswordHandler(
@@ -46,7 +29,7 @@ test('it reports a field error when the new passwords do not match', async () =>
 });
 
 test('it reports invalid credentials for the wrong current password', async () => {
-  const signedIn = await createSignedInUser();
+  const signedIn = await createSignedInUser({ password: 'original-password' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     changePasswordHandler(
@@ -61,7 +44,7 @@ test('it reports invalid credentials for the wrong current password', async () =
 });
 
 test('it changes the password and redirects to account for a caller with no 2FA', async () => {
-  const signedIn = await createSignedInUser();
+  const signedIn = await createSignedInUser({ password: 'original-password' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const redirectHref = await changePasswordHandler(
@@ -81,7 +64,7 @@ test('it changes the password and redirects to account for a caller with no 2FA'
 });
 
 test('it reports step-up-required for a 2FA-enabled caller with no transaction token', async () => {
-  const signedIn = await createSignedInUser();
+  const signedIn = await createSignedInUser({ password: 'original-password' });
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
@@ -95,7 +78,7 @@ test('it reports step-up-required for a 2FA-enabled caller with no transaction t
 });
 
 test('it changes the password once a valid step-up token is attached', async () => {
-  const signedIn = await createSignedInUser();
+  const signedIn = await createSignedInUser({ password: 'original-password' });
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
