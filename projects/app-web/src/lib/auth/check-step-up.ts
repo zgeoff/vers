@@ -35,6 +35,7 @@ export async function checkStepUp(opts: Readonly<CheckStepUpOptions>): Promise<C
   }
 
   const authSession = await getAuthSession();
+
   const sessionID = authSession.sessionID ?? null;
 
   if (

@@ -30,6 +30,7 @@ export function makeRequestLogger(logger: RequestLoggerSink): Middleware {
     logger.info(`${ANSI.bold}[<---]${ANSI.reset} ${request.method} ${path} processing...`);
 
     const response = await next();
+
     const duration = performance.now() - start;
     const methodColor = request.method === 'GET' ? ANSI.green : ANSI.yellow;
     const methodStyled = `${ANSI.bold}${methodColor}${request.method}${ANSI.reset}`;

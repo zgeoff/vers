@@ -17,6 +17,7 @@ test('it serves the production build health check and anonymous home page', asyn
   const health = await request.get('/health');
 
   expect(health.status()).toBe(200);
+
   await expect(health.json()).resolves.toStrictEqual({ ok: true });
 
   const root = await request.get('/');
