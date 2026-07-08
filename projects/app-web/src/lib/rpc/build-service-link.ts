@@ -1,6 +1,7 @@
 import { RPCLink } from '@orpc/client/fetch';
 import { createIsomorphicFn } from '@tanstack/react-start';
-import { attachAuthHeaders } from './attach-auth-headers';
+import { getAuthSession } from '../auth/get-auth-session';
+import { buildAuthHeaders } from './build-auth-headers';
 import { buildAuthenticatedFetch } from './build-authenticated-fetch';
 import type { ServiceName } from './service-urls';
 import { SERVICE_URLS } from './service-urls';
@@ -29,7 +30,15 @@ export function buildServiceLink(service: ServiceName): RPCLink<ServiceLinkConte
       () =>
         new RPCLink<ServiceLinkContext>({
           fetch: buildAuthenticatedFetch(),
-          headers: (options) => options.context.headers ?? attachAuthHeaders(),
+          headers: async (options) => {
+            if (options.context.headers !== undefined) {
+              return options.context.headers;
+            }
+
+            const session = await getAuthSession();
+
+            return buildAuthHeaders(session);
+          },
           url: `${SERVICE_URLS[service]}/rpc`,
         }),
     )
