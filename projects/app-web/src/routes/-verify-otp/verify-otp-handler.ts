@@ -42,6 +42,7 @@ export async function verifyOTPHandler(formData: FormData): Promise<VerifyOTPRes
 
   if (submission.data.type === '2fa') {
     const verifySession = await getVerifySession();
+
     const boundTarget = verifySession['login2FA#target'];
 
     if (boundTarget === undefined) {

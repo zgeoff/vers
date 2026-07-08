@@ -11,6 +11,7 @@ export async function requireOnboardingSession(): Promise<OnboardingSession> {
   await requireAnonymous();
 
   const verifySession = await getVerifySession();
+
   const email = verifySession['onboarding#email'];
 
   if (email === undefined) {

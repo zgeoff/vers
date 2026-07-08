@@ -22,6 +22,7 @@ export function buildAuthenticatedFetch(): (
     // the retry needs its own untouched body: cloning after `fetch` consumes `request` throws,
     // since a `Request` with a body can only be read once
     const retryable = request.clone();
+
     const response = await fetch(request, init);
 
     if (response.status !== 401) {

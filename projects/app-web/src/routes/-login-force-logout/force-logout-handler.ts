@@ -21,7 +21,9 @@ export async function forceLogoutHandler(formData: FormData): Promise<never> {
   await requireAnonymous();
 
   const intent = formData.get('intent');
+
   const verifySession = await getVerifySession();
+
   const sessionID = verifySession['loginLogout#sessionID'];
 
   if (intent !== 'confirm' || sessionID === undefined) {

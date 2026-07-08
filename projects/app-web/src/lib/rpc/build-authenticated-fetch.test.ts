@@ -30,6 +30,7 @@ test('it retries a 401 with the refreshed access token and the original body int
     http.post(probeUrl, () => HttpResponse.json({}, { status: 401 }), { once: true }),
     http.post(probeUrl, async (info) => {
       retried.authorization = info.request.headers.get('authorization');
+
       retried.body = await info.request.json();
 
       return HttpResponse.json({ ok: true });

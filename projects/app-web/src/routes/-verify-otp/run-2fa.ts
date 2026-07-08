@@ -12,6 +12,7 @@ import type { RunVerificationContext } from './run-verification-context';
  */
 export async function run2FA(ctx: Readonly<RunVerificationContext>): Promise<never> {
   const verifySession = await getVerifySession();
+
   const sessionID = verifySession['login2FA#sessionID'];
 
   if (sessionID === undefined) {
