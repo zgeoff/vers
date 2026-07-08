@@ -15,7 +15,7 @@ COPY . .
 
 RUN turbo prune @vers/web --docker
 
-# --- full install (with devDependencies) to run the vite/react-router build ---
+# --- full install (with devDependencies) to run the vite build ---
 FROM base AS installer
 
 COPY --from=pruner /app/out/json/ .
