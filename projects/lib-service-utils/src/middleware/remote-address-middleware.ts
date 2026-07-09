@@ -1,7 +1,7 @@
 import type { HttpBindings } from '@hono/node-server';
 import type { Context, Next } from 'hono';
 
-interface Env {
+export interface RemoteAddressEnv {
   Bindings: {
     server?: HttpBindings;
   };
@@ -20,8 +20,7 @@ interface Env {
  * case of an empty string. Otherwise we should ALWAYS have an IP address set in
  * development and production environments.
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export async function remoteAddressMiddleware(ctx: Context<Env>, next: Next) {
+export async function remoteAddressMiddleware(ctx: Context<RemoteAddressEnv>, next: Next) {
   const ipAddress =
     ctx.req.header('fly-client-ip') ??
     ctx.req.header('x-forwarded-for')?.split(',')[0] ??

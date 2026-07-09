@@ -9,6 +9,17 @@ import { createServiceKeyPair } from './test-utils/create-service-key-pair';
 import { createServiceToken } from './test-utils/create-service-token';
 import type { ServiceContext } from './types';
 
+const OPENAPI_RESPONSES_SHAPE = z.record(z.string(), z.unknown());
+
+const OPENAPI_PATH_ITEM_SHAPE = z.object({
+  get: z.object({ responses: OPENAPI_RESPONSES_SHAPE }).optional(),
+});
+
+/** The slice of a generated OpenAPI document the `/spec.json` test inspects. */
+const OPENAPI_DOCUMENT_SHAPE = z.object({
+  paths: z.record(z.string(), OPENAPI_PATH_ITEM_SHAPE),
+});
+
 function buildTestContract() {
   return {
     getThing: authedRoute
@@ -392,10 +403,9 @@ test('it serves /spec.json declaring the 401 response for the authed route', asy
 
   expect(response.status).toBe(200);
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
-  const document = (await response.json()) as {
-    paths: Record<string, { get?: { responses: Record<string, unknown> } }>;
-  };
+  const responseBody = await response.json();
+
+  const document = OPENAPI_DOCUMENT_SHAPE.parse(responseBody);
 
   expect(Object.keys(document.paths)).not.toBeEmpty();
   expect(document.paths['/things']?.get?.responses).toContainKey('401');

@@ -23,8 +23,7 @@ export async function parseServiceToken(
 ): Promise<ServiceTokenResolution> {
   const authorization = request.headers.get('authorization');
 
-  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-  if (!authorization?.startsWith('Bearer ')) {
+  if (authorization === null || !authorization.startsWith('Bearer ')) {
     return { failure: 'invalid-service-token' };
   }
 

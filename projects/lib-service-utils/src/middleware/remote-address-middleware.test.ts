@@ -1,11 +1,10 @@
 import { expect, mock, test } from 'bun:test';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
+import type { RemoteAddressEnv } from './remote-address-middleware';
 import { remoteAddressMiddleware } from './remote-address-middleware';
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-const testHandlerSpy = mock<(ctx: Context) => Promise<Response>>((ctx: Context) =>
-  // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
+const testHandlerSpy = mock<(ctx: Context<RemoteAddressEnv>) => Promise<Response>>((ctx) =>
   Promise.resolve(ctx.json({ ipAddress: ctx.get('ipAddress') })),
 );
 
