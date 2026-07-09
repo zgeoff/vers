@@ -1,7 +1,7 @@
 import { RPCLink } from '@orpc/client/fetch';
 import { createIsomorphicFn } from '@tanstack/react-start';
 import { createEdgeServiceToken } from './create-edge-service-token';
-import { resolveSessionActor } from './resolve-session-actor';
+import { loadSessionActor } from './load-session-actor';
 import type { ServiceName } from './service-urls';
 import { SERVICE_URLS } from './service-urls';
 
@@ -30,7 +30,7 @@ export function buildServiceLink(service: ServiceName): RPCLink<ServiceLinkConte
           headers: async (options) => {
             const actingUserID =
               options.context.actingUserID === undefined
-                ? await resolveSessionActor()
+                ? await loadSessionActor()
                 : options.context.actingUserID;
 
             const token = await createEdgeServiceToken({ actingUserID, audience: service });

@@ -21,14 +21,14 @@ interface RefreshedTokens {
 const inFlightRefreshes = new Map<string, Promise<RefreshedTokens | undefined>>();
 
 /**
- * Resolves the acting user id for a cookie-derived service call, proactively re-validating a
+ * Loads the acting user id for a cookie-derived service call, proactively re-validating a
  * near-expired session first: services no longer see the caller's own access token, so nothing
  * else re-checks the underlying session's existence, expiry, or revocation before its identity is
  * trusted to mint an s2s token. `null` covers both no live session and one that failed
  * re-validation — the cookie is cleared in the latter case, and the caller's own guard redirects to
  * login on its next request.
  */
-export async function resolveSessionActor(): Promise<string | null> {
+export async function loadSessionActor(): Promise<string | null> {
   const session = await getAuthSession();
 
   if (
