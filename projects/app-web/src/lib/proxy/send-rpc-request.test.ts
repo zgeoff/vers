@@ -1,7 +1,9 @@
 import { expect, mock, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
+import * as jose from 'jose';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, http } from 'msw';
+import { createMockAccessToken } from '../../mocks/create-mock-access-token';
 import * as db from '../../mocks/db';
 import { server } from '../../mocks/node';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -26,7 +28,7 @@ test('it rewrites the proxied path from /api/rpc/<service> to /rpc on the servic
   );
 });
 
-test('it forwards the method, headers, and body to the target service for a caller with no cookie session', async () => {
+test('it forwards the method and body for a caller with no cookie session, minting an anonymous token', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
   server.use(http.post('http://localhost:3003/rpc/updateEmail', resolver));
@@ -35,7 +37,7 @@ test('it forwards the method, headers, and body to the target service for a call
     sendRPCRequest(
       new Request('http://app.test/api/rpc/user/updateEmail', {
         body: JSON.stringify({ email: 'new@vers.test' }),
-        headers: { authorization: 'Bearer dev-session' },
+        headers: { authorization: 'Bearer forwarded-from-the-browser' },
         method: 'POST',
       }),
       'user',
@@ -48,8 +50,12 @@ test('it forwards the method, headers, and body to the target service for a call
 
   const body = await request?.text();
 
+  const authorization = request?.headers.get('authorization') ?? '';
+  const payload = jose.decodeJwt(authorization.replace('Bearer ', ''));
+
   expect(request?.method).toBe('POST');
-  expect(request?.headers.get('authorization')).toBe('Bearer dev-session');
+  expect(payload).toMatchObject({ aud: 'user', iss: 'vers-edge' });
+  expect(payload.sub).toBeUndefined();
   expect(body).toBe(JSON.stringify({ email: 'new@vers.test' }));
 });
 
@@ -67,18 +73,21 @@ test('it forwards a bodyless GET request without a body', async () => {
   expect(outcome.value.status).toBe(200);
 });
 
-test('it attaches the caller own bearer header from their cookie session, overriding any forwarded one', async () => {
+test("it mints an s2s token carrying the caller's cookie userID as its subject, overriding any forwarded authorization", async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
+  const userID = createId();
   const sessionID = createId();
 
-  await db.sessionCollection.create({ id: sessionID, userID: createId() });
+  await db.sessionCollection.create({ id: sessionID, userID });
+
+  const accessToken = await createMockAccessToken(userID);
 
   server.use(http.get('http://localhost:3005/rpc/getAvatars', resolver));
 
   await withRequestContext(
     {
       cookies: {
-        en_session: { accessToken: sessionID, refreshToken: 'refresh', sessionID },
+        en_session: { accessToken, refreshToken: 'refresh', sessionID, userID },
       },
     },
     () =>
@@ -93,7 +102,8 @@ test('it attaches the caller own bearer header from their cookie session, overri
 
   expect(resolver).toHaveBeenCalledOnce();
 
-  expect(resolver.mock.calls[0]?.[0].request.headers.get('authorization')).toBe(
-    `Bearer ${sessionID}`,
-  );
+  const authorization = resolver.mock.calls[0]?.[0].request.headers.get('authorization') ?? '';
+  const payload = jose.decodeJwt(authorization.replace('Bearer ', ''));
+
+  expect(payload).toMatchObject({ aud: 'avatar', iss: 'vers-edge', sub: userID });
 });
