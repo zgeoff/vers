@@ -71,8 +71,8 @@ cd projects/lib-db
 bun --env-file=.env.local run db:migrate   # also db:seed, db:rollback
 ```
 
-`db:codegen` is broken under the workspace's TypeScript 7 (#282); regenerate through an isolated
-kysely-codegen + TS5 install until that closes.
+`db:codegen` is broken under the workspace's TypeScript 7; regenerate through an isolated
+kysely-codegen + TS5 install.
 
 For isolated experiments, branch the database instead of sharing `main`:
 
