@@ -55,11 +55,8 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-
 
-      - name: Setup Docker image cache
-        uses: ScribeMD/docker-cache@fb28c93772363301b8d0a6072ce850224b73f74e # 0.5.0
-        id: docker-cache
-        with:
-          key: docker-${{ runner.os }}-${{ github.sha }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
       - name: Boundaries
         run: bun run boundaries
@@ -121,6 +118,16 @@ jobs:
           echo "${affected}" >> "${GITHUB_OUTPUT}"
           echo "${delimiter}" >> "${GITHUB_OUTPUT}"
 
+      # affected images are pushed to Fly's registry here and deployed by digest in
+      # the `deploy` job, so a bad-tests run never ships (deploy gates on success)
+      - name: Log in to Fly registry
+        if: ${{ !cancelled() }}
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          registry: registry.fly.io
+          username: x
+          password: ${{ secrets.FLY_API_TOKEN }}
+
       - name: Build Avatar Service Image
         if:
           ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
@@ -129,8 +136,10 @@ jobs:
         with:
           context: .
           file: projects/service-avatar/Dockerfile
-          tags: vers/service-avatar:latest
-          push: false
+          tags: registry.fly.io/vers-service-avatar:${{ github.sha }}
+          push: true
+          cache-from: type=gha,scope=service-avatar
+          cache-to: type=gha,scope=service-avatar,mode=max
 
       - name: Build Session Service Image
         if:
@@ -140,8 +149,10 @@ jobs:
         with:
           context: .
           file: projects/service-session/Dockerfile
-          tags: vers/service-session:latest
-          push: false
+          tags: registry.fly.io/vers-service-session:${{ github.sha }}
+          push: true
+          cache-from: type=gha,scope=service-session
+          cache-to: type=gha,scope=service-session,mode=max
 
       - name: Build User Service Image
         if:
@@ -151,8 +162,10 @@ jobs:
         with:
           context: .
           file: projects/service-user/Dockerfile
-          tags: vers/service-user:latest
-          push: false
+          tags: registry.fly.io/vers-service-user:${{ github.sha }}
+          push: true
+          cache-from: type=gha,scope=service-user
+          cache-to: type=gha,scope=service-user,mode=max
 
       - name: Build Verification Service Image
         if:
@@ -162,8 +175,10 @@ jobs:
         with:
           context: .
           file: projects/service-verification/Dockerfile
-          tags: vers/service-verification:latest
-          push: false
+          tags: registry.fly.io/vers-service-verification:${{ github.sha }}
+          push: true
+          cache-from: type=gha,scope=service-verification
+          cache-to: type=gha,scope=service-verification,mode=max
 
       - name: Build Web App Image
         if:
@@ -173,5 +188,71 @@ jobs:
         with:
           context: .
           file: projects/app-web/Dockerfile
-          tags: vers/app-web:latest
-          push: false
+          tags: registry.fly.io/vers-app-web:${{ github.sha }}
+          push: true
+          cache-from: type=gha,scope=app-web
+          cache-to: type=gha,scope=app-web,mode=max
+
+  deploy:
+    name: Deploy
+    needs: checks
+    # deploy only a fully green build; each leg self-gates on being affected. Runs
+    # after `checks`, so the migration step there has already applied to Neon.
+    if: ${{ needs.checks.result == 'success' }}
+    runs-on: ubuntu-latest
+    strategy:
+      # one app's rollout failing must not abandon the others
+      fail-fast: false
+      matrix:
+        include:
+          - app: vers-service-avatar
+            pkg: '@vers/service-avatar'
+            dir: service-avatar
+          - app: vers-service-session
+            pkg: '@vers/service-session'
+            dir: service-session
+          - app: vers-service-user
+            pkg: '@vers/service-user'
+            dir: service-user
+          - app: vers-service-verification
+            pkg: '@vers/service-verification'
+            dir: service-verification
+          - app: vers-app-web
+            pkg: '@vers/web'
+            dir: app-web
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@dfdfedc86b296f5e5384f755a18bf400409a15d0 # v1.4
+
+      # bluegreen (per each app's fly.toml) gates cutover on the /health check, so a
+      # machine that fails to boot or serve blocks the release instead of shipping.
+      # The image was already pushed to Fly's registry by the build steps above.
+      - name: Deploy ${{ matrix.app }}
+        if: ${{ contains(needs.checks.outputs.affected-projects, format('<{0}>', matrix.pkg)) }}
+        run: >
+          flyctl deploy --app ${{ matrix.app }} --config projects/${{ matrix.dir }}/fly.toml --image
+          registry.fly.io/${{ matrix.app }}:${{ github.sha }}
+
+      # private services can't be reached from CI — their bluegreen health gate is the
+      # smoke test. app-web is public, so verify it end-to-end after cutover.
+      - name: Smoke check app-web
+        if:
+          ${{ matrix.app == 'vers-app-web' && contains(needs.checks.outputs.affected-projects,
+          '<@vers/web>') }}
+        run: |
+          for attempt in $(seq 1 10); do
+            code="$(curl -fsS -o /dev/null -w '%{http_code}' https://vers-app-web.fly.dev/health || true)"
+            if [ "${code}" = "200" ]; then
+              echo "app-web healthy"
+              exit 0
+            fi
+            echo "attempt ${attempt}: /health returned ${code:-no-response}"
+            sleep 5
+          done
+          echo "app-web /health never returned 200 after deploy"
+          exit 1
