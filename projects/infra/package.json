@@ -1,0 +1,20 @@
+{
+  "name": "@vers/infra",
+  "private": true,
+  "description": "Pulumi program: Cloudflare DNS for versidle.com, state in Cloudflare R2",
+  "main": "index.ts",
+  "scripts": {
+    "preview": "op run --env-file=.env -- pulumi preview",
+    "up": "op run --env-file=.env -- pulumi up",
+    "destroy": "op run --env-file=.env -- pulumi destroy"
+  },
+  "dependencies": {
+    "@pulumi/cloudflare": "6.17.0",
+    "@pulumi/pulumi": "3.250.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "ts-node": "10.9.2",
+    "typescript": "5.7.3"
+  }
+}
