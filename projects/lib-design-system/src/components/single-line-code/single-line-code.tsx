@@ -2,8 +2,6 @@ import { css, cx } from '@vers/styled-system/css';
 import * as React from 'react';
 import { Icon } from '../icon/icon';
 
-export type Props = React.ComponentProps<'code'>;
-
 const container = css({
   alignItems: 'center',
   backgroundColor: 'neutral.900',
@@ -42,8 +40,7 @@ const copyButton = css({
   transitionTimingFunction: 'out',
 });
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function SingleLineCode(props: Props) {
+export function SingleLineCode(props: React.HTMLAttributes<HTMLElement>) {
   const { className, ...rest } = props;
 
   const codeRef = React.useRef<HTMLElement>(null);

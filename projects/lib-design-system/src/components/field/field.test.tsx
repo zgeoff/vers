@@ -14,7 +14,6 @@ test('it renders a label and an input', () => {
 });
 
 test('it handles input changes', async () => {
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const handleChange = mock<(event: ChangeEvent<HTMLInputElement>) => void>();
   const user = userEvent.setup();
 
@@ -28,14 +27,9 @@ test('it handles input changes', async () => {
 
   await user.type(screen.getByLabelText('Email'), 'test@example.com');
 
-  expect(handleChange).toHaveBeenCalledWith(
-    expect.objectContaining({
-      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-      target: expect.objectContaining({
-        value: 'test@example.com',
-      }),
-    }),
-  );
+  const [lastCall] = handleChange.mock.calls.slice(-1);
+
+  expect(lastCall?.[0].target.value).toBe('test@example.com');
 });
 
 test('it displays error messages', () => {

@@ -4,9 +4,9 @@ import * as React from 'react';
 
 interface Props {
   className?: string;
-  errors: Array<string>;
-  inputProps: React.ComponentProps<'input'> & { key?: React.Key };
-  labelProps: React.ComponentProps<'label'>;
+  errors: ReadonlyArray<string>;
+  inputProps: React.InputHTMLAttributes<HTMLInputElement> & { key?: React.Key };
+  labelProps: React.LabelHTMLAttributes<HTMLLabelElement>;
 }
 
 const fieldRecipe = sva({
@@ -54,8 +54,7 @@ const fieldRecipe = sva({
   slots: ['root', 'label', 'input', 'errorText'],
 });
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function Field(props: Props) {
+export function Field(props: Readonly<Props>) {
   // the field context owns error wiring; callers' aria attributes are dropped
   // so they can't point at error elements that render elsewhere.
   const {

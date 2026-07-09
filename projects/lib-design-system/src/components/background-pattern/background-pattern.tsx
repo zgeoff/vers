@@ -1,9 +1,4 @@
-interface BackgroundPatternProps extends React.SVGProps<SVGSVGElement> {
-  className?: string;
-}
-
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function BackgroundPattern(props: BackgroundPatternProps) {
+export function BackgroundPattern(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

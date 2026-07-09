@@ -5,9 +5,9 @@ import * as React from 'react';
 import { Icon } from '../icon/icon';
 
 interface Props {
-  checkboxProps: React.ComponentProps<'input'> & { key?: React.Key };
-  errors: Array<string>;
-  labelProps: React.ComponentProps<'label'>;
+  checkboxProps: React.InputHTMLAttributes<HTMLInputElement> & { key?: React.Key };
+  errors: ReadonlyArray<string>;
+  labelProps: React.LabelHTMLAttributes<HTMLLabelElement>;
 }
 
 const checkboxFieldRecipe = sva({
@@ -63,8 +63,7 @@ const checkboxFieldRecipe = sva({
   slots: ['root', 'checkbox', 'control', 'indicator', 'icon', 'label', 'errorText'],
 });
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function CheckboxField(props: Props) {
+export function CheckboxField(props: Readonly<Props>) {
   const [firstError] = props.errors;
   const onClick = props.checkboxProps.onClick;
   const styles = checkboxFieldRecipe();
@@ -77,8 +76,11 @@ export function CheckboxField(props: Props) {
         defaultChecked={props.checkboxProps.defaultChecked}
         disabled={props.checkboxProps.disabled}
         form={props.checkboxProps.form}
-        // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-        ids={props.checkboxProps.id ? { hiddenInput: props.checkboxProps.id } : undefined}
+        ids={
+          props.checkboxProps.id !== undefined && props.checkboxProps.id !== ''
+            ? { hiddenInput: props.checkboxProps.id }
+            : undefined
+        }
         invalid={props.errors.length > 0}
         name={props.checkboxProps.name}
         required={props.checkboxProps.required}

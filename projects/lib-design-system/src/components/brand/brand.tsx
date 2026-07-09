@@ -33,8 +33,7 @@ const brand = cva({
   },
 });
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function Brand(props: Props) {
+export function Brand(props: Readonly<Props>) {
   return (
     <h1
       className={cx(
