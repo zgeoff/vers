@@ -46,5 +46,4 @@ export interface SimulationContext {
   rng: RNG;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export type SimulationListener = (state: SimulationState) => void;

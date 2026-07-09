@@ -1,4 +1,3 @@
-import invariant from 'tiny-invariant';
 import type {
   Activity,
   ActivityCheckpointGenerator,
@@ -12,20 +11,13 @@ import { createFailedCheckpoint } from './utils/create-failed-checkpoint';
 import { createProgressCheckpoint } from './utils/create-progress-checkpoint';
 import { createStartedCheckpoint } from './utils/create-started-checkpoint';
 
-// oxlint-disable-next-line typescript/require-await -- baseline(#236)
+// oxlint-disable-next-line typescript/require-await -- callers drive this generator with awaited next()/return() calls, so it must satisfy the AsyncGenerator contract even though its own body has no await
 export async function* simulateActivity(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- executor is mutated in place via run/reset during the tick loop
   executor: CombatExecutor,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- activity is mutated in place via moveToNextEnemyGroup during the tick loop
   activity: Activity,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   avatar: Avatar,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,
 ): ActivityCheckpointGenerator {
-  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-  invariant(activity, 'activity is required');
-
   const timestep = yield createStartedCheckpoint(ctx);
 
   const label = `[activity:${activity.type}]`;

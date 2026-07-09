@@ -10,11 +10,8 @@ import type {
 import { handleEvent } from './handle-event';
 
 export function createCombatExecutor(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- activity is mutated in place via elapseTime during the tick loop
   activity: Activity,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- avatar is mutated in place via reset during the tick loop
   avatar: Avatar,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,
 ): CombatExecutor {
   let elapsed = 0;
@@ -24,7 +21,6 @@ export function createCombatExecutor(
     elapsed,
   });
 
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const scheduleEvent = (event: CombatEvent) => {
     scheduledEvents.push(event);
   };
@@ -34,7 +30,6 @@ export function createCombatExecutor(
 
     scheduledEvents.sort(sortEvents);
 
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
     scheduledEvents.forEach((event: CombatEvent) => {
       handleEvent(event, avatar, activity, ctx);
     });
@@ -64,8 +59,10 @@ export function createCombatExecutor(
     elapsed += delta;
 
     avatar.handleTick(executor, ctx);
-    // oxlint-disable-next-line typescript/no-confusing-void-expression -- baseline(#236)
-    activity.currentEnemyGroup?.enemies.map((enemy) => enemy.handleTick(executor, ctx));
+
+    activity.currentEnemyGroup?.enemies.forEach((enemy) => {
+      enemy.handleTick(executor, ctx);
+    });
 
     processEvents();
 

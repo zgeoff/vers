@@ -22,7 +22,6 @@ import { createCombatExecutor } from './create-combat-executor';
 import { simulateActivity } from './simulate-activity';
 import { getAppState } from './utils/get-app-state';
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createSimulation(hasher: XXHashAPI): Simulation {
   let _rng = createRNG(0);
   let _avatar: Avatar | null = null;
@@ -30,7 +29,7 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
   let _activity: Activity | null = null;
   let _combat: CombatExecutor | null = null;
   let _generator: ActivityCheckpointGenerator | null = null;
-  let _done: boolean | undefined;
+  let _done = false;
   let _elapsed = 0;
 
   const ctx: SimulationContext = {
@@ -93,7 +92,6 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
   const stopActivity = async () => {
     _activity = null;
 
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (!_done) {
       // @ts-expect-error - we're not passing a return value during cleanup
       await _generator?.return();
@@ -128,16 +126,12 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
       return null;
     }
 
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    invariant(_generator, 'generator is required');
-
     const prevState = getAppState(state);
 
     const next = await _generator.next(timestep);
 
-    _done = next.done;
+    _done = next.done ?? false;
 
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
     if (_done) {
       _generator = null;
     }
@@ -188,8 +182,9 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     getAppState: () => getAppState(state),
     restartActivity,
     run,
-    // oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- baseline(#236)
-    startActivity,
+    startActivity: (avatarData: AvatarData, activityData: ActivityData) => {
+      void startActivity(avatarData, activityData);
+    },
     stopActivity,
   };
 }

@@ -7,7 +7,7 @@ import type {
   SimulationContext,
 } from '../types';
 
-export type BehaviourState<T> = Record<string, unknown> & T;
+export type BehaviourState<T> = Readonly<Record<string, unknown>> & T;
 
 export interface IBehaviour<
   T extends Entity,
@@ -33,14 +33,11 @@ export interface IBehaviour<
   setState: (setStateFn: SetEntityStateFn<S>) => void;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export type LifecycleHandler<T extends Entity> = (entity: T, ctx: SimulationContext) => void;
 
 export type CombatLifecycleHandler<T extends Entity> = (
   entity: T,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   combatExecutor: CombatExecutor,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,
 ) => void;
 

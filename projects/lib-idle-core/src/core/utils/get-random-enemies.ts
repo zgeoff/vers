@@ -4,7 +4,6 @@ import type { ActivityData, Enemy, SimulationContext } from '../../types';
 export function getRandomEnemies(
   activity: ActivityData,
   count: number,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,
 ): Array<Enemy> {
   if (activity.enemies.length === 1) {

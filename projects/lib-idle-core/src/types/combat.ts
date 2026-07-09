@@ -10,15 +10,14 @@ export interface CombatExecutor {
   getAppState: () => CombatExecutorAppState;
   reset: () => void;
   run: (delta: number) => void;
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   scheduleEvent: (event: CombatEvent) => void;
 }
 
 interface ICombatEvent {
-  id: string;
-  source: string;
-  time: number;
-  type: CombatEventType;
+  readonly id: string;
+  readonly source: string;
+  readonly time: number;
+  readonly type: CombatEventType;
 }
 
 export enum CombatEventType {
@@ -27,11 +26,11 @@ export enum CombatEventType {
 }
 
 export interface AvatarAttackEvent extends ICombatEvent {
-  type: CombatEventType.AvatarAttack;
+  readonly type: CombatEventType.AvatarAttack;
 }
 
 export interface EnemyAttackEvent extends ICombatEvent {
-  type: CombatEventType.EnemyAttack;
+  readonly type: CombatEventType.EnemyAttack;
 }
 
 export type CombatEvent = AvatarAttackEvent | EnemyAttackEvent;

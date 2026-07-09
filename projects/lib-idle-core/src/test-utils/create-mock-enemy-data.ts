@@ -1,6 +1,5 @@
 import type { EnemyData } from '../types';
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createMockEnemyData(overrides: Partial<EnemyData> = {}): EnemyData {
   const enemy: EnemyData = {
     level: 1,

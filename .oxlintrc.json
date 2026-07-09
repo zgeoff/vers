@@ -142,18 +142,36 @@
           { "from": "package", "name": "ZodError", "package": "zod" },
           { "from": "package", "name": "JWTPayload", "package": "jose" },
           { "from": "package", "name": "SubmissionResult", "package": "@conform-to/dom" },
-          // not handles but intentionally never readonly: idle-core's tick
-          // and lifecycle handlers mutate these entities in place for
-          // performance, so no readonly form of them exists to consume
+          { "from": "package", "name": "XXHashAPI", "package": "xxhash-wasm" },
+          // idle-core's live domain objects are mutable handles: entities and
+          // the simulation own internal state that tick/lifecycle code drives
+          // through mutation methods (receiveDamage, setState, scheduleEvent),
+          // and the *Data seeds are mutated in place during setup -- none has a
+          // readonly form a caller can consume, so they are exempted by type
           {
             "from": "file",
-            "name": ["ActivityData", "ActivityAppState", "AetherNodeActivityData"],
+            "name": ["ActivityData", "ActivityAppState", "AetherNodeActivityData", "Activity"],
             "path": "../lib-idle-core/src/types/activity.ts"
           },
           {
             "from": "file",
-            "name": "AvatarData",
+            "name": ["AvatarData", "EnemyData", "Avatar", "Enemy", "EnemyGroup"],
             "path": "../lib-idle-core/src/types/entities.ts"
+          },
+          {
+            "from": "file",
+            "name": ["Simulation", "SimulationContext"],
+            "path": "../lib-idle-core/src/types/simulation.ts"
+          },
+          {
+            "from": "file",
+            "name": "CombatExecutor",
+            "path": "../lib-idle-core/src/types/combat.ts"
+          },
+          {
+            "from": "file",
+            "name": ["Behaviour", "AvatarBehaviour", "EnemyBehaviour"],
+            "path": "../lib-idle-core/src/types/behaviour.ts"
           }
         ]
       }
