@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
-import { expect, test } from 'vitest';
 import { ExistingAccountEmail } from './existing-account-email';
 
 test('it renders the existing account email with all required elements', () => {

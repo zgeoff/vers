@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
-import { expect, test } from 'vitest';
 import { StatusButton } from './status-button';
 
 test('it renders children content', () => {

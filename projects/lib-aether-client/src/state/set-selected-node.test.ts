@@ -1,7 +1,7 @@
+import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
 import type { AetherNode } from '@vers/aether-core';
 import { Object3D } from 'three';
-import { expect, test } from 'vitest';
 import { setSelectedNode } from './set-selected-node';
 import { useSelectedNodeStore } from './use-selected-node-store';
 

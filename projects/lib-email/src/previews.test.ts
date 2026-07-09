@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import * as generators from './index';
 import { previews } from './previews';
 
@@ -22,7 +22,7 @@ test('it renders html and plain text for every preview entry', async () => {
   for (const preview of previews) {
     const rendered = await preview.render();
 
-    expect(rendered.html).include('<html');
+    expect(rendered.html).toInclude('<html');
     expect(rendered.plainText).not.toBe('');
   }
 });

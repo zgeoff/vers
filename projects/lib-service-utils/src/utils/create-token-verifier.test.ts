@@ -1,6 +1,6 @@
+import { expect, test } from 'bun:test';
 import { createTestJWT } from '@vers/service-test-utils';
 import * as jose from 'jose';
-import { expect, test } from 'vitest';
 import { createTokenVerifier } from './create-token-verifier';
 
 const TEST_TOKEN_PAYLOAD = {
@@ -70,10 +70,10 @@ test('it authorizes a valid token and extracts the payload', async () => {
   expect(payload).toStrictEqual(TEST_TOKEN_PAYLOAD);
 });
 
-test('should throws an error if no token is provided', async () => {
-  await expect(verifyToken('')).rejects.toThrow('Invalid Compact JWS');
+test('should throws an error if no token is provided', () => {
+  expect(verifyToken('')).rejects.toThrow('Invalid Compact JWS');
 });
 
-test('should throws an error if an invalid token is provided', async () => {
-  await expect(verifyToken('abc123')).rejects.toThrow('Invalid Compact JWS');
+test('should throws an error if an invalid token is provided', () => {
+  expect(verifyToken('abc123')).rejects.toThrow('Invalid Compact JWS');
 });

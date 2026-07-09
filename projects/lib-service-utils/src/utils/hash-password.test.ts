@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import bcrypt from 'bcryptjs';
-import { expect, test } from 'vitest';
 import { hashPassword } from './hash-password';
 
 test('it hashes a password using bcrypt', async () => {

@@ -1,6 +1,7 @@
+import { expect, test } from 'bun:test';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { AetherNode as AetherNodeType } from '@vers/aether-core';
-import { expect, test } from 'vitest';
+import type { Object3D } from 'three';
 import { useHoveredNodeStore } from '../state/use-hovered-node-store';
 import { useSelectedNodeStore } from '../state/use-selected-node-store';
 import { AetherNode } from './aether-node';
@@ -51,5 +52,8 @@ test('it sets the selected node when the node is clicked and connected to the cu
   });
 
   expect(useSelectedNodeStore.getState().node).toBe(node);
-  expect(useSelectedNodeStore.getState().object3D).toBe(mesh);
+  // the test renderer types its scene children more loosely than the three Object3D the store
+  // holds, though the runtime identity is the same object
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- test-renderer/three type gap (#325)
+  expect(useSelectedNodeStore.getState().object3D).toBe(mesh as unknown as Object3D);
 });

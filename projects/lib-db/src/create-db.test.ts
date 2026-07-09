@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { createTestDB } from './test-support/create-test-db';
 
 test('it round-trips a row through camelCase-mapped columns', async () => {

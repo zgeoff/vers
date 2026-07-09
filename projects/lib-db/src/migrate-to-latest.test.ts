@@ -1,23 +1,24 @@
+import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import postgres from 'postgres';
-import { expect, inject, test } from 'vitest';
 import { createDB } from './create-db';
 import { migrateToLatest } from './migrate-to-latest';
+import { resolveTestDBTarget } from './test-support/resolve-test-db-target';
 
 /**
  * Creates a freshly minted, unmigrated database — the state `migrateToLatest`
  * expects to find before it has ever run.
  */
 async function createEmptyDB() {
-  const dbURI = inject('dbURI');
+  const baseURI = resolveTestDBTarget().baseURI;
   const dbName = `test_${createId()}`;
 
-  const setupClient = postgres(`${dbURI}/postgres`);
+  const setupClient = postgres(`${baseURI}/postgres`);
 
   await setupClient.unsafe(/* SQL */ `CREATE DATABASE ${dbName}`);
   await setupClient.end();
 
-  return `${dbURI}/${dbName}`;
+  return `${baseURI}/${dbName}`;
 }
 
 test('it applies pending migrations once and is a no-op the second time', async () => {

@@ -1,10 +1,10 @@
+import { expect, mock, test } from 'bun:test';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
-import { expect, test, vi } from 'vitest';
 import { remoteAddressMiddleware } from './remote-address-middleware';
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-const testHandlerSpy = vi.fn<(ctx: Context) => Promise<Response>>((ctx: Context) =>
+const testHandlerSpy = mock<(ctx: Context) => Promise<Response>>((ctx: Context) =>
   // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
   Promise.resolve(ctx.json({ ipAddress: ctx.get('ipAddress') })),
 );
@@ -26,7 +26,7 @@ test('it sets the ip address from the fly header', async () => {
 
   const res = await ctx.app.request(req);
 
-  await expect(res.json()).resolves.toStrictEqual({
+  expect(res.json()).resolves.toStrictEqual({
     ipAddress: '127.0.0.1',
   });
 });
@@ -40,7 +40,7 @@ test('it sets the ip address from the x-forwarded-for header', async () => {
 
   const res = await ctx.app.request(req);
 
-  await expect(res.json()).resolves.toStrictEqual({
+  expect(res.json()).resolves.toStrictEqual({
     ipAddress: '127.0.0.1',
   });
 });

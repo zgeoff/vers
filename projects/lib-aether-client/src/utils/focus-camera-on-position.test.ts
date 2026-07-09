@@ -1,11 +1,11 @@
+import { expect, spyOn, test } from 'bun:test';
 import { PerspectiveCamera } from 'three';
-import { expect, test, vi } from 'vitest';
 import { focusCameraOnPosition } from './focus-camera-on-position';
 
 test('it updates camera position to focus on target', () => {
   const camera = new PerspectiveCamera();
 
-  const updateProjectionMatrixSpy = vi.spyOn(camera, 'updateProjectionMatrix');
+  const updateProjectionMatrixSpy = spyOn(camera, 'updateProjectionMatrix');
 
   focusCameraOnPosition(camera, [10, 20]);
 

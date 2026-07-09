@@ -1,6 +1,6 @@
+import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
 import type { AetherNode } from '@vers/aether-core';
-import { expect, test } from 'vitest';
 import { setHoveredNode } from './set-hovered-node';
 import { useHoveredNodeStore } from './use-hovered-node-store';
 

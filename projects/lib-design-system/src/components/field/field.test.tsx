@@ -1,7 +1,7 @@
+import { expect, mock, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ChangeEvent } from 'react';
-import { expect, test, vi } from 'vitest';
 import { Field } from './field';
 
 test('it renders a label and an input', () => {
@@ -15,7 +15,7 @@ test('it renders a label and an input', () => {
 
 test('it handles input changes', async () => {
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  const handleChange = vi.fn<(event: ChangeEvent<HTMLInputElement>) => void>();
+  const handleChange = mock<(event: ChangeEvent<HTMLInputElement>) => void>();
   const user = userEvent.setup();
 
   render(

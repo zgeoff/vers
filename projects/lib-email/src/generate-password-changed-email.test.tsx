@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { generatePasswordChangedEmail } from './generate-password-changed-email';
 
 test('it generates a password changed email with the provided configuration', async () => {
@@ -8,9 +8,9 @@ test('it generates a password changed email with the provided configuration', as
 
   const email = await generatePasswordChangedEmail(config);
 
-  expect(email.html).include('Your password has been changed');
-  expect(email.html).include('test@example.com');
+  expect(email.html).toInclude('Your password has been changed');
+  expect(email.html).toInclude('test@example.com');
 
-  expect(email.plainText).include('YOUR PASSWORD HAS BEEN CHANGED');
-  expect(email.plainText).include('test@example.com');
+  expect(email.plainText).toInclude('YOUR PASSWORD HAS BEEN CHANGED');
+  expect(email.plainText).toInclude('test@example.com');
 });

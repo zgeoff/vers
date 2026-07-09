@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
-import { expect, test } from 'vitest';
 import { ChangeEmailNotificationEmail } from './change-email-notification';
 
 test('it renders a notification email with the correct content', () => {
