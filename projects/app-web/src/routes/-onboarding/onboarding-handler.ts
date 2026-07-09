@@ -50,7 +50,7 @@ export async function onboardingHandler(formData: FormData): Promise<Response | 
       });
     }
 
-    return submission.reply();
+    return submission.reply({ formErrors: ['Something went wrong. Please try again.'] });
   }
 
   const session = await sessionClient.createSession({

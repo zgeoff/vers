@@ -1,7 +1,11 @@
 import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
+import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
+import { userContract } from '@vers/contract-user';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
+import { SERVICE_URLS } from '../../lib/rpc/service-urls';
 import * as db from '../../mocks/db';
+import { server } from '../../mocks/node';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { onboardingHandler } from './onboarding-handler';
@@ -68,6 +72,31 @@ test('it reports a field error for a username already in use', async () => {
   expect(outcome.value.error).toStrictEqual({
     username: ['A user with that username already exists'],
   });
+});
+
+test('it reports a generic form-level error when account creation fails', async () => {
+  const mockUser = buildContractMock({
+    baseUrl: SERVICE_URLS.user,
+    contract: userContract,
+    resolveContext: () => ({ actingUserId: null }),
+  });
+
+  server.use(
+    mockUser.createUser.handler(() => {
+      throw new Error('the user service is unreachable');
+    }),
+  );
+
+  const outcome = await withRequestContext(
+    { cookies: { en_verification: { 'onboarding#email': 'onboard-failure@vers.test' } } },
+    () => onboardingHandler(buildFormData({ ...validFields, username: 'onboard_failure_user' })),
+  );
+
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({ '': ['Something went wrong. Please try again.'] });
 });
 
 test('it creates the account, signs the caller in, and clears the onboarding session', async () => {

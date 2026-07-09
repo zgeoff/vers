@@ -79,12 +79,12 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
       return;
     }
 
-    const navigateToAccount = async (): Promise<void> => {
+    const runAccountNavigation = async (): Promise<void> => {
       await router.invalidate();
       await router.navigate({ to: '/account' });
     };
 
-    void navigateToAccount();
+    void runAccountNavigation();
   }, [props.type, router, submission.lastResult]);
 
   const { key: _codeKey, ...codeProps } = getInputProps(fields.code, { type: 'text' });
