@@ -11,8 +11,8 @@ Cloudflare DNS for `versidle.com`, with Pulumi state held in Cloudflare R2. Cred
 ## Prerequisites
 
 - `op` authenticated (service account: `OP_SERVICE_ACCOUNT_TOKEN` in the environment).
-- `versidle.com` added to Cloudflare, with the registrar's nameservers pointed at the pair Cloudflare
-  assigns. DNS records attach to a zone, so this comes first.
+- `versidle.com` added to Cloudflare, with the registrar's nameservers pointed at the pair
+  Cloudflare assigns. DNS records attach to a zone, so this comes first.
 - An R2 bucket named `vers-pulumi-state` for Pulumi state.
 
 ## One-time setup
@@ -35,8 +35,8 @@ op run --env-file=.env -- sh -c 'pulumi login \
 op run --env-file=.env -- pulumi config set vers-infra:zoneId <zone-id> --stack prod
 ```
 
-The Cloudflare token needs `Zone → DNS → Edit` (versidle.com) and `Account → Workers R2 Storage →
-Edit`; the R2 S3 keys authenticate the state backend.
+The Cloudflare token needs `Zone → DNS → Edit` (versidle.com) and
+`Account → Workers R2 Storage → Edit`; the R2 S3 keys authenticate the state backend.
 
 ## Deploy
 

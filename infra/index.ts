@@ -2,6 +2,7 @@ import * as cloudflare from '@pulumi/cloudflare';
 import * as pulumi from '@pulumi/pulumi';
 
 const config = new pulumi.Config();
+
 const zoneId = config.require('zoneId');
 const zoneName = config.require('zoneName');
 const appHostname = config.require('appHostname');
