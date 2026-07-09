@@ -20,7 +20,7 @@
     "@vers/service-runtime": "workspace:*",
     "elysia": "1.4.29",
     "kysely": "0.29.2",
-    "zod": "4.4.3"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@faker-js/faker": "catalog:",
