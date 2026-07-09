@@ -1,11 +1,18 @@
+import { getFormProps, useForm } from '@conform-to/react';
 import { Link } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import { Brand, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
+import type { FormAction } from '../../lib/forms/types';
+import { useFormSubmit } from '../../lib/forms/use-form-submit';
 import { forceLogout } from './force-logout';
 
 type PendingIntent = 'cancel' | 'confirm' | null;
+
+interface ForceLogoutFormProps {
+  readonly action?: FormAction;
+}
 
 const pageInfo = css({ marginBottom: '4', textAlign: 'center' });
 const infoText = css({ marginBottom: '6' });
@@ -19,24 +26,12 @@ const buttonContainer = css({
   width: '96',
 });
 
-/** The force-logout page's confirm/cancel choice; both options end the request in a redirect. */
-export function ForceLogoutForm() {
+/** The force-logout page's confirm/cancel choice; both intents end the request in a redirect. */
+export function ForceLogoutForm(props: ForceLogoutFormProps) {
   const forceLogoutFn = useServerFn(forceLogout);
+  const submission = useFormSubmit(props.action ?? forceLogoutFn);
+  const [form] = useForm({ id: 'force-logout-form', onSubmit: submission.onSubmit });
   const [pendingIntent, setPendingIntent] = useState<PendingIntent>(null);
-
-  const submit = async (intent: 'cancel' | 'confirm') => {
-    setPendingIntent(intent);
-
-    const formData = new FormData();
-
-    formData.set('intent', intent);
-
-    try {
-      await forceLogoutFn({ data: formData });
-    } finally {
-      setPendingIntent(null);
-    }
-  };
 
   return (
     <>
@@ -52,36 +47,44 @@ export function ForceLogoutForm() {
         <Text>Would you like to logout your other sessions?</Text>
       </section>
 
-      <div className={buttonContainer}>
+      <form {...getFormProps(form)} className={buttonContainer}>
         <StatusButton
-          disabled={pendingIntent !== null}
+          disabled={submission.isPending}
+          name="intent"
           onClick={() => {
-            void submit('confirm');
+            setPendingIntent('confirm');
           }}
           status={
-            pendingIntent === 'confirm' ? StatusButton.Status.Pending : StatusButton.Status.Idle
+            pendingIntent === 'confirm' && submission.isPending
+              ? StatusButton.Status.Pending
+              : StatusButton.Status.Idle
           }
-          type="button"
+          type="submit"
+          value="confirm"
           variant="primary"
           fullWidth
         >
           Confirm
         </StatusButton>
         <StatusButton
-          disabled={pendingIntent !== null}
+          disabled={submission.isPending}
+          name="intent"
           onClick={() => {
-            void submit('cancel');
+            setPendingIntent('cancel');
           }}
           status={
-            pendingIntent === 'cancel' ? StatusButton.Status.Pending : StatusButton.Status.Idle
+            pendingIntent === 'cancel' && submission.isPending
+              ? StatusButton.Status.Pending
+              : StatusButton.Status.Idle
           }
-          type="button"
+          type="submit"
+          value="cancel"
           variant="secondary"
           fullWidth
         >
           Cancel
         </StatusButton>
-      </div>
+      </form>
     </>
   );
 }

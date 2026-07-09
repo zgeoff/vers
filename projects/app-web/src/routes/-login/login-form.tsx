@@ -1,13 +1,19 @@
+import { getFormProps, getInputProps, useForm } from '@conform-to/react';
+import type { SubmissionResult } from '@conform-to/react';
+import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4';
 import { Link } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import { Brand, CheckboxField, Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
-import { useState } from 'react';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
+import type { FormAction } from '../../lib/forms/types';
+import { useFormSubmit } from '../../lib/forms/use-form-submit';
 import { login } from './login';
-import type { LoginResult } from './types';
+import { LoginFormSchema } from './login-form-schema';
 
 interface LoginFormProps {
+  readonly action?: FormAction;
+  readonly lastResult?: SubmissionResult;
   readonly redirectTo?: string | undefined;
 }
 
@@ -25,43 +31,27 @@ const submitButton = css({ marginBottom: '2' });
 /** The login page's client-interactive form: submits to the login server function and renders its result. */
 export function LoginForm(props: LoginFormProps) {
   const loginFn = useServerFn(login);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'email' | 'password', string>>>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
+  const submission = useFormSubmit(props.action ?? loginFn, props.lastResult);
 
-  const handleSubmit = async (form: HTMLFormElement) => {
-    const formData = new FormData(form);
+  const [form, fields] = useForm({
+    constraint: getZodConstraint(LoginFormSchema),
+    id: 'login-form',
+    lastResult: submission.lastResult,
+    onSubmit: submission.onSubmit,
+    onValidate(context) {
+      return parseWithZod(context.formData, { schema: LoginFormSchema });
+    },
+  });
 
-    setIsPending(true);
-    setFormError(null);
-    setFieldErrors({});
+  const { key: _emailKey, ...emailProps } = getInputProps(fields.email, { type: 'email' });
 
-    try {
-      // a successful or 2FA/force-logout-bound submission ends in a redirect that useServerFn
-      // already navigated to, resolving this call with no value — there's no further UI to show
-      const result: LoginResult | Response | undefined = await loginFn({ data: formData });
+  const { key: _passwordKey, ...passwordProps } = getInputProps(fields.password, {
+    type: 'password',
+  });
 
-      if (result === undefined) {
-        return;
-      }
-
-      if (result instanceof Response) {
-        setFormError('Something went wrong. Please try again.');
-
-        return;
-      }
-
-      if (result.status === 'invalid-fields') {
-        setFieldErrors(result.fieldErrors);
-
-        return;
-      }
-
-      setFormError('Invalid email or password');
-    } finally {
-      setIsPending(false);
-    }
-  };
+  const { key: _rememberMeKey, ...rememberMeProps } = getInputProps(fields.rememberMe, {
+    type: 'checkbox',
+  });
 
   return (
     <>
@@ -72,49 +62,39 @@ export function LoginForm(props: LoginFormProps) {
         <Heading level={2}>Welcome back</Heading>
         <Text>Please enter your details to login</Text>
       </section>
-      <form
-        className={formStyles}
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleSubmit(event.currentTarget);
-        }}
-      >
+      <form {...getFormProps(form)} className={formStyles}>
         <HoneypotInputs />
         <Field
-          errors={fieldErrors.email === undefined ? [] : [fieldErrors.email]}
+          errors={fields.email.errors ?? []}
           inputProps={{
+            ...emailProps,
             autoComplete: 'email',
-            id: 'email',
-            name: 'email',
             placeholder: 'your.email@example.com',
-            type: 'email',
           }}
-          labelProps={{ children: 'Email', htmlFor: 'email' }}
+          labelProps={{ children: 'Email', htmlFor: emailProps.id }}
         />
         <Field
-          errors={fieldErrors.password === undefined ? [] : [fieldErrors.password]}
+          errors={fields.password.errors ?? []}
           inputProps={{
+            ...passwordProps,
             autoComplete: 'current-password',
-            id: 'password',
-            name: 'password',
             placeholder: '********',
-            type: 'password',
           }}
-          labelProps={{ children: 'Password', htmlFor: 'password' }}
+          labelProps={{ children: 'Password', htmlFor: passwordProps.id }}
         />
         {props.redirectTo !== undefined && (
           <input name="redirectTo" type="hidden" value={props.redirectTo} />
         )}
         <CheckboxField
-          checkboxProps={{ id: 'rememberMe', name: 'rememberMe' }}
-          errors={[]}
-          labelProps={{ children: 'Remember me', htmlFor: 'rememberMe' }}
+          checkboxProps={{ ...rememberMeProps }}
+          errors={fields.rememberMe.errors ?? []}
+          labelProps={{ children: 'Remember me', htmlFor: rememberMeProps.id }}
         />
-        {formError !== null && <Text role="alert">{formError}</Text>}
+        {form.errors !== undefined && <Text role="alert">{form.errors[0]}</Text>}
         <StatusButton
           className={submitButton}
-          disabled={isPending}
-          status={isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
+          disabled={submission.isPending}
+          status={submission.isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
           type="submit"
           variant="primary"
           fullWidth

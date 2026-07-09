@@ -1,11 +1,20 @@
+import { getFormProps, getInputProps, useForm } from '@conform-to/react';
+import type { SubmissionResult } from '@conform-to/react';
+import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4';
 import { Link } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import { Brand, Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
-import { useState } from 'react';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
+import type { FormAction } from '../../lib/forms/types';
+import { useFormSubmit } from '../../lib/forms/use-form-submit';
 import { signup } from './signup';
-import type { SignupResult } from './types';
+import { SignupFormSchema } from './signup-form-schema';
+
+interface SignupFormProps {
+  readonly action?: FormAction;
+  readonly lastResult?: SubmissionResult;
+}
 
 const pageInfo = css({ marginBottom: '8', textAlign: 'center' });
 
@@ -19,39 +28,21 @@ const formStyles = css({
 const submitButton = css({ marginBottom: '2' });
 
 /** The signup page's client-interactive form: submits to the signup server function. */
-export function SignupForm() {
+export function SignupForm(props: SignupFormProps) {
   const signupFn = useServerFn(signup);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'email', string>>>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
+  const submission = useFormSubmit(props.action ?? signupFn, props.lastResult);
 
-  const handleSubmit = async (form: HTMLFormElement) => {
-    const formData = new FormData(form);
+  const [form, fields] = useForm({
+    constraint: getZodConstraint(SignupFormSchema),
+    id: 'signup-form',
+    lastResult: submission.lastResult,
+    onSubmit: submission.onSubmit,
+    onValidate(context) {
+      return parseWithZod(context.formData, { schema: SignupFormSchema });
+    },
+  });
 
-    setIsPending(true);
-    setFormError(null);
-    setFieldErrors({});
-
-    try {
-      // a submission with no existing account ends in a redirect that useServerFn already
-      // navigated to, resolving this call with no value — there's no further UI to show
-      const result: Response | SignupResult | undefined = await signupFn({ data: formData });
-
-      if (result === undefined) {
-        return;
-      }
-
-      if (result instanceof Response) {
-        setFormError('Something went wrong. Please try again.');
-
-        return;
-      }
-
-      setFieldErrors(result.fieldErrors);
-    } finally {
-      setIsPending(false);
-    }
-  };
+  const { key: _emailKey, ...emailProps } = getInputProps(fields.email, { type: 'email' });
 
   return (
     <>
@@ -62,31 +53,23 @@ export function SignupForm() {
         <Heading level={2}>Create an account</Heading>
         <Text>Please enter your details to create an account</Text>
       </section>
-      <form
-        className={formStyles}
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleSubmit(event.currentTarget);
-        }}
-      >
+      <form {...getFormProps(form)} className={formStyles}>
         <HoneypotInputs />
         <Field
-          errors={fieldErrors.email === undefined ? [] : [fieldErrors.email]}
+          errors={fields.email.errors ?? []}
           inputProps={{
+            ...emailProps,
             autoComplete: 'email',
             autoFocus: true,
-            id: 'email',
-            name: 'email',
             placeholder: 'your.email@example.com',
-            type: 'email',
           }}
-          labelProps={{ children: 'Email', htmlFor: 'email' }}
+          labelProps={{ children: 'Email', htmlFor: emailProps.id }}
         />
-        {formError !== null && <Text role="alert">{formError}</Text>}
+        {form.errors !== undefined && <Text role="alert">{form.errors[0]}</Text>}
         <StatusButton
           className={submitButton}
-          disabled={isPending}
-          status={isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
+          disabled={submission.isPending}
+          status={submission.isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
           type="submit"
           variant="primary"
           fullWidth

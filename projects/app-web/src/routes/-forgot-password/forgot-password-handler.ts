@@ -1,10 +1,11 @@
+import type { SubmissionResult } from '@conform-to/react';
+import { parseWithZod } from '@conform-to/zod/v4';
 import { redirect } from '@tanstack/react-router';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { SpamError } from '../../lib/auth/spam-error';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { ForgotPasswordFormSchema } from './forgot-password-form-schema';
-import type { ForgotPasswordResult } from './types';
 
 /**
  * Runs the forgot-password form's submission: honeypot then field validation, then — for a
@@ -13,7 +14,7 @@ import type { ForgotPasswordResult } from './types';
  */
 export async function forgotPasswordHandler(
   formData: FormData,
-): Promise<ForgotPasswordResult | Response> {
+): Promise<Response | SubmissionResult> {
   await requireAnonymous();
 
   try {
@@ -26,18 +27,13 @@ export async function forgotPasswordHandler(
     throw error;
   }
 
-  const submission = ForgotPasswordFormSchema.safeParse({ email: formData.get('email') });
+  const submission = parseWithZod(formData, { schema: ForgotPasswordFormSchema });
 
-  if (!submission.success) {
-    const [issue] = submission.error.issues;
-
-    return {
-      fieldErrors: { email: issue?.message ?? 'Email is invalid' },
-      status: 'invalid-fields',
-    };
+  if (submission.status !== 'success') {
+    return submission.reply();
   }
 
-  const user = await userClient.getUser({ email: submission.data.email });
+  const user = await userClient.getUser({ email: submission.value.email });
 
   if (user !== null) {
     await userClient.createPasswordResetToken({ id: user.id });

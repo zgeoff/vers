@@ -1,3 +1,5 @@
+import type { SubmissionResult } from '@conform-to/react';
+import { parseWithZod } from '@conform-to/zod/v4';
 import { redirect } from '@tanstack/react-router';
 import { getRequestIP } from '@tanstack/react-start/server';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
@@ -5,20 +7,19 @@ import { completeSessionSignIn } from '../../lib/auth/complete-session-sign-in';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { SpamError } from '../../lib/auth/spam-error';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
-import { toFieldErrors } from '../../lib/forms/to-field-errors';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import { LoginFormSchema } from './login-form-schema';
-import type { LoginResult } from './types';
 
 /**
  * Runs the login form's submission: honeypot then field validation, a credential check, and — for
  * a caller with neither 2FA nor a competing live session — a completed sign-in. A 2FA-enabled
  * account or an already-live session ends in a redirect instead of a result, carrying just enough
- * verify-session state (the pending session's id) for the next step to complete it.
+ * verify-session state (the pending session's id) for the next step to complete it. A wrong
+ * email or password reports a single form-level error, never which of the two was wrong.
  */
-export async function loginHandler(formData: FormData): Promise<LoginResult | Response> {
+export async function loginHandler(formData: FormData): Promise<Response | SubmissionResult> {
   await requireAnonymous();
 
   try {
@@ -31,38 +32,30 @@ export async function loginHandler(formData: FormData): Promise<LoginResult | Re
     throw error;
   }
 
-  const submission = LoginFormSchema.safeParse({
-    email: formData.get('email'),
-    password: formData.get('password'),
-    redirectTo: formData.get('redirectTo') ?? undefined,
-    rememberMe: formData.get('rememberMe') === 'on',
-  });
+  const submission = parseWithZod(formData, { schema: LoginFormSchema });
 
-  if (!submission.success) {
-    return {
-      fieldErrors: toFieldErrors(submission.error, ['email', 'password']),
-      status: 'invalid-fields',
-    };
+  if (submission.status !== 'success') {
+    return submission.reply();
   }
 
-  const user = await userClient.getUser({ email: submission.data.email });
+  const user = await userClient.getUser({ email: submission.value.email });
 
   if (user === null) {
-    return { status: 'invalid-credentials' };
+    return submission.reply({ formErrors: ['Invalid email or password'] });
   }
 
   const verified = await userClient.verifyPassword({
-    email: submission.data.email,
-    password: submission.data.password,
+    email: submission.value.email,
+    password: submission.value.password,
   });
 
   if (!verified.success) {
-    return { status: 'invalid-credentials' };
+    return submission.reply({ formErrors: ['Invalid email or password'] });
   }
 
   const session = await sessionClient.createSession({
     ipAddress: getRequestIP() ?? '0.0.0.0',
-    rememberMe: submission.data.rememberMe,
+    rememberMe: submission.value.rememberMe,
     userID: user.id,
   });
 
@@ -79,16 +72,16 @@ export async function loginHandler(formData: FormData): Promise<LoginResult | Re
 
     const searchParams = new URLSearchParams({ target: user.id, type: '2fa' });
 
-    if (submission.data.redirectTo !== undefined) {
-      searchParams.set('redirect', submission.data.redirectTo);
+    if (submission.value.redirectTo !== undefined) {
+      searchParams.set('redirect', submission.value.redirectTo);
     }
 
     throw redirect({ href: `/verify-otp?${searchParams.toString()}` });
   }
 
   return completeSessionSignIn({
-    email: submission.data.email,
-    redirectTo: submission.data.redirectTo,
+    email: submission.value.email,
+    redirectTo: submission.value.redirectTo,
     session,
   });
 }

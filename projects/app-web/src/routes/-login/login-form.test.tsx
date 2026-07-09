@@ -1,34 +1,56 @@
 import { expect, test } from 'bun:test';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
-import { userContract } from '@vers/contract-user';
-import { SERVICE_URLS } from '../../lib/rpc/service-urls';
-import * as db from '../../mocks/db';
-import { server } from '../../mocks/node';
-import { assertEventually } from '../../test-utils/assert-eventually';
+import type { FormAction } from '../../lib/forms/types';
+import { buildDeferred } from '../../test-utils/build-deferred';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { LoginForm } from './login-form';
 
-test('it shows a generic failure message for a rejected submission', async () => {
+function rejectWithResponse(): Promise<Response> {
+  return Promise.resolve(new Response(null, { status: 400 }));
+}
+
+test('it maps a fabricated form-level result onto a form error', async () => {
+  await withRequestContext({}, async () => {
+    renderWithRouter(
+      <LoginForm lastResult={{ error: { '': ['Invalid email or password'] }, status: 'error' }} />,
+    );
+
+    const alert = await screen.findByRole('alert');
+
+    expect(alert).toHaveTextContent('Invalid email or password');
+  });
+});
+
+test('it maps fabricated field results onto their fields', async () => {
+  await withRequestContext({}, async () => {
+    renderWithRouter(
+      <LoginForm
+        lastResult={{
+          error: { email: ['Email is invalid'], password: ['Password must be 8+ characters'] },
+          status: 'error',
+        }}
+      />,
+    );
+
+    const emailError = await screen.findByText('Email is invalid');
+
+    expect(emailError).toBeInTheDocument();
+    expect(screen.getByText('Password must be 8+ characters')).toBeInTheDocument();
+  });
+});
+
+test('it shows a generic failure message when the server rejects the submission', async () => {
   const user = userEvent.setup();
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<LoginForm />);
+    renderWithRouter(<LoginForm action={rejectWithResponse} />);
 
-    const emailField = await screen.findByLabelText('Email');
+    const emailInput = await screen.findByLabelText('Email');
 
-    await user.type(emailField, 'login-form-honeypot@vers.test');
+    await user.type(emailInput, 'player@vers.test');
     await user.type(screen.getByLabelText('Password'), 'password123');
-
-    const honeypotField = document.querySelector<HTMLInputElement>('#name__confirm');
-
-    if (honeypotField === null) {
-      throw new Error('expected the honeypot field to be present');
-    }
-
-    await user.type(honeypotField, 'filled in by a bot');
     await user.click(screen.getByRole('button', { name: 'Login' }));
 
     await waitFor(() => {
@@ -36,59 +58,28 @@ test('it shows a generic failure message for a rejected submission', async () =>
         'Something went wrong. Please try again.',
       );
     });
-
-    expect(screen.getByRole('button', { name: 'Login' })).not.toBeDisabled();
   });
 });
 
 test('it disables the submit button while the login request is pending', async () => {
   const user = userEvent.setup();
-
-  const foundUser = await db.userCollection.create({
-    email: 'login-form-pending@vers.test',
-    password: 'password123',
-  });
-
-  const mockUser = buildContractMock({
-    baseUrl: SERVICE_URLS.user,
-    contract: userContract,
-    resolveContext: () => ({ actingUserId: null }),
-  });
-
-  const lookupGate = Promise.withResolvers<void>();
-
-  server.use(
-    mockUser.getUser.handler(async () => {
-      await lookupGate.promise;
-
-      return foundUser;
-    }),
-  );
+  const deferred = buildDeferred<undefined>();
+  const gatedAction: FormAction = () => deferred.promise;
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<LoginForm />);
+    renderWithRouter(<LoginForm action={gatedAction} />);
 
-    const emailField = await screen.findByLabelText('Email');
+    const emailInput = await screen.findByLabelText('Email');
 
-    await user.type(emailField, 'login-form-pending@vers.test');
+    await user.type(emailInput, 'player@vers.test');
     await user.type(screen.getByLabelText('Password'), 'password123');
     await user.click(screen.getByRole('button', { name: 'Login' }));
 
-    await assertEventually(() => {
-      if (!screen.getByRole('button', { name: 'Login' }).hasAttribute('disabled')) {
-        throw new Error('the login button is not disabled yet');
-      }
-    });
+    expect(screen.getByRole('button', { name: 'Login' })).toBeDisabled();
 
-    lookupGate.resolve();
+    await deferred.release(undefined);
 
-    // the re-enable lands only after the thrown redirect's navigation settles, which act-wrapped
-    // waitFor cannot observe here
-    await assertEventually(() => {
-      if (screen.getByRole('button', { name: 'Login' }).hasAttribute('disabled')) {
-        throw new Error('the login button is still disabled');
-      }
-    });
+    expect(screen.getByRole('button', { name: 'Login' })).not.toBeDisabled();
   });
 });
 

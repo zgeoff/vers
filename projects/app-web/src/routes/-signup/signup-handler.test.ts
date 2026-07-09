@@ -33,10 +33,11 @@ test('it reports a field error for an invalid email', async () => {
     signupHandler(buildFormData({ email: 'not-an-email' })),
   );
 
-  expect(outcome.value).toStrictEqual({
-    fieldErrors: { email: 'Email is invalid' },
-    status: 'invalid-fields',
-  });
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({ email: ['Email is invalid'] });
 });
 
 test('it redirects to verify-otp without creating a verification for an email already in use', async () => {
