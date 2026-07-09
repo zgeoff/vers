@@ -20,7 +20,9 @@ export async function setupBunTestDB(): Promise<void> {
     return;
   }
 
-  if (await isTestContainerReachable()) {
+  const containerReachable = await isTestContainerReachable();
+
+  if (containerReachable) {
     process.env['TEST_DB_URI'] = `postgres://test:test@localhost:${TEST_CONTAINER_PORT}`;
     process.env['TEST_TEMPLATE_DB'] = TEST_TEMPLATE_DB;
 

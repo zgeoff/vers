@@ -38,11 +38,12 @@ export async function checkStepUp(opts: Readonly<CheckStepUpOptions>): Promise<C
 
   const sessionID = authSession.sessionID ?? null;
 
-  if (
-    opts.token !== undefined &&
-    (await tryConsumeStepUpToken(opts.action, opts.target, opts.token, sessionID))
-  ) {
-    return { status: 'verified' };
+  if (opts.token !== undefined) {
+    const consumed = await tryConsumeStepUpToken(opts.action, opts.target, opts.token, sessionID);
+
+    if (consumed) {
+      return { status: 'verified' };
+    }
   }
 
   return {
