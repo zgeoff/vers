@@ -25,7 +25,7 @@
         "@vitest/ui": "3.0.8",
         "@zgeoff/bun-test-extended": "0.0.3",
         "@zgeoff/format-codemod": "0.0.5",
-        "@zgeoff/oxlint-config": "0.0.2",
+        "@zgeoff/oxlint-config": "0.0.3",
         "esbuild": "0.25.1",
         "lefthook": "2.1.9",
         "oxfmt": "0.56.0",
@@ -2103,7 +2103,7 @@
 
     "@zgeoff/format-codemod": ["@zgeoff/format-codemod@0.0.5", "", { "dependencies": { "oxc-parser": "0.137.0" }, "bin": { "format-codemod": "dist/cli.js" } }, "sha512-YYyXMc9IPjCgcVGkWsXkrLfFFozpvMDgm1EUAVBuW4TyOxZpkIw4pIyg7SWdOgJ2AX0MANMoaPLC7LQdaWpG4w=="],
 
-    "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.0.2", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.71.0" } }, "sha512-H/GP7joUR2a5tuiqkjN//UoafqMug4khijcafAE4EI718NTKYd3DoIlbuB84tAG6UIlXWmuJFPp23NxMYheeOg=="],
+    "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.0.3", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.71.0" } }, "sha512-Kk6WBhjQ6FHpuxT1xTh7oWqbPezoikN9GwM679/nW6geNjdVxFKpBoJjzuGVVLT6BU3/JFHj5caHFrmxDCpx4w=="],
 
     "JSONStream": ["JSONStream@1.3.5", "", { "dependencies": { "jsonparse": "^1.2.0", "through": ">=2.2.7 <3" }, "bin": { "JSONStream": "./bin.js" } }, "sha512-E+iruNOY8VV9s4JEbe1aNEm6MiszPRr/UfcHMz0TQh1BXSxHK+ASV1R6W4HpjBhSeS+54PIsAMCBmwD06LLsqQ=="],
 

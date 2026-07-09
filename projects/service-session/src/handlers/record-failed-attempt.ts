@@ -25,7 +25,9 @@ export async function recordFailedAttempt(
   db: Kysely<DB>,
   opts: RecordFailedAttemptOpts,
 ): Promise<{ attemptsRemaining: number }> {
-  if (await removeIfAtCap(db, opts.input.id)) {
+  const removedAtCap = await removeIfAtCap(db, opts.input.id);
+
+  if (removedAtCap) {
     return { attemptsRemaining: 0 };
   }
 
@@ -44,7 +46,9 @@ export async function recordFailedAttempt(
 
   // a concurrent increment may have moved the row to the cap between the delete-at-cap attempt
   // above and this update; retry the delete once before concluding the row is gone or expired
-  if (await removeIfAtCap(db, opts.input.id)) {
+  const removedOnRetry = await removeIfAtCap(db, opts.input.id);
+
+  if (removedOnRetry) {
     return { attemptsRemaining: 0 };
   }
 
