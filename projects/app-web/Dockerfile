@@ -9,7 +9,7 @@ WORKDIR /app
 FROM base AS pruner
 
 # a standalone turbo binary — no workspace install needed to run prune
-RUN bun add --global turbo@2.10.0
+RUN --mount=type=cache,target=/root/.bun/install/cache bun add --global turbo@2.10.0
 
 COPY . .
 
@@ -21,7 +21,7 @@ FROM base AS installer
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/bun.lock ./bun.lock
 
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 
 # --- build the client + SSR server bundle ---
 FROM installer AS builder
@@ -53,7 +53,7 @@ FROM base AS prod-deps
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/bun.lock ./bun.lock
 
-RUN bun install --frozen-lockfile --production --linker=hoisted --ignore-scripts
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile --production --linker=hoisted --ignore-scripts
 
 # --- runtime ---
 FROM node:${NODE_VERSION}-alpine
@@ -64,10 +64,10 @@ WORKDIR /app
 
 ENV NODE_ENV="production"
 
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=builder /app/projects/app-web/package.json ./package.json
-COPY --from=builder /app/projects/app-web/server.mjs ./server.mjs
-COPY --from=builder /app/projects/app-web/dist ./dist
+COPY --link --from=prod-deps /app/node_modules ./node_modules
+COPY --link --from=builder /app/projects/app-web/package.json ./package.json
+COPY --link --from=builder /app/projects/app-web/server.mjs ./server.mjs
+COPY --link --from=builder /app/projects/app-web/dist ./dist
 
 EXPOSE 3000
 CMD [ "server.mjs" ]

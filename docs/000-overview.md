@@ -1,8 +1,8 @@
 # Overview
 
 Vers is a browser idle game on a microservice backend: a deterministic simulation runs on the
-client, the server verifies its results by replay, and everything deploys from one repo as a single
-atomic release.
+client, the server verifies its results by replay, and everything [deploys](./004-deployment.md)
+from one repo as a single atomic release.
 
 ## Request path
 

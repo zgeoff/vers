@@ -1,3 +1,5 @@
+# Public edge app: the only deployable with a public IP. It reaches the backend
+# services over the private 6PN mesh at their `.flycast` addresses (see [env]).
 app = 'vers-app-web'
 primary_region = 'syd'
 
@@ -6,12 +8,34 @@ primary_region = 'syd'
 [http_service]
 internal_port = 3000
 force_https = true
-auto_stop_machines = 'stop'
-auto_start_machines = false
+auto_stop_machines = 'suspend'
+auto_start_machines = true
+# keep one machine warm so the user-facing SSR app never pays a cold start
 min_machines_running = 1
 processes = ['app']
+
+[http_service.concurrency]
+type = 'requests'
+soft_limit = 200
+hard_limit = 250
+
+[[http_service.checks]]
+method = 'GET'
+path = '/health'
+interval = '15s'
+timeout = '2s'
+grace_period = '10s'
+
+[env]
+AVATAR_SERVICE_URL = 'http://vers-service-avatar.flycast'
+SESSION_SERVICE_URL = 'http://vers-service-session.flycast'
+USER_SERVICE_URL = 'http://vers-service-user.flycast'
+VERIFICATION_SERVICE_URL = 'http://vers-service-verification.flycast'
 
 [[vm]]
 memory = '512mb'
 cpu_kind = 'shared'
 cpus = 1
+
+[deploy]
+strategy = 'bluegreen'

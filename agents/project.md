@@ -36,9 +36,9 @@ project's `workspace:*` deps). Per-project `turbo.json` files exist only to decl
 tags. CI's changed-project detection is `turbo run --affected`.
 
 TypeScript is 7.0.2 (catalog). TS7 has no `baseUrl` and no classic Compiler API, and there is no
-path-alias convention here — write imports relative to the importing file. Node is 24.18.0
-everywhere (CI, every service's Dockerfile, app-web's `engines` field) — panda 2.0's floor and the
-ES2024 `lib` target both need it.
+path-alias convention here — write imports relative to the importing file. Node is 24.18.0 in CI and
+`app-web` (its runtime image and `engines` field); the domain services compile to a Bun binary on
+`alpine`. Panda 2.0's floor and the ES2024 `lib` target both need Node 24.
 
 ## Boundaries
 
@@ -105,21 +105,30 @@ CSS values that aren't theme tokens need the bracket escape hatch (`cursor: '[po
 
 ## Docker
 
-Each server deployable (`app-web`; `service-avatar`, `service-session`, `service-user`,
-`service-verification`) has a multi-stage Dockerfile around `turbo prune <pkg> --docker`;
-`app-design-reference` ships as a plain static-nginx image:
+Every server Dockerfile is multi-stage around `turbo prune <pkg> --docker`, whose **pruner** stage
+runs a standalone `turbo` binary to cut the workspace to the target's dependency graph: `out/json`
+(manifests only, for layer caching), `out/full` (source), a pruned `out/bun.lock`. `bun install`
+layers read a BuildKit cache mount (`--mount=type=cache,target=/root/.bun/install/cache`), so builds
+reuse the package cache.
 
-1. **pruner** — a standalone `turbo` binary prunes to the target's dependency graph: `out/json`
-   (manifests only, for layer caching), `out/full` (source), a pruned `out/bun.lock`.
-2. **installer** — full `bun install` against `out/json` for build-time tooling.
-3. **builder** — copies `out/full` plus `scripts/build-esbuild.ts` and `tsconfig.base.json` (outside
-   any package, so prune doesn't carry them), then runs the project's `build` script.
-4. **prod-deps** — `bun install --production --linker=hoisted`. Hoisting is essential: a bundle
-   inlines source from several packages, and its external imports (`pino`, …) must resolve from the
-   bundle's own location — only a flat `node_modules` serves them all.
-5. **runtime** — `node:24.18.0-alpine` with the prod-deps `node_modules` and built output only.
+`service-avatar`, `service-session`, `service-user`, and `service-verification` compile to a single
+executable in stages:
 
-app-web's builder runs its `codegen`/`typegen`/`build` scripts directly, not `turbo run build`.
+1. **pruner** — as above.
+2. **builder** — a full `bun install`, then
+   `bun build src/serve.ts --compile --target=bun-linux-x64-musl` inlines every dependency (the
+   services carry no native addons) into one binary.
+3. **runtime** — `alpine` with `libgcc` and `libstdc++` and the binary alone: no `node_modules`, no
+   source. The busybox shell keeps `fly ssh console` usable.
+
+`app-web` bundles an SSR server in stages: **pruner**; **installer** (full `bun install` for the
+build tooling); **builder** (its `codegen`/`typegen`/`build` scripts directly, plus
+`tsconfig.base.json` from outside any package); **prod-deps**
+(`bun install --production --linker=hoisted`, whose flat `node_modules` lets the bundle resolve
+external imports like `pino` from one location); and a `node:24.18.0-alpine` **runtime** holding
+`node_modules`, `server.mjs`, and `dist`.
+
+`app-design-reference` ships as a plain static-nginx image.
 
 ## Testing (bun test, 0-isolation)
 

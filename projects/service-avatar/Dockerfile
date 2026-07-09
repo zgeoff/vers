@@ -8,31 +8,41 @@ WORKDIR /app
 FROM base AS pruner
 
 # a standalone turbo binary — no workspace install needed to run prune
-RUN bun add --global turbo@2.10.0
+RUN --mount=type=cache,target=/root/.bun/install/cache bun add --global turbo@2.10.0
 
 COPY . .
 
 RUN turbo prune @vers/service-avatar --docker
 
-# --- production-only deps: no bundle step, so no hoisting needed ---
-FROM base AS prod-deps
+# --- compile the service to a single self-contained executable ---
+# the full dependency set is needed here: `bun build --compile` inlines every JS
+# import (workspace source + external deps) into the binary. The services have no
+# native addons, so the result is standalone — no node_modules or source at runtime.
+FROM base AS builder
 
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/bun.lock ./bun.lock
 
-RUN bun install --frozen-lockfile --production
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 
-# --- runtime: runs the pruned bun source directly, no bundle ---
-FROM base
-
-# the isolated linker nests a `node_modules` under every workspace package, not just the root, so
-# prod-deps' whole tree comes first; out/full then lays real source over its out/json placeholders
-COPY --from=prod-deps /app/ .
 COPY --from=pruner /app/out/full/ .
 
 WORKDIR /app/projects/service-avatar
 
-USER bun
-EXPOSE 3005
+# musl target matches the alpine runtime below
+RUN bun build src/serve.ts --compile --target=bun-linux-x64-musl --outfile /tmp/server
 
-CMD ["bun", "run", "src/serve.ts"]
+# --- runtime: just the binary on alpine (busybox shell kept for `fly ssh console`) ---
+FROM alpine:3.21
+
+# bun's musl binary links against libgcc and libstdc++
+RUN apk add --no-cache libgcc libstdc++
+
+COPY --from=builder /tmp/server /usr/local/bin/server
+
+ENV NODE_ENV="production"
+
+USER nobody
+EXPOSE 3000
+
+CMD ["server"]
