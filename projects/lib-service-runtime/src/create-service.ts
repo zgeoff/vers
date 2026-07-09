@@ -156,7 +156,7 @@ function getRequestId(request: Request): string {
 /**
  * Mounts an oRPC fetch handler behind the s2s trust boundary: an invalid service token short-
  * circuits with a plain 401 before the handler ever runs, per the auth/trust-boundary split in
- * docs/002-service-contracts.md.
+ * docs/service-contracts.md.
  */
 interface MountORPCHandlerDeps {
   readonly logger: pino.Logger;
