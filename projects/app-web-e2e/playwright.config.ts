@@ -47,11 +47,9 @@ export default defineConfig({
   },
   webServer: [
     {
-      // boots the dev server: its own vite plugin starts the mock backend (see
-      // app-web/vite.config.ts), giving journey specs a real request/response cycle backed by the
-      // mock services those journeys need — the production build below can't host that plugin
-      // (its `configureServer` hook only ever fires for `vite dev`), so this is the only server
-      // that can drive an actual signed-in flow.
+      // the dev server's own vite plugin starts the mock backend, giving journey specs the mock
+      // services a signed-in flow needs. Only `vite dev` fires that plugin's `configureServer`
+      // hook, so the production build below can't host it.
       command: 'bun run dev',
       cwd: appWebRoot,
       env: {
@@ -60,18 +58,16 @@ export default defineConfig({
         // Start's session sealing rejects any password under 32 characters
         SESSION_SECRET: 'e2e-session-secret-32-characters',
       },
-      // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-      reuseExistingServer: !process.env['CI'],
+      reuseExistingServer: process.env['CI'] === undefined,
       stderr: 'pipe',
       stdout: 'pipe',
       timeout: 240 * 1000,
       url: baseURL,
     },
     {
-      // boots the real production artifact (`vite build` + `server.mjs`) on its own port so
-      // `production-boot-smoke.spec.ts` can prove the deployable build actually serves traffic.
-      // No mock backend is available here, so only routes that don't call a downstream service
-      // (the health check, the anonymous home page) are exercised.
+      // the real production artifact (`vite build` + `server.mjs`) on its own port, so a smoke
+      // spec can prove the deployable build serves traffic. It hosts no mock backend, so only
+      // routes that call no downstream service (the health check, the anonymous home page) work.
       command: 'bun run build && node ./server.mjs',
       cwd: appWebRoot,
       env: {
@@ -82,14 +78,12 @@ export default defineConfig({
         // Start's session sealing rejects any password under 32 characters
         SESSION_SECRET: 'e2e-session-secret-32-characters',
       },
-      // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-      reuseExistingServer: !process.env['CI'],
+      reuseExistingServer: process.env['CI'] === undefined,
       stderr: 'pipe',
       stdout: 'pipe',
       timeout: 240 * 1000,
       url: `${productionBaseURL}/health`,
     },
   ],
-  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-  ...(process.env['CI'] && { workers: 1 }),
+  ...(process.env['CI'] !== undefined && { workers: 1 }),
 });
