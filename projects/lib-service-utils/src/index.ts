@@ -1,7 +1,3 @@
-export { createAuthMiddleware } from './middleware/create-auth-middleware';
-export { createLoggerMiddleware } from './middleware/create-logger-middleware';
-export { remoteAddressMiddleware } from './middleware/remote-address-middleware';
-
 export { LoggingSchema } from './schemas/logging-schema';
 export { NodeEnvSchema } from './schemas/node-env-schema';
 
