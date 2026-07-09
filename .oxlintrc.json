@@ -238,6 +238,10 @@
       "excludeFiles": [
         "**/src/bun/**",
         "projects/lib-utils/**",
+        "projects/lib-aether-core/**",
+        "projects/lib-contract-base/**",
+        "projects/lib-game-utils/**",
+        "projects/lib-idle-core/**",
         "projects/lib-contract-user/**",
         "projects/lib-contract-session/**",
         "projects/lib-contract-verification/**",

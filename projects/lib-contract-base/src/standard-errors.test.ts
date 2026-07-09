@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { STANDARD_ERRORS, UnauthorizedReasonSchema } from './standard-errors';
 
 test('it accepts both unauthorized reason variants', () => {

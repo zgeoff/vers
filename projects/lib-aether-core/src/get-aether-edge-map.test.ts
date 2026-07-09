@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { getAetherEdgeMap } from './get-aether-edge-map';
 import type { AetherNodeMap } from './types';
 

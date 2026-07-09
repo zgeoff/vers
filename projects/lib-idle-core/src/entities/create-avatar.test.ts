@@ -1,4 +1,4 @@
-import { expect, test, vi } from 'vitest';
+import { expect, mock, test } from 'bun:test';
 import { createActivity } from '../core/create-activity';
 import { createCombatExecutor } from '../core/create-combat-executor';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
@@ -19,7 +19,7 @@ test('it creates an avatar with correct initial values', () => {
 
   const avatar = createAvatar(data, ctx);
 
-  expect(avatar.id).toStrictEqual(expect.any(String));
+  expect(avatar.id).toBeString();
   expect(avatar.level).toBe(data.level);
   expect(avatar.type).toBe(EntityType.Avatar);
   expect(avatar.life).toBe(data.life);
@@ -70,7 +70,7 @@ test('it calls all registered handlers when handling a tick', () => {
   const activity = createActivity(activityData, ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
 
-  const handlerSpy = vi.fn<CombatLifecycleHandler<Avatar>>();
+  const handlerSpy = mock<CombatLifecycleHandler<Avatar>>();
 
   const behaviour: AvatarTestBehaviour = {
     getState: () => ({}),
@@ -79,7 +79,7 @@ test('it calls all registered handlers when handling a tick', () => {
     },
     id: BehaviourID.Test,
     predicate: () => true,
-    setState: vi.fn<AvatarTestBehaviour['setState']>(),
+    setState: mock<AvatarTestBehaviour['setState']>(),
     state: {},
   };
 
@@ -97,7 +97,7 @@ test('it allows removing behaviours', () => {
   const activity = createActivity(activityData, ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
 
-  const handlerSpy = vi.fn<CombatLifecycleHandler<Avatar>>();
+  const handlerSpy = mock<CombatLifecycleHandler<Avatar>>();
 
   const behaviour: AvatarTestBehaviour = {
     getState: () => ({}),
@@ -106,7 +106,7 @@ test('it allows removing behaviours', () => {
     },
     id: BehaviourID.Test,
     predicate: () => true,
-    setState: vi.fn<AvatarTestBehaviour['setState']>(),
+    setState: mock<AvatarTestBehaviour['setState']>(),
     state: {},
   };
 
@@ -140,7 +140,7 @@ test('it resets all behaviour states when resetting the avatar', () => {
   const avatarData = createMockAvatarData();
   const avatar = createAvatar(avatarData, ctx);
 
-  const resetHandlerSpy = vi.fn<LifecycleHandler<Avatar>>();
+  const resetHandlerSpy = mock<LifecycleHandler<Avatar>>();
 
   const behaviour: AvatarTestBehaviour = {
     getState: () => ({}),
@@ -149,7 +149,7 @@ test('it resets all behaviour states when resetting the avatar', () => {
     },
     id: BehaviourID.Test,
     predicate: () => true,
-    setState: vi.fn<AvatarTestBehaviour['setState']>(),
+    setState: mock<AvatarTestBehaviour['setState']>(),
     state: {},
   };
 
@@ -165,7 +165,7 @@ test('it allows for preserving avatar state when resetting', () => {
   const avatarData = createMockAvatarData({ life: 100 });
   const avatar = createAvatar(avatarData, ctx);
 
-  const resetHandlerSpy = vi.fn<LifecycleHandler<Avatar>>();
+  const resetHandlerSpy = mock<LifecycleHandler<Avatar>>();
 
   const behaviour: AvatarTestBehaviour = {
     getState: () => ({}),
@@ -174,7 +174,7 @@ test('it allows for preserving avatar state when resetting', () => {
     },
     id: BehaviourID.Test,
     predicate: () => true,
-    setState: vi.fn<AvatarTestBehaviour['setState']>(),
+    setState: mock<AvatarTestBehaviour['setState']>(),
     state: {
       count: 0,
     },

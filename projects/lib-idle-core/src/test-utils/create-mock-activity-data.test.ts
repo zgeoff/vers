@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { ActivityFailureAction, ActivityType } from '../types';
 import { createMockActivityData } from './create-mock-activity-data';
 import { createMockEnemyData } from './create-mock-enemy-data';

@@ -1,12 +1,15 @@
-import type * as GameUtils from '@vers/game-utils';
-import { expect, test, vi } from 'vitest';
+import { expect, spyOn, test } from 'bun:test';
+import * as gameUtils from '@vers/game-utils';
+import * as createIdModule from './create-id';
 import { generateGraphNodes } from './generate-graph-nodes';
 
-// mock our ID & seed generation so they return predictable values
-vi.mock(import('./create-id'), () => {
+// rather than testing our implementation, snapshot a valid graph.
+// if this changes we need to go over it with a fine tooth comb.
+test('it generates a valid graph', () => {
+  // spy ID & seed generation so they return predictable values for the snapshot
   let id = 0;
 
-  const createID = vi.fn<() => string>(() => {
+  spyOn(createIdModule, 'createID').mockImplementation(() => {
     const result = `id-${id}`;
 
     id++;
@@ -14,25 +17,10 @@ vi.mock(import('./create-id'), () => {
     return result;
   });
 
-  return { createID };
-});
-
-vi.mock(import('@vers/game-utils'), async (importOriginal) => {
-  const original = await importOriginal<typeof GameUtils>();
-
   let seed = 0;
 
-  const createSeed = vi.fn<() => number>(() => seed++);
+  spyOn(gameUtils, 'createSeed').mockImplementation(() => seed++);
 
-  return {
-    ...original,
-    createSeed,
-  };
-});
-
-// rather than testing our implementation, snapshot a valid graph.
-// if this changes we need to go over it with a fine tooth comb.
-test('it generates a valid graph', () => {
   const nodes = generateGraphNodes(3);
 
   expect(nodes).toMatchSnapshot();

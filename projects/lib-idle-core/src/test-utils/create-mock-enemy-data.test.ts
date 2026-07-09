@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { createMockEnemyData } from './create-mock-enemy-data';
 
 test('it creates enemy data with expected properties', () => {

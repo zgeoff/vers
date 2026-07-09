@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { createAetherNode } from './create-aether-node';
 
 test('it returns an aether node with no connections', () => {

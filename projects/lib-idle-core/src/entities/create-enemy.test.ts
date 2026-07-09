@@ -1,5 +1,5 @@
+import { expect, mock, test } from 'bun:test';
 import invariant from 'tiny-invariant';
-import { expect, test, vi } from 'vitest';
 import { createActivity } from '../core/create-activity';
 import { createCombatExecutor } from '../core/create-combat-executor';
 import { createEnemyGroup } from '../core/utils/create-enemy-group';
@@ -18,7 +18,7 @@ test('it creates an enemy with correct initial values', () => {
 
   const enemy = createEnemy(data, ctx);
 
-  expect(enemy.id).toStrictEqual(expect.any(String));
+  expect(enemy.id).toBeString();
   expect(enemy.level).toBe(data.level);
   expect(enemy.name).toBe(data.name);
   expect(enemy.type).toBe(EntityType.Enemy);
@@ -70,7 +70,7 @@ test('it calls all registered handlers when handling a tick', () => {
   const enemyGroup = createEnemyGroup(activityData, ctx, 1);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
 
-  const handlerSpy = vi.fn<CombatLifecycleHandler<Enemy>>();
+  const handlerSpy = mock<CombatLifecycleHandler<Enemy>>();
 
   const behaviour: EnemyTestBehaviour = {
     getState: () => ({}),
@@ -79,7 +79,7 @@ test('it calls all registered handlers when handling a tick', () => {
     },
     id: BehaviourID.Test,
     predicate: () => true,
-    setState: vi.fn<EnemyTestBehaviour['setState']>(),
+    setState: mock<EnemyTestBehaviour['setState']>(),
     state: {},
   };
 
@@ -102,7 +102,7 @@ test('it allows removing behaviours', () => {
   const enemyGroup = createEnemyGroup(activityData, ctx, 1);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
 
-  const handlerSpy = vi.fn<CombatLifecycleHandler<Enemy>>();
+  const handlerSpy = mock<CombatLifecycleHandler<Enemy>>();
 
   const behaviour: EnemyTestBehaviour = {
     getState: () => ({}),
@@ -111,7 +111,7 @@ test('it allows removing behaviours', () => {
     },
     id: BehaviourID.Test,
     predicate: () => true,
-    setState: vi.fn<EnemyTestBehaviour['setState']>(),
+    setState: mock<EnemyTestBehaviour['setState']>(),
     state: {},
   };
 
