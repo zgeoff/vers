@@ -2,8 +2,9 @@ import { renderHook } from '@testing-library/react';
 import { postMessageAndWaitForReply } from '@vers/client-test-utils';
 import { createMockActivityData, createMockAvatarData } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, onTestFinished, test } from 'vitest';
 import { setSimulationWorker } from '../state/set-simulation-worker';
+import { useSimulationStore } from '../state/use-simulation-store';
 import type { InitializeMessage, SetActivityMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { useSimulationWorker } from './use-simulation-worker';
@@ -40,6 +41,26 @@ test('it returns an existing worker instead of creating a new one', () => {
   const hook = renderHook(() => useSimulationWorker());
 
   expect(hook.result.current).toBe(worker);
+});
+
+test('it creates no worker when SharedWorker is unsupported', () => {
+  useSimulationStore.setState({ worker: null });
+
+  const originalSharedWorker = globalThis.SharedWorker;
+
+  Reflect.set(globalThis, 'SharedWorker', undefined);
+
+  onTestFinished(() => {
+    globalThis.SharedWorker = originalSharedWorker;
+  });
+
+  const hook = renderHook(() => useSimulationWorker());
+
+  hook.rerender();
+
+  expect(hook.result.current).toBeNull();
+
+  hook.unmount();
 });
 
 test('it handles state updates from worker', async () => {

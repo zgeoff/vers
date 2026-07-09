@@ -13,6 +13,12 @@ export function useSimulationWorker() {
   const existingWorker = useSimulationStore((state) => state.worker);
 
   useEffect(() => {
+    // Browsers without SharedWorker (Android Chrome, older Safari) would throw on construction;
+    // the worker stays undefined and every consumer degrades to its no-worker branch.
+    if (typeof SharedWorker === 'undefined') {
+      return;
+    }
+
     const worker = existingWorker ?? new SimulationWorker();
 
     setSimulationWorker(worker);
