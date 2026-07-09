@@ -16,7 +16,7 @@ return typed results.
 flowchart LR
     B[Browser] -->|HTTPS| W["app-web<br>TanStack Start"]
     W -->|"oRPC + service token<br>(Fly private mesh)"| S["domain services<br>Elysia on Bun"]
-    S -->|Kysely / Emmett| P[("Postgres<br>(Neon)")]
+    S -->|Kysely| P[("Postgres<br>(Neon)")]
 ```
 
 The oRPC link is isomorphic: during SSR the Start server calls services directly; in the browser,
@@ -44,11 +44,12 @@ is playing. Provisioning, connection rules, and where the secrets live: [databas
 
 - **Relational identity data** — users, sessions, verifications, avatars — accessed through Kysely,
   migrated by kysely-ctl in `lib-db`.
-- **Event-store checkpoints** — via Emmett, one stream per activity. The workload is append-heavy
-  checkpoint batches, point reads for "latest progress", and rare full replays — a natural fit for
-  indexed Postgres, with optimistic concurrency (`UNIQUE(stream_id, version)`) backing the
-  checkpoint hash chain. Emmett is backend-agnostic, so a purpose-built event store would be a
-  drop-in swap.
+- **Activity checkpoints** — an append-only table keyed by `(activity_id, version)`, one row per
+  checkpoint batch, range-partitioned by time. The workload is append-heavy submissions, point reads
+  for "latest progress" off a per-activity head row, and full-stream replays during verification — a
+  natural fit for indexed Postgres, with `UNIQUE(activity_id, version)` optimistic concurrency
+  backing the checkpoint hash chain. Verified streams age out on a retention window and cold-archive
+  to object storage, so the hot partitions stay bounded regardless of lifetime volume.
 
 ## Game layer
 
@@ -100,7 +101,6 @@ Backend:
 - API Layer - [oRPC](https://orpc.unnoq.com), contract-first
 - Database - [PostgreSQL](https://postgresql.org) on [Neon](https://neon.tech) via
   [Kysely](https://kysely.dev)
-- Event Store - [Emmett](https://event-driven-io.github.io/emmett/)
 - Authentication - [TOTP](https://github.com/epicweb-dev/totp),
   [jose](https://github.com/panva/jose), `Bun.password` (argon2id)
 - Email - [React Email](https://react.email), [Resend](https://resend.com)

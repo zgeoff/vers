@@ -21,6 +21,14 @@ from a Fly Sydney machine; warm queries ~2ms, fresh connections ~55–70ms). Fly
 not equal the 300s suspend window, or a first request after idle pays both cold starts at once — set
 Fly's idle-stop meaningfully longer or shorter when provisioning apps.
 
+## Activity checkpoint store
+
+The activity checkpoint log shares this Postgres. It is an append-only table keyed by
+`(activity_id, version)`, range-partitioned by time, alongside a per-activity head row carrying the
+appended and verified cursors that the resume read and the verification lock target. Retention is a
+`DROP PARTITION` over streams already verified and cold-archived to object storage — a bulk delete
+that avoids row-by-row churn and keeps the hot set bounded no matter how long the game runs.
+
 ## Connection strings
 
 Two hosts per endpoint: **direct** (`ep-<endpoint>.<region>.aws.neon.tech`) and **pooled**
