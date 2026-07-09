@@ -41,7 +41,7 @@ test('it shows the check-your-email heading and instructions for onboarding', as
   });
 });
 
-test('it maps a fabricated form-level result onto the code field', async () => {
+test('it shows a form-level error on the code field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
       <VerifyOTPForm

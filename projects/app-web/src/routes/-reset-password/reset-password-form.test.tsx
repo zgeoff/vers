@@ -33,7 +33,7 @@ test('it renders the hidden email and reset-token fields', async () => {
   });
 });
 
-test('it maps a fabricated form-level result onto a form error', async () => {
+test('it shows a form-level error message', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
       <ResetPasswordForm
@@ -52,7 +52,7 @@ test('it maps a fabricated form-level result onto a form error', async () => {
   });
 });
 
-test('it maps a fabricated field result onto the confirm-password field', async () => {
+test('it shows the error for the confirm-password field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
       <ResetPasswordForm

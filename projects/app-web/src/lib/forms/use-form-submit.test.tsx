@@ -78,7 +78,7 @@ function ReferenceForm(props: ReferenceFormProps) {
   );
 }
 
-test('it maps a fabricated form-level result onto a form error with no submit', async () => {
+test('it shows a form-level error message', async () => {
   renderWithRouter(
     <ReferenceForm
       lastResult={{ error: { '': ['Invalid email or password'] }, status: 'error' }}
@@ -90,7 +90,7 @@ test('it maps a fabricated form-level result onto a form error with no submit', 
   expect(alert).toHaveTextContent('Invalid email or password');
 });
 
-test('it maps a fabricated field result onto that field with no submit', async () => {
+test('it shows an error on the field it belongs to', async () => {
   renderWithRouter(
     <ReferenceForm lastResult={{ error: { email: ['That email is taken'] }, status: 'error' }} />,
   );
@@ -100,7 +100,7 @@ test('it maps a fabricated field result onto that field with no submit', async (
   expect(fieldError).toBeInTheDocument();
 });
 
-test('it maps a returned Response onto a generic form error', async () => {
+test('it shows a generic error message when the server rejects the submission', async () => {
   const user = userEvent.setup();
 
   renderWithRouter(<ReferenceForm action={rejectWithResponse} />);

@@ -29,7 +29,7 @@ test('it renders every field the account-creation form collects', async () => {
   );
 });
 
-test('it maps a fabricated field result onto the username field', async () => {
+test('it shows the error for the username field', async () => {
   await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboarding-form@vers.test' } } },
     async () => {
@@ -49,7 +49,7 @@ test('it maps a fabricated field result onto the username field', async () => {
   );
 });
 
-test('it maps a fabricated field result onto the confirm-password field', async () => {
+test('it shows the error for the confirm-password field', async () => {
   await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboarding-form@vers.test' } } },
     async () => {
