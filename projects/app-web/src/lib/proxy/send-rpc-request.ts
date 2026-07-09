@@ -1,5 +1,5 @@
 import { createEdgeServiceToken } from '../rpc/create-edge-service-token';
-import { resolveSessionActor } from '../rpc/resolve-session-actor';
+import { loadSessionActor } from '../rpc/load-session-actor';
 import type { ServiceName } from '../rpc/service-urls';
 import { SERVICE_URLS } from '../rpc/service-urls';
 
@@ -25,7 +25,7 @@ export async function sendRPCRequest(request: Request, service: ServiceName): Pr
 
   const headers = new Headers(request.headers);
 
-  const actingUserID = await resolveSessionActor();
+  const actingUserID = await loadSessionActor();
 
   const token = await createEdgeServiceToken({ actingUserID, audience: service });
 

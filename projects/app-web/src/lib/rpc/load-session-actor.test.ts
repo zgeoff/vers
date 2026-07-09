@@ -3,10 +3,10 @@ import { createId } from '@paralleldrive/cuid2';
 import { createMockAccessToken } from '../../mocks/create-mock-access-token';
 import * as db from '../../mocks/db';
 import { withRequestContext } from '../../test-utils/with-request-context';
-import { resolveSessionActor } from './resolve-session-actor';
+import { loadSessionActor } from './load-session-actor';
 
 test('it returns null with no network call when there is no cookie session', async () => {
-  const outcome = await withRequestContext({}, () => resolveSessionActor());
+  const outcome = await withRequestContext({}, () => loadSessionActor());
 
   expect(outcome.value).toBeNull();
 });
@@ -22,7 +22,7 @@ test('it returns the cookie userID unchanged for a fresh access token', async ()
         en_session: { accessToken, refreshToken: 'refresh-1', sessionID: 'session-1', userID },
       },
     },
-    () => resolveSessionActor(),
+    () => loadSessionActor(),
   );
 
   expect(outcome.value).toBe(userID);
@@ -44,7 +44,7 @@ test('it refreshes a stale access token once, updates the cookie, and returns th
         },
       },
     },
-    () => resolveSessionActor(),
+    () => loadSessionActor(),
   );
 
   expect(outcome.value).toBe(session.userID);
@@ -66,7 +66,7 @@ test('it clears the cookie and returns null when the refresh itself fails', asyn
         },
       },
     },
-    () => resolveSessionActor(),
+    () => loadSessionActor(),
   );
 
   expect(outcome.value).toBeNull();
@@ -87,7 +87,7 @@ test('it single-flights concurrent refreshes for the same session', async () => 
   };
 
   const outcome = await withRequestContext({ cookies }, () =>
-    Promise.all([resolveSessionActor(), resolveSessionActor()]),
+    Promise.all([loadSessionActor(), loadSessionActor()]),
   );
 
   expect(outcome.value).toStrictEqual([session.userID, session.userID]);
