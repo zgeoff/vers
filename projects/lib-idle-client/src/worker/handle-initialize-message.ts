@@ -9,7 +9,6 @@ import { handleSimulationStopped } from './handle-simulation-stopped';
 import { handleSimulationUpdate } from './handle-simulation-update';
 import { getSimulation, setSimulation } from './simulation';
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function handleInitializeMessage(_message: InitializeMessage) {
   const hasher = await xxhash();
 

@@ -4,7 +4,10 @@ import type {
   AnyContractProcedure,
   AnyContractRouter,
   AnySchema,
+  ContractProcedureDef,
   ContractRouterClient,
+  ErrorMap,
+  Meta,
 } from '@orpc/contract';
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { traverseContractProcedures } from '@orpc/server';
@@ -97,15 +100,12 @@ function buildMalformedInputCase(
   anonymousHeaders: ConformanceHeaders,
 ): ConformanceCase | undefined {
   const procedureDef = getProcedureDef(entry.procedure);
-  // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
   const inputSchema = procedureDef.inputSchema;
 
-  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
   if (!inputSchema) {
     return undefined;
   }
 
-  // oxlint-disable-next-line typescript/no-unsafe-argument -- baseline(#236)
   const probe = findRejectingProbe(inputSchema);
 
   if (probe === undefined) {
@@ -126,7 +126,10 @@ function buildMalformedInputCase(
 }
 
 /** Reads a contract procedure's declared route, schemas, and error map through oRPC's internal definition property. */
-function getProcedureDef(procedure: AnyContractProcedure) {
+function getProcedureDef(
+  procedure: AnyContractProcedure,
+): ContractProcedureDef<AnySchema, AnySchema, ErrorMap, Meta> {
+  // oxlint-disable-next-line typescript/no-unsafe-return -- AnyContractProcedure type-erases its schema/error-map generics to `any`; this is the one place that narrows `~orpc` back to its real shape so every caller gets typed fields
   return procedure['~orpc'];
 }
 
@@ -172,11 +175,11 @@ function getClientProcedure(
   let current: unknown = client;
 
   for (const segment of dotPath.split('.')) {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- walking a dot-path through an untyped client proxy; no compile-time proof the segment resolves to an object
     current = (current as Record<string, unknown>)[segment];
   }
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the final segment of a walked dot-path is a callable procedure by construction of the dotPath, not something the type checker can prove
   return current as (input: unknown) => Promise<unknown>;
 }
 
@@ -213,7 +216,7 @@ function buildAnonymousRejectionCase(
       const error = await runRejectingCall(() => call(sample));
 
       assert.equal(error.code, 'UNAUTHORIZED');
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- ORPCError#data is unknown; the UNAUTHORIZED shape is a runtime contract this conformance case verifies, not something declared in its type
       assert.equal((error.data as { reason: string }).reason, 'missing-session');
     },
     title: `it rejects an anonymous call to ${entry.dotPath} with UNAUTHORIZED`,

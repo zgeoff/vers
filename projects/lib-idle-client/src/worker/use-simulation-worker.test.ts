@@ -11,8 +11,9 @@ import { useSimulationWorker } from './use-simulation-worker';
 import SimulationWorker from './worker.ts?sharedworker';
 
 function wait(ms: number) {
-  // oxlint-disable-next-line typescript/strict-void-return -- baseline(#236)
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 // if we don't wait between tests, the worker won't be killed and doesn't

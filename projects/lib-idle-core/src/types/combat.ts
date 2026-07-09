@@ -1,5 +1,5 @@
 export interface CombatExecutorAppState {
-  elapsed: number;
+  readonly elapsed: number;
 }
 
 export interface CombatExecutor {
