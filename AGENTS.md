@@ -240,7 +240,7 @@ tags. CI's changed-project detection is `turbo run --affected`.
 
 TypeScript is 7.0.2 (catalog). TS7 has no `baseUrl` and no classic Compiler API, and there is no
 path-alias convention here — write imports relative to the importing file. Node is 24.18.0 in CI and
-`app-web` (its runtime image and `engines` field); the four services compile to a Bun binary on
+`app-web` (its runtime image and `engines` field); the domain services compile to a Bun binary on
 `alpine`. Panda 2.0's floor and the ES2024 `lib` target both need Node 24.
 
 ## Boundaries
@@ -315,7 +315,7 @@ layers read a BuildKit cache mount (`--mount=type=cache,target=/root/.bun/instal
 reuse the package cache.
 
 `service-avatar`, `service-session`, `service-user`, and `service-verification` compile to a single
-executable in three stages:
+executable in stages:
 
 1. **pruner** — as above.
 2. **builder** — a full `bun install`, then
@@ -324,8 +324,8 @@ executable in three stages:
 3. **runtime** — `alpine` with `libgcc` and `libstdc++` and the binary alone: no `node_modules`, no
    source. The busybox shell keeps `fly ssh console` usable.
 
-`app-web` bundles an SSR server across five stages: **pruner**; **installer** (full `bun install`
-for the build tooling); **builder** (its `codegen`/`typegen`/`build` scripts directly, plus
+`app-web` bundles an SSR server in stages: **pruner**; **installer** (full `bun install` for the
+build tooling); **builder** (its `codegen`/`typegen`/`build` scripts directly, plus
 `tsconfig.base.json` from outside any package); **prod-deps**
 (`bun install --production --linker=hoisted`, whose flat `node_modules` lets the bundle resolve
 external imports like `pino` from one location); and a `node:24.18.0-alpine` **runtime** holding

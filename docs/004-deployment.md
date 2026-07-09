@@ -4,7 +4,7 @@ Where the stack runs, how a merge reaches production, and how to re-provision it
 
 ## Topology
 
-Five apps run on Fly.io in the `syd` region. `app-web` holds the only public address. The four
+The stack runs on Fly.io in the `syd` region. `app-web` holds the only public address. The domain
 services — `service-avatar`, `service-session`, `service-user`, `service-verification` — are
 private, reachable only across the organization's 6PN WireGuard mesh. Postgres is a Neon project
 (see [database](./003-database.md)); no app runs its own database.
