@@ -3,8 +3,7 @@ interface TooltipContentProps {
   className?: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function TooltipContent(props: TooltipContentProps) {
+export function TooltipContent(props: Readonly<TooltipContentProps>) {
   const { children, className, ...restProps } = props;
 
   return (

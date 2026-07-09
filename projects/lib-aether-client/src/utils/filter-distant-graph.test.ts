@@ -53,8 +53,7 @@ test('it filters nodes beyond the maximum distance', () => {
   });
 });
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-function createTestNode(id: string, position: [number, number]): AetherNode {
+function createTestNode(id: string, position: readonly [number, number]): AetherNode {
   return {
     connections: [null, null, null, null],
     difficulty: 0,
@@ -65,8 +64,11 @@ function createTestNode(id: string, position: [number, number]): AetherNode {
   };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-function createTestEdge(id: string, start: [number, number], end: [number, number]): AetherEdge {
+function createTestEdge(
+  id: string,
+  start: readonly [number, number],
+  end: readonly [number, number],
+): AetherEdge {
   return {
     end,
     id,

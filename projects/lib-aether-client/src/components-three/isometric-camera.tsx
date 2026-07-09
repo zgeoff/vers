@@ -40,7 +40,6 @@ export function IsometricCamera() {
     position: getNodeCameraPosition(selectedNode.object3D),
   });
 
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const setCameraRef = useCallback((cameraInstance: null | PerspectiveCameraImpl) => {
     if (!cameraInstance) {
       return;
@@ -97,7 +96,6 @@ export function IsometricCamera() {
  * @param node - the node to get the camera position for
  * @returns the camera position
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function getNodeCameraPosition(node: null | Object3D) {
   if (!node) {
     return [0, CAMERA_DISTANCE, 0];

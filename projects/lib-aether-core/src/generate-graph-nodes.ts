@@ -2,6 +2,18 @@ import invariant from 'tiny-invariant';
 import { createAetherNode } from './create-aether-node';
 import type { AetherNode } from './types';
 
+type MutableConnections = [null | string, null | string, null | string, null | string];
+
+/**
+ * a node mid-construction: its connections are filled in across two passes
+ * before the graph is frozen into the readonly AetherNode shape callers get.
+ */
+type AetherNodeDraft = Omit<AetherNode, 'connections'> & { connections: MutableConnections };
+
+function toDraftNode(node: AetherNode): AetherNodeDraft {
+  return { ...node, connections: [...node.connections] };
+}
+
 /**
  * Generates a graph of AetherNodes and returns them as an array.
  *
@@ -9,9 +21,9 @@ import type { AetherNode } from './types';
  * @returns A graph of AetherNodes
  */
 export function generateGraphNodes(maxDifficulty: number): Array<AetherNode> {
-  const graph: Array<AetherNode> = [];
+  const graph: Array<AetherNodeDraft> = [];
 
-  const centralNode = createAetherNode(0, 0);
+  const centralNode = toDraftNode(createAetherNode(0, 0));
 
   graph.push(centralNode);
 
@@ -21,15 +33,12 @@ export function generateGraphNodes(maxDifficulty: number): Array<AetherNode> {
     const nodesInLevel = 4 * difficulty;
 
     for (let i = 0; i < nodesInLevel; i++) {
-      graph.push(createAetherNode(i, difficulty));
+      graph.push(toDraftNode(createAetherNode(i, difficulty)));
     }
   }
 
   // set all our connections
   for (const [i, node] of graph.entries()) {
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    invariant(node, 'node is required');
-
     const nodesInCurrentLevel = 4 * node.difficulty;
     const nodesInPreviousLevel = nodesInCurrentLevel - 4;
     const nodesInNextLevel = nodesInCurrentLevel + 4;
@@ -141,5 +150,12 @@ export function generateGraphNodes(maxDifficulty: number): Array<AetherNode> {
     node.connections[0] = centralNode.id;
   }
 
-  return graph;
+  return graph.map((node) => ({
+    connections: node.connections,
+    difficulty: node.difficulty,
+    id: node.id,
+    index: node.index,
+    position: node.position,
+    seed: node.seed,
+  }));
 }

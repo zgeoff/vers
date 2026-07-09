@@ -1,9 +1,8 @@
 import invariant from 'tiny-invariant';
-import type { AetherEdgeMap, AetherNodeMap } from './types';
+import type { AetherEdge, AetherEdgeMap, AetherNodeMap } from './types';
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function getAetherEdgeMap(aetherNodes: AetherNodeMap): AetherEdgeMap {
-  const edges: AetherEdgeMap = {};
+  const edges: Record<string, AetherEdge> = {};
 
   for (const node of Object.values(aetherNodes)) {
     for (const connection of node.connections) {

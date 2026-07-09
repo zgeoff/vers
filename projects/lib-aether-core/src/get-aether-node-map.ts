@@ -2,9 +2,10 @@ import { createRNG } from '@vers/game-utils';
 import { getRandomizedPosition } from './get-randomized-position';
 import type { AetherNode, AetherNodeMap, CompressedAetherNode } from './types';
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function getAetherNodeMap(compressedNodes: Array<CompressedAetherNode>): AetherNodeMap {
-  const nodes: AetherNodeMap = {};
+export function getAetherNodeMap(
+  compressedNodes: ReadonlyArray<CompressedAetherNode>,
+): AetherNodeMap {
+  const nodes: Record<string, AetherNode> = {};
 
   for (const node of compressedNodes) {
     const rng = createRNG(node.s);
