@@ -4,6 +4,7 @@ export interface AuthSessionData {
   readonly expires?: string;
   readonly refreshToken?: string;
   readonly sessionID?: string;
+  readonly userID?: string;
 }
 
 /**
@@ -15,6 +16,7 @@ export type VerifySessionKey =
   | 'login2FA#target'
   | 'loginLogout#email'
   | 'loginLogout#sessionID'
+  | 'loginLogout#userID'
   | 'onboarding#email';
 
 /** A write with an explicit `undefined` value clears that key. */
