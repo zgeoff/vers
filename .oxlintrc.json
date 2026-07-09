@@ -138,8 +138,10 @@
             ]
           },
           { "from": "package", "name": "ReactNode", "package": "react" },
+          { "from": "package", "name": "SyntheticEvent", "package": "react" },
           { "from": "package", "name": "ZodError", "package": "zod" },
           { "from": "package", "name": "JWTPayload", "package": "jose" },
+          { "from": "package", "name": "SubmissionResult", "package": "@conform-to/dom" },
           // not handles but intentionally never readonly: idle-core's tick
           // and lifecycle handlers mutate these entities in place for
           // performance, so no readonly form of them exists to consume
