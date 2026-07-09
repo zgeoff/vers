@@ -18,7 +18,7 @@ export default defineConfig({
     // predating the environment API), not `server`.
     ssr: {
       build: {
-        rollupOptions: {
+        rolldownOptions: {
           // pino's transport/worker mechanism spawns a real worker_thread from a file on disk;
           // bundling it strips that file out from under it (breaking on `__dirname`, among other
           // things), so it — and the transports it loads by module name at runtime — stay external

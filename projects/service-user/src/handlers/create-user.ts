@@ -55,7 +55,7 @@ function findViolatedField(error: unknown): 'email' | 'username' | undefined {
     typeof error !== 'object' ||
     error === null ||
     !('code' in error) ||
-    (error as { code: unknown }).code !== '23505' ||
+    error.code !== '23505' ||
     !('constraint_name' in error)
   ) {
     return undefined;

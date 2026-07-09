@@ -56,10 +56,5 @@ export async function createPendingTransaction(
 
 /** postgres.js surfaces a unique-constraint violation as SQLSTATE 23505. */
 function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code: unknown }).code === '23505'
-  );
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
 }

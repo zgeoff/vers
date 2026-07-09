@@ -238,7 +238,7 @@ protocol, and versions shared by 5+ projects live in the root manifest's `worksp
 project's `workspace:*` deps). Per-project `turbo.json` files exist only to declare `boundaries`
 tags. CI's changed-project detection is `turbo run --affected`.
 
-TypeScript is 7.0.1-rc (catalog). TS7 has no `baseUrl` and no classic Compiler API, and there is no
+TypeScript is 7.0.2 (catalog). TS7 has no `baseUrl` and no classic Compiler API, and there is no
 path-alias convention here — write imports relative to the importing file. Node is 24.18.0
 everywhere (CI, every service's Dockerfile, app-web's `engines` field) — panda 2.0's floor and the
 ES2024 `lib` target both need it.
