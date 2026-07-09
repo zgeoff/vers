@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "extends": ["./node_modules/@zgeoff/oxlint-config/oxlintrc.json"],
+  // infra/ is a standalone Pulumi package on its own TS5 + ts-node toolchain, not
+  // the workspace's TS7 world — its tsconfig is invalid for the type-aware pass
+  "ignorePatterns": ["infra/**"],
   "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "react", "jsx-a11y"],
   "env": {
     "browser": true,
