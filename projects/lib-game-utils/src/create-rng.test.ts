@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { createRNG } from './create-rng';
 
 test('it generates a deterministic sequence of integers with the given seed', () => {
@@ -18,5 +18,5 @@ test('it generates a deterministic array of integers with the given seed', () =>
   const series = rng.getSeries(0, 100, 20);
 
   expect(series).toHaveLength(20);
-  expect(series).toStrictEqual(expect.arrayContaining([expect.any(Number)]));
+  expect(series).toSatisfyAll((value: number) => typeof value === 'number');
 });

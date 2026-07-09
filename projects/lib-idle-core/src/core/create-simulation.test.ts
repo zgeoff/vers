@@ -1,4 +1,4 @@
-import { expect, test, vi } from 'vitest';
+import { expect, mock, test } from 'bun:test';
 import xxhash from 'xxhash-wasm';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
@@ -35,7 +35,7 @@ test('it calls an event listener when starting an activity', () => {
 
   const simulation = createSimulation(hasher);
 
-  const listenerSpy = vi.fn<SimulationListener>();
+  const listenerSpy = mock<SimulationListener>();
 
   simulation.addEventListener('started', listenerSpy);
   simulation.startActivity(avatarData, activityData);
@@ -62,7 +62,7 @@ test('it calls an event listener when stopping an activity', async () => {
 
   const simulation = createSimulation(hasher);
 
-  const listenerSpy = vi.fn<SimulationListener>();
+  const listenerSpy = mock<SimulationListener>();
 
   simulation.addEventListener('stopped', listenerSpy);
   simulation.startActivity(avatarData, activityData);
@@ -94,7 +94,7 @@ test('it calls an event listener when restarting an activity', () => {
 
   const simulation = createSimulation(hasher);
 
-  const listenerSpy = vi.fn<SimulationListener>();
+  const listenerSpy = mock<SimulationListener>();
 
   simulation.addEventListener('restarted', listenerSpy);
   simulation.startActivity(avatarData, activityData);
@@ -159,7 +159,7 @@ test('it calls an event listener when the state updates', async () => {
   const simulation = createSimulation(hasher);
   const activityData = createMockActivityData();
 
-  const listenerSpy = vi.fn<SimulationListener>();
+  const listenerSpy = mock<SimulationListener>();
 
   simulation.addEventListener('updated', listenerSpy);
   simulation.startActivity(avatarData, activityData);

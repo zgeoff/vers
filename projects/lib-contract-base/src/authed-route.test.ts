@@ -1,6 +1,6 @@
+import { expect, test } from 'bun:test';
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
-import { expect, test } from 'vitest';
 import * as z from 'zod';
 import { authedRoute } from './authed-route';
 

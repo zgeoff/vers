@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { getCompressedAetherGraph } from './get-compressed-aether-graph';
 import type { AetherNode } from './types';
 

@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import invariant from 'tiny-invariant';
-import { expect, test } from 'vitest';
 import { createActivity } from '../../core/create-activity';
 import { createCombatExecutor } from '../../core/create-combat-executor';
 import { createAvatar } from '../../entities/create-avatar';

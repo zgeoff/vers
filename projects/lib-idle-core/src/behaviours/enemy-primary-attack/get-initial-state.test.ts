@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { getInitialState } from './get-initial-state';
 
 test('it returns the initial state', () => {

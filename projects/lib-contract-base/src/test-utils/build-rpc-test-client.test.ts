@@ -1,7 +1,7 @@
+import { expect, test } from 'bun:test';
 import { implement } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/fetch';
 import { Elysia } from 'elysia';
-import { expect, test } from 'vitest';
 import * as z from 'zod';
 import { publicRoute } from '../public-route';
 import { buildRPCTestClient } from './build-rpc-test-client';

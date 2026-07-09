@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
 import { ActivityCheckpointType } from '../../types';
 import { hashObject } from '../../utils/hash-object';

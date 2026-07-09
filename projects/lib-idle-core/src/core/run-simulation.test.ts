@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
@@ -22,7 +22,6 @@ test('runs a simulation with default configuration', async () => {
 
   const result = await runSimulation(activity, avatar, config);
 
-  // oxlint-disable-next-line vitest/no-large-snapshots -- the snapshot is the full deterministic simulation transcript; its size is the assertion
   expect(result).toMatchInlineSnapshot(`
     {
       "checkpoints": [

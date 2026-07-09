@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { createMockAvatarData } from '../../test-utils/create-mock-avatar-data';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
 import { EquipmentSlot } from '../../types';

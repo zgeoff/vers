@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { createMockActivityData } from '../../test-utils/create-mock-activity-data';
 import { createMockEnemyData } from '../../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
@@ -10,7 +10,7 @@ test('it creates an enemy group with the given number of enemies', () => {
 
   const enemyGroup = createEnemyGroup(activity, ctx, 2);
 
-  expect(enemyGroup.id).toStrictEqual(expect.any(String));
+  expect(enemyGroup.id).toBeString();
   expect(enemyGroup.enemies).toHaveLength(2);
   expect(enemyGroup.remaining).toBe(2);
 });

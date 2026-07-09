@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import { Class } from '@vers/data';
-import { expect, test } from 'vitest';
 import { EquipmentSlot } from '../types';
 import { createMockAvatarData } from './create-mock-avatar-data';
 

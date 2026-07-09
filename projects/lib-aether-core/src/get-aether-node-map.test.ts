@@ -1,17 +1,15 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, expect, mock, spyOn, test } from 'bun:test';
 import { getAetherNodeMap } from './get-aether-node-map';
 import * as getRandomizedPosition from './get-randomized-position';
 import type { CompressedAetherNode } from './types';
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  mock.restore();
 });
 
 test('it creates a node map from compressed nodes', () => {
   // mock our randomization so we can assert we're getting the correct positions
-  vi.spyOn(getRandomizedPosition, 'getRandomizedPosition').mockImplementation(
-    (position) => position,
-  );
+  spyOn(getRandomizedPosition, 'getRandomizedPosition').mockImplementation((position) => position);
 
   const compressedNodes: Array<CompressedAetherNode> = [
     {

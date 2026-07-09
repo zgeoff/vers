@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { createID } from './create-id';
 
 test('it returns an ID with the correct length', () => {

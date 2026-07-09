@@ -1,4 +1,4 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+// Bun Snapshot v1, https://bun.com/docs/test/snapshots
 
 exports[`it generates a valid graph 1`] = `
 [
