@@ -6,6 +6,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Field, StatusButton, Text } from '@vers/design-system';
 import { z } from 'zod';
+import { assertEventually } from '../../test-utils/assert-eventually';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import type { FormAction } from './types';
 import { useFormSubmit } from './use-form-submit';
@@ -146,13 +147,19 @@ test('it disables the submit button while the action is in flight', async () => 
   await user.type(screen.getByPlaceholderText('Password'), 'password123');
   await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled();
+  // the pending toggle is driven outside `act` — poll the DOM rather than `waitFor`, which flushes
+  // through `act` and cannot observe it settle under CI timing
+  await assertEventually(() => {
+    if (!screen.getByRole('button', { name: 'Sign in' }).hasAttribute('disabled')) {
+      throw new Error('the submit button is not disabled yet');
+    }
   });
 
   gate.resolve(undefined);
 
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Sign in' })).not.toBeDisabled();
+  await assertEventually(() => {
+    if (screen.getByRole('button', { name: 'Sign in' }).hasAttribute('disabled')) {
+      throw new Error('the submit button is still disabled');
+    }
   });
 });
