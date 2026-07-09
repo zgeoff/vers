@@ -118,6 +118,7 @@ test('it redirects to force-logout and stores the pending session when another s
   expect(outcome.cookies['en_verification']).toStrictEqual({
     'loginLogout#email': 'force-logout@vers.test',
     'loginLogout#sessionID': expect.toBeString(),
+    'loginLogout#userID': user.id,
   });
 });
 

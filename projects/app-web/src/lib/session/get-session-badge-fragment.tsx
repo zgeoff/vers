@@ -1,8 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { createCompositeComponent } from '@tanstack/react-start/rsc';
-import { getRequestHeaders } from '@tanstack/react-start/server';
 import type { ReactNode } from 'react';
-import { toSessionHeaders } from '../rpc/to-session-headers';
 import { pickSessionBadgeMessage } from './pick-session-badge-message';
 import { tryReadCurrentUser } from './try-read-current-user';
 
@@ -15,7 +13,7 @@ interface SessionBadgeFragmentProps {
  * Query owns this fragment's cache, independent of the index route's own server-rendered content.
  */
 export const getSessionBadgeFragment = createServerFn({ method: 'GET' }).handler(async () => {
-  const result = await tryReadCurrentUser(toSessionHeaders(getRequestHeaders()));
+  const result = await tryReadCurrentUser();
 
   const message = pickSessionBadgeMessage(result);
 

@@ -56,6 +56,7 @@ test('it signs out every other live session and completes sign-in on confirm', a
         en_verification: {
           'loginLogout#email': 'force-logout-confirm@vers.test',
           'loginLogout#sessionID': pendingSessionID,
+          'loginLogout#userID': userID,
         },
       },
     },

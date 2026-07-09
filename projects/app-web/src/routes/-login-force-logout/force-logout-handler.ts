@@ -9,6 +9,7 @@ import { sessionClient } from '../../lib/rpc/clients/session-client';
 const CLEAR_PENDING_SESSION: VerifySessionData = {
   'loginLogout#email': undefined,
   'loginLogout#sessionID': undefined,
+  'loginLogout#userID': undefined,
 };
 
 /**
@@ -25,39 +26,27 @@ export async function forceLogoutHandler(formData: FormData): Promise<never> {
   const verifySession = await getVerifySession();
 
   const sessionID = verifySession['loginLogout#sessionID'];
+  const actingUserID = verifySession['loginLogout#userID'];
 
-  if (intent !== 'confirm' || sessionID === undefined) {
+  if (intent !== 'confirm' || sessionID === undefined || actingUserID === undefined) {
     await updateVerifySession(CLEAR_PENDING_SESSION);
 
     throw redirect({ href: '/' });
   }
 
-  const sessionBearerHeaders = { authorization: `Bearer ${sessionID}` };
-
-  const otherSessions = await sessionClient.getSessions(
-    {},
-    { context: { headers: sessionBearerHeaders } },
-  );
+  const otherSessions = await sessionClient.getSessions({}, { context: { actingUserID } });
 
   await Promise.all(
     otherSessions
       .filter((other) => other.id !== sessionID)
-      .map((other) =>
-        sessionClient.deleteSession(
-          { id: other.id },
-          { context: { headers: sessionBearerHeaders } },
-        ),
-      ),
+      .map((other) => sessionClient.deleteSession({ id: other.id }, { context: { actingUserID } })),
   );
 
-  const session = await sessionClient.getSession(
-    { id: sessionID },
-    { context: { headers: sessionBearerHeaders } },
-  );
+  const session = await sessionClient.getSession({ id: sessionID }, { context: { actingUserID } });
 
   const tokens = await sessionClient.verifySession(
     { id: sessionID },
-    { context: { headers: sessionBearerHeaders } },
+    { context: { actingUserID } },
   );
 
   await updateVerifySession(CLEAR_PENDING_SESSION);
@@ -65,7 +54,12 @@ export async function forceLogoutHandler(formData: FormData): Promise<never> {
   const updateOptions = session === null ? {} : { expiresAt: session.expiresAt };
 
   await updateAuthSession(
-    { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, sessionID },
+    {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      sessionID,
+      userID: actingUserID,
+    },
     updateOptions,
   );
 
