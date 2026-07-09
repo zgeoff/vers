@@ -1,5 +1,4 @@
 config:
-  # Set after adding versidle.com to Cloudflare:
-  #   op run --env-file=.env -- pulumi config set vers-infra:zoneId <zone-id>
   vers-infra:zoneName: versidle.com
   vers-infra:appHostname: vers-app-web.fly.dev
+  vers-infra:zoneId: fc9e4cdc2fff4aee760c7fd1e71ffe27
