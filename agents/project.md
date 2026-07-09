@@ -135,6 +135,10 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
   upstream-failure cases. For oRPC procedures, build those handlers with `buildMockService` /
   `mockService` (`@vers/client-test-utils/rpc-msw`).
 - **Global mock reset** lives in the preload's `afterEach` (`mock.restore()`), never per-test.
+- **A test that mutates global or environment state** restores it in an `onTestFinished(...)`
+  callback registered inside the test — not `try`/`finally`, not a lifecycle hook — so teardown runs
+  after the test whether it passes or throws. A setup helper may register the `onTestFinished`
+  itself, giving callers restoration without wrapping their body.
 - **jest-extended matchers** come from the `@zgeoff/bun-test-extended` preload; a package-local
   `augment-bun-test.ts` side-effect import brings their types into `tsc`.
 - `toStrictEqual`, not `toEqual`, for object assertions.

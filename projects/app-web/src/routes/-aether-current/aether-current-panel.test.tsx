@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import { setSelectedNode } from '@vers/aether-client';
 import type { ActivityAppState } from '@vers/idle-core';
+import { removeSharedWorker } from '../../test-utils/remove-shared-worker';
 import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
 import { AetherCurrentPanel } from './aether-current-panel';
 
@@ -40,6 +41,17 @@ test('it shows a spinner and sends initialize before the worker reports its stat
 
   expect(calls).toStrictEqual([{ type: 'initialize' }]);
   expect(screen.queryByTestId('aether-node-codex-stub')).not.toBeInTheDocument();
+});
+
+test('it reports the simulation as unavailable when SharedWorker is unsupported', async () => {
+  setSelectedNode(null);
+  removeSharedWorker();
+
+  await withIdleWorkerHandle({ activity: undefined, initialized: false, worker: undefined }, () => {
+    render(<AetherCurrentPanel />);
+  });
+
+  expect(screen.getByRole('status')).toHaveTextContent(/activity simulation is unavailable/i);
 });
 
 test('it sends set-activity once initialized but the worker has not caught up yet', async () => {
