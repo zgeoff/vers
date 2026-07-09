@@ -2,11 +2,10 @@ import { expect, test } from 'bun:test';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import type { SubmissionResult } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Field, StatusButton, Text } from '@vers/design-system';
 import { z } from 'zod';
-import { assertEventually } from '../../test-utils/assert-eventually';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import type { FormAction } from './types';
 import { useFormSubmit } from './use-form-submit';
@@ -147,19 +146,15 @@ test('it disables the submit button while the action is in flight', async () => 
   await user.type(screen.getByPlaceholderText('Password'), 'password123');
   await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-  // the pending toggle is driven outside `act`; poll the DOM rather than `waitFor`, which flushes
-  // through `act` and can't observe it settle
-  await assertEventually(() => {
-    if (!screen.getByRole('button', { name: 'Sign in' }).hasAttribute('disabled')) {
-      throw new Error('the submit button is not disabled yet');
-    }
+  expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled();
+
+  // the re-enable fires from the resolved action's own continuation — a microtask outside React's
+  // batching; flush it inside `act` so the settled state is asserted directly, not polled for
+  await act(async () => {
+    gate.resolve(undefined);
+
+    await gate.promise;
   });
 
-  gate.resolve(undefined);
-
-  await assertEventually(() => {
-    if (screen.getByRole('button', { name: 'Sign in' }).hasAttribute('disabled')) {
-      throw new Error('the submit button is still disabled');
-    }
-  });
+  expect(screen.getByRole('button', { name: 'Sign in' })).not.toBeDisabled();
 });
