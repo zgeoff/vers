@@ -14,7 +14,7 @@
     "@orpc/contract": "1.14.6",
     "@vers/contract-base": "workspace:*",
     "@vers/data": "workspace:*",
-    "zod": "4.4.3"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@orpc/openapi": "1.14.6",

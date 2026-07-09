@@ -1,5 +1,5 @@
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
-import { getZodConstraint, parseWithZod } from '@conform-to/zod';
+import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4';
 import { z } from 'zod';
 import { Button } from '../components/button/button';
 import { CheckboxField } from '../components/checkbox-field/checkbox-field';
@@ -8,13 +8,11 @@ import { Field } from '../components/field/field';
 const SignupFormSchema = z.object({
   agreeToTerms: z
     .literal('on', {
-      errorMap: () => ({
-        message: 'You must agree to the terms of service and privacy policy',
-      }),
+      error: 'You must agree to the terms of service and privacy policy',
     })
     .transform(Boolean),
   confirmPassword: z.string().min(6),
-  email: z.string().email(),
+  email: z.email(),
   name: z.string().min(2),
   password: z.string().min(6),
   rememberMe: z.boolean().optional(),
