@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { isNonNullable } from './is-non-nullable';
 
 test.each([[1], [''], [false]])('should return true for non-nullable values', (value) => {
