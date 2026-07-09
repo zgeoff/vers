@@ -148,7 +148,6 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
   return avatar;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function getInitialState(data: AvatarData): AvatarState {
   return {
     life: data.life,

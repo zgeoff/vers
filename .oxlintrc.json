@@ -139,7 +139,20 @@
           },
           { "from": "package", "name": "ReactNode", "package": "react" },
           { "from": "package", "name": "ZodError", "package": "zod" },
-          { "from": "package", "name": "JWTPayload", "package": "jose" }
+          { "from": "package", "name": "JWTPayload", "package": "jose" },
+          // not handles but intentionally never readonly: idle-core's tick
+          // and lifecycle handlers mutate these entities in place for
+          // performance, so no readonly form of them exists to consume
+          {
+            "from": "file",
+            "name": ["ActivityData", "AetherNodeActivityData"],
+            "path": "../lib-idle-core/src/types/activity.ts"
+          },
+          {
+            "from": "file",
+            "name": "AvatarData",
+            "path": "../lib-idle-core/src/types/entities.ts"
+          }
         ]
       }
     ],

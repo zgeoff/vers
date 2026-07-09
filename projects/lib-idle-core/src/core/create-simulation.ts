@@ -65,7 +65,6 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     updated: [],
   };
 
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   const startActivity = async (avatarData: AvatarData, activityData: ActivityData) => {
     const isSameActivity = _activityData?.id === activityData.id;
     const isSameAvatar = _avatar?.id === avatarData.id;
