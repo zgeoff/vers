@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { generateChangeEmailVerificationEmail } from './generate-change-email-verification';
 
 test('it generates a verification email with the provided configuration', async () => {

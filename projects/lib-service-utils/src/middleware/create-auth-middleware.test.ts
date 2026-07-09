@@ -1,8 +1,8 @@
+import { expect, mock, test } from 'bun:test';
 import { createTestJWT } from '@vers/service-test-utils';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
 import * as jose from 'jose';
-import { afterEach, expect, test, vi } from 'vitest';
 import { createAuthMiddleware } from './create-auth-middleware';
 
 const TEST_TOKEN_PAYLOAD = {
@@ -51,18 +51,6 @@ KQIDAQAB
 -----END PUBLIC KEY-----
 `;
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-const testHandlerSpy = vi.fn<(ctx: Context) => Promise<Response>>((ctx: Context) =>
-  Promise.resolve(
-    ctx.json({
-      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-      payload: ctx.get('jwtPayload'),
-      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-      userID: ctx.get('userID'),
-    }),
-  ),
-);
-
 interface TestConfig {
   isAuthRequired?: boolean;
 }
@@ -70,6 +58,20 @@ interface TestConfig {
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function setupTest(config: TestConfig = {}) {
   const app = new Hono();
+
+  // a fresh spy per test: bun runs the file in one process and `mock.restore()` reverts spies
+  // without clearing their call history, so a shared module-level spy would accrue calls
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
+  const handlerSpy = mock<(ctx: Context) => Promise<Response>>((ctx: Context) =>
+    Promise.resolve(
+      ctx.json({
+        // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
+        payload: ctx.get('jwtPayload'),
+        // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
+        userID: ctx.get('userID'),
+      }),
+    ),
+  );
 
   const authMiddleware = createAuthMiddleware({
     ...(config.isAuthRequired !== undefined && {
@@ -82,7 +84,7 @@ async function setupTest(config: TestConfig = {}) {
     },
   });
 
-  app.use('/test', authMiddleware, testHandlerSpy);
+  app.use('/test', authMiddleware, handlerSpy);
 
   const signingKey = await jose.importPKCS8(TEST_PKCS8_PRIVKEY, 'RS256');
 
@@ -93,12 +95,8 @@ async function setupTest(config: TestConfig = {}) {
     sub: TEST_TOKEN_PAYLOAD.sub,
   });
 
-  return { app, token };
+  return { app, handlerSpy, token };
 }
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 test('it authorizes a valid token and extracts the payload and user ID', async () => {
   const ctx = await setupTest({ isAuthRequired: true });
@@ -109,9 +107,9 @@ test('it authorizes a valid token and extracts the payload and user ID', async (
 
   const res = await ctx.app.request(req);
 
-  expect(testHandlerSpy).toHaveBeenCalledOnce();
+  expect(ctx.handlerSpy).toHaveBeenCalledOnce();
 
-  await expect(res.json()).resolves.toStrictEqual({
+  expect(res.json()).resolves.toStrictEqual({
     payload: TEST_TOKEN_PAYLOAD,
     userID: TEST_TOKEN_PAYLOAD.sub,
   });
@@ -126,9 +124,9 @@ test('it returns a 401 if no token is provided', async () => {
 
   const res = await ctx.app.request(req);
 
-  expect(testHandlerSpy).not.toHaveBeenCalled();
+  expect(ctx.handlerSpy).not.toHaveBeenCalled();
 
-  await expect(res.text()).resolves.toBe('Unauthorized');
+  expect(res.text()).resolves.toBe('Unauthorized');
 
   expect(res.status).toBe(401);
 });
@@ -142,9 +140,9 @@ test('it rejects an invalid authorization header', async () => {
 
   const res = await ctx.app.request(req);
 
-  expect(testHandlerSpy).not.toHaveBeenCalled();
+  expect(ctx.handlerSpy).not.toHaveBeenCalled();
 
-  await expect(res.text()).resolves.toBe('Unauthorized');
+  expect(res.text()).resolves.toBe('Unauthorized');
 
   expect(res.status).toBe(401);
 
@@ -162,9 +160,9 @@ test('it rejects an invalid token', async () => {
 
   const res = await ctx.app.request(req);
 
-  expect(testHandlerSpy).not.toHaveBeenCalled();
+  expect(ctx.handlerSpy).not.toHaveBeenCalled();
 
-  await expect(res.text()).resolves.toBe('Unauthorized');
+  expect(res.text()).resolves.toBe('Unauthorized');
 
   expect(res.status).toBe(401);
 
@@ -180,7 +178,7 @@ test('it allows requests without auth header when auth is optional', async () =>
 
   const res = await ctx.app.request(req);
 
-  expect(testHandlerSpy).toHaveBeenCalledOnce();
+  expect(ctx.handlerSpy).toHaveBeenCalledOnce();
   expect(res.status).toBe(200);
 });
 
@@ -193,9 +191,9 @@ test('it validates token when provided even if auth is optional', async () => {
 
   const res = await ctx.app.request(req);
 
-  expect(testHandlerSpy).not.toHaveBeenCalled();
+  expect(ctx.handlerSpy).not.toHaveBeenCalled();
 
-  await expect(res.text()).resolves.toBe('Unauthorized');
+  expect(res.text()).resolves.toBe('Unauthorized');
 
   expect(res.status).toBe(401);
 
@@ -213,10 +211,10 @@ test('it processes valid token when auth is optional', async () => {
 
   const res = await ctx.app.request(req);
 
-  expect(testHandlerSpy).toHaveBeenCalledOnce();
+  expect(ctx.handlerSpy).toHaveBeenCalledOnce();
   expect(res.status).toBe(200);
 
-  await expect(res.json()).resolves.toStrictEqual({
+  expect(res.json()).resolves.toStrictEqual({
     payload: TEST_TOKEN_PAYLOAD,
     userID: TEST_TOKEN_PAYLOAD.sub,
   });
@@ -229,6 +227,6 @@ test('it defaults to optional auth when isAuthRequired is not provided', async (
 
   const res = await ctx.app.request(req);
 
-  expect(testHandlerSpy).toHaveBeenCalledOnce();
+  expect(ctx.handlerSpy).toHaveBeenCalledOnce();
   expect(res.status).toBe(200);
 });

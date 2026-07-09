@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
-import { expect, test } from 'vitest';
 import { PasswordChangedEmail } from './password-changed-email';
 
 test('it renders the password changed email with all required elements', () => {

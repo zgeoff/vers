@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import postgres from 'postgres';
-import { expect, test } from 'vitest';
 import { isPGError } from './is-pg-error';
 
 test('it returns true for postgres errors', () => {

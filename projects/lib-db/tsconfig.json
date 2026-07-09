@@ -1,13 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": ["node", "bun", "@zgeoff/bun-test-extended"]
   },
   "files": [],
   "include": [
-    "vitest.config.ts",
-    "vitest.global-setup.ts",
-    "vitest.setup.ts",
+    "test-setup.ts",
     "kysely.config.ts",
     "src/**/*.ts",
     "migrations/**/*.ts",

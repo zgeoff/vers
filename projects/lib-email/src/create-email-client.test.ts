@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import { HttpResponse, http } from 'msw';
-import { expect, test } from 'vitest';
 import { createEmailClient } from './create-email-client';
 import { ENDPOINT_URL as RESEND_EMAIL_ENDPOINT_URL } from './mocks/handlers/http/resend-emails';
 import { server } from './mocks/node';
@@ -58,12 +58,12 @@ test('it sends an email from a configured from address override', async () => {
   expect(capturedBody).toMatchObject({ from: 'hello@example.com' });
 });
 
-test('it throws when resend reports an error', async () => {
+test('it throws when resend reports an error', () => {
   server.use(http.post(RESEND_EMAIL_ENDPOINT_URL, () => HttpResponse.error()));
 
   const client = createEmailClient({ apiKey: 'test-api-key' });
 
-  await expect(
+  expect(
     client.sendEmail({
       html: '<p>Test content</p>',
       plainText: 'Test content',

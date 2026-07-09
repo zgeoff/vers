@@ -1,7 +1,7 @@
+import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import type { AetherNode } from '@vers/aether-core';
 import { nodeHasText } from '@vers/client-test-utils';
-import { expect, test } from 'vitest';
 import { setHoveredNode } from '../state/set-hovered-node';
 import { NodeTooltip } from './node-tooltip';
 

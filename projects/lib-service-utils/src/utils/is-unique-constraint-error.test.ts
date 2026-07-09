@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import postgres from 'postgres';
-import { expect, test } from 'vitest';
 import { isUniqueConstraintError } from './is-unique-constraint-error';
 
 test('it returns true for unique constraint violations', () => {

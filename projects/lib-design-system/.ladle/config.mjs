@@ -6,7 +6,7 @@ const config = {
       enabled: true,
     },
   },
-  viteConfig: `${process.cwd()}/vitest.config.ts`,
+  viteConfig: `${process.cwd()}/vite.config.ts`,
 };
 
 export default config;

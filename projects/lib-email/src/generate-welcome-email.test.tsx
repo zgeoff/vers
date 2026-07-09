@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { generateWelcomeEmail } from './generate-welcome-email';
 
 test('it generates a welcome email with the provided configuration', async () => {
@@ -9,11 +9,11 @@ test('it generates a welcome email with the provided configuration', async () =>
 
   const email = await generateWelcomeEmail(config);
 
-  expect(email.html).include('Welcome to vers');
-  expect(email.html).include(config.verificationCode);
-  expect(email.html).include(config.verificationURL);
+  expect(email.html).toInclude('Welcome to vers');
+  expect(email.html).toInclude(config.verificationCode);
+  expect(email.html).toInclude(config.verificationURL);
 
-  expect(email.plainText).include('WELCOME TO VERS');
-  expect(email.plainText).include(config.verificationCode);
-  expect(email.plainText).include(config.verificationURL);
+  expect(email.plainText).toInclude('WELCOME TO VERS');
+  expect(email.plainText).toInclude(config.verificationCode);
+  expect(email.plainText).toInclude(config.verificationURL);
 });

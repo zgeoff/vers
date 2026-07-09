@@ -1,6 +1,6 @@
+import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { expect, test } from 'vitest';
 import { CheckboxField } from './checkbox-field';
 
 test('it renders a label and a checkbox input', () => {

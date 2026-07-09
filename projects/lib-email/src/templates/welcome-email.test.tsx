@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
-import { expect, test } from 'vitest';
 import { WelcomeEmail } from './welcome-email';
 
 test('it renders a welcome email with provided configuration', () => {

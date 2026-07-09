@@ -1,6 +1,6 @@
+import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
 import { PerspectiveCamera } from 'three';
-import { expect, test } from 'vitest';
 import { setCamera } from './set-camera';
 import { useCameraStore } from './use-camera-store';
 

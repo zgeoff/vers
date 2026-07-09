@@ -1,6 +1,6 @@
+import { expect, test } from 'bun:test';
 import type { AetherEdge, AetherGraph, AetherNode } from '@vers/aether-core';
 import { Object3D } from 'three';
-import { expect, test } from 'vitest';
 import { filterDistanceGraph } from './filter-distant-graph';
 
 // this data is carefully prepared in a way so that we have nodes and edges
@@ -39,16 +39,16 @@ test('it filters nodes beyond the maximum distance', () => {
 
   expect(filteredGraph).toStrictEqual({
     edges: {
-      nearXNeg: mockGraph.edges['nearXNeg'],
-      nearXPos: mockGraph.edges['nearXPos'],
-      nearYNeg: mockGraph.edges['nearYNeg'],
-      nearYPos: mockGraph.edges['nearYPos'],
+      nearXNeg: mockGraph.edges['nearXNeg']!,
+      nearXPos: mockGraph.edges['nearXPos']!,
+      nearYNeg: mockGraph.edges['nearYNeg']!,
+      nearYPos: mockGraph.edges['nearYPos']!,
     },
     nodes: {
-      nearXNeg: mockGraph.nodes['nearXNeg'],
-      nearXPos: mockGraph.nodes['nearXPos'],
-      nearYNeg: mockGraph.nodes['nearYNeg'],
-      nearYPos: mockGraph.nodes['nearYPos'],
+      nearXNeg: mockGraph.nodes['nearXNeg']!,
+      nearXPos: mockGraph.nodes['nearXPos']!,
+      nearYNeg: mockGraph.nodes['nearYNeg']!,
+      nearYPos: mockGraph.nodes['nearYPos']!,
     },
   });
 });

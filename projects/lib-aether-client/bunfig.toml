@@ -1,0 +1,2 @@
+[test]
+preload = ["@zgeoff/bun-test-extended", "./test-setup.ts"]

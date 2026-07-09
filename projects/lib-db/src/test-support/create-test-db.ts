@@ -1,6 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 import postgres from 'postgres';
 import { createDB } from '../create-db';
+import { resolveTestDBTarget } from './resolve-test-db-target';
 
 /**
  * Creates a uniquely named database cloned from the migrated template
@@ -11,19 +12,16 @@ import { createDB } from '../create-db';
  * @returns - The test database client.
  */
 export async function createTestDB() {
-  const vitestModule = await import('vitest');
-
-  const dbURI = vitestModule.inject('dbURI');
-  const templateDB = vitestModule.inject('templateDB');
-  const setupClient = postgres(`${dbURI}/postgres`);
+  const target = resolveTestDBTarget();
+  const setupClient = postgres(`${target.baseURI}/postgres`);
 
   const dbName = `test_${createId()}`;
 
-  await setupClient.unsafe(/* SQL */ `CREATE DATABASE ${dbName} TEMPLATE ${templateDB}`);
+  await setupClient.unsafe(/* SQL */ `CREATE DATABASE ${dbName} TEMPLATE ${target.templateDB}`);
 
   await setupClient.end();
 
-  const db = createDB({ databaseURL: `${dbURI}/${dbName}` });
+  const db = createDB({ databaseURL: `${target.baseURI}/${dbName}` });
 
   return {
     db,

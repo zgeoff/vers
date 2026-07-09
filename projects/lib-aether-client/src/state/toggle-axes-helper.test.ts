@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import { expect, test } from 'vitest';
 import { toggleAxesHelper } from './toggle-axes-helper';
 import { useIsAxesHelperVisible } from './use-is-axes-helper-visible';
 
