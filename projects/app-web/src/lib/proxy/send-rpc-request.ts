@@ -1,5 +1,5 @@
-import { getAuthSession } from '../auth/get-auth-session';
-import { buildAuthHeaders } from '../rpc/build-auth-headers';
+import { createEdgeServiceToken } from '../rpc/create-edge-service-token';
+import { resolveSessionActor } from '../rpc/resolve-session-actor';
 import type { ServiceName } from '../rpc/service-urls';
 import { SERVICE_URLS } from '../rpc/service-urls';
 
@@ -8,8 +8,8 @@ import { SERVICE_URLS } from '../rpc/service-urls';
  * `<service origin>/rpc/*`. Browser traffic can't reach services directly (private network in
  * production), so it always round-trips through this same-origin proxy; the browser's own call to
  * this route is same-origin, but the service on the other side has no notion of the app's sealed
- * `en_session` cookie — this route's own ambient session is the one thing that does, so it
- * attaches the same bearer header a server-side call would.
+ * `en_session` cookie — this route's own ambient session is the one thing that does, so it mints
+ * and attaches the same s2s token a server-side call would.
  */
 export async function sendRPCRequest(request: Request, service: ServiceName): Promise<Response> {
   const incoming = new URL(request.url);
@@ -25,13 +25,11 @@ export async function sendRPCRequest(request: Request, service: ServiceName): Pr
 
   const headers = new Headers(request.headers);
 
-  const session = await getAuthSession();
+  const actingUserID = await resolveSessionActor();
 
-  const authHeaders = buildAuthHeaders(session);
+  const token = await createEdgeServiceToken({ actingUserID, audience: service });
 
-  for (const [name, value] of Object.entries(authHeaders)) {
-    headers.set(name, value);
-  }
+  headers.set('authorization', `Bearer ${token}`);
 
   return fetch(target, {
     headers,

@@ -1,4 +1,4 @@
-import * as db from './db';
+import * as jose from 'jose';
 
 /** The context every mocked contract handler receives; mirrors the real services' shape. */
 export interface MockContext extends Record<string, unknown> {
@@ -6,43 +6,25 @@ export interface MockContext extends Record<string, unknown> {
 }
 
 /**
- * Derives the acting user from a request's forwarded `authorization`/`cookie` headers, the same
- * two headers the isomorphic `RPCLink` forwards on the SSR path. Standing in for the edge's s2s
- * token minting: a bearer/cookie value is treated directly as a session id, looked up in the mock
- * session store.
+ * Derives the acting user from a request's forwarded `authorization` bearer, standing in for the
+ * edge's s2s token minting: the bearer is decoded (never verified — this is in-process) and its
+ * `sub` claim, when present, names the acting user. A missing, malformed, or subject-less bearer
+ * is a verified-anonymous caller, mirroring what the edge itself would mint in that case.
  */
 export function resolveSessionContext(request: Request): MockContext {
-  const sessionID = findSessionID(request);
-
-  if (sessionID === null) {
-    return { actingUserId: null };
-  }
-
-  const session = db.sessionCollection.findFirst((q) => q.where({ id: sessionID }));
-
-  if (session === undefined || session.expiresAt.getTime() <= Date.now()) {
-    return { actingUserId: null };
-  }
-
-  return { actingUserId: session.userID };
-}
-
-function findSessionID(request: Request): string | null {
   const authorization = request.headers.get('authorization');
 
-  if (authorization !== null && authorization.startsWith('Bearer ')) {
-    return authorization.slice('Bearer '.length);
+  if (authorization === null || !authorization.startsWith('Bearer ')) {
+    return { actingUserId: null };
   }
 
-  const cookieHeader = request.headers.get('cookie') ?? '';
+  const token = authorization.slice('Bearer '.length);
 
-  for (const entry of cookieHeader.split(';')) {
-    const [name, ...rest] = entry.trim().split('=');
+  try {
+    const sub = jose.decodeJwt(token).sub;
 
-    if (name === 'session') {
-      return rest.join('=') || null;
-    }
+    return { actingUserId: typeof sub === 'string' ? sub : null };
+  } catch {
+    return { actingUserId: null };
   }
-
-  return null;
 }

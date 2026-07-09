@@ -9,17 +9,12 @@ export type CurrentUserResult =
   | { readonly authenticated: true; readonly user: UserData };
 
 /**
- * Calls the user service's `getCurrentUser` with the caller's forwarded session headers and folds
- * its typed `UNAUTHORIZED` error into a plain result union, so the index server component never
- * has to branch on a thrown error. Headers are the caller's own concern (read from the live
- * request in production, supplied directly in tests) — this function stays a plain async call.
+ * Calls the user service's `getCurrentUser` for the ambient caller and folds its typed
+ * `UNAUTHORIZED` error into a plain result union, so the index server component never has to
+ * branch on a thrown error.
  */
-export async function tryReadCurrentUser(
-  headers: Readonly<Record<string, string>>,
-): Promise<CurrentUserResult> {
-  const [error, data, isDefined] = await safe(
-    userClient.getCurrentUser({}, { context: { headers } }),
-  );
+export async function tryReadCurrentUser(): Promise<CurrentUserResult> {
+  const [error, data, isDefined] = await safe(userClient.getCurrentUser({}));
 
   if (error === null) {
     return { authenticated: true, user: data };

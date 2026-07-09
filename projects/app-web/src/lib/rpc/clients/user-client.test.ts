@@ -10,7 +10,7 @@ import { userClient } from './user-client';
  * Builds a per-test contract mock for the user service. `createIsomorphicFn`'s uncompiled fallback
  * (this package's own bun-test run, with no Start compiler pass) always resolves to the `.server()`
  * branch — the same client instance the app renders with in production. These tests prove the
- * client-lane consumption path (typed call, forwarded `context.headers`, typed error unwrap)
+ * client-lane consumption path (typed call, explicit `actingUserID` context, typed error unwrap)
  * against per-test overrides for the same contract the browser branch talks to through the
  * `/api/rpc/$service` proxy.
  */
@@ -39,7 +39,7 @@ test('it reads getCurrentUser through the isomorphic client against a mocked ser
 
   server.use(ctx.mockUser.getCurrentUser.handler(user));
 
-  const result = await userClient.getCurrentUser({}, { context: { headers: {} } });
+  const result = await userClient.getCurrentUser({}, { context: { actingUserID: null } });
 
   expect(result).toStrictEqual(user);
 });
@@ -54,7 +54,7 @@ test('it reports the typed UNAUTHORIZED error for a signed-out call', async () =
   );
 
   const [error, , isDefined] = await safe(
-    userClient.getCurrentUser({}, { context: { headers: {} } }),
+    userClient.getCurrentUser({}, { context: { actingUserID: null } }),
   );
 
   const isKnownError = isDefinedError(error);

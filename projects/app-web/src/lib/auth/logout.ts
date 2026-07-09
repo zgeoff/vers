@@ -19,12 +19,10 @@ export async function logout(options: LogoutOptions = {}): Promise<never> {
 
   if (options.deleteSession === true && session.sessionID !== undefined) {
     const sessionID = session.sessionID;
+    const actingUserID = session.userID ?? null;
 
     await sessionClient
-      .deleteSession(
-        { id: sessionID },
-        { context: { headers: { authorization: `Bearer ${sessionID}` } } },
-      )
+      .deleteSession({ id: sessionID }, { context: { actingUserID } })
       .catch(() => {});
   }
 

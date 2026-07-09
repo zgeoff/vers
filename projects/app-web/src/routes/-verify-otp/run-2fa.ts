@@ -19,11 +19,9 @@ export async function run2FA(ctx: Readonly<RunVerificationContext>): Promise<nev
     throw redirect({ href: '/login' });
   }
 
-  const sessionBearerHeaders = { authorization: `Bearer ${sessionID}` };
-
   const [user, session] = await Promise.all([
     userClient.getUser({ id: ctx.target }),
-    sessionClient.getSession({ id: sessionID }, { context: { headers: sessionBearerHeaders } }),
+    sessionClient.getSession({ id: sessionID }, { context: { actingUserID: ctx.target } }),
   ]);
 
   if (user === null || session === null || session.userID !== ctx.target) {

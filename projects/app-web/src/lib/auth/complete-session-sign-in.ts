@@ -7,28 +7,27 @@ import { updateVerifySession } from './update-verify-session';
 interface CompleteSessionSignInOptions {
   readonly email: string;
   readonly redirectTo?: string | undefined;
-  readonly session: { readonly expiresAt: Date; readonly id: string };
+  readonly session: { readonly expiresAt: Date; readonly id: string; readonly userID: string };
 }
 
 /**
  * Finishes signing a caller in once credential or code verification has already cleared: a
  * concurrent live session for the account ends in a force-logout redirect carrying just the
- * pending session's id, otherwise the session is verified directly and the auth cookie is set.
+ * pending session's id and owner, otherwise the session is verified directly and the auth cookie is
+ * set.
  */
 export async function completeSessionSignIn(
   opts: Readonly<CompleteSessionSignInOptions>,
 ): Promise<never> {
-  const sessionBearerHeaders = { authorization: `Bearer ${opts.session.id}` };
+  const actingUserID = opts.session.userID;
 
-  const otherSessions = await sessionClient.getSessions(
-    {},
-    { context: { headers: sessionBearerHeaders } },
-  );
+  const otherSessions = await sessionClient.getSessions({}, { context: { actingUserID } });
 
   if (otherSessions.some((other) => other.id !== opts.session.id)) {
     await updateVerifySession({
       'loginLogout#email': opts.email,
       'loginLogout#sessionID': opts.session.id,
+      'loginLogout#userID': actingUserID,
     });
 
     throw redirect({ href: '/login/force-logout' });
@@ -36,7 +35,7 @@ export async function completeSessionSignIn(
 
   const tokens = await sessionClient.verifySession(
     { id: opts.session.id },
-    { context: { headers: sessionBearerHeaders } },
+    { context: { actingUserID } },
   );
 
   await updateAuthSession(
@@ -44,6 +43,7 @@ export async function completeSessionSignIn(
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       sessionID: opts.session.id,
+      userID: actingUserID,
     },
     { expiresAt: opts.session.expiresAt },
   );

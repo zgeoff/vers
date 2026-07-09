@@ -3,6 +3,7 @@ import { isRedirect } from '@tanstack/react-router';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
 import * as db from '../../mocks/db';
 import { buildFormData } from '../../test-utils/build-form-data';
+import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { verifyOTPHandler } from './verify-otp-handler';
 
@@ -183,8 +184,7 @@ test('it throws for a 2fa-setup verify, which this route does not support', asyn
 });
 
 test('it applies a confirmed email change for the signed-in caller', async () => {
-  const user = await db.userCollection.create({ email: 'verify-otp-change-email-old@vers.test' });
-  const session = await db.sessionCollection.create({ userID: user.id });
+  const signedIn = await createSignedInUser({ email: 'verify-otp-change-email-old@vers.test' });
 
   await db.verificationCollection.create({
     code: '666666',
@@ -192,21 +192,19 @@ test('it applies a confirmed email change for the signed-in caller', async () =>
     type: 'change-email',
   });
 
-  const outcome = await withRequestContext(
-    { cookies: { en_session: { accessToken: session.id, sessionID: session.id } } },
-    () =>
-      verifyOTPHandler(
-        buildFormData({
-          code: '666666',
-          target: 'verify-otp-change-email-new@vers.test',
-          type: 'change-email',
-        }),
-      ),
+  const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
+    verifyOTPHandler(
+      buildFormData({
+        code: '666666',
+        target: 'verify-otp-change-email-new@vers.test',
+        type: 'change-email',
+      }),
+    ),
   );
 
   expect(outcome.value).toStrictEqual({ status: 'change-email-applied' });
 
-  const updated = db.userCollection.findFirst((q) => q.where({ id: user.id }));
+  const updated = db.userCollection.findFirst((q) => q.where({ id: signedIn.userID }));
 
   expect(updated?.email).toBe('verify-otp-change-email-new@vers.test');
 });
