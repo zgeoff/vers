@@ -1,107 +1,51 @@
 import { expect, test } from 'bun:test';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
-import { sessionContract } from '@vers/contract-session';
-import { SERVICE_URLS } from '../../lib/rpc/service-urls';
-import * as db from '../../mocks/db';
-import { server } from '../../mocks/node';
-import { resolveSessionContext } from '../../mocks/resolve-session-context';
-import { assertEventually } from '../../test-utils/assert-eventually';
+import type { FormAction } from '../../lib/forms/types';
+import { buildDeferred } from '../../test-utils/build-deferred';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ForceLogoutForm } from './force-logout-form';
 
 test('it disables both buttons while confirming, then re-enables them', async () => {
   const user = userEvent.setup();
+  const deferred = buildDeferred<undefined>();
+  const gatedAction: FormAction = () => deferred.promise;
 
-  const pendingUser = await db.userCollection.create({});
+  await withRequestContext({}, async () => {
+    renderWithRouter(<ForceLogoutForm action={gatedAction} />);
 
-  await db.sessionCollection.create({
-    id: 'force-logout-form-session',
-    userID: pendingUser.id,
-    verified: false,
+    const confirmButton = await screen.findByRole('button', { name: 'Confirm' });
+
+    await user.click(confirmButton);
+
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+
+    await deferred.release(undefined);
+
+    expect(screen.getByRole('button', { name: 'Confirm' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
   });
-
-  const mockSession = buildContractMock({
-    baseUrl: SERVICE_URLS.session,
-    contract: sessionContract,
-    resolveContext: resolveSessionContext,
-  });
-
-  const lookupGate = Promise.withResolvers<void>();
-
-  server.use(
-    mockSession.getSessions.handler(async (opts) => {
-      await lookupGate.promise;
-
-      const actingUserId = opts.context.actingUserId;
-
-      if (actingUserId === null) {
-        throw new Error('expected a resolved acting user for the test session bearer token');
-      }
-
-      return db.sessionCollection.findMany((q) => q.where({ userID: actingUserId }));
-    }),
-  );
-
-  await withRequestContext(
-    {
-      cookies: {
-        en_verification: {
-          'loginLogout#email': 'force-logout-form-confirm@vers.test',
-          'loginLogout#sessionID': 'force-logout-form-session',
-        },
-      },
-    },
-    async () => {
-      renderWithRouter(<ForceLogoutForm />);
-
-      const confirmButton = await screen.findByRole('button', { name: 'Confirm' });
-
-      await user.click(confirmButton);
-
-      await assertEventually(() => {
-        if (
-          !screen.getByRole('button', { name: 'Confirm' }).hasAttribute('disabled') ||
-          !screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled')
-        ) {
-          throw new Error('the buttons are not disabled yet');
-        }
-      });
-
-      lookupGate.resolve();
-
-      await assertEventually(() => {
-        if (
-          screen.getByRole('button', { name: 'Confirm' }).hasAttribute('disabled') ||
-          screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled')
-        ) {
-          throw new Error('the buttons are still disabled');
-        }
-      });
-    },
-  );
 });
 
 test('it completes a cancel without leaving the buttons stuck disabled', async () => {
   const user = userEvent.setup();
+  const deferred = buildDeferred<undefined>();
+  const gatedAction: FormAction = () => deferred.promise;
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<ForceLogoutForm />);
+    renderWithRouter(<ForceLogoutForm action={gatedAction} />);
 
     const cancelButton = await screen.findByRole('button', { name: 'Cancel' });
 
     await user.click(cancelButton);
 
-    await assertEventually(() => {
-      if (
-        screen.getByRole('button', { name: 'Confirm' }).hasAttribute('disabled') ||
-        screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled')
-      ) {
-        throw new Error('the buttons are still disabled');
-      }
-    });
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+
+    await deferred.release(undefined);
+
+    expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
   });
 });
 

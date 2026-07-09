@@ -33,21 +33,29 @@ test('it reports field errors for an invalid email and a too-short password', as
     loginHandler(buildFormData({ email: 'not-an-email', password: 'short' })),
   );
 
-  expect(outcome.value).toStrictEqual({
-    fieldErrors: { email: 'Email is invalid', password: 'Password must be 8+ characters' },
-    status: 'invalid-fields',
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({
+    email: ['Email is invalid'],
+    password: ['Password must be 8+ characters'],
   });
 });
 
-test('it reports invalid credentials for an unknown email', async () => {
+test('it reports a single form-level error for an unknown email', async () => {
   const outcome = await withRequestContext({}, () =>
     loginHandler(buildFormData({ email: 'unknown@vers.test', password: 'password123' })),
   );
 
-  expect(outcome.value).toStrictEqual({ status: 'invalid-credentials' });
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({ '': ['Invalid email or password'] });
 });
 
-test('it reports invalid credentials for the wrong password', async () => {
+test('it reports a single form-level error for the wrong password', async () => {
   await db.userCollection.create({
     email: 'wrong-password@vers.test',
     password: 'the-real-password',
@@ -57,7 +65,11 @@ test('it reports invalid credentials for the wrong password', async () => {
     loginHandler(buildFormData({ email: 'wrong-password@vers.test', password: 'not-it-either' })),
   );
 
-  expect(outcome.value).toStrictEqual({ status: 'invalid-credentials' });
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({ '': ['Invalid email or password'] });
 });
 
 test('it redirects to verify-otp and stores the pending session for a 2FA-enabled account', async () => {

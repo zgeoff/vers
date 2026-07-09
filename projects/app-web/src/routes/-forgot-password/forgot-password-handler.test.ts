@@ -33,10 +33,11 @@ test('it reports a field error for an invalid email', async () => {
     forgotPasswordHandler(buildFormData({ email: 'not-an-email' })),
   );
 
-  expect(outcome.value).toStrictEqual({
-    fieldErrors: { email: 'Email is invalid' },
-    status: 'invalid-fields',
-  });
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({ email: ['Email is invalid'] });
 });
 
 test('it mints a reset token for a matching account and redirects', async () => {

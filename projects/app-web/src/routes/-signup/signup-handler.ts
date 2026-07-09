@@ -1,3 +1,5 @@
+import type { SubmissionResult } from '@conform-to/react';
+import { parseWithZod } from '@conform-to/zod/v4';
 import { redirect } from '@tanstack/react-router';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
@@ -5,7 +7,6 @@ import { SpamError } from '../../lib/auth/spam-error';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import { SignupFormSchema } from './signup-form-schema';
-import type { SignupResult } from './types';
 
 /**
  * Runs the signup form's submission: honeypot then field validation, then — for a caller with no
@@ -13,7 +14,7 @@ import type { SignupResult } from './types';
  * verify-otp, including for an existing account (which gets no verification created for it), so
  * the response never distinguishes an existing account from a new one.
  */
-export async function signupHandler(formData: FormData): Promise<Response | SignupResult> {
+export async function signupHandler(formData: FormData): Promise<Response | SubmissionResult> {
   await requireAnonymous();
 
   try {
@@ -26,27 +27,22 @@ export async function signupHandler(formData: FormData): Promise<Response | Sign
     throw error;
   }
 
-  const submission = SignupFormSchema.safeParse({ email: formData.get('email') });
+  const submission = parseWithZod(formData, { schema: SignupFormSchema });
 
-  if (!submission.success) {
-    const [issue] = submission.error.issues;
-
-    return {
-      fieldErrors: { email: issue?.message ?? 'Email is invalid' },
-      status: 'invalid-fields',
-    };
+  if (submission.status !== 'success') {
+    return submission.reply();
   }
 
-  const existing = await userClient.getUser({ email: submission.data.email });
+  const existing = await userClient.getUser({ email: submission.value.email });
 
   if (existing === null) {
     await verificationClient.createVerification({
-      target: submission.data.email,
+      target: submission.value.email,
       type: 'onboarding',
     });
   }
 
-  const searchParams = new URLSearchParams({ target: submission.data.email, type: 'onboarding' });
+  const searchParams = new URLSearchParams({ target: submission.value.email, type: 'onboarding' });
 
   throw redirect({ href: `/verify-otp?${searchParams.toString()}` });
 }

@@ -1,52 +1,41 @@
+import { getFormProps, getInputProps, useForm } from '@conform-to/react';
+import type { SubmissionResult } from '@conform-to/react';
+import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4';
 import { Link } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import { Brand, Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
-import { useState } from 'react';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
+import type { FormAction } from '../../lib/forms/types';
+import { useFormSubmit } from '../../lib/forms/use-form-submit';
 import { forgotPassword } from './forgot-password';
-import type { ForgotPasswordResult } from './types';
+import { ForgotPasswordFormSchema } from './forgot-password-form-schema';
+
+interface ForgotPasswordFormProps {
+  readonly action?: FormAction;
+  readonly lastResult?: SubmissionResult;
+}
 
 const pageInfo = css({ marginBottom: '8', textAlign: 'center' });
 
 const formStyles = css({ marginBottom: '6', width: '96' });
 
 /** The forgot-password page's client-interactive form: submits to the forgot-password server function. */
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm(props: ForgotPasswordFormProps) {
   const forgotPasswordFn = useServerFn(forgotPassword);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'email', string>>>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
+  const submission = useFormSubmit(props.action ?? forgotPasswordFn, props.lastResult);
 
-  const handleSubmit = async (form: HTMLFormElement) => {
-    const formData = new FormData(form);
+  const [form, fields] = useForm({
+    constraint: getZodConstraint(ForgotPasswordFormSchema),
+    id: 'forgot-password-form',
+    lastResult: submission.lastResult,
+    onSubmit: submission.onSubmit,
+    onValidate(context) {
+      return parseWithZod(context.formData, { schema: ForgotPasswordFormSchema });
+    },
+  });
 
-    setIsPending(true);
-    setFormError(null);
-    setFieldErrors({});
-
-    try {
-      // a submission that clears validation ends in a redirect that useServerFn already
-      // navigated to, resolving this call with no value — there's no further UI to show
-      const result: ForgotPasswordResult | Response | undefined = await forgotPasswordFn({
-        data: formData,
-      });
-
-      if (result === undefined) {
-        return;
-      }
-
-      if (result instanceof Response) {
-        setFormError('Something went wrong. Please try again.');
-
-        return;
-      }
-
-      setFieldErrors(result.fieldErrors);
-    } finally {
-      setIsPending(false);
-    }
-  };
+  const { key: _emailKey, ...emailProps } = getInputProps(fields.email, { type: 'email' });
 
   return (
     <>
@@ -57,30 +46,22 @@ export function ForgotPasswordForm() {
         <Heading level={2}>Forgot your password?</Heading>
         <Text>No worries, we&apos;ll send you reset instructions to your email address.</Text>
       </section>
-      <form
-        className={formStyles}
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleSubmit(event.currentTarget);
-        }}
-      >
+      <form {...getFormProps(form)} className={formStyles}>
         <HoneypotInputs />
         <Field
-          errors={fieldErrors.email === undefined ? [] : [fieldErrors.email]}
+          errors={fields.email.errors ?? []}
           inputProps={{
+            ...emailProps,
             autoComplete: 'email',
             autoFocus: true,
-            id: 'email',
-            name: 'email',
             placeholder: 'your.email@example.com',
-            type: 'email',
           }}
-          labelProps={{ children: 'Email', htmlFor: 'email' }}
+          labelProps={{ children: 'Email', htmlFor: emailProps.id }}
         />
-        {formError !== null && <Text role="alert">{formError}</Text>}
+        {form.errors !== undefined && <Text role="alert">{form.errors[0]}</Text>}
         <StatusButton
-          disabled={isPending}
-          status={isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
+          disabled={submission.isPending}
+          status={submission.isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
           type="submit"
           variant="primary"
           fullWidth
