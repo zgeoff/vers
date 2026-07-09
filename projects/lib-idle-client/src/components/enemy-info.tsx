@@ -33,8 +33,7 @@ interface EnemyInfoProps {
   enemy: EnemyAppState;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function EnemyInfo(props: EnemyInfoProps) {
+export function EnemyInfo(props: Readonly<EnemyInfoProps>) {
   const lastAttackTime = props.enemy.behaviours.enemyPrimaryAttack?.lastAttackTime ?? 0;
   const attackSpeed = props.enemy.primaryAttack.speed;
   const nextAttackTime = lastAttackTime + 1000 / attackSpeed;

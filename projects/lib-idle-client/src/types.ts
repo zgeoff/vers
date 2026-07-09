@@ -6,17 +6,17 @@ export enum ClientMessageType {
 }
 
 interface IClientMessage {
-  type: ClientMessageType;
+  readonly type: ClientMessageType;
 }
 
 export interface SetActivityMessage extends IClientMessage {
-  activity: ActivityData;
-  avatar: AvatarData;
-  type: ClientMessageType.SetActivity;
+  readonly activity: ActivityData;
+  readonly avatar: AvatarData;
+  readonly type: ClientMessageType.SetActivity;
 }
 
 export interface InitializeMessage extends IClientMessage {
-  type: ClientMessageType.Initialize;
+  readonly type: ClientMessageType.Initialize;
 }
 
 export type ClientMessage = InitializeMessage | SetActivityMessage;
@@ -27,17 +27,17 @@ export enum WorkerMessageType {
 }
 
 interface IWorkerMessage {
-  type: WorkerMessageType;
+  readonly type: WorkerMessageType;
 }
 
 export interface InitialStateMessage extends IWorkerMessage {
-  state: SimulationAppState;
-  type: WorkerMessageType.InitialState;
+  readonly state: SimulationAppState;
+  readonly type: WorkerMessageType.InitialState;
 }
 
 export interface SimulationUpdateMessage extends IWorkerMessage {
-  state: SimulationAppState;
-  type: WorkerMessageType.SimulationUpdate;
+  readonly state: SimulationAppState;
+  readonly type: WorkerMessageType.SimulationUpdate;
 }
 
 export type WorkerMessage = InitialStateMessage | SimulationUpdateMessage;

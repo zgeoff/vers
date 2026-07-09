@@ -5,9 +5,9 @@ import type { CombatExecutor, CombatExecutorAppState } from './combat';
 import type { Avatar, AvatarAppState, AvatarData } from './entities';
 
 export interface SimulationAppState {
-  activity?: ActivityAppState;
-  avatar?: AvatarAppState;
-  combat?: CombatExecutorAppState;
+  readonly activity?: ActivityAppState;
+  readonly avatar?: AvatarAppState;
+  readonly combat?: CombatExecutorAppState;
 }
 
 export interface SimulationState {

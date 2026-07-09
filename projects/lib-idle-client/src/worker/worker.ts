@@ -18,7 +18,6 @@ let running = false;
 console.log('-- worker initialized');
 
 // standard shared worker setup - cache our listeners so we can message them later
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function handleConnect(event: MessageEvent) {
   console.log('-- received connect event');
 
@@ -29,7 +28,6 @@ function handleConnect(event: MessageEvent) {
   connections.add(port);
   port.start();
 
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   port.addEventListener('message', (messageEvent: MessageEvent<ClientMessage>) => {
     void handleClientMessage(messageEvent);
   });
@@ -71,6 +69,7 @@ async function tick() {
 }
 
 function delay(ms: number) {
-  // oxlint-disable-next-line typescript/strict-void-return -- baseline(#236)
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }

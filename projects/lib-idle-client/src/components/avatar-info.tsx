@@ -9,8 +9,7 @@ interface AvatarInfoProps {
   avatar: AvatarAppState;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function AvatarInfo(props: AvatarInfoProps) {
+export function AvatarInfo(props: Readonly<AvatarInfoProps>) {
   const classData = classes[props.avatar.class];
 
   const lastAttackTime = props.avatar.behaviours.avatarWeaponAttack?.lastAttackTime ?? 0;

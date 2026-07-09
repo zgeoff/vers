@@ -32,8 +32,7 @@ interface AttackTimerBarProps {
   nextAttackTime: number;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function AttackTimerBar(props: AttackTimerBarProps) {
+export function AttackTimerBar(props: Readonly<AttackTimerBarProps>) {
   const elapsed = useCombatElapsed();
   const attackTime = props.nextAttackTime - props.lastAttackTime;
   const progressMS = elapsed - props.lastAttackTime;

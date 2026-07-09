@@ -39,8 +39,7 @@ interface LifeBarProps {
   maxLife: number;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function LifeBar(props: LifeBarProps) {
+export function LifeBar(props: Readonly<LifeBarProps>) {
   const lifeWidth = (props.life / props.maxLife) * 100;
 
   return (

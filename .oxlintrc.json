@@ -133,6 +133,7 @@
               "Headers",
               "FormData",
               "HTMLFormElement",
+              "MessageEvent",
               "SharedWorker",
               "URL"
             ]

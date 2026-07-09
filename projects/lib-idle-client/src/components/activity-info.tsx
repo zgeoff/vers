@@ -11,8 +11,7 @@ interface ActivityInfoProps {
   activity: ActivityAppState;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function ActivityInfo(props: ActivityInfoProps) {
+export function ActivityInfo(props: Readonly<ActivityInfoProps>) {
   return (
     <section className={activityInfo}>
       <Heading level={2}>{props.activity.name}</Heading>
