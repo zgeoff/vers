@@ -20,10 +20,6 @@ const GAME_NAV_LINKS: ReadonlyArray<GameNavLink> = [
 
 const navList = css({ display: 'flex', flexDirection: 'column', gap: '2' });
 
-/**
- * The game chrome's collapsible side navigation: the visibility store ports as-is from the
- * pre-rebuild app, gating a plain list of links between the game's own routes.
- */
 export function GameNav() {
   const isVisible = useNavigationVisible();
 

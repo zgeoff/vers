@@ -3,9 +3,8 @@ import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 
 /**
- * Mounts the idle simulation's SharedWorker for every game route: sends the one-time Initialize
- * message as soon as a worker connects that hasn't reported its state yet. Renders nothing — this
- * is the game layout's side-effect-only sibling to its `<Outlet />`.
+ * Renders nothing: a side-effect-only sibling to the game layout's outlet, so it returns null by
+ * design.
  */
 export function GameSimulationMount() {
   const idleWorkerHandle = useIdleWorkerHandle();

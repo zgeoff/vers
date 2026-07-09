@@ -78,8 +78,7 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
       }
 
       if (result.status === 'change-email-applied') {
-        // explicitly invalidates and navigates instead of relying on a server-issued redirect, so
-        // the account hub's own data is the one thing that refreshes it
+        // invalidate so the account hub reloads the just-changed email before navigating to it
         await router.invalidate();
         await router.navigate({ to: '/account' });
 

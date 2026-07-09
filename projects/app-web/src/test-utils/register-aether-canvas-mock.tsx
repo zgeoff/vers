@@ -1,10 +1,9 @@
 import { mock } from 'bun:test';
 
 /**
- * Stubs the code-split boundary `AetherPanel`'s own `import('./aether-canvas')` resolves through:
- * three.js and R3F never load under `bun test` (no WebGL in `happy-dom`), so this replaces the
- * module process-wide, letting tests assert the lazy boundary and its loading fallback instead of
- * the canvas's own internals.
+ * Stubs the lazy-loaded canvas module: three.js and R3F never load under `bun test` (no WebGL in
+ * `happy-dom`), so tests can assert the lazy boundary and its loading fallback instead of the
+ * canvas internals.
  */
 export function registerAetherCanvasMock(): void {
   void mock.module('../routes/-aether/aether-canvas', () => ({

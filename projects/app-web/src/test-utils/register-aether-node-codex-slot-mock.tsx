@@ -1,10 +1,8 @@
 import { mock } from 'bun:test';
 
 /**
- * Stubs the codex fragment slot: it renders through the Flight pipeline (`CompositeComponent`),
- * untestable under `bun test`'s single module graph, so this replaces the module process-wide,
- * letting tests assert the activity-readiness wiring around it instead of the fragment's own
- * content.
+ * Stubs the codex fragment slot so tests can assert the activity-readiness wiring around it
+ * rather than the fragment's own content.
  */
 export function registerAetherNodeCodexSlotMock(): void {
   void mock.module('../components/aether-node-codex-slot', () => ({

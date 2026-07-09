@@ -5,7 +5,9 @@ export interface FakeSimulationWorker {
   readonly port: { readonly postMessage: (message: unknown) => void };
 }
 
-/** The fake shape `registerIdleWorkerHandleMock`'s stub hands back in place of the real hook's read. */
+/**
+ * The fake shape the mocked worker-handle read hands back in place of the real hook's return.
+ */
 export interface FakeIdleWorkerHandle {
   readonly activity: ActivityAppState | undefined;
   readonly initialized: boolean;
@@ -13,8 +15,8 @@ export interface FakeIdleWorkerHandle {
 }
 
 /**
- * The one mutable slot `withIdleWorkerHandle` and the mocked `useIdleWorkerHandle` coordinate
- * through. Defaults to no worker at all, matching a caller that hasn't mounted one yet.
+ * The one mutable slot the mocked worker-handle hook reads and the per-test override writer
+ * coordinate through. Defaults to no worker, matching a caller that hasn't mounted one yet.
  */
 export const idleWorkerHandleHolder: { current: FakeIdleWorkerHandle } = {
   current: { activity: undefined, initialized: false, worker: undefined },

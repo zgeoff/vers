@@ -5,8 +5,7 @@ import type { Middleware } from './middleware';
 
 /**
  * Fixed (non-CSP) security headers applied to every HTML response. Cross-Origin-Embedder-Policy is
- * intentionally left unset — this app embeds cross-origin subresources it doesn't control — and
- * Referrer-Policy is set to same-origin.
+ * intentionally left unset — this app embeds cross-origin subresources it doesn't control.
  */
 const FIXED_SECURE_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ['Cross-Origin-Resource-Policy', 'same-origin'],

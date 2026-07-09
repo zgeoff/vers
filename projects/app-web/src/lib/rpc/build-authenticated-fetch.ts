@@ -72,11 +72,6 @@ async function tryRefreshAndRetry(
   return fetch(new Request(retryable, { headers: retryHeaders }), init);
 }
 
-/**
- * Single-flights refreshes by session ID: a 401 that arrives while another request's refresh for
- * the same session is already in progress awaits and reuses that result instead of racing it with
- * its own `refreshTokens` call.
- */
 async function resolveRefreshedTokens(
   sessionID: string,
   refreshToken: string,

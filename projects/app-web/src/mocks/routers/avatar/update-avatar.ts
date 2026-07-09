@@ -1,7 +1,6 @@
 import * as db from '../../db';
 import { os } from './os';
 
-/** Renames an avatar owned by the acting user; throws NOT_FOUND when they don't own it. */
 export const updateAvatar = os.updateAvatar.handler(async (opts) => {
   const actingUserId = opts.context.actingUserId;
 

@@ -2,7 +2,9 @@ import { createId } from '@paralleldrive/cuid2';
 import * as db from '../../db';
 import { os } from './os';
 
-/** Creates an avatar owned by the acting user; mirrors the service's global name uniqueness. */
+/**
+ * Avatar names are unique globally, not per user, mirroring the real service.
+ */
 export const createAvatar = os.createAvatar.handler((opts) => {
   const actingUserId = opts.context.actingUserId;
 

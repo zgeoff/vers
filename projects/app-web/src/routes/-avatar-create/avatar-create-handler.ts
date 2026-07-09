@@ -7,7 +7,6 @@ import { AvatarCreateFormSchema } from './avatar-create-form-schema';
 import type { AvatarCreateResult } from './types';
 
 /**
- * Runs the avatar-create form's submission: field validation, then creation for the acting user.
  * A taken name reports a field error instead of the service's generic conflict message.
  */
 export async function avatarCreateHandler(formData: FormData): Promise<AvatarCreateResult> {

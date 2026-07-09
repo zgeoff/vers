@@ -9,17 +9,14 @@ import { sendIdleSetActivity } from '../../lib/idle/send-idle-set-activity';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 
 /**
- * A placeholder activity every visit sends the worker, until a real activity-selection flow picks
- * one from the map. Module-scoped so its identity — and so its `id` — stays stable across renders.
+ * Module-scoped so its identity — and its `id` — stays stable across renders.
  */
 const PLACEHOLDER_ACTIVITY = createMockActivityData();
 const PLACEHOLDER_AVATAR = createMockAvatarData();
 
 /**
- * The aether node detail view: sends the SharedWorker `Initialize` once, then `SetActivity` for
- * the placeholder activity, showing a spinner until the worker's own state catches up to it.
- * Client lane end to end per the two-lane rule; the codex fragment alongside the node visual is
- * the one server-fragment slot in this game chrome.
+ * The aether node detail view: shows a spinner until the idle worker reports the activity it was
+ * sent, then renders the node and its codex slot.
  */
 export function AetherCurrentPanel() {
   const idleWorkerHandle = useIdleWorkerHandle();

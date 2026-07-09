@@ -13,10 +13,6 @@ interface ClassSelectionFieldProps {
 
 const optionsRow = css({ display: 'flex', gap: '2' });
 
-/**
- * The avatar-create form's class-selection island: a three-way choice with a short blurb for
- * whichever class is currently selected.
- */
 export function ClassSelectionField(props: ClassSelectionFieldProps) {
   return (
     <fieldset>

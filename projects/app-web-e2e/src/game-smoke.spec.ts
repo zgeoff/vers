@@ -1,14 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-/**
- * Exercises the game surfaces against a live dev server, logging in as the seeded
- * `e2e-game@vers.test` account (its own login, distinct from `home-smoke.spec.ts`'s `dev-session`
- * — signing in as that account instead would force out its already-live session): none of
- * nexus's client-lane Query read, avatar's server-component page, or aether's R3F code-split
- * boundary can run under `bun test` (no live browser, no `react-server` export condition).
- * Tolerant of either avatar state since the mock backend's data persists across runs against the
- * same dev server.
- */
 test('it renders nexus, avatar, and aether for a signed-in caller without console errors', async ({
   page,
 }) => {
@@ -41,6 +32,8 @@ test('it renders nexus, avatar, and aether for a signed-in caller without consol
 
   await page.goto('/avatar');
 
+  // mock-backend data persists across runs against the same dev server, so the account may or
+  // may not already have an avatar
   await expect(page).toHaveURL(/\/avatar(?<create>\/create)?$/);
 
   await page.goto('/aether');

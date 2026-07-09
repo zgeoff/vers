@@ -1,7 +1,9 @@
 import { useActivity, useSimulationInitialized, useSimulationWorker } from '@vers/idle-client';
 import type { ActivityAppState } from '@vers/idle-core';
 
-/** The simulation state every idle-driven surface reads through `useIdleWorkerHandle`. */
+/**
+ * The simulation state every idle-driven consumer reads through this hook.
+ */
 export interface IdleWorkerHandle {
   readonly activity: ActivityAppState | undefined;
   readonly initialized: boolean;
@@ -9,12 +11,10 @@ export interface IdleWorkerHandle {
 }
 
 /**
- * The app's one read seam onto `lib-idle-client`'s SharedWorker mount: every consumer reads
- * simulation state through this hook instead of the library directly, so tests can stub the
- * worker handle at this boundary. `happy-dom` has neither `SharedWorker` nor the Vite
- * worker-import transform the library's own (still-vitest) tests depend on, so this module is
- * replaced wholesale under `bun test` rather than driven for real — see
- * `test-utils/register-idle-worker-handle-mock.ts`.
+ * The app's one read boundary onto `lib-idle-client`'s SharedWorker mount: every consumer reads
+ * simulation state through this hook, so tests can stub the worker handle here. `happy-dom` has
+ * neither `SharedWorker` nor the Vite worker-import transform the library depends on, so this
+ * module is replaced under `bun test`.
  */
 export function useIdleWorkerHandle(): IdleWorkerHandle {
   const worker = useSimulationWorker();

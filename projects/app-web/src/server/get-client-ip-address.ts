@@ -7,9 +7,8 @@ export interface RequestWithIP extends Request {
 }
 
 /**
- * Reads the client's address off a request, preferring Fly's edge-set header, falling back to a
- * generic forwarding header, then the runtime-reported socket peer, and finally an empty string —
- * there's no case where a missing address should fail the request outright.
+ * Reads the client's address from the available forwarding headers or socket peer, defaulting to
+ * an empty string — a missing address never fails the request outright.
  */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RequestWithIP extends the built-in Request, which carries mutating methods (e.g. clone()) no readonly form can cover
 export function getClientIPAddress(request: RequestWithIP): string {

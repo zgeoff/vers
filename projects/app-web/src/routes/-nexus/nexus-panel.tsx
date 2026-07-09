@@ -8,11 +8,6 @@ interface NexusPanelProps {
   readonly orpc: OrpcQueryUtils;
 }
 
-/**
- * The nexus HUD's client-lane read: whether the caller has an avatar decides between a call to
- * action for one who doesn't and the (currently placeholder) HUD for one who does. Client lane
- * end to end per the two-lane rule — this is where tick-driven HUD state will land.
- */
 export function NexusPanel(props: NexusPanelProps) {
   const query = useQuery(props.orpc.avatar.getAvatars.queryOptions({ input: {}, retry: false }));
 

@@ -1,4 +1,3 @@
-/** Picks the aether node detail view's stub codex entry, keyed by the node's difficulty tier. */
 export function pickAetherNodeCodexMessage(difficulty: number): string {
   if (difficulty >= 3) {
     return 'The aether here churns with old violence — tread carefully.';

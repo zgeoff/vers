@@ -7,7 +7,6 @@ interface AvatarContentProps {
   readonly avatar: AvatarData;
 }
 
-/** The avatar page's read-only summary: name, level, class, and progression. */
 export function AvatarContent(props: AvatarContentProps): ReactElement {
   return (
     <section>

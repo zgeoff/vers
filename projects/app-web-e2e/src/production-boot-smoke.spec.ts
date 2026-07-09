@@ -3,11 +3,8 @@ import { expect, test } from '@playwright/test';
 const PRODUCTION_BASE_URL = process.env['PRODUCTION_BASE_URL'] ?? 'http://localhost:3010';
 
 /**
- * Proves the actual deployable artifact (`vite build` + `server.mjs`) boots and serves traffic —
- * distinct from the dev-server-backed journey specs, since the production build can't host the
- * mock backend plugin (see playwright.config.ts). Only routes with no downstream service call are
- * exercised here; `home-smoke.spec.ts` and `game-smoke.spec.ts` cover the rest against the mock
- * backend.
+ * The production server hosts no mock backend, so only routes with no downstream service call
+ * can be asserted here.
  */
 test('it serves the production build health check and anonymous home page', async ({
   playwright,

@@ -1,7 +1,6 @@
 import * as db from '../../db';
 import { os } from './os';
 
-/** Lists every avatar owned by the acting user. */
 export const getAvatars = os.getAvatars.handler((opts) => {
   const actingUserId = opts.context.actingUserId;
 

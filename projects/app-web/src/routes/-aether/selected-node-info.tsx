@@ -2,7 +2,6 @@ import { Link } from '@tanstack/react-router';
 import { useSelectedNode } from '@vers/aether-client';
 import { Text } from '@vers/design-system';
 
-/** The aether map's client-lane read: the currently selected node's summary and a way in. */
 export function SelectedNodeInfo() {
   const node = useSelectedNode().node;
 

@@ -15,7 +15,6 @@ const formStyles = css({
   width: '96',
 });
 
-/** The avatar-create page's client-interactive form: class selection plus a name, submitted together. */
 export function AvatarCreateForm() {
   const avatarCreateFn = useServerFn(avatarCreate);
   const [selectedClass, setSelectedClass] = useState<ClassID | undefined>(undefined);
