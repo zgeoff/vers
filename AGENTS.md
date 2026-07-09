@@ -227,8 +227,8 @@ sentence can't be simplified without losing it.
 
 ## Monorepo layout
 
-Projects live under `projects/*` (the sole bun workspace glob); `docs/000-overview.md` lists them.
-Every project has its own `package.json` named `@vers/<name>`: internal deps use the `workspace:*`
+Projects live under `projects/*` (the sole bun workspace glob); `docs/overview.md` lists them. Every
+project has its own `package.json` named `@vers/<name>`: internal deps use the `workspace:*`
 protocol, and versions shared by 5+ projects live in the root manifest's `workspaces.catalog`
 (referenced as `catalog:`). Libraries are consumed as TypeScript source (`exports` →
 `./src/index.ts`); there are no per-library build steps. `bun install` uses the isolated linker

@@ -7,7 +7,7 @@ Where the stack runs, how a merge reaches production, and how to re-provision it
 The stack runs on Fly.io in the `syd` region. `app-web` holds the only public address. The domain
 services — `service-avatar`, `service-session`, `service-user`, `service-verification` — are
 private, reachable only across the organization's 6PN WireGuard mesh. Postgres is a Neon project
-(see [database](./003-database.md)); no app runs its own database.
+(see [database](./database.md)); no app runs its own database.
 
 Every app scales to zero. `auto_stop_machines = 'suspend'` parks an idle machine with its memory
 snapshot for sub-second wake. `app-web` keeps one machine warm (`min_machines_running = 1`) so a

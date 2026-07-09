@@ -1,8 +1,8 @@
 # Overview
 
 Vers is a browser idle game on a microservice backend: a deterministic simulation runs on the
-client, the server verifies its results by replay, and everything [deploys](./004-deployment.md)
-from one repo as a single atomic release.
+client, the server verifies its results by replay, and everything [deploys](./deployment.md) from
+one repo as a single atomic release.
 
 ## Request path
 
@@ -22,7 +22,7 @@ flowchart LR
 The oRPC link is isomorphic: during SSR the Start server calls services directly; in the browser,
 calls go through the app's `/api/rpc` proxy route, since services are not reachable from the public
 internet. Either way the client is typed by the service's contract package alone — see
-[service contracts](./002-service-contracts.md).
+[service contracts](./service-contracts.md).
 
 ## Topology
 
@@ -30,7 +30,7 @@ Each service is its own Fly deployment, scale-to-zero, reachable only on the pri
 
 - `service-user`, `service-session`, `service-verification` — the identity platform: accounts,
   sessions (RS256 JWTs signed by the session service), and the OTP/TOTP verification flows. The auth
-  design is specified in [auth](./001-auth.md).
+  design is specified in [auth](./auth.md).
 - `service-avatar` — the game-domain service: avatars and their progression.
 - `service-activities` — owns the game's event store: activity streams of simulation checkpoint
   batches, and the "current activity" / "latest progress" reads the client resumes from.
@@ -40,8 +40,7 @@ Each service is its own Fly deployment, scale-to-zero, reachable only on the pri
 ## Data
 
 One database, two shapes. Both live in the same Postgres on Neon, which scales to zero when nobody
-is playing. Provisioning, connection rules, and where the secrets live:
-[database](./003-database.md).
+is playing. Provisioning, connection rules, and where the secrets live: [database](./database.md).
 
 - **Relational identity data** — users, sessions, verifications, avatars — accessed through Kysely,
   migrated by kysely-ctl in `lib-db`.
@@ -74,7 +73,7 @@ The star map (`lib-aether-*`) generates the world graph — concentric difficult
   runtime plugin in `lib-service-runtime` verifies it before any handler runs.
 - **Contracts** — each service's API is declared in its own `@vers/contract-*` package, oRPC
   contract-first with Zod schemas owned by the contract that declares them. Mechanics, error
-  taxonomy, and change discipline: [service contracts](./002-service-contracts.md).
+  taxonomy, and change discipline: [service contracts](./service-contracts.md).
 - **Atomic release** — contracts are unversioned workspace source packages; the repo deploys as one
   unit from one SHA. Turborepo re-typechecks every consumer on any contract change, so divergence
   cannot land on `main`. There is no version matrix — the monorepo is the compatibility mechanism.
