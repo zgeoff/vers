@@ -153,4 +153,3 @@ Libraries:
   schemas
 - `lib-styled-system` - generated code for panda css design system
 - `lib-utils` - low-level platform-agnostic utils
-- `lib-validation` - shared zod schemas
