@@ -540,19 +540,6 @@
         "vitest": "catalog:",
       },
     },
-    "projects/lib-validation": {
-      "name": "@vers/validation",
-      "version": "0.0.0",
-      "dependencies": {
-        "zod": "catalog:",
-      },
-      "devDependencies": {
-        "@types/node": "22.13.10",
-        "jest-extended": "catalog:",
-        "typescript": "catalog:",
-        "vitest": "catalog:",
-      },
-    },
     "projects/service-avatar": {
       "name": "@vers/service-avatar",
       "version": "0.0.0",
@@ -1839,8 +1826,6 @@
     "@vers/styled-system": ["@vers/styled-system@workspace:projects/lib-styled-system"],
 
     "@vers/utils": ["@vers/utils@workspace:projects/lib-utils"],
-
-    "@vers/validation": ["@vers/validation@workspace:projects/lib-validation"],
 
     "@vers/web": ["@vers/web@workspace:projects/app-web"],
 

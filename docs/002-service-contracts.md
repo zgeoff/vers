@@ -71,9 +71,8 @@ them. Entity schemas live in the contract package that owns the entity — not i
 package, even at some duplication cost — because sharing entity schemas across contracts would
 couple services through the back door.
 
-Contract packages pin zod 4 directly — never the workspace catalog, which holds zod 3.
-`@vers/validation` is one of the zod 3 packages, so its schemas are not consumable from contracts —
-any schema a contract needs lives in the contract package itself.
+Contract packages pin zod 4 directly — never the workspace catalog, which holds zod 3 — so any
+schema a contract needs lives in the contract package itself.
 
 ## The service side
 

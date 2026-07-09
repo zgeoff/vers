@@ -52,8 +52,8 @@ those directories.
 ### Package naming
 
 Every importable workspace package lives in a `lib-`-prefixed folder. A package's name is its folder
-name minus the taxonomy prefix: `lib-` and `app-` strip (`lib-validation` → `@vers/validation`,
-`app-web` → `@vers/web`); `service-` is part of the name and carries through (`service-user` →
+name minus the taxonomy prefix: `lib-` and `app-` strip (`lib-utils` → `@vers/utils`, `app-web` →
+`@vers/web`); `service-` is part of the name and carries through (`service-user` →
 `@vers/service-user`).
 
 ## Styling
