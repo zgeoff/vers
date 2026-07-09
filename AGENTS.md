@@ -325,8 +325,9 @@ executable in stages:
    source. The busybox shell keeps `fly ssh console` usable.
 
 `app-web` bundles an SSR server in stages: **pruner**; **installer** (full `bun install` for the
-build tooling); **builder** (its `codegen`/`typegen`/`build` scripts directly, plus
-`tsconfig.base.json` from outside any package); **prod-deps**
+build tooling); **builder** (`turbo run codegen typegen --filter=@vers/web...` so a workspace dep's
+generated output — `@vers/styled-system`'s panda CSS — exists before its own `build` script runs,
+plus `tsconfig.base.json` from outside any package); **prod-deps**
 (`bun install --production --linker=hoisted`, whose flat `node_modules` lets the bundle resolve
 external imports like `pino` from one location); and a `node:24.18.0-alpine` **runtime** holding
 `node_modules`, `server.mjs`, and `dist`.
