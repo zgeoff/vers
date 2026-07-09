@@ -386,6 +386,22 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
   is a review finding. Every stubbed ambient path is also crossed by the smoke suite. Explicit args
   stay preferred where they cost nothing.
 
+### Forms (Conform)
+
+- A form island drives a Conform form through the shared `useFormSubmit` hook (`lib/forms/`): the
+  hook takes the form's server function, dispatches the assembled `FormData`, and hands back
+  `lastResult` for `useForm`, an in-flight flag for the submit button, and the submit handler. The
+  handler runs `parseWithZod(formData)` and returns `submission.reply()`; the honeypot check stays a
+  server-side helper. Validation imports from `@conform-to/zod/v4`, matching app-web's zod v4.
+- The hook takes an optional seed `lastResult` beside the server function, and an island forwards
+  both from props, so a test injects a stand-in action or seeds a result without touching the wire.
+- Cover a form's result→UI mapping by rendering the island with a fabricated
+  `submission.reply()`-shaped `lastResult` and asserting the rendered errors — a form-level message
+  under the empty-string key, a field message under the field name. No submit runs and no server is
+  reached, so every result branch is assertable, including the plain-object branch a live
+  `createServerFn` dispatch collapses to `undefined` under bun test. Drive pending state and the
+  out-of-band `Response` fallback by injecting an action instead.
+
 ### Real-database services (service/app/DB packages)
 
 Services, apps, and DB-backed libraries whose tests exercise a real postgres follow this standard —

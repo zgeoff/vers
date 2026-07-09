@@ -48,6 +48,8 @@
       "name": "@vers/web",
       "version": "0.0.0",
       "dependencies": {
+        "@conform-to/react": "1.19.4",
+        "@conform-to/zod": "1.19.4",
         "@msw/data": "1.1.6",
         "@orpc/client": "1.14.6",
         "@orpc/contract": "1.14.6",
@@ -327,8 +329,8 @@
         "react-icons": "5.5.0",
       },
       "devDependencies": {
-        "@conform-to/react": "1.2.2",
-        "@conform-to/zod": "1.2.2",
+        "@conform-to/react": "1.19.4",
+        "@conform-to/zod": "1.19.4",
         "@fontsource-variable/manrope": "5.2.8",
         "@fontsource/chakra-petch": "5.2.7",
         "@fontsource/ibm-plex-mono": "5.2.7",
@@ -790,11 +792,11 @@
 
     "@commitlint/types": ["@commitlint/types@19.8.1", "", { "dependencies": { "@types/conventional-commits-parser": "^5.0.0", "chalk": "^5.3.0" } }, "sha512-/yCrWGCoA1SVKOks25EGadP9Pnj0oAIHGpl2wH2M2Y46dPM2ueb8wyCVOD7O3WCTkaJ0IkKvzhl1JY7+uCT2Dw=="],
 
-    "@conform-to/dom": ["@conform-to/dom@1.2.2", "", {}, "sha512-f05EClpNP31o6lX4LYmmLqgsiTOHdGfY7z2XXK6U6rRp+EtxrkUBdrFlIGsfkf7e9AFO19h3/Cb/cXHVd1k1FA=="],
+    "@conform-to/dom": ["@conform-to/dom@1.19.4", "", {}, "sha512-P/mBdVRl946iE74TXmF5YLY9+1IDrQzxKdj9A7qv7Cd4l/O02EvJskg3X7cHwhmFFIXXgNzSmf/y4B597SS4gg=="],
 
-    "@conform-to/react": ["@conform-to/react@1.2.2", "", { "dependencies": { "@conform-to/dom": "1.2.2" }, "peerDependencies": { "react": ">=18" } }, "sha512-1JBECb3NKi5/IlexaYLgnAxGJ55MRuO2sEQ10cJfUK2bfltNbTIQnYUDG6pU886A4lda/q6UH/adPsjiB/4Gkg=="],
+    "@conform-to/react": ["@conform-to/react@1.19.4", "", { "dependencies": { "@conform-to/dom": "1.19.4" }, "peerDependencies": { "react": ">=18", "react-dom": ">=18" } }, "sha512-Xyw4hbD9467q8PTWW+Nvmf523y814w70eeABRJzVvfnpghGOAWAGt1lpOboAs6sqaKG/eouqifibz/r+PDFZLg=="],
 
-    "@conform-to/zod": ["@conform-to/zod@1.2.2", "", { "dependencies": { "@conform-to/dom": "1.2.2" }, "peerDependencies": { "zod": "^3.21.0" } }, "sha512-mNCzh0XsF2vhCtD8bfHYMYayEJ9dP6/KsGjmq8DFcO1ykDTNQZwfi1MIm4evGYVempSS3poYr4xZjd7cXEbtaw=="],
+    "@conform-to/zod": ["@conform-to/zod@1.19.4", "", { "dependencies": { "@conform-to/dom": "1.19.4" }, "peerDependencies": { "zod": "^3.21.0 || ^4.0.0" } }, "sha512-g80QtotXLcXWCF86Xou/VpI6i+NBOQxYgLS9YCQYrgV27yilZFJYpgWWBsA8YwodmJVBIYm9RawJba7WnUoddA=="],
 
     "@dotenvx/dotenvx": ["@dotenvx/dotenvx@1.38.4", "", { "dependencies": { "commander": "^11.1.0", "dotenv": "^16.4.5", "eciesjs": "^0.4.10", "execa": "^5.1.1", "fdir": "^6.2.0", "ignore": "^5.3.0", "object-treeify": "1.1.33", "picomatch": "^4.0.2", "which": "^4.0.0" }, "bin": { "dotenvx": "src/cli/dotenvx.js", "git-dotenvx": "src/cli/dotenvx.js" } }, "sha512-5rl1W5uMgSMrjluMqOf0FmUC6DILlR9Iy+6WzJIzt8qAON6gSbNZEkDG7MtktbK8g6QgQm9mMwaGgjW4DeU9Gw=="],
 
