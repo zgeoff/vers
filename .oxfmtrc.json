@@ -3,9 +3,7 @@
   "ignorePatterns": [
     "bun.lock",
     "projects/app-design-reference/public/**",
-    "projects/app-web/app/gql/**",
     "projects/app-web/public/mockServiceWorker.js",
-    "schema.graphql",
     "agents/shared.md",
     "AGENTS.md"
   ],

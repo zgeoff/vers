@@ -20,7 +20,9 @@ export interface CheckStepUpOptions {
 /**
  * Gates a mutation behind step-up: callers with no live 2FA never gate at all. A 2FA-enabled
  * caller needs a transaction token minted from a completed step-up code check — an absent, forged,
- * expired, or mismatched-claim token starts a fresh pending transaction instead of trusting it.
+ * expired, mismatched-claim, or session-mismatched token starts a fresh pending transaction instead
+ * of trusting it. The session check stops a token minted under one auth session from redeeming
+ * under another, mirroring the pending-transaction consume path's own `sessionID` match.
  */
 export async function checkStepUp(opts: Readonly<CheckStepUpOptions>): Promise<CheckStepUpResult> {
   const twoFactorVerification = await verificationClient.getVerification({
@@ -32,14 +34,21 @@ export async function checkStepUp(opts: Readonly<CheckStepUpOptions>): Promise<C
     return { status: 'not-needed' };
   }
 
+  const authSession = await getAuthSession();
+
+  const sessionID = authSession.sessionID ?? null;
+
   if (
     opts.token !== undefined &&
-    (await tryConsumeStepUpToken(opts.action, opts.target, opts.token))
+    (await tryConsumeStepUpToken(opts.action, opts.target, opts.token, sessionID))
   ) {
     return { status: 'verified' };
   }
 
-  return { status: 'required', transactionID: await createPendingStepUpTransaction(opts) };
+  return {
+    status: 'required',
+    transactionID: await createPendingStepUpTransaction(opts, sessionID),
+  };
 }
 
 /** Redeems a step-up transaction token exactly once, folding every failure mode into `false`. */
@@ -47,10 +56,16 @@ async function tryConsumeStepUpToken(
   action: SecureAction,
   target: string,
   token: string,
+  sessionID: string | null,
 ): Promise<boolean> {
   const claims = await verifyStepUpTransactionToken(token).catch(() => null);
 
-  if (claims === null || claims.action !== action || claims.target !== target) {
+  if (
+    claims === null ||
+    claims.action !== action ||
+    claims.target !== target ||
+    claims.sessionID !== sessionID
+  ) {
     return false;
   }
 
@@ -62,16 +77,17 @@ async function tryConsumeStepUpToken(
   return result.consumed;
 }
 
-async function createPendingStepUpTransaction(opts: Readonly<CheckStepUpOptions>): Promise<string> {
-  const authSession = await getAuthSession();
-
+async function createPendingStepUpTransaction(
+  opts: Readonly<CheckStepUpOptions>,
+  sessionID: string | null,
+): Promise<string> {
   const transactionID = createId();
 
   await sessionClient.stepUp.createPendingTransaction({
     action: opts.action,
     id: transactionID,
     ipAddress: getRequestIP() ?? '0.0.0.0',
-    sessionID: authSession.sessionID ?? null,
+    sessionID,
     target: opts.target,
   });
 

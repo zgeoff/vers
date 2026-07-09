@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useRouter } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import type { VerificationType } from '@vers/contract-verification';
 import { Brand, Heading, OTPField, StatusButton, Text } from '@vers/design-system';
@@ -51,6 +51,7 @@ const otpField = css({ marginBottom: '6' });
 
 /** The verify-otp page's client-interactive form: submits the code and renders the result. */
 export function VerifyOTPForm(props: VerifyOTPFormProps) {
+  const router = useRouter();
   const verifyOTPFn = useServerFn(verifyOTP);
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -62,8 +63,8 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
     setFormError(null);
 
     try {
-      // a successful verify ends in a redirect that useServerFn already navigated to, resolving
-      // this call with no value — there's no further UI to show
+      // 2fa, 2fa-setup, and onboarding verifies end in a redirect that useServerFn already
+      // navigated to, resolving this call with no value — there's no further UI to show
       const result: VerifyOTPResult | Response | undefined = await verifyOTPFn({ data: formData });
 
       if (result === undefined) {
@@ -72,6 +73,14 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
 
       if (result instanceof Response) {
         setFormError('Something went wrong. Please try again.');
+
+        return;
+      }
+
+      if (result.status === 'change-email-applied') {
+        // invalidate so the account hub reloads the just-changed email before navigating to it
+        await router.invalidate();
+        await router.navigate({ to: '/account' });
 
         return;
       }

@@ -8,12 +8,26 @@ interface ServiceFetchInit {
   readonly redirect?: RequestRedirect;
 }
 
+interface RefreshedTokens {
+  readonly accessToken: string;
+  readonly refreshToken: string;
+}
+
 /**
- * Wraps a service call's underlying fetch with transparent token refresh: a `401` triggers exactly
- * one refresh-and-retry using the `en_session` cookie's refresh token. A refresh that itself fails,
- * or that can't even be attempted (no cookie session, or no ambient request at all), clears the
- * cookie if one exists and returns the original `401` unchanged — the caller's own guard redirects
- * to login on its next request.
+ * Concurrent 401s for the same session share one in-flight refresh instead of each calling
+ * `refreshTokens` — racing that call trips the service's refresh-token reuse detection and revokes
+ * the session. Every service link this process builds (`buildAuthenticatedFetch` is called once per
+ * `buildServiceLink`) shares this one module-scoped map, since a 401 from one service and a 401 from
+ * another can both be racing a refresh for the same session.
+ */
+const inFlightRefreshes = new Map<string, Promise<RefreshedTokens | undefined>>();
+
+/**
+ * Wraps a service call's underlying fetch with transparent token refresh: a `401` triggers a
+ * refresh-and-retry using the `en_session` cookie's refresh token. A refresh that itself fails, or
+ * that can't even be attempted (no cookie session, or no ambient request at all), clears the cookie
+ * if one exists and returns the original `401` unchanged — the caller's own guard redirects to
+ * login on its next request.
  */
 export function buildAuthenticatedFetch(): (
   request: Request,
@@ -45,24 +59,58 @@ async function tryRefreshAndRetry(
     return originalResponse;
   }
 
-  const [error, tokens] = await safe(
-    sessionRefreshClient.refreshTokens(
-      { id: session.sessionID, refreshToken: session.refreshToken },
-      { context: { headers: { authorization: `Bearer ${session.sessionID}` } } },
-    ),
-  );
+  const tokens = await resolveRefreshedTokens(session.sessionID, session.refreshToken);
 
-  if (error !== null) {
-    await clearAuthSession();
-
+  if (tokens === undefined) {
     return originalResponse;
   }
-
-  await updateAuthSession({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
 
   const retryHeaders = new Headers(retryable.headers);
 
   retryHeaders.set('authorization', `Bearer ${tokens.accessToken}`);
 
   return fetch(new Request(retryable, { headers: retryHeaders }), init);
+}
+
+async function resolveRefreshedTokens(
+  sessionID: string,
+  refreshToken: string,
+): Promise<RefreshedTokens | undefined> {
+  const existing = inFlightRefreshes.get(sessionID);
+
+  if (existing !== undefined) {
+    return existing;
+  }
+
+  const refresh = runRefresh(sessionID, refreshToken);
+
+  inFlightRefreshes.set(sessionID, refresh);
+
+  try {
+    return await refresh;
+  } finally {
+    inFlightRefreshes.delete(sessionID);
+  }
+}
+
+async function runRefresh(
+  sessionID: string,
+  refreshToken: string,
+): Promise<RefreshedTokens | undefined> {
+  const [error, tokens] = await safe(
+    sessionRefreshClient.refreshTokens(
+      { id: sessionID, refreshToken },
+      { context: { headers: { authorization: `Bearer ${sessionID}` } } },
+    ),
+  );
+
+  if (error !== null) {
+    await clearAuthSession();
+
+    return undefined;
+  }
+
+  await updateAuthSession({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
+
+  return tokens;
 }

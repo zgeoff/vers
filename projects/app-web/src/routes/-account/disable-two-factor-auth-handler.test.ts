@@ -40,7 +40,7 @@ test('it removes the 2FA verification and redirects to account once a valid toke
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({
       action: 'TwoFactorAuthDisable',
-      sessionID: null,
+      sessionID: signedIn.sessionID,
       target: signedIn.userID,
     });
 

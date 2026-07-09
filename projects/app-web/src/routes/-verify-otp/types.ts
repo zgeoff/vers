@@ -5,10 +5,10 @@ export interface RunVerificationContext {
 }
 
 /**
- * The verify-otp form's non-redirect outcome. Every successful verify ends in a thrown redirect
- * instead of a value here — its continuation depends on the verification type.
+ * The verify-otp form's outcomes. Every verification type but `change-email` ends a successful
+ * verify in a thrown redirect instead of a value here; `change-email` reports
+ * `'change-email-applied'` so its caller can refresh the account hub without one.
  */
-export interface VerifyOTPResult {
-  readonly formError: string;
-  readonly status: 'invalid-fields';
-}
+export type VerifyOTPResult =
+  | { readonly formError: string; readonly status: 'invalid-fields' }
+  | { readonly status: 'change-email-applied' };

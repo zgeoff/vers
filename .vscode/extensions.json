@@ -3,7 +3,6 @@
     "oxc.oxc-vscode",
     "ms-playwright.playwright",
     "arcanis.vscode-zipfs",
-    "bierner.markdown-mermaid",
-    "kumar-harsh.graphql-for-vscode"
+    "bierner.markdown-mermaid"
   ]
 }

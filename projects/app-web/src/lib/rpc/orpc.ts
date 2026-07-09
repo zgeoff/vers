@@ -11,4 +11,8 @@ export const orpc = {
   verification: createTanstackQueryUtils(verificationClient),
 };
 
-export type OrpcQueryUtils = typeof orpc;
+type DeepReadonly<T> = T extends (...args: ReadonlyArray<never>) => unknown
+  ? T
+  : { readonly [K in keyof T]: DeepReadonly<T[K]> };
+
+export type OrpcQueryUtils = DeepReadonly<typeof orpc>;

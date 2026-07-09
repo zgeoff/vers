@@ -59,6 +59,128 @@ test('it retries a 401 with the refreshed access token and the original body int
   expect(outcome.cookies['en_session']).toContainEntry(['accessToken', session.id]);
 });
 
+test('it single-flights concurrent refreshes for the same session', async () => {
+  const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
+
+  const probeUrlA = 'http://localhost:3999/probe-concurrent-a';
+  const probeUrlB = 'http://localhost:3999/probe-concurrent-b';
+
+  const retriedAuthorization: Array<string | null> = [];
+
+  server.use(
+    http.post(probeUrlA, () => HttpResponse.json({}, { status: 401 }), { once: true }),
+    http.post(probeUrlA, (info) => {
+      retriedAuthorization.push(info.request.headers.get('authorization'));
+
+      return HttpResponse.json({ ok: 'a' });
+    }),
+    http.post(probeUrlB, () => HttpResponse.json({}, { status: 401 }), { once: true }),
+    http.post(probeUrlB, (info) => {
+      retriedAuthorization.push(info.request.headers.get('authorization'));
+
+      return HttpResponse.json({ ok: 'b' });
+    }),
+  );
+
+  const authenticatedFetch = buildAuthenticatedFetch();
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken: 'stale-access-token',
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+        },
+      },
+    },
+    () =>
+      Promise.all([
+        authenticatedFetch(new Request(probeUrlA, { method: 'POST' }), {}),
+        authenticatedFetch(new Request(probeUrlB, { method: 'POST' }), {}),
+      ]),
+  );
+
+  const [responseA, responseB] = outcome.value;
+
+  // if the refresh raced instead of single-flighting, the mock service's reuse detection would
+  // fail the second refresh, so its 401 retry would carry the original stale access token
+  expect(responseA.status).toBe(200);
+  expect(responseB.status).toBe(200);
+
+  expect(retriedAuthorization).toIncludeAllMembers([
+    `Bearer ${session.id}`,
+    `Bearer ${session.id}`,
+  ]);
+
+  expect(db.sessionCollection.findFirst((q) => q.where({ id: session.id }))).toMatchObject({
+    previousRefreshToken: 'refresh-1',
+  });
+});
+
+test('it single-flights concurrent refreshes for the same session across separate service links', async () => {
+  const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
+
+  const probeUrlA = 'http://localhost:3999/probe-cross-service-a';
+  const probeUrlB = 'http://localhost:3999/probe-cross-service-b';
+
+  const retriedAuthorization: Array<string | null> = [];
+
+  server.use(
+    http.post(probeUrlA, () => HttpResponse.json({}, { status: 401 }), { once: true }),
+    http.post(probeUrlA, (info) => {
+      retriedAuthorization.push(info.request.headers.get('authorization'));
+
+      return HttpResponse.json({ ok: 'a' });
+    }),
+    http.post(probeUrlB, () => HttpResponse.json({}, { status: 401 }), { once: true }),
+    http.post(probeUrlB, (info) => {
+      retriedAuthorization.push(info.request.headers.get('authorization'));
+
+      return HttpResponse.json({ ok: 'b' });
+    }),
+  );
+
+  // each service client builds its own `RPCLink`, and so its own `buildAuthenticatedFetch()`
+  // instance, the way `buildServiceLink` does for every service
+  const authenticatedFetchA = buildAuthenticatedFetch();
+  const authenticatedFetchB = buildAuthenticatedFetch();
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken: 'stale-access-token',
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+        },
+      },
+    },
+    () =>
+      Promise.all([
+        authenticatedFetchA(new Request(probeUrlA, { method: 'POST' }), {}),
+        authenticatedFetchB(new Request(probeUrlB, { method: 'POST' }), {}),
+      ]),
+  );
+
+  const [responseA, responseB] = outcome.value;
+
+  // if the two instances raced separate refreshes instead of sharing one, the mock service's
+  // reuse detection would fail the second refresh, so its 401 retry would carry the original
+  // stale access token
+  expect(responseA.status).toBe(200);
+  expect(responseB.status).toBe(200);
+
+  expect(retriedAuthorization).toIncludeAllMembers([
+    `Bearer ${session.id}`,
+    `Bearer ${session.id}`,
+  ]);
+
+  expect(db.sessionCollection.findFirst((q) => q.where({ id: session.id }))).toMatchObject({
+    previousRefreshToken: 'refresh-1',
+  });
+});
+
 test('it clears the session and returns the original 401 when the refresh itself fails', async () => {
   const probeUrl = 'http://localhost:3999/probe-refresh-failure';
 

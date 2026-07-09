@@ -58,7 +58,7 @@ test('it applies the change once a valid step-up token is attached', async () =>
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await mintStepUpTransactionToken({
       action: 'ChangeEmail',
-      sessionID: null,
+      sessionID: signedIn.sessionID,
       target: signedIn.userID,
     });
 

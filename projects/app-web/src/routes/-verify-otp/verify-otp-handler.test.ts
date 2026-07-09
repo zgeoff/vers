@@ -194,22 +194,17 @@ test('it applies a confirmed email change for the signed-in caller', async () =>
 
   const outcome = await withRequestContext(
     { cookies: { en_session: { accessToken: session.id, sessionID: session.id } } },
-    async () => {
-      const redirectHref = await verifyOTPHandler(
+    () =>
+      verifyOTPHandler(
         buildFormData({
           code: '666666',
           target: 'verify-otp-change-email-new@vers.test',
           type: 'change-email',
         }),
-      )
-        .then(() => null)
-        .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
-
-      return redirectHref;
-    },
+      ),
   );
 
-  expect(outcome.value).toBe('/account');
+  expect(outcome.value).toStrictEqual({ status: 'change-email-applied' });
 
   const updated = db.userCollection.findFirst((q) => q.where({ id: user.id }));
 

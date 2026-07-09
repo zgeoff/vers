@@ -13,7 +13,6 @@ interface ActivityConfig {
 }
 
 export function createActivity(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   data: ActivityData,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,

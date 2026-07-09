@@ -5,6 +5,9 @@ import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
 import { registerMSWLifecycle } from '@vers/client-test-utils/test-setup';
 import { server } from './src/mocks/node';
+import { registerAetherCanvasMock } from './src/test-utils/register-aether-canvas-mock';
+import { registerAetherNodeCodexSlotMock } from './src/test-utils/register-aether-node-codex-slot-mock';
+import { registerIdleWorkerHandleMock } from './src/test-utils/register-idle-worker-handle-mock';
 import { registerRequestContextMock } from './src/test-utils/register-request-context-mock';
 
 process.env['SESSION_SECRET'] = 'test-session-secret-test-session-secret';
@@ -19,6 +22,12 @@ expect.extend(jestDOMMatchers);
 registerMSWLifecycle(server);
 
 registerRequestContextMock();
+
+registerIdleWorkerHandleMock();
+
+registerAetherCanvasMock();
+
+registerAetherNodeCodexSlotMock();
 
 // Imported dynamically, after `GlobalRegistrator.register()`: `@testing-library/react` reads
 // `document` at import time to decide whether to install its own auto-cleanup, and a static

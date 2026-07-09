@@ -126,11 +126,33 @@
           },
           {
             "from": "lib",
-            "name": ["Request", "Response", "Date", "Headers", "FormData", "HTMLFormElement"]
+            "name": [
+              "Request",
+              "Response",
+              "Date",
+              "Headers",
+              "FormData",
+              "HTMLFormElement",
+              "SharedWorker",
+              "URL"
+            ]
           },
           { "from": "package", "name": "ReactNode", "package": "react" },
           { "from": "package", "name": "ZodError", "package": "zod" },
-          { "from": "package", "name": "JWTPayload", "package": "jose" }
+          { "from": "package", "name": "JWTPayload", "package": "jose" },
+          // not handles but intentionally never readonly: idle-core's tick
+          // and lifecycle handlers mutate these entities in place for
+          // performance, so no readonly form of them exists to consume
+          {
+            "from": "file",
+            "name": ["ActivityData", "ActivityAppState", "AetherNodeActivityData"],
+            "path": "../lib-idle-core/src/types/activity.ts"
+          },
+          {
+            "from": "file",
+            "name": "AvatarData",
+            "path": "../lib-idle-core/src/types/entities.ts"
+          }
         ]
       }
     ],
@@ -335,10 +357,8 @@
     "**/*timestamp*.mjs",
     "**/mockServiceWorker.js",
     "**/projects/app-design-reference/public/**",
-    "**/projects/app-web/app/gql/**",
     "**/.react-router/**",
     "**/styled-system/**",
-    "schema.graphql",
     "**/.ladle/**"
   ]
 }

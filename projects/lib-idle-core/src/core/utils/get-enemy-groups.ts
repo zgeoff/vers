@@ -11,7 +11,6 @@ interface ActivityConfig {
 }
 
 export function getEnemyGroups(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   activity: ActivityData,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,
