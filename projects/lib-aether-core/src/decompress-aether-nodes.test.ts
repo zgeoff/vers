@@ -1,11 +1,7 @@
-import { afterEach, expect, mock, spyOn, test } from 'bun:test';
+import { expect, spyOn, test } from 'bun:test';
 import { decompressAetherNodes } from './decompress-aether-nodes';
 import * as getRandomizedPosition from './get-randomized-position';
 import type { CompressedAetherNode } from './types';
-
-afterEach(() => {
-  mock.restore();
-});
 
 test('it decompresses nodes into a complete aether graph', () => {
   // mock our randomization so we can assert we're getting the correct positions

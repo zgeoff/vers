@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": ["node", "bun", "vite/client"]
+    "types": ["node", "bun", "vite/client", "@zgeoff/bun-test-extended"]
   },
   "files": [],
   "include": [

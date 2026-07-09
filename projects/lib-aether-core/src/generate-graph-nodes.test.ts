@@ -1,11 +1,7 @@
-import { afterEach, expect, mock, spyOn, test } from 'bun:test';
+import { expect, spyOn, test } from 'bun:test';
 import * as gameUtils from '@vers/game-utils';
 import * as createIdModule from './create-id';
 import { generateGraphNodes } from './generate-graph-nodes';
-
-afterEach(() => {
-  mock.restore();
-});
 
 // rather than testing our implementation, snapshot a valid graph.
 // if this changes we need to go over it with a fine tooth comb.

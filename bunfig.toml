@@ -11,7 +11,7 @@ minimumReleaseAge = 604800
 # format-codemod 0.0.5 (published 2026-07-08) ages past the gate ~2026-07-15 — remove its exclude then (#219)
 # panda 2.0 is still in beta with no stable ETA published — remove these excludes
 # once @pandacss/dev goes stable (#222)
-# @zgeoff/bun-test-extended 0.0.2 ages past the 7-day gate ~2026-07-11 — remove then (#257)
+# @zgeoff/bun-test-extended 0.0.3 ages past the 7-day gate ~2026-07-16 — remove then (#257)
 # @zgeoff/oxlint-config 0.0.2 ages past the 7-day gate ~2026-07-14 — remove then (#292)
 # TanStack Start's RSC support is experimental and churns fast (#259) — the router/start/vite
 # ecosystem it pins ships new versions inside the 7-day window routinely; excluded per-package
