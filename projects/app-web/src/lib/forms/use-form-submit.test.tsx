@@ -147,8 +147,8 @@ test('it disables the submit button while the action is in flight', async () => 
   await user.type(screen.getByPlaceholderText('Password'), 'password123');
   await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-  // the pending toggle is driven outside `act` — poll the DOM rather than `waitFor`, which flushes
-  // through `act` and cannot observe it settle under CI timing
+  // the pending toggle is driven outside `act`; poll the DOM rather than `waitFor`, which flushes
+  // through `act` and can't observe it settle
   await assertEventually(() => {
     if (!screen.getByRole('button', { name: 'Sign in' }).hasAttribute('disabled')) {
       throw new Error('the submit button is not disabled yet');

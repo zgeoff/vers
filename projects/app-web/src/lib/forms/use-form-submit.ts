@@ -14,14 +14,10 @@ const GENERIC_SUBMIT_ERROR = 'Something went wrong. Please try again.';
  * Wires a Conform form to a TanStack Start server function: dispatches the assembled `FormData`,
  * holds the reply as `lastResult`, and tracks the in-flight flag. Triages the three shapes a
  * server-function call resolves to — a redirect the browser already followed (`undefined`, nothing
- * left to show), a `Response` the server returned for an out-of-band rejection (mapped to a
- * form-level error), or a `SubmissionResult` from `reply()` (shown as-is).
+ * left to show), a `Response` returned for an out-of-band rejection (mapped to a form-level error),
+ * or a `SubmissionResult` from `reply()` (shown as-is).
  *
- * The optional `lastResult` seeds the form before any dispatch: a fabricated result renders its
- * error→UI mapping with no server round-trip, and a real dispatch's reply supersedes it. A live
- * dispatch never resolves to a plain result under bun test — an uncompiled server-function call
- * relays only a `Response` or a thrown redirect — so branch coverage comes from the seed and from an
- * injected `action`, not from the real wire.
+ * An optional `lastResult` seeds the form before any dispatch; a dispatch's own reply supersedes it.
  */
 export function useFormSubmit(action: FormAction, lastResult?: SubmissionResult): FormSubmission {
   const [dispatchedResult, setDispatchedResult] = useState<SubmissionResult | undefined>(undefined);

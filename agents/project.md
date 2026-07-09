@@ -185,19 +185,17 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
 
 ### Forms (Conform)
 
-- A form island drives a Conform form through the shared `useFormSubmit` hook (`lib/forms/`): the
-  hook takes the form's server function, dispatches the assembled `FormData`, and hands back
-  `lastResult` for `useForm`, an in-flight flag for the submit button, and the submit handler. The
-  handler runs `parseWithZod(formData)` and returns `submission.reply()`; the honeypot check stays a
-  server-side helper. Validation imports from `@conform-to/zod/v4`, matching app-web's zod v4.
-- The hook takes an optional seed `lastResult` beside the server function, and an island forwards
-  both from props, so a test injects a stand-in action or seeds a result without touching the wire.
-- Cover a form's result→UI mapping by rendering the island with a fabricated
-  `submission.reply()`-shaped `lastResult` and asserting the rendered errors — a form-level message
-  under the empty-string key, a field message under the field name. No submit runs and no server is
-  reached, so every result branch is assertable, including the plain-object branch a live
-  `createServerFn` dispatch collapses to `undefined` under bun test. Drive pending state and the
-  out-of-band `Response` fallback by injecting an action instead.
+- A form island drives a Conform form through the shared `useFormSubmit` hook (`lib/forms/`): pass
+  the form's server function and it dispatches the `FormData`, returning `lastResult` for `useForm`,
+  an in-flight flag, and the submit handler. The handler runs `parseWithZod(formData)` and returns
+  `submission.reply()`; the honeypot check stays a server-side helper. Validation imports from
+  `@conform-to/zod/v4`, matching app-web's zod v4.
+- The hook also takes an optional seed `lastResult`, which an island forwards from props beside the
+  action. Cover a form's result→UI mapping by rendering it with a fabricated
+  `submission.reply()`-shaped `lastResult` and asserting the errors — a form-level message under the
+  empty-string key, a field message under the field name. This reaches every branch with no submit
+  and no server, including the plain-object branch a live `createServerFn` dispatch collapses to
+  `undefined` under bun test. Inject an action to drive pending state and the `Response` fallback.
 
 ### Real-database services (service/app/DB packages)
 

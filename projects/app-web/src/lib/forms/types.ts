@@ -23,11 +23,6 @@ export interface FormSubmitContext {
   readonly formData: FormData;
 }
 
-/**
- * What the shared submit hook hands an island to drive a Conform form: the last submission's result
- * for `useForm`'s `lastResult`, the in-flight flag for the submit button, and the submit handler for
- * `useForm`'s `onSubmit`.
- */
 export interface FormSubmission {
   readonly isPending: boolean;
   readonly lastResult: SubmissionResult | undefined;
