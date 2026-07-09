@@ -41,8 +41,7 @@ RUN \
   # without removing dev/test env files, vite loads the wrong one in our prod
   # bundle — doesn't reproduce outside docker, not worth chasing further
   rm -f .env.development .env.test && \
-  bun run codegen && \
-  bun run typegen && \
+  bunx turbo run codegen typegen --filter=@vers/web... && \
   bun run build --mode production && \
   rm -f dist/client/mockServiceWorker.js
 
