@@ -46,10 +46,11 @@ test('it reports field errors for a mismatched password confirmation', async () 
       ),
   );
 
-  expect(outcome.value).toStrictEqual({
-    fieldErrors: { confirmPassword: 'The passwords must match' },
-    status: 'invalid-fields',
-  });
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({ confirmPassword: ['The passwords must match'] });
 });
 
 test('it reports a field error for a username already in use', async () => {
@@ -60,9 +61,12 @@ test('it reports a field error for a username already in use', async () => {
     () => onboardingHandler(buildFormData(validFields)),
   );
 
-  expect(outcome.value).toStrictEqual({
-    fieldErrors: { username: 'A user with that username already exists' },
-    status: 'invalid-fields',
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({
+    username: ['A user with that username already exists'],
   });
 });
 

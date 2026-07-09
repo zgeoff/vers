@@ -1,21 +1,21 @@
+import type { SubmissionResult } from '@conform-to/react';
+import { parseWithZod } from '@conform-to/zod/v4';
 import { isDefinedError, safe } from '@orpc/client';
 import { getRequestIP } from '@tanstack/react-start/server';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { completeSessionSignIn } from '../../lib/auth/complete-session-sign-in';
 import { SpamError } from '../../lib/auth/spam-error';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
-import { toFieldErrors } from '../../lib/forms/to-field-errors';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { OnboardingFormSchema } from './onboarding-form-schema';
 import { requireOnboardingSession } from './require-onboarding-session';
-import type { OnboardingResult } from './types';
 
 /**
  * Runs the onboarding form's submission: honeypot then field validation, then account creation
  * for the email signup already verified. Completes the caller's first sign-in on success.
  */
-export async function onboardingHandler(formData: FormData): Promise<OnboardingResult | Response> {
+export async function onboardingHandler(formData: FormData): Promise<Response | SubmissionResult> {
   const onboardingSession = await requireOnboardingSession();
 
   try {
@@ -28,51 +28,34 @@ export async function onboardingHandler(formData: FormData): Promise<OnboardingR
     throw error;
   }
 
-  const submission = OnboardingFormSchema.safeParse({
-    agreeToTerms: formData.get('agreeToTerms') === 'on',
-    confirmPassword: formData.get('confirmPassword'),
-    name: formData.get('name'),
-    password: formData.get('password'),
-    rememberMe: formData.get('rememberMe') === 'on',
-    username: formData.get('username'),
-  });
+  const submission = parseWithZod(formData, { schema: OnboardingFormSchema });
 
-  if (!submission.success) {
-    return {
-      fieldErrors: toFieldErrors(submission.error, [
-        'agreeToTerms',
-        'confirmPassword',
-        'name',
-        'password',
-        'username',
-      ]),
-      status: 'invalid-fields',
-    };
+  if (submission.status !== 'success') {
+    return submission.reply();
   }
 
   const [error, user] = await safe(
     userClient.createUser({
       email: onboardingSession.email,
-      name: submission.data.name,
-      password: submission.data.password,
-      username: submission.data.username,
+      name: submission.value.name,
+      password: submission.value.password,
+      username: submission.value.username,
     }),
   );
 
   if (error) {
     if (isDefinedError(error) && error.data.field === 'username') {
-      return {
-        fieldErrors: { username: 'A user with that username already exists' },
-        status: 'invalid-fields',
-      };
+      return submission.reply({
+        fieldErrors: { username: ['A user with that username already exists'] },
+      });
     }
 
-    return { fieldErrors: {}, status: 'invalid-fields' };
+    return submission.reply();
   }
 
   const session = await sessionClient.createSession({
     ipAddress: getRequestIP() ?? '0.0.0.0',
-    rememberMe: submission.data.rememberMe,
+    rememberMe: submission.value.rememberMe,
     userID: user.id,
   });
 

@@ -1,18 +1,14 @@
+import type { SubmissionResult } from '@conform-to/react';
+import { parseWithZod } from '@conform-to/zod/v4';
 import { safe } from '@orpc/client';
 import { redirect } from '@tanstack/react-router';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { SpamError } from '../../lib/auth/spam-error';
-import { toFieldErrors } from '../../lib/forms/to-field-errors';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { ResetPasswordFormSchema } from './reset-password-form-schema';
-import type { ResetPasswordResult } from './types';
 
-const INVALID_LINK_RESULT: ResetPasswordResult = {
-  fieldErrors: {},
-  formError: 'This reset link is invalid or has expired.',
-  status: 'invalid-fields',
-};
+const INVALID_LINK_ERROR = 'This reset link is invalid or has expired.';
 
 /**
  * Runs the reset-password form's submission: honeypot then field validation, then applies the new
@@ -20,7 +16,7 @@ const INVALID_LINK_RESULT: ResetPasswordResult = {
  */
 export async function resetPasswordHandler(
   formData: FormData,
-): Promise<ResetPasswordResult | Response> {
+): Promise<Response | SubmissionResult> {
   await requireAnonymous();
 
   try {
@@ -33,36 +29,28 @@ export async function resetPasswordHandler(
     throw error;
   }
 
-  const submission = ResetPasswordFormSchema.safeParse({
-    confirmPassword: formData.get('confirmPassword'),
-    email: formData.get('email'),
-    password: formData.get('password'),
-    resetToken: formData.get('resetToken'),
-  });
+  const submission = parseWithZod(formData, { schema: ResetPasswordFormSchema });
 
-  if (!submission.success) {
-    return {
-      fieldErrors: toFieldErrors(submission.error, ['confirmPassword', 'password']),
-      status: 'invalid-fields',
-    };
+  if (submission.status !== 'success') {
+    return submission.reply();
   }
 
-  const user = await userClient.getUser({ email: submission.data.email });
+  const user = await userClient.getUser({ email: submission.value.email });
 
   if (user === null) {
-    return INVALID_LINK_RESULT;
+    return submission.reply({ formErrors: [INVALID_LINK_ERROR] });
   }
 
   const [error] = await safe(
     userClient.resetPassword({
       id: user.id,
-      password: submission.data.password,
-      resetToken: submission.data.resetToken,
+      password: submission.value.password,
+      resetToken: submission.value.resetToken,
     }),
   );
 
   if (error) {
-    return INVALID_LINK_RESULT;
+    return submission.reply({ formErrors: [INVALID_LINK_ERROR] });
   }
 
   throw redirect({ href: '/login' });
