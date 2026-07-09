@@ -97,8 +97,7 @@ keeps clients contract-only.
 
 `@vers/service-runtime` provides the shell around this — a `createService(...)` entry composing the
 runtime's Elysia plugins — so a new service is roughly: a contract package, handlers, and one
-`createService` call. OpenTelemetry is part of the shell (Grafana-flavored sink; the shared service
-gauges are tracked in #182).
+`createService` call. OpenTelemetry is part of the shell (Grafana-flavored sink).
 
 ## The client side
 
