@@ -172,7 +172,7 @@ function mountORPCHandler(
   deps: MountORPCHandlerDeps,
 ): void {
   app.all(
-    `${prefix}*` as `/${string}`,
+    `${prefix}*`,
     async (context) => {
       const requestId = getRequestId(context.request);
 
