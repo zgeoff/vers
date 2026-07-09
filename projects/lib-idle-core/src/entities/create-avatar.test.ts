@@ -205,8 +205,7 @@ test('it returns the expected avatar state for a client app', () => {
   expect(state).toStrictEqual({
     behaviours: {
       avatarWeaponAttack: {
-        // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-        lastAttackTime: expect.any(Number),
+        lastAttackTime: expect.toBeNumber(),
       },
     },
     class: data.class,
@@ -215,12 +214,9 @@ test('it returns the expected avatar state for a client app', () => {
     level: avatar.level,
     life: avatar.life,
     mainHandAttack: {
-      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-      maxDamage: expect.any(Number),
-      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-      minDamage: expect.any(Number),
-      // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-      speed: expect.any(Number),
+      maxDamage: expect.toBeNumber(),
+      minDamage: expect.toBeNumber(),
+      speed: expect.toBeNumber(),
     },
     maxLife: avatar.life,
     name: data.name,

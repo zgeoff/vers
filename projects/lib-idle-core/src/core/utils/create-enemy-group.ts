@@ -4,7 +4,6 @@ import { getRandomEnemies } from './get-random-enemies';
 
 export function createEnemyGroup(
   activity: ActivityData,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,
   enemyCount: number,
 ): EnemyGroup {

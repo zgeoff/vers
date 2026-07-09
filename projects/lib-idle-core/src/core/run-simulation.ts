@@ -16,8 +16,8 @@ import { createSimulation } from './create-simulation';
  * verifying client progress.
  */
 interface SimulationConfig {
-  duration: number;
-  stopAtSeed?: number;
+  readonly duration: number;
+  readonly stopAtSeed?: number;
 }
 
 interface SimulationOutput {
@@ -30,7 +30,6 @@ const SERVER_SIMULATION_INTERVAL = 100;
 export async function runSimulation(
   activity: ActivityData,
   avatar: AvatarData,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   config: SimulationConfig,
 ): Promise<SimulationOutput> {
   const hasher = await xxhash();

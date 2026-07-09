@@ -8,15 +8,13 @@ import type {
 import { getEnemyGroups } from './utils/get-enemy-groups';
 
 interface ActivityConfig {
-  groupCount?: number;
-  groupSize?: number;
+  readonly groupCount?: number;
+  readonly groupSize?: number;
 }
 
 export function createActivity(
   data: ActivityData,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   config: ActivityConfig = {},
 ): Activity {
   let elapsed = 0;

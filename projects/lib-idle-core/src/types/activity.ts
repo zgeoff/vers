@@ -59,9 +59,9 @@ export type ActivityCheckpointGenerator = AsyncGenerator<
 >;
 
 interface IActivityCheckpoint {
-  hash: string;
-  time: number;
-  type: ActivityCheckpointType;
+  readonly hash: string;
+  readonly time: number;
+  readonly type: ActivityCheckpointType;
 }
 
 export enum ActivityCheckpointType {
@@ -72,23 +72,23 @@ export enum ActivityCheckpointType {
 }
 
 export interface ActivityStartedCheckpoint extends IActivityCheckpoint {
-  seed: number;
-  type: ActivityCheckpointType.Started;
+  readonly seed: number;
+  readonly type: ActivityCheckpointType.Started;
 }
 
 export interface ActivityFailedCheckpoint extends IActivityCheckpoint {
-  nextSeed: number;
-  type: ActivityCheckpointType.Failed;
+  readonly nextSeed: number;
+  readonly type: ActivityCheckpointType.Failed;
 }
 
 export interface ActivityCompletedCheckpoint extends IActivityCheckpoint {
-  nextSeed: number;
-  type: ActivityCheckpointType.Completed;
+  readonly nextSeed: number;
+  readonly type: ActivityCheckpointType.Completed;
 }
 
 export interface ActivityProgressCheckpoint extends IActivityCheckpoint {
-  nextSeed: number;
-  type: ActivityCheckpointType.Progress;
+  readonly nextSeed: number;
+  readonly type: ActivityCheckpointType.Progress;
 }
 
 export type ActivityCheckpoint =

@@ -131,10 +131,8 @@ test('it runs an activity and returns checkpoints', async () => {
   const firstCheckpoint = await simulation.run(100);
 
   expect(firstCheckpoint).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    hash: expect.any(String),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    seed: expect.any(Number),
+    hash: expect.toBeString(),
+    seed: expect.toBeNumber(),
     time: 0,
     type: ActivityCheckpointType.Started,
   });
@@ -142,12 +140,9 @@ test('it runs an activity and returns checkpoints', async () => {
   const secondCheckpoint = await simulation.run(10_000);
 
   expect(secondCheckpoint).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    hash: expect.any(String),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    nextSeed: expect.any(Number),
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    time: expect.any(Number),
+    hash: expect.toBeString(),
+    nextSeed: expect.toBeNumber(),
+    time: expect.toBeNumber(),
     type: ActivityCheckpointType.Progress,
   });
 

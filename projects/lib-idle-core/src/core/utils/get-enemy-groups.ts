@@ -6,15 +6,13 @@ const MIN_ENEMIES = 3;
 const MAX_ENEMIES = 6;
 
 interface ActivityConfig {
-  groupCount?: number;
-  groupSize?: number;
+  readonly groupCount?: number;
+  readonly groupSize?: number;
 }
 
 export function getEnemyGroups(
   activity: ActivityData,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   ctx: SimulationContext,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   config: ActivityConfig,
 ): Array<EnemyGroup> {
   const enemyGroupCount = config.groupCount ?? getRandomEnemyGroupCount(ctx);

@@ -14,8 +14,7 @@ test('it creates an avatar attack event', () => {
   const event = createAvatarAttackEvent(avatar, time);
 
   expect(event).toStrictEqual({
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-    id: expect.any(String),
+    id: expect.toBeString(),
     source: avatar.id,
     time,
     type: CombatEventType.AvatarAttack,
