@@ -5,6 +5,11 @@ on:
     branches:
       - main
 
+# a newer push to main supersedes an in-flight run instead of piling up behind it
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   actions: read
   contents: read
@@ -55,9 +60,6 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
-
       - name: Boundaries
         run: bun run boundaries
 
@@ -98,7 +100,7 @@ jobs:
         # only on a fully green run, and exactly once per push — several
         # services share the one database, so migrations never run
         # per-service. Idempotent: kysely-ctl no-ops when up to date.
-        # Deploy jobs (#207) must order after this step.
+        # The deploy job orders after this via `needs: checks`.
         if: ${{ success() }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -106,9 +108,8 @@ jobs:
 
       - name: Record Affected Projects
         id: record-affected-projects
-        # runs even when e2e fails so a flaky suite can't skip the image builds
-        # below (which validate every affected Dockerfile)
-        if: ${{ !cancelled() }}
+        # only a green run deploys; this feeds the deploy matrix's per-app gate
+        if: ${{ success() }}
         run: |
           # names are <>-wrapped so the contains() gates can't substring-match
           affected="$(bunx turbo run build --affected --dry=json | jq -r '.packages[] | "<\(.)>"')"
@@ -118,81 +119,6 @@ jobs:
           echo "${affected}" >> "${GITHUB_OUTPUT}"
           echo "${delimiter}" >> "${GITHUB_OUTPUT}"
 
-      # affected images are pushed to Fly's registry here and deployed by digest in
-      # the `deploy` job, so a bad-tests run never ships (deploy gates on success)
-      - name: Log in to Fly registry
-        if: ${{ !cancelled() }}
-        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
-        with:
-          registry: registry.fly.io
-          username: x
-          password: ${{ secrets.FLY_API_TOKEN }}
-
-      - name: Build Avatar Service Image
-        if:
-          ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
-          '<@vers/service-avatar>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: projects/service-avatar/Dockerfile
-          tags: registry.fly.io/vers-service-avatar:${{ github.sha }}
-          push: true
-          cache-from: type=gha,scope=service-avatar
-          cache-to: type=gha,scope=service-avatar,mode=max
-
-      - name: Build Session Service Image
-        if:
-          ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
-          '<@vers/service-session>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: projects/service-session/Dockerfile
-          tags: registry.fly.io/vers-service-session:${{ github.sha }}
-          push: true
-          cache-from: type=gha,scope=service-session
-          cache-to: type=gha,scope=service-session,mode=max
-
-      - name: Build User Service Image
-        if:
-          ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
-          '<@vers/service-user>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: projects/service-user/Dockerfile
-          tags: registry.fly.io/vers-service-user:${{ github.sha }}
-          push: true
-          cache-from: type=gha,scope=service-user
-          cache-to: type=gha,scope=service-user,mode=max
-
-      - name: Build Verification Service Image
-        if:
-          ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
-          '<@vers/service-verification>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: projects/service-verification/Dockerfile
-          tags: registry.fly.io/vers-service-verification:${{ github.sha }}
-          push: true
-          cache-from: type=gha,scope=service-verification
-          cache-to: type=gha,scope=service-verification,mode=max
-
-      - name: Build Web App Image
-        if:
-          ${{ !cancelled() && contains(steps.record-affected-projects.outputs.affected-projects,
-          '<@vers/web>') }}
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: projects/app-web/Dockerfile
-          tags: registry.fly.io/vers-app-web:${{ github.sha }}
-          push: true
-          cache-from: type=gha,scope=app-web
-          cache-to: type=gha,scope=app-web,mode=max
-
   deploy:
     name: Deploy
     needs: checks
@@ -201,7 +127,7 @@ jobs:
     if: ${{ needs.checks.result == 'success' }}
     runs-on: ubuntu-latest
     strategy:
-      # one app's rollout failing must not abandon the others
+      # each app is independent — one rollout failing must not abandon the others
       fail-fast: false
       matrix:
         include:
@@ -229,14 +155,15 @@ jobs:
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@dfdfedc86b296f5e5384f755a18bf400409a15d0 # v1.4
 
-      # bluegreen (per each app's fly.toml) gates cutover on the /health check, so a
-      # machine that fails to boot or serve blocks the release instead of shipping.
-      # The image was already pushed to Fly's registry by the build steps above.
+      # Fly's remote builder builds the image and pushes it inside Fly's network —
+      # avoiding a GitHub-runner-to-registry.fly.io blob upload, which 502s on the
+      # large compiled-binary layers. bluegreen (per fly.toml) gates cutover on the
+      # /health check, so a machine that fails to boot blocks the release.
       - name: Deploy ${{ matrix.app }}
         if: ${{ contains(needs.checks.outputs.affected-projects, format('<{0}>', matrix.pkg)) }}
         run: >
-          flyctl deploy --app ${{ matrix.app }} --config projects/${{ matrix.dir }}/fly.toml --image
-          registry.fly.io/${{ matrix.app }}:${{ github.sha }}
+          flyctl deploy --remote-only --config projects/${{ matrix.dir }}/fly.toml --dockerfile
+          projects/${{ matrix.dir }}/Dockerfile
 
       # private services can't be reached from CI — their bluegreen health gate is the
       # smoke test. app-web is public, so verify it end-to-end after cutover.
