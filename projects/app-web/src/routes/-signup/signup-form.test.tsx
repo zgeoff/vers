@@ -11,7 +11,7 @@ function rejectWithResponse(): Promise<Response> {
   return Promise.resolve(new Response(null, { status: 400 }));
 }
 
-test('it maps a fabricated field result onto the email field', async () => {
+test('it shows the error for the email field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
       <SignupForm lastResult={{ error: { email: ['Email is invalid'] }, status: 'error' }} />,

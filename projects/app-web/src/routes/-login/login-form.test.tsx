@@ -11,7 +11,7 @@ function rejectWithResponse(): Promise<Response> {
   return Promise.resolve(new Response(null, { status: 400 }));
 }
 
-test('it maps a fabricated form-level result onto a form error', async () => {
+test('it shows a form-level error message', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
       <LoginForm lastResult={{ error: { '': ['Invalid email or password'] }, status: 'error' }} />,
@@ -23,7 +23,7 @@ test('it maps a fabricated form-level result onto a form error', async () => {
   });
 });
 
-test('it maps fabricated field results onto their fields', async () => {
+test('it shows the error for each invalid field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
       <LoginForm

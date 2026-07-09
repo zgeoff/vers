@@ -8,7 +8,7 @@ export const OnboardingFormSchema = z
       error: 'You must agree to the terms of service and privacy policy',
     }),
     name: NameSchema,
-    rememberMe: z.boolean(),
+    rememberMe: z.boolean().default(false),
     username: UsernameSchema,
   })
   .and(ConfirmPasswordSchema);

@@ -222,7 +222,7 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
   `submission.reply()`; the honeypot check stays a server-side helper. Validation imports from
   `@conform-to/zod/v4`, matching app-web's zod v4.
 - The hook also takes an optional seed `lastResult`, which an island forwards from props beside the
-  action. Cover a form's result→UI mapping by rendering it with a fabricated
+  action. Cover a form's result→UI mapping by rendering it with a hand-built
   `submission.reply()`-shaped `lastResult` and asserting the errors — a form-level message under the
   empty-string key, a field message under the field name. This reaches every branch with no submit
   and no server, including the plain-object branch a live `createServerFn` dispatch collapses to

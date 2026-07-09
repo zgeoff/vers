@@ -1,14 +1,21 @@
+import { getFormProps, getInputProps, useForm } from '@conform-to/react';
+import type { SubmissionResult } from '@conform-to/react';
+import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4';
 import { Link, useRouter } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import type { VerificationType } from '@vers/contract-verification';
 import { Brand, Heading, OTPField, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
-import type { VerifyOTPResult } from './types';
+import type { FormAction } from '../../lib/forms/types';
+import { useFormSubmit } from '../../lib/forms/use-form-submit';
 import { verifyOTP } from './verify-otp';
+import { VerifyOTPFormSchema } from './verify-otp-form-schema';
 
 interface VerifyOTPFormProps {
+  readonly action?: FormAction;
+  readonly lastResult?: SubmissionResult;
   readonly redirectTo?: string | undefined;
   readonly target: string;
   readonly type: VerificationType;
@@ -53,43 +60,36 @@ const otpField = css({ marginBottom: '6' });
 export function VerifyOTPForm(props: VerifyOTPFormProps) {
   const router = useRouter();
   const verifyOTPFn = useServerFn(verifyOTP);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
+  const submission = useFormSubmit(props.action ?? verifyOTPFn, props.lastResult);
 
-  const handleSubmit = async (form: HTMLFormElement) => {
-    const formData = new FormData(form);
+  const [form, fields] = useForm({
+    constraint: getZodConstraint(VerifyOTPFormSchema),
+    id: 'verify-otp-form',
+    lastResult: submission.lastResult,
+    onSubmit: submission.onSubmit,
+    onValidate(context) {
+      return parseWithZod(context.formData, { schema: VerifyOTPFormSchema });
+    },
+  });
 
-    setIsPending(true);
-    setFormError(null);
-
-    try {
-      // 2fa, 2fa-setup, and onboarding verifies end in a redirect that useServerFn already
-      // navigated to, resolving this call with no value — there's no further UI to show
-      const result: VerifyOTPResult | Response | undefined = await verifyOTPFn({ data: formData });
-
-      if (result === undefined) {
-        return;
-      }
-
-      if (result instanceof Response) {
-        setFormError('Something went wrong. Please try again.');
-
-        return;
-      }
-
-      if (result.status === 'change-email-applied') {
-        // invalidate so the account hub reloads the just-changed email before navigating to it
-        await router.invalidate();
-        await router.navigate({ to: '/account' });
-
-        return;
-      }
-
-      setFormError(result.formError);
-    } finally {
-      setIsPending(false);
+  useEffect(() => {
+    // only a change-email verify replies with a success result instead of a server-issued
+    // redirect — every other type has already navigated away by the time this could run
+    if (props.type !== 'change-email' || submission.lastResult?.status !== 'success') {
+      return;
     }
-  };
+
+    const runAccountNavigation = async (): Promise<void> => {
+      await router.invalidate();
+      await router.navigate({ to: '/account' });
+    };
+
+    void runAccountNavigation();
+  }, [props.type, router, submission.lastResult]);
+
+  const { key: _codeKey, ...codeProps } = getInputProps(fields.code, { type: 'text' });
+
+  const codeErrors = [...(fields.code.errors ?? []), ...(form.errors ?? [])];
 
   return (
     <>
@@ -100,23 +100,16 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
         <Heading level={2}>{HEADING_BY_TYPE[props.type]}</Heading>
         <Text>{INSTRUCTION_BY_TYPE[props.type]}</Text>
       </section>
-      <form
-        className={formStyles}
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleSubmit(event.currentTarget);
-        }}
-      >
+      <form {...getFormProps(form)} className={formStyles}>
         <HoneypotInputs />
         <OTPField
           className={otpField}
-          errors={formError === null ? [] : [formError]}
+          errors={codeErrors}
           inputProps={{
+            ...codeProps,
             autoComplete: 'one-time-code',
             autoFocus: true,
-            id: 'code',
             mode: OTP_INPUT_MODE_BY_TYPE[props.type],
-            name: 'code',
           }}
         />
         <input name="type" type="hidden" value={props.type} />
@@ -125,8 +118,8 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
           <input name="redirect" type="hidden" value={props.redirectTo} />
         )}
         <StatusButton
-          disabled={isPending}
-          status={isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
+          disabled={submission.isPending}
+          status={submission.isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
           type="submit"
           variant="primary"
           fullWidth

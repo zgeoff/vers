@@ -1,9 +1,15 @@
 import { expect, test } from 'bun:test';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { FormAction } from '../../lib/forms/types';
+import { buildDeferred } from '../../test-utils/build-deferred';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { VerifyOTPForm } from './verify-otp-form';
+
+function rejectWithResponse(): Promise<Response> {
+  return Promise.resolve(new Response(null, { status: 400 }));
+}
 
 test('it shows the 2FA heading and instructions for a login verification', async () => {
   await withRequestContext({}, async () => {
@@ -35,27 +41,58 @@ test('it shows the check-your-email heading and instructions for onboarding', as
   });
 });
 
+test('it shows a form-level error on the code field', async () => {
+  await withRequestContext({}, async () => {
+    renderWithRouter(
+      <VerifyOTPForm
+        lastResult={{ error: { '': ['Invalid or expired code'] }, status: 'error' }}
+        target="user_1"
+        type="2fa"
+      />,
+    );
+
+    const codeError = await screen.findByText('Invalid or expired code');
+
+    expect(codeError).toBeInTheDocument();
+  });
+});
+
 test('it shows a generic failure message for a rejected submission', async () => {
   const user = userEvent.setup();
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<VerifyOTPForm target="user_1" type="2fa" />);
+    renderWithRouter(<VerifyOTPForm action={rejectWithResponse} target="user_1" type="2fa" />);
 
-    const honeypotField = await waitFor(() => {
-      const field = document.querySelector<HTMLInputElement>('#name__confirm');
+    const otpInput = await screen.findByTestId('otp-input');
 
-      if (field === null) {
-        throw new Error('expected the honeypot field to be present');
-      }
-
-      return field;
-    });
-
-    await user.type(honeypotField, 'filled in by a bot');
+    await user.click(otpInput);
+    await user.keyboard('123456');
     await user.click(screen.getByRole('button', { name: 'Verify' }));
 
     await waitFor(() => {
       expect(screen.getByText('Something went wrong. Please try again.')).toBeVisible();
     });
+  });
+});
+
+test('it disables the submit button while the verify request is pending', async () => {
+  const user = userEvent.setup();
+  const deferred = buildDeferred<undefined>();
+  const gatedAction: FormAction = () => deferred.promise;
+
+  await withRequestContext({}, async () => {
+    renderWithRouter(<VerifyOTPForm action={gatedAction} target="user_1" type="2fa" />);
+
+    const otpInput = await screen.findByTestId('otp-input');
+
+    await user.click(otpInput);
+    await user.keyboard('123456');
+    await user.click(screen.getByRole('button', { name: 'Verify' }));
+
+    expect(screen.getByRole('button', { name: 'Verify' })).toBeDisabled();
+
+    await deferred.release(undefined);
+
+    expect(screen.getByRole('button', { name: 'Verify' })).not.toBeDisabled();
   });
 });

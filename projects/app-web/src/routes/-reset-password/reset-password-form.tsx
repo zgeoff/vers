@@ -1,14 +1,20 @@
+import { getFormProps, getInputProps, useForm } from '@conform-to/react';
+import type { SubmissionResult } from '@conform-to/react';
+import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4';
 import { Link } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import { Brand, Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
-import { useState } from 'react';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
+import type { FormAction } from '../../lib/forms/types';
+import { useFormSubmit } from '../../lib/forms/use-form-submit';
 import { resetPassword } from './reset-password';
-import type { ResetPasswordResult } from './types';
+import { ResetPasswordFormSchema } from './reset-password-form-schema';
 
 interface ResetPasswordFormProps {
+  readonly action?: FormAction;
   readonly email: string;
+  readonly lastResult?: SubmissionResult;
   readonly resetToken: string;
 }
 
@@ -24,40 +30,26 @@ const formStyles = css({
 /** The reset-password page's client-interactive form: submits to the reset-password server function. */
 export function ResetPasswordForm(props: ResetPasswordFormProps) {
   const resetPasswordFn = useServerFn(resetPassword);
-  const [fieldErrors, setFieldErrors] = useState<ResetPasswordResult['fieldErrors']>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
+  const submission = useFormSubmit(props.action ?? resetPasswordFn, props.lastResult);
 
-  const handleSubmit = async (form: HTMLFormElement) => {
-    const formData = new FormData(form);
+  const [form, fields] = useForm({
+    constraint: getZodConstraint(ResetPasswordFormSchema),
+    id: 'reset-password-form',
+    lastResult: submission.lastResult,
+    onSubmit: submission.onSubmit,
+    onValidate(context) {
+      return parseWithZod(context.formData, { schema: ResetPasswordFormSchema });
+    },
+  });
 
-    setIsPending(true);
-    setFormError(null);
-    setFieldErrors({});
+  const { key: _passwordKey, ...passwordProps } = getInputProps(fields.password, {
+    type: 'password',
+  });
 
-    try {
-      // a successful reset ends in a redirect that useServerFn already navigated to, resolving
-      // this call with no value — there's no further UI to show
-      const result: ResetPasswordResult | Response | undefined = await resetPasswordFn({
-        data: formData,
-      });
-
-      if (result === undefined) {
-        return;
-      }
-
-      if (result instanceof Response) {
-        setFormError('Something went wrong. Please try again.');
-
-        return;
-      }
-
-      setFieldErrors(result.fieldErrors);
-      setFormError(result.formError ?? null);
-    } finally {
-      setIsPending(false);
-    }
-  };
+  const { key: _confirmPasswordKey, ...confirmPasswordProps } = getInputProps(
+    fields.confirmPassword,
+    { type: 'password' },
+  );
 
   return (
     <>
@@ -68,43 +60,33 @@ export function ResetPasswordForm(props: ResetPasswordFormProps) {
         <Heading level={2}>Reset your password</Heading>
         <Text>Please enter your new password</Text>
       </section>
-      <form
-        className={formStyles}
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleSubmit(event.currentTarget);
-        }}
-      >
+      <form {...getFormProps(form)} className={formStyles}>
         <HoneypotInputs />
         <input name="email" type="hidden" value={props.email} />
         <input name="resetToken" type="hidden" value={props.resetToken} />
         <Field
-          errors={fieldErrors.password === undefined ? [] : [fieldErrors.password]}
+          errors={fields.password.errors ?? []}
           inputProps={{
+            ...passwordProps,
             autoComplete: 'new-password',
             autoFocus: true,
-            id: 'password',
-            name: 'password',
             placeholder: '********',
-            type: 'password',
           }}
-          labelProps={{ children: 'New Password', htmlFor: 'password' }}
+          labelProps={{ children: 'New Password', htmlFor: passwordProps.id }}
         />
         <Field
-          errors={fieldErrors.confirmPassword === undefined ? [] : [fieldErrors.confirmPassword]}
+          errors={fields.confirmPassword.errors ?? []}
           inputProps={{
+            ...confirmPasswordProps,
             autoComplete: 'new-password',
-            id: 'confirmPassword',
-            name: 'confirmPassword',
             placeholder: '********',
-            type: 'password',
           }}
-          labelProps={{ children: 'Confirm Password', htmlFor: 'confirmPassword' }}
+          labelProps={{ children: 'Confirm Password', htmlFor: confirmPasswordProps.id }}
         />
-        {formError !== null && <Text role="alert">{formError}</Text>}
+        {form.errors !== undefined && <Text role="alert">{form.errors[0]}</Text>}
         <StatusButton
-          disabled={isPending}
-          status={isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
+          disabled={submission.isPending}
+          status={submission.isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
           type="submit"
           variant="primary"
           fullWidth

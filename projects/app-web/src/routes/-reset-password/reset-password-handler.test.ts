@@ -42,10 +42,11 @@ test('it reports a field error for a mismatched password confirmation', async ()
     ),
   );
 
-  expect(outcome.value).toStrictEqual({
-    fieldErrors: { confirmPassword: 'The passwords must match' },
-    status: 'invalid-fields',
-  });
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({ confirmPassword: ['The passwords must match'] });
 });
 
 test('it reports a form error for an email with no matching account', async () => {
@@ -53,10 +54,12 @@ test('it reports a form error for an email with no matching account', async () =
     resetPasswordHandler(buildFormData(validFields)),
   );
 
-  expect(outcome.value).toStrictEqual({
-    fieldErrors: {},
-    formError: 'This reset link is invalid or has expired.',
-    status: 'invalid-fields',
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({
+    '': ['This reset link is invalid or has expired.'],
   });
 });
 
@@ -73,10 +76,12 @@ test('it reports a form error for a stale or invalid reset token', async () => {
     ),
   );
 
-  expect(outcome.value).toStrictEqual({
-    fieldErrors: {},
-    formError: 'This reset link is invalid or has expired.',
-    status: 'invalid-fields',
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({
+    '': ['This reset link is invalid or has expired.'],
   });
 });
 

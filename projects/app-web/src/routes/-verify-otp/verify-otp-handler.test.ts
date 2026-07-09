@@ -26,7 +26,11 @@ test('it reports a form error for a code with the wrong length', async () => {
     verifyOTPHandler(buildFormData({ code: '123', target: 'x', type: 'onboarding' })),
   );
 
-  expect(outcome.value).toStrictEqual({ formError: 'Invalid code', status: 'invalid-fields' });
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({ '': ['Invalid code'] });
 });
 
 test('it reports a form error for a code that fails verification', async () => {
@@ -46,10 +50,11 @@ test('it reports a form error for a code that fails verification', async () => {
     ),
   );
 
-  expect(outcome.value).toStrictEqual({
-    formError: 'Invalid or expired code',
-    status: 'invalid-fields',
-  });
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({ '': ['Invalid or expired code'] });
 });
 
 test('it records the verified email and redirects to onboarding', async () => {
@@ -158,10 +163,11 @@ test('it rejects a 2FA login carrying a target other than the pending session ow
     () => verifyOTPHandler(buildFormData({ code: '777777', target: attacker.id, type: '2fa' })),
   );
 
-  expect(outcome.value).toStrictEqual({
-    formError: 'Invalid or expired code',
-    status: 'invalid-fields',
-  });
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.error).toStrictEqual({ '': ['Invalid or expired code'] });
 });
 
 test('it throws for a 2fa-setup verify, which this route does not support', async () => {
@@ -202,7 +208,11 @@ test('it applies a confirmed email change for the signed-in caller', async () =>
     ),
   );
 
-  expect(outcome.value).toStrictEqual({ status: 'change-email-applied' });
+  if (outcome.value instanceof Response) {
+    throw new TypeError('expected a submission result');
+  }
+
+  expect(outcome.value.status).toBe('success');
 
   const updated = db.userCollection.findFirst((q) => q.where({ id: signedIn.userID }));
 
