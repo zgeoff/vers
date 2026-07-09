@@ -50,7 +50,7 @@ Ground rules for working in this repo:
 - Read AGENTS.md at the repo root before writing any code; its conventions (module order, function-name prefixes, testing rules) are binding.
 - Work ONLY inside the worktree at ${worktree}. Never commit on main.
 - The worktree needs its own dependencies: run \`bun install\` inside it first (isolated linker — node_modules are not shared with the main checkout).
-- Git hooks are lefthook: pre-commit runs codegen plus oxlint/oxfmt/format-codemod fixes on staged files; commit-msg runs commitlint; pre-push runs format:check, lint, lint:type-aware, and typecheck (tests are CI-owned). NEVER bypass them with --no-verify or by editing hook files. If a hook fails, fix the cause and re-commit.
+- Git hooks are lefthook — read lefthook.yml at the repo root for what each hook actually gates. NEVER bypass hooks with --no-verify or by editing hook files. If a hook fails, fix the cause and re-commit.
 - If your changed tests touch Postgres, start the test container first: \`bun run pg:test-container:start\`.
 - Use Conventional Commits${issue ? `, referencing the issue in the scope, e.g. \`feat(#${issue}): …\`` : ''}.
 `;
@@ -150,7 +150,7 @@ const CI_SCHEMA = {
 phase('Implement');
 const verifyGate =
   verifyCommands && verifyCommands.length > 0
-    ? `\nThe pre-commit hooks only gate affected/changed scopes. Before your final commit, additionally run each of these from the worktree and get it green:\n${verifyCommands.map((c) => `- \`${c}\``).join('\n')}\n`
+    ? `\nThe affected-scope gates above miss cross-cutting breakage. Before your final commit, additionally run each of these from the worktree and get it green:\n${verifyCommands.map((c) => `- \`${c}\``).join('\n')}\n`
     : '';
 const impl = await agent(
   `You are implementing a feature that has already been planned and agreed. Follow the plan; do not redesign it. If the plan is wrong in a way you cannot resolve locally, stop and return status=blocked with the reason rather than improvising a different design.
@@ -161,7 +161,7 @@ The plan:
 
 ${plan}
 
-Implement the plan completely, including tests for new behaviour per AGENTS.md testing rules. Commit in logical increments — the pre-commit hooks are your verification gate, so a passing commit means typecheck, changed tests, format, and lint are green for that increment.
+Implement the plan completely, including tests for new behaviour per AGENTS.md testing rules. Commit in logical increments. Pre-commit only auto-fixes lint/format on staged files — it proves nothing about types or behaviour. Before your final commit, run \`bunx turbo run typecheck\` and \`bunx turbo run test --affected\` from the worktree and get both green: pre-push and CI gate them anyway, but later stages expect a branch that already passes.
 ${verifyGate}
 Do not push and do not open a PR; later stages handle that.`,
   { label: 'implement', model: 'sonnet', schema: IMPLEMENT_SCHEMA },
