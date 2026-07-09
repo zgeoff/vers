@@ -237,6 +237,7 @@
       // vitest→bun-test sweep (#266) retires the plugin entirely.
       "excludeFiles": [
         "**/src/bun/**",
+        "projects/lib-utils/**",
         "projects/lib-contract-user/**",
         "projects/lib-contract-session/**",
         "projects/lib-contract-verification/**",

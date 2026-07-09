@@ -1,9 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": ["node", "bun"]
   },
   "files": [],
-  "include": ["vitest.config.ts", "vitest.setup.ts", "src/**/*.ts"],
+  "include": ["augment-bun-test.ts", "src/**/*.ts"],
   "exclude": []
 }
