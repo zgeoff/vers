@@ -2,10 +2,11 @@ import { expect, test } from 'bun:test';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import type { SubmissionResult } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4';
-import { act, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Field, StatusButton, Text } from '@vers/design-system';
 import { z } from 'zod';
+import { buildDeferred } from '../../test-utils/build-deferred';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import type { FormAction } from './types';
 import { useFormSubmit } from './use-form-submit';
@@ -135,8 +136,8 @@ test('it shows no error after a redirect resolves the submission', async () => {
 
 test('it disables the submit button while the action is in flight', async () => {
   const user = userEvent.setup();
-  const gate = Promise.withResolvers<undefined>();
-  const gatedAction: FormAction = () => gate.promise;
+  const deferred = buildDeferred<undefined>();
+  const gatedAction: FormAction = () => deferred.promise;
 
   renderWithRouter(<ReferenceForm action={gatedAction} />);
 
@@ -148,13 +149,7 @@ test('it disables the submit button while the action is in flight', async () => 
 
   expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled();
 
-  // the re-enable fires from the resolved action's own continuation — a microtask outside React's
-  // batching; flush it inside `act` so the settled state is asserted directly, not polled for
-  await act(async () => {
-    gate.resolve(undefined);
-
-    await gate.promise;
-  });
+  await deferred.release(undefined);
 
   expect(screen.getByRole('button', { name: 'Sign in' })).not.toBeDisabled();
 });
