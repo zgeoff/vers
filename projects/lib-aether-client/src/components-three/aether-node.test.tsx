@@ -54,6 +54,6 @@ test('it sets the selected node when the node is clicked and connected to the cu
   expect(useSelectedNodeStore.getState().node).toBe(node);
   // the test renderer types its scene children more loosely than the three Object3D the store
   // holds, though the runtime identity is the same object
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- test-renderer/three type gap
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- test-renderer/three type gap (#325)
   expect(useSelectedNodeStore.getState().object3D).toBe(mesh as unknown as Object3D);
 });
