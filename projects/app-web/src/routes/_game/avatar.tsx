@@ -10,6 +10,7 @@ export const Route = createFileRoute('/_game/avatar')({
 
     return { Content: avatarContent.Renderable };
   },
+  staticData: { presentation: 'ambient' },
 });
 
 function AvatarPage() {
