@@ -31,9 +31,24 @@ export async function sendRPCRequest(request: Request, service: ServiceName): Pr
 
   headers.set('authorization', `Bearer ${token}`);
 
-  return fetch(target, {
+  const response = await fetch(target, {
     headers,
     method: request.method,
     ...(hasBody && { body: await request.blob() }),
+  });
+
+  // fetch responses carry immutable headers, which the server framework must still be able to
+  // finalize (merge, drop stale encoding headers) — rewrap into a mutable response. Copy entry by
+  // entry: passing another runtime's Headers instance to the constructor can yield an empty copy.
+  // The body is already decoded, so the upstream encoding headers no longer describe it.
+  const responseHeaders = new Headers([...response.headers]);
+
+  responseHeaders.delete('content-encoding');
+  responseHeaders.delete('content-length');
+
+  return new Response(response.body, {
+    headers: responseHeaders,
+    status: response.status,
+    statusText: response.statusText,
   });
 }

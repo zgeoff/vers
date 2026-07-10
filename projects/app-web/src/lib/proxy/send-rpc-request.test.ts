@@ -54,7 +54,7 @@ test('it forwards the method and body for a caller with no cookie session, minti
   const payload = jose.decodeJwt(authorization.replace('Bearer ', ''));
 
   expect(request?.method).toBe('POST');
-  expect(payload).toMatchObject({ aud: 'user', iss: 'vers-edge' });
+  expect(payload).toMatchObject({ aud: 'service-user', iss: 'vers-edge' });
   expect(payload.sub).toBeUndefined();
   expect(body).toBe(JSON.stringify({ email: 'new@vers.test' }));
 });
@@ -105,5 +105,23 @@ test("it mints an s2s token carrying the caller's cookie userID as its subject, 
   const authorization = resolver.mock.calls[0]?.[0].request.headers.get('authorization') ?? '';
   const payload = jose.decodeJwt(authorization.replace('Bearer ', ''));
 
-  expect(payload).toMatchObject({ aud: 'avatar', iss: 'vers-edge', sub: userID });
+  expect(payload).toMatchObject({ aud: 'service-avatar', iss: 'vers-edge', sub: userID });
+});
+
+test('it returns a response whose headers the server can still modify', async () => {
+  server.use(
+    http.get('http://localhost:3003/rpc/getUser', () =>
+      HttpResponse.json({}, { headers: { 'x-upstream': 'kept' } }),
+    ),
+  );
+
+  const outcome = await withRequestContext({}, () =>
+    sendRPCRequest(new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }), 'user'),
+  );
+
+  expect(outcome.value.headers.get('x-upstream')).toBe('kept');
+
+  expect(() => {
+    outcome.value.headers.delete('x-upstream');
+  }).not.toThrow();
 });
