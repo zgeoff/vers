@@ -7,7 +7,7 @@ import type { SceneState } from '@vers/game-rendering';
  * navigation to happen: `staticData` isn't reachable from the router's `types` view-transition
  * callback, which only receives locations, so this runs `matchRoutes` itself to recover the
  * matched branch and folds its root-first `scene`/`presentation` contributions against `previous`
- * the same way `SceneStateSync` folds the live match list.
+ * the same way the live route-to-store sync folds the active match list.
  */
 export function resolveSceneStateForLocation(
   router: AnyRouter,
