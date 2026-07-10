@@ -11,3 +11,4 @@ export { Spinner } from './components/spinner/spinner';
 export { StatusButton } from './components/status-button/status-button';
 export { Text } from './components/text/text';
 export type { PolymorphicComponentProps } from './types';
+export { sceneColors } from './scene-colors';
