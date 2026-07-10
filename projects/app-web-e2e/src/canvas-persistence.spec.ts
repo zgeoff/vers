@@ -6,6 +6,10 @@ import { expect, test } from '@playwright/test';
  * carrying whatever GPU state it already uploaded.
  */
 test('it keeps the same canvas element across client-side game navigation', async ({ page }) => {
+  // a real login plus five client-side game navigations, each holding a mounted Three.js canvas,
+  // runs well past other specs' budget under CI's shared dev server and CPU contention
+  test.slow();
+
   const consoleErrors: Array<string> = [];
 
   page.on('console', (message) => {
