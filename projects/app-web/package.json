@@ -39,6 +39,7 @@
     "@vers/contract-verification": "workspace:*",
     "@vers/data": "workspace:*",
     "@vers/design-system": "workspace:*",
+    "@vers/game-rendering": "workspace:*",
     "@vers/idle-client": "workspace:*",
     "@vers/idle-core": "workspace:*",
     "@vers/panda-preset": "workspace:*",
