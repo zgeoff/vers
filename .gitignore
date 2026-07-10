@@ -5,6 +5,9 @@ tmp
 /out-tsc
 .test-results
 
+# git worktrees
+.worktrees
+
 # dependencies
 node_modules
 
