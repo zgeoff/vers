@@ -154,7 +154,7 @@
     "e2e:app-web": "turbo run e2e --filter=@vers/web-e2e",
     "serve:app-web": "dotenvx run -f projects/app-web/.env.development.local -- node ./projects/app-web/server.mjs",
     "---UTILITY": "",
-    "prepare": "lefthook install --force || true"
+    "prepare": "command -v git > /dev/null 2>&1 && lefthook install --force || true"
   },
   "dependencies": {
     "commander": "catalog:",
