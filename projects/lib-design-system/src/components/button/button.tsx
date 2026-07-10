@@ -164,8 +164,7 @@ export type Props<C extends React.ElementType = 'button'> = PolymorphicComponent
   ButtonProps
 >;
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function Button<C extends React.ElementType>(props: Props<C>) {
+export function Button<C extends React.ElementType>(props: Readonly<Props<C>>) {
   const { as, className, fullWidth, size, variant, ...restProps } = props;
 
   const Element = as ?? 'button';

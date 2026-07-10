@@ -34,8 +34,7 @@ const text = cva({
 });
 
 export function Text<C extends React.ElementType = 'p'>(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  props: PolymorphicComponentProps<C, TextProps>,
+  props: Readonly<PolymorphicComponentProps<C, TextProps>>,
 ) {
   const { align, as, bold, className, ...restProps } = props;
 

@@ -27,12 +27,11 @@ export function Default() {
 }
 
 interface EmulateSubmitConfig {
-  success: boolean;
+  readonly success: boolean;
 }
 
 // hacky hook to give us a simulatedish submit flow that cycles the
 // status button states from idle -> pending -> success.
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function useEmulateSubmit(config: EmulateSubmitConfig) {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState(StatusButton.Status.Idle);
@@ -50,7 +49,7 @@ function useEmulateSubmit(config: EmulateSubmitConfig) {
   // 2 second delay, set the status to success
   useEffect(() => {
     if (!submitting) {
-      return;
+      return () => {};
     }
 
     setStatus(StatusButton.Status.Pending);
@@ -63,8 +62,9 @@ function useEmulateSubmit(config: EmulateSubmitConfig) {
       setStatus(finalStatus);
     }, 2000);
 
-    // oxlint-disable-next-line typescript/consistent-return, typescript/no-confusing-void-expression -- baseline(#236)
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+    };
   }, [submitting, setSubmitting, config.success]);
 
   return { handleSubmit, resetStatus, status };

@@ -25,8 +25,7 @@ const heading = cva({
   },
 });
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function Heading(props: Props) {
+export function Heading(props: Readonly<Props>) {
   const Element = `h${props.level}` as const;
 
   return (

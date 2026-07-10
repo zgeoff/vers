@@ -5,8 +5,8 @@ import * as React from 'react';
 
 interface Props {
   className?: string;
-  errors: Array<string>;
-  inputProps: React.ComponentProps<'input'> & {
+  errors: ReadonlyArray<string>;
+  inputProps: React.InputHTMLAttributes<HTMLInputElement> & {
     key?: React.Key;
     mode?: 'alphanumeric' | 'numeric';
   };
@@ -73,8 +73,7 @@ const otpFieldRecipe = sva({
   slots: ['root', 'control', 'group', 'input', 'separator', 'errorText'],
 });
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function OTPField(props: Props) {
+export function OTPField(props: Readonly<Props>) {
   const { autoFocus, defaultValue, id, key, mode, name, ...hiddenInputProps } = props.inputProps;
   const [firstError] = props.errors;
   const styles = otpFieldRecipe();
@@ -84,10 +83,9 @@ export function OTPField(props: Props) {
       <PinInput.Root
         // oxlint-disable-next-line jsx-a11y/no-autofocus -- opt-in per form; code entry is the page's sole action
         autoFocus={autoFocus}
-        // oxlint-disable-next-line typescript/no-misused-spread -- baseline(#236)
+        // oxlint-disable-next-line typescript/no-misused-spread -- unicorn/prefer-spread bans the Array.from() alternative; spread is also the Unicode-code-point-safe way to split the code into per-digit characters
         defaultValue={typeof defaultValue === 'string' ? [...defaultValue] : undefined}
-        // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-        ids={id ? { hiddenInput: id } : undefined}
+        ids={id !== undefined && id !== '' ? { hiddenInput: id } : undefined}
         invalid={props.errors.length > 0}
         name={name}
         placeholder=""

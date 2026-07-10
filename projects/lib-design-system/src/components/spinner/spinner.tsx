@@ -38,8 +38,7 @@ export type Props = RecipeVariantProps<typeof wrapper> & {
   color?: string;
 };
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function Spinner(props: Props) {
+export function Spinner(props: Readonly<Props>) {
   return (
     <output className={wrapper({ ...(props.size !== undefined && { size: props.size }) })}>
       <svg className={container} fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
