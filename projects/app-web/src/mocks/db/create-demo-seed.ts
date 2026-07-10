@@ -1,4 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
+import { avatarCollection } from './avatar-collection';
 import { userCollection } from './user-collection';
 
 /**
@@ -9,6 +10,8 @@ const GAME_DEMO_EMAIL = 'e2e-game@vers.test';
 const GAME_DEMO_PASSWORD = 'password123';
 const CANVAS_DEMO_EMAIL = 'e2e-canvas@vers.test';
 const CANVAS_DEMO_PASSWORD = 'password123';
+const AVATAR_SATELLITE_DEMO_EMAIL = 'e2e-avatar-satellite@vers.test';
+const AVATAR_SATELLITE_DEMO_PASSWORD = 'password123';
 
 /**
  * Seeds the demo accounts with no pre-existing session: every signed-in spec establishes its own
@@ -46,5 +49,27 @@ export async function createDemoSeed(): Promise<void> {
     seed: 0,
     updatedAt: new Date(),
     username: 'e2e-canvas',
+  });
+
+  const avatarSatelliteDemoUserID = createId();
+
+  await userCollection.create({
+    createdAt: new Date(),
+    email: AVATAR_SATELLITE_DEMO_EMAIL,
+    id: avatarSatelliteDemoUserID,
+    name: 'Avatar Satellite Demo Account',
+    password: AVATAR_SATELLITE_DEMO_PASSWORD,
+    seed: 0,
+    updatedAt: new Date(),
+    username: 'e2e-avatar-satellite',
+  });
+
+  // pre-seeded so /avatar renders the panel directly instead of redirecting to /avatar/create
+  await avatarCollection.create({
+    createdAt: new Date(),
+    id: createId(),
+    name: 'Satellite Test Avatar',
+    updatedAt: new Date(),
+    userID: avatarSatelliteDemoUserID,
   });
 }
