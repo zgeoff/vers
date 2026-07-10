@@ -1,41 +1,50 @@
-import { renderHook } from '@testing-library/react';
-import { postMessageAndWaitForReply } from '@vers/client-test-utils';
-import { createMockActivityData, createMockAvatarData } from '@vers/idle-core';
+import { expect, onTestFinished, test } from 'bun:test';
+import { renderHook, waitFor } from '@testing-library/react';
 import invariant from 'tiny-invariant';
-import { afterEach, expect, onTestFinished, test } from 'vitest';
 import { setSimulationWorker } from '../state/set-simulation-worker';
+import { useCombatStore } from '../state/use-combat-store';
 import { useSimulationStore } from '../state/use-simulation-store';
-import type { InitializeMessage, SetActivityMessage } from '../types';
+import type { ClientMessage, InitialStateMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { useSimulationWorker } from './use-simulation-worker';
-import SimulationWorker from './worker.ts?sharedworker';
 
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
+/**
+ * Stands in for a real SharedWorker: `.port` is the client-facing end, `.channel.port2` is the end
+ * a test drives from to act as the worker process. Real worker behaviour (message handling,
+ * simulation ticking) is covered by `create-worker-runtime.test.ts` — this file only exercises the
+ * hook's own wiring.
+ */
+class FakeSharedWorker {
+  channel = new MessageChannel();
+
+  port = this.channel.port1;
+}
+
+function stubSharedWorker() {
+  const originalSharedWorker = globalThis.SharedWorker;
+
+  Reflect.set(globalThis, 'SharedWorker', FakeSharedWorker);
+
+  onTestFinished(() => {
+    Reflect.set(globalThis, 'SharedWorker', originalSharedWorker);
   });
 }
 
-// if we don't wait between tests, the worker won't be killed and doesn't
-// get re-initialized in the next test correctly. nothing less than 100ms
-// is reliable. this seems to be related to it being initialized in the hook;
-// everything works as expected in our worker.ts tests.
-afterEach(async () => {
-  await wait(500);
-});
-
 test('it initializes the worker connection', () => {
+  stubSharedWorker();
+
   const hook = renderHook(() => useSimulationWorker());
 
   hook.rerender();
 
-  expect(hook.result.current).toBeInstanceOf(SharedWorker);
+  expect(hook.result.current).toBeInstanceOf(FakeSharedWorker);
 
   hook.unmount();
 });
 
 test('it returns an existing worker instead of creating a new one', () => {
-  const worker = new SimulationWorker();
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- FakeSharedWorker stands in for a real SharedWorker; the hook only ever touches its `.port`
+  const worker = new FakeSharedWorker() as unknown as SharedWorker;
 
   setSimulationWorker(worker);
 
@@ -52,7 +61,7 @@ test('it creates no worker when SharedWorker is unsupported', () => {
   Reflect.set(globalThis, 'SharedWorker', undefined);
 
   onTestFinished(() => {
-    globalThis.SharedWorker = originalSharedWorker;
+    Reflect.set(globalThis, 'SharedWorker', originalSharedWorker);
   });
 
   const hook = renderHook(() => useSimulationWorker());
@@ -64,30 +73,55 @@ test('it creates no worker when SharedWorker is unsupported', () => {
   hook.unmount();
 });
 
-test('it handles state updates from worker', async () => {
+test('it updates simulation state from worker messages', async () => {
+  stubSharedWorker();
+
   const hook = renderHook(() => useSimulationWorker());
 
   hook.rerender();
 
-  expect(hook.result.current).toBeInstanceOf(SharedWorker);
+  invariant(hook.result.current, 'Worker not initialized');
+
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a FakeSharedWorker, so its return value has that shape at runtime
+  const worker = hook.result.current as unknown as FakeSharedWorker;
+
+  worker.channel.port2.start();
+
+  const message: InitialStateMessage = {
+    state: { combat: { elapsed: 1000 } },
+    type: WorkerMessageType.InitialState,
+  };
+
+  worker.channel.port2.postMessage(message);
+
+  await waitFor(() => {
+    expect(useSimulationStore.getState().initialized).toBeTrue();
+  });
+
+  expect(useCombatStore.getState().combat).toStrictEqual({ elapsed: 1000 });
+});
+
+test('it sends a disconnect message on pagehide', async () => {
+  stubSharedWorker();
+
+  const hook = renderHook(() => useSimulationWorker());
+
+  hook.rerender();
 
   invariant(hook.result.current, 'Worker not initialized');
 
-  const initializeMessage: InitializeMessage = {
-    type: ClientMessageType.Initialize,
-  };
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a FakeSharedWorker, so its return value has that shape at runtime
+  const worker = hook.result.current as unknown as FakeSharedWorker;
 
-  const firstEvent = await postMessageAndWaitForReply(hook.result.current, initializeMessage);
+  worker.channel.port2.start();
 
-  expect(firstEvent.data.type).toBe(WorkerMessageType.InitialState);
+  const received = new Promise<MessageEvent<ClientMessage>>((resolve) => {
+    worker.channel.port2.addEventListener('message', resolve, { once: true });
+  });
 
-  const setActivityMessage: SetActivityMessage = {
-    activity: createMockActivityData(),
-    avatar: createMockAvatarData(),
-    type: ClientMessageType.SetActivity,
-  };
+  globalThis.dispatchEvent(new Event('pagehide'));
 
-  const secondEvent = await postMessageAndWaitForReply(hook.result.current, setActivityMessage);
+  const event = await received;
 
-  expect(secondEvent.data.type).toBe(WorkerMessageType.SimulationUpdate);
+  expect(event.data).toStrictEqual({ type: ClientMessageType.Disconnect });
 });

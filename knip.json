@@ -11,7 +11,6 @@
   "workspaces": {
     ".": {
       "vite": { "config": [] },
-      "vitest": { "config": [] },
       "entry": ["scripts/**/*.ts"],
       "project": ["scripts/**/*.ts"],
       "ignoreDependencies": [
@@ -58,6 +57,9 @@
       "ignoreDependencies": ["happy-dom"]
     },
     "projects/lib-email": {
+      "ignoreDependencies": ["happy-dom"]
+    },
+    "projects/lib-idle-client": {
       "ignoreDependencies": ["happy-dom"]
     },
     "projects/lib-game-rendering": {

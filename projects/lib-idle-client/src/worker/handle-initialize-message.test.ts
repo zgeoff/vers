@@ -1,76 +1,80 @@
+import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
-import { afterEach, expect, test, vi } from 'vitest';
 import xxhash from 'xxhash-wasm';
 import type { InitializeMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
-import { connections } from './connections';
 import { handleInitializeMessage } from './handle-initialize-message';
-import { getSimulation, setSimulation } from './simulation';
+import type { WorkerContext } from './types';
 
 const hasher = await xxhash();
 
-afterEach(() => {
-  setSimulation(null);
+function createContext(initialConnections: ReadonlyArray<MessagePort> = []): WorkerContext {
+  const connections = new Set(initialConnections);
 
-  connections.clear();
-});
+  let simulation: null | ReturnType<typeof createSimulation> = null;
+
+  return {
+    connections,
+    getSimulation: () => simulation,
+    removeConnection: (port) => {
+      connections.delete(port);
+    },
+    setSimulation: (newSimulation) => {
+      simulation = newSimulation;
+    },
+  };
+}
 
 test('it initializes the simulation', async () => {
+  const context = createContext();
+
   const message: InitializeMessage = {
     type: ClientMessageType.Initialize,
   };
 
-  await handleInitializeMessage(message);
+  await handleInitializeMessage(context, message);
 
-  const simulation = getSimulation();
-
-  expect(simulation).not.toBeNull();
+  expect(context.getSimulation()).not.toBeNull();
 });
 
 test('it sends an initial state message to all connections', async () => {
-  const postMessageSpy = vi.fn<(message: unknown) => void>();
+  const channel = new MessageChannel();
 
-  const mockPort: MessagePort = {
-    addEventListener: vi.fn<MessagePort['addEventListener']>(),
-    close: vi.fn<MessagePort['close']>(),
-    dispatchEvent: vi.fn<MessagePort['dispatchEvent']>(),
-    onmessage: vi.fn<NonNullable<MessagePort['onmessage']>>(),
-    onmessageerror: vi.fn<NonNullable<MessagePort['onmessageerror']>>(),
-    postMessage: postMessageSpy,
-    removeEventListener: vi.fn<MessagePort['removeEventListener']>(),
-    start: vi.fn<MessagePort['start']>(),
-  };
+  const context = createContext([channel.port2]);
 
-  connections.add(mockPort);
+  channel.port1.start();
+
+  const received = new Promise<MessageEvent>((resolve) => {
+    channel.port1.addEventListener('message', resolve, { once: true });
+  });
 
   const message: InitializeMessage = {
     type: ClientMessageType.Initialize,
   };
 
-  await handleInitializeMessage(message);
+  await handleInitializeMessage(context, message);
 
-  const simulation = getSimulation();
+  const event = await received;
 
-  expect(postMessageSpy).toHaveBeenCalledWith(
-    expect.objectContaining({
-      state: simulation?.getAppState(),
-      type: WorkerMessageType.InitialState,
-    }),
-  );
+  const simulation = context.getSimulation();
+
+  expect(event.data).toStrictEqual({
+    state: simulation?.getAppState(),
+    type: WorkerMessageType.InitialState,
+  });
 });
 
 test('it does not create a new simulation if one already exists', async () => {
+  const context = createContext();
   const existingSimulation = createSimulation(hasher);
 
-  setSimulation(existingSimulation);
+  context.setSimulation(existingSimulation);
 
   const message: InitializeMessage = {
     type: ClientMessageType.Initialize,
   };
 
-  await handleInitializeMessage(message);
+  await handleInitializeMessage(context, message);
 
-  const simulation = getSimulation();
-
-  expect(simulation).toBe(existingSimulation);
+  expect(context.getSimulation()).toBe(existingSimulation);
 });

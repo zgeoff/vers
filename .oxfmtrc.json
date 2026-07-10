@@ -28,7 +28,7 @@
     "customGroups": [
       {
         "groupName": "test-libs",
-        "elementNamePattern": ["^vitest$", "^@testing-library"]
+        "elementNamePattern": ["^@testing-library"]
       }
     ],
     "newlinesBetween": false,

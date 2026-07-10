@@ -7,7 +7,9 @@ import { setSimulationWorker } from '../state/set-simulation-worker';
 import { useSimulationStore } from '../state/use-simulation-store';
 import type { InitialStateMessage, SimulationUpdateMessage, WorkerMessage } from '../types';
 import { WorkerMessageType } from '../types';
-import SimulationWorker from './worker.ts?sharedworker';
+import { createDisconnectMessage } from './create-disconnect-message';
+
+let hasRegisteredDisconnectListener = false;
 
 export function useSimulationWorker() {
   const existingWorker = useSimulationStore((state) => state.worker);
@@ -19,15 +21,34 @@ export function useSimulationWorker() {
       return;
     }
 
-    const worker = existingWorker ?? new SimulationWorker();
+    const worker =
+      existingWorker ??
+      // oxlint-disable-next-line unicorn/relative-url-style -- Vite's worker-import-meta-url plugin resolves this specifier as a relative file reference only with the leading './'; a bare specifier resolves to the same URL at runtime but Vite's static analysis would treat it as a bare package import and skip bundling it
+      new SharedWorker(new URL('./worker.ts', import.meta.url), { type: 'module' });
 
     setSimulationWorker(worker);
 
     // oxlint-disable-next-line unicorn/prefer-add-event-listener -- assigning onmessage starts MessagePort delivery; addEventListener also needs an explicit port.start()
     worker.port.onmessage = handleWorkerMessage;
+
+    // Registered once for the page's lifetime, never from this effect's own cleanup: the effect's
+    // `[existingWorker]` dependency re-runs right after the first mount creates a worker (the store
+    // update it triggers changes `existingWorker`'s identity), and a cleanup-based send would fire
+    // on that transition and disconnect the connection it just made.
+    if (!hasRegisteredDisconnectListener) {
+      hasRegisteredDisconnectListener = true;
+
+      window.addEventListener('pagehide', handlePageHide);
+    }
   }, [existingWorker]);
 
   return existingWorker;
+}
+
+function handlePageHide() {
+  const worker = useSimulationStore.getState().worker;
+
+  worker?.port.postMessage(createDisconnectMessage());
 }
 
 function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {

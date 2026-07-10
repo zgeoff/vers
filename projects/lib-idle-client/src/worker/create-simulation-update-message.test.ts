@@ -1,7 +1,7 @@
+import { expect, test } from 'bun:test';
 import { Class } from '@vers/data';
 import type { SimulationAppState } from '@vers/idle-core';
 import { EntityStatus } from '@vers/idle-core';
-import { expect, test } from 'vitest';
 import { WorkerMessageType } from '../types';
 import { createSimulationUpdateMessage } from './create-simulation-update-message';
 

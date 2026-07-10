@@ -1,6 +1,7 @@
 import type { ActivityData, AvatarData, SimulationAppState } from '@vers/idle-core';
 
 export enum ClientMessageType {
+  Disconnect = 'disconnect',
   Initialize = 'initialize',
   SetActivity = 'set-activity',
 }
@@ -19,7 +20,11 @@ export interface InitializeMessage extends IClientMessage {
   readonly type: ClientMessageType.Initialize;
 }
 
-export type ClientMessage = InitializeMessage | SetActivityMessage;
+export interface DisconnectMessage extends IClientMessage {
+  readonly type: ClientMessageType.Disconnect;
+}
+
+export type ClientMessage = DisconnectMessage | InitializeMessage | SetActivityMessage;
 
 export enum WorkerMessageType {
   InitialState = 'initial-state',

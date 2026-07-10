@@ -52,13 +52,7 @@
     "import/no-unassigned-import": [
       "error",
       {
-        "allow": [
-          "jest-extended",
-          "@testing-library/jest-dom/vitest",
-          "@zgeoff/bun-test-extended",
-          "**/augment-bun-test.ts",
-          "**/*.css"
-        ]
+        "allow": ["@zgeoff/bun-test-extended", "**/augment-bun-test.ts", "**/*.css"]
       }
     ],
 
@@ -104,7 +98,6 @@
           // the router instance: a live handle carrying match/history/cache state it mutates
           // internally on every navigation, so it has no useful readonly form
           { "from": "package", "name": "AnyRouter", "package": "@tanstack/router-core" },
-          { "from": "package", "name": "TestProject", "package": "vitest" },
           {
             "from": "package",
             "name": "StartedPostgreSqlContainer",
@@ -137,6 +130,7 @@
               "FormData",
               "HTMLFormElement",
               "MessageEvent",
+              "MessagePort",
               "SharedWorker",
               "URL",
               "MouseEvent"
@@ -277,76 +271,6 @@
       "rules": {
         "max-lines": "off",
         "typescript/no-non-null-assertion": "off"
-      }
-    },
-    {
-      "files": ["**/*.test.ts", "**/*.test.tsx"],
-      // bun-test files (born on `bun test`, not vitest) import `test`/
-      // `expect`/hooks from 'bun:test' — the vitest plugin would misjudge those
-      // as vitest's own injected globals. Both the per-package `src/bun/**`
-      // suites and the fully converted packages are excluded until the
-      // vitest→bun-test sweep (#266) retires the plugin entirely.
-      "excludeFiles": [
-        "**/src/bun/**",
-        "projects/lib-utils/**",
-        "projects/lib-aether-client/**",
-        "projects/lib-aether-core/**",
-        "projects/lib-db/**",
-        "projects/lib-design-system/**",
-        "projects/lib-email/**",
-        "projects/lib-flags/**",
-        "projects/lib-game-rendering/**",
-        "projects/lib-service-auth/**",
-        "projects/lib-service-runtime/**",
-        "projects/lib-service-test-utils/**",
-        "projects/lib-service-utils/**",
-        "projects/lib-contract-base/**",
-        "projects/lib-game-utils/**",
-        "projects/lib-idle-core/**",
-        "projects/lib-contract-user/**",
-        "projects/lib-contract-session/**",
-        "projects/lib-contract-verification/**",
-        "projects/lib-contract-avatar/**",
-        "projects/lib-client-test-utils/**",
-        "projects/lib-test-utils/**",
-        "projects/service-avatar/**",
-        "projects/service-session/**",
-        "projects/service-user/**",
-        "projects/service-verification/**",
-        "projects/app-web/**"
-      ],
-      // vitest plugin only applies to `.test.ts(x)` files — scoping it here
-      // (rather than in the top-level `plugins` list) keeps its rules off
-      // ordinary source files, which the plugin would otherwise misjudge as
-      // tests
-      "plugins": ["vitest"],
-      "rules": {
-        "vitest/max-expects": "off",
-        "vitest/no-alias-methods": "error",
-        "vitest/no-conditional-in-test": "error",
-        "vitest/no-focused-tests": "off",
-        "vitest/no-hooks": ["error", { "allow": ["afterEach"] }],
-        "vitest/prefer-expect-assertions": "off",
-        "vitest/prefer-strict-equal": "error",
-        "vitest/require-top-level-describe": "off",
-        // tests import `test`/`expect`/`vi` from 'vitest' explicitly (see
-        // AGENTS.md testing conventions) instead of relying on injected
-        // globals
-        "vitest/no-importing-vitest-globals": "off",
-        // conflicts with the repo's no-shared-setup testing convention;
-        // only `afterEach` is an allowed hook (`vitest/no-hooks`, above)
-        "vitest/require-hook": "off",
-        // the repo deliberately uses two test-file suffixes: `.test.ts` for
-        // vitest and `.spec.ts` for Playwright — this rule only accounts
-        // for one
-        "vitest/consistent-test-filename": "off",
-        // `toHaveBeenCalledOnce()` is a preferred jest-extended matcher (see
-        // AGENTS.md's matcher list) — this rule demands the opposite,
-        // `toHaveBeenCalledTimes(1)`
-        "vitest/prefer-called-times": "off",
-        // `test.todo` is deliberate coverage tracking, same policy as
-        // no-warning-comments
-        "vitest/warn-todo": "off"
       }
     },
     {

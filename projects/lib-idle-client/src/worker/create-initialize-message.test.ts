@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { ClientMessageType } from '../types';
 import { createInitializeMessage } from './create-initialize-message';
 

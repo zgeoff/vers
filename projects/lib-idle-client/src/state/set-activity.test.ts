@@ -1,6 +1,6 @@
+import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
 import type { ActivityAppState } from '@vers/idle-core';
-import { expect, test } from 'vitest';
 import { setActivity } from './set-activity';
 import { useActivityStore } from './use-activity-store';
 
