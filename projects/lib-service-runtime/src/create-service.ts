@@ -51,8 +51,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
 
   const publicKey = await jose.importSPKI(env.SERVICE_AUTH_PUBLIC_KEY, TOKEN_ALGORITHM);
 
-  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-  if (env.SENTRY_DSN) {
+  if (env.SENTRY_DSN !== undefined) {
     const sentry = await import('@sentry/bun');
 
     sentry.init({ dsn: env.SENTRY_DSN });
@@ -63,8 +62,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
 
   const app = new Elysia();
 
-  // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-  if (env.OTEL_EXPORTER_OTLP_ENDPOINT) {
+  if (env.OTEL_EXPORTER_OTLP_ENDPOINT !== undefined) {
     const [{ opentelemetry }, { OTLPTraceExporter }] = await Promise.all([
       import('@elysiajs/opentelemetry'),
       import('@opentelemetry/exporter-trace-otlp-proto'),

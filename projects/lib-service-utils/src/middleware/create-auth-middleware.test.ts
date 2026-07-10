@@ -3,6 +3,7 @@ import { createTestJWT } from '@vers/service-test-utils';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
 import * as jose from 'jose';
+import type { AuthContextVariables } from './create-auth-middleware';
 import { createAuthMiddleware } from './create-auth-middleware';
 
 const TEST_TOKEN_PAYLOAD = {
@@ -52,25 +53,22 @@ KQIDAQAB
 `;
 
 interface TestConfig {
-  isAuthRequired?: boolean;
+  readonly isAuthRequired?: boolean;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 async function setupTest(config: TestConfig = {}) {
   const app = new Hono();
 
   // a fresh spy per test: bun runs the file in one process and `mock.restore()` reverts spies
   // without clearing their call history, so a shared module-level spy would accrue calls
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  const handlerSpy = mock<(ctx: Context) => Promise<Response>>((ctx: Context) =>
-    Promise.resolve(
-      ctx.json({
-        // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-        payload: ctx.get('jwtPayload'),
-        // oxlint-disable-next-line typescript/no-unsafe-assignment -- baseline(#236)
-        userID: ctx.get('userID'),
-      }),
-    ),
+  const handlerSpy = mock<(ctx: Context<{ Variables: AuthContextVariables }>) => Promise<Response>>(
+    (ctx) =>
+      Promise.resolve(
+        ctx.json({
+          payload: ctx.get('jwtPayload'),
+          userID: ctx.get('userID'),
+        }),
+      ),
   );
 
   const authMiddleware = createAuthMiddleware({

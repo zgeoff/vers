@@ -1,17 +1,23 @@
 import type { Context, Next } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { createTokenVerifier } from '../utils/create-token-verifier';
-import type { TokenVerifierConfig } from '../utils/create-token-verifier';
+import type { RelevantJWTPayload, TokenVerifierConfig } from '../utils/create-token-verifier';
 import { getTokenFromHeader } from '../utils/get-token-from-header';
 
 interface AuthMiddlewareConfig {
-  isAuthRequired?: boolean;
-  tokenVerifierConfig: TokenVerifierConfig;
+  readonly isAuthRequired?: boolean;
+  readonly tokenVerifierConfig: TokenVerifierConfig;
+}
+
+/** Context variables `createAuthMiddleware` sets once a token verifies. */
+export interface AuthContextVariables {
+  jwtPayload: RelevantJWTPayload;
+  token: string;
+  userID: string;
 }
 
 // this is adapted from the generic jwt middleware for hono
 // ref: https://github.com/honojs/hono/blob/d091c6a180887d69715abcd84ea88a123c876305/src/middleware/jwt/index.test.ts
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createAuthMiddleware(config: AuthMiddlewareConfig) {
   const verifyToken = createTokenVerifier({
     audience: config.tokenVerifierConfig.audience,
@@ -19,21 +25,18 @@ export function createAuthMiddleware(config: AuthMiddlewareConfig) {
     spkiKey: config.tokenVerifierConfig.spkiKey,
   });
 
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-  return async (ctx: Context, next: Next) => {
+  return async (ctx: Context<{ Variables: AuthContextVariables }>, next: Next) => {
     const authHeader = ctx.req.raw.headers.get('Authorization');
 
     // if we don't explicitly require auth then we're safe to pass through
     // when no auth header is present
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    if (!authHeader && !config.isAuthRequired) {
+    if (authHeader === null && config.isAuthRequired !== true) {
       await next();
 
       return;
     }
 
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    if (!authHeader) {
+    if (authHeader === null) {
       const errorDescription = 'no authorization included in request';
 
       throw new HTTPException(401, {
@@ -48,8 +51,7 @@ export function createAuthMiddleware(config: AuthMiddlewareConfig) {
 
     const token = getTokenFromHeader(authHeader);
 
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    if (!token) {
+    if (token === null) {
       const errorDescription = 'invalid authorization header structure';
 
       throw new HTTPException(401, {
@@ -86,13 +88,12 @@ export function createAuthMiddleware(config: AuthMiddlewareConfig) {
 }
 
 interface ErrorParts {
-  ctx: Context;
-  description: string;
-  error: string;
-  statusText?: string;
+  readonly ctx: Context;
+  readonly description: string;
+  readonly error: string;
+  readonly statusText?: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 function createUnauthorizedResponse(error: ErrorParts) {
   return new Response('Unauthorized', {
     headers: {

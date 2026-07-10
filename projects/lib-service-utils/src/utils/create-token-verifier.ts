@@ -2,17 +2,16 @@ import * as jose from 'jose';
 import invariant from 'tiny-invariant';
 
 export interface TokenVerifierConfig {
-  audience: string;
-  issuer: string;
-  spkiKey: string;
+  readonly audience: string;
+  readonly issuer: string;
+  readonly spkiKey: string;
 }
 
-interface RelevantJWTPayload {
-  iss: string | undefined;
-  sub: string;
+export interface RelevantJWTPayload {
+  readonly iss: string | undefined;
+  readonly sub: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export function createTokenVerifier(config: TokenVerifierConfig) {
   return async (token: string): Promise<RelevantJWTPayload> => {
     const publicKey = await jose.importSPKI(config.spkiKey, 'RS256');
