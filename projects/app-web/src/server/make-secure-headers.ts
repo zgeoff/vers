@@ -22,7 +22,7 @@ const FIXED_SECURE_HEADERS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 interface MakeSecureHeadersOptions {
-  readonly sentryEnabled: boolean;
+  readonly sentryOrigin: string | null;
 }
 
 /**
@@ -48,7 +48,7 @@ export function makeSecureHeaders(options: MakeSecureHeadersOptions): Middleware
 
     headers.set(
       'Content-Security-Policy',
-      buildCSPHeaderValue({ nonce, sentryEnabled: options.sentryEnabled }),
+      buildCSPHeaderValue({ nonce, sentryOrigin: options.sentryOrigin }),
     );
 
     for (const [name, value] of FIXED_SECURE_HEADERS) {

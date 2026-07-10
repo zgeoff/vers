@@ -28,6 +28,11 @@ if (env.isProduction && env.SENTRY_DSN !== undefined) {
 // production traffic gets the full strict budget
 const RATE_LIMIT_MAX_MULTIPLE = env.isProduction ? 1 : 10_000;
 
+// the browser posts error envelopes to the host of the DSN baked into the client bundle, so the
+// CSP allows that origin — the same variable must be present at build and at runtime
+const SENTRY_ORIGIN =
+  env.VITE_SENTRY_DSN === undefined ? null : new URL(env.VITE_SENTRY_DSN).origin;
+
 const clientAssets = serveStatic({ dir: CLIENT_ASSETS_DIRECTORY });
 
 /**
@@ -45,7 +50,7 @@ const serverEntry = {
       makeRequestLogger(logger),
       removeTrailingSlash,
       enforceHTTPS,
-      makeSecureHeaders({ sentryEnabled: env.SENTRY_DSN !== undefined }),
+      makeSecureHeaders({ sentryOrigin: SENTRY_ORIGIN }),
       makeRateLimiter({ maxMultiple: RATE_LIMIT_MAX_MULTIPLE }),
       serveClientAssets,
     ],

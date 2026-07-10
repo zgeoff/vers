@@ -9,6 +9,7 @@ const envSchema = z.object({
   LOGGING: z.enum(['debug', 'info', 'warn', 'error']).optional().default('info'),
   NODE_ENV: z.enum(['development', 'e2e', 'production', 'test']),
   SENTRY_DSN: z.url().optional(),
+  VITE_SENTRY_DSN: z.url().optional(),
   SERVICE_AUTH_PRIVATE_KEY: z.string().min(1),
 });
 

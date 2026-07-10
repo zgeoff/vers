@@ -19,7 +19,8 @@ platform: the app owns the pipe, the provider owns one job.
 
 ## Observability
 
-- **GlitchTip** — error tracking. Browser and server exceptions ingest over the Sentry protocol.
+- **Bugsink** — error tracking, self-hosted on Fly (`projects/app-bugsink`). Browser and server
+  exceptions ingest over the Sentry protocol.
 - **Axiom** — traces, logs, and metrics. The OpenTelemetry export path from every service and the
   web server lands here.
 

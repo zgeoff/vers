@@ -54,7 +54,8 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
   if (env.SENTRY_DSN !== undefined) {
     const sentry = await import('@sentry/bun');
 
-    sentry.init({ dsn: env.SENTRY_DSN });
+    // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes
+    sentry.init({ dsn: env.SENTRY_DSN, sendDefaultPii: true, tracesSampleRate: 0 });
   }
 
   const router = await config.buildRouter({ env, logger });

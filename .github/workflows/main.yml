@@ -167,26 +167,24 @@ jobs:
       # on the /health check, so a machine that fails to boot blocks the release.
       #
       # syd host capacity is intermittently tight: a rollout that can't reserve a
-      # machine fails with "insufficient resources / could not reserve resource". Fly
-      # rolls the failed rollout back, so a retry is clean — capacity frees within
-      # seconds. Retry on any failure; a genuinely broken image fails all three and the
-      # health gate still blocks it.
+      # machine fails with "insufficient resources / could not reserve resource" and
+      # Fly rolls it back cleanly — re-run the failed job.
+      #
+      # app-web's image build bakes the browser DSN into the client bundle and uploads
+      # source maps to the error tracker; both no-op when the token/DSN aren't configured.
       - name: Deploy ${{ matrix.app }}
         if: ${{ contains(needs.checks.outputs.affected-projects, format('<{0}>', matrix.pkg)) }}
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
         run: |
-          for attempt in 1 2 3; do
-            if flyctl deploy --remote-only \
-              --config projects/${{ matrix.dir }}/fly.toml \
-              --dockerfile projects/${{ matrix.dir }}/Dockerfile; then
-              exit 0
-            fi
-            if [ "${attempt}" -lt 3 ]; then
-              echo "deploy attempt ${attempt} failed; retrying in $((attempt * 30))s"
-              sleep $((attempt * 30))
-            fi
-          done
-          echo "deploy failed after 3 attempts"
-          exit 1
+          build_args=""
+          if [ "${{ matrix.app }}" = "vers-app-web" ] && [ -n "${SENTRY_AUTH_TOKEN}" ]; then
+            build_args="--build-arg SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN} --build-arg VITE_SENTRY_DSN=${VITE_SENTRY_DSN}"
+          fi
+          flyctl deploy --remote-only ${build_args} \
+            --config projects/${{ matrix.dir }}/fly.toml \
+            --dockerfile projects/${{ matrix.dir }}/Dockerfile
 
       # private services can't be reached from CI — their rollout health gate is the
       # smoke test. app-web is public, so verify it end-to-end after cutover.
@@ -206,3 +204,37 @@ jobs:
           done
           echo "app-web /health never returned 200 after deploy"
           exit 1
+
+  deploy-bugsink:
+    name: Deploy vers-bugsink
+    needs: checks
+    # the error tracker isn't a workspace package, so turbo's affected detection
+    # can't see it — this leg self-gates on a diff of its config directory. It ships
+    # the pinned stock image: no build, just a machine update.
+    if: ${{ needs.checks.result == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - name: Detect config changes
+        id: config-diff
+        run: |
+          changed="$(git diff --name-only '${{ github.event.before }}' HEAD -- projects/app-bugsink/)"
+          if [ -n "${changed}" ]; then
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Setup flyctl
+        if: ${{ steps.config-diff.outputs.changed == 'true' }}
+        uses: superfly/flyctl-actions/setup-flyctl@dfdfedc86b296f5e5384f755a18bf400409a15d0 # v1.4
+
+      - name: Deploy vers-bugsink
+        if: ${{ steps.config-diff.outputs.changed == 'true' }}
+        run: flyctl deploy --config projects/app-bugsink/fly.toml

@@ -15,6 +15,9 @@ export function initSentryReact(): void {
   Sentry.init({
     dsn,
     environment: import.meta.env.MODE,
-    tracesSampleRate: import.meta.env.PROD ? 1 : 0,
+    sendDefaultPii: true,
+
+    // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes
+    tracesSampleRate: 0,
   });
 }
