@@ -3,7 +3,7 @@ import { CSP_NONCE_HEADER } from './csp-nonce-header';
 import { makeSecureHeaders } from './make-secure-headers';
 
 test('it stamps a csp nonce header onto the request before calling next', async () => {
-  const secureHeaders = makeSecureHeaders({ sentryEnabled: false });
+  const secureHeaders = makeSecureHeaders({ sentryOrigin: null });
 
   const request = new Request('https://example.test/');
 
@@ -20,7 +20,7 @@ test('it stamps a csp nonce header onto the request before calling next', async 
 });
 
 test('it applies the csp and fixed security headers to an html response', async () => {
-  const secureHeaders = makeSecureHeaders({ sentryEnabled: false });
+  const secureHeaders = makeSecureHeaders({ sentryOrigin: null });
 
   const request = new Request('https://example.test/');
 
@@ -39,7 +39,7 @@ test('it applies the csp and fixed security headers to an html response', async 
 });
 
 test('it leaves a non-html response untouched', async () => {
-  const secureHeaders = makeSecureHeaders({ sentryEnabled: false });
+  const secureHeaders = makeSecureHeaders({ sentryOrigin: null });
 
   const request = new Request('https://example.test/assets/app.js');
 
@@ -52,7 +52,7 @@ test('it leaves a non-html response untouched', async () => {
 });
 
 test('it uses the same nonce in the request header and the response csp', async () => {
-  const secureHeaders = makeSecureHeaders({ sentryEnabled: false });
+  const secureHeaders = makeSecureHeaders({ sentryOrigin: null });
 
   const request = new Request('https://example.test/');
 

@@ -9,17 +9,12 @@ import { env } from './env';
  */
 export function initSentryNode(): void {
   Sentry.init({
-    beforeSendTransaction(event) {
-      if (event.request?.headers?.['x-healthcheck'] === 'true') {
-        return null;
-      }
-
-      return event;
-    },
-    denyUrls: [/\/health/, /\/assets\//],
     ...(env.SENTRY_DSN !== undefined && { dsn: env.SENTRY_DSN }),
     environment: env.NODE_ENV,
     integrations: [Sentry.httpIntegration()],
-    tracesSampleRate: env.isProduction ? 1 : 0,
+    sendDefaultPii: true,
+
+    // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes
+    tracesSampleRate: 0,
   });
 }

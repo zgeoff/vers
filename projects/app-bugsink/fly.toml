@@ -1,0 +1,27 @@
+# Self-hosted Bugsink error tracker. Public because browsers post error envelopes
+# directly to it; every other client is a server SDK. Runs the stock image, so CI's
+# build-and-release pipeline never touches it — deploy with
+# `fly deploy --config projects/app-bugsink/fly.toml`.
+app = 'vers-bugsink'
+primary_region = 'syd'
+
+[build]
+image = 'bugsink/bugsink:2.4.0'
+
+[http_service]
+internal_port = 8000
+force_https = true
+auto_stop_machines = 'suspend'
+auto_start_machines = true
+min_machines_running = 0
+processes = ['app']
+
+[env]
+BASE_URL = 'https://vers-bugsink.fly.dev'
+BEHIND_HTTPS_PROXY = 'True'
+SINGLE_USER = 'True'
+
+[[vm]]
+memory = '512mb'
+cpu_kind = 'shared'
+cpus = 1

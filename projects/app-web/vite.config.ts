@@ -1,17 +1,39 @@
 import babel from '@rolldown/plugin-babel';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react';
 import rsc from '@vitejs/plugin-rsc';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
 
+const sentryAuthToken = process.env['SENTRY_AUTH_TOKEN'];
+const sentryDSN = process.env['VITE_SENTRY_DSN'];
+
 export default defineConfig({
+  build: { sourcemap: sentryAuthToken === undefined ? false : 'hidden' },
   plugins: [
     tanstackStart({ rsc: { enabled: true } }),
     rsc(),
     viteReact(),
     babel({ presets: [reactCompilerPreset()] }),
     buildMockBackendPlugin(),
+
+    // source maps upload to the error tracker's Debug-ID artifact-bundle endpoints — it never
+    // fetches scripts from public URLs — then get deleted so the runtime image never serves them.
+    // Releases are Sentry-specific endpoints the tracker doesn't implement, so both legs are off.
+    ...(sentryAuthToken !== undefined && sentryDSN !== undefined
+      ? [
+          sentryVitePlugin({
+            authToken: sentryAuthToken,
+            org: 'bugsink',
+            project: 'web',
+            release: { create: false, inject: false },
+            sourcemaps: { filesToDeleteAfterUpload: ['dist/**/*.map'] },
+            telemetry: false,
+            url: new URL(sentryDSN).origin,
+          }),
+        ]
+      : []),
   ],
   environments: {
     // tanstack start names its server environment `ssr` (kept for compatibility with vite plugins

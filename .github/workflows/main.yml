@@ -171,11 +171,20 @@ jobs:
       # rolls the failed rollout back, so a retry is clean — capacity frees within
       # seconds. Retry on any failure; a genuinely broken image fails all three and the
       # health gate still blocks it.
+      # app-web's image build bakes the browser DSN into the client bundle and uploads
+      # source maps to the error tracker; both no-op when the token/DSN aren't configured.
       - name: Deploy ${{ matrix.app }}
         if: ${{ contains(needs.checks.outputs.affected-projects, format('<{0}>', matrix.pkg)) }}
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
         run: |
+          build_args=""
+          if [ "${{ matrix.app }}" = "vers-app-web" ] && [ -n "${SENTRY_AUTH_TOKEN}" ]; then
+            build_args="--build-arg SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN} --build-arg VITE_SENTRY_DSN=${VITE_SENTRY_DSN}"
+          fi
           for attempt in 1 2 3; do
-            if flyctl deploy --remote-only \
+            if flyctl deploy --remote-only ${build_args} \
               --config projects/${{ matrix.dir }}/fly.toml \
               --dockerfile projects/${{ matrix.dir }}/Dockerfile; then
               exit 0

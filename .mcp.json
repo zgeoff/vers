@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "bugsink": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "BUGSINK_TOKEN=\"$(op read 'op://vers/bugsink/mcp-token')\" exec npx -y @zgeoff/bugsink-mcp"
+      ],
+      "env": {
+        "BUGSINK_URL": "https://vers-bugsink.fly.dev"
+      }
+    }
+  }
+}

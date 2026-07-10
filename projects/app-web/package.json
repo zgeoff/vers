@@ -62,6 +62,7 @@
     "@happy-dom/global-registrator": "catalog:",
     "@pandacss/dev": "catalog:",
     "@rolldown/plugin-babel": "catalog:",
+    "@sentry/vite-plugin": "catalog:",
     "@tanstack/router-cli": "catalog:",
     "@tanstack/start-storage-context": "catalog:",
     "@testing-library/jest-dom": "catalog:",
