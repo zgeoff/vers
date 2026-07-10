@@ -4,4 +4,5 @@ import { AetherPanel } from '../-aether/aether-panel';
 export const Route = createFileRoute('/_game/aether')({
   component: AetherPanel,
   head: () => ({ meta: [{ title: 'vers | Aether' }] }),
+  staticData: { presentation: 'focus', scene: 'worldmap' },
 });

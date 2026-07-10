@@ -1,9 +1,9 @@
-import { Canvas } from '@react-three/fiber';
-import { DevTools, NodeTooltip, Scene, setAetherGraph, setSelectedNode } from '@vers/aether-client';
+import { setAetherGraph, setSelectedNode } from '@vers/aether-client';
 import type { CompressedAetherNode } from '@vers/aether-core';
 import { decompressAetherNodes } from '@vers/aether-core';
 import { aetherNodes } from '@vers/data';
-import { SelectedNodeInfo } from './selected-node-info';
+import { GameCanvas } from '@vers/game-rendering';
+import { SceneRoot } from './scene-root';
 
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the aether graph ships as plain JSON with no way to encode the branded CompressedAetherNode type at that boundary
 const aetherGraph = decompressAetherNodes(aetherNodes as Array<CompressedAetherNode>);
@@ -15,18 +15,13 @@ setAetherGraph(aetherGraph);
 setSelectedNode(firstNode, null);
 
 /**
- * The aether map's three.js scene: dynamically imported through a code-split boundary so three.js
- * and the R3F canvas never land in the initial bundle.
+ * The persistent canvas's world content: dynamically imported through `GameCanvasMount`'s
+ * code-split boundary so three.js and the aether graph payload never land in the initial bundle.
  */
-export function AetherCanvas() {
+export function GameWorld() {
   return (
-    <>
-      <Canvas>
-        <Scene />
-      </Canvas>
-      <NodeTooltip />
-      <SelectedNodeInfo />
-      {import.meta.env.DEV && <DevTools />}
-    </>
+    <GameCanvas>
+      <SceneRoot />
+    </GameCanvas>
   );
 }
