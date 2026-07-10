@@ -167,10 +167,9 @@ jobs:
       # on the /health check, so a machine that fails to boot blocks the release.
       #
       # syd host capacity is intermittently tight: a rollout that can't reserve a
-      # machine fails with "insufficient resources / could not reserve resource". Fly
-      # rolls the failed rollout back, so a retry is clean — capacity frees within
-      # seconds. Retry on any failure; a genuinely broken image fails all three and the
-      # health gate still blocks it.
+      # machine fails with "insufficient resources / could not reserve resource" and
+      # Fly rolls it back cleanly — re-run the failed job.
+      #
       # app-web's image build bakes the browser DSN into the client bundle and uploads
       # source maps to the error tracker; both no-op when the token/DSN aren't configured.
       - name: Deploy ${{ matrix.app }}
@@ -183,19 +182,9 @@ jobs:
           if [ "${{ matrix.app }}" = "vers-app-web" ] && [ -n "${SENTRY_AUTH_TOKEN}" ]; then
             build_args="--build-arg SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN} --build-arg VITE_SENTRY_DSN=${VITE_SENTRY_DSN}"
           fi
-          for attempt in 1 2 3; do
-            if flyctl deploy --remote-only ${build_args} \
-              --config projects/${{ matrix.dir }}/fly.toml \
-              --dockerfile projects/${{ matrix.dir }}/Dockerfile; then
-              exit 0
-            fi
-            if [ "${attempt}" -lt 3 ]; then
-              echo "deploy attempt ${attempt} failed; retrying in $((attempt * 30))s"
-              sleep $((attempt * 30))
-            fi
-          done
-          echo "deploy failed after 3 attempts"
-          exit 1
+          flyctl deploy --remote-only ${build_args} \
+            --config projects/${{ matrix.dir }}/fly.toml \
+            --dockerfile projects/${{ matrix.dir }}/Dockerfile
 
       # private services can't be reached from CI — their rollout health gate is the
       # smoke test. app-web is public, so verify it end-to-end after cutover.
@@ -248,15 +237,4 @@ jobs:
 
       - name: Deploy vers-bugsink
         if: ${{ steps.config-diff.outputs.changed == 'true' }}
-        run: |
-          for attempt in 1 2 3; do
-            if flyctl deploy --config projects/app-bugsink/fly.toml; then
-              exit 0
-            fi
-            if [ "${attempt}" -lt 3 ]; then
-              echo "deploy attempt ${attempt} failed; retrying in $((attempt * 30))s"
-              sleep $((attempt * 30))
-            fi
-          done
-          echo "deploy failed after 3 attempts"
-          exit 1
+        run: flyctl deploy --config projects/app-bugsink/fly.toml

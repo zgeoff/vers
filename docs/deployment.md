@@ -52,16 +52,18 @@ rolls out:
 
 1. Neon migrations apply once — several services share the one database, so migration never runs per
    service.
-2. Each affected app's image builds and pushes to `registry.fly.io/<app>:<sha>`.
-3. `flyctl deploy --image` ships each affected app, retried up to three times against transient
-   `syd` host-capacity refusals. `app-web` uses the `bluegreen` strategy — a full parallel fleet
-   passes `/health` before traffic cuts over atomically — because it is the one public app. Services
-   use `rolling` with `max_unavailable = 1`, updating a machine in place while the other keeps
-   serving; a broken boot fails the health gate and halts the rollout with the old machine still up.
-4. `app-web`'s public `/health` is polled as an end-to-end check. A service, being private, is
+2. `flyctl deploy --remote-only` ships each affected app: Fly's remote builder builds the image from
+   the app's Dockerfile and deploys it in one step, so no image blob crosses from the GitHub runner.
+   `app-web` uses the `bluegreen` strategy — a full parallel fleet passes `/health` before traffic
+   cuts over atomically — because it is the user-facing app. Services use `rolling` with
+   `max_unavailable = 1`, updating a machine in place while the other keeps serving; a broken boot
+   fails the health gate and halts the rollout with the old machine still up.
+3. `app-web`'s public `/health` is polled as an end-to-end check. A service, being private, is
    verified by its rollout health gate alone.
 
-Only a fully green run deploys, and only affected apps.
+Only a fully green run deploys, and only affected apps. A rollout can fail on transient `syd`
+host-capacity refusals ("could not reserve resource"); Fly rolls it back cleanly, so re-run the
+failed job.
 
 `vers-bugsink` ships in its own workflow leg. It isn't a workspace package, so turbo's affected
 detection can't see it — the leg gates on a diff of `projects/app-bugsink/` instead, and deploys the
