@@ -1,4 +1,4 @@
-import { TOKEN_ALGORITHM } from '@vers/service-runtime';
+import { TOKEN_ALGORITHM } from '@vers/service-auth';
 import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
 
