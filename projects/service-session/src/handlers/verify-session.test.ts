@@ -4,6 +4,7 @@ import { createAnonymousViewer, createTestDB, createTestUser } from '@vers/servi
 import { buildRPCTestClient, getTestJWTKeyPair } from '@vers/test-utils';
 import * as jose from 'jose';
 import { createSessionService } from '../create-session-service';
+import { createPendingTransactionRow } from '../test-utils/create-pending-transaction-row';
 import { createSessionRow } from '../test-utils/create-session-row';
 
 async function setupTest() {
@@ -100,4 +101,138 @@ test('it throws NOT_FOUND for a session that is already verified', async () => {
   expect(client.verifySession({ id: session.id })).rejects.toMatchObject({
     code: 'NOT_FOUND',
   });
+});
+
+test("it deletes the user's other verified session when a new session verifies", async () => {
+  await using ctx = await setupTest();
+
+  const created = await createTestUser(ctx.db);
+  const other = await createSessionRow(ctx.db, { userId: created.user.id, verified: true });
+  const session = await createSessionRow(ctx.db, { userId: created.user.id, verified: false });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
+
+  const result = await client.verifySession({ id: session.id });
+
+  expect(result).toStrictEqual({
+    accessToken: expect.toBeString(),
+    refreshToken: expect.toBeString(),
+  });
+
+  const remaining = await ctx.db
+    .selectFrom('sessions')
+    .select('id')
+    .where('id', '=', other.id)
+    .executeTakeFirst();
+
+  expect(remaining).toBeUndefined();
+});
+
+test("it deletes the user's other unverified sessions when a session verifies", async () => {
+  await using ctx = await setupTest();
+
+  const created = await createTestUser(ctx.db);
+  const other = await createSessionRow(ctx.db, { userId: created.user.id, verified: false });
+  const session = await createSessionRow(ctx.db, { userId: created.user.id, verified: false });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
+
+  const result = await client.verifySession({ id: session.id });
+
+  expect(result).toStrictEqual({
+    accessToken: expect.toBeString(),
+    refreshToken: expect.toBeString(),
+  });
+
+  const remaining = await ctx.db
+    .selectFrom('sessions')
+    .select('id')
+    .where('id', '=', other.id)
+    .executeTakeFirst();
+
+  expect(remaining).toBeUndefined();
+});
+
+test("it leaves other users' sessions untouched", async () => {
+  await using ctx = await setupTest();
+
+  const created = await createTestUser(ctx.db);
+  const otherUser = await createTestUser(ctx.db);
+
+  const otherUsersSession = await createSessionRow(ctx.db, {
+    userId: otherUser.user.id,
+    verified: true,
+  });
+
+  const session = await createSessionRow(ctx.db, { userId: created.user.id, verified: false });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
+
+  const result = await client.verifySession({ id: session.id });
+
+  expect(result).toStrictEqual({
+    accessToken: expect.toBeString(),
+    refreshToken: expect.toBeString(),
+  });
+
+  const remaining = await ctx.db
+    .selectFrom('sessions')
+    .select('id')
+    .where('id', '=', otherUsersSession.id)
+    .executeTakeFirst();
+
+  expect(remaining).toStrictEqual({ id: otherUsersSession.id });
+});
+
+test('it evicts nothing when the session was already verified', async () => {
+  await using ctx = await setupTest();
+
+  const created = await createTestUser(ctx.db);
+  const other = await createSessionRow(ctx.db, { userId: created.user.id, verified: true });
+  const session = await createSessionRow(ctx.db, { userId: created.user.id, verified: true });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
+
+  expect(client.verifySession({ id: session.id })).rejects.toMatchObject({
+    code: 'NOT_FOUND',
+  });
+
+  const remaining = await ctx.db
+    .selectFrom('sessions')
+    .select('id')
+    .where('id', '=', other.id)
+    .executeTakeFirst();
+
+  expect(remaining).toStrictEqual({ id: other.id });
+});
+
+test("it drops the evicted session's pending step-up transactions", async () => {
+  await using ctx = await setupTest();
+
+  const created = await createTestUser(ctx.db);
+  const other = await createSessionRow(ctx.db, { userId: created.user.id, verified: true });
+  const pendingTransaction = await createPendingTransactionRow(ctx.db, { sessionId: other.id });
+  const session = await createSessionRow(ctx.db, { userId: created.user.id, verified: false });
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
+
+  const result = await client.verifySession({ id: session.id });
+
+  expect(result).toStrictEqual({
+    accessToken: expect.toBeString(),
+    refreshToken: expect.toBeString(),
+  });
+
+  const remaining = await ctx.db
+    .selectFrom('pendingTransactions')
+    .select('id')
+    .where('id', '=', pendingTransaction.id)
+    .executeTakeFirst();
+
+  expect(remaining).toBeUndefined();
 });
