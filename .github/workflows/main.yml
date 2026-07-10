@@ -215,3 +215,48 @@ jobs:
           done
           echo "app-web /health never returned 200 after deploy"
           exit 1
+
+  deploy-bugsink:
+    name: Deploy vers-bugsink
+    needs: checks
+    # the error tracker isn't a workspace package, so turbo's affected detection
+    # can't see it — this leg self-gates on a diff of its config directory. It ships
+    # the pinned stock image: no build, just a machine update.
+    if: ${{ needs.checks.result == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - name: Detect config changes
+        id: config-diff
+        run: |
+          changed="$(git diff --name-only '${{ github.event.before }}' HEAD -- projects/app-bugsink/)"
+          if [ -n "${changed}" ]; then
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Setup flyctl
+        if: ${{ steps.config-diff.outputs.changed == 'true' }}
+        uses: superfly/flyctl-actions/setup-flyctl@dfdfedc86b296f5e5384f755a18bf400409a15d0 # v1.4
+
+      - name: Deploy vers-bugsink
+        if: ${{ steps.config-diff.outputs.changed == 'true' }}
+        run: |
+          for attempt in 1 2 3; do
+            if flyctl deploy --config projects/app-bugsink/fly.toml; then
+              exit 0
+            fi
+            if [ "${attempt}" -lt 3 ]; then
+              echo "deploy attempt ${attempt} failed; retrying in $((attempt * 30))s"
+              sleep $((attempt * 30))
+            fi
+          done
+          echo "deploy failed after 3 attempts"
+          exit 1

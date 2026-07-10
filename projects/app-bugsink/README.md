@@ -5,11 +5,9 @@ Browser and server exceptions ingest here over the Sentry protocol: each vers ap
 Bugsink project, and that project's DSN is the only wiring an app carries.
 
 This directory holds Fly config only — no workspace package, nothing to build. The app runs the
-stock `bugsink/bugsink` image and deploys manually:
-
-```sh
-fly deploy --config projects/app-bugsink/fly.toml
-```
+pinned stock `bugsink/bugsink` image; a merge to `main` touching this directory redeploys it, so
+upgrading Bugsink is a tag bump in `fly.toml`. A manual roll is
+`fly deploy --config projects/app-bugsink/fly.toml`.
 
 ## Storage
 

@@ -63,6 +63,10 @@ rolls out:
 
 Only a fully green run deploys, and only affected apps.
 
+`vers-bugsink` ships in its own workflow leg. It isn't a workspace package, so turbo's affected
+detection can't see it — the leg gates on a diff of `projects/app-bugsink/` instead, and deploys the
+pinned stock image with no build. Upgrading Bugsink is a tag bump in its `fly.toml`.
+
 ## Provision from nothing
 
 Requires `flyctl` authenticated to the `vers` org, the Neon pooled `DATABASE_URL`, and the domain in
@@ -119,8 +123,9 @@ fly secrets set -a vers-app-web \
 rm s2s.key s2s.pub session.key
 ```
 
-Stand up the error tracker (a stock image the CI pipeline never builds): create the app and a public
-address, create a `bugsink` database in the Neon project for its `DATABASE_URL`, then deploy:
+Stand up the error tracker: create the app and a public address, create a `bugsink` database in the
+Neon project for its `DATABASE_URL`, then run the first deploy by hand (CI redeploys it on later
+config changes):
 
 ```sh
 fly apps create vers-bugsink --org vers

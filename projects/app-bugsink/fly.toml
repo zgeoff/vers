@@ -1,7 +1,7 @@
 # Self-hosted Bugsink error tracker. Public because browsers post error envelopes
-# directly to it; every other client is a server SDK. Runs the stock image, so CI's
-# build-and-release pipeline never touches it — deploy with
-# `fly deploy --config projects/app-bugsink/fly.toml`.
+# directly to it; every other client is a server SDK. Runs the pinned stock image —
+# no build — and a merge to main touching this directory redeploys it, so upgrading
+# Bugsink is a tag bump here.
 app = 'vers-bugsink'
 primary_region = 'syd'
 
