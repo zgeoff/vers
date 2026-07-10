@@ -134,7 +134,7 @@ Libraries:
 - `lib-aether-core` - platform-agnostic aether graph generation
 - `lib-client-test-utils` - react & web worker testing utilities
 - `lib-contract-avatar` - oRPC API declaration for the avatar service
-- `lib-contract-base` - shared contract error taxonomy, base builders, and conformance-test helper
+- `lib-contract-base` - shared contract error taxonomy and base builders
 - `lib-contract-session` - oRPC API declaration for the session service
 - `lib-contract-user` - oRPC API declaration for the user service
 - `lib-contract-verification` - oRPC API declaration for the verification service
@@ -152,4 +152,6 @@ Libraries:
 - `lib-service-utils` - shared Elysia middleware (auth, logging, remote address) and service env
   schemas
 - `lib-styled-system` - generated code for panda css design system
+- `lib-test-utils` - generic test helpers: env override/cleanup, MSW lifecycle wiring, JWT and
+  in-process RPC-client fixtures, and oRPC conformance-case collection
 - `lib-utils` - low-level platform-agnostic utils
