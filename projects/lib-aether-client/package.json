@@ -13,12 +13,12 @@
   "dependencies": {
     "@react-hookz/web": "catalog:",
     "@react-spring/three": "catalog:",
-    "@react-three/drei": "catalog:",
     "@react-three/fiber": "catalog:",
     "@vers/aether-core": "workspace:*",
     "@vers/client-test-utils": "workspace:*",
     "@vers/design-system": "workspace:*",
     "@vers/styled-system": "workspace:*",
+    "camera-controls": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "three": "catalog:",
