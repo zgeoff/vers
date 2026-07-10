@@ -16,7 +16,7 @@ test('it keeps the same canvas element across client-side game navigation', asyn
 
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
 
-  await page.goto('/aether');
+  await page.goto('/explore');
 
   await expect(page).toHaveURL(/\/login/);
   await page.waitForLoadState('networkidle');
@@ -30,7 +30,7 @@ test('it keeps the same canvas element across client-side game navigation', asyn
 
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  await expect(page).toHaveURL(/\/aether$/);
+  await expect(page).toHaveURL(/\/explore$/);
 
   const canvas = page.locator('canvas');
 
@@ -41,9 +41,11 @@ test('it keeps the same canvas element across client-side game navigation', asyn
   });
 
   for (const [linkName, urlPattern] of [
-    ['Nexus', /\/nexus$/],
+    ['Respite', /\/respite$/],
+    ['Stash', /\/stash$/],
+    ['Market', /\/market$/],
     ['Avatar', /\/avatar(?<create>\/create)?$/],
-    ['Aether', /\/aether$/],
+    ['Explore', /\/explore$/],
   ] as const) {
     await page.getByRole('button', { name: 'Menu' }).click();
     await page.getByRole('link', { exact: true, name: linkName }).click();

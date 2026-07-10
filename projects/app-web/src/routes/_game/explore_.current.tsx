@@ -1,9 +1,9 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { AetherCurrentPanel } from '../-aether-current/aether-current-panel';
+import { ExploreCurrentPanel } from '../-explore-current/explore-current-panel';
 import { avatarClient } from '../../lib/rpc/clients/avatar-client';
 
-export const Route = createFileRoute('/_game/aether_/current')({
-  component: AetherCurrentPanel,
+export const Route = createFileRoute('/_game/explore_/current')({
+  component: ExploreCurrentPanel,
   head: () => ({ meta: [{ title: 'vers | Aether Node' }] }),
   loader: async () => {
     const [avatar] = await avatarClient.getAvatars({});
@@ -12,4 +12,5 @@ export const Route = createFileRoute('/_game/aether_/current')({
       throw redirect({ href: '/avatar/create' });
     }
   },
+  staticData: { presentation: 'focus', scene: 'worldmap' },
 });

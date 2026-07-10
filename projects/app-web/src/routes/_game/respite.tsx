@@ -1,13 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { css } from '@vers/styled-system/css';
-import { NexusPanel } from '../-nexus/nexus-panel';
+import { RespitePanel } from '../-respite/respite-panel';
 
-export const Route = createFileRoute('/_game/nexus')({
-  component: NexusPage,
-  head: () => ({ meta: [{ title: 'vers | Nexus' }] }),
+export const Route = createFileRoute('/_game/respite')({
+  component: RespitePage,
+  head: () => ({ meta: [{ title: 'vers | Respite' }] }),
+  staticData: { presentation: 'ambient' },
 });
 
-function NexusPage() {
+function RespitePage() {
   const ctx = Route.useRouteContext();
 
   return (
@@ -20,7 +21,7 @@ function NexusPage() {
         textAlign: 'center',
       })}
     >
-      <NexusPanel orpc={ctx.orpc} />
+      <RespitePanel orpc={ctx.orpc} />
     </main>
   );
 }

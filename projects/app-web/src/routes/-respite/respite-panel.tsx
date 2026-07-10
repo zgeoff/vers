@@ -4,21 +4,21 @@ import { Link } from '@tanstack/react-router';
 import { Heading, Text } from '@vers/design-system';
 import type { OrpcQueryUtils } from '../../lib/rpc/orpc';
 
-interface NexusPanelProps {
+interface RespitePanelProps {
   readonly orpc: OrpcQueryUtils;
 }
 
-export function NexusPanel(props: NexusPanelProps) {
+export function RespitePanel(props: RespitePanelProps) {
   const query = useQuery(props.orpc.avatar.getAvatars.queryOptions({ input: {}, retry: false }));
 
   if (query.isPending) {
-    return <Text data-testid="nexus-loading">Loading your avatar…</Text>;
+    return <Text data-testid="respite-loading">Loading your avatar…</Text>;
   }
 
   if (query.error) {
     const message = isDefinedError(query.error) ? query.error.message : 'Something went wrong';
 
-    return <Text data-testid="nexus-error">{message}</Text>;
+    return <Text data-testid="respite-error">{message}</Text>;
   }
 
   const [avatar] = query.data;
@@ -36,7 +36,7 @@ export function NexusPanel(props: NexusPanelProps) {
 
   return (
     <>
-      <Heading level={2}>Nexus</Heading>
+      <Heading level={2}>Respite</Heading>
       <Text>vers is a work in progress. Check back often for updates.</Text>
     </>
   );

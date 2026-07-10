@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import { setSelectedNode } from '@vers/aether-client';
 import type { AetherNode } from '@vers/aether-core';
 import { renderWithRouter } from '../../test-utils/render-with-router';
-import { SelectedNodeInfo } from './selected-node-info';
+import { ExplorePanel } from './explore-panel';
 
 const node: AetherNode = {
   connections: ['conn1', null, 'conn2', null],
@@ -14,26 +14,20 @@ const node: AetherNode = {
   seed: 12_345,
 };
 
-test('it renders nothing with no node selected', () => {
+test('it renders no canvas of its own', () => {
   setSelectedNode(null);
 
-  renderWithRouter(<SelectedNodeInfo />);
+  const rendered = renderWithRouter(<ExplorePanel />);
 
-  expect(screen.queryByTestId('selected-node-id')).not.toBeInTheDocument();
+  expect(rendered.container.querySelector('canvas')).not.toBeInTheDocument();
 });
 
-test('it shows the selected node and links into its activity', async () => {
+test('it shows the selected node once the graph reports one', async () => {
   setSelectedNode(node, null);
 
-  renderWithRouter(<SelectedNodeInfo />);
+  renderWithRouter(<ExplorePanel />);
 
   const nodeID = await screen.findByTestId('selected-node-id');
 
   expect(nodeID).toHaveTextContent('Aether Node (node123)');
-  expect(screen.getByTestId('selected-node-difficulty')).toHaveTextContent('Difficulty 2');
-
-  expect(screen.getByRole('link', { name: 'Click to start' })).toHaveAttribute(
-    'href',
-    '/aether/current',
-  );
 });

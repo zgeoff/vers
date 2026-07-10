@@ -20,7 +20,7 @@ const PLACEHOLDER_AVATAR = createMockAvatarData();
  * The aether node detail view: shows a spinner until the idle worker reports the activity it was
  * sent, then renders the node and its codex slot.
  */
-export function AetherCurrentPanel() {
+export function ExploreCurrentPanel() {
   const isSharedWorkerSupported = useIsSharedWorkerSupported();
   const idleWorkerHandle = useIdleWorkerHandle();
   const selectedNode = useSelectedNode().node;

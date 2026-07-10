@@ -14,12 +14,15 @@ test('it hides the link list until the menu button is toggled open', async () =>
 
   const menuButton = await screen.findByRole('button', { name: /Menu/ });
 
-  expect(screen.queryByRole('link', { name: /Nexus/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Respite/ })).not.toBeInTheDocument();
 
   await user.click(menuButton);
 
-  expect(screen.getByRole('link', { name: /Nexus/ })).toHaveAttribute('href', '/nexus');
-  expect(screen.getByRole('link', { name: /Aether/ })).toHaveAttribute('href', '/aether');
+  expect(screen.getByRole('link', { name: /Respite/ })).toHaveAttribute('href', '/respite');
+  expect(screen.getByRole('link', { name: /Explore/ })).toHaveAttribute('href', '/explore');
+  expect(screen.getByRole('link', { name: /Stash/ })).toHaveAttribute('href', '/stash');
+  expect(screen.getByRole('link', { name: /Market/ })).toHaveAttribute('href', '/market');
+  expect(screen.getByRole('link', { name: /Encounter/ })).toHaveAttribute('href', '/encounter');
   expect(screen.getByRole('link', { name: /Avatar/ })).toHaveAttribute('href', '/avatar');
   expect(screen.getByRole('link', { name: /Account/ })).toHaveAttribute('href', '/account');
 });
@@ -31,9 +34,9 @@ test('it closes the link list once a link is followed', async () => {
 
   renderWithRouter(<GameNav />);
 
-  const nexusLink = await screen.findByRole('link', { name: /Nexus/ });
+  const respiteLink = await screen.findByRole('link', { name: /Respite/ });
 
-  await user.click(nexusLink);
+  await user.click(respiteLink);
 
-  expect(screen.queryByRole('link', { name: /Nexus/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Respite/ })).not.toBeInTheDocument();
 });
