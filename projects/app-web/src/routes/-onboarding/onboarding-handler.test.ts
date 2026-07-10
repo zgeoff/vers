@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { isRedirect } from '@tanstack/react-router';
-import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
+import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { userContract } from '@vers/contract-user';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
 import { SERVICE_URLS } from '../../lib/rpc/service-urls';

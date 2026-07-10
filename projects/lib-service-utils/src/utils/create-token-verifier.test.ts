@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { createTestJWT } from '@vers/service-test-utils';
+import { createTestJWT } from '@vers/test-utils';
 import * as jose from 'jose';
 import { createTokenVerifier } from './create-token-verifier';
 

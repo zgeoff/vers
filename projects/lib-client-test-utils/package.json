@@ -5,8 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./rpc-msw": "./src/rpc-msw/index.ts",
-    "./test-setup": "./src/test-setup/index.ts"
+    "./orpc": "./src/orpc/index.ts"
   },
   "scripts": {
     "test": "bun test",
@@ -22,6 +21,7 @@
     "@orpc/client": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
+    "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "typescript": "catalog:",
     "zod": "catalog:"

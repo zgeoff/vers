@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { AvatarContract } from '@vers/contract-avatar';
-import { buildRPCTestClient } from '@vers/contract-base/test-utils';
 import { createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import { buildRPCTestClient } from '@vers/test-utils';
 import { createAvatarService } from './create-avatar-service';
 
 test('it wires an injected db into the router instead of building one from env', async () => {

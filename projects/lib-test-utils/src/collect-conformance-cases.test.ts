@@ -1,12 +1,18 @@
 import { expect, test } from 'bun:test';
+import { oc } from '@orpc/contract';
 import { implement } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/fetch';
-import { Elysia } from 'elysia';
 import * as z from 'zod';
-import { authedRoute } from '../authed-route';
-import { publicRoute } from '../public-route';
 import type { ConformanceCaseApp } from './collect-conformance-cases';
 import { collectConformanceCases } from './collect-conformance-cases';
+
+/** Error vocabulary a fixture authed procedure declares, standing in for the real contract-base one. */
+const TEST_ERRORS = {
+  UNAUTHORIZED: {
+    data: z.object({ reason: z.string() }),
+    message: 'No valid session',
+  },
+} as const;
 
 test('it collects titles covering malformed-input, anonymous-UNAUTHORIZED, and openapi generation', () => {
   const contract = buildTestContract();
@@ -55,8 +61,11 @@ test('it fails the anonymous-UNAUTHORIZED case against a nonconforming app', asy
 
 function buildTestContract() {
   return {
-    getThing: authedRoute.input(z.object({ id: z.string() })).output(z.object({ id: z.string() })),
-    ping: publicRoute.output(z.object({ pong: z.boolean() })),
+    getThing: oc
+      .errors(TEST_ERRORS)
+      .input(z.object({ id: z.string() }))
+      .output(z.object({ id: z.string() })),
+    ping: oc.output(z.object({ pong: z.boolean() })),
   };
 }
 
@@ -95,14 +104,16 @@ function buildBrokenApp(contract: TestContract): ConformanceCaseApp {
 }
 
 function buildRPCApp(handler: RPCHandler<{ actingUserId: null | string }>): ConformanceCaseApp {
-  return new Elysia().all('/rpc*', async (context) => {
-    const result = await handler.handle(context.request, {
-      context: {
-        actingUserId: context.request.headers.get('x-acting-user-id'),
-      },
-      prefix: '/rpc',
-    });
+  return {
+    handle: async (request) => {
+      const result = await handler.handle(request, {
+        context: {
+          actingUserId: request.headers.get('x-acting-user-id'),
+        },
+        prefix: '/rpc',
+      });
 
-    return result.matched ? result.response : new Response('not found', { status: 404 });
-  });
+      return result.matched ? result.response : new Response('not found', { status: 404 });
+    },
+  };
 }

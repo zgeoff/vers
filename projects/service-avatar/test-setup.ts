@@ -1,10 +1,10 @@
 import '@zgeoff/bun-test-extended';
 import {
   getTestServiceKeyPair,
-  registerBunTestCleanup,
   resolveTestDBTarget,
   setupBunTestDB,
 } from '@vers/service-test-utils/bun';
+import { registerBunTestCleanup } from '@vers/test-utils/bun';
 
 await setupBunTestDB();
 

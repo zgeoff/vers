@@ -14,23 +14,33 @@ import { traverseContractProcedures } from '@orpc/server';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
 import { buildRPCTestClient } from './build-rpc-test-client';
 
-/** An Elysia app (or anything shaped like one) a conformance case can exercise. */
+/**
+ * An Elysia app (or anything shaped like one) a conformance case can exercise.
+ */
 export interface ConformanceCaseApp {
   readonly handle: (request: Request) => Promise<Response> | Response;
 }
 
-/** One mechanical guarantee, checked against a real app via its `handle` function. */
+/**
+ * One mechanical guarantee, checked against a real app via its `handle` function.
+ */
 export interface ConformanceCase {
-  /** Behavioural title, e.g. "it rejects malformed input on users.getCurrentUser". */
+  /**
+   * Behavioural title, e.g. "it rejects malformed input on users.getCurrentUser".
+   */
   run: (app: ConformanceCaseApp) => Promise<void>;
   title: string;
 }
 
-/** Header collection accepted wherever a conformance case needs to send headers. */
+/**
+ * Header collection accepted wherever a conformance case needs to send headers.
+ */
 type ConformanceHeaders = Readonly<Record<string, string>>;
 
 interface CollectConformanceCasesOptions {
-  /** Headers carrying a valid service token with no acting user. */
+  /**
+   * Headers carrying a valid service token with no acting user.
+   */
   readonly anonymousHeaders: ConformanceHeaders;
 
   /**
@@ -39,7 +49,9 @@ interface CollectConformanceCasesOptions {
    */
   readonly authedSamples?: Readonly<Record<string, unknown>>;
 
-  /** RPC mount prefix of the app under test. Default '/rpc'. */
+  /**
+   * RPC mount prefix of the app under test. Default '/rpc'.
+   */
   readonly rpcPrefix?: string;
 }
 
@@ -80,7 +92,9 @@ interface ContractProcedureEntry {
   readonly procedure: AnyContractProcedure;
 }
 
-/** Gathers every leaf procedure in a contract router, paired with its dot-separated path. */
+/**
+ * Gathers every leaf procedure in a contract router, paired with its dot-separated path.
+ */
 function collectContractProcedures(contract: AnyContractRouter): Array<ContractProcedureEntry> {
   const entries: Array<ContractProcedureEntry> = [];
 
@@ -125,7 +139,9 @@ function buildMalformedInputCase(
   };
 }
 
-/** Reads a contract procedure's declared route, schemas, and error map through oRPC's internal definition property. */
+/**
+ * Reads a contract procedure's declared route, schemas, and error map through oRPC's internal definition property.
+ */
 function getProcedureDef(
   procedure: AnyContractProcedure,
 ): ContractProcedureDef<AnySchema, AnySchema, ErrorMap, Meta> {
@@ -154,7 +170,9 @@ function findRejectingProbe(schema: AnySchema): unknown {
   return undefined;
 }
 
-/** Builds a typed oRPC client that exercises an app's real RPC wire protocol via its `handle` function. */
+/**
+ * Builds a typed oRPC client that exercises an app's real RPC wire protocol via its `handle` function.
+ */
 function buildConformanceClient(
   app: ConformanceCaseApp,
   rpcPrefix: string,
@@ -166,7 +184,9 @@ function buildConformanceClient(
   });
 }
 
-/** Indexes a dot-path into a client object, returning the callable procedure at that path. */
+/**
+ * Indexes a dot-path into a client object, returning the callable procedure at that path.
+ */
 function getClientProcedure(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- oRPC client proxy walked by dot-path; framework type with no readonly form
   client: ContractRouterClient<AnyContractRouter>,
@@ -183,7 +203,9 @@ function getClientProcedure(
   return current as (input: unknown) => Promise<unknown>;
 }
 
-/** Runs a client call expected to throw, and returns the thrown ORPCError. */
+/**
+ * Runs a client call expected to throw, and returns the thrown ORPCError.
+ */
 async function runRejectingCall(call: () => Promise<unknown>): Promise<ORPCError<string, unknown>> {
   try {
     await call();

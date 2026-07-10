@@ -4,7 +4,7 @@
 // since normal module resolution accepts `.ts` sources directly. bunfig.toml
 // registers the same module as its own preload entry for the runtime effect.
 import '@zgeoff/bun-test-extended';
-import { registerBunTestCleanup } from './register-bun-test-cleanup';
+import { registerBunTestCleanup } from '@vers/test-utils/bun';
 import { setupBunTestDB } from './setup-bun-test-db';
 
 await setupBunTestDB();

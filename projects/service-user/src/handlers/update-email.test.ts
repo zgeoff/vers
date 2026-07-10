@@ -1,13 +1,9 @@
 import { expect, test } from 'bun:test';
-import { buildRPCTestClient } from '@vers/contract-base/test-utils';
 import type { UserContract } from '@vers/contract-user';
-import {
-  createAnonymousViewer,
-  createTestDB,
-  createTestVerification,
-  createViewer,
-} from '@vers/service-test-utils/bun';
+import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import { buildRPCTestClient } from '@vers/test-utils';
 import { createUserService } from '../create-user-service';
+import { createVerificationRow } from '../test-utils/create-verification-row';
 
 async function setupTest() {
   const db = await createTestDB();
@@ -45,7 +41,7 @@ test('it repoints an in-progress 2fa verification to the new email', async () =>
     user: { email: 'current@test.com' },
   });
 
-  const verification = await createTestVerification(ctx.db, {
+  const verification = await createVerificationRow(ctx.db, {
     target: 'current@test.com',
     type: '2fa',
   });
@@ -72,7 +68,7 @@ test('it repoints an in-progress 2fa-setup verification to the new email', async
     user: { email: 'current@test.com' },
   });
 
-  const verification = await createTestVerification(ctx.db, {
+  const verification = await createVerificationRow(ctx.db, {
     target: 'current@test.com',
     type: '2fa-setup',
   });

@@ -1,6 +1,6 @@
+import { TOKEN_ALGORITHM, TOKEN_ISSUER } from '@vers/service-runtime';
 import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
-import { TOKEN_ALGORITHM, TOKEN_ISSUER } from '../token-claims';
 
 interface CreateServiceTokenOptions {
   readonly actingUserId?: string;

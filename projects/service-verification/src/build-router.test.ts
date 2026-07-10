@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
-import { collectConformanceCases } from '@vers/contract-base/test-utils';
 import { verificationContract } from '@vers/contract-verification';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
+import { collectConformanceCases } from '@vers/test-utils';
 import { createVerificationService } from './create-verification-service';
 
 async function setupTest() {

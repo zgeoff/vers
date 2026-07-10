@@ -5,6 +5,8 @@ interface TestJWTKeyPair {
   readonly publicKeyPEM: string;
 }
 
+let cached: Promise<TestJWTKeyPair> | undefined;
+
 /**
  * One RS256 keypair per test process: the preload publishes the private key as
  * `JWT_SIGNING_PRIVKEY`, and tests verify minted tokens against the public half. Bridges preload
@@ -26,5 +28,3 @@ async function createTestJWTKeyPair(): Promise<TestJWTKeyPair> {
 
   return { privateKeyPEM: pemPair[0], publicKeyPEM: pemPair[1] };
 }
-
-let cached: Promise<TestJWTKeyPair> | undefined;

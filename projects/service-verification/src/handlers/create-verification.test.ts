@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
-import { buildRPCTestClient } from '@vers/contract-base/test-utils';
 import type { VerificationContract } from '@vers/contract-verification';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
+import { buildRPCTestClient } from '@vers/test-utils';
 import { createVerificationService } from '../create-verification-service';
 
 async function setupTest() {

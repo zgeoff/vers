@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { buildRPCTestClient } from '@vers/contract-base/test-utils';
 import type { UserContract } from '@vers/contract-user';
 import { createAnonymousViewer, createTestDB, createTestUser } from '@vers/service-test-utils/bun';
+import { buildRPCTestClient } from '@vers/test-utils';
 import { createUserService } from '../create-user-service';
 
 async function setupTest() {

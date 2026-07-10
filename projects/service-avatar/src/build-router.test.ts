@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { avatarContract } from '@vers/contract-avatar';
-import { collectConformanceCases } from '@vers/contract-base/test-utils';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
+import { collectConformanceCases } from '@vers/test-utils';
 import { createAvatarService } from './create-avatar-service';
 
 async function setupTest() {

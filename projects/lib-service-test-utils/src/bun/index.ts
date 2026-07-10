@@ -1,17 +1,12 @@
 export { createAnonymousViewer } from './composites/create-anonymous-viewer';
 export { createViewer } from './composites/create-viewer';
 export { createDatabaseFromTemplate } from './create-database-from-template';
+export { createServiceToken } from './create-service-token';
 export { createTestDB } from './create-test-db';
 export { createTestUser } from './create-test-user';
-export { createTestVerification } from './create-test-verification';
 export { getTestServiceKeyPair } from './get-test-service-key-pair';
 export type { Isolation } from './make-test-db';
 export { makeTestDB } from './make-test-db';
-export { registerBunTestCleanup } from './register-bun-test-cleanup';
-export { removeEnvOverrides } from './remove-env-overrides';
 export { resolveTestDBTarget } from './resolve-test-db-target';
 export { setupBunTestDB } from './setup-bun-test-db';
-export { createDatabaseTestDB } from './strategies/create-database-test-db';
-export { createTransactionTestDB } from './strategies/create-transaction-test-db';
 export type { TestDBHandle } from './test-db-handle';
-export { updateEnv } from './update-env';

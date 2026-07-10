@@ -1,11 +1,11 @@
 import '@zgeoff/bun-test-extended';
 import {
   getTestServiceKeyPair,
-  registerBunTestCleanup,
   resolveTestDBTarget,
   setupBunTestDB,
 } from '@vers/service-test-utils/bun';
-import { getTestJWTKeyPair } from './src/test-utils/get-test-jwt-key-pair';
+import { getTestJWTKeyPair } from '@vers/test-utils';
+import { registerBunTestCleanup } from '@vers/test-utils/bun';
 
 await setupBunTestDB();
 

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
-import { buildRPCTestClient } from '@vers/contract-base/test-utils';
 import type { SessionContract } from '@vers/contract-session';
 import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import { buildRPCTestClient } from '@vers/test-utils';
 import { createSessionService } from '../create-session-service';
 import { createSessionRow } from '../test-utils/create-session-row';
 

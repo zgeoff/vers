@@ -1,4 +1,4 @@
-import { buildMockService } from '@vers/client-test-utils/rpc-msw';
+import { buildMockService } from '@vers/client-test-utils/orpc';
 import { avatarContract } from '@vers/contract-avatar';
 import { sessionContract } from '@vers/contract-session';
 import { userContract } from '@vers/contract-user';

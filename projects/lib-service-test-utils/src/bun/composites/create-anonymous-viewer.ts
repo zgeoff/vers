@@ -1,4 +1,4 @@
-import { createServiceToken } from '@vers/service-runtime/test-utils';
+import { createServiceToken } from '../create-service-token';
 import { getTestServiceKeyPair } from '../get-test-service-key-pair';
 
 interface CreateAnonymousViewerConfig {

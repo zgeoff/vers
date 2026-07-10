@@ -1,6 +1,6 @@
+import { TOKEN_ALGORITHM } from '@vers/service-runtime';
 import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
-import { TOKEN_ALGORITHM } from '../token-claims';
 
 /** Generates a fresh Ed25519 keypair for tests: the public key in the SPKI PEM shape services expect. */
 export async function createServiceKeyPair(): Promise<{

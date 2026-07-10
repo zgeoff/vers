@@ -1,5 +1,5 @@
-import { createServiceKeyPair } from '@vers/service-runtime/test-utils';
 import type { CryptoKey } from 'jose';
+import { createServiceKeyPair } from './create-service-key-pair';
 
 interface TestServiceKeyPair {
   readonly privateKey: CryptoKey;

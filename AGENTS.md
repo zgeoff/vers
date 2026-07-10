@@ -369,10 +369,10 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
 - **MSW is the sanctioned mock at the external HTTP/service boundary** — mock there, never internal
   abstractions. Each package with HTTP tests keeps one shared `server` (`setupServer()`) in a
   `mocks/` module; its lifecycle (`listen({ onUnhandledRequest: 'error' })`, `resetHandlers`,
-  `close`) is wired globally by `registerMSWLifecycle(server)` (from `@vers/client-test-utils`) in
-  the preload. Tests add per-test handlers with `server.use(...)` — including override and
+  `close`) is wired globally by `registerMSWLifecycle(server)` (from `@vers/test-utils/bun`) in the
+  preload. Tests add per-test handlers with `server.use(...)` — including override and
   upstream-failure cases. For oRPC procedures, build those handlers with `buildMockService` /
-  `mockService` (`@vers/client-test-utils/rpc-msw`).
+  `mockService` (`@vers/client-test-utils/orpc`).
 - **Global mock reset** lives in the preload's `afterEach` (`mock.restore()`), never per-test.
 - **A test that mutates global or environment state** restores it in an `onTestFinished(...)`
   callback registered inside the test — not `try`/`finally`, not a lifecycle hook — so teardown runs
