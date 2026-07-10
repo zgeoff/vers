@@ -72,6 +72,7 @@
         "@vers/contract-verification": "workspace:*",
         "@vers/data": "workspace:*",
         "@vers/design-system": "workspace:*",
+        "@vers/flags": "workspace:*",
         "@vers/game-rendering": "workspace:*",
         "@vers/idle-client": "workspace:*",
         "@vers/idle-core": "workspace:*",
@@ -377,6 +378,23 @@
         "happy-dom": "catalog:",
         "msw": "catalog:",
         "typescript": "catalog:",
+      },
+    },
+    "projects/lib-flags": {
+      "name": "@vers/flags",
+      "version": "0.0.0",
+      "dependencies": {
+        "@openfeature/core": "catalog:",
+        "@openfeature/server-sdk": "catalog:",
+        "@orpc/server": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+        "zod": "catalog:",
       },
     },
     "projects/lib-game-rendering": {
@@ -720,6 +738,8 @@
     "@happy-dom/global-registrator": "17.4.3",
     "@ladle/react": "5.1.1",
     "@msw/data": "1.1.6",
+    "@openfeature/core": "1.11.0",
+    "@openfeature/server-sdk": "1.22.0",
     "@opentelemetry/exporter-trace-otlp-proto": "0.219.0",
     "@orpc/client": "1.14.6",
     "@orpc/contract": "1.14.6",
@@ -1156,6 +1176,10 @@
     "@open-draft/logger": ["@open-draft/logger@0.3.0", "", { "dependencies": { "is-node-process": "^1.2.0", "outvariant": "^1.4.0" } }, "sha512-X2g45fzhxH238HKO4xbSr7+wBS8Fvw6ixhTDuvLd5mqh6bJJCFAPwU9mPDxbcrRtfxv4u5IHCEH77BmxvXmmxQ=="],
 
     "@open-draft/until": ["@open-draft/until@2.1.0", "", {}, "sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg=="],
+
+    "@openfeature/core": ["@openfeature/core@1.11.0", "", {}, "sha512-P0u3/ht/oZCQT89fOed+laLk0kZR529a825cS02uPDglxXbE97irWYpDAeRGGVETIzKfuy+H2g8c3Ccv/tXJNQ=="],
+
+    "@openfeature/server-sdk": ["@openfeature/server-sdk@1.22.0", "", { "peerDependencies": { "@openfeature/core": "^1.11.0" } }, "sha512-YBrf6SQkn0FNB/dRAtLEs41dvFMUE8CrQTwI+iLaMFUIqWlqGNJfGnulKSneEKS+2OgKTAC6DdmKcZ6tK7kBcg=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.1", "", {}, "sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q=="],
 
@@ -2060,6 +2084,8 @@
     "@vers/design-system": ["@vers/design-system@workspace:projects/lib-design-system"],
 
     "@vers/email": ["@vers/email@workspace:projects/lib-email"],
+
+    "@vers/flags": ["@vers/flags@workspace:projects/lib-flags"],
 
     "@vers/game-rendering": ["@vers/game-rendering@workspace:projects/lib-game-rendering"],
 
