@@ -9,6 +9,7 @@ import {
   GiHangingSign,
   GiOpenBook,
   GiPolarStar,
+  GiSpikedDragonHead,
   GiStarSwirl,
 } from 'react-icons/gi';
 import { TbAlertSmall, TbCheck, TbCopy, TbMenu2 } from 'react-icons/tb';
@@ -21,14 +22,15 @@ export const Icon = {
 
   // feature specific
   Account: GiCog,
-  Aether: GiStarSwirl,
   Arena: GiCrossedSwords,
   Avatar: GiCharacter,
+  Encounter: GiSpikedDragonHead,
+  Explore: GiStarSwirl,
   Forge: GiAnvil,
   Guild: GiGriffinShield,
   Leaderboard: GiAchievement,
   Market: GiHangingSign,
-  Nexus: GiPolarStar,
+  Respite: GiPolarStar,
   Stash: GiChest,
   Wiki: GiOpenBook,
 };
