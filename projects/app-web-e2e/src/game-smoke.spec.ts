@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('it renders nexus, avatar, and aether for a signed-in caller without console errors', async ({
+test('it renders respite, avatar, and explore for a signed-in caller without console errors', async ({
   page,
 }) => {
   const consoleErrors: Array<string> = [];
@@ -13,7 +13,7 @@ test('it renders nexus, avatar, and aether for a signed-in caller without consol
 
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
 
-  await page.goto('/nexus');
+  await page.goto('/respite');
 
   await expect(page).toHaveURL(/\/login/);
   await page.waitForLoadState('networkidle');
@@ -27,8 +27,8 @@ test('it renders nexus, avatar, and aether for a signed-in caller without consol
 
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  await expect(page).toHaveURL(/\/nexus$/);
-  await expect(page.getByText(/Destiny Awaits a Vessel|Nexus/)).toBeVisible();
+  await expect(page).toHaveURL(/\/respite$/);
+  await expect(page.getByText(/Destiny Awaits a Vessel|Respite/)).toBeVisible();
 
   await page.goto('/avatar');
 
@@ -36,7 +36,7 @@ test('it renders nexus, avatar, and aether for a signed-in caller without consol
   // may not already have an avatar
   await expect(page).toHaveURL(/\/avatar(?<create>\/create)?$/);
 
-  await page.goto('/aether');
+  await page.goto('/explore');
 
   await expect(page.locator('canvas')).toBeVisible();
 
