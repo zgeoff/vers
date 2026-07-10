@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { useAetherGraph } from '../state/use-aether-graph';
 import { useSelectedNode } from '../state/use-selected-node';
 import { filterDistanceGraph } from '../utils/filter-distant-graph';
-import { AetherEdge } from './aether-edge';
-import { AetherNode } from './aether-node';
+import { AetherEdges } from './aether-edges';
+import { AetherNodes } from './aether-nodes';
 import { AxesHelper } from './axes-helper';
 import { DevCamera } from './dev-camera';
 import { Floor } from './floor';
@@ -20,18 +20,17 @@ function useFilteredGraph() {
 export function Scene() {
   const filteredGraph = useFilteredGraph();
 
+  const nodes = useMemo(() => Object.values(filteredGraph.nodes), [filteredGraph]);
+  const edges = useMemo(() => Object.values(filteredGraph.edges), [filteredGraph]);
+
   return (
     <>
       <IsometricCamera />
       <ambientLight intensity={0.8} />
 
       <group rotation={[-Math.PI / 2, 0, 0]}>
-        {Object.values(filteredGraph.nodes).map((node) => (
-          <AetherNode key={node.id} node={node} />
-        ))}
-        {Object.values(filteredGraph.edges).map((edge) => (
-          <AetherEdge key={edge.id} edge={edge} />
-        ))}
+        <AetherNodes nodes={nodes} />
+        <AetherEdges edges={edges} />
       </group>
 
       <Fog />
