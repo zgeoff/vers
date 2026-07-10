@@ -125,28 +125,36 @@ fly secrets set -a vers-app-web \
 rm s2s.key s2s.pub session.key
 ```
 
-Stand up the error tracker: create the app and a public address, create a `bugsink` database in the
-Neon project for its `DATABASE_URL`, then run the first deploy by hand (CI redeploys it on later
-config changes):
+Stand up the error tracker. The first deploy is by hand; CI redeploys it on later config changes.
+The admin credentials live on the `bugsink` item in the `vers` 1Password vault — the same item that
+later carries the MCP token:
 
 ```sh
 fly apps create vers-bugsink --org vers
 fly ips allocate-v4 --shared -a vers-bugsink
 fly ips allocate-v6 -a vers-bugsink
 
+neonctl databases create --name bugsink
+
+BUGSINK_ADMIN_PASSWORD="$(openssl rand -base64 16)"
+op item create --vault vers --category login --title bugsink \
+  --url https://vers-bugsink.fly.dev \
+  "username=me@$DOMAIN" "password=$BUGSINK_ADMIN_PASSWORD"
+
 fly secrets set -a vers-bugsink \
   SECRET_KEY="$(openssl rand -base64 50)" \
-  DATABASE_URL="$BUGSINK_DATABASE_URL" \
-  CREATE_SUPERUSER="me@$DOMAIN:$(openssl rand -base64 16)"
+  DATABASE_URL="<the bugsink database's pooled connection URL>" \
+  CREATE_SUPERUSER="me@$DOMAIN:$BUGSINK_ADMIN_PASSWORD"
 
 fly deploy --config projects/app-bugsink/fly.toml
+fly secrets unset CREATE_SUPERUSER -a vers-bugsink
 ```
 
-Unset `CREATE_SUPERUSER` after first boot. In the Bugsink UI, create one project per app, set each
-project's DSN as that app's `SENTRY_DSN` secret, and set the web project's DSN as the
-`VITE_SENTRY_DSN` GitHub Actions variable plus a `vers-app-web` secret of the same name. Mint an API
-token for CI source-map uploads (`SENTRY_AUTH_TOKEN` GitHub secret) and one for the MCP server
-(`mcp-token` on the `bugsink` item in the `vers` 1Password vault).
+In the Bugsink UI, create one project per app, set each project's DSN as that app's `SENTRY_DSN`
+secret, and set the web project's DSN as the `VITE_SENTRY_DSN` GitHub Actions variable plus a
+`vers-app-web` secret of the same name. Mint an API token for CI source-map uploads
+(`SENTRY_AUTH_TOKEN` GitHub secret) and one for the MCP server, added to the vault item as
+`mcp-token`.
 
 The next push to `main` fills the machines.
 
