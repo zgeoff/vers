@@ -9,16 +9,24 @@ export interface BuildMockServiceOptions<
   TContract extends AnyContractRouter,
   TContext extends Record<string, unknown>,
 > {
-  /** The service's origin, e.g. `http://user.test`; the RPC mount is always `${baseUrl}/rpc`. */
+  /**
+   * The service's origin, e.g. `http://user.test`; the RPC mount is always `${baseUrl}/rpc`.
+   */
   baseUrl: string;
 
-  /** The contract the router must implement; anchors `router`'s type to the real service shape. */
+  /**
+   * The contract the router must implement; anchors `router`'s type to the real service shape.
+   */
   contract: TContract;
 
-  /** Builds per-call context (e.g. `actingUserId`) from a request's forwarded headers. */
+  /**
+   * Builds per-call context (e.g. `actingUserId`) from a request's forwarded headers.
+   */
   resolveContext: (request: Request) => TContext | Promise<TContext>;
 
-  /** A full `implement(contract)` router; every leaf handled, backend storage is the caller's choice. */
+  /**
+   * A full `implement(contract)` router; every leaf handled, backend storage is the caller's choice.
+   */
   router: Router<TContract, TContext>;
 }
 

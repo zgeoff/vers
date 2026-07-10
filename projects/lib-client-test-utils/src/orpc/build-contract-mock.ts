@@ -13,7 +13,9 @@ import { http } from 'msw';
 import { RPC_PREFIX } from './rpc-prefix';
 import { toRPCHTTPPath } from './to-rpc-http-path';
 
-/** Arguments passed to a mocked procedure's handler function. */
+/**
+ * Arguments passed to a mocked procedure's handler function.
+ */
 export interface MockProcedureHandlerArgs<
   TInput,
   TContext extends Record<string, unknown>,
@@ -26,7 +28,9 @@ export interface MockProcedureHandlerArgs<
   readonly request: Request;
 }
 
-/** A mocked procedure's output: a static value, or a function computing it per call. */
+/**
+ * A mocked procedure's output: a static value, or a function computing it per call.
+ */
 export type MockProcedureHandler<
   TInput,
   TOutput,
@@ -39,14 +43,18 @@ export type MockProcedureHandler<
       args: MockProcedureHandlerArgs<TInput, TContext, TErrorMap>,
     ) => Promise<Response | TOutput> | Response | TOutput);
 
-/** The leaf the proxy exposes at a contract procedure's path. */
+/**
+ * The leaf the proxy exposes at a contract procedure's path.
+ */
 export interface MockProcedureProxy<
   TInput,
   TOutput,
   TContext extends Record<string, unknown>,
   TErrorMap extends ErrorMap,
 > {
-  /** Registers a narrow MSW handler matching exactly this procedure's RPC URL. */
+  /**
+   * Registers a narrow MSW handler matching exactly this procedure's RPC URL.
+   */
   handler: (mock: MockProcedureHandler<TInput, TOutput, TContext, TErrorMap>) => HttpHandler;
 }
 
@@ -67,7 +75,9 @@ type MockServiceProxyNode<TNode, TContext extends Record<string, unknown>> =
       ? { [K in keyof TNode]: MockServiceProxyNode<TNode[K], TContext> }
       : never;
 
-/** A typed proxy mirroring a contract's procedure tree; every leaf exposes `.handler(mock)`. */
+/**
+ * A typed proxy mirroring a contract's procedure tree; every leaf exposes `.handler(mock)`.
+ */
 export type MockServiceProxy<
   TContract extends AnyContractRouter,
   TContext extends Record<string, unknown>,
@@ -77,13 +87,19 @@ export interface MockServiceOptions<
   TContract extends AnyContractRouter,
   TContext extends Record<string, unknown>,
 > {
-  /** The service's origin, e.g. `http://user.test`; the RPC mount is always `${baseUrl}/rpc`. */
+  /**
+   * The service's origin, e.g. `http://user.test`; the RPC mount is always `${baseUrl}/rpc`.
+   */
   baseUrl: string;
 
-  /** The contract the proxy mirrors; anchors every leaf's input/output/error types. */
+  /**
+   * The contract the proxy mirrors; anchors every leaf's input/output/error types.
+   */
   contract: TContract;
 
-  /** Builds per-call context (e.g. `actingUserId`) from a request's forwarded headers. */
+  /**
+   * Builds per-call context (e.g. `actingUserId`) from a request's forwarded headers.
+   */
   resolveContext: (request: Request) => TContext | Promise<TContext>;
 }
 
@@ -104,7 +120,9 @@ export function buildContractMock<
   return buildProxyNode(options, []) as MockServiceProxy<TContract, TContext>;
 }
 
-/** Arguments a mocked procedure's handler function receives, once its types are erased. */
+/**
+ * Arguments a mocked procedure's handler function receives, once its types are erased.
+ */
 interface LooseMockFnArgs {
   readonly context: Record<string, unknown>;
   readonly errors: unknown;
@@ -113,18 +131,24 @@ interface LooseMockFnArgs {
   readonly request: Request;
 }
 
-/** A mocked procedure's handler function, once its input/output/error/context types are erased. */
+/**
+ * A mocked procedure's handler function, once its input/output/error/context types are erased.
+ */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- generic callback-arg object; members are caller-typed, no deep-readonly satisfies the rule
 type LooseMockFn = (args: LooseMockFnArgs) => unknown;
 
-/** The loosely-typed view of `MockServiceOptions` this module's runtime traversal operates over. */
+/**
+ * The loosely-typed view of `MockServiceOptions` this module's runtime traversal operates over.
+ */
 interface UntypedMockServiceOptions {
   baseUrl: string;
   contract: AnyContractRouter;
   resolveContext: (request: Request) => Promise<Record<string, unknown>> | Record<string, unknown>;
 }
 
-/** Recursively builds the proxy tree, tracking the dot-path walked so far. */
+/**
+ * Recursively builds the proxy tree, tracking the dot-path walked so far.
+ */
 function buildProxyNode<
   TContract extends AnyContractRouter,
   TContext extends Record<string, unknown>,
@@ -147,7 +171,9 @@ function buildProxyNode<
   });
 }
 
-/** Builds the narrow MSW handler for one procedure's `.handler(mock)` call. */
+/**
+ * Builds the narrow MSW handler for one procedure's `.handler(mock)` call.
+ */
 function buildProcedureHandler(
   options: Readonly<UntypedMockServiceOptions>,
   path: ReadonlyArray<string>,
@@ -181,7 +207,9 @@ function buildProcedureHandler(
   });
 }
 
-/** Arguments a single implemented procedure's inner handler receives. */
+/**
+ * Arguments a single implemented procedure's inner handler receives.
+ */
 interface ProcedureImplementerHandlerArgs {
   readonly context: Record<string, unknown>;
   readonly errors: unknown;
@@ -189,7 +217,9 @@ interface ProcedureImplementerHandlerArgs {
   readonly path: ReadonlyArray<string>;
 }
 
-/** The shape `implement(contract)` exposes at a single procedure's path. */
+/**
+ * The shape `implement(contract)` exposes at a single procedure's path.
+ */
 interface ProcedureImplementer {
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- generic callback-arg object; members are caller-typed, no deep-readonly satisfies the rule
   handler: (fn: (opts: ProcedureImplementerHandlerArgs) => Promise<unknown>) => AnyRouter;
@@ -232,7 +262,9 @@ function buildMockProcedure(
   });
 }
 
-/** Rebuilds the nested router shape a single implemented procedure needs to sit at its path. */
+/**
+ * Rebuilds the nested router shape a single implemented procedure needs to sit at its path.
+ */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- oRPC AnyRouter is a live router handle; no readonly form
 function buildNestedRouter(path: ReadonlyArray<string>, leaf: AnyRouter): AnyRouter {
   return path.reduceRight<AnyRouter>((accumulator, segment) => ({ [segment]: accumulator }), leaf);

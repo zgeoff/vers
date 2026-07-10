@@ -25,7 +25,9 @@ export async function createTransactionTestDB(): Promise<TestDBHandle> {
 
 let workerDB: Promise<Kysely<DB>> | undefined;
 
-/** One template clone per test process, memoized: every acquire shares the same underlying database. */
+/**
+ * One template clone per test process, memoized: every acquire shares the same underlying database.
+ */
 function getWorkerDB(): Promise<Kysely<DB>> {
   workerDB ??= buildWorkerDB();
 

@@ -26,7 +26,9 @@ const secretContract = {
     .output(z.object({ value: z.string() })),
 };
 
-/** Reads the acting user from a bearer token forwarded on the `Authorization` header. */
+/**
+ * Reads the acting user from a bearer token forwarded on the `Authorization` header.
+ */
 function resolveContext(request: Request): SecretContext {
   const header = request.headers.get('authorization') ?? '';
   const actingUserId = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
@@ -34,7 +36,9 @@ function resolveContext(request: Request): SecretContext {
   return { actingUserId };
 }
 
-/** Runs a client call expected to reject with a defined oRPC error, and returns it. */
+/**
+ * Runs a client call expected to reject with a defined oRPC error, and returns it.
+ */
 async function runRejectingCall(call: () => Promise<unknown>): Promise<ORPCError<string, unknown>> {
   try {
     await call();

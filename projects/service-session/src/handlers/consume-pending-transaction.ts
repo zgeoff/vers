@@ -4,12 +4,16 @@ import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload } from '../types';
 import { toPendingTransactionData } from './to-pending-transaction-data';
 
-/** Payload shape for the `TRANSACTION_MISMATCH` error, naming the first field that didn't match. */
+/**
+ * Payload shape for the `TRANSACTION_MISMATCH` error, naming the first field that didn't match.
+ */
 interface TransactionMismatchPayload {
   readonly data: { readonly field: 'action' | 'ipAddress' | 'sessionID' | 'target' };
 }
 
-/** oRPC handler opts for the public `stepUp.consumePendingTransaction` procedure. */
+/**
+ * oRPC handler opts for the public `stepUp.consumePendingTransaction` procedure.
+ */
 interface ConsumePendingTransactionOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;

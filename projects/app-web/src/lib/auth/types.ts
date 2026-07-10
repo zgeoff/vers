@@ -1,4 +1,6 @@
-/** The `en_session` cookie's stored shape: the caller's live session plus its target expiry. */
+/**
+ * The `en_session` cookie's stored shape: the caller's live session plus its target expiry.
+ */
 export interface AuthSessionData {
   readonly accessToken?: string;
   readonly expires?: string;
@@ -19,5 +21,7 @@ type VerifySessionKey =
   | 'loginLogout#userID'
   | 'onboarding#email';
 
-/** A write with an explicit `undefined` value clears that key. */
+/**
+ * A write with an explicit `undefined` value clears that key.
+ */
 export type VerifySessionData = Partial<Record<VerifySessionKey, string | undefined>>;

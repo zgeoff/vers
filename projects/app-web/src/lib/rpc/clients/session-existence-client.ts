@@ -5,7 +5,9 @@ import type { sessionContract } from '@vers/contract-session';
 import { createEdgeServiceToken } from '../create-edge-service-token';
 import { SERVICE_URLS } from '../service-urls';
 
-/** The per-call context this client requires: who the outbound s2s token's `sub` claim names. */
+/**
+ * The per-call context this client requires: who the outbound s2s token's `sub` claim names.
+ */
 interface SessionExistenceClientContext {
   readonly actingUserID: string;
 }

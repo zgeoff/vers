@@ -3,7 +3,9 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload } from '../types';
 
-/** oRPC handler opts for the `resetPassword` procedure. */
+/**
+ * oRPC handler opts for the `resetPassword` procedure.
+ */
 interface ResetPasswordOpts {
   readonly errors: {
     readonly INVALID_RESET_TOKEN: (payload: EmptyErrorPayload) => Error;

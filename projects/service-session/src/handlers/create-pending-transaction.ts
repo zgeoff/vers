@@ -5,7 +5,9 @@ import { PENDING_TRANSACTION_TTL } from '../consts';
 import type { EmptyErrorPayload } from '../types';
 import { toPendingTransactionData } from './to-pending-transaction-data';
 
-/** oRPC handler opts for the public `stepUp.createPendingTransaction` procedure. */
+/**
+ * oRPC handler opts for the public `stepUp.createPendingTransaction` procedure.
+ */
 interface CreatePendingTransactionOpts {
   readonly errors: {
     readonly CONFLICT: (payload: EmptyErrorPayload) => Error;
@@ -54,7 +56,9 @@ export async function createPendingTransaction(
   }
 }
 
-/** postgres.js surfaces a unique-constraint violation as SQLSTATE 23505. */
+/**
+ * postgres.js surfaces a unique-constraint violation as SQLSTATE 23505.
+ */
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
 }

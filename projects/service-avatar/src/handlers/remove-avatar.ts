@@ -2,7 +2,9 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 
-/** oRPC handler opts for the authed `deleteAvatar` procedure. */
+/**
+ * oRPC handler opts for the authed `deleteAvatar` procedure.
+ */
 interface RemoveAvatarOpts {
   readonly context: { readonly actingUserId: null | string };
   readonly errors: {
@@ -12,7 +14,9 @@ interface RemoveAvatarOpts {
   readonly input: { readonly id: string };
 }
 
-/** Removes an avatar owned by the acting user; throws NOT_FOUND when they don't own it. */
+/**
+ * Removes an avatar owned by the acting user; throws NOT_FOUND when they don't own it.
+ */
 export async function removeAvatar(
   db: Kysely<DB>,
   opts: RemoveAvatarOpts,

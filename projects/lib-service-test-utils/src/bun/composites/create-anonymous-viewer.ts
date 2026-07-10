@@ -5,7 +5,9 @@ interface CreateAnonymousViewerConfig {
   readonly audience: string;
 }
 
-/** An s2s-authenticated token carrying no acting user, for anonymous-call test cases. */
+/**
+ * An s2s-authenticated token carrying no acting user, for anonymous-call test cases.
+ */
 export async function createAnonymousViewer(
   config: Readonly<CreateAnonymousViewerConfig>,
 ): Promise<{ token: string }> {

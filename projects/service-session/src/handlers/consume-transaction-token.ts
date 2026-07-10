@@ -1,7 +1,9 @@
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 
-/** oRPC handler opts for the public `stepUp.consumeTransactionToken` procedure. */
+/**
+ * oRPC handler opts for the public `stepUp.consumeTransactionToken` procedure.
+ */
 interface ConsumeTransactionTokenOpts {
   readonly input: { readonly expiresAt: Date; readonly jti: string };
 }

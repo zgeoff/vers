@@ -14,7 +14,9 @@ export const Route = createFileRoute('/reset-password-started')({
 
 const pageInfo = css({ marginBottom: '8', textAlign: 'center' });
 
-/** A pure server component: a confirmation page with no client-interactive parts. */
+/**
+ * A pure server component: a confirmation page with no client-interactive parts.
+ */
 function ResetPasswordStarted() {
   return (
     <>

@@ -1,4 +1,6 @@
-/** The test container's base connection URI and migrated template database name. */
+/**
+ * The test container's base connection URI and migrated template database name.
+ */
 interface TestDBTarget {
   readonly baseURI: string;
   readonly templateDB: string;

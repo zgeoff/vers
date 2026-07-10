@@ -3,7 +3,9 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { toPendingTransactionData } from './to-pending-transaction-data';
 
-/** oRPC handler opts for the public `stepUp.getPendingTransaction` procedure. */
+/**
+ * oRPC handler opts for the public `stepUp.getPendingTransaction` procedure.
+ */
 interface GetPendingTransactionOpts {
   readonly input: { readonly id: string };
 }

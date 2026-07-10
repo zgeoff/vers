@@ -5,7 +5,9 @@ import type { EmptyErrorPayload } from '../types';
 
 const RESET_TOKEN_TTL_MS = 10 * 60 * 1000;
 
-/** oRPC handler opts for the `createPasswordResetToken` procedure. */
+/**
+ * oRPC handler opts for the `createPasswordResetToken` procedure.
+ */
 interface CreatePasswordResetTokenOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;

@@ -8,11 +8,15 @@ import * as z from 'zod';
 import { buildAvatarRouter } from './build-router';
 
 interface CreateAvatarServiceConfig {
-  /** Injected only in tests, to run the service inside the test's own transaction. */
+  /**
+   * Injected only in tests, to run the service inside the test's own transaction.
+   */
   readonly db?: Kysely<DB>;
 }
 
-/** Boots the avatar service; the production entrypoint and tests both call this as the one shared config. */
+/**
+ * Boots the avatar service; the production entrypoint and tests both call this as the one shared config.
+ */
 export function createAvatarService(
   config: CreateAvatarServiceConfig = {},
 ): Promise<Service<{ DATABASE_URL: z.ZodString }>> {

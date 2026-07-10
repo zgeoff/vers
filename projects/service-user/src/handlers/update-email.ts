@@ -2,7 +2,9 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, FieldConflictPayload, MissingSessionPayload } from '../types';
 
-/** oRPC handler opts for the authed `updateEmail` procedure. */
+/**
+ * oRPC handler opts for the authed `updateEmail` procedure.
+ */
 interface UpdateEmailOpts {
   readonly context: { readonly actingUserId: null | string };
   readonly errors: {
@@ -114,7 +116,9 @@ async function runGuardedEmailUpdate(
   return result.length > 0;
 }
 
-/** postgres.js surfaces a unique-constraint violation as SQLSTATE 23505, naming the constraint. */
+/**
+ * postgres.js surfaces a unique-constraint violation as SQLSTATE 23505, naming the constraint.
+ */
 function isEmailViolation(error: unknown): boolean {
   return (
     typeof error === 'object' &&

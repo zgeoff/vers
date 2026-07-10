@@ -2,7 +2,9 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { MissingSessionPayload } from '../types';
 
-/** oRPC handler opts for the authed `deleteSession` procedure. */
+/**
+ * oRPC handler opts for the authed `deleteSession` procedure.
+ */
 interface RemoveSessionOpts {
   readonly context: { readonly actingUserId: null | string };
   readonly errors: {

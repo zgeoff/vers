@@ -4,7 +4,9 @@ import { sql } from 'kysely';
 import { MAX_TRANSACTION_ATTEMPTS } from '../consts';
 import type { EmptyErrorPayload } from '../types';
 
-/** oRPC handler opts for the public `stepUp.recordFailedAttempt` procedure. */
+/**
+ * oRPC handler opts for the public `stepUp.recordFailedAttempt` procedure.
+ */
 interface RecordFailedAttemptOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -55,7 +57,9 @@ export async function recordFailedAttempt(
   throw opts.errors.NOT_FOUND({ data: {} });
 }
 
-/** Deletes the pending transaction if it has reached the second-to-last allowed attempt. */
+/**
+ * Deletes the pending transaction if it has reached the second-to-last allowed attempt.
+ */
 async function removeIfAtCap(db: Kysely<DB>, id: string): Promise<boolean> {
   const result = await db
     .deleteFrom('pendingTransactions')

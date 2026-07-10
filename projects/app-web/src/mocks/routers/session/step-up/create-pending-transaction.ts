@@ -1,7 +1,9 @@
 import * as db from '../../../db';
 import { os } from '../os';
 
-/** How long a pending step-up transaction stays consumable before it must be restarted. */
+/**
+ * How long a pending step-up transaction stays consumable before it must be restarted.
+ */
 const PENDING_TRANSACTION_TTL_MS = 10 * 60 * 1000;
 
 export const createPendingTransaction = os.stepUp.createPendingTransaction.handler((opts) => {

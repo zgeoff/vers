@@ -2,7 +2,9 @@ import { getSession } from '@tanstack/react-start/server';
 import { buildVerifySessionConfig } from './build-verify-session-config';
 import type { VerifySessionData } from './types';
 
-/** Reads the caller's in-flight verification state; empty once the 10-minute window lapses. */
+/**
+ * Reads the caller's in-flight verification state; empty once the 10-minute window lapses.
+ */
 export async function getVerifySession(): Promise<VerifySessionData> {
   const session = await getSession<VerifySessionData>(buildVerifySessionConfig());
 

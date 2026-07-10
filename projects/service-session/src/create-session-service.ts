@@ -9,7 +9,9 @@ import * as z from 'zod';
 import { buildSessionRouter } from './build-router';
 
 interface CreateSessionServiceConfig {
-  /** Injected only in tests, to run the service inside the test's own transaction. */
+  /**
+   * Injected only in tests, to run the service inside the test's own transaction.
+   */
   readonly db?: Kysely<DB>;
 }
 
@@ -19,7 +21,9 @@ const SESSION_ENV_SHAPE = {
   JWT_SIGNING_PRIVKEY: z.string(),
 };
 
-/** Boots the session service; the production entrypoint and tests both call this as the one shared config. */
+/**
+ * Boots the session service; the production entrypoint and tests both call this as the one shared config.
+ */
 export function createSessionService(
   config: CreateSessionServiceConfig = {},
 ): Promise<Service<typeof SESSION_ENV_SHAPE>> {

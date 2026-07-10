@@ -7,7 +7,9 @@ import { updateAuthSession } from '../auth/update-auth-session';
 import { sessionExistenceClient } from './clients/session-existence-client';
 import { sessionRefreshClient } from './clients/session-refresh-client';
 
-/** How far ahead of the access token's real `exp` a refresh is triggered proactively. */
+/**
+ * How far ahead of the access token's real `exp` a refresh is triggered proactively.
+ */
 const REFRESH_SKEW_SECONDS = 30;
 
 interface RefreshedTokens {

@@ -3,7 +3,9 @@ import * as z from 'zod';
 import { VerificationDataSchema } from './verification-data-schema';
 import { VerificationTypeSchema } from './verification-type-schema';
 
-/** The verification service's API: TOTP-backed codes for 2FA, email change, and onboarding. */
+/**
+ * The verification service's API: TOTP-backed codes for 2FA, email change, and onboarding.
+ */
 export const verificationContract = {
   createVerification: publicRoute
     .route({ method: 'POST', path: '/verifications', summary: 'Create a verification code' })

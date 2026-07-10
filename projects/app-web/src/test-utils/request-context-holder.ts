@@ -1,11 +1,15 @@
-/** One faked cookie session: mirrors the shape `@tanstack/react-start/server` itself returns. */
+/**
+ * One faked cookie session: mirrors the shape `@tanstack/react-start/server` itself returns.
+ */
 export interface FakeSession {
   createdAt: number;
   data: Record<string, unknown>;
   id: string;
 }
 
-/** The ambient request state a `withRequestContext` call is currently driving. */
+/**
+ * The ambient request state a `withRequestContext` call is currently driving.
+ */
 export interface RequestContextState {
   readonly headers: Headers;
   readonly ip: string | undefined;

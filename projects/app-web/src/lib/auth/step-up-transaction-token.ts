@@ -3,12 +3,16 @@ import type { SecureAction } from '@vers/contract-session';
 import { SecureActionSchema } from '@vers/contract-session';
 import * as jose from 'jose';
 
-/** How long a minted step-up transaction token stays redeemable. */
+/**
+ * How long a minted step-up transaction token stays redeemable.
+ */
 const TRANSACTION_TOKEN_TTL_MS = 5 * 60 * 1000;
 
 const TRANSACTION_TOKEN_ISSUER = 'vers-web-step-up';
 
-/** Claims a step-up transaction token carries; `jti` is its single-use replay-guard id. */
+/**
+ * Claims a step-up transaction token carries; `jti` is its single-use replay-guard id.
+ */
 interface StepUpTransactionClaims {
   readonly action: SecureAction;
   readonly expiresAt: Date;
@@ -54,7 +58,9 @@ export async function mintStepUpTransactionToken(
   return { expiresAt, jti, token };
 }
 
-/** Verifies a step-up transaction token's signature and expiry, returning its claims. */
+/**
+ * Verifies a step-up transaction token's signature and expiry, returning its claims.
+ */
 export async function verifyStepUpTransactionToken(
   token: string,
 ): Promise<StepUpTransactionClaims> {
