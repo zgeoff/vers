@@ -15,12 +15,10 @@
       "entry": ["scripts/**/*.ts"],
       "project": ["scripts/**/*.ts"],
       "ignoreDependencies": [
-        "@parcel/watcher",
         "@playwright/test",
         "@stylistic/eslint-plugin",
         "@zgeoff/bun-test-extended",
-        "@zgeoff/oxlint-config",
-        "playwright"
+        "@zgeoff/oxlint-config"
       ]
     },
     "projects/app-web": {
@@ -32,14 +30,14 @@
         "src/router.tsx",
         "src/mocks/browser.ts"
       ],
-      "ignoreDependencies": ["jest-extended", "pino", "pino-pretty", "pino-sentry-transport"]
+      "ignoreDependencies": ["pino", "pino-pretty", "pino-sentry-transport"]
     },
     "projects/lib-db": {
       "entry": ["kysely.config.ts", "migrations/*.ts", "seeds/*.ts"]
     },
     "projects/service-*": {
       "entry": ["src/serve.ts"],
-      "ignoreDependencies": ["@orpc/contract", "jest-extended"]
+      "ignoreDependencies": ["@orpc/contract"]
     },
     "projects/lib-service-utils": {
       "ignoreDependencies": ["pino-pretty", "pino-sentry-transport"]

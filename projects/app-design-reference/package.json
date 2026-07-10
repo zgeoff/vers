@@ -6,6 +6,9 @@
   "license": "",
   "type": "module",
   "scripts": {
-    "dev": "bunx serve public"
+    "dev": "serve public"
+  },
+  "devDependencies": {
+    "serve": "catalog:"
   }
 }

@@ -8,15 +8,15 @@ pre-commit:
   jobs:
     - name: oxlint --fix
       glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}'
-      run: bunx oxlint --fix --no-error-on-unmatched-pattern {staged_files}
+      run: node_modules/.bin/oxlint --fix --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     - name: oxfmt
       glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,jsonc,md,css,yml,yaml,html}'
-      run: bunx oxfmt --no-error-on-unmatched-pattern {staged_files}
+      run: node_modules/.bin/oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     - name: format-codemod
       glob: '*.{ts,tsx}'
-      run: bunx format-codemod --quiet {staged_files}
+      run: node_modules/.bin/format-codemod --quiet {staged_files}
       stage_fixed: true
     - name: codegen:styles
       glob: 'projects/**/*.{ts,tsx}'
@@ -29,7 +29,7 @@ pre-commit:
 commit-msg:
   jobs:
     - name: commitlint
-      run: bunx commitlint --edit {1}
+      run: node_modules/.bin/commitlint --edit {1}
 
 pre-push:
   parallel: true
@@ -39,6 +39,8 @@ pre-push:
     - name: lint
       run: bun run lint
     - name: typecheck
-      run: bunx turbo run typecheck
+      run: node_modules/.bin/turbo run typecheck
+    - name: deadcode
+      run: bun run deadcode
     - name: test (changed)
-      run: bunx turbo run test --affected
+      run: node_modules/.bin/turbo run test --affected
