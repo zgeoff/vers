@@ -28,14 +28,26 @@ test('it serves the anonymous home page server-rendered and hydrates the session
 
 test('it serves the signed-in home page server-rendered and hydrates the session badge', async ({
   page,
-  request,
 }) => {
-  await page.setExtraHTTPHeaders({ authorization: 'Bearer dev-session' });
+  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
 
-  const rawResponse = await request.get('/', {
-    headers: { authorization: 'Bearer dev-session' },
-  });
+  await page.goto('/login');
+  await page.waitForLoadState('networkidle');
 
+  await page.getByLabel('Email').fill('demo@vers.test');
+  await page.getByLabel('Password').fill('password123');
+
+  // the honeypot rejects any submission under 1.5s old as bot-paced — real typing naturally
+  // clears it, a scripted fill+click doesn't
+  await page.waitForTimeout(1600);
+
+  await page.getByRole('button', { exact: true, name: 'Login' }).click();
+
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'));
+
+  // the raw SSR body, read through the page's own cookie jar — the bare `request` fixture keeps a
+  // separate jar and would render anonymous
+  const rawResponse = await page.request.get('/');
   const rawBody = await rawResponse.text();
 
   expect(rawBody).toContain('data-testid="home-signed-in"');
