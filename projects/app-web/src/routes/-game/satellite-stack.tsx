@@ -11,9 +11,8 @@ const stack = css({
 });
 
 /**
- * Positions every registered satellite (`useSatellite`) as a card stack fixed to the
- * bottom-right of the viewport, above the persistent canvas and clear of the top-anchored
- * `GameNav`.
+ * Positions every registered satellite widget as a card stack fixed to the bottom-right of the
+ * viewport, above the persistent canvas and clear of the top-anchored nav.
  */
 export function SatelliteStack() {
   return (
