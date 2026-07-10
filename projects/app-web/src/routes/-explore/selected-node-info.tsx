@@ -13,7 +13,7 @@ export function SelectedNodeInfo() {
     <div>
       <Text data-testid="selected-node-id">Aether Node ({node.id})</Text>
       <Text data-testid="selected-node-difficulty">Difficulty {node.difficulty}</Text>
-      <Link to="/aether/current">Click to start</Link>
+      <Link to="/explore/current">Click to start</Link>
     </div>
   );
 }
