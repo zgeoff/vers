@@ -12,9 +12,7 @@ export const Route = createFileRoute('/')({
     const [{ Renderable }] = await Promise.all([
       getHomeContent(),
       opts.context.queryClient
-        .ensureQueryData(
-          opts.context.orpc.user.getCurrentUser.queryOptions({ input: {}, retry: false }),
-        )
+        .ensureQueryData(opts.context.orpc.user.getCurrentUser.queryOptions({ input: {} }))
         .catch(() => {}),
       opts.context.queryClient.ensureQueryData(sessionBadgeQueryOptions),
     ]);

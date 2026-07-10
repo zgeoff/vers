@@ -1,9 +1,9 @@
-import { QueryClient } from '@tanstack/react-query';
 import { createRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
 import { createIsomorphicFn } from '@tanstack/react-start';
 import { getRequestHeader } from '@tanstack/react-start/server';
 import { useSceneStateStore } from '@vers/game-rendering';
+import { buildQueryClient } from './lib/query/build-query-client';
 import { orpc } from './lib/rpc/orpc';
 import { classifySceneTransition } from './lib/scene/classify-scene-transition';
 import { resolveSceneStateForLocation } from './lib/scene/resolve-scene-state-for-location';
@@ -25,7 +25,7 @@ const getCSPNonce = createIsomorphicFn()
  * Builds a fresh router + query client pair for each request (SSR) or the one browser session.
  */
 export function getRouter() {
-  const queryClient = new QueryClient();
+  const queryClient = buildQueryClient();
 
   const nonce = getCSPNonce();
 

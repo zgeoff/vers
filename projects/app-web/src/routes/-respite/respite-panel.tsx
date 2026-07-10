@@ -9,7 +9,7 @@ interface RespitePanelProps {
 }
 
 export function RespitePanel(props: RespitePanelProps) {
-  const query = useQuery(props.orpc.avatar.getAvatars.queryOptions({ input: {}, retry: false }));
+  const query = useQuery(props.orpc.avatar.getAvatars.queryOptions({ input: {} }));
 
   if (query.isPending) {
     return <Text data-testid="respite-loading">Loading your avatar…</Text>;

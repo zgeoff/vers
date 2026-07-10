@@ -88,7 +88,7 @@ test('it throws NOT_FOUND when the user does not exist', async () => {
   });
 });
 
-test('it throws NO_PASSWORD for a user without a password', async () => {
+test('it throws PASSWORD_NOT_SET for a user without a password', async () => {
   await using ctx = await setupTest();
 
   const created = await createTestUser(ctx.db, { password: null });
@@ -97,6 +97,6 @@ test('it throws NO_PASSWORD for a user without a password', async () => {
   const client = buildRPCTestClient<UserContract>(ctx.app, { token: viewer.token });
 
   expect(client.createPasswordResetToken({ id: created.user.id })).rejects.toMatchObject({
-    code: 'NO_PASSWORD',
+    code: 'PASSWORD_NOT_SET',
   });
 });

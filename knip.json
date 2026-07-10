@@ -30,7 +30,7 @@
         "src/mocks/browser.ts",
         "src/lib/scene/types.ts"
       ],
-      "ignoreDependencies": ["pino", "pino-pretty", "pino-sentry-transport"]
+      "ignoreDependencies": ["pino", "pino-pretty"]
     },
     "projects/lib-db": {
       "entry": ["kysely.config.ts", "migrations/*.ts", "seeds/*.ts"]
@@ -40,7 +40,7 @@
       "ignoreDependencies": ["@orpc/contract"]
     },
     "projects/lib-service-utils": {
-      "ignoreDependencies": ["pino-pretty", "pino-sentry-transport"]
+      "ignoreDependencies": ["pino-pretty"]
     },
     "projects/lib-design-system": {
       "ignoreDependencies": [

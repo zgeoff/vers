@@ -16,6 +16,30 @@ Express a true invariant — a condition only a bug can break — with `tiny-inv
 (`invariant(value, 'message')`) rather than a hand-rolled `if`/`throw`. A condition real input can
 trigger is ordinary control flow, not an invariant.
 
+## Error handling
+
+The full conventions — taxonomy, code registry, trace context, reporting split — live in
+`docs/error-handling.md`. The rules a PR must satisfy:
+
+- A procedure handler throws only its typed `opts.errors.*` constructors or `invariant()`. No
+  try/catch for logging or reporting in handlers — the central `onError` interceptor in
+  `createService` owns that.
+- Every contract `.errors({…})` map is built with `defineErrors` (`@vers/contract-base`). A bespoke
+  code (any code outside oRPC's canonical set) declares an explicit `status` and lands with its row
+  in the `docs/error-handling.md` registry table in the same PR; bespoke codes are named
+  `NOUN_PROBLEM`.
+- Clients narrow on `code` via `isDefinedError`/`safe` and act on `data` fields — never on `message`
+  strings.
+- The Sentry SDK is the only path to the error backend; pino is a log-only sink. Never wire a log
+  transport to the error backend, and never `captureException` in code the central hooks (service
+  interceptor, query caches, root error boundary) already cover.
+- app-web: form validation returns `submission.reply()`, navigation and access control throw
+  `redirect()`/`Response`, faults throw and land on a route `errorComponent`. Retry policy is
+  central in `buildQueryClient`; a per-query `retry` override needs a behavioural reason the default
+  policy can't express.
+- Function-naming extension to the shared taxonomy — pure producers: `define<X>` is an identity
+  helper whose only job is compile-time constraint of its literal argument (`defineErrors`).
+
 ## Writing
 
 ### Banned words

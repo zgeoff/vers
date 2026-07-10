@@ -1,4 +1,3 @@
-import { userContract } from '@vers/contract-user';
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
@@ -25,7 +24,6 @@ export function createUserService(
       buildUserRouter({
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
       }),
-    contract: userContract,
     envShape: { DATABASE_URL: z.string() },
     name: 'service-user',
   });

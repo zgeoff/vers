@@ -1,10 +1,14 @@
-import { authedRoute, publicRoute } from '@vers/contract-base';
+import { authedRoute, defineErrors, publicRoute } from '@vers/contract-base';
 import * as z from 'zod';
 import { NameSchema } from './name-schema';
 import { PasswordSchema } from './password-schema';
 import { UserDataSchema } from './user-data-schema';
 import { UserEmailSchema } from './user-email-schema';
 import { UsernameSchema } from './username-schema';
+
+const CreateUserConflictDataSchema = z.object({ field: z.enum(['email', 'username']) });
+const UpdateEmailConflictDataSchema = z.object({ field: z.literal('email') });
+const UpdateUserConflictDataSchema = z.object({ field: z.literal('username') });
 
 /**
  * The user service's API: signup, credential checks, and profile mutation.
@@ -14,9 +18,11 @@ export const userContract = {
     .route({ method: 'POST', path: '/users/me/password', summary: "Change the caller's password" })
     .input(z.object({ password: PasswordSchema }))
     .output(z.object({ updatedID: z.string() }))
-    .errors({
-      NOT_FOUND: { data: z.object({}), message: 'User not found' },
-    }),
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'User not found' },
+      }),
+    ),
 
   createPasswordResetToken: publicRoute
     .route({
@@ -26,10 +32,16 @@ export const userContract = {
     })
     .input(z.object({ id: z.string() }))
     .output(z.object({ resetToken: z.string() }))
-    .errors({
-      NOT_FOUND: { data: z.object({}), message: 'User not found' },
-      NO_PASSWORD: { data: z.object({}), message: 'User has no password set' },
-    }),
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'User not found' },
+        PASSWORD_NOT_SET: {
+          data: z.object({}),
+          message: 'User has no password set',
+          status: 409,
+        },
+      }),
+    ),
 
   createUser: publicRoute
     .route({ method: 'POST', path: '/users', summary: 'Create a user' })
@@ -42,12 +54,14 @@ export const userContract = {
       }),
     )
     .output(UserDataSchema)
-    .errors({
-      CONFLICT: {
-        data: z.object({ field: z.enum(['email', 'username']) }),
-        message: 'A user with that email or username already exists',
-      },
-    }),
+    .errors(
+      defineErrors({
+        CONFLICT: {
+          data: CreateUserConflictDataSchema,
+          message: 'A user with that email or username already exists',
+        },
+      }),
+    ),
 
   getCurrentUser: authedRoute
     .route({ method: 'GET', path: '/users/me', summary: 'Get the currently authenticated user' })
@@ -69,35 +83,49 @@ export const userContract = {
       }),
     )
     .output(z.object({}))
-    .errors({
-      INVALID_RESET_TOKEN: { data: z.object({}), message: 'Invalid reset token' },
-      NOT_FOUND: { data: z.object({}), message: 'User not found' },
-      RESET_TOKEN_EXPIRED: { data: z.object({}), message: 'Reset token expired' },
-    }),
+    .errors(
+      defineErrors({
+        INVALID_RESET_TOKEN: {
+          data: z.object({}),
+          message: 'Invalid reset token',
+          status: 422,
+        },
+        NOT_FOUND: { data: z.object({}), message: 'User not found' },
+        RESET_TOKEN_EXPIRED: {
+          data: z.object({}),
+          message: 'Reset token expired',
+          status: 410,
+        },
+      }),
+    ),
 
   updateEmail: authedRoute
     .route({ method: 'PATCH', path: '/users/me/email', summary: "Change the caller's email" })
     .input(z.object({ email: UserEmailSchema }))
     .output(z.object({ updatedID: z.string() }))
-    .errors({
-      CONFLICT: {
-        data: z.object({ field: z.literal('email') }),
-        message: 'A user with that email already exists',
-      },
-      NOT_FOUND: { data: z.object({}), message: 'User not found' },
-    }),
+    .errors(
+      defineErrors({
+        CONFLICT: {
+          data: UpdateEmailConflictDataSchema,
+          message: 'A user with that email already exists',
+        },
+        NOT_FOUND: { data: z.object({}), message: 'User not found' },
+      }),
+    ),
 
   updateUser: authedRoute
     .route({ method: 'PATCH', path: '/users/me', summary: "Update the caller's profile" })
     .input(z.object({ name: NameSchema.optional(), username: UsernameSchema.optional() }))
     .output(z.object({ updatedID: z.string() }))
-    .errors({
-      CONFLICT: {
-        data: z.object({ field: z.literal('username') }),
-        message: 'A user with that username already exists',
-      },
-      NOT_FOUND: { data: z.object({}), message: 'User not found' },
-    }),
+    .errors(
+      defineErrors({
+        CONFLICT: {
+          data: UpdateUserConflictDataSchema,
+          message: 'A user with that username already exists',
+        },
+        NOT_FOUND: { data: z.object({}), message: 'User not found' },
+      }),
+    ),
 
   verifyPassword: publicRoute
     .route({ method: 'POST', path: '/users/verify-password', summary: "Check a user's password" })

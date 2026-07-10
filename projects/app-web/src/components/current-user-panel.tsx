@@ -7,7 +7,7 @@ interface CurrentUserPanelProps {
 }
 
 export function CurrentUserPanel(props: CurrentUserPanelProps) {
-  const query = useQuery(props.orpc.user.getCurrentUser.queryOptions({ input: {}, retry: false }));
+  const query = useQuery(props.orpc.user.getCurrentUser.queryOptions({ input: {} }));
 
   if (query.isPending) {
     return <p data-testid="current-user-panel-loading">Loading session…</p>;

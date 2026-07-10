@@ -1,4 +1,3 @@
-import { verificationContract } from '@vers/contract-verification';
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
@@ -25,7 +24,6 @@ export function createVerificationService(
       buildVerificationRouter({
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
       }),
-    contract: verificationContract,
     envShape: { DATABASE_URL: z.string() },
     name: 'service-verification',
   });

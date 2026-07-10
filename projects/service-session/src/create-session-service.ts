@@ -1,4 +1,3 @@
-import { sessionContract } from '@vers/contract-session';
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
@@ -36,7 +35,6 @@ export function createSessionService(
         // imported once at boot, not per request: every handler reuses this same resolved key
         signingKey: await jose.importPKCS8(runtime.env.JWT_SIGNING_PRIVKEY, 'RS256'),
       }),
-    contract: sessionContract,
     envShape: SESSION_ENV_SHAPE,
     name: 'service-session',
   });
