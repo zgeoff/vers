@@ -13,7 +13,7 @@ const ANSI = {
  * The one logger capability this middleware needs — satisfied structurally by the app's pino
  * instance without pulling pino's own types into this module's public signature.
  */
-export interface RequestLoggerSink {
+interface RequestLoggerSink {
   readonly info: (message: string) => void;
 }
 

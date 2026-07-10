@@ -33,7 +33,7 @@ const spinner = css({
   opacity: '[1]',
 });
 
-export type Props = RecipeVariantProps<typeof wrapper> & {
+type Props = RecipeVariantProps<typeof wrapper> & {
   className?: string;
   color?: string;
 };

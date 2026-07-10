@@ -18,7 +18,6 @@
     "@vers/contract-verification": "workspace:*",
     "@vers/db": "workspace:*",
     "@vers/service-runtime": "workspace:*",
-    "elysia": "catalog:",
     "kysely": "catalog:",
     "zod": "catalog:"
   },

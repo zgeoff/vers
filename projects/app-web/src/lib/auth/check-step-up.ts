@@ -6,12 +6,12 @@ import { verificationClient } from '../rpc/clients/verification-client';
 import { getAuthSession } from './get-auth-session';
 import { verifyStepUpTransactionToken } from './step-up-transaction-token';
 
-export type CheckStepUpResult =
+type CheckStepUpResult =
   | { readonly status: 'not-needed' }
   | { readonly status: 'required'; readonly transactionID: string }
   | { readonly status: 'verified' };
 
-export interface CheckStepUpOptions {
+interface CheckStepUpOptions {
   readonly action: SecureAction;
   readonly target: string;
   readonly token: string | undefined;

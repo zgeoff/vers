@@ -50,7 +50,7 @@ export function NodeTooltip(props: Readonly<NodeTooltipProps>) {
 }
 
 // util to prevent us from having SSR issues with document not being defined
-export function useDocument() {
+function useDocument() {
   const [myDocument, setMyDocument] = useState<Document | null>(null);
 
   useEffect(() => {

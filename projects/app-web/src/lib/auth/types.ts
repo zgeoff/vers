@@ -11,7 +11,7 @@ export interface AuthSessionData {
  * Keys are prefixed with the flow they belong to so two in-flight flows sharing the one
  * `en_verification` cookie can't clobber each other's state.
  */
-export type VerifySessionKey =
+type VerifySessionKey =
   | 'login2FA#sessionID'
   | 'login2FA#target'
   | 'loginLogout#email'

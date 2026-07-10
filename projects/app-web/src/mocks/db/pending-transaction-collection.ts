@@ -9,7 +9,7 @@ import * as z from 'zod';
  * and every other field defaults to a live, consumable, fresh-attempt state, so tests state only
  * the fields they wire between rows or assert on.
  */
-export const PendingTransactionRowSchema = PendingTransactionDataSchema.extend({
+const PendingTransactionRowSchema = PendingTransactionDataSchema.extend({
   attempts: z.int().default(0),
   expiresAt: z.date().default(() => faker.date.soon()),
   id: z.string().default(() => createId()),

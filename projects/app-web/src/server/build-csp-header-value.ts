@@ -1,4 +1,4 @@
-export interface BuildCSPHeaderValueOptions {
+interface BuildCSPHeaderValueOptions {
   readonly nonce: string;
   readonly sentryEnabled: boolean;
 }

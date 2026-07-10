@@ -1,5 +1,5 @@
 /** The part of a URL {@link getLoginPathWithRedirect} needs to rebuild the page a guard bounced. */
-export interface RedirectSource {
+interface RedirectSource {
   readonly pathname: string;
   readonly search: string;
 }

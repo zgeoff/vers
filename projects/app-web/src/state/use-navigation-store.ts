@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export interface NavigationStore {
+interface NavigationStore {
   visible: boolean;
 }
 

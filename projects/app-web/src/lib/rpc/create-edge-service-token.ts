@@ -9,7 +9,7 @@ const ALGORITHM = 'EdDSA';
 // imported once at module scope, not per call: every mint reuses this same resolved key
 const privateKey = jose.importPKCS8(env.SERVICE_AUTH_PRIVATE_KEY, ALGORITHM);
 
-export interface CreateEdgeServiceTokenOptions {
+interface CreateEdgeServiceTokenOptions {
   readonly actingUserID: string | null;
   readonly audience: ServiceName;
 }

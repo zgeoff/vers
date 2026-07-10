@@ -5,7 +5,7 @@ import { z } from 'zod';
 // own catalog pin); this app is on zod 4, so the equivalent enums are declared locally rather than
 // composed across the major-version boundary. `addEnvUtils` is plain-function generic, not
 // zod-typed, so it stays reusable regardless of which zod produced its input.
-export const envSchema = z.object({
+const envSchema = z.object({
   LOGGING: z.enum(['debug', 'info', 'warn', 'error']).optional().default('info'),
   NODE_ENV: z.enum(['development', 'e2e', 'production', 'test']),
   SENTRY_DSN: z.url().optional(),

@@ -8,7 +8,7 @@ import * as z from 'zod';
  * A stored mock avatar row: the public `AvatarDataSchema` with every field defaulted, so tests
  * state only the fields they assert on. `userID` defaults to a random id, not a real user's.
  */
-export const AvatarRowSchema = AvatarDataSchema.extend({
+const AvatarRowSchema = AvatarDataSchema.extend({
   class: AvatarClassSchema.default('brute'),
   createdAt: z.date().default(() => new Date()),
   id: z.string().default(() => createId()),

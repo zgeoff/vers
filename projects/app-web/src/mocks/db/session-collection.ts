@@ -8,7 +8,7 @@ import * as z from 'zod';
  * A stored mock session row: the public `SessionDataSchema` plus the token pair it gates. The
  * defaults describe a live, verified session; tests state only the fields they assert on.
  */
-export const SessionRowSchema = SessionDataSchema.extend({
+const SessionRowSchema = SessionDataSchema.extend({
   createdAt: z.date().default(() => new Date()),
   expiresAt: z.date().default(() => faker.date.soon()),
   id: z.string().default(() => createId()),

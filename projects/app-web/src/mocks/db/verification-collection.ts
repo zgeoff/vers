@@ -8,7 +8,7 @@ import * as z from 'zod';
  * `type` stays required: a verification is meaningless without the flow it gates, so tests must
  * state it.
  */
-export const VerificationRowSchema = VerificationDataSchema.extend({
+const VerificationRowSchema = VerificationDataSchema.extend({
   code: z.string().default('123456'),
   expiresAt: z.date().nullable().default(null),
   id: z.string().default(() => createId()),

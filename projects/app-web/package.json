@@ -79,7 +79,6 @@
     "@vitejs/plugin-react": "catalog:",
     "@vitejs/plugin-rsc": "catalog:",
     "@zgeoff/bun-test-extended": "catalog:",
-    "autoprefixer": "catalog:",
     "babel-plugin-react-compiler": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:"

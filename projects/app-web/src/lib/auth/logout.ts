@@ -4,7 +4,7 @@ import { clearAuthSession } from './clear-auth-session';
 import { getAuthSession } from './get-auth-session';
 import { toSafeRedirectPath } from './to-safe-redirect-path';
 
-export interface LogoutOptions {
+interface LogoutOptions {
   readonly deleteSession?: boolean;
   readonly redirectTo?: string;
 }

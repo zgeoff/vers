@@ -30,7 +30,7 @@ interface RateLimitWindow {
   resetAt: number;
 }
 
-export interface MakeRateLimiterOptions {
+interface MakeRateLimiterOptions {
   readonly maxMultiple: number;
 }
 

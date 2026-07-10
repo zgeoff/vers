@@ -3,7 +3,7 @@ import { getAuthSession } from './get-auth-session';
 import { getLoginPathWithRedirect } from './get-login-path-with-redirect';
 import { logout } from './logout';
 
-export interface AuthResult {
+interface AuthResult {
   readonly accessToken: string;
   readonly refreshToken: string;
   readonly sessionID: string;

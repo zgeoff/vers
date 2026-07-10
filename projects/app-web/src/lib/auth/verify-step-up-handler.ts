@@ -14,9 +14,9 @@ export const VerifyStepUpInputSchema = z.object({
   transactionID: z.string().min(1),
 });
 
-export type VerifyStepUpInput = z.infer<typeof VerifyStepUpInputSchema>;
+type VerifyStepUpInput = z.infer<typeof VerifyStepUpInputSchema>;
 
-export type VerifyStepUpResult =
+type VerifyStepUpResult =
   | { readonly attemptsRemaining: number; readonly status: 'invalid-code' }
   | { readonly status: 'verified'; readonly token: string };
 

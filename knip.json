@@ -1,0 +1,65 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": [
+    "**/augment-bun-test.ts",
+    "**/*.generated.ts",
+    "projects/app-design-reference/public/**",
+    "projects/lib-aether-core/generate-graph.ts"
+  ],
+  "ignoreBinaries": ["ladle", "op", "pulumi"],
+  "rules": { "enumMembers": "off" },
+  "workspaces": {
+    ".": {
+      "vite": { "config": [] },
+      "vitest": { "config": [] },
+      "entry": ["scripts/**/*.ts"],
+      "project": ["scripts/**/*.ts"],
+      "ignoreDependencies": [
+        "@parcel/watcher",
+        "@playwright/test",
+        "@stylistic/eslint-plugin",
+        "@zgeoff/bun-test-extended",
+        "@zgeoff/oxlint-config",
+        "playwright"
+      ]
+    },
+    "projects/app-web": {
+      "entry": [
+        "src/routes/**/*.{ts,tsx}",
+        "src/server.ts",
+        "src/client.tsx",
+        "src/client-sentry.ts",
+        "src/router.tsx",
+        "src/mocks/browser.ts"
+      ],
+      "ignoreDependencies": ["jest-extended", "pino", "pino-pretty", "pino-sentry-transport"]
+    },
+    "projects/lib-db": {
+      "entry": ["kysely.config.ts", "migrations/*.ts", "seeds/*.ts"]
+    },
+    "projects/service-*": {
+      "entry": ["src/serve.ts"],
+      "ignoreDependencies": ["@orpc/contract", "jest-extended"]
+    },
+    "projects/lib-service-utils": {
+      "ignoreDependencies": ["pino-pretty", "pino-sentry-transport"]
+    },
+    "projects/lib-design-system": {
+      "ignoreDependencies": [
+        "@fontsource-variable/manrope",
+        "@fontsource/chakra-petch",
+        "@fontsource/ibm-plex-mono",
+        "happy-dom"
+      ]
+    },
+    "projects/lib-styled-system": {
+      "ignoreDependencies": ["react"]
+    },
+    "projects/lib-aether-client": {
+      "ignoreDependencies": ["happy-dom"]
+    },
+    "projects/lib-email": {
+      "ignoreDependencies": ["happy-dom"]
+    }
+  }
+}

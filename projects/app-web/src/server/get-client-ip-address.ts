@@ -2,7 +2,7 @@
  * A `Request` carrying the runtime's best-effort peer address, when the runtime exposes one (srvx
  * sets this from the underlying socket on Node).
  */
-export interface RequestWithIP extends Request {
+interface RequestWithIP extends Request {
   readonly ip?: string;
 }
 

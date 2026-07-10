@@ -18,7 +18,6 @@
     "@vers/db": "workspace:*",
     "@vers/game-utils": "workspace:*",
     "@vers/service-runtime": "workspace:*",
-    "elysia": "catalog:",
     "kysely": "catalog:",
     "zod": "catalog:"
   },
