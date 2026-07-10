@@ -2,9 +2,6 @@ import type { QueryClient } from '@tanstack/react-query';
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import type { OrpcQueryUtils } from '../lib/rpc/orpc';
-// codegen (`panda cssgen`) writes this file; nothing else in the app imports it, so without this
-// the page never links a stylesheet and every panda-generated class -- preflight, tokens, view
-// transition rules included -- has no effect in the browser
 import appStyles from '../styled-system/styles.css?url';
 
 export interface RouterAppContext {
