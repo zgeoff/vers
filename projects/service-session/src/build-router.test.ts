@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
-import { collectConformanceCases } from '@vers/contract-base/test-utils';
 import { sessionContract } from '@vers/contract-session';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
+import { collectConformanceCases } from '@vers/test-utils';
 import { createSessionService } from './create-session-service';
 
 async function setupTest() {
