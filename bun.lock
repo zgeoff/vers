@@ -109,6 +109,7 @@
         "@types/react-dom": "catalog:",
         "@types/three": "catalog:",
         "@vers/client-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
         "@vitejs/plugin-react": "catalog:",
         "@vitejs/plugin-rsc": "catalog:",
         "@zgeoff/bun-test-extended": "catalog:",
@@ -199,6 +200,7 @@
         "@orpc/client": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
+        "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "typescript": "catalog:",
         "zod": "catalog:",
@@ -372,6 +374,7 @@
         "@types/node": "catalog:",
         "@types/react": "catalog:",
         "@vers/client-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "happy-dom": "catalog:",
         "msw": "catalog:",
@@ -528,6 +531,26 @@
       "devDependencies": {
         "@pandacss/dev": "catalog:",
         "typescript": "catalog:",
+      },
+    },
+    "projects/lib-test-utils": {
+      "name": "@vers/test-utils",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/client": "catalog:",
+        "@orpc/contract": "catalog:",
+        "@orpc/openapi": "catalog:",
+        "@orpc/server": "catalog:",
+        "@orpc/zod": "catalog:",
+        "jose": "catalog:",
+        "msw": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+        "zod": "catalog:",
       },
     },
     "projects/lib-utils": {
@@ -2009,6 +2032,8 @@
     "@vers/service-verification": ["@vers/service-verification@workspace:projects/service-verification"],
 
     "@vers/styled-system": ["@vers/styled-system@workspace:projects/lib-styled-system"],
+
+    "@vers/test-utils": ["@vers/test-utils@workspace:projects/lib-test-utils"],
 
     "@vers/utils": ["@vers/utils@workspace:projects/lib-utils"],
 

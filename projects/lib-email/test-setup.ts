@@ -1,7 +1,7 @@
 import { afterEach, expect } from 'bun:test';
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
-import { registerMSWLifecycle } from '@vers/client-test-utils/test-setup';
+import { registerMSWLifecycle } from '@vers/test-utils/bun';
 import { server } from './src/mocks/node';
 
 // bun's native web-stream classes, captured before happy-dom overwrites them with its own

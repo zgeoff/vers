@@ -25,6 +25,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@vers/client-test-utils": "workspace:*",
+    "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "happy-dom": "catalog:",
     "msw": "catalog:",

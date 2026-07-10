@@ -3,7 +3,7 @@ import { afterEach, expect } from 'bun:test';
 import { faker } from '@faker-js/faker';
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
-import { registerMSWLifecycle } from '@vers/client-test-utils/test-setup';
+import { registerMSWLifecycle } from '@vers/test-utils/bun';
 import { server } from './src/mocks/node';
 import { registerAetherCanvasMock } from './src/test-utils/register-aether-canvas-mock';
 import { registerAetherNodeCodexSlotMock } from './src/test-utils/register-aether-node-codex-slot-mock';

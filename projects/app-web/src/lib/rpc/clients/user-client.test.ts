@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { isDefinedError, safe } from '@orpc/client';
-import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
+import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { userContract } from '@vers/contract-user';
 import { server } from '../../../mocks/node';
 import { SERVICE_URLS } from '../service-urls';
