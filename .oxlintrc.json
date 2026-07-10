@@ -299,6 +299,7 @@
         "projects/lib-contract-verification/**",
         "projects/lib-contract-avatar/**",
         "projects/lib-client-test-utils/**",
+        "projects/lib-test-utils/**",
         "projects/service-avatar/**",
         "projects/service-session/**",
         "projects/service-user/**",

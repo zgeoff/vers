@@ -2,7 +2,6 @@ import { expect, test } from 'bun:test';
 import { oc } from '@orpc/contract';
 import { implement } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/fetch';
-import { expect, test } from 'vitest';
 import * as z from 'zod';
 import type { ConformanceCaseApp } from './collect-conformance-cases';
 import { collectConformanceCases } from './collect-conformance-cases';

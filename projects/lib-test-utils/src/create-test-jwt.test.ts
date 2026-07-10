@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import { expect, test } from 'vitest';
 import { createTestJWT } from './create-test-jwt';
 
 test('it creates a valid JWT with the provided configuration', async () => {
