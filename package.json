@@ -131,7 +131,7 @@
     "build": "turbo run build",
     "build:agents": "bash scripts/build-agents-md.sh agents/shared.md agents/project.md AGENTS.md",
     "boundaries": "turbo boundaries",
-    "deadcode": "bun scripts/run-knip.ts",
+    "deadcode": "knip",
     "lint": "turbo run codegen typegen && oxlint --type-aware --type-check --report-unused-disable-directives-severity error",
     "lint:fix": "turbo run codegen typegen && oxlint --type-aware --type-check --report-unused-disable-directives-severity error --fix",
     "test": "turbo run test",
