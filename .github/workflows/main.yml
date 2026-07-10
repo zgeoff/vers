@@ -72,6 +72,9 @@ jobs:
       - name: Generate Styles
         run: bun run codegen:styles
 
+      - name: Dead Code
+        run: bun run deadcode
+
       - name: Check Formatting
         run: bun run format:check
 
@@ -88,7 +91,7 @@ jobs:
 
       - name: E2E Tests
         id: e2e
-        run: bunx turbo run e2e --affected
+        run: node_modules/.bin/turbo run e2e --affected
 
       - name: Upload Videos Of Failed E2E
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -115,7 +118,7 @@ jobs:
         if: ${{ success() }}
         run: |
           # names are <>-wrapped so the contains() gates can't substring-match
-          affected="$(bunx turbo run build --affected --dry=json | jq -r '.packages[] | "<\(.)>"')"
+          affected="$(node_modules/.bin/turbo run build --affected --dry=json | jq -r '.packages[] | "<\(.)>"')"
           echo "${affected}"
           delimiter="$(openssl rand -hex 8)"
           echo "affected-projects<<${delimiter}" >> "${GITHUB_OUTPUT}"

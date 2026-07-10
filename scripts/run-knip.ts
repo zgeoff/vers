@@ -1,4 +1,5 @@
 import { rmSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 /**
  * knip's Vite/Vitest/Ladle plugins insist on loading a root `vite.config.ts`, but the isolated
@@ -8,12 +9,18 @@ import { rmSync, writeFileSync } from 'node:fs';
  */
 const stubURL = new URL('../vite.config.ts', import.meta.url);
 
+/**
+ * The workspace-installed binary is spawned by path so the catalog-pinned version always runs —
+ * PATH- or registry-based lookups can silently substitute a different release.
+ */
+const knipBin = fileURLToPath(new URL('../node_modules/.bin/knip', import.meta.url));
+
 writeFileSync(stubURL, 'export default {};\n');
 
 let exitCode = 0;
 
 try {
-  const result = Bun.spawnSync(['bunx', 'knip', ...Bun.argv.slice(2)], {
+  const result = Bun.spawnSync([knipBin, ...Bun.argv.slice(2)], {
     stderr: 'inherit',
     stdin: 'inherit',
     stdout: 'inherit',

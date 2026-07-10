@@ -66,6 +66,9 @@ jobs:
       - name: Generate Styles
         run: bun run codegen:styles
 
+      - name: Dead Code
+        run: bun run deadcode
+
       - name: Check Formatting
         run: bun run format:check
 
@@ -78,14 +81,14 @@ jobs:
           bun run test
 
       - name: Build
-        run: bunx turbo run build --affected
+        run: node_modules/.bin/turbo run build --affected
 
       - name: Install E2E browsers
         run: bun run playwright install --with-deps --only-shell chromium
 
       - name: E2E Tests
         id: e2e
-        run: bunx turbo run e2e --affected
+        run: node_modules/.bin/turbo run e2e --affected
 
       - name: Upload Videos Of Failed E2E
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

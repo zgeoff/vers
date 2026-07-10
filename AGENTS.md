@@ -326,6 +326,12 @@ PR and promotes it into `lib-design-system` when a second consumer appears.
 - `bun run build` — `turbo run build`; one project via `--filter`.
 - `bun run e2e` — `turbo run e2e` (Playwright, `app-web-e2e`).
 - `bun run boundaries` — `turbo boundaries`.
+- `bun run deadcode` — knip over the whole workspace (`knip.json` at the root;
+  `scripts/run-knip.ts` writes a throwaway root `vite.config.ts` stub that knip's Vite-family
+  plugins insist on loading). Blocking in CI and pre-push. It needs codegen output present — a
+  missing router typegen reports as an unresolved import. A dependency knip can't see
+  (runtime-string imports, type-only peers, test preloads, css-imported fonts) gets a `knip.json`
+  ignore in the PR that introduces it.
 - Git hooks: lefthook (`lefthook.yml`, installed by `prepare`). Pre-push tests changed files only
   (`turbo run test --affected`, so each affected project's own runner is used) — the full suite is
   CI's. `LEFTHOOK=0` skips all hooks.
