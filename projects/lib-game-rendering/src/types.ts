@@ -11,3 +11,5 @@ export interface SceneState {
   readonly presentation: Presentation;
   readonly scene: SceneKey;
 }
+
+export type GameLoopCallback = (delta: number, elapsed: number) => void;
