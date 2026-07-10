@@ -7,6 +7,7 @@ import { registerMSWLifecycle } from '@vers/test-utils/bun';
 import { server } from './src/mocks/node';
 import { registerAetherNodeCodexSlotMock } from './src/test-utils/register-aether-node-codex-slot-mock';
 import { registerAetherSceneMock } from './src/test-utils/register-aether-scene-mock';
+import { registerAvatarViewerMock } from './src/test-utils/register-avatar-viewer-mock';
 import { registerGameCanvasMock } from './src/test-utils/register-game-canvas-mock';
 import { registerIdleWorkerHandleMock } from './src/test-utils/register-idle-worker-handle-mock';
 import { registerRequestContextMock } from './src/test-utils/register-request-context-mock';
@@ -41,6 +42,8 @@ registerRequestContextMock();
 registerIdleWorkerHandleMock();
 
 registerGameCanvasMock();
+
+registerAvatarViewerMock();
 
 registerAetherSceneMock();
 
