@@ -142,6 +142,8 @@ Libraries:
 - `lib-db` - kysely connection helper, migrations, and generated database types
 - `lib-design-system` - ui component library (Ark UI primitives + Panda recipes)
 - `lib-email` - Resend wrapper and react-email template factories
+- `lib-game-rendering` - client rendering shell: scene/presentation state for the persistent
+  three.js canvas
 - `lib-game-utils` - shared game logic (encounter derivation, rewards)
 - `lib-idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
 - `lib-idle-core` - deterministic seeded simulation engine
