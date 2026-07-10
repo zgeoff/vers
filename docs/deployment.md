@@ -44,10 +44,14 @@ rolls out:
 1. Neon migrations apply once — several services share the one database, so migration never runs per
    service.
 2. Each affected app's image builds and pushes to `registry.fly.io/<app>:<sha>`.
-3. `flyctl deploy --image` ships each affected app with the `bluegreen` strategy: a new machine must
-   pass its `/health` check before traffic cuts over, so a broken boot blocks the release.
+3. `flyctl deploy --image` ships each affected app, retried up to three times against transient
+   `syd` host-capacity refusals. `app-web` uses the `bluegreen` strategy — a full parallel fleet
+   passes `/health` before traffic cuts over atomically — because it is the one public app.
+   Services use `rolling` with `max_unavailable = 1`, updating a machine in place while the other
+   keeps serving; a broken boot fails the health gate and halts the rollout with the old machine
+   still up.
 4. `app-web`'s public `/health` is polled as an end-to-end check. A service, being private, is
-   verified by its bluegreen health gate alone.
+   verified by its rollout health gate alone.
 
 Only a fully green run deploys, and only affected apps.
 
