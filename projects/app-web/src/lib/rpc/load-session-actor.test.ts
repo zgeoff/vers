@@ -99,6 +99,40 @@ test('it hits getSession at most once per request for a fresh access token', asy
   expect(callCount).toBe(1);
 });
 
+test('it fails the call and keeps the cookie when the session cannot be confirmed', async () => {
+  const session = await db.sessionCollection.create({});
+  const accessToken = await createMockAccessToken(session.userID);
+
+  const mockSession = buildContractMock({
+    baseUrl: SERVICE_URLS.session,
+    contract: sessionContract,
+    resolveContext: resolveSessionContext,
+  });
+
+  server.use(
+    mockSession.getSession.handler(() => {
+      throw new Error('session service unreachable');
+    }),
+  );
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken,
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+          userID: session.userID,
+        },
+      },
+    },
+    () => loadSessionActor().catch((error: unknown) => error),
+  );
+
+  expect(outcome.value).toBeInstanceOf(Error);
+  expect(outcome.cookies['en_session']).toContainEntry(['sessionID', session.id]);
+});
+
 test('it refreshes a stale access token once, updates the cookie, and returns the acting user', async () => {
   const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
   const staleAccessToken = await createMockAccessToken(session.userID, '-1s');
@@ -141,6 +175,40 @@ test('it clears the cookie and returns null when the refresh itself fails', asyn
 
   expect(outcome.value).toBeNull();
   expect(outcome.cookies['en_session']).toBeUndefined();
+});
+
+test('it fails the call and keeps the cookie when the refresh errors without a verdict on the session', async () => {
+  const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
+  const staleAccessToken = await createMockAccessToken(session.userID, '-1s');
+
+  const mockSession = buildContractMock({
+    baseUrl: SERVICE_URLS.session,
+    contract: sessionContract,
+    resolveContext: resolveSessionContext,
+  });
+
+  server.use(
+    mockSession.refreshTokens.handler(() => {
+      throw new Error('session service unreachable');
+    }),
+  );
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken: staleAccessToken,
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+          userID: session.userID,
+        },
+      },
+    },
+    () => loadSessionActor().catch((error: unknown) => error),
+  );
+
+  expect(outcome.value).toBeInstanceOf(Error);
+  expect(outcome.cookies['en_session']).toContainEntry(['sessionID', session.id]);
 });
 
 test('it single-flights concurrent refreshes for the same session', async () => {

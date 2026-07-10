@@ -1,4 +1,4 @@
-import { safe } from '@orpc/client';
+import { isDefinedError, safe } from '@orpc/client';
 import { getRequest } from '@tanstack/react-start/server';
 import * as jose from 'jose';
 import { clearAuthSession } from '../auth/clear-auth-session';
@@ -29,9 +29,11 @@ const inFlightRefreshes = new Map<string, Promise<RefreshedTokens | undefined>>(
  * trusted to mint an s2s token. Even a fresh access token no longer settles that on its own — this
  * closes the token's own trust window by confirming the session row still exists on every call,
  * request-scoped-memoized so the repeated calls one SSR request makes hit the session service at
- * most once per session. `null` covers no live session, a failed refresh, and a session the
- * confirmation found gone — the cookie is cleared in the latter two cases, and the caller's own
- * guard redirects to login on its next request.
+ * most once per session. `null` covers no live session, a definitively rejected refresh, and a
+ * session the confirmation found gone — the cookie is cleared in the latter two cases, and the
+ * caller's own guard redirects to login on its next request. A session service that can't be
+ * reached at all fails the call instead: an unreachable service is never grounds to trust the
+ * token or to destroy the cookie.
  */
 export async function loadSessionActor(): Promise<string | null> {
   const session = await getAuthSession();
@@ -138,6 +140,12 @@ async function resolveRefreshedTokens(
   }
 }
 
+/**
+ * Rotates the session's token pair, mapping only the contract's declared rejections (session gone,
+ * expired, or token reuse) to `undefined` so the caller signs the session out. A transport failure
+ * or unexpected service error stays a throw — it says nothing about the session, so it must not
+ * end it.
+ */
 async function runRefresh(
   sessionID: string,
   refreshToken: string,
@@ -146,5 +154,13 @@ async function runRefresh(
     sessionRefreshClient.refreshTokens({ id: sessionID, refreshToken }),
   );
 
-  return error === null ? tokens : undefined;
+  if (error === null) {
+    return tokens;
+  }
+
+  if (isDefinedError(error)) {
+    return undefined;
+  }
+
+  throw error;
 }
