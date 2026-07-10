@@ -11,11 +11,11 @@ interface SessionExistenceClientContext {
 }
 
 /**
- * A bare session client for `loadSessionActor`'s own per-request session-existence check: plain
- * `fetch`, minting an s2s token for the caller-supplied acting user directly. `loadSessionActor` is
- * what establishes a cookie session's identity in the first place, so calling through the
- * isomorphic session client — whose server link derives an omitted acting user id by calling
- * `loadSessionActor` itself — would recurse without bound.
+ * A bare session client for the per-request session-existence check: plain `fetch`, minting an s2s
+ * token for the caller-supplied acting user directly. The check runs inside the routine that
+ * establishes a cookie session's identity, and the isomorphic session client's server link derives
+ * an omitted acting user id from that same routine — so calling through it would recurse without
+ * bound.
  */
 export const sessionExistenceClient: ContractRouterClient<
   typeof sessionContract,

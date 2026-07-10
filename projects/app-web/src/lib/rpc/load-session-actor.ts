@@ -82,8 +82,8 @@ function isAccessTokenStale(accessToken: string): boolean {
 
 /**
  * Per-request cache of the session-existence check, keyed by the ambient request object: a `Map`
- * per request holding one in-flight/settled lookup per session id, so the several `loadSessionActor`
- * calls one SSR request makes for the same session share a single `getSession` round trip. Never a
+ * per request holding one in-flight/settled lookup per session id, so the several identity loads
+ * one SSR request makes for the same session share a single existence round trip. Never a
  * module-level TTL cache — that would trust an evicted session for the life of the process instead
  * of just the request that read it.
  */

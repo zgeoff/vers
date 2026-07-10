@@ -2,6 +2,7 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { ACCESS_TOKEN_DURATION } from '../consts';
 import { createJWT } from '../create-jwt';
+import { isDeadlockError } from '../is-deadlock-error';
 import type { EmptyErrorPayload, SessionSigningDeps } from '../types';
 
 /** oRPC handler opts for the public `verifySession` procedure. */
@@ -112,9 +113,4 @@ function runVerifyAndEvictStatement(
     .selectFrom('verified')
     .select('id')
     .execute();
-}
-
-/** postgres.js surfaces a deadlock as SQLSTATE 40P01. */
-function isDeadlockError(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === '40P01';
 }
