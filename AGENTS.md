@@ -201,6 +201,13 @@ implementing that algorithm — forcing list verbs onto textbook terms hides the
 - Pin exact versions — no `^`/`~` ranges. (`bun add` saves exact automatically via `exact = true` in
   bunfig.toml — the rule applies to hand-written edits.)
 
+## Issue hygiene
+
+Triage a GitHub issue the moment it's opened, not in a later pass: assign the delivery-phase
+milestone, apply the area, type, and priority labels, record blocking edges against the issues it
+depends on, add it to the delivery board, and set its board status. An open issue that isn't on the
+board with a milestone and status is a defect.
+
 ## Type-only modules
 
 A module whose exports are all types or interfaces is a defect: those exports belong in the
