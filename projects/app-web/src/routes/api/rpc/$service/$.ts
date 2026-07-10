@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
+import type { ServiceName } from '@vers/service-auth';
 import { sendRPCRequest } from '../../../../lib/proxy/send-rpc-request';
-import type { ServiceName } from '../../../../lib/rpc/service-urls';
 import { SERVICE_URLS } from '../../../../lib/rpc/service-urls';
 
 /**

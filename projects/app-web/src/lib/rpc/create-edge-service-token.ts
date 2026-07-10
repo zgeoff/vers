@@ -1,13 +1,9 @@
-import * as jose from 'jose';
+import type { ServiceName } from '@vers/service-auth';
+import { createServiceToken, parseServicePrivateKey } from '@vers/service-auth';
 import { env } from '../../server/env';
-import type { ServiceName } from './service-urls';
-
-// the issuer and algorithm the services verify s2s tokens against
-const ISSUER = 'vers-edge';
-const ALGORITHM = 'EdDSA';
 
 // imported once at module scope, not per call: every mint reuses this same resolved key
-const privateKey = jose.importPKCS8(env.SERVICE_AUTH_PRIVATE_KEY, ALGORITHM);
+const privateKey = parseServicePrivateKey(env.SERVICE_AUTH_PRIVATE_KEY);
 
 interface CreateEdgeServiceTokenOptions {
   readonly actingUserID: string | null;
@@ -15,24 +11,15 @@ interface CreateEdgeServiceTokenOptions {
 }
 
 /**
- * Mints the 60s s2s token every outbound service call carries, signed with this app's edge key.
+ * Mints the s2s token every outbound service call carries, signed with this app's edge key.
  * `actingUserID` becomes the token's `sub` claim; `null` mints a verified-anonymous token instead.
  */
 export async function createEdgeServiceToken(
   options: Readonly<CreateEdgeServiceTokenOptions>,
 ): Promise<string> {
-  // services verify `aud` against their registered name, which carries the `service-` prefix
-  const jwt = new jose.SignJWT({})
-    .setProtectedHeader({ alg: ALGORITHM })
-    .setIssuer(ISSUER)
-    .setAudience(`service-${options.audience}`)
-    .setExpirationTime('60s');
-
-  if (options.actingUserID !== null) {
-    jwt.setSubject(options.actingUserID);
-  }
-
-  const key = await privateKey;
-
-  return jwt.sign(key);
+  return createServiceToken({
+    audience: options.audience,
+    privateKey: await privateKey,
+    ...(options.actingUserID !== null && { actingUserId: options.actingUserID }),
+  });
 }

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { TOKEN_ALGORITHM } from '@vers/service-runtime';
+import { TOKEN_ALGORITHM } from '@vers/service-auth';
 import * as jose from 'jose';
 import { getTestServiceKeyPair } from '../get-test-service-key-pair';
 import { createAnonymousViewer } from './create-anonymous-viewer';

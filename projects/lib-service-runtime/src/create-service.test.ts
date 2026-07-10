@@ -1,13 +1,13 @@
 import { expect, test } from 'bun:test';
 import { implement } from '@orpc/server';
 import { authedRoute, publicRoute } from '@vers/contract-base';
+import { TOKEN_ALGORITHM, TOKEN_ISSUER } from '@vers/service-auth';
 import { buildRPCTestClient, collectConformanceCases } from '@vers/test-utils';
 import { expectTypeOf } from 'expect-type';
 import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
 import * as z from 'zod';
 import { createService } from './create-service';
-import { TOKEN_ALGORITHM, TOKEN_ISSUER } from './token-claims';
 import type { ServiceContext } from './types';
 
 const OPENAPI_RESPONSES_SHAPE = z.record(z.string(), z.unknown());

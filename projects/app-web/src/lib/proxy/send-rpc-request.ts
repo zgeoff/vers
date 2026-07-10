@@ -1,6 +1,6 @@
+import type { ServiceName } from '@vers/service-auth';
 import { createEdgeServiceToken } from '../rpc/create-edge-service-token';
 import { loadSessionActor } from '../rpc/load-session-actor';
-import type { ServiceName } from '../rpc/service-urls';
 import { SERVICE_URLS } from '../rpc/service-urls';
 
 /**

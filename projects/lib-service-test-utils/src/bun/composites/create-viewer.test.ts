@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { TOKEN_ALGORITHM } from '@vers/service-runtime';
+import { TOKEN_ALGORITHM } from '@vers/service-auth';
 import * as jose from 'jose';
 import { createTestDB } from '../create-test-db';
 import { getTestServiceKeyPair } from '../get-test-service-key-pair';

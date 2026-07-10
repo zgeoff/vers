@@ -76,6 +76,7 @@
         "@vers/idle-client": "workspace:*",
         "@vers/idle-core": "workspace:*",
         "@vers/panda-preset": "workspace:*",
+        "@vers/service-auth": "workspace:*",
         "@vers/service-utils": "workspace:*",
         "@vers/styled-system": "workspace:*",
         "jose": "catalog:",
@@ -475,6 +476,19 @@
         "typescript": "catalog:",
       },
     },
+    "projects/lib-service-auth": {
+      "name": "@vers/service-auth",
+      "version": "0.0.0",
+      "dependencies": {
+        "jose": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "projects/lib-service-runtime": {
       "name": "@vers/service-runtime",
       "version": "0.0.0",
@@ -487,6 +501,7 @@
         "@orpc/zod": "catalog:",
         "@sentry/bun": "catalog:",
         "@sinclair/typebox": "catalog:",
+        "@vers/service-auth": "workspace:*",
         "elysia": "catalog:",
         "jose": "catalog:",
         "pino": "catalog:",
@@ -511,7 +526,7 @@
         "@testcontainers/postgresql": "catalog:",
         "@vers/db": "workspace:*",
         "@vers/game-utils": "workspace:*",
-        "@vers/service-runtime": "workspace:*",
+        "@vers/service-auth": "workspace:*",
         "jose": "catalog:",
         "kysely": "catalog:",
         "postgres": "catalog:",
@@ -2057,6 +2072,8 @@
     "@vers/infra": ["@vers/infra@workspace:projects/infra"],
 
     "@vers/panda-preset": ["@vers/panda-preset@workspace:projects/lib-panda-preset"],
+
+    "@vers/service-auth": ["@vers/service-auth@workspace:projects/lib-service-auth"],
 
     "@vers/service-avatar": ["@vers/service-avatar@workspace:projects/service-avatar"],
 

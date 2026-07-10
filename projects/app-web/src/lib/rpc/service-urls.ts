@@ -1,4 +1,4 @@
-export type ServiceName = 'avatar' | 'session' | 'user' | 'verification';
+import type { ServiceName } from '@vers/service-auth';
 
 /**
  * Each service's origin for the SSR direct-to-service path, defaulting to the real services' dev

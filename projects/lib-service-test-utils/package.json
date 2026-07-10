@@ -17,7 +17,7 @@
     "@testcontainers/postgresql": "catalog:",
     "@vers/db": "workspace:*",
     "@vers/game-utils": "workspace:*",
-    "@vers/service-runtime": "workspace:*",
+    "@vers/service-auth": "workspace:*",
     "jose": "catalog:",
     "kysely": "catalog:",
     "postgres": "catalog:"

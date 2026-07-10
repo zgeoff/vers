@@ -1,8 +1,8 @@
 import { RPCLink } from '@orpc/client/fetch';
 import { createIsomorphicFn } from '@tanstack/react-start';
+import type { ServiceName } from '@vers/service-auth';
 import { createEdgeServiceToken } from './create-edge-service-token';
 import { loadSessionActor } from './load-session-actor';
-import type { ServiceName } from './service-urls';
 import { SERVICE_URLS } from './service-urls';
 
 /**

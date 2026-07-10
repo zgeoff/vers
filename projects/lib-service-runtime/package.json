@@ -19,6 +19,7 @@
     "@orpc/zod": "catalog:",
     "@sentry/bun": "catalog:",
     "@sinclair/typebox": "catalog:",
+    "@vers/service-auth": "workspace:*",
     "elysia": "catalog:",
     "jose": "catalog:",
     "pino": "catalog:",

@@ -295,6 +295,7 @@
         "projects/lib-design-system/**",
         "projects/lib-email/**",
         "projects/lib-game-rendering/**",
+        "projects/lib-service-auth/**",
         "projects/lib-service-runtime/**",
         "projects/lib-service-test-utils/**",
         "projects/lib-service-utils/**",
