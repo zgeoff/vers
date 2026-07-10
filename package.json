@@ -24,6 +24,8 @@
       "@happy-dom/global-registrator": "17.4.3",
       "@ladle/react": "5.1.1",
       "@msw/data": "1.1.6",
+      "@openfeature/core": "1.11.0",
+      "@openfeature/server-sdk": "1.22.0",
       "@opentelemetry/exporter-trace-otlp-proto": "0.219.0",
       "@orpc/client": "1.14.6",
       "@orpc/contract": "1.14.6",

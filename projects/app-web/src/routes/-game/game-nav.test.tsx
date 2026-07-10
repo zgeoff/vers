@@ -10,7 +10,7 @@ test('it hides the link list until the menu button is toggled open', async () =>
 
   setNavigationVisible(false);
 
-  renderWithRouter(<GameNav />);
+  renderWithRouter(<GameNav />, { flags: { market: true } });
 
   const menuButton = await screen.findByRole('button', { name: /Menu/ });
 
@@ -32,11 +32,31 @@ test('it closes the link list once a link is followed', async () => {
 
   setNavigationVisible(true);
 
-  renderWithRouter(<GameNav />);
+  renderWithRouter(<GameNav />, { flags: { market: true } });
 
   const respiteLink = await screen.findByRole('link', { name: /Respite/ });
 
   await user.click(respiteLink);
 
   expect(screen.queryByRole('link', { name: /Respite/ })).not.toBeInTheDocument();
+});
+
+test('it hides the Market link when the market flag is off', async () => {
+  setNavigationVisible(true);
+
+  renderWithRouter(<GameNav />, { flags: { market: false } });
+
+  await screen.findByRole('link', { name: /Respite/ });
+
+  expect(screen.queryByRole('link', { name: /Market/ })).not.toBeInTheDocument();
+});
+
+test('it shows the Market link when the market flag is on', async () => {
+  setNavigationVisible(true);
+
+  renderWithRouter(<GameNav />, { flags: { market: true } });
+
+  const marketLink = await screen.findByRole('link', { name: /Market/ });
+
+  expect(marketLink).toHaveAttribute('href', '/market');
 });

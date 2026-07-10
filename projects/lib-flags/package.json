@@ -1,0 +1,27 @@
+{
+  "name": "@vers/flags",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./orpc": "./src/orpc/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@openfeature/core": "catalog:",
+    "@openfeature/server-sdk": "catalog:",
+    "@orpc/server": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@vers/test-utils": "workspace:*",
+    "@zgeoff/bun-test-extended": "catalog:",
+    "typescript": "catalog:",
+    "zod": "catalog:"
+  }
+}
