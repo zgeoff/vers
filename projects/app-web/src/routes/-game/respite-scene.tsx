@@ -2,7 +2,7 @@ import { extend } from '@react-three/fiber';
 import { useLayoutEffect, useRef } from 'react';
 import type { InstancedMesh } from 'three';
 import { Color, Object3D } from 'three';
-import { MeshBasicNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu';
+import { MeshBasicNodeMaterial } from 'three/webgpu';
 
 const GROUND_COLOR = '#3d424d';
 const GROUND_SIZE = 40;
@@ -19,8 +19,7 @@ const BLOCKS: ReadonlyArray<readonly [number, number, number]> = [
   [2, 1.4, -1.5],
 ];
 
-const GroundMaterial = extend(MeshBasicNodeMaterial);
-const BlockMaterial = extend(MeshStandardNodeMaterial);
+const RespiteMaterial = extend(MeshBasicNodeMaterial);
 
 const blockColor = new Color(BLOCK_COLOR);
 const dummy = new Object3D();
@@ -57,16 +56,14 @@ export function RespiteScene() {
 
   return (
     <>
-      <ambientLight intensity={0.8} />
-
       <mesh position={[0, -0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[GROUND_SIZE, GROUND_SIZE]} />
-        <GroundMaterial color={GROUND_COLOR} />
+        <RespiteMaterial color={GROUND_COLOR} />
       </mesh>
 
       <instancedMesh ref={blocksRef} args={[undefined, undefined, BLOCKS.length]}>
         <boxGeometry args={[1, 1, 1]} />
-        <BlockMaterial />
+        <RespiteMaterial />
       </instancedMesh>
     </>
   );

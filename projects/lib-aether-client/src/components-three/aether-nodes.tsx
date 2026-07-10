@@ -24,10 +24,6 @@ const AetherNodeMaterial = extend(MeshStandardNodeMaterial);
 
 const instanceMatrix = new Matrix4();
 
-function handlePointerLeave() {
-  setHoveredNode(null);
-}
-
 export function AetherNodes(props: Readonly<AetherNodesProps>) {
   const meshRef = useRef<InstancedMesh | null>(null);
   const appliedSelectedNodeIDRef = useRef<null | string>(null);
@@ -131,4 +127,8 @@ export function AetherNodes(props: Readonly<AetherNodesProps>) {
       <AetherNodeMaterial />
     </instancedMesh>
   );
+}
+
+function handlePointerLeave() {
+  setHoveredNode(null);
 }
