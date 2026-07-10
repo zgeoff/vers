@@ -2,6 +2,13 @@ import { expect, test } from 'bun:test';
 import { setSceneState } from './set-scene-state';
 import { useSceneStateStore } from './use-scene-state-store';
 
+test('it starts hidden on the worldmap until a route declares itself', () => {
+  expect(useSceneStateStore.getState()).toStrictEqual({
+    presentation: 'hidden',
+    scene: 'worldmap',
+  });
+});
+
 test('it applies the fold against the current store state', () => {
   setSceneState([{ presentation: 'focus', scene: 'respite' }]);
 
