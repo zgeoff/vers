@@ -26,14 +26,14 @@ sentence can't be simplified without losing it.
 
 Projects live under `projects/*` (the sole bun workspace glob); `docs/overview.md` lists them. Every
 project has its own `package.json` named `@vers/<name>`: internal deps use the `workspace:*`
-protocol, and versions shared by 5+ projects live in the root manifest's `workspaces.catalog`
-(referenced as `catalog:`). Libraries are consumed as TypeScript source (`exports` →
-`./src/index.ts`); there are no per-library build steps. `bun install` uses the isolated linker
-(pnpm-style symlinks, no phantom deps) with exact pins and a 7-day `minimumReleaseAge` — see
-`bunfig.toml`. Turborepo drives the task graph: root `turbo.json` declares the
-`build`/`typecheck`/`test`/`codegen`/`typegen`/`e2e` pipelines (ordering inferred from each
-project's `workspace:*` deps). Per-project `turbo.json` files exist only to declare `boundaries`
-tags. CI's changed-project detection is `turbo run --affected`.
+protocol, and every external dependency's version lives in the root manifest's `workspaces.catalog`,
+referenced everywhere as `catalog:` — project manifests carry no direct version pins. Libraries are
+consumed as TypeScript source (`exports` → `./src/index.ts`); there are no per-library build steps.
+`bun install` uses the isolated linker (pnpm-style symlinks, no phantom deps) with exact pins and a
+7-day `minimumReleaseAge` — see `bunfig.toml`. Turborepo drives the task graph: root `turbo.json`
+declares the `build`/`typecheck`/`test`/`codegen`/`typegen`/`e2e` pipelines (ordering inferred from
+each project's `workspace:*` deps). Per-project `turbo.json` files exist only to declare
+`boundaries` tags. CI's changed-project detection is `turbo run --affected`.
 
 TypeScript is 7.0.2 (catalog). TS7 has no `baseUrl` and no classic Compiler API, and there is no
 path-alias convention here — write imports relative to the importing file. Node is 24.18.0 in CI and

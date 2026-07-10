@@ -1,3 +1,6 @@
 name: vers-infra
-runtime: nodejs
+runtime:
+  name: nodejs
+  options:
+    typescript: false
 description: Cloudflare DNS for versidle.com, with Pulumi state held in Cloudflare R2.
