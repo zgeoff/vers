@@ -12,5 +12,6 @@ export { setSceneState } from './set-scene-state';
 export { useRenderer } from './use-renderer';
 export { useSatellite } from './use-satellite';
 export { useSceneState } from './use-scene-state';
+export { useSceneStateStore } from './use-scene-state-store';
 
 export type * from './types';

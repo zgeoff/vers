@@ -15,6 +15,9 @@ const container = css({
   position: 'fixed',
   transition: 'opacity',
   transitionDuration: 'normal',
+  // its own view-transition group so the live canvas keeps rendering through a route transition
+  // instead of freezing into the root snapshot
+  viewTransitionName: 'game-canvas',
   zIndex: '[-1]',
 });
 
