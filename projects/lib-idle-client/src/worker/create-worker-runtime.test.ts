@@ -11,7 +11,7 @@ import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerRuntime's `connections` field is a ReadonlySet, which this rule doesn't recognize as a readonly type
-function connect(runtime: WorkerRuntime): MessagePort {
+function createConnection(runtime: WorkerRuntime): MessagePort {
   const channel = new MessageChannel();
 
   runtime.handleConnect(new MessageEvent('connect', { ports: [channel.port2] }));
@@ -43,7 +43,7 @@ test('it sends the initial state', async () => {
     runtime.stop();
   });
 
-  const port = connect(runtime);
+  const port = createConnection(runtime);
   const reply = waitForMessage(port);
 
   const message: InitializeMessage = {
@@ -64,7 +64,7 @@ test('it processes simulation updates', async () => {
     runtime.stop();
   });
 
-  const port = connect(runtime);
+  const port = createConnection(runtime);
 
   const initializeMessage: InitializeMessage = {
     type: ClientMessageType.Initialize,
@@ -98,8 +98,8 @@ test('it stops broadcasting to a connection after it disconnects', async () => {
     runtime.stop();
   });
 
-  const survivor = connect(runtime);
-  const leaving = connect(runtime);
+  const survivor = createConnection(runtime);
+  const leaving = createConnection(runtime);
 
   const survivorInitialized = waitForMessage(survivor);
 

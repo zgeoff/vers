@@ -20,7 +20,7 @@ class FakeSharedWorker {
   port = this.channel.port1;
 }
 
-function stubSharedWorker() {
+function registerSharedWorkerStub() {
   const originalSharedWorker = globalThis.SharedWorker;
 
   Reflect.set(globalThis, 'SharedWorker', FakeSharedWorker);
@@ -31,7 +31,7 @@ function stubSharedWorker() {
 }
 
 test('it initializes the worker connection', () => {
-  stubSharedWorker();
+  registerSharedWorkerStub();
 
   const hook = renderHook(() => useSimulationWorker());
 
@@ -74,7 +74,7 @@ test('it creates no worker when SharedWorker is unsupported', () => {
 });
 
 test('it updates simulation state from worker messages', async () => {
-  stubSharedWorker();
+  registerSharedWorkerStub();
 
   const hook = renderHook(() => useSimulationWorker());
 
@@ -102,7 +102,7 @@ test('it updates simulation state from worker messages', async () => {
 });
 
 test('it sends a disconnect message on pagehide', async () => {
-  stubSharedWorker();
+  registerSharedWorkerStub();
 
   const hook = renderHook(() => useSimulationWorker());
 
