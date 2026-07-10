@@ -3,7 +3,10 @@ import { createRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
 import { createIsomorphicFn } from '@tanstack/react-start';
 import { getRequestHeader } from '@tanstack/react-start/server';
+import { useSceneStateStore } from '@vers/game-rendering';
 import { orpc } from './lib/rpc/orpc';
+import { classifySceneTransition } from './lib/scene/classify-scene-transition';
+import { resolveSceneStateForLocation } from './lib/scene/resolve-scene-state-for-location';
 import { routeTree } from './routeTree.gen';
 import { CSP_NONCE_HEADER } from './server/csp-nonce-header';
 
@@ -26,6 +29,14 @@ export function getRouter() {
 
   const router = createRouter({
     context: { orpc, queryClient },
+    defaultViewTransition: {
+      types: (locationChangeInfo) => {
+        const current = useSceneStateStore.getState();
+        const next = resolveSceneStateForLocation(router, locationChangeInfo.toLocation, current);
+
+        return classifySceneTransition(current, next);
+      },
+    },
     routeTree,
     scrollRestoration: true,
     // `exactOptionalPropertyTypes` rejects an explicit `nonce: undefined`, so the property is
