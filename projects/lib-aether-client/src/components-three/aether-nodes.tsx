@@ -1,6 +1,7 @@
 import { extend, useFrame } from '@react-three/fiber';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { AetherNode } from '@vers/aether-core';
+import { sceneColors } from '@vers/design-system';
 import { useLayoutEffect, useRef } from 'react';
 import type { InstancedMesh } from 'three';
 import { Color, Matrix4 } from 'three';
@@ -17,8 +18,8 @@ interface AetherNodesProps {
 const RADIUS = 0.8;
 const NODE_SEGMENTS = 24;
 
-const BASE_COLOR = new Color('#cbd5e1');
-const SELECTED_COLOR = new Color('#7dd3fc');
+const BASE_COLOR = new Color(sceneColors.nodeBase);
+const SELECTED_COLOR = new Color(sceneColors.nodeSelected);
 
 const AetherNodeMaterial = extend(MeshStandardNodeMaterial);
 

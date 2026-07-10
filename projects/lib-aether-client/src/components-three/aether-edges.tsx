@@ -1,5 +1,6 @@
 import { extend } from '@react-three/fiber';
 import type { AetherEdge } from '@vers/aether-core';
+import { sceneColors } from '@vers/design-system';
 import { useLayoutEffect, useRef } from 'react';
 import type { BufferGeometry } from 'three';
 import { BufferAttribute } from 'three';
@@ -10,7 +11,7 @@ interface AetherEdgesProps {
   readonly edges: ReadonlyArray<AetherEdge>;
 }
 
-const COLOR = '#64748b';
+const COLOR = sceneColors.worldmapEdge;
 const POSITION_COMPONENTS_PER_EDGE = 6;
 const VERTEX_SIZE = 3;
 

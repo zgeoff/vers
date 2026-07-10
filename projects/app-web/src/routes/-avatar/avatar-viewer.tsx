@@ -1,4 +1,5 @@
 import { Canvas, useFrame } from '@react-three/fiber';
+import { sceneColors } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { useRef } from 'react';
 import type { Mesh } from 'three';
@@ -44,7 +45,7 @@ function PlaceholderAvatar() {
   return (
     <mesh ref={meshRef}>
       <capsuleGeometry args={[0.6, 1.2, 4, 8]} />
-      <meshStandardMaterial color="#D8A56E" flatShading />
+      <meshStandardMaterial color={sceneColors.avatarPlaceholder} flatShading />
     </mesh>
   );
 }

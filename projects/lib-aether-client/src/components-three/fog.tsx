@@ -1,3 +1,4 @@
+import { sceneColors } from '@vers/design-system';
 import { useIsDevCameraActive } from '../state/use-is-dev-camera-active';
 
 export function Fog() {
@@ -7,5 +8,5 @@ export function Fog() {
     return null;
   }
 
-  return <fog args={[0x000000, 20, 200]} attach="fog" />;
+  return <fog args={[sceneColors.fog, 20, 200]} attach="fog" />;
 }
