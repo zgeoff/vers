@@ -106,6 +106,7 @@ the function's shape without opening it.
 | `write`    | persist to the filesystem                                                                                                               | `writeOutput`     |
 | `remove`   | delete a resource                                                                                                                       | `removeStaleDist` |
 | `update`   | mutate existing state or resource in place                                                                                              | `updateIndex`     |
+| `set`      | assign a store's named state slice wholesale — the store-setter idiom; partial mutation is `update`                                     | `setSelectedNode` |
 | `print`    | write to stdout/stderr                                                                                                                  | `printHelp`       |
 | `run`      | execute a subprocess, task, or whole pipeline                                                                                           | `runCLI`          |
 | `check`    | evaluate and report findings; effects allowed per mode                                                                                  | `checkFile`       |
