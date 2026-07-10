@@ -43,6 +43,7 @@
     "@vers/idle-client": "workspace:*",
     "@vers/idle-core": "workspace:*",
     "@vers/panda-preset": "workspace:*",
+    "@vers/service-auth": "workspace:*",
     "@vers/service-utils": "workspace:*",
     "@vers/styled-system": "workspace:*",
     "jose": "catalog:",
