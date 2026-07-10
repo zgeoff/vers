@@ -9,6 +9,7 @@ export interface FakeSession {
 export interface RequestContextState {
   readonly headers: Headers;
   readonly ip: string | undefined;
+  readonly request: Request;
   readonly sessions: Map<string, FakeSession>;
   readonly url: URL;
 }
