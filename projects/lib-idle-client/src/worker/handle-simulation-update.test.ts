@@ -1,45 +1,40 @@
+import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
-import { afterEach, expect, test, vi } from 'vitest';
 import xxhash from 'xxhash-wasm';
 import { WorkerMessageType } from '../types';
-import { connections } from './connections';
 import { handleSimulationUpdate } from './handle-simulation-update';
-import { setSimulation } from './simulation';
+import type { WorkerContext } from './types';
 
 const hasher = await xxhash();
 
-afterEach(() => {
-  setSimulation(null);
-
-  connections.clear();
-});
-
-test('it sends simulation update messages to all connections', () => {
-  const postMessageSpy = vi.fn<(message: unknown) => void>();
-
-  const mockPort: MessagePort = {
-    addEventListener: vi.fn<MessagePort['addEventListener']>(),
-    close: vi.fn<MessagePort['close']>(),
-    dispatchEvent: vi.fn<MessagePort['dispatchEvent']>(),
-    onmessage: vi.fn<NonNullable<MessagePort['onmessage']>>(),
-    onmessageerror: vi.fn<NonNullable<MessagePort['onmessageerror']>>(),
-    postMessage: postMessageSpy,
-    removeEventListener: vi.fn<MessagePort['removeEventListener']>(),
-    start: vi.fn<MessagePort['start']>(),
-  };
-
-  connections.add(mockPort);
-
+test('it sends simulation update messages to all connections', async () => {
   const simulation = createSimulation(hasher);
 
-  setSimulation(simulation);
+  const channel = new MessageChannel();
 
-  handleSimulationUpdate();
+  const context: WorkerContext = {
+    connections: new Set([channel.port2]),
+    getSimulation: () => simulation,
+    removeConnection: () => {
+      //
+    },
+    setSimulation: () => {
+      //
+    },
+  };
 
-  expect(postMessageSpy).toHaveBeenCalledWith(
-    expect.objectContaining({
-      state: simulation.getAppState(),
-      type: WorkerMessageType.SimulationUpdate,
-    }),
-  );
+  channel.port1.start();
+
+  const received = new Promise<MessageEvent>((resolve) => {
+    channel.port1.addEventListener('message', resolve, { once: true });
+  });
+
+  handleSimulationUpdate(context);
+
+  const event = await received;
+
+  expect(event.data).toStrictEqual({
+    state: simulation.getAppState(),
+    type: WorkerMessageType.SimulationUpdate,
+  });
 });

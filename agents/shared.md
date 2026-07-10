@@ -114,6 +114,7 @@ the function's shape without opening it.
 | `require`  | throw unless a runtime condition holds — a guard real input can trip (`assert` covers invariants)                                       | `requireAuth`     |
 | `emit`     | dispatch an event or notification                                                                                                       | `emitProgress`    |
 | `send`     | transmit a payload to a remote receiver (fire-and-forget or RPC — no resource semantics; REST mutations are `create`/`update`/`remove`) | `sendWebhook`     |
+| `wait`     | block until an event or condition resolves; may return the awaited value                                                                | `waitForMessage`  |
 
 **Wrappers and factories** — the result is behaviour, not data:
 

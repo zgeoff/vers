@@ -1,5 +1,5 @@
+import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import { expect, test } from 'vitest';
 import { setSimulationInitialized } from './set-simulation-initialized';
 import { useSimulationInitialized } from './use-simulation-initialized';
 

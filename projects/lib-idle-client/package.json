@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -22,15 +22,13 @@
     "zustand": "catalog:"
   },
   "devDependencies": {
+    "@happy-dom/global-registrator": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
-    "@vitest/web-worker": "catalog:",
+    "@zgeoff/bun-test-extended": "catalog:",
     "happy-dom": "catalog:",
-    "jest-extended": "catalog:",
-    "typescript": "catalog:",
-    "vite": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   }
 }

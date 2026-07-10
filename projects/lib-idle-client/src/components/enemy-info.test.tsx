@@ -1,8 +1,8 @@
+import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import { nodeHasText } from '@vers/client-test-utils';
 import type { EnemyAppState } from '@vers/idle-core';
 import { EntityStatus } from '@vers/idle-core';
-import { expect, test } from 'vitest';
 import { EnemyInfo } from './enemy-info';
 
 test('it renders enemy information', () => {

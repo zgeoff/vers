@@ -1,6 +1,6 @@
+import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
 import type { CombatExecutorAppState } from '@vers/idle-core';
-import { expect, test } from 'vitest';
 import { setCombat } from './set-combat';
 import { useCombatElapsed } from './use-combat-elapsed';
 

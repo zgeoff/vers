@@ -8,8 +8,8 @@ GlobalRegistrator.register();
 expect.extend(jestDOMMatchers);
 
 // installs the zustand `create` wrapper before any store module below imports it; bun runs every
-// test file in one process with no isolation, so the five aether-client stores would otherwise
-// leak state across files
+// test file in one process with no isolation, so the four idle-client stores would otherwise leak
+// state across files
 registerZustandReset();
 
 // dynamic import: RTL reads `document` at import time, so it must load after registration

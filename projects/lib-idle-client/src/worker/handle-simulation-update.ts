@@ -1,14 +1,13 @@
 import invariant from 'tiny-invariant';
-import { connections } from './connections';
 import { createSimulationUpdateMessage } from './create-simulation-update-message';
-import { getSimulation } from './simulation';
+import type { WorkerContext } from './types';
 
-export function handleSimulationUpdate() {
-  const simulation = getSimulation();
+export function handleSimulationUpdate(context: WorkerContext) {
+  const simulation = context.getSimulation();
 
   invariant(simulation, 'simulation is required');
 
-  for (const connection of connections) {
+  for (const connection of context.connections) {
     const message = createSimulationUpdateMessage(simulation.getAppState());
 
     connection.postMessage(message);

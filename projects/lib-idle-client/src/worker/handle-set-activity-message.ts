@@ -1,8 +1,8 @@
 import type { SetActivityMessage } from '../types';
-import { getSimulation } from './simulation';
+import type { WorkerContext } from './types';
 
-export function handleSetActivityMessage(message: SetActivityMessage) {
-  const simulation = getSimulation();
+export function handleSetActivityMessage(context: WorkerContext, message: SetActivityMessage) {
+  const simulation = context.getSimulation();
 
   if (!simulation) {
     console.warn('-- tried setting activity but no simulation');

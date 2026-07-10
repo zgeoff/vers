@@ -1,5 +1,5 @@
+import { test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
-import { test } from 'vitest';
 import xxhash from 'xxhash-wasm';
 import { runSimulation } from './run-simulation';
 

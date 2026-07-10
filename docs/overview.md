@@ -115,7 +115,7 @@ Backend:
 Development:
 
 - Build - [Vite](https://vitejs.dev), [esbuild](https://esbuild.github.io)
-- Testing - [Vitest](https://vitest.dev), [Playwright](https://playwright.dev),
+- Testing - [Bun's test runner](https://bun.sh/docs/cli/test), [Playwright](https://playwright.dev),
   [MSW](https://mswjs.io)
 - Monorepo - [Turborepo](https://turborepo.dev) + [Bun](https://bun.sh) workspaces
 - Type Safety - [TypeScript](https://typescriptlang.org), [Zod](https://zod.dev)

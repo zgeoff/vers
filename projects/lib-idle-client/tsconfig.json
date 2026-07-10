@@ -2,15 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
-    "types": ["node", "vite/client"]
+    "types": ["node", "bun", "@zgeoff/bun-test-extended"]
   },
   "files": [],
-  "include": [
-    "vitest.config.ts",
-    "vitest.global-setup.ts",
-    "vitest.setup.ts",
-    "src/**/*.ts",
-    "src/**/*.tsx"
-  ],
+  "include": ["test-setup.ts", "augment-bun-test.ts", "src/**/*.ts", "src/**/*.tsx"],
   "exclude": []
 }

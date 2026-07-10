@@ -14,7 +14,8 @@
   "dependencies": {
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
-    "msw": "catalog:"
+    "msw": "catalog:",
+    "zustand": "catalog:"
   },
   "devDependencies": {
     "@msw/data": "catalog:",

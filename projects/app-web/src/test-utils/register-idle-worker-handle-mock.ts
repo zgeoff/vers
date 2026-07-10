@@ -3,11 +3,10 @@ import type { FakeSimulationWorker } from './idle-worker-handle-holder';
 import { idleWorkerHandleHolder } from './idle-worker-handle-holder';
 
 /**
- * Stubs the app's idle-worker-handle boundary. `happy-dom` has neither `SharedWorker` nor the
- * Vite worker-import transform (nor WebGL, for the `AetherNode` visual) the real
- * `@vers/idle-client` exports depend on, so reads go through the in-memory holder instead. The
- * message senders post the production message shape, so a test asserting on its fake worker's
- * calls sees the real wiring contract.
+ * Stubs the app's idle-worker-handle boundary. `happy-dom` has neither `SharedWorker` nor WebGL
+ * (for the `AetherNode` visual) the real `@vers/idle-client` exports depend on, so reads go
+ * through the in-memory holder instead. The message senders post the production message shape, so
+ * a test asserting on its fake worker's calls sees the real wiring contract.
  */
 export function registerIdleWorkerHandleMock(): void {
   void mock.module('../lib/idle/use-idle-worker-handle', () => ({
