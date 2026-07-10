@@ -21,10 +21,11 @@ interface CreateEdgeServiceTokenOptions {
 export async function createEdgeServiceToken(
   options: Readonly<CreateEdgeServiceTokenOptions>,
 ): Promise<string> {
+  // services verify `aud` against their registered name, which carries the `service-` prefix
   const jwt = new jose.SignJWT({})
     .setProtectedHeader({ alg: ALGORITHM })
     .setIssuer(ISSUER)
-    .setAudience(options.audience)
+    .setAudience(`service-${options.audience}`)
     .setExpirationTime('60s');
 
   if (options.actingUserID !== null) {

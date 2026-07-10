@@ -25,13 +25,15 @@ and mesh traffic is already encrypted, so services set `force_https = false`.
 Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.toml` or Dockerfile.
 Secrets are set with `fly secrets set` and never committed.
 
-| App                                                      | Secrets                                             |
-| -------------------------------------------------------- | --------------------------------------------------- |
-| `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`           |
-| `service-session`                                        | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY` |
-| `app-web`                                                | `SESSION_SECRET`, `COOKIE_DOMAIN`                   |
+| App                                                      | Secrets                                                       |
+| -------------------------------------------------------- | ------------------------------------------------------------- |
+| `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`                     |
+| `service-session`                                        | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY`           |
+| `app-web`                                                | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY` |
 
-`SERVICE_AUTH_PUBLIC_KEY` is the Ed25519 SPKI public key a service verifies inbound calls with.
+`SERVICE_AUTH_PUBLIC_KEY` is the Ed25519 SPKI public key a service verifies inbound calls with;
+`SERVICE_AUTH_PRIVATE_KEY` is its PKCS8 private half, which `app-web` signs outbound s2s tokens with
+— every token's `aud` is the target's registered service name (`service-user`).
 `JWT_SIGNING_PRIVKEY` is the RS256 PKCS8 private key `service-session` signs user tokens with, under
 issuer and audience `API_IDENTIFIER`. `SESSION_SECRET` seals `app-web`'s cookies. `SENTRY_DSN` and
 `OTEL_EXPORTER_OTLP_ENDPOINT` are optional on any app.
@@ -104,7 +106,8 @@ fly secrets set -a vers-service-session \
 
 fly secrets set -a vers-app-web \
   SESSION_SECRET="$(openssl rand -base64 32)" \
-  COOKIE_DOMAIN="$DOMAIN"
+  COOKIE_DOMAIN="$DOMAIN" \
+  SERVICE_AUTH_PRIVATE_KEY="$(cat s2s.key)"
 
 rm s2s.key s2s.pub session.key
 ```
