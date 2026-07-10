@@ -40,6 +40,7 @@
       "@pulumi/pulumi": "3.250.0",
       "@react-email/components": "0.0.33",
       "@react-hookz/web": "25.1.0",
+      "@react-spring/rafz": "10.1.2",
       "@react-spring/three": "10.1.2",
       "@react-three/fiber": "9.6.1",
       "@react-three/test-renderer": "9.1.0",
