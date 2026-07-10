@@ -10,6 +10,7 @@ import { registerAetherSceneMock } from './src/test-utils/register-aether-scene-
 import { registerGameCanvasMock } from './src/test-utils/register-game-canvas-mock';
 import { registerIdleWorkerHandleMock } from './src/test-utils/register-idle-worker-handle-mock';
 import { registerRequestContextMock } from './src/test-utils/register-request-context-mock';
+import { registerRespiteSceneMock } from './src/test-utils/register-respite-scene-mock';
 
 process.env['SESSION_SECRET'] = 'test-session-secret-test-session-secret';
 
@@ -43,6 +44,8 @@ registerIdleWorkerHandleMock();
 registerGameCanvasMock();
 
 registerAetherSceneMock();
+
+registerRespiteSceneMock();
 
 registerAetherNodeCodexSlotMock();
 

@@ -5,7 +5,7 @@ import { RespitePanel } from '../-respite/respite-panel';
 export const Route = createFileRoute('/_game/respite')({
   component: RespitePage,
   head: () => ({ meta: [{ title: 'vers | Respite' }] }),
-  staticData: { presentation: 'ambient' },
+  staticData: { presentation: 'focus', scene: 'respite' },
 });
 
 function RespitePage() {
