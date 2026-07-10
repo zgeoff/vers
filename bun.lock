@@ -378,6 +378,27 @@
         "typescript": "catalog:",
       },
     },
+    "projects/lib-game-rendering": {
+      "name": "@vers/game-rendering",
+      "version": "0.0.0",
+      "dependencies": {
+        "react": "catalog:",
+        "zustand": "catalog:",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "catalog:",
+        "@testing-library/jest-dom": "catalog:",
+        "@testing-library/react": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@types/react": "catalog:",
+        "@types/react-dom": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "happy-dom": "catalog:",
+        "react-dom": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "projects/lib-game-utils": {
       "name": "@vers/game-utils",
       "version": "0.0.0",
@@ -1971,6 +1992,8 @@
     "@vers/design-system": ["@vers/design-system@workspace:projects/lib-design-system"],
 
     "@vers/email": ["@vers/email@workspace:projects/lib-email"],
+
+    "@vers/game-rendering": ["@vers/game-rendering@workspace:projects/lib-game-rendering"],
 
     "@vers/game-utils": ["@vers/game-utils@workspace:projects/lib-game-utils"],
 

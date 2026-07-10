@@ -28,7 +28,8 @@ Route-driven world state has two independent axes:
   active.
 - **Presentation** — how the current scene shows: `focus` (the canvas is the page, DOM renders HUD
   over it), `ambient` (the world recedes — dimmed, pulled back — behind an HTML panel), or `hidden`
-  (frameloop suspended, zero GPU cost).
+  (frameloop suspended, zero GPU cost). Sticky like scene: a branch that declares no presentation
+  keeps the current one, so every route's behavior is explicit in its own `staticData`.
 
 Routes declare their contribution in `staticData`, merged along the matched branch so child routes
 inherit what they don't override. Sub-routes contribute deltas within a scene, not new scenes:

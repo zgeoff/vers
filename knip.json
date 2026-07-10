@@ -58,6 +58,9 @@
     },
     "projects/lib-email": {
       "ignoreDependencies": ["happy-dom"]
+    },
+    "projects/lib-game-rendering": {
+      "ignoreDependencies": ["happy-dom"]
     }
   }
 }
