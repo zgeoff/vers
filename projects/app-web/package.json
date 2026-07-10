@@ -23,7 +23,6 @@
     "@orpc/server": "catalog:",
     "@orpc/tanstack-query": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
-    "@react-three/fiber": "catalog:",
     "@sentry/node": "catalog:",
     "@sentry/react": "catalog:",
     "@tanstack/react-query": "catalog:",
@@ -54,7 +53,6 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "srvx": "catalog:",
-    "three": "catalog:",
     "zod": "catalog:",
     "zustand": "catalog:"
   },
@@ -75,7 +73,6 @@
     "@types/qrcode": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@types/three": "catalog:",
     "@vers/client-test-utils": "workspace:*",
     "@vitejs/plugin-react": "catalog:",
     "@vitejs/plugin-rsc": "catalog:",
