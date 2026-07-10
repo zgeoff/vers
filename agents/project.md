@@ -86,13 +86,11 @@ PR and promotes it into `lib-design-system` when a second consumer appears.
 - `bun install` — whole workspace (`--frozen-lockfile` in CI; `bun.lock` is committed).
 - `bun run typecheck` — `turbo run typecheck` (per-project `tsc --noEmit`); one project via
   `--filter=@vers/<name>`.
-- `bun run test` — `turbo run test`, each project's own runner; one project via `--filter`. The
-  repo's test runner is `bun test`; a package runs vitest exactly when it has a `vitest.config.ts`
-  (the root `vitest.workspace.ts` globs those, and deleting the config drops the package from the
-  vitest run). Never add vitest to a new package, and never re-add it to a converted one to "match"
-  a vitest neighbour. Postgres-backed suites need `bun run pg:test-container:start` first. bun-test
-  packages each carry their own `bunfig.toml` (bunfig is read from cwd, not merged up) —
-  root-invoked `bun test <file>` still resolves jest-extended matchers from the root preload.
+- `bun run test` — `turbo run test`, each project's own runner; one project via `--filter`. Every
+  package runs on `bun test` — never add vitest to a package. Postgres-backed suites need
+  `bun run pg:test-container:start` first. Each package carries its own `bunfig.toml` (bunfig is
+  read from cwd, not merged up) — root-invoked `bun test <file>` still resolves jest-extended
+  matchers from the root preload.
 - `bun run lint` / `bun run lint:fix` — `turbo run codegen typegen`, then
   `oxlint --type-aware --type-check --report-unused-disable-directives-severity error` over the
   whole tree (`.oxlintrc.json` at the root; oxlint-tsgolint underneath, needs the TS7 toolchain —

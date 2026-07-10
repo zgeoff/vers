@@ -12,9 +12,8 @@ interface IdleWorkerHandle {
 
 /**
  * The app's one read boundary onto `lib-idle-client`'s SharedWorker mount: every consumer reads
- * simulation state through this hook, so tests can stub the worker handle here. `happy-dom` has
- * neither `SharedWorker` nor the Vite worker-import transform the library depends on, so this
- * module is replaced under `bun test`.
+ * simulation state through this hook, so tests can stub the worker handle here. `happy-dom` has no
+ * `SharedWorker` implementation, so this module is replaced under `bun test`.
  */
 export function useIdleWorkerHandle(): IdleWorkerHandle {
   const worker = useSimulationWorker();
