@@ -65,7 +65,8 @@ together but don't attest combat outcomes — replay is the proof. The same repl
 offline progress: simulate forward from the last verified checkpoint.
 
 The star map (`lib-aether-*`) generates the world graph — concentric difficulty rings of baked nodes
-— and renders it with three.js via react-three-fiber.
+— and renders it with three.js via react-three-fiber. How the 3D world and the HTML UI share the
+screen: [game rendering](./game-rendering.md).
 
 ## Cross-cutting
 
