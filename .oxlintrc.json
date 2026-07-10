@@ -403,6 +403,9 @@
               "geometry",
               "far",
               "near",
+              "aspect",
+              "fov",
+              "onUpdate",
               "userData"
             ]
           }
