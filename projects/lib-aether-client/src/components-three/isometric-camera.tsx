@@ -1,7 +1,6 @@
 import { animated, config, useSpring } from '@react-spring/three';
-import { PerspectiveCamera, useHelper } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
-import { useCallback, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { useCallback, useEffect, useRef } from 'react';
 import type { Group, Object3D, PerspectiveCamera as PerspectiveCameraImpl } from 'three';
 import { CameraHelper, Euler } from 'three';
 import {
@@ -15,6 +14,7 @@ import { setCamera } from '../state/set-camera';
 import { useCamera } from '../state/use-camera';
 import { useIsDevCameraActive } from '../state/use-is-dev-camera-active';
 import { useSelectedNode } from '../state/use-selected-node';
+import { useMakeDefaultCamera } from './use-make-default-camera';
 
 const ISOMETRIC_CAMERA_ROTATION = new Euler(CAMERA_ROTATION_X, CAMERA_ROTATION_Y, 0, 'YXZ');
 
@@ -27,9 +27,12 @@ const AnimatedGroup = animated['group'];
  */
 export function IsometricCamera() {
   const cameraRigRef = useRef<Group | null>(null);
+  const cameraRef = useRef<PerspectiveCameraImpl | null>(null);
   const camera = useCamera();
   const isDevCameraActive = useIsDevCameraActive();
   const selectedNode = useSelectedNode();
+
+  const [positionX, positionY, positionZ] = getNodeCameraPosition(selectedNode.object3D);
 
   const spring = useSpring({
     config: {
@@ -37,10 +40,14 @@ export function IsometricCamera() {
       clamp: true,
       precision: 0.001,
     },
-    position: getNodeCameraPosition(selectedNode.object3D),
+    x: positionX,
+    y: positionY,
+    z: positionZ,
   });
 
   const setCameraRef = useCallback((cameraInstance: null | PerspectiveCameraImpl) => {
+    cameraRef.current = cameraInstance;
+
     if (!cameraInstance) {
       return;
     }
@@ -48,11 +55,14 @@ export function IsometricCamera() {
     setCamera(cameraInstance);
   }, []);
 
-  // @ts-expect-error - can't make ref types work with useHelper for the life of me
-  useHelper(import.meta.env.DEV && camera, CameraHelper);
+  const helperCamera = import.meta.env.DEV ? camera : null;
 
-  // force our isometric camera rotation and height unless we're using our dev camera
-  useFrame(() => {
+  useMakeDefaultCamera(cameraRef, !isDevCameraActive);
+  useCameraHelper(helperCamera);
+
+  // force our isometric camera rotation and height unless we're using our dev camera, and keep
+  // its aspect ratio and projection matrix in sync with the canvas
+  useFrame((state) => {
     if (!camera || !cameraRigRef.current) {
       return;
     }
@@ -61,23 +71,20 @@ export function IsometricCamera() {
 
     cameraRigRef.current.position.y = CAMERA_DISTANCE;
 
+    camera.aspect = state.size.width / state.size.height;
+
     camera.updateProjectionMatrix();
   });
 
   return (
-    // @ts-expect-error - can't make ref types work with useHelper for the life of me
-    <AnimatedGroup position={spring.position} rotation={ISOMETRIC_CAMERA_ROTATION}>
-      <PerspectiveCamera
-        ref={setCameraRef}
-        // args={[75, aspect, 0.1, 1000]}
-        makeDefault={!isDevCameraActive}
-      />
+    <AnimatedGroup position={[spring.x, spring.y, spring.z]} rotation={ISOMETRIC_CAMERA_ROTATION}>
+      <perspectiveCamera ref={setCameraRef} />
     </AnimatedGroup>
   );
 }
 
 // keeping this for a rainy day
-// <OrthographicCamera
+// <orthographicCamera
 //   ref={cameraRef}
 //   args={[
 //     -CAMERA_DISTANCE * aspect,
@@ -87,8 +94,6 @@ export function IsometricCamera() {
 //     1,
 //     1000,
 //   ]}
-//   makeDefault={!isDevCameraActive}
-//   zoom={10}
 // />
 
 /**
@@ -96,7 +101,7 @@ export function IsometricCamera() {
  * @param node - the node to get the camera position for
  * @returns the camera position
  */
-function getNodeCameraPosition(node: null | Object3D) {
+function getNodeCameraPosition(node: null | Object3D): [number, number, number] {
   if (!node) {
     return [0, CAMERA_DISTANCE, 0];
   }
@@ -106,4 +111,37 @@ function getNodeCameraPosition(node: null | Object3D) {
     CAMERA_DISTANCE,
     -(node.position.y - ISOMETRIC_OFFSET_Z),
   ];
+}
+
+/**
+ * renders a `CameraHelper` frustum visualization for `camera` in dev tooling, keeping it in sync
+ * every frame; a null `camera` renders nothing.
+ */
+function useCameraHelper(camera: null | PerspectiveCameraImpl) {
+  const scene = useThree((state) => state.scene);
+  const helperRef = useRef<CameraHelper | null>(null);
+
+  useEffect(() => {
+    if (!camera) {
+      return () => {};
+    }
+
+    const helper = new CameraHelper(camera);
+
+    helperRef.current = helper;
+
+    scene.add(helper);
+
+    return () => {
+      helperRef.current = null;
+
+      scene.remove(helper);
+
+      helper.dispose();
+    };
+  }, [camera, scene]);
+
+  useFrame(() => {
+    helperRef.current?.update();
+  });
 }

@@ -143,6 +143,9 @@
           { "from": "package", "name": "SyntheticEvent", "package": "react" },
           { "from": "package", "name": "ElementType", "package": "react" },
           { "from": "package", "name": "ChangeEvent", "package": "react" },
+          // a ref's entire purpose is its mutable `.current` slot, so it has
+          // no useful readonly form
+          { "from": "package", "name": "RefObject", "package": "react" },
           {
             "from": "package",
             "name": ["SVGProps", "InputHTMLAttributes", "LabelHTMLAttributes", "HTMLAttributes"],
@@ -162,7 +165,7 @@
           // readonly form of them is useful to a caller
           {
             "from": "package",
-            "name": ["Object3D", "Mesh", "PerspectiveCamera"],
+            "name": ["Object3D", "Mesh", "PerspectiveCamera", "OrthographicCamera"],
             "package": "three"
           },
           // r3f pointer event: intersects a live DOM PointerEvent, which has
