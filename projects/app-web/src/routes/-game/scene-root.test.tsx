@@ -13,10 +13,12 @@ test('it renders the aether scene for the worldmap scene key', async () => {
   expect(scene).toBeVisible();
 });
 
-test('it renders nothing for the respite scene key', () => {
+test('it renders the respite scene for the respite scene key', async () => {
   setSceneState([{ scene: 'respite' }]);
 
   render(<SceneRoot />);
 
-  expect(screen.queryByTestId('aether-scene-stub')).not.toBeInTheDocument();
+  const scene = await screen.findByTestId('respite-scene-stub');
+
+  expect(scene).toBeVisible();
 });

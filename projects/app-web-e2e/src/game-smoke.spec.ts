@@ -29,6 +29,7 @@ test('it renders respite, avatar, and explore for a signed-in caller without con
 
   await expect(page).toHaveURL(/\/respite$/);
   await expect(page.getByText(/Destiny Awaits a Vessel|Respite/)).toBeVisible();
+  await expect(page.locator('canvas')).toBeVisible();
 
   await page.goto('/avatar');
 
