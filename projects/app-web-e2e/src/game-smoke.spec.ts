@@ -31,6 +31,21 @@ test('it renders respite, avatar, and explore for a signed-in caller without con
   await expect(page.getByText(/Destiny Awaits a Vessel|Respite/)).toBeVisible();
   await expect(page.locator('canvas')).toBeVisible();
 
+  // guard against the app shipping without its generated stylesheet: at least one sheet must be
+  // linked, preflight must have applied (body margin reset), and the preset's global token
+  // variables must resolve
+  const styleProbe = await page.evaluate(() => ({
+    bodyMargin: getComputedStyle(document.body).margin,
+    fontBodyVar: getComputedStyle(document.documentElement)
+      .getPropertyValue('--global-font-body')
+      .trim(),
+    sheetCount: document.styleSheets.length,
+  }));
+
+  expect(styleProbe.sheetCount).toBeGreaterThan(0);
+  expect(styleProbe.bodyMargin).toBe('0px');
+  expect(styleProbe.fontBodyVar).not.toBe('');
+
   await page.goto('/avatar');
 
   // mock-backend data persists across runs against the same dev server, so the account may or
