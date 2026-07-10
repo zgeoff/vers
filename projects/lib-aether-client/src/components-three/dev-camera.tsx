@@ -23,7 +23,13 @@ export function DevCamera() {
       <CameraControls />
       <perspectiveCamera
         ref={cameraRef}
-        args={[75, aspect, 0.1, 1000]}
+        aspect={aspect}
+        far={1000}
+        fov={75}
+        near={0.1}
+        onUpdate={(camera) => {
+          camera.updateProjectionMatrix();
+        }}
         position={[0, 500, -500]}
         rotation={[-Math.PI / 4, 0, 0]}
       />

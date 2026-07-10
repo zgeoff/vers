@@ -13,9 +13,6 @@ import {
   Vector4,
 } from 'three';
 
-const MIN_ZOOM = 10;
-const MAX_ZOOM = 30;
-
 // to allow for tree shaking, only import the subset of three.js camera-controls depends on
 // see https://github.com/yomotsu/camera-controls#important
 CameraControlsImpl.install({
@@ -27,25 +24,23 @@ export function CameraControls() {
   const domElement = useThree((state) => state.gl.domElement);
   const controlsRef = useRef<CameraControlsImpl | null>(null);
 
-  controlsRef.current ??= new CameraControlsImpl(camera);
-
-  const controls = controlsRef.current;
-
-  controls.camera = camera;
-  controls.minZoom = MIN_ZOOM;
-  controls.maxZoom = MAX_ZOOM;
-
   useEffect(() => {
+    const controls = new CameraControlsImpl(camera);
+
+    controlsRef.current = controls;
+
     controls.connect(domElement);
 
     return () => {
       controls.disconnect();
       controls.dispose();
+
+      controlsRef.current = null;
     };
-  }, [controls, domElement]);
+  }, [camera, domElement]);
 
   useFrame((_state, delta) => {
-    controls.update(delta);
+    controlsRef.current?.update(delta);
   });
 
   return null;
