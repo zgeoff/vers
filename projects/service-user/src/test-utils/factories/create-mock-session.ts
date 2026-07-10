@@ -7,7 +7,9 @@ interface CreateMockSessionData extends Partial<Insertable<Sessions>> {
   readonly userId: string;
 }
 
-/** A plain, unpersisted session row with faker-generated defaults; requires an owning user. */
+/**
+ * A plain, unpersisted session row with faker-generated defaults; requires an owning user.
+ */
 export function createMockSession(data: Readonly<CreateMockSessionData>): Insertable<Sessions> {
   return {
     expiresAt: faker.date.future(),

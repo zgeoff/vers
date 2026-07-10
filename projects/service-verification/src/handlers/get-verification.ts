@@ -3,12 +3,16 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { toVerificationData } from './to-verification-data';
 
-/** oRPC handler opts for the `getVerification` procedure. */
+/**
+ * oRPC handler opts for the `getVerification` procedure.
+ */
 interface GetVerificationOpts {
   readonly input: { readonly target: string; readonly type: VerificationType };
 }
 
-/** Looks up a verification by target and type; deletes and returns null when it has expired. */
+/**
+ * Looks up a verification by target and type; deletes and returns null when it has expired.
+ */
 export async function getVerification(
   db: Kysely<DB>,
   opts: GetVerificationOpts,

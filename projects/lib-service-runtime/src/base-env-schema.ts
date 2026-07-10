@@ -1,6 +1,8 @@
 import * as z from 'zod';
 
-/** Environment variables every service validates at boot, before any service-specific ones. */
+/**
+ * Environment variables every service validates at boot, before any service-specific ones.
+ */
 export const BASE_ENV_SCHEMA = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),

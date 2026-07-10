@@ -5,10 +5,14 @@ import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload } from '../types';
 import { toVerificationData } from './to-verification-data';
 
-/** Verification types whose code is consumed once and the row deleted on a successful verify. */
+/**
+ * Verification types whose code is consumed once and the row deleted on a successful verify.
+ */
 const DELETING_TYPES: ReadonlySet<VerificationType> = new Set(['change-email', 'onboarding']);
 
-/** oRPC handler opts for the `verifyCode` procedure. */
+/**
+ * oRPC handler opts for the `verifyCode` procedure.
+ */
 interface VerifyCodeOpts {
   readonly errors: {
     readonly CODE_ALREADY_USED: (payload: EmptyErrorPayload) => Error;

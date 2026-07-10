@@ -2,7 +2,9 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload } from '../types';
 
-/** oRPC handler opts for the `deleteVerification` procedure. */
+/**
+ * oRPC handler opts for the `deleteVerification` procedure.
+ */
 interface RemoveVerificationOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -10,7 +12,9 @@ interface RemoveVerificationOpts {
   readonly input: { readonly id: string };
 }
 
-/** Removes a verification record; throws NOT_FOUND when it doesn't exist. */
+/**
+ * Removes a verification record; throws NOT_FOUND when it doesn't exist.
+ */
 export async function removeVerification(
   db: Kysely<DB>,
   opts: RemoveVerificationOpts,

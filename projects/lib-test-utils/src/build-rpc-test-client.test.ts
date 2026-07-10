@@ -40,7 +40,9 @@ function buildTestContract() {
 
 type TestContract = ReturnType<typeof buildTestContract>;
 
-/** An app (in the shape `buildRPCTestClient` requires) whose one procedure reports back the `authorization` header it received. */
+/**
+ * An app (in the shape `buildRPCTestClient` requires) whose one procedure reports back the `authorization` header it received.
+ */
 function buildEchoApp(): { handle: (request: Request) => Promise<Response> } {
   const os = implement(buildTestContract()).$context<{ authorization: null | string }>();
 

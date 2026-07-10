@@ -8,11 +8,15 @@ import * as z from 'zod';
 import { buildVerificationRouter } from './build-router';
 
 interface CreateVerificationServiceConfig {
-  /** Injected only in tests, to run the service inside the test's own transaction. */
+  /**
+   * Injected only in tests, to run the service inside the test's own transaction.
+   */
   readonly db?: Kysely<DB>;
 }
 
-/** Boots the verification service; the production entrypoint and tests both call this as the one shared config. */
+/**
+ * Boots the verification service; the production entrypoint and tests both call this as the one shared config.
+ */
 export function createVerificationService(
   config: CreateVerificationServiceConfig = {},
 ): Promise<Service<{ DATABASE_URL: z.ZodString }>> {

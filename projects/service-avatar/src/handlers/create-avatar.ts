@@ -5,7 +5,9 @@ import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 import { toAvatarData } from './to-avatar-data';
 
-/** oRPC handler opts for the authed `createAvatar` procedure. */
+/**
+ * oRPC handler opts for the authed `createAvatar` procedure.
+ */
 interface CreateAvatarOpts {
   readonly context: { readonly actingUserId: null | string };
   readonly errors: {
@@ -15,7 +17,9 @@ interface CreateAvatarOpts {
   readonly input: { readonly class: AvatarData['class']; readonly name: string };
 }
 
-/** Creates an avatar owned by the acting user; throws CONFLICT when the name is already taken. */
+/**
+ * Creates an avatar owned by the acting user; throws CONFLICT when the name is already taken.
+ */
 export async function createAvatar(db: Kysely<DB>, opts: CreateAvatarOpts): Promise<AvatarData> {
   if (opts.context.actingUserId === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
@@ -43,7 +47,9 @@ export async function createAvatar(db: Kysely<DB>, opts: CreateAvatarOpts): Prom
   }
 }
 
-/** postgres.js surfaces a unique-constraint violation as SQLSTATE 23505. */
+/**
+ * postgres.js surfaces a unique-constraint violation as SQLSTATE 23505.
+ */
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
 }

@@ -6,7 +6,9 @@ import type { Kysely } from 'kysely';
 const DUMMY_HASH =
   '$argon2id$v=19$m=65536,t=2,p=1$HcnWDKgn0Ge+fMLfUNLxdQyZQP62cm11r4tp2hS9GwE$jcksXM4djDmS+FjzQVmKOHr/5+J1lvSh1lPjUesXBco';
 
-/** oRPC handler opts for the `verifyPassword` procedure. */
+/**
+ * oRPC handler opts for the `verifyPassword` procedure.
+ */
 interface VerifyPasswordOpts {
   readonly input: { readonly email: string; readonly password: string };
 }

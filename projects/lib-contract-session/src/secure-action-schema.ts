@@ -1,6 +1,8 @@
 import * as z from 'zod';
 
-/** A step-up-gated action; the pending-transaction and transaction-token subject. */
+/**
+ * A step-up-gated action; the pending-transaction and transaction-token subject.
+ */
 export const SecureActionSchema = z.enum([
   'ChangeEmail',
   'ChangeEmailConfirmation',

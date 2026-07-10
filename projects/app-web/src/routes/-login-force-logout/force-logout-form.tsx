@@ -26,7 +26,9 @@ const buttonContainer = css({
   width: '96',
 });
 
-/** The force-logout page's confirm/cancel choice; both intents end the request in a redirect. */
+/**
+ * The force-logout page's confirm/cancel choice; both intents end the request in a redirect.
+ */
 export function ForceLogoutForm(props: ForceLogoutFormProps) {
   const forceLogoutFn = useServerFn(forceLogout);
   const submission = useFormSubmit(props.action ?? forceLogoutFn);

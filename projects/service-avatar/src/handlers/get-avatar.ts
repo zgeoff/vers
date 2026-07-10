@@ -4,7 +4,9 @@ import type { Kysely } from 'kysely';
 import type { MissingSessionPayload } from '../types';
 import { toAvatarData } from './to-avatar-data';
 
-/** oRPC handler opts for the authed `getAvatar` procedure. */
+/**
+ * oRPC handler opts for the authed `getAvatar` procedure.
+ */
 interface GetAvatarOpts {
   readonly context: { readonly actingUserId: null | string };
   readonly errors: {
@@ -13,7 +15,9 @@ interface GetAvatarOpts {
   readonly input: { readonly id: string };
 }
 
-/** Returns an avatar owned by the acting user, or null when it doesn't exist or isn't theirs. */
+/**
+ * Returns an avatar owned by the acting user, or null when it doesn't exist or isn't theirs.
+ */
 export async function getAvatar(db: Kysely<DB>, opts: GetAvatarOpts): Promise<AvatarData | null> {
   if (opts.context.actingUserId === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });

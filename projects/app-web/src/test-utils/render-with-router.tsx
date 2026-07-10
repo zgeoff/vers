@@ -13,7 +13,9 @@ import type { FlagKey } from '@vers/flags';
 import type { ReactElement } from 'react';
 
 interface RenderWithRouterOptions {
-  /** Seeds the `/_game` layout route's context, read via `useRouteContext({ from: '/_game' })`. */
+  /**
+   * Seeds the `/_game` layout route's context, read via `useRouteContext({ from: '/_game' })`.
+   */
   readonly flags?: Readonly<Record<FlagKey, boolean>>;
 }
 

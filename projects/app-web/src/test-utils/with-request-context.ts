@@ -4,7 +4,9 @@ import type { FakeSession } from './request-context-holder';
 import { requestContextHolder } from './request-context-holder';
 
 interface RequestContextInit {
-  /** Seeds a named cookie session (keyed by its `SessionConfig.name`) with existing data. */
+  /**
+   * Seeds a named cookie session (keyed by its `SessionConfig.name`) with existing data.
+   */
   readonly cookies?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   readonly headers?: Readonly<Record<string, string>>;
   readonly ip?: string;
@@ -12,7 +14,9 @@ interface RequestContextInit {
 }
 
 interface RequestContextOutcome<T> {
-  /** Every named cookie session's data once the driven call finished; missing if it was cleared. */
+  /**
+   * Every named cookie session's data once the driven call finished; missing if it was cleared.
+   */
   readonly cookies: Readonly<Record<string, Record<string, unknown> | undefined>>;
   readonly value: T;
 }

@@ -16,7 +16,9 @@ const OPENAPI_PATH_ITEM_SHAPE = z.object({
   get: z.object({ responses: OPENAPI_RESPONSES_SHAPE }).optional(),
 });
 
-/** The slice of a generated OpenAPI document the `/spec.json` test inspects. */
+/**
+ * The slice of a generated OpenAPI document the `/spec.json` test inspects.
+ */
 const OPENAPI_DOCUMENT_SHAPE = z.object({
   paths: z.record(z.string(), OPENAPI_PATH_ITEM_SHAPE),
 });
@@ -71,7 +73,9 @@ interface CreateTestServiceTokenOptions {
   readonly privateKey: CryptoKey;
 }
 
-/** Signs a short-lived s2s token carrying the same claim vocabulary a real service token does. */
+/**
+ * Signs a short-lived s2s token carrying the same claim vocabulary a real service token does.
+ */
 function createTestServiceToken(options: Readonly<CreateTestServiceTokenOptions>): Promise<string> {
   const claims = options.actingUserId === undefined ? {} : { sub: options.actingUserId };
 

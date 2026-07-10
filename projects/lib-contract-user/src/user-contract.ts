@@ -6,7 +6,9 @@ import { UserDataSchema } from './user-data-schema';
 import { UserEmailSchema } from './user-email-schema';
 import { UsernameSchema } from './username-schema';
 
-/** The user service's API: signup, credential checks, and profile mutation. */
+/**
+ * The user service's API: signup, credential checks, and profile mutation.
+ */
 export const userContract = {
   changePassword: authedRoute
     .route({ method: 'POST', path: '/users/me/password', summary: "Change the caller's password" })

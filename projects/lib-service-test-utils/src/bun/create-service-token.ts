@@ -9,7 +9,9 @@ interface CreateServiceTokenOptions {
   readonly privateKey: CryptoKey;
 }
 
-/** Signs a short-lived s2s token carrying the shared claim vocabulary, for tests to send as `Authorization: Bearer <token>`. */
+/**
+ * Signs a short-lived s2s token carrying the shared claim vocabulary, for tests to send as `Authorization: Bearer <token>`.
+ */
 export function createServiceToken(options: CreateServiceTokenOptions): Promise<string> {
   const claims = options.actingUserId === undefined ? {} : { sub: options.actingUserId };
 

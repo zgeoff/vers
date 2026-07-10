@@ -52,7 +52,9 @@ export async function checkStepUp(opts: Readonly<CheckStepUpOptions>): Promise<C
   };
 }
 
-/** Redeems a step-up transaction token exactly once, folding every failure mode into `false`. */
+/**
+ * Redeems a step-up transaction token exactly once, folding every failure mode into `false`.
+ */
 async function tryConsumeStepUpToken(
   action: SecureAction,
   target: string,

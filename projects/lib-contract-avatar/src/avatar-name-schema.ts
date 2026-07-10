@@ -1,6 +1,8 @@
 import * as z from 'zod';
 
-/** An avatar's display name. */
+/**
+ * An avatar's display name.
+ */
 export const AvatarNameSchema = z
   .string({ error: 'Name is required' })
   .min(3, { error: 'Name must be at least 3 characters' })

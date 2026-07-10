@@ -1,7 +1,9 @@
 import { PasswordSchema } from '@vers/contract-user';
 import * as z from 'zod';
 
-/** Shared shape for any form collecting a new password twice, requiring the pair to match. */
+/**
+ * Shared shape for any form collecting a new password twice, requiring the pair to match.
+ */
 export const ConfirmPasswordSchema = z
   .object({ confirmPassword: PasswordSchema, password: PasswordSchema })
   .superRefine((value, ctx) => {

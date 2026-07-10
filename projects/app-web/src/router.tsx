@@ -21,7 +21,9 @@ const getCSPNonce = createIsomorphicFn()
     // no request middleware on the client to have stamped a nonce
   });
 
-/** Builds a fresh router + query client pair for each request (SSR) or the one browser session. */
+/**
+ * Builds a fresh router + query client pair for each request (SSR) or the one browser session.
+ */
 export function getRouter() {
   const queryClient = new QueryClient();
 

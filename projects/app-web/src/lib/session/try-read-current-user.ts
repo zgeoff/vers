@@ -3,7 +3,9 @@ import type { UnauthorizedReason } from '@vers/contract-base';
 import type { UserData } from '@vers/contract-user';
 import { userClient } from '../rpc/clients/user-client';
 
-/** The index route's auth-state read, folded into a plain result union — never a thrown error. */
+/**
+ * The index route's auth-state read, folded into a plain result union — never a thrown error.
+ */
 export type CurrentUserResult =
   | { readonly authenticated: false; readonly reason: 'transport-error' | UnauthorizedReason }
   | { readonly authenticated: true; readonly user: UserData };

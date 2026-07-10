@@ -1,7 +1,9 @@
 import { createServerFn } from '@tanstack/react-start';
 import { forceLogoutHandler } from './force-logout-handler';
 
-/** The force-logout page's confirm/cancel submit action. */
+/**
+ * The force-logout page's confirm/cancel submit action.
+ */
 export const forceLogout = createServerFn({ method: 'POST' })
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) {

@@ -5,7 +5,9 @@ interface CreateLoggerOptions {
   readonly name: string;
 }
 
-/** Builds a service's pino logger: JSON lines to stdout, with `name` bound onto every entry. */
+/**
+ * Builds a service's pino logger: JSON lines to stdout, with `name` bound onto every entry.
+ */
 export function createLogger(options: CreateLoggerOptions): pino.Logger {
   return pino({ level: options.level, name: options.name });
 }

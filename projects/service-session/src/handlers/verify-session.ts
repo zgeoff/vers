@@ -5,7 +5,9 @@ import { createJWT } from '../create-jwt';
 import { isDeadlockError } from '../is-deadlock-error';
 import type { EmptyErrorPayload, SessionSigningDeps } from '../types';
 
-/** oRPC handler opts for the public `verifySession` procedure. */
+/**
+ * oRPC handler opts for the public `verifySession` procedure.
+ */
 interface VerifySessionOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;

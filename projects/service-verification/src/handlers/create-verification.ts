@@ -18,7 +18,9 @@ const VERIFICATION_TYPE_TO_CHARSET: Record<VerificationType, string> = {
   onboarding: TOTP_CHARSET,
 };
 
-/** oRPC handler opts for the `createVerification` procedure. */
+/**
+ * oRPC handler opts for the `createVerification` procedure.
+ */
 interface CreateVerificationOpts {
   readonly input: {
     readonly expiresAt?: Date | null | undefined;

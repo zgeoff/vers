@@ -4,7 +4,9 @@ import { AvatarClassSchema } from './avatar-class-schema';
 import { AvatarDataSchema } from './avatar-data-schema';
 import { AvatarNameSchema } from './avatar-name-schema';
 
-/** The avatar service's API: every procedure is authed and owner-scoped by `actingUserId`. */
+/**
+ * The avatar service's API: every procedure is authed and owner-scoped by `actingUserId`.
+ */
 export const avatarContract = {
   createAvatar: authedRoute
     .route({ method: 'POST', path: '/avatars', summary: 'Create an avatar for the caller' })

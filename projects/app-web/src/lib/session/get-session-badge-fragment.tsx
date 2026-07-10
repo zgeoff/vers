@@ -4,7 +4,9 @@ import type { ReactNode } from 'react';
 import { pickSessionBadgeMessage } from './pick-session-badge-message';
 import { tryReadCurrentUser } from './try-read-current-user';
 
-/** The session-badge fragment's one client slot: a free-form refresh control. */
+/**
+ * The session-badge fragment's one client slot: a free-form refresh control.
+ */
 interface SessionBadgeFragmentProps {
   readonly children?: ReactNode;
 }

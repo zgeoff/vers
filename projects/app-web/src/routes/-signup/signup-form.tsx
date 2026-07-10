@@ -27,7 +27,9 @@ const formStyles = css({
 
 const submitButton = css({ marginBottom: '2' });
 
-/** The signup page's client-interactive form: submits to the signup server function. */
+/**
+ * The signup page's client-interactive form: submits to the signup server function.
+ */
 export function SignupForm(props: SignupFormProps) {
   const signupFn = useServerFn(signup);
   const submission = useFormSubmit(props.action ?? signupFn, props.lastResult);

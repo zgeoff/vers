@@ -14,7 +14,9 @@ interface BuildVerificationRouterDeps {
   readonly db: Kysely<DB>;
 }
 
-/** Assembles the verification service's oRPC router, closing each handler over the shared db client. */
+/**
+ * Assembles the verification service's oRPC router, closing each handler over the shared db client.
+ */
 export function buildVerificationRouter(deps: BuildVerificationRouterDeps) {
   const os = implement(verificationContract).$context<ServiceContext>();
 

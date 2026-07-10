@@ -4,7 +4,9 @@ import { ACCESS_TOKEN_DURATION, SESSION_DURATION_SHORT } from '../consts';
 import { createJWT } from '../create-jwt';
 import type { EmptyErrorPayload, SessionSigningDeps } from '../types';
 
-/** oRPC handler opts for the public `refreshTokens` procedure. */
+/**
+ * oRPC handler opts for the public `refreshTokens` procedure.
+ */
 interface RefreshTokensOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;

@@ -113,7 +113,9 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
   };
 }
 
-/** Parses the base + service-specific environment shape against `process.env`, failing fast. */
+/**
+ * Parses the base + service-specific environment shape against `process.env`, failing fast.
+ */
 function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
   envShape: TEnvShape,
 ): ServiceEnv<TEnvShape> {
@@ -132,7 +134,9 @@ function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
   return { ...base.data, ...extra.data };
 }
 
-/** Generates the service's OpenAPI document from its contract, never its implementation. */
+/**
+ * Generates the service's OpenAPI document from its contract, never its implementation.
+ */
 function buildOpenAPIDocument(
   contract: AnyContractRouter,
   name: string,
@@ -146,7 +150,9 @@ function buildOpenAPIDocument(
   });
 }
 
-/** Reads the incoming request-id, or mints one when the caller didn't supply it. */
+/**
+ * Reads the incoming request-id, or mints one when the caller didn't supply it.
+ */
 function getRequestId(request: Request): string {
   return request.headers.get('x-request-id') ?? crypto.randomUUID();
 }

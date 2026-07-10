@@ -1,6 +1,8 @@
 import type { ActivityAppState } from '@vers/idle-core';
 
-/** A duck-typed stand-in for `SharedWorker`: only the one channel the app ever writes to. */
+/**
+ * A duck-typed stand-in for `SharedWorker`: only the one channel the app ever writes to.
+ */
 export interface FakeSimulationWorker {
   readonly port: { readonly postMessage: (message: unknown) => void };
 }

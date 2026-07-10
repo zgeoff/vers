@@ -1,6 +1,8 @@
 import * as z from 'zod';
 
-/** A user as returned to callers; strips `passwordHash` and password-reset fields. */
+/**
+ * A user as returned to callers; strips `passwordHash` and password-reset fields.
+ */
 export const UserDataSchema = z.object({
   createdAt: z.date(),
   email: z.string(),

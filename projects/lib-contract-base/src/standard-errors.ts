@@ -1,6 +1,8 @@
 import * as z from 'zod';
 
-/** Why a session failed to authenticate; carried in the UNAUTHORIZED error payload. */
+/**
+ * Why a session failed to authenticate; carried in the UNAUTHORIZED error payload.
+ */
 export const UnauthorizedReasonSchema = z.enum(['missing-session', 'expired-session']);
 
 export type UnauthorizedReason = z.infer<typeof UnauthorizedReasonSchema>;

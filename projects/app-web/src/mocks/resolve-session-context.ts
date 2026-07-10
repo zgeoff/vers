@@ -1,6 +1,8 @@
 import * as jose from 'jose';
 
-/** The context every mocked contract handler receives; mirrors the real services' shape. */
+/**
+ * The context every mocked contract handler receives; mirrors the real services' shape.
+ */
 export interface MockContext extends Record<string, unknown> {
   readonly actingUserId: string | null;
 }

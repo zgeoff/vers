@@ -2,7 +2,9 @@ import * as db from '../../../db';
 import { os } from '../os';
 import { findLivePendingTransaction } from './find-live-pending-transaction';
 
-/** Failed verify attempts a pending transaction tolerates before it's abandoned. */
+/**
+ * Failed verify attempts a pending transaction tolerates before it's abandoned.
+ */
 const MAX_STEP_UP_ATTEMPTS = 5;
 
 /**

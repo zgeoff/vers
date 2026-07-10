@@ -1,4 +1,6 @@
-/** Reads the step-up transaction token a gated mutation's resubmission carries, if any. */
+/**
+ * Reads the step-up transaction token a gated mutation's resubmission carries, if any.
+ */
 export function findStepUpToken(formData: FormData): string | undefined {
   const raw = formData.get('stepUpToken');
 

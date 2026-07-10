@@ -22,7 +22,9 @@ interface BuildSessionRouterDeps {
   readonly signingKey: CryptoKey;
 }
 
-/** Assembles the session service's oRPC router, closing each handler over the shared db client. */
+/**
+ * Assembles the session service's oRPC router, closing each handler over the shared db client.
+ */
 export function buildSessionRouter(deps: Readonly<BuildSessionRouterDeps>) {
   const os = implement(sessionContract).$context<ServiceContext>();
 

@@ -4,7 +4,9 @@ import type { Kysely } from 'kysely';
 import type { MissingSessionPayload } from '../types';
 import { toSessionData } from './to-session-data';
 
-/** oRPC handler opts for the authed `getSession` procedure. */
+/**
+ * oRPC handler opts for the authed `getSession` procedure.
+ */
 interface GetSessionOpts {
   readonly context: { readonly actingUserId: null | string };
   readonly errors: {
@@ -13,7 +15,9 @@ interface GetSessionOpts {
   readonly input: { readonly id: string };
 }
 
-/** Returns a session owned by the acting user, or null when it doesn't exist or isn't theirs. */
+/**
+ * Returns a session owned by the acting user, or null when it doesn't exist or isn't theirs.
+ */
 export async function getSession(
   db: Kysely<DB>,
   opts: GetSessionOpts,
