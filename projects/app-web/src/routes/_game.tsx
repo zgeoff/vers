@@ -4,6 +4,7 @@ import { requireAuth } from '../lib/auth/require-auth';
 import { GameCanvasMount } from './-game/game-canvas-mount';
 import { GameNav } from './-game/game-nav';
 import { GameSimulationMount } from './-game/game-simulation-mount';
+import { SatelliteStack } from './-game/satellite-stack';
 import { SceneStateSync } from './-game/scene-state-sync';
 
 const requireAuthFn = createServerFn({ method: 'GET' }).handler(() => requireAuth());
@@ -17,6 +18,7 @@ function GameLayout() {
   return (
     <>
       <GameCanvasMount />
+      <SatelliteStack />
       <SceneStateSync />
       <GameSimulationMount />
       <GameNav />

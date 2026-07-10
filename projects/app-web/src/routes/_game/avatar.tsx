@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { css } from '@vers/styled-system/css';
+import { AvatarPanel } from '../-avatar/avatar-panel';
 import { getAvatarContent } from '../../lib/avatar/get-avatar-content';
 
 export const Route = createFileRoute('/_game/avatar')({
@@ -16,9 +16,5 @@ export const Route = createFileRoute('/_game/avatar')({
 function AvatarPage() {
   const data = Route.useLoaderData();
 
-  return (
-    <main className={css({ display: 'flex', flexDirection: 'column', gap: '4', padding: '6' })}>
-      {data.Content}
-    </main>
-  );
+  return <AvatarPanel Content={data.Content} />;
 }
