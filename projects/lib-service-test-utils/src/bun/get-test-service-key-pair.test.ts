@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { TOKEN_ALGORITHM } from '@vers/service-runtime';
-import { createServiceToken } from '@vers/service-runtime/test-utils';
 import * as jose from 'jose';
+import { createServiceToken } from './create-service-token';
 import { getTestServiceKeyPair } from './get-test-service-key-pair';
 
 test('it memoizes the same keypair across repeated calls within a process', async () => {

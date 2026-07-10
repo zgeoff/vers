@@ -474,6 +474,7 @@
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@vers/contract-base": "workspace:*",
+        "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "expect-type": "catalog:",
         "typescript": "catalog:",
@@ -483,7 +484,6 @@
       "name": "@vers/service-test-utils",
       "version": "0.0.0",
       "dependencies": {
-        "@epic-web/totp": "catalog:",
         "@faker-js/faker": "catalog:",
         "@paralleldrive/cuid2": "catalog:",
         "@testcontainers/postgresql": "catalog:",
@@ -497,6 +497,7 @@
       "devDependencies": {
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
+        "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "typescript": "catalog:",
       },

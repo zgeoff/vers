@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./test-utils": "./src/test-utils/index.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "test": "bun test",
@@ -29,6 +28,7 @@
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/contract-base": "workspace:*",
+    "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "expect-type": "catalog:",
     "typescript": "catalog:"

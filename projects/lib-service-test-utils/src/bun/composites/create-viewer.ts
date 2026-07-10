@@ -1,6 +1,6 @@
 import type { DB, Users } from '@vers/db';
-import { createServiceToken } from '@vers/service-runtime/test-utils';
 import type { Insertable, Kysely, Selectable } from 'kysely';
+import { createServiceToken } from '../create-service-token';
 import { createTestUser } from '../create-test-user';
 import { getTestServiceKeyPair } from '../get-test-service-key-pair';
 
