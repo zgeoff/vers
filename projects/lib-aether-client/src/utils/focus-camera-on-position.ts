@@ -2,8 +2,10 @@ import type { PerspectiveCamera } from 'three';
 import { Vector3 } from 'three';
 import { CAMERA_DISTANCE, ISOMETRIC_OFFSET_X, ISOMETRIC_OFFSET_Z } from '../consts';
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function focusCameraOnPosition(camera: PerspectiveCamera, position: [number, number]) {
+export function focusCameraOnPosition(
+  camera: PerspectiveCamera,
+  position: readonly [number, number],
+) {
   const [x, y] = position;
 
   const offset = new Vector3();

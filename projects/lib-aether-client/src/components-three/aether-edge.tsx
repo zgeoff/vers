@@ -6,8 +6,7 @@ interface AetherEdgeProps {
   edge: AetherEdge;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-export function AetherEdge(props: AetherEdgeProps) {
+export function AetherEdge(props: Readonly<AetherEdgeProps>) {
   const points = [
     new Vector3(...getScenePosition(props.edge.start)),
     new Vector3(...getScenePosition(props.edge.end)),

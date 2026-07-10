@@ -26,7 +26,7 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
       React.ComponentPropsWithoutRef<T> & RecipeVariantProps<R>
     >((props, ref) => {
       const [variantProps, restProps] = recipe.splitVariantProps(props);
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- calling a value of the generic type R returns its call signature's declared type, not ReturnType<R>; TS can't unify the two for a type parameter
       const slotStyles = recipe(variantProps) as StyleSlotRecipe<R>;
 
       const className =
@@ -51,8 +51,7 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
   };
 
   const withContext = <T extends React.ElementType>(Component: T, slot?: StyleSlot<R>): T => {
-    // oxlint-disable-next-line typescript/strict-boolean-expressions -- baseline(#236)
-    if (!slot) {
+    if (slot === undefined) {
       return Component;
     }
 
@@ -76,17 +75,21 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
 
     StyledComponent.displayName = `Styled${getComponentName(Component)}`;
 
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- baseline(#236)
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- forwardRef's return type is a fixed ForwardRefExoticComponent that can't be expressed in terms of the caller's generic component type
     return StyledComponent as unknown as T;
   };
 
   return { withContext, withProvider };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
-function getComponentName(Component: React.ElementType) {
-  return typeof Component === 'string'
-    ? Component
-    : // oxlint-disable-next-line typescript/prefer-nullish-coalescing, typescript/strict-boolean-expressions -- baseline(#236)
-      Component.displayName || Component.name || 'Component';
+function getComponentName(Component: React.ElementType): string {
+  if (typeof Component === 'string') {
+    return Component;
+  }
+
+  if (Component.displayName !== undefined && Component.displayName !== '') {
+    return Component.displayName;
+  }
+
+  return Component.name === '' ? 'Component' : Component.name;
 }

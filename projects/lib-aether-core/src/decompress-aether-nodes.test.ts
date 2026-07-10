@@ -5,7 +5,9 @@ import type { CompressedAetherNode } from './types';
 
 test('it decompresses nodes into a complete aether graph', () => {
   // mock our randomization so we can assert we're getting the correct positions
-  spyOn(getRandomizedPosition, 'getRandomizedPosition').mockImplementation((position) => position);
+  spyOn(getRandomizedPosition, 'getRandomizedPosition').mockImplementation((position) => [
+    ...position,
+  ]);
 
   const compressedNodes: Array<CompressedAetherNode> = [
     {

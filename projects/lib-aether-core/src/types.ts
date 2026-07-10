@@ -1,32 +1,32 @@
 export interface AetherGraph {
-  edges: AetherEdgeMap;
-  nodes: AetherNodeMap;
+  readonly edges: AetherEdgeMap;
+  readonly nodes: AetherNodeMap;
 }
 
-export type AetherEdgeMap = Record<string, AetherEdge>;
+export type AetherEdgeMap = Readonly<Record<string, AetherEdge>>;
 
-export type AetherNodeMap = Record<string, AetherNode>;
+export type AetherNodeMap = Readonly<Record<string, AetherNode>>;
 
 export interface AetherNode {
-  connections: [null | string, null | string, null | string, null | string];
-  difficulty: number;
-  id: string;
-  index: number;
-  position: [number, number];
-  seed: number;
+  readonly connections: readonly [null | string, null | string, null | string, null | string];
+  readonly difficulty: number;
+  readonly id: string;
+  readonly index: number;
+  readonly position: readonly [number, number];
+  readonly seed: number;
 }
 
 export interface AetherEdge {
-  end: [number, number];
-  id: string;
-  start: [number, number];
+  readonly end: readonly [number, number];
+  readonly id: string;
+  readonly start: readonly [number, number];
 }
 
 export interface CompressedAetherNode {
-  c: [null | string, null | string, null | string, null | string];
-  d: number;
-  i: number;
-  id: string;
-  p: [number, number];
-  s: number;
+  readonly c: readonly [null | string, null | string, null | string, null | string];
+  readonly d: number;
+  readonly i: number;
+  readonly id: string;
+  readonly p: readonly [number, number];
+  readonly s: number;
 }
