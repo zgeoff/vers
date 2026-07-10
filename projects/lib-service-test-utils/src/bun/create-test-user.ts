@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
 import type { DB, Users } from '@vers/db';
-import bcrypt from 'bcryptjs';
 import type { Insertable, Kysely, Selectable } from 'kysely';
 import { createMockUser } from './factories/create-mock-user';
 
@@ -41,7 +40,10 @@ export async function createTestUser(
 
     passwordHash =
       data.passwordAlgorithm === 'bcrypt'
-        ? await bcrypt.hash(password, LEGACY_BCRYPT_COST_FACTOR)
+        ? await Bun.password.hash(password, {
+            algorithm: 'bcrypt',
+            cost: LEGACY_BCRYPT_COST_FACTOR,
+          })
         : await Bun.password.hash(password, { algorithm: 'argon2id' });
   }
 

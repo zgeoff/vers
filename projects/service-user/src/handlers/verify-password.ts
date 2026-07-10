@@ -1,5 +1,4 @@
 import type { DB } from '@vers/db';
-import bcrypt from 'bcryptjs';
 import type { Kysely } from 'kysely';
 
 // a fixed, valid argon2id hash verified against on every miss so a missing user or unset
@@ -33,7 +32,7 @@ export async function verifyPassword(
   }
 
   if (row.passwordHash.startsWith('$2')) {
-    const isValid = await bcrypt.compare(opts.input.password, row.passwordHash);
+    const isValid = await Bun.password.verify(opts.input.password, row.passwordHash);
 
     if (!isValid) {
       return { success: false };
