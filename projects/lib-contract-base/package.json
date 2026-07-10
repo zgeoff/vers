@@ -4,27 +4,22 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./test-utils": "./src/test-utils/index.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
-    "@orpc/openapi": "catalog:",
-    "@orpc/zod": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@orpc/server": "catalog:",
-    "@sinclair/typebox": "catalog:",
+    "@orpc/openapi": "catalog:",
+    "@orpc/zod": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@zgeoff/bun-test-extended": "catalog:",
-    "elysia": "catalog:",
     "typescript": "catalog:"
   }
 }
