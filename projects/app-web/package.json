@@ -81,7 +81,6 @@
     "@zgeoff/bun-test-extended": "0.0.3",
     "autoprefixer": "10.4.21",
     "babel-plugin-react-compiler": "1.0.0",
-    "jest-extended": "catalog:",
     "typescript": "catalog:",
     "vite": "8.1.3"
   },

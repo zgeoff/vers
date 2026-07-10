@@ -30,7 +30,6 @@
     "@vers/contract-base": "workspace:*",
     "@vers/service-test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "0.0.3",
-    "jest-extended": "catalog:",
     "typescript": "catalog:"
   }
 }
