@@ -53,6 +53,9 @@ export default defineConfig({
       command: 'bun run dev',
       cwd: appWebRoot,
       env: {
+        // canvas-persistence.spec.ts clicks through to the Market nav link
+        FEATURE_MARKET: 'true',
+
         PLAYWRIGHT_TEST_BASE_URL: baseURL,
 
         // Start's session sealing rejects any password under 32 characters
