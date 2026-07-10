@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
-import { buildContractMock } from '@vers/client-test-utils/rpc-msw';
+import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { sessionContract } from '@vers/contract-session';
 import { createMockAccessToken } from '../../mocks/create-mock-access-token';
 import * as db from '../../mocks/db';
