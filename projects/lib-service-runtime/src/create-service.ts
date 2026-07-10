@@ -5,6 +5,7 @@ import type { AnyRouter } from '@orpc/server';
 import type { FetchHandler } from '@orpc/server/fetch';
 import { RPCHandler } from '@orpc/server/fetch';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
+import { TOKEN_ALGORITHM, parseServiceToken } from '@vers/service-auth';
 import { Elysia } from 'elysia';
 import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
@@ -12,8 +13,6 @@ import type pino from 'pino';
 import * as z from 'zod';
 import { BASE_ENV_SCHEMA } from './base-env-schema';
 import { createLogger } from './create-logger';
-import { parseServiceToken } from './parse-service-token';
-import { TOKEN_ALGORITHM } from './token-claims';
 import type { ServiceContext } from './types';
 
 type ServiceEnv<TEnvShape extends z.ZodRawShape> = z.infer<typeof BASE_ENV_SCHEMA> &
