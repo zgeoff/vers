@@ -14,9 +14,9 @@ interface TunnelInProps {
 /**
  * Builds an isolated `In`/`Out` pair for piping React children out of one subtree and rendering
  * them in another: `In` registers its children under a stable id, `Out` renders every current
- * entry in the order its `In` first mounted. Multiple `In`s may be mounted at once; a fresh call
- * to `createTunnel` gives an independent channel, so this is safe to call more than once — the
- * package's shared scene→DOM channel (see `sceneTunnel`) is just one instance of it.
+ * entry in the order its `In` first mounted. Multiple `In`s may be mounted at once; each call
+ * gives an independent channel, so this is safe to call more than once — the package's shared
+ * scene→DOM channel is just one instance of it.
  */
 export function createTunnel(): {
   readonly In: (props: Readonly<TunnelInProps>) => null;

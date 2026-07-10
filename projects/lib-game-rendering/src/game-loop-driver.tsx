@@ -11,9 +11,9 @@ if (raf.frameLoop !== 'demand') {
 }
 
 /**
- * Mounted once inside the persistent canvas by `GameCanvas`. Each driven frame it steps the
- * react-spring rafz clock via `raf.advance`, then runs every callback registered through
- * `registerGameLoopCallback`, in that order.
+ * Mounted once inside the persistent canvas. Each driven frame it steps the react-spring rafz
+ * clock via `raf.advance`, then runs every callback registered against the package's shared
+ * game-loop instance, in that order.
  */
 export function GameLoopDriver(): null {
   useFrame((state, delta) => {
