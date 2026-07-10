@@ -151,9 +151,7 @@ const button = cva({
   },
 });
 
-export type ButtonProps<C extends React.ElementType = 'button'> = RecipeVariantProps<
-  typeof button
-> & {
+type ButtonProps<C extends React.ElementType = 'button'> = RecipeVariantProps<typeof button> & {
   as?: C;
   children: React.ReactNode;
   css?: Styles;

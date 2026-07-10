@@ -1,7 +1,7 @@
 import type { RecipeVariantProps } from '@vers/styled-system/css';
 import { cva, cx } from '@vers/styled-system/css';
 
-export type Props = RecipeVariantProps<typeof brand> & {
+type Props = RecipeVariantProps<typeof brand> & {
   className?: string;
 };
 

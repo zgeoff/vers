@@ -10,7 +10,7 @@ import { Floor } from './floor';
 import { Fog } from './fog';
 import { IsometricCamera } from './isometric-camera';
 
-export function useFilteredGraph() {
+function useFilteredGraph() {
   const graph = useAetherGraph();
   const selectedNode = useSelectedNode();
 

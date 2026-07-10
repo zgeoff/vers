@@ -4,7 +4,7 @@ import type { ActivityAppState } from '@vers/idle-core';
 /**
  * The simulation state every idle-driven consumer reads through this hook.
  */
-export interface IdleWorkerHandle {
+interface IdleWorkerHandle {
   readonly activity: ActivityAppState | undefined;
   readonly initialized: boolean;
   readonly worker: SharedWorker | undefined;

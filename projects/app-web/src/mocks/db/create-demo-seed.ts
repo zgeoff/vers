@@ -5,8 +5,8 @@ import { userCollection } from './user-collection';
  * The e2e game-flow account's login. Each signed-in spec logs in as its own account so their
  * sessions never collide across a shared dev server.
  */
-export const GAME_DEMO_EMAIL = 'e2e-game@vers.test';
-export const GAME_DEMO_PASSWORD = 'password123';
+const GAME_DEMO_EMAIL = 'e2e-game@vers.test';
+const GAME_DEMO_PASSWORD = 'password123';
 
 /**
  * Seeds the demo accounts with no pre-existing session: every signed-in spec establishes its own

@@ -3,7 +3,7 @@ import { cva, cx } from '@vers/styled-system/css';
 import * as React from 'react';
 import type { PolymorphicComponentProps } from '../../types';
 
-export type TextProps<C extends React.ElementType = 'p'> = RecipeVariantProps<typeof text> & {
+type TextProps<C extends React.ElementType = 'p'> = RecipeVariantProps<typeof text> & {
   as?: C;
   children: React.ReactNode;
   className?: string;

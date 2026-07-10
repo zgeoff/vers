@@ -5,7 +5,7 @@ import {
 } from './build-auth-session-config';
 import type { AuthSessionData } from './types';
 
-export interface UpdateAuthSessionOptions {
+interface UpdateAuthSessionOptions {
   readonly expiresAt?: Date;
 }
 

@@ -3,7 +3,7 @@ import { os } from '../os';
 import { findLivePendingTransaction } from './find-live-pending-transaction';
 
 /** Failed verify attempts a pending transaction tolerates before it's abandoned. */
-export const MAX_STEP_UP_ATTEMPTS = 5;
+const MAX_STEP_UP_ATTEMPTS = 5;
 
 /**
  * Records one failed step-up code check. A pending transaction that runs out of attempts is

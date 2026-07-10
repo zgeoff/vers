@@ -9,7 +9,7 @@ const TRANSACTION_TOKEN_TTL_MS = 5 * 60 * 1000;
 const TRANSACTION_TOKEN_ISSUER = 'vers-web-step-up';
 
 /** Claims a step-up transaction token carries; `jti` is its single-use replay-guard id. */
-export interface StepUpTransactionClaims {
+interface StepUpTransactionClaims {
   readonly action: SecureAction;
   readonly expiresAt: Date;
   readonly jti: string;
@@ -17,7 +17,7 @@ export interface StepUpTransactionClaims {
   readonly target: string;
 }
 
-export interface MintedStepUpTransactionToken {
+interface MintedStepUpTransactionToken {
   readonly expiresAt: Date;
   readonly jti: string;
   readonly token: string;

@@ -1,7 +1,7 @@
 import type { Logger } from 'pino';
 import pino from 'pino';
 
-export interface CreateLoggerOptions {
+interface CreateLoggerOptions {
   readonly level: string;
   readonly pretty?: boolean;
   readonly sentryDSN?: string;

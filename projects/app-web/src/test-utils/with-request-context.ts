@@ -3,7 +3,7 @@ import { runWithStartContext } from '@tanstack/start-storage-context';
 import type { FakeSession } from './request-context-holder';
 import { requestContextHolder } from './request-context-holder';
 
-export interface RequestContextInit {
+interface RequestContextInit {
   /** Seeds a named cookie session (keyed by its `SessionConfig.name`) with existing data. */
   readonly cookies?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   readonly headers?: Readonly<Record<string, string>>;
@@ -11,7 +11,7 @@ export interface RequestContextInit {
   readonly url?: string;
 }
 
-export interface RequestContextOutcome<T> {
+interface RequestContextOutcome<T> {
   /** Every named cookie session's data once the driven call finished; missing if it was cleared. */
   readonly cookies: Readonly<Record<string, Record<string, unknown> | undefined>>;
   readonly value: T;

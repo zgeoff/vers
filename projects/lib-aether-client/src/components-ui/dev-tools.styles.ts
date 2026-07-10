@@ -9,7 +9,3 @@ export const container = css({
   top: '2',
   zIndex: '[2]',
 });
-
-export const button = css({
-  marginBottom: '2',
-});

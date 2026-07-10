@@ -21,7 +21,7 @@ const FIXED_SECURE_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ['X-XSS-Protection', '0'],
 ];
 
-export interface MakeSecureHeadersOptions {
+interface MakeSecureHeadersOptions {
   readonly sentryEnabled: boolean;
 }
 

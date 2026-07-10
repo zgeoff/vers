@@ -118,7 +118,7 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
   return enemy;
 }
 
-export function getInitialState(data: EnemyData): EnemyState {
+function getInitialState(data: EnemyData): EnemyState {
   return {
     life: data.life,
     maxLife: data.life,

@@ -7,10 +7,6 @@
     "e2e": "playwright test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": {
-    "@vers/service-utils": "workspace:*",
-    "zod": "catalog:"
-  },
   "devDependencies": {
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",

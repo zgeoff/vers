@@ -144,7 +144,7 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
   return avatar;
 }
 
-export function getInitialState(data: AvatarData): AvatarState {
+function getInitialState(data: AvatarData): AvatarState {
   return {
     life: data.life,
     maxLife: data.life,
