@@ -55,5 +55,25 @@ test('it keeps the same canvas element across client-side game navigation', asyn
     await expect(canvas).toHaveAttribute('data-canvas-persistence-tag', 'original');
   }
 
+  // cheap proof the view-transition wiring shipped: the canvas's nearest named ancestor still
+  // carries the stable `game-canvas` group that keeps it out of the root snapshot
+  const viewTransitionName = await canvas.evaluate((element) => {
+    let node: Element | null = element;
+
+    while (node !== null) {
+      const name = getComputedStyle(node).viewTransitionName;
+
+      if (name !== 'none') {
+        return name;
+      }
+
+      node = node.parentElement;
+    }
+
+    return null;
+  });
+
+  expect(viewTransitionName).toBe('game-canvas');
+
   expect(consoleErrors).toStrictEqual([]);
 });
