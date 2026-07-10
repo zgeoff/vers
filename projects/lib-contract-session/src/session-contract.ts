@@ -132,7 +132,11 @@ export const sessionContract = {
   },
 
   verifySession: publicRoute
-    .route({ method: 'POST', path: '/sessions/verify', summary: 'Complete a 2FA-gated login' })
+    .route({
+      method: 'POST',
+      path: '/sessions/verify',
+      summary: 'Complete a 2FA-gated login, signing the user out of every other session',
+    })
     .input(z.object({ id: z.string() }))
     .output(SessionTokensSchema)
     .errors({

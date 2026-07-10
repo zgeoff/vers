@@ -40,9 +40,12 @@ export async function withRequestContext<T>(
     sessions.set(name, { createdAt: Date.now(), data: { ...data }, id: createId() });
   }
 
+  const request = new Request(init.url ?? 'http://localhost/');
+
   requestContextHolder.current = {
     headers: new Headers(init.headers ?? {}),
     ip: init.ip,
+    request,
     sessions,
     url: new URL(init.url ?? 'http://localhost/'),
   };
@@ -56,7 +59,7 @@ export async function withRequestContext<T>(
           throw new Error('getRouter is not available under withRequestContext');
         },
         handlerType: 'serverFn',
-        request: new Request(init.url ?? 'http://localhost/'),
+        request,
         startOptions: {},
       },
       run,

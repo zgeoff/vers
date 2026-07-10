@@ -13,10 +13,10 @@ const CLEAR_PENDING_SESSION: VerifySessionData = {
 };
 
 /**
- * Runs the force-logout page's confirm/cancel choice. Confirming signs out every other live
- * session for the pending sign-in's account, then completes it exactly like a direct login would;
- * cancelling — or a request with no pending state left to act on — just clears the verify-session
- * cookie and sends the caller back.
+ * Runs the force-logout page's confirm/cancel choice. Confirming completes the pending sign-in
+ * exactly like a direct login would — `verifySession` itself signs out every other live session
+ * for the account; cancelling, or a request with no pending state left to act on, just clears the
+ * verify-session cookie and sends the caller back.
  */
 export async function forceLogoutHandler(formData: FormData): Promise<never> {
   await requireAnonymous();
@@ -33,14 +33,6 @@ export async function forceLogoutHandler(formData: FormData): Promise<never> {
 
     throw redirect({ href: '/' });
   }
-
-  const otherSessions = await sessionClient.getSessions({}, { context: { actingUserID } });
-
-  await Promise.all(
-    otherSessions
-      .filter((other) => other.id !== sessionID)
-      .map((other) => sessionClient.deleteSession({ id: other.id }, { context: { actingUserID } })),
-  );
 
   const session = await sessionClient.getSession({ id: sessionID }, { context: { actingUserID } });
 

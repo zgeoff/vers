@@ -13,6 +13,7 @@ export function registerRequestContextMock(): void {
   void mock.module('@tanstack/react-start/server', () => ({
     ...reactStartServer,
     clearSession: fakeClearSession,
+    getRequest: fakeGetRequest,
     getRequestHeader: fakeGetRequestHeader,
     getRequestHeaders: fakeGetRequestHeaders,
     getRequestIP: fakeGetRequestIP,
@@ -91,6 +92,10 @@ function fakeClearSession(config: FakeSessionConfig): Promise<void> {
   state.sessions.delete(config.name ?? 'h3');
 
   return Promise.resolve();
+}
+
+function fakeGetRequest(): Request {
+  return requireContext().request;
 }
 
 function fakeGetRequestUrl(): URL {

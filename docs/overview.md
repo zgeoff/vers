@@ -12,6 +12,12 @@ the acting user's ID, and calls domain services through typed oRPC contract clie
 private mesh. Services verify that token on every call, do their work against Postgres on Neon, and
 return typed results.
 
+A user has at most one verified session at a time: completing a 2FA-gated login evicts every other
+session on the account, server-side. Because a request's minted service token can outlive its
+session by up to the token's own short lifetime, the trust edge also re-confirms the session still
+exists on every request before trusting it, so an evicted device is signed out on its next request
+rather than waiting for its cached token to expire.
+
 ```mermaid
 flowchart LR
     B[Browser] -->|HTTPS| W["app-web<br>TanStack Start"]
