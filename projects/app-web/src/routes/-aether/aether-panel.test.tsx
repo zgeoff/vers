@@ -1,11 +1,33 @@
 import { expect, test } from 'bun:test';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { setSelectedNode } from '@vers/aether-client';
+import type { AetherNode } from '@vers/aether-core';
+import { renderWithRouter } from '../../test-utils/render-with-router';
 import { AetherPanel } from './aether-panel';
 
-test('it renders the canvas behind a code-split boundary', async () => {
-  render(<AetherPanel />);
+const node: AetherNode = {
+  connections: ['conn1', null, 'conn2', null],
+  difficulty: 2,
+  id: 'node123',
+  index: 3,
+  position: [1.2345, 6.789],
+  seed: 12_345,
+};
 
-  const canvas = await screen.findByTestId('aether-canvas-stub');
+test('it renders no canvas of its own', () => {
+  setSelectedNode(null);
 
-  expect(canvas).toBeVisible();
+  const rendered = renderWithRouter(<AetherPanel />);
+
+  expect(rendered.container.querySelector('canvas')).not.toBeInTheDocument();
+});
+
+test('it shows the selected node once the graph reports one', async () => {
+  setSelectedNode(node, null);
+
+  renderWithRouter(<AetherPanel />);
+
+  const nodeID = await screen.findByTestId('selected-node-id');
+
+  expect(nodeID).toHaveTextContent('Aether Node (node123)');
 });

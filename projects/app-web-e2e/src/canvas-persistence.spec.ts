@@ -1,0 +1,57 @@
+import { expect, test } from '@playwright/test';
+
+/**
+ * The `_game` layout mounts its canvas once and never remounts it across child-route navigation:
+ * a client-side nav to another game route must leave the same `<canvas>` element in the DOM,
+ * carrying whatever GPU state it already uploaded.
+ */
+test('it keeps the same canvas element across client-side game navigation', async ({ page }) => {
+  const consoleErrors: Array<string> = [];
+
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      consoleErrors.push(message.text());
+    }
+  });
+
+  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
+
+  await page.goto('/aether');
+
+  await expect(page).toHaveURL(/\/login/);
+  await page.waitForLoadState('networkidle');
+
+  await page.getByLabel('Email').fill('e2e-canvas@vers.test');
+  await page.getByLabel('Password').fill('password123');
+
+  // the honeypot rejects any submission under 1.5s old as bot-paced — real typing naturally
+  // clears it, a scripted fill+click doesn't
+  await page.waitForTimeout(1600);
+
+  await page.getByRole('button', { exact: true, name: 'Login' }).click();
+
+  await expect(page).toHaveURL(/\/aether$/);
+
+  const canvas = page.locator('canvas');
+
+  await expect(canvas).toBeVisible();
+
+  await canvas.evaluate((element) => {
+    element.dataset['canvasPersistenceTag'] = 'original';
+  });
+
+  for (const [linkName, urlPattern] of [
+    ['Nexus', /\/nexus$/],
+    ['Avatar', /\/avatar(?<create>\/create)?$/],
+    ['Aether', /\/aether$/],
+  ] as const) {
+    await page.getByRole('button', { name: 'Menu' }).click();
+    await page.getByRole('link', { exact: true, name: linkName }).click();
+
+    await expect(page).toHaveURL(urlPattern);
+    await expect(canvas).toBeAttached();
+    await expect(canvas).toHaveAttribute('data-canvas-persistence-tag', 'original');
+  }
+
+  expect(consoleErrors).toStrictEqual([]);
+});

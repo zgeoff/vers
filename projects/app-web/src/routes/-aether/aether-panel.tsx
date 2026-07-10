@@ -1,22 +1,16 @@
-import { Spinner } from '@vers/design-system';
-import { Suspense, lazy, memo } from 'react';
-
-const LazyAetherCanvas = lazy(async () => {
-  const module = await import('./aether-canvas');
-
-  return { default: module.AetherCanvas };
-});
-
-const MemoizedAetherCanvas = memo(LazyAetherCanvas);
+import { DevTools, NodeTooltip } from '@vers/aether-client';
+import { SelectedNodeInfo } from './selected-node-info';
 
 /**
- * The aether map's client-lane host: three.js and the R3F canvas load only once this component
- * mounts, behind a `React.lazy` boundary, so they never land in the initial bundle.
+ * The aether route's DOM-lane chrome: the world itself renders through the game layout's
+ * persistent canvas, so this component owns only the tooltip, selection panel, and dev tools.
  */
 export function AetherPanel() {
   return (
-    <Suspense fallback={<Spinner />}>
-      <MemoizedAetherCanvas />
-    </Suspense>
+    <>
+      <NodeTooltip />
+      <SelectedNodeInfo />
+      {import.meta.env.DEV && <DevTools />}
+    </>
   );
 }

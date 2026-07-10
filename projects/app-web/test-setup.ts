@@ -5,8 +5,9 @@ import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
 import { registerMSWLifecycle } from '@vers/client-test-utils/test-setup';
 import { server } from './src/mocks/node';
-import { registerAetherCanvasMock } from './src/test-utils/register-aether-canvas-mock';
 import { registerAetherNodeCodexSlotMock } from './src/test-utils/register-aether-node-codex-slot-mock';
+import { registerAetherSceneMock } from './src/test-utils/register-aether-scene-mock';
+import { registerGameCanvasMock } from './src/test-utils/register-game-canvas-mock';
 import { registerIdleWorkerHandleMock } from './src/test-utils/register-idle-worker-handle-mock';
 import { registerRequestContextMock } from './src/test-utils/register-request-context-mock';
 
@@ -39,7 +40,9 @@ registerRequestContextMock();
 
 registerIdleWorkerHandleMock();
 
-registerAetherCanvasMock();
+registerGameCanvasMock();
+
+registerAetherSceneMock();
 
 registerAetherNodeCodexSlotMock();
 
