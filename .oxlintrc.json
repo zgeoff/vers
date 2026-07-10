@@ -133,9 +133,14 @@
               "MessagePort",
               "SharedWorker",
               "URL",
-              "MouseEvent"
+              "MouseEvent",
+              // genuinely immutable, but its members are method signatures, which the
+              // rule's default settings treat as mutable (typescript-eslint#8013)
+              "ReadonlySet"
             ]
           },
+          // zustand's own generic callback type; it has no readonly form
+          { "from": "package", "name": "StateCreator", "package": "zustand" },
           { "from": "package", "name": "ReactNode", "package": "react" },
           { "from": "package", "name": "SyntheticEvent", "package": "react" },
           { "from": "package", "name": "ElementType", "package": "react" },

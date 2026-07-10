@@ -10,7 +10,6 @@ import { ClientMessageType, WorkerMessageType } from '../types';
 import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerRuntime's `connections` field is a ReadonlySet, which this rule doesn't recognize as a readonly type
 function createConnection(runtime: WorkerRuntime): MessagePort {
   const channel = new MessageChannel();
 
@@ -27,7 +26,6 @@ function waitForMessage(port: MessagePort) {
   });
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerRuntime's `connections` field is a ReadonlySet, which this rule doesn't recognize as a readonly type
 async function waitForConnectionCount(runtime: WorkerRuntime, size: number) {
   for (let attempt = 0; attempt < 50 && runtime.connections.size !== size; attempt++) {
     await new Promise((resolve) => {

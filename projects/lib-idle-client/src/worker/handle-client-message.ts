@@ -8,7 +8,6 @@ import { isSetActivityMessage } from './is-set-activity-message';
 import type { WorkerContext } from './types';
 
 export async function handleClientMessage(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerContext's `connections` field is a ReadonlySet, which this rule doesn't recognize as a readonly type
   context: WorkerContext,
   port: MessagePort,
   event: MessageEvent<ClientMessage>,

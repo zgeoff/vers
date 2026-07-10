@@ -16,14 +16,8 @@ export function registerZustandReset(): void {
   const storeResetFns = new Set<() => void>();
 
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- wraps zustand's own overloaded generic `create`; the wrapper is call-compatible but structurally distinct from the real signature
-  const create = (<T>(
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- StateCreator is zustand's own generic callback type; it has no readonly form
-    stateCreator?: actualZustand.StateCreator<T>,
-  ) => {
-    const curried = (
-      // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- StateCreator is zustand's own generic callback type; it has no readonly form
-      creator: actualZustand.StateCreator<T>,
-    ) => {
+  const create = (<T>(stateCreator?: actualZustand.StateCreator<T>) => {
+    const curried = (creator: actualZustand.StateCreator<T>) => {
       const store = actualCreate(creator);
       const initialState = store.getInitialState();
 
