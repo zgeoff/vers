@@ -148,6 +148,7 @@ Libraries:
 - `lib-db` - kysely connection helper, migrations, and generated database types
 - `lib-design-system` - ui component library (Ark UI primitives + Panda recipes)
 - `lib-email` - Resend wrapper and react-email template factories
+- `lib-flags` - OpenFeature-backed feature flag registry and env provider
 - `lib-game-rendering` - client rendering shell: scene/presentation state for the persistent
   three.js canvas
 - `lib-game-utils` - shared game logic (encounter derivation, rewards)
