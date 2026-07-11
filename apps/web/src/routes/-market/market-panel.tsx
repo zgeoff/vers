@@ -16,7 +16,6 @@ const MARKET_LISTINGS: ReadonlyArray<MarketListing> = [
 const panel = css({
   backgroundColor: 'bg.panel',
   borderColor: 'border',
-  borderRadius: 'md',
   borderWidth: '[1px]',
   display: 'flex',
   flexDirection: 'column',
@@ -33,7 +32,6 @@ const list = css({
 
 const listing = css({
   backgroundColor: 'bg.panelElevated',
-  borderRadius: 'sm',
   display: 'block',
   padding: '3',
 });

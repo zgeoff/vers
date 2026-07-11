@@ -6,7 +6,6 @@ const CHARACTER_FRAMES: ReadonlyArray<string> = ['Vanguard', 'Support', 'Striker
 const panel = css({
   backgroundColor: 'bg.panel',
   borderColor: 'border',
-  borderRadius: 'md',
   borderWidth: '[1px]',
   display: 'flex',
   flexDirection: 'column',
@@ -17,7 +16,6 @@ const panel = css({
 
 const lootPanel = css({
   backgroundColor: 'bg.panelElevated',
-  borderRadius: 'sm',
   padding: '4',
 });
 
@@ -28,7 +26,6 @@ const characterFrameRow = css({
 
 const characterFrame = css({
   backgroundColor: 'bg.panelElevated',
-  borderRadius: 'sm',
   flex: '1',
   padding: '3',
   textAlign: 'center',

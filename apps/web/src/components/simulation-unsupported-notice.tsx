@@ -11,7 +11,6 @@ export function SimulationUnsupportedNotice() {
       className={css({
         backgroundColor: 'bg.panel',
         borderColor: 'border',
-        borderRadius: 'md',
         borderWidth: '[1px]',
         display: 'flex',
         flexDirection: 'column',

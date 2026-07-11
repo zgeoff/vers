@@ -17,20 +17,15 @@ const lifeLabel = css({
 });
 
 const lifeBar = css({
-  backgroundColor: 'gray.700',
-  borderColor: 'gray.800',
+  backgroundColor: 'bg.panelElevated',
+  borderColor: 'border',
   borderWidth: '[1px]',
   marginBottom: '2',
-  rounded: 'xs',
 });
 
 const lifeBarFill = css({
-  backgroundColor: 'red.500',
+  backgroundColor: 'accent.enemy',
   height: '2',
-  rounded: 'xs',
-  transition: '[width]',
-  transitionDuration: 'slowest',
-  transitionTimingFunction: 'in-out',
   width: 'full',
 });
 

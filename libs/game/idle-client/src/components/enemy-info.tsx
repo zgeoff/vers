@@ -8,15 +8,10 @@ const enemyInfo = css({
   _last: {
     marginBottom: '0',
   },
-  backgroundColor: 'gray.900',
-  borderColor: 'gray.700',
+  backgroundColor: 'bg.panel',
+  borderColor: 'border',
   borderWidth: '[1px]',
-  boxShadow: 'md',
   padding: '2',
-  rounded: 'md',
-  transition: '[opacity]',
-  transitionDuration: 'fast',
-  transitionTimingFunction: 'in-out',
   width: '1/2',
 });
 

@@ -23,9 +23,6 @@
   "devDependencies": {
     "@conform-to/react": "catalog:",
     "@conform-to/zod": "catalog:",
-    "@fontsource-variable/manrope": "catalog:",
-    "@fontsource/chakra-petch": "catalog:",
-    "@fontsource/ibm-plex-mono": "catalog:",
     "@happy-dom/global-registrator": "catalog:",
     "@ladle/react": "catalog:",
     "@pandacss/dev": "catalog:",

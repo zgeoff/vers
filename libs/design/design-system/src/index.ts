@@ -1,4 +1,3 @@
-export { BackgroundPattern } from './components/background-pattern/background-pattern';
 export { Brand } from './components/brand/brand';
 export { Button } from './components/button/button';
 export { CheckboxField } from './components/checkbox-field/checkbox-field';

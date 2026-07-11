@@ -12,33 +12,31 @@ interface Props {
 const fieldRecipe = sva({
   base: {
     errorText: {
-      color: 'red.500',
+      color: 'text.danger',
       fontSize: 'sm',
     },
     input: {
       _focusVisible: {
-        borderColor: 'gray.500',
+        borderColor: 'border.strong',
         outline: 'none',
       },
       _invalid: {
-        borderColor: 'red.500',
+        borderColor: 'border.danger',
       },
       _placeholder: {
-        color: 'gray.600',
+        color: 'text.faint',
       },
-      backgroundColor: 'gray.900',
-      borderColor: 'gray.700',
+      backgroundColor: 'bg.panel',
+      borderColor: 'border',
       borderWidth: '[1px]',
-      color: 'gray.300',
+      color: 'text.primary',
       outline: 'none',
       paddingX: '3',
       paddingY: '2',
-      rounded: 'md',
       width: 'full',
     },
     label: {
-      color: 'slate.200',
-      fontFamily: 'body',
+      color: 'text.primary',
       fontSize: 'sm',
       fontWeight: 'semibold',
       lineHeight: 'normal',

@@ -13,7 +13,6 @@ const STASH_ITEMS: ReadonlyArray<string> = [
 const panel = css({
   backgroundColor: 'bg.panel',
   borderColor: 'border',
-  borderRadius: 'md',
   borderWidth: '[1px]',
   display: 'flex',
   flexDirection: 'column',
@@ -30,7 +29,6 @@ const grid = css({
 
 const item = css({
   backgroundColor: 'bg.panelElevated',
-  borderRadius: 'sm',
   padding: '3',
 });
 

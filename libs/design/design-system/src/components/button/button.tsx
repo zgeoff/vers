@@ -5,13 +5,7 @@ import type { PolymorphicComponentProps } from '../../types';
 
 const button = cva({
   base: {
-    _active: {
-      transform: 'translateY(1px)',
-    },
     _disabled: {
-      _active: {
-        transform: 'none',
-      },
       _hover: {
         cursor: '[not-allowed]',
       },
@@ -23,13 +17,11 @@ const button = cva({
     alignItems: 'center',
     borderWidth: '[1px]',
     display: 'flex',
-    fontFamily: 'body',
     fontWeight: 'semibold',
     justifyContent: 'center',
     lineHeight: 'none',
     overflow: 'hidden',
     position: 'relative',
-    rounded: 'sm',
     textAlign: 'center',
     userSelect: 'none',
   },
@@ -67,78 +59,71 @@ const button = cva({
       default: {
         _disabled: {
           _hover: {
-            background: 'neutral.900',
+            borderColor: 'border.subtle',
           },
-          background: 'neutral.900',
-          borderColor: 'neutral.100/5',
-          color: 'neutral.600',
+          borderColor: 'border.subtle',
+          color: 'text.faint',
         },
         _hover: {
-          background: 'neutral.700',
+          borderColor: 'border.strong',
         },
-        background: 'neutral.800',
-        borderColor: 'neutral.100/20',
-        color: 'slate.100',
+        background: 'bg.panelElevated',
+        borderColor: 'border',
+        color: 'text.primary',
       },
       link: {
-        _active: {
-          transform: 'none',
-        },
         _hover: {
           textDecoration: 'underline',
         },
         borderWidth: '[0]',
-        color: 'sky.500',
+        color: 'text.primary',
         fontWeight: 'normal',
         padding: '0',
       },
       primary: {
         _disabled: {
           _hover: {
-            background: 'sky.900',
+            borderColor: 'border.subtle',
           },
-          background: 'sky.900',
-          borderColor: 'neutral.100/5',
-          color: 'neutral.900',
+          borderColor: 'border.subtle',
+          color: 'text.faint',
         },
         _hover: {
-          background: 'sky.400',
+          borderColor: 'border.strong',
         },
-        background: 'sky.500',
-        borderColor: 'neutral.100/20',
-        color: 'neutral.900',
+        background: 'bg.panelElevated',
+        borderColor: 'border',
+        color: 'text.primary',
       },
       secondary: {
         _disabled: {
           _hover: {
-            background: 'slate.800',
+            borderColor: 'border.subtle',
           },
-          background: 'slate.800',
-          borderColor: 'neutral.100/5',
-          color: 'slate.600',
+          borderColor: 'border.subtle',
+          color: 'text.faint',
         },
         _hover: {
-          background: 'slate.200',
+          borderColor: 'border.strong',
         },
-        background: 'slate.200',
-        borderColor: 'neutral.100/20',
-        color: 'slate.800',
+        background: 'bg.panelElevated',
+        borderColor: 'border',
+        color: 'text.primary',
       },
       tertiary: {
         _disabled: {
           _hover: {
-            background: 'gold.900',
+            borderColor: 'border.subtle',
           },
-          background: 'gold.900',
-          borderColor: 'neutral.100/5',
-          color: 'neutral.500',
+          borderColor: 'border.subtle',
+          color: 'text.faint',
         },
         _hover: {
-          background: 'gold.400',
+          borderColor: 'border.strong',
         },
-        background: 'gold.500',
-        borderColor: 'neutral.100/20',
-        color: 'neutral.100',
+        background: 'bg.panelElevated',
+        borderColor: 'border',
+        color: 'text.primary',
       },
       transparent: {
         _hover: {

@@ -9,8 +9,7 @@ interface Props {
 
 const heading = cva({
   base: {
-    color: 'slate.200',
-    fontFamily: 'display',
+    color: 'text.heading',
     fontWeight: 'semibold',
   },
   variants: {
