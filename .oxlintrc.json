@@ -95,6 +95,8 @@
         "allow": [
           { "from": "package", "name": "Kysely", "package": "kysely" },
           { "from": "package", "name": "Logger", "package": "pino" },
+          // a pino write sink: its single `write` method is behaviour, not data; no readonly form
+          { "from": "package", "name": "DestinationStream", "package": "pino" },
           // the router instance: a live handle carrying match/history/cache state it mutates
           // internally on every navigation, so it has no useful readonly form
           { "from": "package", "name": "AnyRouter", "package": "@tanstack/router-core" },

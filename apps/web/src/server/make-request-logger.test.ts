@@ -37,6 +37,27 @@ test('it includes the query string in the logged path', async () => {
   expect(lines[0]).toInclude('/login?next=/account');
 });
 
+test('it emits no escape codes when colorize is off', async () => {
+  const lines: Array<string> = [];
+
+  const requestLogger = makeRequestLogger(
+    {
+      info: (message) => {
+        lines.push(message);
+      },
+    },
+    { colorize: false },
+  );
+
+  await requestLogger(new Request('https://example.test/nexus'), () =>
+    Promise.resolve(new Response('ok')),
+  );
+
+  expect(lines).toHaveLength(2);
+  expect(lines.join('')).not.toInclude('\u001B[');
+  expect(lines[1]).toInclude('[--->] GET /nexus 200');
+});
+
 test('it labels a server error response distinctly from a success', async () => {
   const lines: Array<string> = [];
 
