@@ -107,7 +107,7 @@
       "pino": "10.3.1",
       "pino-pretty": "13.0.0",
       "postcss": "8.5.16",
-      "postgres": "3.4.5",
+      "postgres": "3.4.9",
       "pure-rand": "7.0.1",
       "qrcode": "1.5.4",
       "react": "19.2.7",
