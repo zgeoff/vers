@@ -262,16 +262,16 @@ sentence can't be simplified without losing it.
 
 Packages live under kind-first roots — the bun workspace globs are `apps/*`, `services/*`,
 `contracts/*`, `libs/*/*` (libraries grouped by domain: `core`, `data`, `design`, `game`, `service`,
-`testing`), and `infra`; `docs/overview.md` lists them. Every project has its own `package.json`
-named `@vers/<name>`: internal deps use the `workspace:*` protocol, and every external dependency's
-version lives in the root manifest's `workspaces.catalog`, referenced everywhere as `catalog:` —
-project manifests carry no direct version pins. Libraries are consumed as TypeScript source
-(`exports` → `./src/index.ts`); there are no per-library build steps. `bun install` uses the
-isolated linker (pnpm-style symlinks, no phantom deps) with exact pins and a 7-day
-`minimumReleaseAge` — see `bunfig.toml`. Turborepo drives the task graph: root `turbo.json` declares
-the `build`/`typecheck`/`test`/`codegen`/`typegen`/`e2e` pipelines (ordering inferred from each
-project's `workspace:*` deps). Per-project `turbo.json` files exist only to declare `boundaries`
-tags. CI's changed-project detection is `turbo run --affected`.
+`testing`), `infra`, and `scripts`; `docs/overview.md` lists them. Every project has its own
+`package.json` named `@vers/<name>`: internal deps use the `workspace:*` protocol, and every
+external dependency's version lives in the root manifest's `workspaces.catalog`, referenced
+everywhere as `catalog:` — project manifests carry no direct version pins. Libraries are consumed as
+TypeScript source (`exports` → `./src/index.ts`); there are no per-library build steps.
+`bun install` uses the isolated linker (pnpm-style symlinks, no phantom deps) with exact pins and a
+7-day `minimumReleaseAge` — see `bunfig.toml`. Turborepo drives the task graph: root `turbo.json`
+declares the `build`/`typecheck`/`test`/`codegen`/`typegen`/`e2e` pipelines (ordering inferred from
+each project's `workspace:*` deps). Per-project `turbo.json` files exist only to declare
+`boundaries` tags. CI's changed-project detection is `turbo run --affected`.
 
 TypeScript is 7.0.2 (catalog). TS7 has no `baseUrl` and no classic Compiler API, and there is no
 path-alias convention here — write imports relative to the importing file. Node is 24.18.0 in CI and
@@ -294,6 +294,30 @@ A package's name is `@vers/` plus its leaf folder name: `libs/core/utils` → `@
 prefix the name keeps: `services/user` → `@vers/service-user` and `contracts/user` →
 `@vers/contract-user`. The `libs/<domain>/` grouping is browsing-only — it carries no boundary
 semantics, and moving a lib between domains changes nothing but its path.
+
+## Repo scripts
+
+Operational tooling is the `@vers/scripts` workspace package (`scripts/`), so it gets typecheck,
+test, lint, boundaries, and knip coverage like any project. `src/bin/` holds the executable
+entrypoints — thin shells that sequence I/O and exit codes; `src/<domain>/` directories (`deploy/`,
+`stack/`, `postgres/`) hold the composable logic; `src/utils/` accepts only domain-free pieces (a
+retry wrapper, a subprocess edge). Decision logic is pure — data in, findings out — with co-located
+tests; effect modules stay thin enough that running the CLI is their coverage. Root-manifest script
+entries (`bun run deploy`, `bun run stack`, `pg:*`) invoke the bin files with plain `bun`.
+
+## Deploys
+
+`bun run deploy` drives every Fly rollout. The fleet manifest is `deploy.config.ts` at the repo root
+— apps, staleness triggers, and post-deploy probes — typed by `defineDeployManifest`
+(`@vers/scripts`) and loaded by the CLI at runtime. Every deploy stamps the commit SHA into machine
+env as `GIT_SHA`, and staleness compares HEAD against that stamp (`turbo --affected` for workspace
+packages, path globs for non-workspace apps), so a rollout lost to a failure or cancellation ships
+on the next push. `deploy --app <name>` deploys one app when stale, waits for the fleet to report
+the new SHA, then runs the app's probes; `verify` asserts every manifest app is online (machines
+exist, warm floors met) and current, failing on any finding. CI's deploy matrix and its
+`verify-fleet` job — the gate that runs on every green main push even when no deploy leg fired —
+both call the CLI through the `.github/actions/fly-deploy` composite action; locally the CLI needs
+only a `FLY_API_TOKEN`.
 
 ## Styling
 

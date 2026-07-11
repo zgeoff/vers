@@ -1,0 +1,58 @@
+import { withRetry } from '../utils/with-retry';
+import type { Probe } from './types';
+
+const PROBE_ATTEMPTS = 10;
+const PROBE_DELAY_MS = 5000;
+
+/**
+ * Runs each probe against the live app, retrying while the deploy settles,
+ * and returns findings; an empty array means every probe passed. Probes run
+ * sequentially so their log output stays readable.
+ */
+export async function runProbes(probes: ReadonlyArray<Probe>): Promise<ReadonlyArray<string>> {
+  const findings: Array<string> = [];
+
+  for (const probe of probes) {
+    try {
+      await withRetry(() => runProbe(probe), { attempts: PROBE_ATTEMPTS, delayMS: PROBE_DELAY_MS });
+
+      console.log(`✓ probe passed: ${formatProbe(probe)}`);
+    } catch (error) {
+      findings.push(`probe failed: ${formatProbe(probe)} — ${toMessage(error)}`);
+    }
+  }
+
+  return findings;
+}
+
+async function runProbe(probe: Probe): Promise<void> {
+  if (probe.kind === 'http') {
+    const response = await fetch(probe.url);
+
+    if (response.status !== probe.expectStatus) {
+      throw new Error(`expected status ${probe.expectStatus}, got ${response.status}`);
+    }
+
+    return;
+  }
+
+  const response = await fetch(probe.url, {
+    body: JSON.stringify(probe.body),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+
+  const body: unknown = await response.json();
+
+  if (!probe.expect(body)) {
+    throw new Error(`response did not satisfy expectation: ${JSON.stringify(body)}`);
+  }
+}
+
+function formatProbe(probe: Probe): string {
+  return `${probe.kind} ${probe.url}`;
+}
+
+function toMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}

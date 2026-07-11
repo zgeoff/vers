@@ -1,15 +1,13 @@
-#!/usr/bin/env node
-
 import { Command } from 'commander';
-import { exec } from './stack/commands/exec';
-import { logs } from './stack/commands/logs';
-import { rm } from './stack/commands/rm';
-import { start } from './stack/commands/start';
-import type { StartOptions } from './stack/commands/start';
-import { status } from './stack/commands/status';
-import { stop } from './stack/commands/stop';
-import type { ServiceID } from './stack/types';
-import { parseServiceArg } from './stack/utils/parse-service-arg';
+import { exec } from '../stack/commands/exec';
+import { logs } from '../stack/commands/logs';
+import { rm } from '../stack/commands/rm';
+import { start } from '../stack/commands/start';
+import type { StartOptions } from '../stack/commands/start';
+import { status } from '../stack/commands/status';
+import { stop } from '../stack/commands/stop';
+import type { ServiceID } from '../stack/types';
+import { parseServiceArg } from '../stack/utils/parse-service-arg';
 
 const program = new Command().name('stack').description('CLI to manage the development stack');
 

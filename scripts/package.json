@@ -1,0 +1,29 @@
+{
+  "name": "@vers/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@vers/db": "workspace:*",
+    "@vers/service-test-utils": "workspace:*",
+    "commander": "catalog:",
+    "execa": "catalog:",
+    "ora": "catalog:",
+    "postgres": "catalog:",
+    "tiny-invariant": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@zgeoff/bun-test-extended": "catalog:",
+    "typescript": "catalog:"
+  }
+}

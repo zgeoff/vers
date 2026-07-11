@@ -10,6 +10,9 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    # a hung step (a script that never exits, a wedged container) must fail the
+    # run, not burn runner hours — the suite's worst observed run is ~4 minutes
+    timeout-minutes: 10
     env:
       TURBO_SCM_BASE: main
       # CI never commits, but skip hook install/execution regardless
