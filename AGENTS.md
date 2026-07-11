@@ -178,8 +178,8 @@ The full conventions — taxonomy, code registry, trace context, reporting split
   `createService` owns that.
 - Every contract `.errors({…})` map is built with `defineErrors` (`@vers/contract-base`). A bespoke
   code (any code outside oRPC's canonical set) declares an explicit `status` and lands with its row
-  in the `docs/architecture/error-handling.md` registry table in the same PR; bespoke codes are named
-  `NOUN_PROBLEM`.
+  in the `docs/architecture/error-handling.md` registry table in the same PR; bespoke codes are
+  named `NOUN_PROBLEM`.
 - Clients narrow on `code` via `isDefinedError`/`safe` and act on `data` fields — never on `message`
   strings.
 - The Sentry SDK is the only path to the error backend; pino is a log-only sink. Never wire a log
