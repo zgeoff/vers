@@ -111,6 +111,9 @@ the function's shape without opening it.
 | `emit`     | dispatch an event or notification                                                                                                       | `emitProgress`    |
 | `send`     | transmit a payload to a remote receiver (fire-and-forget or RPC — no resource semantics; REST mutations are `create`/`update`/`remove`) | `sendWebhook`     |
 | `wait`     | block until an event or condition resolves; may return the awaited value                                                                | `waitForMessage`  |
+| `start`    | put a long-running resource into service (server, worker, poll loop); `stop` reverses it                                                | `startQueues`     |
+| `stop`     | take a long-running resource out of service, releasing what `start` acquired                                                            | `stopWorker`      |
+| `drain`    | consume a pending backlog until empty                                                                                                   | `drainJobs`       |
 
 **Wrappers and factories** — the result is behaviour, not data:
 
