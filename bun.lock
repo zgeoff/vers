@@ -165,6 +165,23 @@
         "typescript": "catalog:",
       },
     },
+    "contracts/email": {
+      "name": "@vers/contract-email",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@vers/contract-base": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@orpc/openapi": "catalog:",
+        "@orpc/zod": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "contracts/session": {
       "name": "@vers/contract-session",
       "version": "0.0.0",
@@ -697,6 +714,29 @@
         "@vers/service-test-utils": "workspace:*",
         "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "services/email": {
+      "name": "@vers/service-email",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/server": "catalog:",
+        "@vers/contract-email": "workspace:*",
+        "@vers/email": "workspace:*",
+        "@vers/jobs": "workspace:*",
+        "@vers/service-runtime": "workspace:*",
+        "tiny-invariant": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@orpc/contract": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "msw": "catalog:",
         "typescript": "catalog:",
       },
     },
@@ -2061,6 +2101,8 @@
 
     "@vers/contract-base": ["@vers/contract-base@workspace:contracts/base"],
 
+    "@vers/contract-email": ["@vers/contract-email@workspace:contracts/email"],
+
     "@vers/contract-session": ["@vers/contract-session@workspace:contracts/session"],
 
     "@vers/contract-user": ["@vers/contract-user@workspace:contracts/user"],
@@ -2098,6 +2140,8 @@
     "@vers/service-auth": ["@vers/service-auth@workspace:libs/service/service-auth"],
 
     "@vers/service-avatar": ["@vers/service-avatar@workspace:services/avatar"],
+
+    "@vers/service-email": ["@vers/service-email@workspace:services/email"],
 
     "@vers/service-runtime": ["@vers/service-runtime@workspace:libs/service/service-runtime"],
 

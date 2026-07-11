@@ -38,6 +38,9 @@ Each service is its own Fly deployment, scale-to-zero, reachable only on the pri
   sessions (RS256 JWTs signed by the session service), and the OTP/TOTP verification flows. The auth
   design is specified in [auth](./auth.md).
 - `service-avatar` — the game-domain service: avatars and their progression.
+- `service-email` — queues and delivers transactional email through Resend. Each procedure enqueues
+  a pg-boss job and nudges an immediate drain attempt; an hourly scheduled machine sweeps the queue
+  for anything that nudge missed, and a failed delivery retries on a backoff before dead-lettering.
 - `service-activity` — owns the game's event store: activity streams of simulation checkpoint
   batches, and the "current activity" / "latest progress" reads the client resumes from.
 - `service-verifier` (in build) — queue-fed checkpoint-replay worker. Replaying a simulation is
@@ -137,6 +140,7 @@ Services (`services/`):
 
 - `services/activity` - activities domain service
 - `services/avatar` - avatar domain service
+- `services/email` - transactional email delivery service, queued on pg-boss
 - `services/session` - session domain service
 - `services/user` - user domain service
 - `services/verification` - OTP/TOTP verification domain service
@@ -146,6 +150,7 @@ Contracts (`contracts/`):
 - `contracts/activity` - oRPC API declaration for the activities service
 - `contracts/avatar` - oRPC API declaration for the avatar service
 - `contracts/base` - shared contract error taxonomy and base builders
+- `contracts/email` - oRPC API declaration for the email service
 - `contracts/session` - oRPC API declaration for the session service
 - `contracts/user` - oRPC API declaration for the user service
 - `contracts/verification` - oRPC API declaration for the verification service
@@ -167,6 +172,7 @@ Libraries (`libs/`, grouped by domain):
 - `libs/game/game-utils` - shared game logic (encounter derivation, rewards)
 - `libs/game/idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
 - `libs/game/idle-core` - deterministic seeded simulation engine
+- `libs/service/jobs` - typed pg-boss job queue wrapper: send, drain, and retry/dead-letter policy
 - `libs/service/service-auth` - s2s token minting, parsing, and audience derivation
 - `libs/service/service-runtime` - Elysia service runtime: createService, s2s auth, health, logging,
   OTel/Sentry wiring
