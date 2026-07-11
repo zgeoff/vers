@@ -26,6 +26,13 @@ RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lock
 # --- build the client + SSR server bundle ---
 FROM installer AS builder
 
+# sentry-cli uploads sourcemaps over TLS through libcurl, which reads the
+# system CA store the slim base image omits — without it every upload fails
+# certificate verification (bun is unaffected: it bundles its own roots)
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends ca-certificates && \
+  rm -rf /var/lib/apt/lists/*
+
 COPY --from=pruner /app/out/full/ .
 # turbo prune only copies workspace packages — the tsconfig every
 # project's tsconfig.json extends lives outside any package, so it comes

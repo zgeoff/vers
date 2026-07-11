@@ -6,8 +6,8 @@ import rsc from '@vitejs/plugin-rsc';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
 
-const sentryAuthToken = process.env['SENTRY_AUTH_TOKEN'];
-const sentryDSN = process.env['VITE_SENTRY_DSN'];
+const sentryAuthToken = findNonEmptyEnv('SENTRY_AUTH_TOKEN');
+const sentryDSN = findNonEmptyEnv('VITE_SENTRY_DSN');
 
 export default defineConfig({
   build: { sourcemap: sentryAuthToken === undefined ? false : 'hidden' },
@@ -31,6 +31,13 @@ export default defineConfig({
             sourcemaps: { filesToDeleteAfterUpload: ['dist/**/*.map'] },
             telemetry: false,
             url: new URL(sentryDSN).origin,
+
+            // the plugin's default handler logs upload failures and lets the build pass,
+            // shipping an image whose stack traces can never be symbolicated — a build
+            // that can't deliver its sourcemaps must not ship
+            errorHandler(error) {
+              throw error;
+            },
           }),
         ]
       : []),
@@ -58,6 +65,17 @@ export default defineConfig({
   },
   server: { port: 3000 },
 });
+
+/**
+ * Docker passes declared-but-unset build args through as empty strings, so an empty
+ * value counts as absent — otherwise an argless image build enables the sourcemap
+ * plugin with blank credentials instead of skipping it.
+ */
+function findNonEmptyEnv(name: string): string | undefined {
+  const value = process.env[name];
+
+  return value === undefined || value === '' ? undefined : value;
+}
 
 /**
  * Starts the shared MSW server for `vite dev` only — `configureServer` never fires for
