@@ -33,9 +33,10 @@ Each activity is one append-only stream: a head row carrying the `appended_head`
 cursors, the last chain hash, and the activity status, plus one checkpoint row per version keyed
 `(activity_id, version)`.
 
-- Each checkpoint hashes `{seed/nextSeed, time, type}` and links the previous checkpoint's hash. The
-  hashed subset is frozen — it never gains, loses, or repurposes a field — and includes the
-  entropy-source commitment, so a checkpoint's provenance is derivable from the chain itself.
+- Each checkpoint hashes `{seed/nextSeed, time, type, entropySource}` and links the previous
+  checkpoint's hash. The hashed subset is frozen from the first row ever written — it never gains,
+  loses, or repurposes a field — and the entropy-source tag inside it makes a checkpoint's
+  provenance derivable from the chain itself.
 - The hash is a chain link, not an outcome proof: rewards ride outside the hashed subset as signed
   deltas in an open keyed map, and only replay validates them.
 - Appends are a compare-and-swap on the head row's `appended_head`. A stale head returns a retryable
@@ -71,9 +72,15 @@ all in one local transaction, so a crashed worker retries idempotently.
 
 - First-clears, achievements, and other one-shot grants insert into a unique-keyed grant table with
   `ON CONFLICT DO NOTHING` inside the same transaction — idempotent across re-farms and replays.
-- Item instances mint at settlement from their deterministic drop coordinate, idempotently —
-  re-verification never duplicates an item.
-- A rejected claim rolls back by forward compensating events, never by snapshot restore.
+- Item instances mint at settlement: identity is the restart-stable drop coordinate and content is
+  rolled from the avatar's key under the activity's pinned versions (see
+  [game entropy](./game-entropy.md)), so re-verification never duplicates or re-rolls an item.
+- Drop content is revealed only for coordinates whose producing checkpoint is durably appended, and
+  the reveal is a pure function of the coordinate — append retries and bulk offline resends return
+  identical reveals.
+- A rejected claim rolls back by forward compensating events, never by snapshot restore: the node's
+  seed anchor resets to the verified prefix and revealed-but-unsettled drops past it are cleared
+  from optimistic display.
 
 Resume always anchors on the last verified checkpoint. The client rebuilds optimistic state by
 simulating forward from that anchor; it never renders the server's settled progression columns
