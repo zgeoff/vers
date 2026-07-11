@@ -64,10 +64,12 @@ type JobHandlers = Readonly<
 
 /**
  * Wraps `pg-boss` behind this package's typed API so consumers never import `pg-boss` directly.
+ * `config` is a `NoInfer` site: `TDefs` comes from `defs` alone, so a handler that omits its
+ * payload parameter can't widen every job's payload type to `object`.
  */
 export function createJobQueue<TDefs extends JobDefs>(
   defs: Readonly<TDefs>,
-  config: Readonly<CreateJobQueueConfig<TDefs>>,
+  config: Readonly<CreateJobQueueConfig<NoInfer<TDefs>>>,
 ): JobQueue<TDefs> {
   const boss = new PgBoss(config.connectionString);
 
