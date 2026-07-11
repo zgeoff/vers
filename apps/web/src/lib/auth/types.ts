@@ -17,6 +17,7 @@ type VerifySessionKey =
   | 'login2FA#sessionID'
   | 'login2FA#target'
   | 'loginLogout#email'
+  | 'loginLogout#redirect'
   | 'loginLogout#sessionID'
   | 'loginLogout#userID'
   | 'onboarding#email';

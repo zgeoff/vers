@@ -26,6 +26,7 @@ export async function completeSessionSignIn(
   if (otherSessions.some((other) => other.id !== opts.session.id)) {
     await updateVerifySession({
       'loginLogout#email': opts.email,
+      'loginLogout#redirect': opts.redirectTo,
       'loginLogout#sessionID': opts.session.id,
       'loginLogout#userID': actingUserID,
     });
@@ -48,5 +49,5 @@ export async function completeSessionSignIn(
     { expiresAt: opts.session.expiresAt },
   );
 
-  throw redirect({ href: toSafeRedirectPath(opts.redirectTo, '/') });
+  throw redirect({ href: toSafeRedirectPath(opts.redirectTo, '/respite') });
 }
