@@ -8,17 +8,15 @@ exact = true
 # supply-chain guard: only install versions published >= 7 days ago
 minimumReleaseAge = 604800
 
+# an exclude lives only as long as its pinned version is younger than the gate —
+# once the version ages past it, the entry is dead weight; remove it
 # format-codemod 0.0.5 (published 2026-07-08) ages past the gate ~2026-07-15 — remove its exclude then (#219)
-# panda 2.0 is still in beta with no stable ETA published — remove these excludes
-# once @pandacss/dev goes stable (#222)
 # @zgeoff/bun-test-extended 0.0.3 ages past the 7-day gate ~2026-07-16 — remove then (#257)
-# @zgeoff/oxlint-config 0.0.2 ages past the 7-day gate ~2026-07-14 — remove then (#292)
+# @zgeoff/oxlint-config 0.0.4 ages past the 7-day gate ~2026-07-18 — remove then (#292)
 # oxlint 1.73.0 (published 2026-07-06) ages past the 7-day gate ~2026-07-13 — remove then
 # typescript 7.0.2 (published 2026-07-08) ages past the 7-day gate ~2026-07-15 — remove then
 # @types/node 26.1.1 (published 2026-07-08) ages past the 7-day gate ~2026-07-15 — remove then
-# TanStack Start's RSC support is experimental and churns fast (#259) — the router/start/vite
-# ecosystem it pins ships new versions inside the 7-day window routinely; excluded per-package
-# rather than dropping the gate repo-wide.
+# vite 8.1.4 (published 2026-07-09) ages past the 7-day gate ~2026-07-16 — remove then
 minimumReleaseAgeExcludes = [
   "@zgeoff/format-codemod",
   "@zgeoff/bun-test-extended",
@@ -26,38 +24,7 @@ minimumReleaseAgeExcludes = [
   "oxlint",
   "typescript",
   "@types/node",
-  "@pandacss/dev",
-  "@pandacss/preset-base",
-  "@pandacss/preset-panda",
-  "@pandacss/cli",
-  "@pandacss/compiler",
-  "@pandacss/config",
-  "@pandacss/postcss",
-  "@pandacss/types",
-  "@pandacss/compiler-shared",
-  "@pandacss/compiler-darwin-arm64",
-  "@pandacss/compiler-darwin-x64",
-  "@pandacss/compiler-linux-x64-gnu",
-  "@pandacss/compiler-linux-arm64-gnu",
-  "@pandacss/compiler-linux-x64-musl",
-  "@pandacss/compiler-linux-arm64-musl",
-  "@pandacss/compiler-win32-x64-msvc",
-  "@pandacss/compiler-win32-arm64-msvc",
-  "@pandacss/compiler-wasm32-wasi",
   "vite",
-  "@tanstack/react-start",
-  "@tanstack/react-start-client",
-  "@tanstack/react-start-rsc",
-  "@tanstack/react-start-server",
-  "@tanstack/start-client-core",
-  "@tanstack/start-plugin-core",
-  "@tanstack/start-server-core",
-  "@tanstack/react-router",
-  "@tanstack/router-core",
-  "@tanstack/router-cli",
-  "@tanstack/start-storage-context",
-  "@tanstack/router-generator",
-  "@tanstack/router-plugin",
 ]
 
 [test]

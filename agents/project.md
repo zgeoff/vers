@@ -91,12 +91,11 @@ semantics, and moving a lib between domains changes nothing but its path.
 ## Styling
 
 Panda CSS 2.0 spans all four consumers (`@vers/panda-preset`, `@vers/styled-system`,
-`@vers/design-system`, app-web), pinned at 2.0.0-beta.8 — no stable 2.0 release exists — through
-`bunfig.toml`'s `minimumReleaseAgeExcludes`. `@vers/panda-preset` composes
-`presets: [presetBase, presetPanda]` from `@pandacss/preset-base` and `@pandacss/preset-panda` —
-Panda 2.0 ships no bundled default preset. CSS values that aren't theme tokens need the bracket
-escape hatch (`cursor: '[pointer]'`, `borderWidth: '[1px]'`) — 2.0's `SystemStyleObject` value types
-reject arbitrary strings/numbers.
+`@vers/design-system`, app-web), pinned at 2.0.0-beta.8 in the catalog — no stable 2.0 release
+exists. `@vers/panda-preset` composes `presets: [presetBase, presetPanda]` from
+`@pandacss/preset-base` and `@pandacss/preset-panda` — Panda 2.0 ships no bundled default preset.
+CSS values that aren't theme tokens need the bracket escape hatch (`cursor: '[pointer]'`,
+`borderWidth: '[1px]'`) — 2.0's `SystemStyleObject` value types reject arbitrary strings/numbers.
 
 ### Screens
 
