@@ -18,7 +18,6 @@ if (process.env['TEST_DB_URI'] === undefined) {
     process.env['TEST_TEMPLATE_DB'] = TEST_TEMPLATE_DB;
   } else {
     const container = await createPostgresContainer();
-
     const migrationResult = await migrateToLatest({ databaseURL: container.getConnectionUri() });
 
     if (migrationResult.error !== undefined) {
@@ -46,16 +45,19 @@ function isTestContainerReachable(): Promise<boolean> {
 
     socket.once('connect', () => {
       socket.destroy();
+
       resolve(true);
     });
 
     socket.once('timeout', () => {
       socket.destroy();
+
       resolve(false);
     });
 
     socket.once('error', () => {
       socket.destroy();
+
       resolve(false);
     });
   });

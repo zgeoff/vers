@@ -8,6 +8,7 @@ import { removeEnvOverrides } from './remove-env-overrides';
 export function registerBunTestCleanup(): void {
   afterEach(() => {
     mock.restore();
+
     removeEnvOverrides();
   });
 }

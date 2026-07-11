@@ -5,7 +5,6 @@ import { SceneRoot } from './scene-root';
 
 test('it renders the aether scene for the worldmap scene key', async () => {
   setSceneState([{ scene: 'worldmap' }]);
-
   render(<SceneRoot />);
 
   const scene = await screen.findByTestId('aether-scene-stub');
@@ -15,7 +14,6 @@ test('it renders the aether scene for the worldmap scene key', async () => {
 
 test('it renders the respite scene for the respite scene key', async () => {
   setSceneState([{ scene: 'respite' }]);
-
   render(<SceneRoot />);
 
   const scene = await screen.findByTestId('respite-scene-stub');

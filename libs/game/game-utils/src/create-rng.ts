@@ -11,12 +11,10 @@ import type { RNG } from './types';
 export function createRNG(initialSeed: number): RNG {
   let seed = initialSeed;
   let rng = prand.xoroshiro128plus(seed);
-
   const getInt = (min: number, max: number) => prand.unsafeUniformIntDistribution(min, max, rng);
 
   const generateNewSeed = () => {
     seed = getInt(0, 0x100000000);
-
     rng = prand.xoroshiro128plus(seed);
 
     return seed;

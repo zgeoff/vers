@@ -15,7 +15,6 @@ const avatar = {
 
 test('it shows the avatar name, level, class, and xp', () => {
   render(<AvatarContent avatar={avatar} />);
-
   expect(screen.getByText('Karnak')).toBeVisible();
   expect(screen.getByTestId('avatar-level')).toHaveTextContent('Level 12');
   expect(screen.getByTestId('avatar-class')).toHaveTextContent('Brute');

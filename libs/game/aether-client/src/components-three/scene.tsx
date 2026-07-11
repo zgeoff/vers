@@ -19,7 +19,6 @@ function useFilteredGraph() {
 
 export function Scene() {
   const filteredGraph = useFilteredGraph();
-
   const nodes = useMemo(() => Object.values(filteredGraph.nodes), [filteredGraph]);
   const edges = useMemo(() => Object.values(filteredGraph.edges), [filteredGraph]);
 

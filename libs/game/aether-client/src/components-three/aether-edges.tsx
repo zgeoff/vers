@@ -14,7 +14,6 @@ interface AetherEdgesProps {
 const COLOR = sceneColors.worldmapEdge;
 const POSITION_COMPONENTS_PER_EDGE = 6;
 const VERTEX_SIZE = 3;
-
 const AetherEdgeMaterial = extend(LineBasicNodeMaterial);
 
 export function AetherEdges(props: Readonly<AetherEdgesProps>) {

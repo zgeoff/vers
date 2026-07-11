@@ -8,6 +8,5 @@ test('it reports support when the SharedWorker constructor exists', () => {
 
 test('it reports no support when the SharedWorker constructor is absent', () => {
   removeSharedWorker();
-
   expect(isSharedWorkerSupported()).toBe(false);
 });

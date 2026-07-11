@@ -42,7 +42,6 @@ const copyButton = css({
 
 export function SingleLineCode(props: React.HTMLAttributes<HTMLElement>) {
   const { className, ...rest } = props;
-
   const codeRef = React.useRef<HTMLElement>(null);
 
   const copyToClipboard = () => {

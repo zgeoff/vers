@@ -10,7 +10,6 @@ test('it generates a password changed email with the provided configuration', as
 
   expect(email.html).toInclude('Your password has been changed');
   expect(email.html).toInclude('test@example.com');
-
   expect(email.plainText).toInclude('YOUR PASSWORD HAS BEEN CHANGED');
   expect(email.plainText).toInclude('test@example.com');
 });

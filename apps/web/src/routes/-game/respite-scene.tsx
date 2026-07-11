@@ -40,7 +40,6 @@ export function RespiteScene() {
       dummy.position.set(x, height / 2, z);
       dummy.scale.set(1, height, 1);
       dummy.updateMatrix();
-
       blocks.setMatrixAt(index, dummy.matrix);
       blocks.setColorAt(index, blockColor);
     }

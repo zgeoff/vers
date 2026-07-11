@@ -19,7 +19,6 @@ test('it creates a started checkpoint', () => {
 test('it includes a hash based on checkpoint data', () => {
   const ctx = createMockSimulationContext();
   const checkpoint = createStartedCheckpoint(ctx);
-
   const { hash, ...hashParts } = checkpoint;
 
   expect(hash).toStrictEqual(hashObject(ctx.hasher, hashParts));

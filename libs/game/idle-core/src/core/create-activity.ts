@@ -19,9 +19,7 @@ export function createActivity(
 ): Activity {
   let elapsed = 0;
   let currentEnemyGroupIdx = 0;
-
   const enemyGroups: Array<EnemyGroup> = getEnemyGroups(data, ctx, config);
-
   const isEnemyGroupsRemaining = () => enemyGroups.some((group) => group.remaining > 0);
 
   const moveToNextEnemyGroup = () => {
@@ -34,9 +32,7 @@ export function createActivity(
 
   const getAppState = (): ActivityAppState => {
     const currentEnemyGroup = enemyGroups[currentEnemyGroupIdx]?.getAppState() ?? null;
-
     const enemiesRemaining = enemyGroups.reduce((acc, group) => acc + group.remaining, 0);
-
     const enemyGroupsRemaining = enemyGroups.filter((group) => group.remaining > 0).length;
 
     return {

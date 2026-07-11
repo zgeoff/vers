@@ -10,7 +10,6 @@ test('it records a failed attempt and reports the remaining count for an incorre
   const transactionID = createId();
 
   await db.verificationCollection.create({ target, type: '2fa' });
-
   await db.pendingTransactionCollection.create({ action: 'ChangeEmail', id: transactionID });
 
   const outcome = await withRequestContext({}, () =>

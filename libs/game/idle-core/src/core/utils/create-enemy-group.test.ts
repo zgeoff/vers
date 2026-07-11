@@ -7,7 +7,6 @@ import { createEnemyGroup } from './create-enemy-group';
 test('it creates an enemy group with the given number of enemies', () => {
   const activity = createMockActivityData();
   const ctx = createMockSimulationContext();
-
   const enemyGroup = createEnemyGroup(activity, ctx, 2);
 
   expect(enemyGroup.id).toBeString();
@@ -22,11 +21,9 @@ test('it returns the correct remaining count as enemies are killed', () => {
 
   const activity = createMockActivityData({ enemies: [enemyData] });
   const ctx = createMockSimulationContext();
-
   const enemyGroup = createEnemyGroup(activity, ctx, 2);
 
   enemyGroup.nextLivingEnemy?.receiveDamage(100);
-
   expect(enemyGroup.remaining).toBe(1);
 });
 
@@ -37,12 +34,10 @@ test('it returns no living enemy when all enemies are dead', () => {
 
   const activity = createMockActivityData({ enemies: [enemyData] });
   const ctx = createMockSimulationContext();
-
   const enemyGroup = createEnemyGroup(activity, ctx, 2);
 
   enemyGroup.nextLivingEnemy?.receiveDamage(100);
   enemyGroup.nextLivingEnemy?.receiveDamage(100);
-
   expect(enemyGroup.remaining).toBe(0);
   expect(enemyGroup.nextLivingEnemy).toBeNull();
 });

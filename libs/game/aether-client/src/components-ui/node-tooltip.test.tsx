@@ -16,7 +16,6 @@ test('it displays information about the hovered node', () => {
   };
 
   setHoveredNode(node);
-
   render(<NodeTooltip />);
 
   const nodeID = screen.getByText('Test Aether Node (node123)');

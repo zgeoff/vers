@@ -30,19 +30,15 @@ test('it serves the signed-in home page server-rendered and hydrates the session
   page,
 }) => {
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
-
   await page.goto('/login');
   await page.waitForLoadState('networkidle');
-
   await page.getByLabel('Email').fill('demo@vers.test');
   await page.getByLabel('Password').fill('password123');
 
   // the honeypot rejects any submission under 1.5s old as bot-paced — real typing naturally
   // clears it, a scripted fill+click doesn't
   await page.waitForTimeout(1600);
-
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
-
   await page.waitForURL((url) => !url.pathname.startsWith('/login'));
 
   // the raw SSR body, read through the page's own cookie jar — the bare `request` fixture keeps a

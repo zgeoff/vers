@@ -111,6 +111,5 @@ try {
 } catch (error) {
   console.error('❌ Reset failed');
   console.error(error);
-
   process.exit(1);
 }

@@ -18,7 +18,6 @@ test('it creates an unverified session with the short duration by default', asyn
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
 
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
-
   const before = Date.now();
 
   const session = await client.createSession({ ipAddress: '127.0.0.1', userID: created.user.id });
@@ -46,7 +45,6 @@ test('it creates a session with the long duration when rememberMe is set', async
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
 
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
-
   const before = Date.now();
 
   const session = await client.createSession({

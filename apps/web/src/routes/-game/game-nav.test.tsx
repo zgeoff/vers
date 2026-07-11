@@ -9,7 +9,6 @@ test('it hides the link list until the menu button is toggled open', async () =>
   const user = userEvent.setup();
 
   setNavigationVisible(false);
-
   renderWithRouter(<GameNav />, { flags: { market: true } });
 
   const menuButton = await screen.findByRole('button', { name: /Menu/ });
@@ -31,7 +30,6 @@ test('it closes the link list once a link is followed', async () => {
   const user = userEvent.setup();
 
   setNavigationVisible(true);
-
   renderWithRouter(<GameNav />, { flags: { market: true } });
 
   const respiteLink = await screen.findByRole('link', { name: /Respite/ });
@@ -43,7 +41,6 @@ test('it closes the link list once a link is followed', async () => {
 
 test('it hides the Market link when the market flag is off', async () => {
   setNavigationVisible(true);
-
   renderWithRouter(<GameNav />, { flags: { market: false } });
 
   await screen.findByRole('link', { name: /Respite/ });
@@ -53,7 +50,6 @@ test('it hides the Market link when the market flag is off', async () => {
 
 test('it shows the Market link when the market flag is on', async () => {
   setNavigationVisible(true);
-
   renderWithRouter(<GameNav />, { flags: { market: true } });
 
   const marketLink = await screen.findByRole('link', { name: /Market/ });

@@ -9,7 +9,6 @@ export function createEnemyGroup(
 ): EnemyGroup {
   const id = createId();
   const enemies = getRandomEnemies(activity, enemyCount, ctx);
-
   const getRemainingEnemies = () => enemies.filter((enemy) => enemy.isAlive);
 
   const getAppState = (): EnemyGroupAppState => ({

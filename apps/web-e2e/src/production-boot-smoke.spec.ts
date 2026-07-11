@@ -10,7 +10,6 @@ test('it serves the production build health check and anonymous home page', asyn
   playwright,
 }) => {
   const request = await playwright.request.newContext({ baseURL: PRODUCTION_BASE_URL });
-
   const health = await request.get('/health');
 
   expect(health.status()).toBe(200);

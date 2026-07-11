@@ -5,7 +5,6 @@ import { useSatelliteStore } from './src/use-satellite-store';
 import { useSceneStateStore } from './src/use-scene-state-store';
 
 GlobalRegistrator.register();
-
 expect.extend(jestDOMMatchers);
 
 // dynamic import: RTL reads `document` at import time, so it must load after registration
@@ -16,7 +15,6 @@ const reactTestingLibrary = await import('@testing-library/react');
 afterEach(() => {
   reactTestingLibrary.cleanup();
   mock.restore();
-
   useSceneStateStore.setState(useSceneStateStore.getInitialState(), true);
   useSatelliteStore.setState(useSatelliteStore.getInitialState(), true);
 });

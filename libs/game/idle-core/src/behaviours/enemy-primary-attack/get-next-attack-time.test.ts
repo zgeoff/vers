@@ -15,9 +15,7 @@ test('it calculates the next attack time', () => {
 
   const ctx = createMockSimulationContext();
   const enemy = createEnemy(enemyData, ctx);
-
   const state = { lastAttackTime: 1000 };
-
   const nextAttackTime = getNextAttackTime(enemy, state);
 
   expect(nextAttackTime).toBe(2000); // 1000 + 1000

@@ -12,9 +12,7 @@ test('it renders nothing when no satellites are registered', () => {
 test('it renders every registered satellite element', () => {
   registerSatellite('avatar', { element: <span>avatar viewer</span>, keepAlive: false });
   registerSatellite('item', { element: <span>item inspector</span>, keepAlive: false });
-
   render(<SatelliteHost />);
-
   expect(screen.getByText('avatar viewer')).toBeInTheDocument();
   expect(screen.getByText('item inspector')).toBeInTheDocument();
 });

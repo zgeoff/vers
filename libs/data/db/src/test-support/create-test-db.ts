@@ -14,11 +14,9 @@ import { resolveTestDBTarget } from './resolve-test-db-target';
 export async function createTestDB() {
   const target = resolveTestDBTarget();
   const setupClient = postgres(`${target.baseURI}/postgres`);
-
   const dbName = `test_${createId()}`;
 
   await setupClient.unsafe(/* SQL */ `CREATE DATABASE ${dbName} TEMPLATE ${target.templateDB}`);
-
   await setupClient.end();
 
   const db = createDB({ databaseURL: `${target.baseURI}/${dbName}` });

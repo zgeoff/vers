@@ -43,7 +43,6 @@ test('it applies damage from the enemy to the avatar', () => {
   };
 
   handleEnemyAttack(event, avatar, activity);
-
   expect(avatar.life).toBe(90);
 });
 
@@ -84,7 +83,6 @@ test('it does nothing if the enemy is dead', () => {
   };
 
   handleEnemyAttack(event, avatar, activity);
-
   expect(avatar.life).toBe(100);
 });
 
@@ -131,6 +129,5 @@ test('it correctly resolves the correct event source', () => {
   firstEnemy.receiveDamage(100);
 
   handleEnemyAttack(event, avatar, activity);
-
   expect(avatar.life).toBe(100);
 });

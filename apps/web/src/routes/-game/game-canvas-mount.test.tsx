@@ -5,7 +5,6 @@ import { GameCanvasMount } from './game-canvas-mount';
 
 test('it renders the world behind a code-split boundary', async () => {
   setSceneState([{ presentation: 'focus' }]);
-
   render(<GameCanvasMount />);
 
   const canvas = await screen.findByTestId('game-canvas-stub');

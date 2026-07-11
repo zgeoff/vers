@@ -47,7 +47,6 @@ test('it signs out every other live session and completes sign-in on confirm', a
   const otherSessionID = createId();
 
   await db.sessionCollection.create({ id: pendingSessionID, userID, verified: false });
-
   await db.sessionCollection.create({ id: otherSessionID, userID });
 
   const outcome = await withRequestContext(

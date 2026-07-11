@@ -45,7 +45,6 @@ test('it folds the matched branch staticData for the given location against the 
 test('it keeps the previous scene when the target branch declares no scene', () => {
   const router = buildTestRouter();
   const previous: SceneState = { presentation: 'focus', scene: 'worldmap' };
-
   const next = resolveSceneStateForLocation(router, { pathname: '/stash', search: {} }, previous);
 
   expect(next).toStrictEqual({ presentation: 'ambient', scene: 'worldmap' });

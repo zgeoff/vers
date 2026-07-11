@@ -12,7 +12,6 @@ const projectRoot = process.cwd().includes('web-e2e')
   : `${process.cwd()}/apps/web-e2e`;
 
 const appWebRoot = path.resolve(projectRoot, '..', 'web');
-
 const dotEnvFile = path.join(projectRoot, '.env');
 
 try {

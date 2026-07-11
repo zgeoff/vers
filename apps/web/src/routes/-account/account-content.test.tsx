@@ -10,7 +10,6 @@ test('it shows the caller profile and a not-enabled 2FA status', async () => {
   });
 
   render(<AccountContent has2FA={false} user={user} />);
-
   expect(screen.getByTestId('account-username')).toHaveTextContent('Username: account-content');
   expect(screen.getByTestId('account-email')).toHaveTextContent('Email: account-content@vers.test');
 

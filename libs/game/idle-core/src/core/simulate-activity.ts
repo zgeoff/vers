@@ -19,7 +19,6 @@ export async function* simulateActivity(
   ctx: SimulationContext,
 ): ActivityCheckpointGenerator {
   const timestep = yield createStartedCheckpoint(ctx);
-
   const label = `[activity:${activity.type}]`;
 
   logger.debug(`${label} starting activity with ${activity.enemyGroups.length} enemy groups`);
@@ -33,7 +32,6 @@ export async function* simulateActivity(
 
     if (activity.currentEnemyGroup?.remaining === 0) {
       yield createProgressCheckpoint(activity, ctx);
-
       logger.debug(`${label} moving to next enemy group`);
 
       // move to the next enemy group

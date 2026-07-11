@@ -20,7 +20,6 @@ test('it returns true when avatar has a main hand weapon', () => {
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-
   const result = predicate(avatar);
 
   expect(result).toBeTrue();
@@ -35,7 +34,6 @@ test('it returns false when avatar has no main hand weapon', () => {
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-
   const result = predicate(avatar);
 
   expect(result).toBeFalse();

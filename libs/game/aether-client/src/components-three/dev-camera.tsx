@@ -9,7 +9,6 @@ export function DevCamera() {
   const canvasSize = useThree((state) => state.size);
   const isDevCameraActive = useIsDevCameraActive();
   const cameraRef = useRef<PerspectiveCameraImpl | null>(null);
-
   const aspect = canvasSize.width / canvasSize.height;
 
   useMakeDefaultCamera(cameraRef, isDevCameraActive);

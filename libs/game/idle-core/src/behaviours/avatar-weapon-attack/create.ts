@@ -14,7 +14,6 @@ import { predicate } from './predicate';
 
 export function create(entity: Avatar): AvatarWeaponAttackBehaviour {
   let state = getInitialState();
-
   const getState = (): AvatarWeaponAttackBehaviourState => state;
 
   const setState = (setStateFn: SetEntityStateFn<AvatarWeaponAttackBehaviourState>): void => {

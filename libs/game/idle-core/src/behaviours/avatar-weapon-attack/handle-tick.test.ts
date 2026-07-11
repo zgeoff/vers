@@ -29,7 +29,6 @@ test('it schedules attacks on the tick event', () => {
   const activity = createActivity(activityData, ctx, { groupSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-
   const enemyGroup = activity.currentEnemyGroup;
 
   // we need to remove the behaviour from the avatar as it's already added
@@ -41,13 +40,11 @@ test('it schedules attacks on the tick event', () => {
   combatExecutor.run(1000);
 
   handleTick(avatar, behaviour, combatExecutor);
-
   expect(enemyGroup?.remaining).toBe(1);
 
   combatExecutor.run(1);
 
   handleTick(avatar, behaviour, combatExecutor);
-
   expect(enemyGroup?.remaining).toBe(0);
   expect(behaviour.state.lastAttackTime).toBe(1000);
 });
@@ -71,7 +68,6 @@ test('it schedules multiple attacks for high APS weapons', () => {
   const activity = createActivity(activityData, ctx, { groupSize: 5 });
   const avatar = createAvatar(avatarData, ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-
   const enemyGroup = activity.currentEnemyGroup;
 
   // we need to remove the behaviour from the avatar as it's already added

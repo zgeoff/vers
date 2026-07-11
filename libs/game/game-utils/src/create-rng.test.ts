@@ -14,7 +14,6 @@ test('it generates a deterministic sequence of integers with the given seed', ()
 
 test('it generates a deterministic array of integers with the given seed', () => {
   const rng = createRNG(35_131_234);
-
   const series = rng.getSeries(0, 100, 20);
 
   expect(series).toHaveLength(20);

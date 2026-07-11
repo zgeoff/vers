@@ -12,7 +12,6 @@ test('it generates a welcome email with the provided configuration', async () =>
   expect(email.html).toInclude('Welcome to vers');
   expect(email.html).toInclude(config.verificationCode);
   expect(email.html).toInclude(config.verificationURL);
-
   expect(email.plainText).toInclude('WELCOME TO VERS');
   expect(email.plainText).toInclude(config.verificationCode);
   expect(email.plainText).toInclude(config.verificationURL);

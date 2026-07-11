@@ -15,7 +15,6 @@ import { createEnemy } from './create-enemy';
 test('it creates an enemy with correct initial values', () => {
   const ctx = createMockSimulationContext();
   const data = createMockEnemyData();
-
   const enemy = createEnemy(data, ctx);
 
   expect(enemy.id).toBeString();
@@ -69,7 +68,6 @@ test('it calls all registered handlers when handling a tick', () => {
   const activity = createActivity(activityData, ctx);
   const enemyGroup = createEnemyGroup(activityData, ctx, 1);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-
   const handlerSpy = mock<CombatLifecycleHandler<Enemy>>();
 
   const behaviour: EnemyTestBehaviour = {
@@ -101,7 +99,6 @@ test('it allows removing behaviours', () => {
   const activity = createActivity(activityData, ctx);
   const enemyGroup = createEnemyGroup(activityData, ctx, 1);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-
   const handlerSpy = mock<CombatLifecycleHandler<Enemy>>();
 
   const behaviour: EnemyTestBehaviour = {
@@ -130,7 +127,6 @@ test('it returns the expected enemy state for a client app', () => {
   const ctx = createMockSimulationContext();
   const data = createMockEnemyData();
   const enemy = createEnemy(data, ctx);
-
   const state = enemy.getAppState();
 
   expect(state).toStrictEqual({

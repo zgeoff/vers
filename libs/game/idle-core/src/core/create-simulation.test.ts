@@ -18,7 +18,6 @@ test('it initializes with the expected values', () => {
 test('it starts an activity', () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityData();
-
   const simulation = createSimulation(hasher);
 
   simulation.startActivity(avatarData, activityData);
@@ -32,9 +31,7 @@ test('it starts an activity', () => {
 test('it calls an event listener when starting an activity', () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityData();
-
   const simulation = createSimulation(hasher);
-
   const listenerSpy = mock<SimulationListener>();
 
   simulation.addEventListener('started', listenerSpy);
@@ -46,7 +43,6 @@ test('it calls an event listener when starting an activity', () => {
 test('it stops an activity', async () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityData();
-
   const simulation = createSimulation(hasher);
 
   simulation.startActivity(avatarData, activityData);
@@ -59,9 +55,7 @@ test('it stops an activity', async () => {
 test('it calls an event listener when stopping an activity', async () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityData();
-
   const simulation = createSimulation(hasher);
-
   const listenerSpy = mock<SimulationListener>();
 
   simulation.addEventListener('stopped', listenerSpy);
@@ -75,7 +69,6 @@ test('it calls an event listener when stopping an activity', async () => {
 test('it restarts an activity', () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityData();
-
   const simulation = createSimulation(hasher);
 
   simulation.startActivity(avatarData, activityData);
@@ -91,14 +84,11 @@ test('it restarts an activity', () => {
 test('it calls an event listener when restarting an activity', () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityData();
-
   const simulation = createSimulation(hasher);
-
   const listenerSpy = mock<SimulationListener>();
 
   simulation.addEventListener('restarted', listenerSpy);
   simulation.startActivity(avatarData, activityData);
-
   simulation.restartActivity();
 
   expect(listenerSpy).toHaveBeenCalledExactlyOnceWith(simulation.state);
@@ -107,13 +97,10 @@ test('it calls an event listener when restarting an activity', () => {
 test('it resets the avatar when restarting an activity', () => {
   const avatarData = createMockAvatarData({ life: 100 });
   const activityData = createMockActivityData();
-
   const simulation = createSimulation(hasher);
 
   simulation.startActivity(avatarData, activityData);
-
   simulation.state.avatar?.receiveDamage(50);
-
   expect(simulation.state.avatar?.life).toBe(50);
 
   simulation.restartActivity();
@@ -153,7 +140,6 @@ test('it calls an event listener when the state updates', async () => {
   const avatarData = createMockAvatarData();
   const simulation = createSimulation(hasher);
   const activityData = createMockActivityData();
-
   const listenerSpy = mock<SimulationListener>();
 
   simulation.addEventListener('updated', listenerSpy);
@@ -170,7 +156,6 @@ test('it calls an event listener when the state updates', async () => {
 
 test('it returns the expected simulation state for a client app', () => {
   const simulation = createSimulation(hasher);
-
   const state = simulation.getAppState();
 
   expect(state).toStrictEqual({});

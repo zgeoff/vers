@@ -44,6 +44,7 @@ test('it stops running a callback once it unregisters', () => {
   });
 
   unregister();
+
   gameLoop.runGameLoopCallbacks(0, 0);
 
   expect(calls).toStrictEqual([]);
@@ -62,6 +63,7 @@ test('it leaves the other callbacks running after one unregisters', () => {
   });
 
   unregisterFirst();
+
   gameLoop.runGameLoopCallbacks(0, 0);
 
   expect(order).toStrictEqual([2]);
@@ -72,7 +74,6 @@ test('it tolerates unregistering the same callback twice', () => {
   const unregister = gameLoop.registerGameLoopCallback(() => {});
 
   unregister();
-
   expect(unregister).not.toThrow();
 });
 

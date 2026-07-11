@@ -78,6 +78,7 @@ export function ChangePasswordForm() {
           }
 
           resubmission.set('stepUpToken', token);
+
           setStepUpChallenge(null);
           setPendingFormData(null);
           void submit(resubmission);

@@ -9,9 +9,7 @@ test('it persists a user and mints a token carrying that user as the acting subj
   await using testDB = await createTestDB();
 
   const keyPair = await getTestServiceKeyPair();
-
   const viewer = await createViewer({ audience: 'create-viewer-spec', db: testDB.db });
-
   const publicKey = await jose.importSPKI(keyPair.publicKeyPEM, TOKEN_ALGORITHM);
 
   const verified = await jose.jwtVerify(viewer.token, publicKey, {

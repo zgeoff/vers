@@ -16,15 +16,12 @@ const node: AetherNode = {
 
 test('it renders nothing with no node selected', () => {
   setSelectedNode(null);
-
   renderWithRouter(<SelectedNodeInfo />);
-
   expect(screen.queryByTestId('selected-node-id')).not.toBeInTheDocument();
 });
 
 test('it shows the selected node and links into its activity', async () => {
   setSelectedNode(node, null);
-
   renderWithRouter(<SelectedNodeInfo />);
 
   const nodeID = await screen.findByTestId('selected-node-id');

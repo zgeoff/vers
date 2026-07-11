@@ -9,11 +9,9 @@ export function handleEnemyAttack(event: EnemyAttackEvent, avatar: Avatar, activ
 
   if (enemy?.isAlive === true && avatar.isAlive) {
     const label = createLogLabel('enemy', event.source);
-
     const damage = enemy.calcAttackDamage();
 
     logger.debug(`${label} --> ${damage} damage to ${avatar.id}`);
-
     avatar.receiveDamage(damage);
   }
 }

@@ -44,7 +44,6 @@ export function OnboardingForm(props: OnboardingFormProps) {
   });
 
   const { key: _usernameKey, ...usernameProps } = getInputProps(fields.username, { type: 'text' });
-
   const { key: _nameKey, ...nameProps } = getInputProps(fields.name, { type: 'text' });
 
   const { key: _passwordKey, ...passwordProps } = getInputProps(fields.password, {

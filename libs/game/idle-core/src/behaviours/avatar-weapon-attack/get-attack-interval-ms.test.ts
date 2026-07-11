@@ -20,7 +20,6 @@ test('it calculates the weapons attack interval', () => {
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-
   const interval = getAttackIntervalMS(avatar);
 
   expect(interval).toBe(1818); // 1000ms / 0.55 = 1818ms
