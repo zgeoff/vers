@@ -379,7 +379,6 @@
     "**/*.json",
     "**/*timestamp*.mjs",
     "**/mockServiceWorker.js",
-    "**/apps/design-reference/public/**",
     "**/.react-router/**",
     "**/apps/web/src/styled-system/**",
     "**/libs/design/design-system/src/styled-system/**",
