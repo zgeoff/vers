@@ -94,6 +94,11 @@
         "ignoreInferredTypes": true,
         "allow": [
           { "from": "package", "name": "Kysely", "package": "kysely" },
+          // a live pg-boss client handle: connection pool and event emitter state, no readonly form
+          { "from": "package", "name": "PgBoss", "package": "pg-boss" },
+          // structurally a single method signature, which the rule's default settings treat as
+          // mutable (typescript-eslint#8013), same as ReadonlySet below
+          { "from": "package", "name": "KyselyTransactionLike", "package": "pg-boss" },
           { "from": "package", "name": "Logger", "package": "pino" },
           // a pino write sink: its single `write` method is behaviour, not data; no readonly form
           { "from": "package", "name": "DestinationStream", "package": "pino" },
@@ -161,6 +166,8 @@
             "package": "react"
           },
           { "from": "package", "name": "ZodError", "package": "zod" },
+          // a schema's validation/refinement methods, no readonly form
+          { "from": "package", "name": "ZodType", "package": "zod" },
           { "from": "package", "name": "JWTPayload", "package": "jose" },
           { "from": "package", "name": "SubmissionResult", "package": "@conform-to/dom" },
           { "from": "package", "name": "XXHashAPI", "package": "xxhash-wasm" },
