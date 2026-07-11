@@ -1,5 +1,5 @@
 import { afterAll, afterEach } from 'bun:test';
-import type { SetupServerApi } from 'msw/node';
+import type { SetupServer } from 'msw/node';
 
 /**
  * Wires an MSW server's lifecycle into the current bun-test run: starts it (erroring on any
@@ -7,7 +7,7 @@ import type { SetupServerApi } from 'msw/node';
  * preload — `bun test` runs every file in one process, so these hooks apply suite-wide. Test files
  * then add per-test handlers with `server.use(...)`.
  */
-export function registerMSWLifecycle(server: SetupServerApi): void {
+export function registerMSWLifecycle(server: SetupServer): void {
   server.listen({ onUnhandledRequest: 'error' });
 
   afterEach(() => {

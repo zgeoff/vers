@@ -98,7 +98,7 @@
       "kysely-ctl": "0.21.0",
       "kysely-postgres-js": "3.0.0",
       "lefthook": "2.1.9",
-      "msw": "2.7.3",
+      "msw": "2.14.6",
       "ora": "8.2.0",
       "oxfmt": "0.57.0",
       "oxlint": "1.73.0",

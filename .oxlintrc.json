@@ -116,7 +116,7 @@
             "name": ["RPCHandler", "FetchHandler"],
             "package": "@orpc/server"
           },
-          { "from": "package", "name": "SetupServerApi", "package": "msw" },
+          { "from": "package", "name": "SetupServer", "package": "msw" },
           { "from": "package", "name": "Collection", "package": "@msw/data" },
           {
             "from": "package",

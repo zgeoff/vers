@@ -56,9 +56,6 @@
     "libs/game/aether-client": {
       "ignoreDependencies": ["happy-dom"]
     },
-    "libs/core/email": {
-      "ignoreDependencies": ["happy-dom"]
-    },
     "libs/game/idle-client": {
       "ignoreDependencies": ["happy-dom"]
     },

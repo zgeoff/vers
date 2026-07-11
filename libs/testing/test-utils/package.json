@@ -12,6 +12,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p src/bun/tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@happy-dom/global-registrator": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
     "@orpc/openapi": "catalog:",

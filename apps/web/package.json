@@ -62,7 +62,6 @@
   "devDependencies": {
     "@babel/core": "catalog:",
     "@faker-js/faker": "catalog:",
-    "@happy-dom/global-registrator": "catalog:",
     "@pandacss/dev": "catalog:",
     "@rolldown/plugin-babel": "catalog:",
     "@sentry/vite-plugin": "catalog:",
