@@ -244,8 +244,6 @@ The full conventions — taxonomy, code registry, trace context, reporting split
   `redirect()`/`Response`, faults throw and land on a route `errorComponent`. Retry policy is
   central in `buildQueryClient`; a per-query `retry` override needs a behavioural reason the default
   policy can't express.
-- Function-naming extension to the shared taxonomy — pure producers: `define<X>` is an identity
-  helper whose only job is compile-time constraint of its literal argument (`defineErrors`).
 
 ## Writing
 
