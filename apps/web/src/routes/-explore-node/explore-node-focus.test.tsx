@@ -1,10 +1,10 @@
 import { expect, test } from 'bun:test';
 import { render, renderHook } from '@testing-library/react';
-import { setAetherGraph, setSelectedNode, useSelectedNode } from '@vers/aether-client';
-import type { AetherGraph, AetherNode } from '@vers/aether-core';
+import { setSelectedNode, setWorldGraph, useSelectedNode } from '@vers/worldmap-client';
+import type { WorldGraph, WorldNode } from '@vers/worldmap-core';
 import { ExploreNodeFocus } from './explore-node-focus';
 
-const node1: AetherNode = {
+const node1: WorldNode = {
   connections: [null, null, null, null],
   difficulty: 1,
   id: 'node1',
@@ -13,13 +13,13 @@ const node1: AetherNode = {
   seed: 0,
 };
 
-const graph: AetherGraph = {
+const graph: WorldGraph = {
   edges: {},
   nodes: { node1 },
 };
 
 test('it selects the graph node matching the route param', () => {
-  setAetherGraph(graph);
+  setWorldGraph(graph);
   setSelectedNode(null);
   render(<ExploreNodeFocus nodeID="node1" />);
 
@@ -29,7 +29,7 @@ test('it selects the graph node matching the route param', () => {
 });
 
 test('it renders nothing and leaves selection untouched for an unknown node id', () => {
-  setAetherGraph(graph);
+  setWorldGraph(graph);
   setSelectedNode(null);
 
   const rendered = render(<ExploreNodeFocus nodeID="missing-node" />);

@@ -21,9 +21,9 @@ test('it creates activity data with expected properties', () => {
     ],
     failureAction: ActivityFailureAction.Retry,
     id: expect.toBeString(),
-    name: 'Aether Node',
+    name: 'World Node',
     seed: expect.toBeNumber(),
-    type: ActivityType.AetherNode,
+    type: ActivityType.WorldNode,
   });
 });
 
@@ -36,7 +36,7 @@ test('it creates activity data with custom properties', () => {
     id: 'custom-activity',
     name: 'Custom Activity',
     seed: 123,
-    type: ActivityType.AetherNode,
+    type: ActivityType.WorldNode,
   });
 
   expect(activity).toStrictEqual({
@@ -45,6 +45,6 @@ test('it creates activity data with custom properties', () => {
     id: 'custom-activity',
     name: 'Custom Activity',
     seed: 123,
-    type: ActivityType.AetherNode,
+    type: ActivityType.WorldNode,
   });
 });

@@ -4,7 +4,7 @@
     "**/augment-bun-test.ts",
     "**/*.generated.ts",
     "apps/design-reference/public/**",
-    "libs/game/aether-core/generate-graph.ts",
+    "libs/game/worldmap-core/generate-graph.ts",
     ".claude/**"
   ],
   "ignoreBinaries": ["flyctl", "gh", "ladle", "op", "pulumi"],
@@ -56,7 +56,7 @@
     "libs/design/styled-system": {
       "ignoreDependencies": ["react"]
     },
-    "libs/game/aether-client": {
+    "libs/game/worldmap-client": {
       "ignoreDependencies": ["happy-dom"]
     },
     "libs/game/idle-client": {

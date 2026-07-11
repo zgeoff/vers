@@ -61,8 +61,8 @@ test('it generates enemy group killed checkpoints', async () => {
   const activityData = createMockActivityData({
     enemies: [enemyData],
     failureAction: ActivityFailureAction.Retry,
-    id: 'aether_node_1',
-    type: ActivityType.AetherNode,
+    id: 'world_node_1',
+    type: ActivityType.WorldNode,
   });
 
   const ctx = createMockSimulationContext();
@@ -154,8 +154,8 @@ test('it returns a completed checkpoint when all enemies are defeated', async ()
   const activityData = createMockActivityData({
     enemies: [enemyData],
     failureAction: ActivityFailureAction.Retry,
-    id: 'aether_node_1',
-    type: ActivityType.AetherNode,
+    id: 'world_node_1',
+    type: ActivityType.WorldNode,
   });
 
   const ctx = createMockSimulationContext();

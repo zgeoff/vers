@@ -9,9 +9,9 @@ export function createMockActivityData(overrides: Partial<ActivityData> = {}): A
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,
     id: createId(),
-    name: 'Aether Node',
+    name: 'World Node',
     seed: 1,
-    type: ActivityType.AetherNode,
+    type: ActivityType.WorldNode,
     ...overrides,
   };
 

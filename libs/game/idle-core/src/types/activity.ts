@@ -8,7 +8,7 @@ interface IActivityData {
 }
 
 export enum ActivityType {
-  AetherNode = 'aether_node',
+  WorldNode = 'world_node',
 }
 
 export enum ActivityFailureAction {
@@ -16,13 +16,13 @@ export enum ActivityFailureAction {
   Retry = 'retry',
 }
 
-export interface AetherNodeActivityData extends IActivityData {
+export interface WorldNodeActivityData extends IActivityData {
   enemies: Array<EnemyData>;
   seed: number;
-  type: ActivityType.AetherNode;
+  type: ActivityType.WorldNode;
 }
 
-export type ActivityData = AetherNodeActivityData;
+export type ActivityData = WorldNodeActivityData;
 
 export interface ActivityAppState {
   readonly currentEnemyGroup: EnemyGroupAppState | null;

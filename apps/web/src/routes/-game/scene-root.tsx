@@ -1,5 +1,5 @@
-import { Scene } from '@vers/aether-client';
 import { useSceneState } from '@vers/game-rendering';
+import { Scene } from '@vers/worldmap-client';
 import type { ReactNode } from 'react';
 import { RespiteScene } from './respite-scene';
 
