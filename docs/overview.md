@@ -1,8 +1,8 @@
 # Overview
 
 Vers is a browser idle game on a microservice backend: a deterministic simulation runs on the
-client, the server verifies its results by replay, and everything [deploys](./deployment.md) from
-one repo as a single atomic release.
+client, the server verifies its results by replay (in build), and everything
+[deploys](./deployment.md) from one repo as a single atomic release.
 
 ## Request path
 
@@ -38,10 +38,10 @@ Each service is its own Fly deployment, scale-to-zero, reachable only on the pri
   sessions (RS256 JWTs signed by the session service), and the OTP/TOTP verification flows. The auth
   design is specified in [auth](./auth.md).
 - `service-avatar` — the game-domain service: avatars and their progression.
-- `service-activities` — owns the game's event store: activity streams of simulation checkpoint
-  batches, and the "current activity" / "latest progress" reads the client resumes from.
-- `service-verifier` — queue-fed checkpoint-replay worker. Replaying a simulation is CPU-bound, so
-  verification runs off the request path with its own scaling profile.
+- `service-activities` (in build) — owns the game's event store: activity streams of simulation
+  checkpoint batches, and the "current activity" / "latest progress" reads the client resumes from.
+- `service-verifier` (in build) — queue-fed checkpoint-replay worker. Replaying a simulation is
+  CPU-bound, so verification runs off the request path with its own scaling profile.
 
 ## Data
 
@@ -50,12 +50,12 @@ is playing. Provisioning, connection rules, and where the secrets live: [databas
 
 - **Relational identity data** — users, sessions, verifications, avatars — accessed through Kysely,
   migrated by kysely-ctl in `@vers/db`.
-- **Activity checkpoints** — an append-only table keyed by `(activity_id, version)`, one row per
-  checkpoint batch, range-partitioned by time. The workload is append-heavy submissions, point reads
-  for "latest progress" off a per-activity head row, and full-stream replays during verification — a
-  natural fit for indexed Postgres, with `UNIQUE(activity_id, version)` optimistic concurrency
-  backing the checkpoint hash chain. Verified streams age out on a retention window and cold-archive
-  to object storage, so the hot partitions stay bounded regardless of lifetime volume.
+- **Activity checkpoints** (in build) — an append-only table keyed by `(activity_id, version)`, one
+  row per checkpoint batch, range-partitioned by time. The workload is append-heavy submissions,
+  point reads for "latest progress" off a per-activity head row, and full-stream replays during
+  verification — a natural fit for indexed Postgres, with `UNIQUE(activity_id, version)` optimistic
+  concurrency backing the checkpoint hash chain. Verified streams age out on a retention window and
+  cold-archive to object storage, so the hot partitions stay bounded regardless of lifetime volume.
 
 ## Game layer
 
@@ -66,9 +66,9 @@ in the shared libs — not a service — so client and verifier compute identica
 same inputs.
 
 Checkpoint batches are submitted to the activities service; the verifier replays the same seeds
-server-side and compares results before progress is trusted. Checkpoint hashes chain the stream
-together but don't attest combat outcomes — replay is the proof. The same replay path generates
-offline progress: simulate forward from the last verified checkpoint.
+server-side and compares results before progress is trusted (in build). Checkpoint hashes chain the
+stream together but don't attest combat outcomes — replay is the proof. The same replay path
+generates offline progress: simulate forward from the last verified checkpoint.
 
 The world map (`@vers/worldmap-*`) generates the world graph — concentric difficulty rings of baked
 nodes — and renders it with three.js via react-three-fiber. How the 3D world and the HTML UI share
@@ -85,8 +85,9 @@ the screen: [game rendering](./game-rendering.md).
 - **Atomic release** — contracts are unversioned workspace source packages; the repo deploys as one
   unit from one SHA. Turborepo re-typechecks every consumer on any contract change, so divergence
   cannot land on `main`. There is no version matrix — the monorepo is the compatibility mechanism.
-- **Observability** — OpenTelemetry and Sentry are wired into every service by
-  `@vers/service-runtime`; request IDs propagate edge to service.
+- **Observability** — OpenTelemetry (traces and logs to Axiom) and the Sentry SDK (errors to
+  Bugsink) are wired into every service by `@vers/service-runtime`; request IDs propagate edge to
+  service.
 
 ## Core technology
 
@@ -119,13 +120,15 @@ Development:
   [MSW](https://mswjs.io)
 - Monorepo - [Turborepo](https://turborepo.dev) + [Bun](https://bun.sh) workspaces
 - Type Safety - [TypeScript](https://typescriptlang.org), [Zod](https://zod.dev)
-- Monitoring - [Sentry](https://sentry.io), [OpenTelemetry](https://opentelemetry.io)
+- Monitoring - [Bugsink](https://www.bugsink.com) (errors, Sentry protocol),
+  [Axiom](https://axiom.co) (traces and logs via [OpenTelemetry](https://opentelemetry.io))
 - Hosting - [Fly.io](https://fly.io) (compute), [Neon](https://neon.tech) (data)
 
 ## Projects
 
 Applications (`apps/`):
 
+- `apps/bugsink` - self-hosted error tracker, ingesting over the Sentry protocol
 - `apps/design-reference` - static host for the exported visual-direction design pages
 - `apps/web` - TanStack Start web app; the trust edge and only public deployment
 - `apps/web-e2e` - e2e test suite for the web app

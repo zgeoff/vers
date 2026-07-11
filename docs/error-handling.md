@@ -46,10 +46,12 @@ clients narrow on `code` (via `isDefinedError`/`safe`) and `data`, never on `mes
 Every bespoke code in the system, its status, and its meaning. A new bespoke code lands with its row
 added here in the same PR.
 
-Status assignment follows the failure's nature: a well-formed value the state no longer accepts
-(expired, already used) is **410 Gone**; a value that was never acceptable is **422 Unprocessable
-Content**; a failure of authentication state is **401 Unauthorized**; an operation whose
-precondition the resource's current state contradicts is **409 Conflict**.
+Status assignment follows the failure's nature:
+
+- **410 Gone** — a well-formed value the state no longer accepts (expired, already used).
+- **422 Unprocessable Content** — a value that was never acceptable.
+- **401 Unauthorized** — a failure of authentication state.
+- **409 Conflict** — an operation whose precondition the resource's current state contradicts.
 
 | Domain       | Code                   | Status | Meaning                                                         | data        |
 | ------------ | ---------------------- | ------ | --------------------------------------------------------------- | ----------- |
@@ -74,7 +76,7 @@ precondition the resource's current state contradicts is **409 Conflict**.
   log, no report, it's the caller's outcome. Everything else is logged at error level with the trace
   id and captured to the error backend, then encoded by oRPC as a bare `INTERNAL_SERVER_ERROR` —
   internals never reach the wire.
-- **Wire surface.** Services speak the oRPC RPC protocol at `/rpc` only. Contracts keep their
+- **Wire protocol.** Services speak the oRPC RPC protocol at `/rpc` only. Contracts keep their
   `.route()` metadata and stay OpenAPI-generatable (the conformance suite asserts this), but no
   OpenAPI endpoint is served.
 

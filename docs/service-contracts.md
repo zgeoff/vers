@@ -69,8 +69,8 @@ them. Entity schemas live in the contract package that owns the entity — not i
 package, even at some duplication cost — because sharing entity schemas across contracts would
 couple services through the back door.
 
-Contract packages pin zod 4 directly — never the workspace catalog, which holds zod 3 — so any
-schema a contract needs lives in the contract package itself.
+Schemas are zod schemas, so every contract depends on `zod`, referenced through the workspace
+catalog (`catalog:`) like every external dependency — the catalog resolves it to zod 4.
 
 ## The service side
 
@@ -88,14 +88,12 @@ const getCurrentUser = os.getCurrentUser.handler(({ context, errors }) => {
 ```
 
 Every handler is typechecked against its declaration — inputs, outputs, and error payloads. The
-router mounts on Elysia three ways from the same implementation: the RPC protocol under `/rpc` (what
-typed clients speak), an OpenAPI-shaped REST API under `/api`, and a generated OpenAPI 3.1 document
-at `/spec.json`. The spec is generated from the _contract_, never the implementation, which is what
-keeps clients contract-only.
+router mounts on Elysia under `/rpc`, the RPC protocol typed clients speak, and serves no other
+path.
 
 `@vers/service-runtime` provides the shell around this — a `createService(...)` entry composing the
-runtime's Elysia plugins — so a new service is roughly: a contract package, handlers, and one
-`createService` call. OpenTelemetry is part of the shell (Grafana-flavored sink).
+runtime's Elysia plugins — so a new service is a contract package, handlers, and one `createService`
+call. The shell exports OpenTelemetry traces to Axiom.
 
 ## The client side
 

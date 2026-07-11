@@ -15,9 +15,9 @@ words. No narrative about prior attempts or review cycles.
 
 ## Testing
 
-- [ ] `yarn typecheck` passes
-- [ ] `yarn test` passes
-- [ ] `yarn lint` passes
+- [ ] `bun run typecheck` passes
+- [ ] `bun run test` passes
+- [ ] `bun run lint` passes
 - [ ] New tests added for new functionality
 
 ## Context

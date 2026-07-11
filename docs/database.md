@@ -16,10 +16,10 @@ One Neon project holds the identity database; services and migrations all point 
 | Compute         | 0.25 CU fixed, scale-to-zero                       |
 | Suspend timeout | 300s — free-plan fixed; the flag to change it 403s |
 
-The compute suspends after 5 idle minutes and resumes on the next connection (~0.6–1.1s observed
-from a Fly Sydney machine; warm queries ~2ms, fresh connections ~55–70ms). Fly idle-stop timing must
-not equal the 300s suspend window, or a first request after idle pays both cold starts at once — set
-Fly's idle-stop meaningfully longer or shorter when provisioning apps.
+Idle compute resumes on the next connection (~0.6–1.1s observed from a Fly Sydney machine; warm
+queries ~2ms, fresh connections ~55–70ms). Fly idle-stop timing must not equal the 300s suspend
+window, or a first request after idle pays both cold starts at once — set Fly's idle-stop
+meaningfully longer or shorter when provisioning apps.
 
 ## Activity checkpoint store
 
