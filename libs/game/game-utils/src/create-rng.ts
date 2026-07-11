@@ -1,4 +1,5 @@
-import prand from 'pure-rand';
+import { uniformInt } from 'pure-rand/distribution/uniformInt';
+import { xoroshiro128plus } from 'pure-rand/generator/xoroshiro128plus';
 import type { RNG } from './types';
 
 /**
@@ -10,12 +11,12 @@ import type { RNG } from './types';
  */
 export function createRNG(initialSeed: number): RNG {
   let seed = initialSeed;
-  let rng = prand.xoroshiro128plus(seed);
-  const getInt = (min: number, max: number) => prand.unsafeUniformIntDistribution(min, max, rng);
+  let rng = xoroshiro128plus(seed);
+  const getInt = (min: number, max: number) => uniformInt(rng, min, max);
 
   const generateNewSeed = () => {
     seed = getInt(0, 0x100000000);
-    rng = prand.xoroshiro128plus(seed);
+    rng = xoroshiro128plus(seed);
 
     return seed;
   };
