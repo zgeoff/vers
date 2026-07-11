@@ -48,6 +48,25 @@ test('it delivers a sent job to its handler via drain', async () => {
   expect(received).toStrictEqual([{ to: 'a@example.com' }]);
 });
 
+test('it returns the job id drain hands the handler', async () => {
+  const defs = defineJobs({ email: { schema: z.object({ to: z.string() }) } });
+  const receivedJobIDs: Array<string> = [];
+
+  await using ctx = await setupTest(defs, {
+    email: (_payload, context) => {
+      receivedJobIDs.push(context.jobID);
+
+      return Promise.resolve();
+    },
+  });
+
+  const jobID = await ctx.queue.send('email', { to: 'a@example.com' });
+
+  await ctx.queue.drain();
+
+  expect(receivedJobIDs).toStrictEqual([jobID]);
+});
+
 test('it enqueues transactionally: a committed send drains and a rolled-back send never appears', async () => {
   const defs = defineJobs({ email: { schema: z.object({ to: z.string() }) } });
 
@@ -131,6 +150,46 @@ test('it retries a failed job after its retry delay', async () => {
   const afterDelay = await ctx.queue.drain();
 
   expect(afterDelay).toStrictEqual({ completed: 1, failed: 0 });
+  expect(attempts).toBe(2);
+});
+
+test('it retries a failed job on an exponential backoff schedule when the definition opts in', async () => {
+  const defs = defineJobs({
+    email: {
+      retryBackoff: true,
+      retryDelay: 1,
+      retryLimit: 2,
+      schema: z.object({ to: z.string() }),
+    },
+  });
+
+  let attempts = 0;
+
+  await using ctx = await setupTest(defs, {
+    email: () => {
+      attempts += 1;
+
+      if (attempts === 1) {
+        return Promise.reject(new Error('first attempt fails'));
+      }
+
+      return Promise.resolve();
+    },
+  });
+
+  await ctx.queue.send('email', { to: 'a@example.com' });
+
+  const firstDrain = await ctx.queue.drain();
+
+  expect(firstDrain).toStrictEqual({ completed: 0, failed: 1 });
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 3000);
+  });
+
+  const afterBackoff = await ctx.queue.drain();
+
+  expect(afterBackoff).toStrictEqual({ completed: 1, failed: 0 });
   expect(attempts).toBe(2);
 });
 
