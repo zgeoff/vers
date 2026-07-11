@@ -262,16 +262,16 @@ sentence can't be simplified without losing it.
 
 Packages live under kind-first roots — the bun workspace globs are `apps/*`, `services/*`,
 `contracts/*`, `libs/*/*` (libraries grouped by domain: `core`, `data`, `design`, `game`, `service`,
-`testing`), and `infra`; `docs/overview.md` lists them. Every
-project has its own `package.json` named `@vers/<name>`: internal deps use the `workspace:*`
-protocol, and every external dependency's version lives in the root manifest's `workspaces.catalog`,
-referenced everywhere as `catalog:` — project manifests carry no direct version pins. Libraries are
-consumed as TypeScript source (`exports` → `./src/index.ts`); there are no per-library build steps.
-`bun install` uses the isolated linker (pnpm-style symlinks, no phantom deps) with exact pins and a
-7-day `minimumReleaseAge` — see `bunfig.toml`. Turborepo drives the task graph: root `turbo.json`
-declares the `build`/`typecheck`/`test`/`codegen`/`typegen`/`e2e` pipelines (ordering inferred from
-each project's `workspace:*` deps). Per-project `turbo.json` files exist only to declare
-`boundaries` tags. CI's changed-project detection is `turbo run --affected`.
+`testing`), and `infra`; `docs/overview.md` lists them. Every project has its own `package.json`
+named `@vers/<name>`: internal deps use the `workspace:*` protocol, and every external dependency's
+version lives in the root manifest's `workspaces.catalog`, referenced everywhere as `catalog:` —
+project manifests carry no direct version pins. Libraries are consumed as TypeScript source
+(`exports` → `./src/index.ts`); there are no per-library build steps. `bun install` uses the
+isolated linker (pnpm-style symlinks, no phantom deps) with exact pins and a 7-day
+`minimumReleaseAge` — see `bunfig.toml`. Turborepo drives the task graph: root `turbo.json` declares
+the `build`/`typecheck`/`test`/`codegen`/`typegen`/`e2e` pipelines (ordering inferred from each
+project's `workspace:*` deps). Per-project `turbo.json` files exist only to declare `boundaries`
+tags. CI's changed-project detection is `turbo run --affected`.
 
 TypeScript is 7.0.2 (catalog). TS7 has no `baseUrl` and no classic Compiler API, and there is no
 path-alias convention here — write imports relative to the importing file. Node is 24.18.0 in CI and
@@ -300,10 +300,10 @@ semantics, and moving a lib between domains changes nothing but its path.
 Panda CSS 2.0 spans all four consumers (`@vers/panda-preset`, `@vers/styled-system`,
 `@vers/design-system`, app-web), pinned at 2.0.0-beta.8 — no stable 2.0 release exists — through
 `bunfig.toml`'s `minimumReleaseAgeExcludes`. `@vers/panda-preset` composes
-`presets: [presetBase, presetPanda]` from
-`@pandacss/preset-base` and `@pandacss/preset-panda` — Panda 2.0 ships no bundled default preset.
-CSS values that aren't theme tokens need the bracket escape hatch (`cursor: '[pointer]'`,
-`borderWidth: '[1px]'`) — 2.0's `SystemStyleObject` value types reject arbitrary strings/numbers.
+`presets: [presetBase, presetPanda]` from `@pandacss/preset-base` and `@pandacss/preset-panda` —
+Panda 2.0 ships no bundled default preset. CSS values that aren't theme tokens need the bracket
+escape hatch (`cursor: '[pointer]'`, `borderWidth: '[1px]'`) — 2.0's `SystemStyleObject` value types
+reject arbitrary strings/numbers.
 
 ### Screens
 
@@ -331,8 +331,8 @@ PR and promotes it into `@vers/design-system` when a second consumer appears.
   `styled-system`, router typegen) those imports degrade to `any` and the unsafe-\* rules report
   hundreds of false violations. Every type-aware rule is on. Two exceptions are permanent:
   `only-throw-error`'s documented app-web override, and the inline directives on
-  `@vers/idle-core`/`@vers/aether-core` tick/lifecycle handlers that mutate their entity parameter by
-  design. Pre-existing violations are baselined inline with
+  `@vers/idle-core`/`@vers/aether-core` tick/lifecycle handlers that mutate their entity parameter
+  by design. Pre-existing violations are baselined inline with
   `// oxlint-disable-next-line <rule> -- baseline(#236)` comments rather than turned off in config;
   the unused-directive check is the ratchet — fixing a baselined site makes its comment stale and
   lint fails until the comment is deleted. `typescript/prefer-readonly-parameter-types` is never
