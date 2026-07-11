@@ -12,7 +12,10 @@ export function initSentryNode(): void {
     ...(env.SENTRY_DSN !== undefined && { dsn: env.SENTRY_DSN }),
     environment: env.NODE_ENV,
     integrations: [Sentry.httpIntegration()],
-    sendDefaultPii: true,
+
+    // userInfo defaults off; the other categories default on once dataCollection is present,
+    // matching what sendDefaultPii: true collected
+    dataCollection: { userInfo: true },
 
     // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes
     tracesSampleRate: 0,
