@@ -25,8 +25,7 @@ export interface JobQueue<TDefs extends JobDefs> {
     payload: Readonly<z.infer<TDefs[TName]['schema']>>,
     opts?: Readonly<SendJobOptions>,
   ) => Promise<void>;
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- `name` is a string-literal union derived from `TDefs`; there is no object here to make readonly
-  readonly drain: (name?: keyof TDefs & string) => Promise<DrainResult>;
+  readonly drain: (name?: Extract<keyof TDefs, string>) => Promise<DrainResult>;
 }
 
 export interface CreateJobQueueConfig<TDefs extends JobDefs> {
