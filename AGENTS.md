@@ -171,14 +171,14 @@ trigger is ordinary control flow, not an invariant.
 ## Error handling
 
 The full conventions — taxonomy, code registry, trace context, reporting split — live in
-`docs/error-handling.md`. The rules a PR must satisfy:
+`docs/architecture/error-handling.md`. The rules a PR must satisfy:
 
 - A procedure handler throws only its typed `opts.errors.*` constructors or `invariant()`. No
   try/catch for logging or reporting in handlers — the central `onError` interceptor in
   `createService` owns that.
 - Every contract `.errors({…})` map is built with `defineErrors` (`@vers/contract-base`). A bespoke
   code (any code outside oRPC's canonical set) declares an explicit `status` and lands with its row
-  in the `docs/error-handling.md` registry table in the same PR; bespoke codes are named
+  in the `docs/architecture/error-handling.md` registry table in the same PR; bespoke codes are named
   `NOUN_PROBLEM`.
 - Clients narrow on `code` via `isDefinedError`/`safe` and act on `data` fields — never on `message`
   strings.
@@ -201,7 +201,7 @@ text.
 
 ## Monorepo layout
 
-Packages live under kind-first roots; `docs/overview.md` lists every project.
+Packages live under kind-first roots; `docs/architecture/overview.md` lists every project.
 
 - Workspace globs: `apps/*`, `services/*`, `contracts/*`, `libs/*/*` (grouped by domain: `core`,
   `data`, `design`, `game`, `service`, `testing`), `infra`, and `scripts`.
@@ -247,7 +247,7 @@ test, lint, boundaries, and knip like any project.
 
 `bun run deploy` drives every Fly rollout from the `deploy.config.ts` manifest at the repo root;
 `deploy verify` asserts the fleet is online and current. Mechanics, staleness detection, CI wiring,
-container builds, and secrets: `docs/deployment.md`.
+container builds, and secrets: `docs/architecture/deployment.md`.
 
 - Database migrations run once per green push in their own never-cancelled `migrate` job — never per
   service.

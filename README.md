@@ -1,10 +1,19 @@
-# vers
+<div align="center">
+  <h1>vers</h1>
 
-A browser idle game on a microservice backend: a deterministic simulation runs on the client, and
-the server verifies its results by replay.
+  <p>
+    A browser idle game on a microservice backend: a deterministic simulation runs on the client,
+    and the server verifies its results by replay.
+  </p>
 
-[Documentation](./docs/README.md) • [Architecture overview](./docs/overview.md) •
-[Agent guidelines](./AGENTS.md)
+  <p>
+    <a href="./docs/README.md">Documentation</a> •
+    <a href="./docs/architecture/overview.md">Architecture</a> •
+    <a href="./AGENTS.md">Agent Guidelines</a>
+  </p>
+</div>
+
+---
 
 ## Quick start
 
@@ -27,7 +36,9 @@ bun run e2e                       # playwright; first run: bun playwright instal
 
 ## Layout and conventions
 
-- [docs/overview.md](./docs/overview.md) maps the architecture and every workspace project.
+- [docs/architecture/overview.md](./docs/architecture/overview.md) maps the architecture and every
+  workspace project.
 - [AGENTS.md](./AGENTS.md) holds the engineering conventions. It is generated from
   `agents/shared.md` and `agents/project.md` — edit the partials, never the file itself.
-- Deploys run through `bun run deploy` — see [docs/deployment.md](./docs/deployment.md).
+- Deploys run through `bun run deploy` — see
+  [docs/architecture/deployment.md](./docs/architecture/deployment.md).

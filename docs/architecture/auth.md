@@ -5,7 +5,7 @@ The edge (`apps/web`) runs the credential and code flows, holds the session cook
 service-to-service token. Durable state lives in the services: sessions and step-up transactions in
 `service-session`, password credentials and reset tokens in `service-user`, TOTP verifications in
 `service-verification`. Services never see cookies — the edge validates the session and mints a
-short-lived token naming the acting user (`docs/service-contracts.md`).
+short-lived token naming the acting user (`docs/architecture/service-contracts.md`).
 
 ## Session lifecycle
 

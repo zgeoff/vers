@@ -70,7 +70,7 @@ Status assignment follows the failure's nature:
 `createService` (`@vers/service-runtime`) owns the whole failure path outside handler bodies:
 
 - **Trust boundary.** An invalid s2s token short-circuits with a plain 401 before any oRPC handler
-  runs; the response is not contract-shaped by design (docs/service-contracts.md).
+  runs; the response is not contract-shaped by design (docs/architecture/service-contracts.md).
 - **Central error interceptor.** One `onError` client-interceptor on the RPC handler classifies
   everything a procedure throws: a defined contract error or any 4xx passes through untouched — no
   log, no report, it's the caller's outcome. Everything else is logged at error level with the trace
