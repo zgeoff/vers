@@ -26,6 +26,8 @@ How the platform is built — system design, data flows, and operational wiring.
   the reporting split
 - [Database](./architecture/database.md) — Neon postgres topology, connection rules, and
   re-provisioning
+- [Queues](./architecture/queues.md) — pg-boss behind `@vers/jobs`, the drain delivery model, and
+  retry/idempotency rules
 - [Deployment](./architecture/deployment.md) — Fly rollouts, container builds, CI wiring, and
   secrets
 - [Service providers](./architecture/service-providers.md) — the external services and what each one
