@@ -15,13 +15,24 @@ COPY . .
 
 RUN turbo prune @vers/web --docker
 
+# turbo prune's subset bun.lock keeps the root's hoisting choices, which bun
+# re-resolves differently for the smaller workspace set — --frozen-lockfile
+# then fails (vercel/turborepo#11007). Install stages instead use the
+# committed root lockfile with every workspace manifest present, filtered to
+# the @vers/web graph; prune output feeds only the source (out/full) stage.
+RUN mkdir /manifests && \
+  find . -name package.json -not -path './out/*' -exec cp --parents {} /manifests/ \; && \
+  cp bun.lock bunfig.toml /manifests/ && \
+  cp -r patches /manifests/patches
+
 # --- full install (with devDependencies) to run the vite build ---
 FROM base AS installer
 
-COPY --from=pruner /app/out/json/ .
-COPY --from=pruner /app/out/bun.lock ./bun.lock
+COPY --from=pruner /manifests/ .
 
-RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
+# @vers/source (the root manifest) carries the build-driving devDependencies:
+# turbo for the codegen graph and the @tsconfig base every tsconfig extends
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile --filter=@vers/web --filter=@vers/source
 
 # --- build the client + SSR server bundle ---
 FROM installer AS builder
@@ -58,10 +69,9 @@ RUN \
 # runtime import from one flat node_modules regardless of directory depth ---
 FROM base AS prod-deps
 
-COPY --from=pruner /app/out/json/ .
-COPY --from=pruner /app/out/bun.lock ./bun.lock
+COPY --from=pruner /manifests/ .
 
-RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile --production --linker=hoisted --ignore-scripts
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile --production --linker=hoisted --ignore-scripts --filter=@vers/web
 
 # --- runtime ---
 FROM node:${NODE_VERSION}-alpine
