@@ -4,8 +4,10 @@ import type { Selectable } from 'kysely';
 
 /**
  * Maps a kysely `activities` row (camelCase columns) onto the contract's `ActivityData` shape.
- * `buildSnapshot` is cast to `BuildSnapshot`: the column is untyped jsonb, but every write comes
- * from this service's own snapshot construction.
+ * `buildSnapshot` is cast to `BuildSnapshot`: the column is untyped jsonb, every write comes from
+ * this service's own snapshot construction, and the cast cannot smuggle a drifted row past the RPC
+ * boundary — oRPC validates handler output against the contract's output schema and fails the
+ * request on mismatch.
  */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the row's jsonb `buildSnapshot` field types as the generated `Json` union, which nests a mutable `JsonValue[]` branch with no readonly form
 export function toActivityData(row: Readonly<Selectable<Activities>>): ActivityData {
@@ -13,7 +15,7 @@ export function toActivityData(row: Readonly<Selectable<Activities>>): ActivityD
     appendedAt: row.appendedAt,
     appendedHead: row.appendedHead,
     avatarID: row.avatarId,
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is this service's own snapshot construction
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is this service's own snapshot construction, and oRPC's output validation rejects a drifted shape at the boundary
     buildSnapshot: row.buildSnapshot as BuildSnapshot,
     contentVersion: row.contentVersion,
     createdAt: row.createdAt,

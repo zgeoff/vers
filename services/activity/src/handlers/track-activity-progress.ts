@@ -37,7 +37,6 @@ interface TrackActivityProgressOpts {
  */
 export async function trackActivityProgress(
   db: Kysely<DB>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- CheckpointBatchEntry's payload is a zod `looseObject`, whose extra-key index signature types as mutable `Record<string, unknown>` with no readonly form
   opts: TrackActivityProgressOpts,
 ): Promise<{ appendedHead: number }> {
   const actingUserID = opts.context.actingUserId;
@@ -100,7 +99,7 @@ export async function trackActivityProgress(
           opts.input.checkpoints.map((checkpoint) => ({
             activityId: opts.input.activityID,
             hash: checkpoint.hash,
-            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; the value is CheckpointPayloadSchema-validated contract input
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; the value is schema-validated contract input
             payload: checkpoint.payload as Json,
             prevHash: checkpoint.prevHash,
             version: checkpoint.version,
@@ -132,7 +131,6 @@ interface TrackActivityProgressHead {
  * a stale batch's chain has nothing to link onto — the first entry's link onto the current head.
  */
 function findInvalidReason(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- CheckpointBatchEntry's payload is a zod `looseObject`, whose extra-key index signature types as mutable `Record<string, unknown>` with no readonly form
   input: Readonly<CheckpointBatchInput>,
   head: Readonly<TrackActivityProgressHead>,
 ): string | undefined {
