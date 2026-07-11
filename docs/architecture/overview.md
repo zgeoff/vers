@@ -129,7 +129,6 @@ Development:
 Applications (`apps/`):
 
 - `apps/bugsink` - self-hosted error tracker, ingesting over the Sentry protocol
-- `apps/design-reference` - static host for the exported visual-direction design pages
 - `apps/web` - TanStack Start web app; the trust edge and only public deployment
 - `apps/web-e2e` - e2e test suite for the web app
 

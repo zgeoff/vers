@@ -126,11 +126,6 @@ Dockerfile, compiling to a single executable:
    every runtime import from one flat `node_modules` regardless of directory depth.
 5. **runtime** — `node:24.18.0-alpine` holding `node_modules`, `server.mjs`, and `dist`.
 
-### app-design-reference
-
-A plain `nginx:alpine` image serving the committed `public/` pages. It has no workspace
-dependencies, so it skips the prune-and-install stages entirely.
-
 ## Provision from nothing
 
 Requires `flyctl` authenticated to the `vers` org, the Neon pooled `DATABASE_URL`, and the domain in
