@@ -68,9 +68,38 @@ test('it signs out every other live session and completes sign-in on confirm', a
     },
   );
 
-  expect(outcome.value).toBe('/');
+  expect(outcome.value).toBe('/respite');
   expect(outcome.cookies['en_verification']).toStrictEqual({});
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
   expect(db.sessionCollection.findFirst((q) => q.where({ id: otherSessionID }))).toBeUndefined();
   expect(db.sessionCollection.findFirst((q) => q.where({ id: pendingSessionID }))).toBeDefined();
+});
+
+test('it honors a stashed redirect target on confirm', async () => {
+  const userID = createId();
+  const pendingSessionID = createId();
+
+  await db.sessionCollection.create({ id: pendingSessionID, userID, verified: false });
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_verification: {
+          'loginLogout#email': 'force-logout-redirect@vers.test',
+          'loginLogout#redirect': '/nexus',
+          'loginLogout#sessionID': pendingSessionID,
+          'loginLogout#userID': userID,
+        },
+      },
+    },
+    async () => {
+      const redirectHref = await forceLogoutHandler(buildFormData({ intent: 'confirm' }))
+        .then(() => null)
+        .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+
+      return redirectHref;
+    },
+  );
+
+  expect(outcome.value).toBe('/nexus');
 });

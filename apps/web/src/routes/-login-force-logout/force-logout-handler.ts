@@ -1,6 +1,7 @@
 import { redirect } from '@tanstack/react-router';
 import { getVerifySession } from '../../lib/auth/get-verify-session';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
+import { toSafeRedirectPath } from '../../lib/auth/to-safe-redirect-path';
 import type { VerifySessionData } from '../../lib/auth/types';
 import { updateAuthSession } from '../../lib/auth/update-auth-session';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
@@ -8,6 +9,7 @@ import { sessionClient } from '../../lib/rpc/clients/session-client';
 
 const CLEAR_PENDING_SESSION: VerifySessionData = {
   'loginLogout#email': undefined,
+  'loginLogout#redirect': undefined,
   'loginLogout#sessionID': undefined,
   'loginLogout#userID': undefined,
 };
@@ -27,6 +29,7 @@ export async function forceLogoutHandler(formData: FormData): Promise<never> {
 
   const sessionID = verifySession['loginLogout#sessionID'];
   const actingUserID = verifySession['loginLogout#userID'];
+  const redirectTo = verifySession['loginLogout#redirect'];
 
   if (intent !== 'confirm' || sessionID === undefined || actingUserID === undefined) {
     await updateVerifySession(CLEAR_PENDING_SESSION);
@@ -55,5 +58,5 @@ export async function forceLogoutHandler(formData: FormData): Promise<never> {
     updateOptions,
   );
 
-  throw redirect({ href: '/' });
+  throw redirect({ href: toSafeRedirectPath(redirectTo, '/respite') });
 }

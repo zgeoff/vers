@@ -83,6 +83,21 @@ test('it disables the submit button while the login request is pending', async (
   });
 });
 
+test('it links to signup and forgot password', async () => {
+  await withRequestContext({}, async () => {
+    renderWithRouter(<LoginForm />);
+
+    const signupLink = await screen.findByRole('link', { name: 'Create an account' });
+
+    expect(signupLink).toHaveAttribute('href', '/signup');
+
+    expect(screen.getByRole('link', { name: 'Forgot password?' })).toHaveAttribute(
+      'href',
+      '/forgot-password',
+    );
+  });
+});
+
 test('it renders the redirect target as a hidden field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(<LoginForm redirectTo="/nexus" />);

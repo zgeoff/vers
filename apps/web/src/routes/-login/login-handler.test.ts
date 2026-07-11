@@ -122,6 +122,29 @@ test('it redirects to force-logout and stores the pending session when another s
   });
 });
 
+test('it stashes the redirect target alongside the pending force-logout session', async () => {
+  const user = await db.userCollection.create({
+    email: 'force-logout-redirect@vers.test',
+    password: 'password123',
+  });
+
+  await db.sessionCollection.create({ userID: user.id });
+
+  const outcome = await withRequestContext({}, () =>
+    loginHandler(
+      buildFormData({
+        email: 'force-logout-redirect@vers.test',
+        password: 'password123',
+        redirectTo: '/nexus',
+      }),
+    )
+      .then(() => null)
+      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null)),
+  );
+
+  expect(outcome.cookies['en_verification']).toContainEntry(['loginLogout#redirect', '/nexus']);
+});
+
 test('it signs a first-time caller in directly and clears their redirect target', async () => {
   await db.userCollection.create({ email: 'first-login@vers.test', password: 'password123' });
 
@@ -141,4 +164,20 @@ test('it signs a first-time caller in directly and clears their redirect target'
 
   expect(outcome.value).toBe('/nexus');
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
+});
+
+test('it lands a caller with no redirect target at respite', async () => {
+  await db.userCollection.create({ email: 'default-landing@vers.test', password: 'password123' });
+
+  const outcome = await withRequestContext({}, async () => {
+    const redirectHref = await loginHandler(
+      buildFormData({ email: 'default-landing@vers.test', password: 'password123' }),
+    )
+      .then(() => null)
+      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+
+    return redirectHref;
+  });
+
+  expect(outcome.value).toBe('/respite');
 });
