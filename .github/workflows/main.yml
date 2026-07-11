@@ -193,7 +193,12 @@ jobs:
             --dockerfile ${{ matrix.dir }}/Dockerfile
 
       # private services can't be reached from CI — their rollout health gate is the
-      # smoke test. app-web is public, so verify it end-to-end after cutover.
+      # smoke test. app-web is public, so verify it end-to-end after cutover: /health
+      # proves the app booted, then an anonymous call through the RPC proxy must come
+      # back as the contract's typed UNAUTHORIZED ("defined": true distinguishes it
+      # from a middleware 401 or a 500). That round-trip crosses app-web → flycast →
+      # service-user, so it fails on zero-machine services, key drift, and audience
+      # drift — none of which /health can see.
       - name: Smoke check app-web
         if:
           ${{ matrix.app == 'vers-app-web' && contains(needs.checks.outputs.affected-projects,
@@ -203,12 +208,27 @@ jobs:
             code="$(curl -fsS -o /dev/null -w '%{http_code}' https://vers-app-web.fly.dev/health || true)"
             if [ "${code}" = "200" ]; then
               echo "app-web healthy"
-              exit 0
+              break
+            fi
+            if [ "${attempt}" = "10" ]; then
+              echo "app-web /health never returned 200 after deploy"
+              exit 1
             fi
             echo "attempt ${attempt}: /health returned ${code:-no-response}"
             sleep 5
           done
-          echo "app-web /health never returned 200 after deploy"
+          for attempt in $(seq 1 10); do
+            body="$(curl -sS -X POST -H 'content-type: application/json' -d '{"json":{}}' \
+              https://vers-app-web.fly.dev/api/rpc/user/getCurrentUser || true)"
+            if jq -e '.json.defined == true and .json.code == "UNAUTHORIZED" and .json.data.reason == "missing-session"' \
+              > /dev/null 2>&1 <<< "${body}"; then
+              echo "rpc path healthy: typed UNAUTHORIZED round-tripped"
+              exit 0
+            fi
+            echo "attempt ${attempt}: rpc probe returned ${body:-no-response}"
+            sleep 5
+          done
+          echo "app-web rpc probe never returned the typed UNAUTHORIZED after deploy"
           exit 1
 
   deploy-bugsink:
