@@ -75,6 +75,7 @@ the function's shape without opening it.
 | Prefix                        | Contract                                                                  | Example             |
 | ----------------------------- | ------------------------------------------------------------------------- | ------------------- |
 | `build<Result>[From<Source>]` | default constructor for values; drop `From<Source>` when no single source | `buildEditsFromAST` |
+| `define<X>`                   | identity; its only job is compile-time constraint of its literal argument | `defineErrors`      |
 | `parse`                       | unstructured input → structure, invalid input reported                    | `parseSource`       |
 | `plan`                        | compute an action without performing it                                   | `planGapEdit`       |
 | `pick`                        | select among known alternatives                                           | `pickMode`          |
