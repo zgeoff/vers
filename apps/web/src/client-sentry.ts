@@ -15,7 +15,10 @@ export function initSentryReact(): void {
   Sentry.init({
     dsn,
     environment: import.meta.env.MODE,
-    sendDefaultPii: true,
+
+    // userInfo defaults off; the other categories default on once dataCollection is present,
+    // matching what sendDefaultPii: true collected
+    dataCollection: { userInfo: true },
 
     // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes
     tracesSampleRate: 0,

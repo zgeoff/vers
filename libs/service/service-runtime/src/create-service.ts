@@ -146,7 +146,7 @@ async function createErrorReporter(dsn: string): Promise<(error: unknown) => voi
   const sentry = await import('@sentry/bun');
 
   // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes
-  sentry.init({ dsn, sendDefaultPii: true, tracesSampleRate: 0 });
+  sentry.init({ dsn, dataCollection: { userInfo: true }, tracesSampleRate: 0 });
 
   return (error) => {
     sentry.withScope((scope) => {
