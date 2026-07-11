@@ -4,13 +4,12 @@ import { Icon } from '../icon/icon';
 
 const container = css({
   alignItems: 'center',
-  backgroundColor: 'neutral.900',
+  backgroundColor: 'bg.panel',
   display: 'flex',
   paddingLeft: '4',
   paddingRight: '7',
   paddingY: '2',
   position: 'relative',
-  rounded: 'md',
 });
 
 const pre = css({
@@ -21,23 +20,20 @@ const pre = css({
 const code = css({
   backgroundColor: 'transparent',
   border: 'none',
-  color: 'neutral.50',
+  color: 'text.primary',
   fontFamily: 'mono',
 });
 
 const copyButton = css({
   _hover: {
-    color: 'neutral.200',
+    color: 'text.primary',
     cursor: '[pointer]',
   },
-  color: 'neutral.700',
+  color: 'text.muted',
   height: 'full',
   position: 'absolute',
   right: '1',
   top: '[0px]',
-  transition: 'colors',
-  transitionDuration: 'fast',
-  transitionTimingFunction: 'out',
 });
 
 export function SingleLineCode(props: React.HTMLAttributes<HTMLElement>) {

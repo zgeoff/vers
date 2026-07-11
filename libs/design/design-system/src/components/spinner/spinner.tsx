@@ -22,7 +22,7 @@ const container = css({
   animationDuration: 'slowest',
   animationIterationCount: 'infinite',
   animationTimingFunction: 'linear',
-  color: 'neutral.200',
+  color: 'text.primary',
 });
 
 const circle = css({
@@ -35,7 +35,6 @@ const spinner = css({
 
 type Props = RecipeVariantProps<typeof wrapper> & {
   className?: string;
-  color?: string;
 };
 
 export function Spinner(props: Readonly<Props>) {

@@ -70,7 +70,7 @@ server-side and compares results before progress is trusted. Checkpoint hashes c
 together but don't attest combat outcomes — replay is the proof. The same replay path generates
 offline progress: simulate forward from the last verified checkpoint.
 
-The star map (`@vers/aether-*`) generates the world graph — concentric difficulty rings of baked
+The world map (`@vers/worldmap-*`) generates the world graph — concentric difficulty rings of baked
 nodes — and renders it with three.js via react-three-fiber. How the 3D world and the HTML UI share
 the screen: [game rendering](./game-rendering.md).
 
@@ -155,8 +155,8 @@ Libraries (`libs/`, grouped by domain):
 - `libs/design/design-system` - ui component library (Ark UI primitives + Panda recipes)
 - `libs/design/panda-preset` - design tokens & panda css config
 - `libs/design/styled-system` - generated code for panda css design system
-- `libs/game/aether-client` - client code (react, three, zustand) for the aether star map
-- `libs/game/aether-core` - platform-agnostic aether graph generation
+- `libs/game/worldmap-client` - client code (react, three, zustand) for the world map
+- `libs/game/worldmap-core` - platform-agnostic world-graph generation
 - `libs/game/game-rendering` - client rendering shell: scene/presentation state for the persistent
   three.js canvas
 - `libs/game/game-utils` - shared game logic (encounter derivation, rewards)

@@ -21,7 +21,7 @@ const otpFieldRecipe = sva({
       gap: '2',
     },
     errorText: {
-      color: 'red.500',
+      color: 'text.danger',
       fontSize: 'sm',
     },
     group: {
@@ -35,18 +35,17 @@ const otpFieldRecipe = sva({
         cursor: '[not-allowed]',
       },
       _focusVisible: {
-        borderColor: 'gray.500',
+        borderColor: 'border.strong',
         outline: 'none',
         zIndex: '[10]',
       },
-      backgroundColor: 'gray.900',
-      borderColor: 'gray.700',
+      backgroundColor: 'bg.panel',
+      borderColor: 'border',
       borderWidth: '[1px]',
-      color: 'gray.300',
+      color: 'text.primary',
       fontSize: 'md',
       height: '11',
       lineHeight: 'normal',
-      rounded: 'sm',
       textAlign: 'center',
       textTransform: 'uppercase',
       width: '9',
@@ -60,13 +59,12 @@ const otpFieldRecipe = sva({
       marginBottom: '4',
     },
     separator: {
-      backgroundColor: 'gray.800',
+      backgroundColor: 'border.strong',
 
       // preflight gives hr a 1px top border in text color — zero it so the
       // separator renders as a plain dot
       borderTopWidth: '[0]',
       height: '1',
-      rounded: 'sm',
       width: '1',
     },
   },

@@ -1,4 +1,4 @@
-import { DevTools, NodeTooltip } from '@vers/aether-client';
+import { DevTools, NodeTooltip } from '@vers/worldmap-client';
 import { SelectedNodeInfo } from './selected-node-info';
 
 /**

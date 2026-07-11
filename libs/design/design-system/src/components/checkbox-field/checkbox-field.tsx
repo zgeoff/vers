@@ -20,10 +20,10 @@ const checkboxFieldRecipe = sva({
     },
     control: {
       '&[data-state=checked]': {
-        backgroundColor: 'neutral.200',
+        backgroundColor: 'text.primary',
       },
       '&[data-state=unchecked]': {
-        borderColor: 'neutral.200',
+        borderColor: 'border.strong',
         borderWidth: '[1px]',
       },
       alignItems: 'center',
@@ -31,22 +31,20 @@ const checkboxFieldRecipe = sva({
       height: '5',
       justifyContent: 'center',
       outline: 'none',
-      rounded: 'sm',
       width: '5',
     },
     errorText: {
-      color: 'red.500',
+      color: 'text.danger',
       fontSize: 'sm',
     },
     icon: {
-      color: 'neutral.900',
+      color: 'bg.panel',
     },
     indicator: {
       display: 'flex',
     },
     label: {
-      color: 'slate.200',
-      fontFamily: 'body',
+      color: 'text.primary',
       fontSize: 'md',
       fontWeight: 'normal',
       lineHeight: 'normal',

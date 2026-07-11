@@ -8,7 +8,6 @@ interface MarketListingPanelProps {
 const panel = css({
   backgroundColor: 'bg.panelElevated',
   borderColor: 'border',
-  borderRadius: 'md',
   borderWidth: '[1px]',
   display: 'flex',
   flexDirection: 'column',

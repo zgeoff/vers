@@ -77,7 +77,7 @@
     "typescript/no-unsafe-member-access": "error",
     "typescript/no-unsafe-type-assertion": "error",
     "typescript/prefer-nullish-coalescing": "error",
-    // `lib-idle-core`/`lib-aether-core` tick/lifecycle handlers mutate their
+    // `lib-idle-core`/`lib-worldmap-core` tick/lifecycle handlers mutate their
     // entity parameter in place by design -- those sites carry a real reason
     // instead of a baseline marker (see the sim-core exception noted where
     // they occur).
@@ -187,14 +187,14 @@
           // readonly form a caller can consume, so they are exempted by type
           {
             "from": "file",
-            "name": ["ActivityData", "ActivityAppState", "AetherNodeActivityData", "Activity"],
+            "name": ["ActivityData", "ActivityAppState", "WorldNodeActivityData", "Activity"],
             "path": "../idle-core/src/types/activity.ts"
           },
           // from-file paths resolve against the consuming package's directory, so
           // consumers outside libs/game/ need their own entry per depth
           {
             "from": "file",
-            "name": ["ActivityData", "ActivityAppState", "AetherNodeActivityData", "Activity"],
+            "name": ["ActivityData", "ActivityAppState", "WorldNodeActivityData", "Activity"],
             "path": "../../libs/game/idle-core/src/types/activity.ts"
           },
           {
@@ -342,7 +342,7 @@
     {
       // react-three-fiber props aren't DOM attributes — same ignore list the
       // eslint config carried for the r3f renderer
-      "files": ["**/libs/game/aether-client/**/*.ts", "**/libs/game/aether-client/**/*.tsx"],
+      "files": ["**/libs/game/worldmap-client/**/*.ts", "**/libs/game/worldmap-client/**/*.tsx"],
       "rules": {
         "react/no-unknown-property": [
           "error",

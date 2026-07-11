@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
-import { setSelectedNode } from '@vers/aether-client';
 import type { ActivityAppState } from '@vers/idle-core';
+import { setSelectedNode } from '@vers/worldmap-client';
 import { removeSharedWorker } from '../../test-utils/remove-shared-worker';
 import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
 import { ExploreCurrentPanel } from './explore-current-panel';
@@ -25,7 +25,7 @@ function buildFakeActivityAppState(id: string): ActivityAppState {
     enemyGroups: [],
     enemyGroupsRemaining: 0,
     id,
-    name: 'Aether Node',
+    name: 'World Node',
   };
 }
 
@@ -40,7 +40,7 @@ test('it shows a spinner and sends initialize before the worker reports its stat
   });
 
   expect(calls).toStrictEqual([{ type: 'initialize' }]);
-  expect(screen.queryByTestId('aether-node-codex-stub')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('world-node-codex-stub')).not.toBeInTheDocument();
 });
 
 test('it reports the simulation as unavailable when SharedWorker is unsupported', async () => {
@@ -73,7 +73,7 @@ test('it sends set-activity once initialized but the worker has not caught up ye
   }
 
   expect(sentMessage.activity.id).toBeString();
-  expect(screen.queryByTestId('aether-node-codex-stub')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('world-node-codex-stub')).not.toBeInTheDocument();
 });
 
 test('it renders the node and its codex fragment once the worker reports the sent activity', async () => {
@@ -103,7 +103,7 @@ test('it renders the node and its codex fragment once the worker reports the sen
     async () => {
       render(<ExploreCurrentPanel />);
 
-      const codex = await screen.findByTestId('aether-node-codex-stub');
+      const codex = await screen.findByTestId('world-node-codex-stub');
 
       expect(codex).toBeVisible();
     },

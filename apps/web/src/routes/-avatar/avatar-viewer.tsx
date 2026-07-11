@@ -7,7 +7,6 @@ import type { Mesh } from 'three';
 const card = css({
   backgroundColor: 'bg.panel',
   borderColor: 'border',
-  borderRadius: 'md',
   borderWidth: '[1px]',
   height: '64',
   overflow: 'hidden',

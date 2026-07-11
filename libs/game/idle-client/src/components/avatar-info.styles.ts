@@ -1,14 +1,12 @@
 import { css } from '@vers/styled-system/css';
 
 export const avatarInfo = css({
-  backgroundColor: 'gray.900',
-  borderColor: 'gray.700',
+  backgroundColor: 'bg.panel',
+  borderColor: 'border',
   borderWidth: '[1px]',
-  boxShadow: 'md',
   overflow: 'hidden',
   padding: '2',
   position: 'relative',
-  rounded: 'md',
 });
 
 export const avatarName = css({

@@ -1,29 +1,20 @@
-import { css, cx } from '@vers/styled-system/css';
+import { css } from '@vers/styled-system/css';
 import { useCombatElapsed } from '../state/use-combat-elapsed';
 
 const attackTimerBar = css({
-  backgroundColor: 'gray.700',
-  borderColor: 'gray.800',
+  backgroundColor: 'bg.panelElevated',
+  borderColor: 'border',
   borderWidth: '[1px]',
   height: '2',
   overflow: 'hidden',
   position: 'relative',
-  rounded: 'xs',
   width: 'full',
   zIndex: '[1]',
 });
 
 const attackTimerBarFill = css({
-  backgroundColor: 'gold.400',
+  backgroundColor: 'accent.self',
   height: '2',
-  rounded: 'xs',
-  transition: '[width]',
-  transitionDuration: 'fastest',
-  transitionTimingFunction: 'linear',
-});
-
-const noTransition = css({
-  transition: '[none]',
 });
 
 interface AttackTimerBarProps {
@@ -40,10 +31,7 @@ export function AttackTimerBar(props: Readonly<AttackTimerBarProps>) {
 
   return (
     <div className={attackTimerBar}>
-      <div
-        className={cx(attackTimerBarFill, progress === 0 && noTransition)}
-        style={{ width: `${progress}%` }}
-      />
+      <div className={attackTimerBarFill} style={{ width: `${progress}%` }} />
     </div>
   );
 }

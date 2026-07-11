@@ -11,9 +11,9 @@ test('runs a simulation with default configuration', async () => {
   const activity = createMockActivityData({
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,
-    id: 'aether_node_1',
+    id: 'world_node_1',
     seed: 3_047_525_658,
-    type: ActivityType.AetherNode,
+    type: ActivityType.WorldNode,
   });
 
   const config = {
@@ -85,9 +85,9 @@ test('it respects duration limit and stops the simulation accordingly', async ()
   const activity = createMockActivityData({
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,
-    id: 'aether_node_1',
+    id: 'world_node_1',
     seed: 3_047_525_658,
-    type: ActivityType.AetherNode,
+    type: ActivityType.WorldNode,
   });
 
   const config = {
@@ -109,9 +109,9 @@ test('it stops at the specified seed if provided', async () => {
   const activity = createMockActivityData({
     enemies: [enemy],
     failureAction: ActivityFailureAction.Retry,
-    id: 'aether_node_1',
+    id: 'world_node_1',
     seed: 3_047_525_658,
-    type: ActivityType.AetherNode,
+    type: ActivityType.WorldNode,
   });
 
   const config = {
@@ -143,9 +143,9 @@ test('it aborts on failure if failure action is set to abort', async () => {
   const activity = createMockActivityData({
     enemies: [enemy],
     failureAction: ActivityFailureAction.Abort,
-    id: 'aether_node_1',
+    id: 'world_node_1',
     seed: 3_047_525_658,
-    type: ActivityType.AetherNode,
+    type: ActivityType.WorldNode,
   });
 
   const config = {
@@ -178,9 +178,9 @@ test('it retries when failure action is set to retry', async () => {
   const activity = createMockActivityData({
     enemies: [enemy],
     failureAction: ActivityFailureAction.Retry,
-    id: 'aether_node_1',
+    id: 'world_node_1',
     seed: 3_047_525_658,
-    type: ActivityType.AetherNode,
+    type: ActivityType.WorldNode,
   });
 
   const config = {

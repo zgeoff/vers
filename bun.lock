@@ -54,8 +54,6 @@
         "@tanstack/react-router": "catalog:",
         "@tanstack/react-router-ssr-query": "catalog:",
         "@tanstack/react-start": "catalog:",
-        "@vers/aether-client": "workspace:*",
-        "@vers/aether-core": "workspace:*",
         "@vers/contract-avatar": "workspace:*",
         "@vers/contract-base": "workspace:*",
         "@vers/contract-session": "workspace:*",
@@ -71,6 +69,8 @@
         "@vers/service-auth": "workspace:*",
         "@vers/service-utils": "workspace:*",
         "@vers/styled-system": "workspace:*",
+        "@vers/worldmap-client": "workspace:*",
+        "@vers/worldmap-core": "workspace:*",
         "jose": "catalog:",
         "msw": "catalog:",
         "pino": "catalog:",
@@ -305,9 +305,6 @@
       "devDependencies": {
         "@conform-to/react": "catalog:",
         "@conform-to/zod": "catalog:",
-        "@fontsource-variable/manrope": "catalog:",
-        "@fontsource/chakra-petch": "catalog:",
-        "@fontsource/ibm-plex-mono": "catalog:",
         "@happy-dom/global-registrator": "catalog:",
         "@ladle/react": "catalog:",
         "@pandacss/dev": "catalog:",
@@ -347,55 +344,6 @@
       },
       "devDependencies": {
         "@pandacss/dev": "catalog:",
-        "typescript": "catalog:",
-      },
-    },
-    "libs/game/aether-client": {
-      "name": "@vers/aether-client",
-      "version": "0.0.0",
-      "dependencies": {
-        "@react-hookz/web": "catalog:",
-        "@react-spring/three": "catalog:",
-        "@react-three/fiber": "catalog:",
-        "@vers/aether-core": "workspace:*",
-        "@vers/client-test-utils": "workspace:*",
-        "@vers/design-system": "workspace:*",
-        "@vers/styled-system": "workspace:*",
-        "camera-controls": "catalog:",
-        "react": "catalog:",
-        "react-dom": "catalog:",
-        "three": "catalog:",
-        "zustand": "catalog:",
-      },
-      "devDependencies": {
-        "@happy-dom/global-registrator": "catalog:",
-        "@react-three/test-renderer": "catalog:",
-        "@testing-library/jest-dom": "catalog:",
-        "@testing-library/react": "catalog:",
-        "@testing-library/user-event": "catalog:",
-        "@types/bun": "catalog:",
-        "@types/node": "catalog:",
-        "@types/react": "catalog:",
-        "@types/react-dom": "catalog:",
-        "@types/three": "catalog:",
-        "@zgeoff/bun-test-extended": "catalog:",
-        "happy-dom": "catalog:",
-        "typescript": "catalog:",
-        "vite": "catalog:",
-      },
-    },
-    "libs/game/aether-core": {
-      "name": "@vers/aether-core",
-      "version": "0.0.0",
-      "dependencies": {
-        "@paralleldrive/cuid2": "catalog:",
-        "@vers/game-utils": "workspace:*",
-        "tiny-invariant": "catalog:",
-      },
-      "devDependencies": {
-        "@types/bun": "catalog:",
-        "@types/node": "catalog:",
-        "@zgeoff/bun-test-extended": "catalog:",
         "typescript": "catalog:",
       },
     },
@@ -474,6 +422,55 @@
         "immer": "catalog:",
         "tiny-invariant": "catalog:",
         "xxhash-wasm": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "libs/game/worldmap-client": {
+      "name": "@vers/worldmap-client",
+      "version": "0.0.0",
+      "dependencies": {
+        "@react-hookz/web": "catalog:",
+        "@react-spring/three": "catalog:",
+        "@react-three/fiber": "catalog:",
+        "@vers/client-test-utils": "workspace:*",
+        "@vers/design-system": "workspace:*",
+        "@vers/styled-system": "workspace:*",
+        "@vers/worldmap-core": "workspace:*",
+        "camera-controls": "catalog:",
+        "react": "catalog:",
+        "react-dom": "catalog:",
+        "three": "catalog:",
+        "zustand": "catalog:",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "catalog:",
+        "@react-three/test-renderer": "catalog:",
+        "@testing-library/jest-dom": "catalog:",
+        "@testing-library/react": "catalog:",
+        "@testing-library/user-event": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@types/react": "catalog:",
+        "@types/react-dom": "catalog:",
+        "@types/three": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "happy-dom": "catalog:",
+        "typescript": "catalog:",
+        "vite": "catalog:",
+      },
+    },
+    "libs/game/worldmap-core": {
+      "name": "@vers/worldmap-core",
+      "version": "0.0.0",
+      "dependencies": {
+        "@paralleldrive/cuid2": "catalog:",
+        "@vers/game-utils": "workspace:*",
+        "tiny-invariant": "catalog:",
       },
       "devDependencies": {
         "@types/bun": "catalog:",
@@ -743,9 +740,6 @@
     "@elysiajs/opentelemetry": "1.4.11",
     "@epic-web/totp": "4.0.1",
     "@faker-js/faker": "10.5.0",
-    "@fontsource-variable/manrope": "5.2.8",
-    "@fontsource/chakra-petch": "5.2.7",
-    "@fontsource/ibm-plex-mono": "5.2.7",
     "@happy-dom/global-registrator": "20.10.6",
     "@ladle/react": "5.1.1",
     "@msw/data": "1.1.6",
@@ -1044,12 +1038,6 @@
     "@floating-ui/dom": ["@floating-ui/dom@1.7.6", "", { "dependencies": { "@floating-ui/core": "^1.7.5", "@floating-ui/utils": "^0.2.11" } }, "sha512-9gZSAI5XM36880PPMm//9dfiEngYoC6Am2izES1FF406YFsjvyBMmeJ2g4SAju3xWwtuynNRFL2s9hgxpLI5SQ=="],
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
-
-    "@fontsource-variable/manrope": ["@fontsource-variable/manrope@5.2.8", "", {}, "sha512-nc9lOuCRz73UHnovDE2bwXUdghE2SEOc7Aii0qGe3CLyE03W1a7VnY5Z6euRiapiKbCkGS+eXbY3s/kvWeGeSw=="],
-
-    "@fontsource/chakra-petch": ["@fontsource/chakra-petch@5.2.7", "", {}, "sha512-GLbun5WZJNAEc8FtWxwcgo+4Kurqdwejvf671l+YfIjyQgPvTjyxXYP7Ffg2HAY89NGnp3oOvKQjRzfm/fBECw=="],
-
-    "@fontsource/ibm-plex-mono": ["@fontsource/ibm-plex-mono@5.2.7", "", {}, "sha512-MKAb8qV+CaiMQn2B0dIi1OV3565NYzp3WN5b4oT6LTkk+F0jR6j0ZN+5BKJiIhffDC3rtBULsYZE65+0018z9w=="],
 
     "@gar/promise-retry": ["@gar/promise-retry@1.0.3", "", {}, "sha512-GmzA9ckNokPypTg10pgpeHNQe7ph+iIKKmhKu3Ob9ANkswreCx7R3cKmY781K8QK3AqVL3xVh9A42JvIAbkkSA=="],
 
@@ -2009,10 +1997,6 @@
 
     "@ver0/deep-equal": ["@ver0/deep-equal@1.0.1", "", {}, "sha512-XSvL5wKXBZIv7fflMqhQx936sRpEtzxeV25xAEt0rLLXzbF6RCQaRA1jrVIn8JCubMyn/y0TaidphUtilLzl1A=="],
 
-    "@vers/aether-client": ["@vers/aether-client@workspace:libs/game/aether-client"],
-
-    "@vers/aether-core": ["@vers/aether-core@workspace:libs/game/aether-core"],
-
     "@vers/client-test-utils": ["@vers/client-test-utils@workspace:libs/testing/client-test-utils"],
 
     "@vers/contract-avatar": ["@vers/contract-avatar@workspace:contracts/avatar"],
@@ -2076,6 +2060,10 @@
     "@vers/web": ["@vers/web@workspace:apps/web"],
 
     "@vers/web-e2e": ["@vers/web-e2e@workspace:apps/web-e2e"],
+
+    "@vers/worldmap-client": ["@vers/worldmap-client@workspace:libs/game/worldmap-client"],
+
+    "@vers/worldmap-core": ["@vers/worldmap-core@workspace:libs/game/worldmap-core"],
 
     "@vitejs/plugin-react": ["@vitejs/plugin-react@6.0.3", "", { "dependencies": { "@rolldown/pluginutils": "^1.0.1" }, "peerDependencies": { "@rolldown/plugin-babel": "^0.1.7 || ^0.2.0", "babel-plugin-react-compiler": "^1.0.0", "vite": "^8.0.0" }, "optionalPeers": ["@rolldown/plugin-babel", "babel-plugin-react-compiler"] }, "sha512-vmFvco5/QuC2f9Oj+wTk0+9XeDFkHxSamwZKYc7MxYwKICfvUvlMhqKI0VuICPltGqh1neqBKDvO4kes1ya8vg=="],
 

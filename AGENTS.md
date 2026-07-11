@@ -366,7 +366,7 @@ PR and promotes it into `@vers/design-system` when a second consumer appears.
   `styled-system`, router typegen) those imports degrade to `any` and the unsafe-\* rules report
   hundreds of false violations. Every type-aware rule is on. Two exceptions are permanent:
   `only-throw-error`'s documented app-web override, and the inline directives on
-  `@vers/idle-core`/`@vers/aether-core` tick/lifecycle handlers that mutate their entity parameter
+  `@vers/idle-core`/`@vers/worldmap-core` tick/lifecycle handlers that mutate their entity parameter
   by design. Pre-existing violations are baselined inline with
   `// oxlint-disable-next-line <rule> -- baseline(#236)` comments rather than turned off in config;
   the unused-directive check is the ratchet — fixing a baselined site makes its comment stale and

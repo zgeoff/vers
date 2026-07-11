@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
 import { screen } from '@testing-library/react';
-import { setSelectedNode } from '@vers/aether-client';
-import type { AetherNode } from '@vers/aether-core';
+import { setSelectedNode } from '@vers/worldmap-client';
+import type { WorldNode } from '@vers/worldmap-core';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { SelectedNodeInfo } from './selected-node-info';
 
-const node: AetherNode = {
+const node: WorldNode = {
   connections: ['conn1', null, 'conn2', null],
   difficulty: 2,
   id: 'node123',
@@ -26,7 +26,7 @@ test('it shows the selected node and links into its activity', async () => {
 
   const nodeID = await screen.findByTestId('selected-node-id');
 
-  expect(nodeID).toHaveTextContent('Aether Node (node123)');
+  expect(nodeID).toHaveTextContent('World Node (node123)');
   expect(screen.getByTestId('selected-node-difficulty')).toHaveTextContent('Difficulty 2');
 
   expect(screen.getByRole('link', { name: 'Click to start' })).toHaveAttribute(

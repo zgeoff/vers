@@ -1,4 +1,4 @@
-export { AetherNode } from './aether-node';
+export { WorldNodeActivity } from './world-node-activity';
 export { setSimulationWorker } from './state/set-simulation-worker';
 export { useActivity } from './state/use-activity';
 export { useAvatar } from './state/use-avatar';

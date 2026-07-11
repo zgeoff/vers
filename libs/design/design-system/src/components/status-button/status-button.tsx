@@ -20,24 +20,22 @@ enum StatusButtonStatus {
 
 const statusIconContainer = css({
   alignItems: 'center',
-  backgroundColor: 'neutral.900/10',
+  backgroundColor: 'bg.panelElevated',
+  color: 'text.primary',
   display: 'flex',
   height: '[100%]',
   justifyContent: 'center',
   position: 'absolute',
   transform: 'translateY(-100%)',
-  transition: '[transform, background]',
-  transitionDuration: 'normal',
-  transitionTimingFunction: 'in-out',
   width: '[100%]',
 });
 
 const errorStatusButton = css({
-  borderColor: 'red.800 !important',
+  borderColor: 'border.danger !important',
 });
 
 const errorStatusIconContainer = css({
-  backgroundColor: 'red.800',
+  backgroundColor: 'bg.panel',
 });
 
 const buttonContent = css({
@@ -45,9 +43,6 @@ const buttonContent = css({
   display: 'block',
   height: '[100%]',
   justifyContent: 'center',
-  transition: 'transform',
-  transitionDuration: 'normal',
-  transitionTimingFunction: 'in-out',
   width: '[100%]',
 });
 
@@ -57,9 +52,6 @@ const showStatusIcon = css({
 
 const hideButtonContent = css({
   transform: 'translateY(200%)',
-  transition: 'transform',
-  transitionDuration: 'normal',
-  transitionTimingFunction: 'in-out',
 });
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the polymorphic props type composes through Omit<>, which resolves to a concrete DOM attribute type with no readonly form and no allow-list match once the element type argument is fixed
@@ -109,7 +101,7 @@ StatusButton.Status = StatusButtonStatus;
 
 function getStatusIcon(status: StatusButtonStatus) {
   if (status === StatusButtonStatus.Pending) {
-    return <Spinner color="#fff" size="sm" />;
+    return <Spinner size="sm" />;
   }
 
   if (status === StatusButtonStatus.Success) {
@@ -117,7 +109,6 @@ function getStatusIcon(status: StatusButtonStatus) {
       <Icon.Checkmark
         aria-hidden="false"
         aria-label="Success"
-        color="#fff"
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- inline SVG icon; role="img" + aria-label is the accessible-SVG pattern, an <img> tag needs a src
         role="img"
         size={24}
@@ -130,7 +121,6 @@ function getStatusIcon(status: StatusButtonStatus) {
       <Icon.Alert
         aria-hidden="false"
         aria-label="Error"
-        color="#fff"
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- inline SVG icon; role="img" + aria-label is the accessible-SVG pattern, an <img> tag needs a src
         role="img"
         size={32}

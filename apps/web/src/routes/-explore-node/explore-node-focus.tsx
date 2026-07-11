@@ -1,4 +1,4 @@
-import { setSelectedNode, useAetherGraph } from '@vers/aether-client';
+import { setSelectedNode, useWorldGraph } from '@vers/worldmap-client';
 import { useEffect } from 'react';
 
 interface ExploreNodeFocusProps {
@@ -12,7 +12,7 @@ interface ExploreNodeFocusProps {
  * selection changes.
  */
 export function ExploreNodeFocus(props: ExploreNodeFocusProps) {
-  const graph = useAetherGraph();
+  const graph = useWorldGraph();
   const node = graph.nodes[props.nodeID];
 
   useEffect(() => {
