@@ -22,6 +22,12 @@ const rpcUnauthorizedReply = z.object({
 export default defineDeployManifest({
   apps: [
     {
+      app: 'vers-service-activity',
+      configDir: 'services/activity',
+      dockerfile: 'services/activity/Dockerfile',
+      trigger: { kind: 'turbo-affected', pkg: '@vers/service-activity' },
+    },
+    {
       app: 'vers-service-avatar',
       configDir: 'services/avatar',
       dockerfile: 'services/avatar/Dockerfile',

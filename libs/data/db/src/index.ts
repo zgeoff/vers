@@ -7,6 +7,7 @@ export type {
   Avatars,
   ConsumedTransactionTokens,
   DB,
+  Json,
   PendingTransactions,
   Sessions,
   Users,

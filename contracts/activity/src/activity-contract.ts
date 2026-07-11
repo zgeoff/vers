@@ -56,6 +56,7 @@ export const activityContract = {
           data: z.object({ activity: ActivityDataSchema }),
           message: 'An activity is already active for this avatar',
         },
+        NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
       }),
     ),
 

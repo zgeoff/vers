@@ -1,0 +1,53 @@
+import { faker } from '@faker-js/faker';
+import type { CheckpointBatchEntry } from '@vers/contract-activity';
+import { buildCheckpointHash } from '@vers/contract-activity';
+
+interface CreateMockCheckpointBatchConfig {
+  /**
+   * How many entries to build. Default 1.
+   */
+  readonly count?: number;
+
+  /**
+   * The hash the batch's first entry links onto — the activity's current `lastHash` for a batch
+   * that will apply cleanly.
+   */
+  readonly startPrevHash: string;
+
+  /**
+   * The batch's first entry version — the activity's current `appendedHead + 1` for a batch that
+   * will apply cleanly.
+   */
+  readonly startVersion: number;
+}
+
+/**
+ * Builds a chain-valid checkpoint batch: real hashes computed via `buildCheckpointHash`, each
+ * entry linking onto the previous one, starting from a given version and previous hash.
+ */
+export function createMockCheckpointBatch(
+  config: Readonly<CreateMockCheckpointBatchConfig>,
+): Array<CheckpointBatchEntry> {
+  const count = config.count ?? 1;
+  const entries: Array<CheckpointBatchEntry> = [];
+  let prevHash = config.startPrevHash;
+
+  for (let index = 0; index < count; index += 1) {
+    const version = config.startVersion + index;
+
+    const payload = {
+      nextSeed: faker.string.alphanumeric({ casing: 'lower', length: 16 }),
+      seed: faker.string.alphanumeric({ casing: 'lower', length: 16 }),
+      time: version * 1000,
+      type: 'tick',
+    };
+
+    const hash = buildCheckpointHash({ ...payload, prevHash, version });
+
+    entries.push({ hash, payload, prevHash, version });
+
+    prevHash = hash;
+  }
+
+  return entries;
+}
