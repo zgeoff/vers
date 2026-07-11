@@ -9,6 +9,13 @@ export interface CreateEmailClientConfig {
 
 export interface SendEmailInput {
   html: string;
+
+  /**
+   * Sent as the `Idempotency-Key` header, so a resend of the same key returns the original send
+   * instead of delivering a duplicate — used by callers that retry a send after an ambiguous
+   * failure.
+   */
+  idempotencyKey?: string;
   plainText: string;
   subject: string;
   to: string;
@@ -19,7 +26,7 @@ export interface SentEmail {
 }
 
 export interface EmailClient {
-  sendEmail: (input: Readonly<SendEmailInput>) => Promise<SentEmail>;
+  readonly sendEmail: (input: Readonly<SendEmailInput>) => Promise<SentEmail>;
 }
 
 /**
@@ -33,13 +40,19 @@ export function createEmailClient(config: Readonly<CreateEmailClientConfig>): Em
 
   return {
     sendEmail: async (input) => {
-      const result = await resend.emails.send({
-        from,
-        html: input.html,
-        subject: input.subject,
-        text: input.plainText,
-        to: input.to,
-      });
+      const sendOptions =
+        input.idempotencyKey === undefined ? undefined : { idempotencyKey: input.idempotencyKey };
+
+      const result = await resend.emails.send(
+        {
+          from,
+          html: input.html,
+          subject: input.subject,
+          text: input.plainText,
+          to: input.to,
+        },
+        sendOptions,
+      );
 
       if (result.error) {
         throw new Error(`failed to send email: ${result.error.message}`, { cause: result.error });
