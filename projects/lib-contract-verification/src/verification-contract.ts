@@ -1,4 +1,4 @@
-import { publicRoute } from '@vers/contract-base';
+import { defineErrors, publicRoute } from '@vers/contract-base';
 import * as z from 'zod';
 import { VerificationDataSchema } from './verification-data-schema';
 import { VerificationTypeSchema } from './verification-type-schema';
@@ -23,9 +23,11 @@ export const verificationContract = {
     .route({ method: 'DELETE', path: '/verifications/{id}', summary: 'Delete a verification' })
     .input(z.object({ id: z.string() }))
     .output(z.object({ deletedID: z.string() }))
-    .errors({
-      NOT_FOUND: { data: z.object({}), message: 'Verification not found' },
-    }),
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'Verification not found' },
+      }),
+    ),
 
   get2FAVerificationURI: publicRoute
     .route({
@@ -35,9 +37,11 @@ export const verificationContract = {
     })
     .input(z.object({ target: z.string() }))
     .output(z.object({ otpURI: z.string() }))
-    .errors({
-      NOT_FOUND: { data: z.object({}), message: 'No 2FA verification found for this target' },
-    }),
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'No 2FA verification found for this target' },
+      }),
+    ),
 
   getVerification: publicRoute
     .route({ method: 'GET', path: '/verifications', summary: 'Look up a verification' })
@@ -48,19 +52,35 @@ export const verificationContract = {
     .route({ method: 'PATCH', path: '/verifications/{id}', summary: 'Update a verification' })
     .input(z.object({ id: z.string(), type: VerificationTypeSchema.optional() }))
     .output(z.object({ updatedID: z.string() }))
-    .errors({
-      NOT_FOUND: { data: z.object({}), message: 'Verification not found' },
-    }),
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'Verification not found' },
+      }),
+    ),
 
   verifyCode: publicRoute
     .route({ method: 'POST', path: '/verifications/verify', summary: 'Verify a code' })
     .input(z.object({ code: z.string(), target: z.string(), type: VerificationTypeSchema }))
     .output(VerificationDataSchema)
-    .errors({
-      CODE_ALREADY_USED: { data: z.object({}), message: 'Verification code has already been used' },
-      CODE_EXPIRED: { data: z.object({}), message: 'Verification code has expired' },
-      INVALID_CODE: { data: z.object({}), message: 'Invalid verification code' },
-    }),
+    .errors(
+      defineErrors({
+        CODE_ALREADY_USED: {
+          data: z.object({}),
+          message: 'Verification code has already been used',
+          status: 410,
+        },
+        CODE_EXPIRED: {
+          data: z.object({}),
+          message: 'Verification code has expired',
+          status: 410,
+        },
+        INVALID_CODE: {
+          data: z.object({}),
+          message: 'Invalid verification code',
+          status: 422,
+        },
+      }),
+    ),
 };
 
 export type VerificationContract = typeof verificationContract;

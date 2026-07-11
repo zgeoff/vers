@@ -45,7 +45,7 @@ export default defineConfig({
           // bundling it strips that file out from under it (breaking on `__dirname`, among other
           // things), so it — and the transports it loads by module name at runtime — stay external
           // and get resolved from node_modules instead.
-          external: ['pino', 'pino-pretty', 'pino-sentry-transport', 'thread-stream'],
+          external: ['pino', 'pino-pretty', 'thread-stream'],
         },
       },
     },

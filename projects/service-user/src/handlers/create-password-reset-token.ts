@@ -11,7 +11,7 @@ const RESET_TOKEN_TTL_MS = 10 * 60 * 1000;
 interface CreatePasswordResetTokenOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
-    readonly NO_PASSWORD: (payload: EmptyErrorPayload) => Error;
+    readonly PASSWORD_NOT_SET: (payload: EmptyErrorPayload) => Error;
   };
   readonly input: { readonly id: string };
 }
@@ -35,7 +35,7 @@ export async function createPasswordResetToken(
   }
 
   if (user.passwordHash === null) {
-    throw opts.errors.NO_PASSWORD({ data: {} });
+    throw opts.errors.PASSWORD_NOT_SET({ data: {} });
   }
 
   const resetToken = randomBytes(32).toString('hex');

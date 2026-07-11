@@ -1,4 +1,4 @@
-import { authedRoute, publicRoute } from '@vers/contract-base';
+import { authedRoute, defineErrors, publicRoute } from '@vers/contract-base';
 import * as z from 'zod';
 import { PendingTransactionDataSchema } from './pending-transaction-data-schema';
 import { SecureActionSchema } from './secure-action-schema';
@@ -7,6 +7,10 @@ import { SessionDataSchema } from './session-data-schema';
 const SessionTokensSchema = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),
+});
+
+const TransactionMismatchDataSchema = z.object({
+  field: z.enum(['action', 'ipAddress', 'sessionID', 'target']),
 });
 
 /**
@@ -46,11 +50,21 @@ export const sessionContract = {
     .route({ method: 'POST', path: '/sessions/refresh', summary: 'Rotate session tokens' })
     .input(z.object({ id: z.string(), refreshToken: z.string() }))
     .output(SessionTokensSchema)
-    .errors({
-      NOT_FOUND: { data: z.object({}), message: 'Session not found' },
-      REFRESH_TOKEN_REUSED: { data: z.object({}), message: 'Refresh token has already been used' },
-      SESSION_EXPIRED: { data: z.object({}), message: 'Session has expired' },
-    }),
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'Session not found' },
+        REFRESH_TOKEN_REUSED: {
+          data: z.object({}),
+          message: 'Refresh token has already been used',
+          status: 401,
+        },
+        SESSION_EXPIRED: {
+          data: z.object({}),
+          message: 'Session has expired',
+          status: 401,
+        },
+      }),
+    ),
 
   stepUp: {
     consumePendingTransaction: publicRoute
@@ -69,13 +83,16 @@ export const sessionContract = {
         }),
       )
       .output(PendingTransactionDataSchema)
-      .errors({
-        NOT_FOUND: { data: z.object({}), message: 'Pending transaction not found' },
-        TRANSACTION_MISMATCH: {
-          data: z.object({ field: z.enum(['action', 'ipAddress', 'sessionID', 'target']) }),
-          message: 'Pending transaction does not match the consuming request',
-        },
-      }),
+      .errors(
+        defineErrors({
+          NOT_FOUND: { data: z.object({}), message: 'Pending transaction not found' },
+          TRANSACTION_MISMATCH: {
+            data: TransactionMismatchDataSchema,
+            message: 'Pending transaction does not match the consuming request',
+            status: 422,
+          },
+        }),
+      ),
 
     consumeTransactionToken: publicRoute
       .route({
@@ -102,12 +119,14 @@ export const sessionContract = {
         }),
       )
       .output(PendingTransactionDataSchema)
-      .errors({
-        CONFLICT: {
-          data: z.object({}),
-          message: 'A pending transaction with that id already exists',
-        },
-      }),
+      .errors(
+        defineErrors({
+          CONFLICT: {
+            data: z.object({}),
+            message: 'A pending transaction with that id already exists',
+          },
+        }),
+      ),
 
     getPendingTransaction: publicRoute
       .route({
@@ -126,9 +145,11 @@ export const sessionContract = {
       })
       .input(z.object({ id: z.string() }))
       .output(z.object({ attemptsRemaining: z.int() }))
-      .errors({
-        NOT_FOUND: { data: z.object({}), message: 'Pending transaction not found' },
-      }),
+      .errors(
+        defineErrors({
+          NOT_FOUND: { data: z.object({}), message: 'Pending transaction not found' },
+        }),
+      ),
   },
 
   verifySession: publicRoute
@@ -139,9 +160,11 @@ export const sessionContract = {
     })
     .input(z.object({ id: z.string() }))
     .output(SessionTokensSchema)
-    .errors({
-      NOT_FOUND: { data: z.object({}), message: 'Session not found' },
-    }),
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'Session not found' },
+      }),
+    ),
 };
 
 export type SessionContract = typeof sessionContract;

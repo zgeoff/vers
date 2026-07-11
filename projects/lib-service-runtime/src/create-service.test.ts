@@ -10,19 +10,6 @@ import * as z from 'zod';
 import { createService } from './create-service';
 import type { ServiceContext } from './types';
 
-const OPENAPI_RESPONSES_SHAPE = z.record(z.string(), z.unknown());
-
-const OPENAPI_PATH_ITEM_SHAPE = z.object({
-  get: z.object({ responses: OPENAPI_RESPONSES_SHAPE }).optional(),
-});
-
-/**
- * The slice of a generated OpenAPI document the `/spec.json` test inspects.
- */
-const OPENAPI_DOCUMENT_SHAPE = z.object({
-  paths: z.record(z.string(), OPENAPI_PATH_ITEM_SHAPE),
-});
-
 function buildTestContract() {
   return {
     getThing: authedRoute
@@ -30,6 +17,7 @@ function buildTestContract() {
       .input(z.object({ id: z.string() }))
       .output(z.object({ id: z.string() })),
     ping: publicRoute.output(z.object({ pong: z.boolean() })),
+    throwPlainError: publicRoute.output(z.object({})),
   };
 }
 
@@ -46,6 +34,9 @@ function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
       return { id: opts.input.id };
     }),
     ping: os.ping.handler(() => ({ pong: true })),
+    throwPlainError: os.throwPlainError.handler(() => {
+      throw new Error('a secret internal detail');
+    }),
   };
 }
 
@@ -95,7 +86,6 @@ test('it throws at boot when SERVICE_AUTH_PUBLIC_KEY is missing', () => {
   expect(
     createService({
       buildRouter: () => buildTestRouter(contract),
-      contract,
       envShape: {},
       name: 'test-service',
     }),
@@ -113,7 +103,6 @@ test('it applies default PORT and LOG_LEVEL when unset', async () => {
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: {},
     name: 'test-service',
   });
@@ -132,7 +121,6 @@ test('it parses a service-specific envShape variable onto env', async () => {
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: { CUSTOM_GREETING: z.string() },
     name: 'test-service',
   });
@@ -153,7 +141,6 @@ test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugi
   await expect(
     createService({
       buildRouter: () => buildTestRouter(contract),
-      contract,
       envShape: {},
       name: 'test-service',
     }),
@@ -173,7 +160,6 @@ test('it serves a router built by an async buildRouter', async () => {
 
       return buildTestRouter(contract);
     },
-    contract,
     envShape: {},
     name: 'test-service',
   });
@@ -202,20 +188,19 @@ test('it rejects an /rpc call with no Authorization header with a plain 401', as
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: {},
     name: 'test-service',
   });
 
   const response = await service.app.handle(
     new Request('http://test.local/rpc/ping', {
-      headers: { 'x-request-id': 'abc' },
+      headers: { traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01' },
       method: 'POST',
     }),
   );
 
   expect(response.status).toBe(401);
-  expect(response.headers.get('x-request-id')).toBe('abc');
+  expect(response.headers.get('x-trace-id')).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
 
   expect(response.json()).resolves.toStrictEqual({
     error: 'invalid-service-token',
@@ -231,7 +216,6 @@ test('it rejects an /rpc call with a garbage token with a plain 401', async () =
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: {},
     name: 'test-service',
   });
@@ -259,7 +243,6 @@ test('it rejects an /rpc call with an expired token with a plain 401', async () 
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: {},
     name: 'test-service',
   });
@@ -293,7 +276,6 @@ test('it rejects an /rpc call with a wrong-audience token with a plain 401', asy
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: {},
     name: 'test-service',
   });
@@ -326,7 +308,6 @@ test('it returns data from an authed procedure given a valid token naming an act
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: {},
     name: 'test-service',
   });
@@ -355,7 +336,6 @@ test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a v
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: {},
     name: 'test-service',
   });
@@ -384,7 +364,6 @@ test('it serves /health without any token', async () => {
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: {},
     name: 'test-service',
   });
@@ -399,7 +378,7 @@ test('it serves /health without any token', async () => {
   });
 });
 
-test('it echoes a supplied x-request-id and mints one when absent', async () => {
+test('it mints a fresh trace id when no traceparent is supplied', async () => {
   const keyPair = await createTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
@@ -408,25 +387,38 @@ test('it echoes a supplied x-request-id and mints one when absent', async () => 
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: {},
     name: 'test-service',
   });
 
-  const withoutHeader = await service.app.handle(new Request('http://test.local/health'));
+  const response = await service.app.handle(new Request('http://test.local/health'));
 
-  expect(withoutHeader.headers.get('x-request-id')).toBeString();
+  expect(response.headers.get('x-trace-id')).toMatch(/^[0-9a-f]{32}$/);
+});
 
-  const withHeader = await service.app.handle(
+test('it continues the trace named by an inbound traceparent header', async () => {
+  const keyPair = await createTestServiceKeyPair();
+
+  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const response = await service.app.handle(
     new Request('http://test.local/health', {
-      headers: { 'x-request-id': 'abc' },
+      headers: { traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01' },
     }),
   );
 
-  expect(withHeader.headers.get('x-request-id')).toBe('abc');
+  expect(response.headers.get('x-trace-id')).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
 });
 
-test('it serves /spec.json declaring the 401 response for the authed route', async () => {
+test('it mints a fresh trace id for a malformed traceparent header', async () => {
   const keyPair = await createTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
@@ -435,24 +427,20 @@ test('it serves /spec.json declaring the 401 response for the authed route', asy
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: {},
     name: 'test-service',
   });
 
-  const response = await service.app.handle(new Request('http://test.local/spec.json'));
+  const response = await service.app.handle(
+    new Request('http://test.local/health', {
+      headers: { traceparent: 'garbage' },
+    }),
+  );
 
-  expect(response.status).toBe(200);
-
-  const responseBody = await response.json();
-
-  const document = OPENAPI_DOCUMENT_SHAPE.parse(responseBody);
-
-  expect(Object.keys(document.paths)).not.toBeEmpty();
-  expect(document.paths['/things']?.get?.responses).toContainKey('401');
+  expect(response.headers.get('x-trace-id')).toMatch(/^[0-9a-f]{32}$/);
 });
 
-test('it serves the authed route over /api given a valid token', async () => {
+test('it masks an unexpected handler error as a bare INTERNAL_SERVER_ERROR', async () => {
   const keyPair = await createTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
@@ -461,27 +449,47 @@ test('it serves the authed route over /api given a valid token', async () => {
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: {},
     name: 'test-service',
   });
 
   const token = await createTestServiceToken({
-    actingUserId: 'user-1',
     audience: 'test-service',
     privateKey: keyPair.privateKey,
   });
 
-  const response = await service.app.handle(
-    new Request('http://test.local/api/things?id=thing-1', {
-      headers: { authorization: `Bearer ${token}`, 'x-request-id': 'abc' },
-    }),
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  expect(client.throwPlainError({})).rejects.toMatchObject({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: 'Internal server error',
+    status: 500,
+  });
+});
+
+test('it does not serve the dropped /api and /spec.json paths', async () => {
+  const keyPair = await createTestServiceKeyPair();
+
+  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const apiResponse = await service.app.handle(
+    new Request('http://test.local/api/things?id=thing-1'),
   );
 
-  expect(response.status).toBe(200);
-  expect(response.headers.get('x-request-id')).toBe('abc');
+  const specResponse = await service.app.handle(new Request('http://test.local/spec.json'));
 
-  expect(response.json()).resolves.toStrictEqual({ id: 'thing-1' });
+  expect(apiResponse.status).toBe(404);
+  expect(specResponse.status).toBe(404);
 });
 
 test('it passes every conformance case collected from its own contract', async () => {
@@ -493,7 +501,6 @@ test('it passes every conformance case collected from its own contract', async (
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
-    contract,
     envShape: {},
     name: 'test-service',
   });

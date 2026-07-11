@@ -15,6 +15,7 @@ minimumReleaseAge = 604800
 # @zgeoff/oxlint-config 0.0.2 ages past the 7-day gate ~2026-07-14 — remove then (#292)
 # oxlint 1.73.0 (published 2026-07-06) ages past the 7-day gate ~2026-07-13 — remove then
 # typescript 7.0.2 (published 2026-07-08) ages past the 7-day gate ~2026-07-15 — remove then
+# @types/node 26.1.1 (published 2026-07-08) ages past the 7-day gate ~2026-07-15 — remove then
 # TanStack Start's RSC support is experimental and churns fast (#259) — the router/start/vite
 # ecosystem it pins ships new versions inside the 7-day window routinely; excluded per-package
 # rather than dropping the gate repo-wide.
@@ -24,6 +25,7 @@ minimumReleaseAgeExcludes = [
   "@zgeoff/oxlint-config",
   "oxlint",
   "typescript",
+  "@types/node",
   "@pandacss/dev",
   "@pandacss/preset-base",
   "@pandacss/preset-panda",

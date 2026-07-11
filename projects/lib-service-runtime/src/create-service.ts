@@ -1,11 +1,15 @@
-import type { AnyContractRouter, OpenAPI } from '@orpc/contract';
-import { OpenAPIGenerator } from '@orpc/openapi';
-import { OpenAPIHandler } from '@orpc/openapi/fetch';
 import type { AnyRouter } from '@orpc/server';
+import { ORPCError, onError } from '@orpc/server';
 import type { FetchHandler } from '@orpc/server/fetch';
 import { RPCHandler } from '@orpc/server/fetch';
-import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
 import { TOKEN_ALGORITHM, parseServiceToken } from '@vers/service-auth';
+import type { TraceContext } from '@vers/service-utils';
+import {
+  createTraceContext,
+  findTraceContext,
+  parseTraceparent,
+  withTraceContext,
+} from '@vers/service-utils';
 import { Elysia } from 'elysia';
 import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
@@ -25,7 +29,6 @@ interface ServiceRuntime<TEnvShape extends z.ZodRawShape> {
 
 export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
   readonly buildRouter: (runtime: ServiceRuntime<TEnvShape>) => AnyRouter | Promise<AnyRouter>;
-  readonly contract: AnyContractRouter;
   readonly envShape: TEnvShape;
   readonly name: string;
 }
@@ -39,7 +42,7 @@ export interface Service<TEnvShape extends z.ZodRawShape> {
 
 /**
  * Boots the Elysia shell every service composes: env validation, s2s token verification ahead of
- * the oRPC handlers, health checks, request-id propagation, and optional Sentry/OTel wiring.
+ * the oRPC handler, health checks, W3C trace-context propagation, and optional Sentry/OTel wiring.
  * Nothing is started — call the returned `listen` to bind a port.
  */
 export async function createService<TEnvShape extends z.ZodRawShape = Record<never, never>>(
@@ -50,15 +53,10 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
 
   const publicKey = await jose.importSPKI(env.SERVICE_AUTH_PUBLIC_KEY, TOKEN_ALGORITHM);
 
-  if (env.SENTRY_DSN !== undefined) {
-    const sentry = await import('@sentry/bun');
-
-    // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes
-    sentry.init({ dsn: env.SENTRY_DSN, sendDefaultPii: true, tracesSampleRate: 0 });
-  }
+  const reportError =
+    env.SENTRY_DSN === undefined ? undefined : await createErrorReporter(env.SENTRY_DSN);
 
   const router = await config.buildRouter({ env, logger });
-  const document = await buildOpenAPIDocument(config.contract, config.name);
 
   const app = new Elysia();
 
@@ -79,24 +77,29 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
   }
 
   app.get('/health', (context) => {
-    context.set.headers['x-request-id'] = getRequestId(context.request);
+    const trace = createTrace(context.request);
+
+    context.set.headers['x-trace-id'] = trace.traceID;
 
     return { service: config.name, status: 'ok' };
   });
 
-  app.get('/spec.json', (context) => {
-    context.set.headers['x-request-id'] = getRequestId(context.request);
+  const handler = new RPCHandler(router, {
+    clientInterceptors: [
+      onError((thrown) => {
+        // A declared contract error or any other 4xx is the caller's problem, already encoded by
+        // the wire layer; only genuinely unexpected failures are logged and reported.
+        if (thrown instanceof ORPCError && (thrown.defined || thrown.status < 500)) {
+          return;
+        }
 
-    return document;
+        logger.error({ err: thrown }, 'unexpected service error');
+        reportError?.(thrown);
+      }),
+    ],
   });
 
-  mountORPCHandler(app, '/rpc', new RPCHandler(router), {
-    logger,
-    publicKey,
-    serviceName: config.name,
-  });
-
-  mountORPCHandler(app, '/api', new OpenAPIHandler(router), {
+  mountORPCHandler(app, '/rpc', handler, {
     logger,
     publicKey,
     serviceName: config.name,
@@ -135,39 +138,49 @@ function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
 }
 
 /**
- * Generates the service's OpenAPI document from its contract, never its implementation.
+ * Initializes the Sentry SDK and returns the reporting function the error interceptor calls. The
+ * SDK is the only path to the error backend — pino stays a log-only sink — so one error is never
+ * shipped twice. Trace ids ride along as an event tag, linking reports to log lines.
  */
-function buildOpenAPIDocument(
-  contract: AnyContractRouter,
-  name: string,
-): Promise<OpenAPI.Document> {
-  const generator = new OpenAPIGenerator({
-    schemaConverters: [new ZodToJsonSchemaConverter()],
-  });
+async function createErrorReporter(dsn: string): Promise<(error: unknown) => void> {
+  const sentry = await import('@sentry/bun');
 
-  return generator.generate(contract, {
-    info: { title: name, version: '0.0.0' },
-  });
+  // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes
+  sentry.init({ dsn, sendDefaultPii: true, tracesSampleRate: 0 });
+
+  return (error) => {
+    sentry.withScope((scope) => {
+      const trace = findTraceContext();
+
+      if (trace !== undefined) {
+        scope.setTag('traceID', trace.traceID);
+      }
+
+      sentry.captureException(error);
+    });
+  };
 }
 
 /**
- * Reads the incoming request-id, or mints one when the caller didn't supply it.
+ * Continues the caller's W3C trace when a valid `traceparent` came in, or starts a fresh trace for
+ * this hop otherwise.
  */
-function getRequestId(request: Request): string {
-  return request.headers.get('x-request-id') ?? crypto.randomUUID();
+function createTrace(request: Request): TraceContext {
+  return createTraceContext(parseTraceparent(request.headers.get('traceparent')) ?? undefined);
 }
 
-/**
- * Mounts an oRPC fetch handler behind the s2s trust boundary: an invalid service token short-
- * circuits with a plain 401 before the handler ever runs, per the auth/trust-boundary split in
- * docs/service-contracts.md.
- */
 interface MountORPCHandlerDeps {
   readonly logger: pino.Logger;
   readonly publicKey: CryptoKey;
   readonly serviceName: string;
 }
 
+/**
+ * Mounts an oRPC fetch handler behind the s2s trust boundary: an invalid service token short-
+ * circuits with a plain 401 before the handler ever runs, per the auth/trust-boundary split in
+ * docs/service-contracts.md. Every response — including that 401 — carries the request's trace id
+ * in `x-trace-id`, and the whole request runs inside its trace-context scope so logs correlate.
+ */
 function mountORPCHandler(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- elysia app is a live framework instance with mutable routing state; no readonly form
   app: Elysia,
@@ -177,38 +190,40 @@ function mountORPCHandler(
 ): void {
   app.all(
     `${prefix}*`,
-    async (context) => {
-      const requestId = getRequestId(context.request);
+    (context) => {
+      const trace = createTrace(context.request);
 
-      const resolution = await parseServiceToken(context.request, {
-        audience: deps.serviceName,
-        publicKey: deps.publicKey,
+      return withTraceContext(trace, async () => {
+        const resolution = await parseServiceToken(context.request, {
+          audience: deps.serviceName,
+          publicKey: deps.publicKey,
+        });
+
+        if ('failure' in resolution) {
+          const response = Response.json({ error: resolution.failure }, { status: 401 });
+
+          response.headers.set('x-trace-id', trace.traceID);
+
+          return response;
+        }
+
+        const handled = await handler.handle(context.request, {
+          context: {
+            actingUserId: resolution.actingUserId,
+            logger: deps.logger,
+            traceID: trace.traceID,
+          },
+          prefix,
+        });
+
+        const finalResponse = handled.matched
+          ? handled.response
+          : new Response('not found', { status: 404 });
+
+        finalResponse.headers.set('x-trace-id', trace.traceID);
+
+        return finalResponse;
       });
-
-      if ('failure' in resolution) {
-        const response = Response.json({ error: resolution.failure }, { status: 401 });
-
-        response.headers.set('x-request-id', requestId);
-
-        return response;
-      }
-
-      const handled = await handler.handle(context.request, {
-        context: {
-          actingUserId: resolution.actingUserId,
-          logger: deps.logger.child({ requestId }),
-          requestId,
-        },
-        prefix,
-      });
-
-      const finalResponse = handled.matched
-        ? handled.response
-        : new Response('not found', { status: 404 });
-
-      finalResponse.headers.set('x-request-id', requestId);
-
-      return finalResponse;
     },
     { parse: 'none' },
   );

@@ -9,5 +9,10 @@ export interface ServiceContext {
    */
   actingUserId: null | string;
   logger: pino.Logger;
-  requestId: string;
+
+  /**
+   * W3C trace id shared with the caller; also stamped on logs and the `x-trace-id` response
+   * header.
+   */
+  traceID: string;
 }

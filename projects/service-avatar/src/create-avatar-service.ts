@@ -1,4 +1,3 @@
-import { avatarContract } from '@vers/contract-avatar';
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
@@ -23,7 +22,6 @@ export function createAvatarService(
   return createService({
     buildRouter: (runtime) =>
       buildAvatarRouter({ db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }) }),
-    contract: avatarContract,
     envShape: { DATABASE_URL: z.string() },
     name: 'service-avatar',
   });

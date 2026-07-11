@@ -1,4 +1,3 @@
-import { QueryClient } from '@tanstack/react-query';
 import {
   Outlet,
   RouterProvider,
@@ -11,6 +10,7 @@ import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query
 import { render } from '@testing-library/react';
 import type { FlagKey } from '@vers/flags';
 import type { ReactElement } from 'react';
+import { buildQueryClient } from '../lib/query/build-query-client';
 
 interface RenderWithRouterOptions {
   /**
@@ -53,7 +53,7 @@ export function renderWithRouter(
     path: '$',
   });
 
-  const queryClient = new QueryClient();
+  const queryClient = buildQueryClient();
 
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: ['/'] }),

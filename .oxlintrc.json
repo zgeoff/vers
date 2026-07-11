@@ -98,6 +98,9 @@
           // the router instance: a live handle carrying match/history/cache state it mutates
           // internally on every navigation, so it has no useful readonly form
           { "from": "package", "name": "AnyRouter", "package": "@tanstack/router-core" },
+          // the router hands the boundary a live error/reset pair; its `info` member is a
+          // mutable React structure with no readonly form
+          { "from": "package", "name": "ErrorComponentProps", "package": "@tanstack/router-core" },
           {
             "from": "package",
             "name": "StartedPostgreSqlContainer",
@@ -126,12 +129,14 @@
               "Request",
               "Response",
               "Date",
+              "Error",
               "Headers",
               "FormData",
               "HTMLFormElement",
               "MessageEvent",
               "MessagePort",
               "SharedWorker",
+              "Uint8Array",
               "URL",
               "MouseEvent",
               // genuinely immutable, but its members are method signatures, which the
@@ -310,7 +315,12 @@
       // or via its `redirect()` helper) for redirects and error pages — not an
       // Error instance. all 9 violations `lint:type-aware` found here are that
       // idiom, not a bug
-      "files": ["**/projects/app-web/**/*.ts", "**/projects/app-web/**/*.tsx"],
+      "files": [
+        "**/projects/app-web/src/routes/**/*.ts",
+        "**/projects/app-web/src/routes/**/*.tsx",
+        "**/projects/app-web/src/lib/auth/**/*.ts",
+        "**/projects/app-web/src/lib/avatar/**/*.tsx"
+      ],
       "rules": {
         "typescript/only-throw-error": "off"
       }

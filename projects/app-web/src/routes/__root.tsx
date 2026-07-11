@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
+import { RootErrorScreen } from '../components/root-error-screen';
 import type { OrpcQueryUtils } from '../lib/rpc/orpc';
 import appStyles from '../styled-system/styles.css?url';
 
@@ -11,6 +12,7 @@ export interface RouterAppContext {
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
+  errorComponent: RootErrorScreen,
   head: () => ({
     links: [{ href: appStyles, rel: 'stylesheet' }],
     meta: [
