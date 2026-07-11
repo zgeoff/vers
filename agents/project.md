@@ -5,6 +5,14 @@ milestone, apply the area, type, and priority labels, record blocking edges agai
 depends on, add it to the delivery board, and set its board status. An open issue that isn't on the
 board with a milestone and status is a defect.
 
+Upkeep issues are the exception: event- or date-triggered maintenance (dropping a dependency
+override, deleting an audit ignore, pruning a `minimumReleaseAgeExcludes` entry) carries the
+`upkeep` label plus an area label, no milestone, and stays off the delivery board. Each upkeep
+issue's body opens with a fenced trigger line — `trigger: release <pkg> ><version>` or
+`trigger: date <YYYY-MM-DD>` — that the weekly dep-health sweep evaluates; when the condition holds,
+the sweep comments on the issue and marks it `upkeep-ready`. An upkeep issue without a parseable
+trigger line fails the sweep.
+
 ## Type-only modules
 
 A module whose exports are all types or interfaces is a defect: those exports belong in the

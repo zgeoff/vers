@@ -7,7 +7,7 @@
     "libs/game/aether-core/generate-graph.ts",
     ".claude/**"
   ],
-  "ignoreBinaries": ["flyctl", "ladle", "op", "pulumi"],
+  "ignoreBinaries": ["flyctl", "gh", "ladle", "op", "pulumi"],
   "rules": {
     "enumMembers": "off"
   },
