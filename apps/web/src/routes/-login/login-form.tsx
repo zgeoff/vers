@@ -104,6 +104,9 @@ export function LoginForm(props: LoginFormProps) {
           Login
         </StatusButton>
       </form>
+      <Text>Don&apos;t have an account?</Text>
+      <Link to="/signup">Create an account</Link>
+      <Link to="/forgot-password">Forgot password?</Link>
     </>
   );
 }
