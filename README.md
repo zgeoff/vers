@@ -1,76 +1,44 @@
-# vers
+<div align="center">
+  <h1>vers</h1>
 
-## usage
+  <p>
+    A browser idle game on a microservice backend: a deterministic simulation runs on the client,
+    and the server verifies its results by replay.
+  </p>
 
-```sh
-# start postgres container for tests
-yarn pg:test-container:start
+  <p>
+    <a href="./docs/README.md">Documentation</a> •
+    <a href="./docs/architecture/overview.md">Architecture</a> •
+    <a href="./AGENTS.md">Agent Guidelines</a>
+  </p>
+</div>
 
-# lint, typecheck, unit tests
-yarn lint
-yarn typecheck
-yarn test
+---
 
-# build, dev, test specific project
-yarn build:<project>
-yarn dev:<project>
-yarn test:<project>
-
-# run panda css codegen
-yarn codegen:styles
-
-# regenerate tsconfig's paths after adding/renaming a package
-yarn codegen:paths
-
-# spin up full backend via docker compose
-yarn stack start
-
-# rebuild full backend
-yarn stack build
-
-# install e2e browsers
-yarn playwright install
-
-# run all e2e tests
-yarn e2e
-
-# stop full backend
-yarn stack stop
-
-# stop specific service
-yarn stack stop:<service>
-```
-
-## generating keys for JWT signing & verification
+## Quick start
 
 ```sh
-
-# generate rs256 private key
-openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 | openssl pkcs8 -topk8 -nocrypt > privkey.pem
-
-# extract pubkey
-openssl pkey -pubout -in privkey.pem -out pubkey.crt
+bun install                       # whole workspace
+bun run stack start               # full backend via docker compose
+bun run dev:app-web               # web app dev server
+bun run stack stop                # tear the backend down
 ```
 
-## creating a new fly deployment
+## Checks
 
 ```sh
-cd <project-dir> # e.g. services/user
-
-# initial deployment
-fly launch
-
-# attach our service to our postgres instance
-fly pg attach vers-pg --database-name=vers
-
-# create secrets if needed
-fly secrets set SESSION_SECRET=$(openssl rand -hex 32) HONEYPOT_SECRET=$(openssl rand -hex 32)
-
-# setting jwt signing secrets
-fly secrets set --app=vers-<project-name> JWT_SIGNING_PRIVKEY=- < privkey.pem
+bun run typecheck
+bun run test                      # postgres suites need: bun run pg:test-container:start
+bun run lint
+bun run format
+bun run e2e                       # playwright; first run: bun playwright install
 ```
 
-## development with agents
+## Layout and conventions
 
-See [AGENTS.md](AGENTS.md) for agent guidelines (generated from `agents/shared.md` and
-`agents/project.md` — edit the partials, never `AGENTS.md` itself).
+- [docs/architecture/overview.md](./docs/architecture/overview.md) maps the architecture and every
+  workspace project.
+- [AGENTS.md](./AGENTS.md) holds the engineering conventions. It is generated from
+  `agents/shared.md` and `agents/project.md` — edit the partials, never the file itself.
+- Deploys run through `bun run deploy` — see
+  [docs/architecture/deployment.md](./docs/architecture/deployment.md).

@@ -2,8 +2,8 @@
 
 The external services vers depends on, one per concern. Each rides a vendor-neutral interface —
 OpenTelemetry for telemetry, OpenFeature for flags, the Sentry ingest protocol for errors — so the
-backend behind it is a swap, not a migration. A single-purpose provider is preferred over a bundled
-platform: the app owns the pipe, the provider owns one job.
+backend behind it is a swap, not a migration. Single-purpose providers win over a bundled platform:
+the app owns the pipe, the provider owns one job.
 
 ## Platform
 

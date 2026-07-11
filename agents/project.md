@@ -1,17 +1,19 @@
 ## Issue hygiene
 
-Triage a GitHub issue the moment it's opened, not in a later pass: assign the delivery-phase
-milestone, apply the area, type, and priority labels, record blocking edges against the issues it
-depends on, add it to the delivery board, and set its board status. An open issue that isn't on the
-board with a milestone and status is a defect.
+Triage a GitHub issue the moment it's opened, not in a later pass:
+
+- assign the delivery-phase milestone and the area, type, and priority labels
+- record blocking edges against the issues it depends on
+- add it to the delivery board and set its board status
+
+An open issue that isn't on the board with a milestone and status is a defect.
 
 Upkeep issues are the exception: event- or date-triggered maintenance (dropping a dependency
-override, deleting an audit ignore, pruning a `minimumReleaseAgeExcludes` entry) carries the
-`upkeep` label plus an area label, no milestone, and stays off the delivery board. Each upkeep
-issue's body opens with a fenced trigger line — `trigger: release <pkg> ><version>` or
-`trigger: date <YYYY-MM-DD>` — that the weekly dep-health sweep evaluates; when the condition holds,
-the sweep comments on the issue and marks it `upkeep-ready`. An upkeep issue without a parseable
-trigger line fails the sweep.
+override, deleting an audit ignore) carries the `upkeep` label plus an area label, no milestone, and
+stays off the delivery board. The issue body opens with a fenced trigger line —
+`trigger: release <pkg> ><version>` or `trigger: date <YYYY-MM-DD>` — that the weekly dep-health
+sweep evaluates, commenting and marking the issue `upkeep-ready` when the condition holds. An upkeep
+issue without a parseable trigger line fails the sweep.
 
 ## Type-only modules
 
@@ -27,15 +29,15 @@ trigger is ordinary control flow, not an invariant.
 ## Error handling
 
 The full conventions — taxonomy, code registry, trace context, reporting split — live in
-`docs/error-handling.md`. The rules a PR must satisfy:
+`docs/architecture/error-handling.md`. The rules a PR must satisfy:
 
 - A procedure handler throws only its typed `opts.errors.*` constructors or `invariant()`. No
   try/catch for logging or reporting in handlers — the central `onError` interceptor in
   `createService` owns that.
 - Every contract `.errors({…})` map is built with `defineErrors` (`@vers/contract-base`). A bespoke
   code (any code outside oRPC's canonical set) declares an explicit `status` and lands with its row
-  in the `docs/error-handling.md` registry table in the same PR; bespoke codes are named
-  `NOUN_PROBLEM`.
+  in the `docs/architecture/error-handling.md` registry table in the same PR; bespoke codes are
+  named `NOUN_PROBLEM`.
 - Clients narrow on `code` via `isDefinedError`/`safe` and act on `data` fields — never on `message`
   strings.
 - The Sentry SDK is the only path to the error backend; pino is a log-only sink. Never wire a log
@@ -46,241 +48,227 @@ The full conventions — taxonomy, code registry, trace context, reporting split
   central in `buildQueryClient`; a per-query `retry` override needs a behavioural reason the default
   policy can't express.
 
-## Writing
+## Banned words
 
-### Banned words
+Overused jargon a plainer word covers; applies to all prose — docs, comments, PR descriptions, issue
+text.
 
-Overused jargon a plainer word covers. Applies to all prose — docs, comments, PR descriptions, issue
-text. An exception is allowed only when no other word logically represents the meaning and the
-sentence can't be simplified without losing it.
-
-- `load-bearing` / `load bearing` — say what breaks without it: "required", "essential", or name the
-  failure.
+- `load-bearing` — "required", "essential", or name what breaks without it.
 - `seam` — "boundary", "join", "integration point".
 - `surface` — noun: "area", "API", the concrete thing itself; verb: "show", "raise", "report".
 
 ## Monorepo layout
 
-Packages live under kind-first roots — the bun workspace globs are `apps/*`, `services/*`,
-`contracts/*`, `libs/*/*` (libraries grouped by domain: `core`, `data`, `design`, `game`, `service`,
-`testing`), `infra`, and `scripts`; `docs/overview.md` lists them. Every project has its own
-`package.json` named `@vers/<name>`: internal deps use the `workspace:*` protocol, and every
-external dependency's version lives in the root manifest's `workspaces.catalog`, referenced
-everywhere as `catalog:` — project manifests carry no direct version pins. Libraries are consumed as
-TypeScript source (`exports` → `./src/index.ts`); there are no per-library build steps.
-`bun install` uses the isolated linker (pnpm-style symlinks, no phantom deps) with exact pins and a
-7-day `minimumReleaseAge` — see `bunfig.toml`. Turborepo drives the task graph: root `turbo.json`
-declares the `build`/`typecheck`/`test`/`codegen`/`typegen`/`e2e` pipelines (ordering inferred from
-each project's `workspace:*` deps). Per-project `turbo.json` files exist only to declare
-`boundaries` tags. CI's changed-project detection is `turbo run --affected`.
+Packages live under kind-first roots; `docs/architecture/overview.md` lists every project.
 
-TypeScript is 7.0.2 (catalog). TS7 has no `baseUrl` and no classic Compiler API, and there is no
-path-alias convention here — write imports relative to the importing file. Node is 24.18.0 in CI and
-`app-web` (its runtime image and `engines` field); the domain services compile to a Bun binary on
-`alpine`. Panda 2.0's floor and the ES2024 `lib` target both need Node 24.
+- Workspace globs: `apps/*`, `services/*`, `contracts/*`, `libs/*/*` (grouped by domain: `core`,
+  `data`, `design`, `game`, `service`, `testing`), `infra`, and `scripts`.
+- Internal deps use the `workspace:*` protocol; every external version lives in the root manifest's
+  `workspaces.catalog`, referenced everywhere as `catalog:` — project manifests carry no version
+  pins.
+- Libraries are consumed as TypeScript source (`exports` → `./src/index.ts`); there are no
+  per-library build steps.
+- `bun install` uses the isolated linker with exact pins and a 7-day `minimumReleaseAge`
+  (`bunfig.toml`).
+- Turborepo drives the task graph from the root `turbo.json`; per-project `turbo.json` files exist
+  only to declare `boundaries` tags. CI's changed-project detection is `turbo run --affected`.
+- TypeScript is 7.0.2: no `baseUrl`, no path aliases — write imports relative to the importing file.
+  Node is 24.18.0 in CI and app-web; the domain services compile to a Bun binary on `alpine`.
 
 ## Boundaries
 
 Projects are tagged `lib`, `service`, or `app` in their own `turbo.json`; the root `boundaries`
 block denies `lib` → `service`/`app` and `service` → `app` imports, transitively.
 `bun run boundaries` also flags imports of packages missing from the importer's `package.json`. It
-walks the filesystem, ignoring `.gitignore` — run it on a clean tree, or stale `dist/`/`build/`/
-`styled-system/` output reads as source. CI runs it straight after install, before codegen populates
-those directories.
+walks the filesystem ignoring `.gitignore` — run it on a clean tree, or stale
+`dist/`/`styled-system/` output reads as source.
 
-### Package naming
-
-A package's name is `@vers/` plus its leaf folder name: `libs/core/utils` → `@vers/utils`,
-`libs/service/service-auth` → `@vers/service-auth`, `apps/web` → `@vers/web`. Two roots drop a
-prefix the name keeps: `services/user` → `@vers/service-user` and `contracts/user` →
-`@vers/contract-user`. The `libs/<domain>/` grouping is browsing-only — it carries no boundary
-semantics, and moving a lib between domains changes nothing but its path.
+Package naming is `@vers/` plus the leaf folder name (`libs/core/utils` → `@vers/utils`, `apps/web`
+→ `@vers/web`), except `services/user` → `@vers/service-user` and `contracts/user` →
+`@vers/contract-user`. The `libs/<domain>/` grouping is browsing-only — moving a lib between domains
+changes nothing but its path.
 
 ## Repo scripts
 
-Operational tooling is the `@vers/scripts` workspace package (`scripts/`), so it gets typecheck,
-test, lint, boundaries, and knip coverage like any project. `src/bin/` holds the executable
-entrypoints — thin shells that sequence I/O and exit codes; `src/<domain>/` directories (`deploy/`,
-`stack/`, `postgres/`) hold the composable logic; `src/utils/` accepts only domain-free pieces (a
-retry wrapper, a subprocess edge). Decision logic is pure — data in, findings out — with co-located
-tests; effect modules stay thin enough that running the CLI is their coverage. Root-manifest script
-entries (`bun run deploy`, `bun run stack`, `pg:*`) invoke the bin files with plain `bun`.
+Operational tooling is the `@vers/scripts` workspace package (`scripts/`), covered by typecheck,
+test, lint, boundaries, and knip like any project.
+
+- `src/bin/` holds the executable entrypoints — thin shells that sequence I/O and exit codes.
+- `src/<domain>/` directories (`deploy/`, `stack/`, `postgres/`) hold the composable logic;
+  `src/utils/` accepts only domain-free pieces.
+- Decision logic is pure — data in, findings out — with co-located tests; effect modules stay thin
+  enough that running the CLI is their coverage.
+- Root-manifest entries (`bun run deploy`, `bun run stack`, `pg:*`) invoke the bin files with plain
+  `bun`.
 
 ## Deploys
 
-`bun run deploy` drives every Fly rollout. The fleet manifest is `deploy.config.ts` at the repo root
-— apps, staleness triggers, and post-deploy probes — typed by `defineDeployManifest`
-(`@vers/scripts`) and loaded by the CLI at runtime. Every deploy stamps the commit SHA into machine
-env as `GIT_SHA`, and staleness compares HEAD against that stamp (`turbo --affected` for workspace
-packages, path globs for non-workspace apps), so a rollout lost to a failure or cancellation ships
-on the next push. `deploy --app <name>` deploys one app when stale, waits for the fleet to report
-the new SHA, then runs the app's probes; `verify` asserts every manifest app is online (machines
-exist, warm floors met) and current, failing on any finding. CI's deploy matrix and its
-`verify-fleet` job — the gate that runs on every green main push even when no deploy leg fired —
-both call the CLI through the `.github/actions/fly-deploy` composite action; locally the CLI needs
-only a `FLY_API_TOKEN`. Database migrations run in their own never-cancelled `migrate` job between
-`checks` and the deploy fan-out, once per green push. The deploy-phase jobs target the `production`
-GitHub environment, which holds the Fly, database, and error-tracker secrets — repo-level secrets
-carry only what PR checks need. A red main pipeline posts to Discord through the environment's
-webhook secret.
+`bun run deploy` drives every Fly rollout from the `deploy.config.ts` manifest at the repo root;
+`deploy verify` asserts the fleet is online and current. Mechanics, staleness detection, CI wiring,
+container builds, and secrets: `docs/architecture/deployment.md`.
+
+- Database migrations run once per green push in their own never-cancelled `migrate` job — never per
+  service.
+- Deploy-phase jobs target the `production` GitHub environment; repo-level secrets carry only what
+  PR checks need.
 
 ## Styling
 
-Panda CSS 2.0 spans all four consumers (`@vers/panda-preset`, `@vers/styled-system`,
-`@vers/design-system`, app-web), pinned at 2.0.0-beta.8 in the catalog — no stable 2.0 release
-exists. `@vers/panda-preset` composes `presets: [presetBase, presetPanda]` from
-`@pandacss/preset-base` and `@pandacss/preset-panda` — Panda 2.0 ships no bundled default preset.
-CSS values that aren't theme tokens need the bracket escape hatch (`cursor: '[pointer]'`,
-`borderWidth: '[1px]'`) — 2.0's `SystemStyleObject` value types reject arbitrary strings/numbers.
+Panda CSS 2.0 spans `@vers/panda-preset`, `@vers/styled-system`, `@vers/design-system`, and app-web,
+pinned at 2.0.0-beta.8 in the catalog — no stable 2.0 release exists.
+
+- `@vers/panda-preset` composes `presets: [presetBase, presetPanda]` — Panda 2.0 ships no bundled
+  default preset.
+- CSS values that aren't theme tokens need the bracket escape hatch (`cursor: '[pointer]'`,
+  `borderWidth: '[1px]'`) — 2.0's `SystemStyleObject` value types reject arbitrary strings and
+  numbers.
 
 ### Screens
 
-Screens and routes are built workable-only: compose existing `@vers/design-system` components and
-semantic tokens (`bg.*`, `text.*`, `border.*`, `accent.*`) — no bespoke visual styling beyond
-layout, no new one-off colors/fonts/animations, no polish passes. The semantic-token layer is the
-stable contract: re-skins change token values, never token names, so screens that stick to it adapt
-for free. A screen needing a component that doesn't exist yet builds the minimal version in its own
-PR and promotes it into `@vers/design-system` when a second consumer appears.
+Screens and routes are built workable-only:
+
+- Compose existing `@vers/design-system` components and semantic tokens (`bg.*`, `text.*`,
+  `border.*`, `accent.*`) — no bespoke visual styling beyond layout, no one-off
+  colors/fonts/animations, no polish passes.
+- The semantic-token layer is the stable contract: re-skins change token values, never token names,
+  so screens that stick to it adapt for free.
+- A screen needing a component that doesn't exist yet builds the minimal version in its own PR and
+  promotes it into `@vers/design-system` when a second consumer appears.
 
 ## Running things
 
 - `bun install` — whole workspace (`--frozen-lockfile` in CI; `bun.lock` is committed).
-- `bun run typecheck` — `turbo run typecheck` (per-project `tsc --noEmit`); one project via
-  `--filter=@vers/<name>`.
+- `bun run typecheck` — `turbo run typecheck`; one project via `--filter=@vers/<name>`.
 - `bun run test` — `turbo run test`, each project's own runner; one project via `--filter`. Every
-  package runs on `bun test` — never add vitest to a package. Postgres-backed suites need
-  `bun run pg:test-container:start` first. Each package carries its own `bunfig.toml` (bunfig is
-  read from cwd, not merged up) — root-invoked `bun test <file>` still resolves jest-extended
-  matchers from the root preload.
-- `bun run lint` / `bun run lint:fix` — `turbo run codegen typegen`, then
-  `oxlint --type-aware --type-check --report-unused-disable-directives-severity error` over the
-  whole tree (`.oxlintrc.json` at the root; oxlint-tsgolint underneath, needs the TS7 toolchain —
-  ~5s wall with warm caches). The codegen leg is required: without generated output (panda's
-  `styled-system`, router typegen) those imports degrade to `any` and the unsafe-\* rules report
-  hundreds of false violations. Every type-aware rule is on. Two exceptions are permanent:
-  `only-throw-error`'s documented app-web override, and the inline directives on
-  `@vers/idle-core`/`@vers/worldmap-core` tick/lifecycle handlers that mutate their entity parameter
-  by design. Pre-existing violations are baselined inline with
-  `// oxlint-disable-next-line <rule> -- baseline(#236)` comments rather than turned off in config;
-  the unused-directive check is the ratchet — fixing a baselined site makes its comment stale and
-  lint fails until the comment is deleted. `typescript/prefer-readonly-parameter-types` is never
-  baselined: a function's own data/config/props/option types are made `readonly` (or the param
-  `Readonly<…>`-wrapped; React props `Readonly<Props>`), and framework/library handles that have no
-  readonly form (a `Kysely`/`Elysia`/`RPCHandler`/`Request` handle, a `Date`, …) are exempted
-  per-type via the rule's `allow` list in `.oxlintrc.json` — never an inline marker. Only a
-  genuinely un-`readonly`-able own type (a generic callback-arg object, a `ZodType`-bearing shape, a
-  React-element wrapper) carries a single honest inline directive stating why; `allow` covers the
-  rest.
-- `bun run format` — `oxfmt .` (`.oxfmtrc.json` at the root), then `format-codemod` (blank-line
-  padding) over the whole tree. The codemod's exclusions live in the root `.formatignore` (one glob
-  per line, `#` comments) — that file keeps it off committed codegen output (panda's `styled-system`
-  dirs, router typegen) and nested checkouts, and it is read from the working directory, so run
-  format from the repo root. oxfmt covers the same set through `.oxfmtrc.json` plus `.gitignore`.
-  The chain is idempotent: a second run is byte-identical.
-- `bun run format:check` — both tools' check legs (`oxfmt --check .`, then `format-codemod --check`
-  with the same ignores).
-- `bun run build` — `turbo run build`; one project via `--filter`.
-- `bun run e2e` — `turbo run e2e` (Playwright, `@vers/web-e2e`).
-- `bun run boundaries` — `turbo boundaries`.
+  package runs on `bun test` — never add vitest. Postgres-backed suites need
+  `bun run pg:test-container:start` first. bunfig is read from cwd, not merged up, but root-invoked
+  `bun test <file>` still resolves jest-extended matchers from the root preload.
+- `bun run lint` / `bun run lint:fix` — `turbo run codegen typegen`, then type-aware oxlint over the
+  whole tree. The codegen leg is required: without generated output (panda's `styled-system`, router
+  typegen) those imports degrade to `any` and the unsafe-\* rules report hundreds of false
+  violations.
+- `bun run format` — `oxfmt .`, then `format-codemod` (blank-line padding). Run from the repo root:
+  the codemod's exclusions (`.formatignore`, keeping it off committed codegen output and nested
+  checkouts) are read from the working directory. The chain is idempotent.
+- `bun run format:check` — both tools' check legs.
+- `bun run build` / `bun run e2e` / `bun run boundaries` — `turbo run` each; `e2e` is Playwright
+  (`@vers/web-e2e`).
 - `bun run deadcode` — knip (`knip.json`); blocking in CI and pre-push. Needs codegen output
   present; a dependency knip can't see gets a `knip.json` ignore in the PR that introduces it.
 - Git hooks: lefthook (`lefthook.yml`, installed by `prepare`). Pre-push tests changed files only
-  (`turbo run test --affected`, so each affected project's own runner is used) — the full suite is
-  CI's. `LEFTHOOK=0` skips all hooks.
+  (`turbo run test --affected`); `LEFTHOOK=0` skips all hooks.
 
-## Docker
+## Lint policy
 
-Every server Dockerfile is multi-stage around `turbo prune <pkg> --docker`, whose **pruner** stage
-runs a standalone `turbo` binary to cut the workspace to the target's dependency graph: `out/json`
-(manifests only, for layer caching), `out/full` (source), a pruned `out/bun.lock`. `bun install`
-layers read a BuildKit cache mount (`--mount=type=cache,target=/root/.bun/install/cache`), so builds
-reuse the package cache.
+- Every type-aware rule is on (`.oxlintrc.json`; oxlint-tsgolint underneath, ~5s wall with warm
+  caches). Two permanent exceptions: `only-throw-error`'s documented app-web override, and the
+  inline directives on `@vers/idle-core`/`@vers/worldmap-core` tick/lifecycle handlers that mutate
+  their entity parameter by design.
+- Pre-existing violations are baselined inline with
+  `// oxlint-disable-next-line <rule> -- baseline(#236)`, never turned off in config. The
+  unused-directive check is the ratchet: fixing a baselined site strands its comment, and lint fails
+  until the comment is deleted.
+- `typescript/prefer-readonly-parameter-types` is never baselined: a function's own
+  data/config/props/option types go `readonly` (React props `Readonly<Props>`), and framework
+  handles with no readonly form (a `Kysely`/`Elysia`/`RPCHandler`/`Request` handle, a `Date`, …) are
+  exempted per-type via the rule's `allow` list in `.oxlintrc.json` — never an inline marker. Only a
+  genuinely un-`readonly`-able own type (a generic callback-arg object, a `ZodType`-bearing shape)
+  carries a single inline directive stating why.
 
-`service-avatar`, `service-session`, `service-user`, and `service-verification` compile to a single
-executable in stages:
+## Testing
 
-1. **pruner** — as above.
-2. **builder** — a full `bun install`, then
-   `bun build src/serve.ts --compile --target=bun-linux-x64-musl` inlines every dependency (the
-   services carry no native addons) into one binary.
-3. **runtime** — `alpine` with `libgcc` and `libstdc++` and the binary alone: no `node_modules`, no
-   source. The busybox shell keeps `fly ssh console` usable.
+`bun test` runs every file in one process with no per-file isolation — lean into it: lifecycle and
+cleanup register once in a package's `bunfig.toml` preload and apply process-wide, and test files
+contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. Three regimes cover the workspace, by
+package kind:
 
-`app-web` bundles an SSR server in stages: **pruner**; **installer** (full `bun install` for the
-build tooling); **builder** (`turbo run codegen typegen --filter=@vers/web...` so a workspace dep's
-generated output — `@vers/styled-system`'s panda CSS — exists before its own `build` script runs,
-plus `tsconfig.base.json` from outside any package); **prod-deps**
-(`bun install --production --linker=hoisted`, whose flat `node_modules` lets the bundle resolve
-external imports like `pino` from one location); and a `node:24.18.0-alpine` **runtime** holding
-`node_modules`, `server.mjs`, and `dist`.
+- **Pure packages** — libs and CLIs with no service or database edge. Mock-free: pure modules assert
+  on return values, file-touching ones use `mkdtemp` trees, and CLI behaviour is asserted end-to-end
+  by spawning the real binary — a module hard to test without mocking moves its I/O to the caller.
+  Test data is inline, no fixtures shared between tests, even if that means duplication.
+- **MSW-mocked packages** — clients of mocked services and app-web.
+- **Real-database packages** — services, apps, and DB-backed libraries exercising a real postgres.
 
-`app-design-reference` ships as a plain static-nginx image.
+Everywhere:
 
-## Testing (bun test, 0-isolation)
-
-`bun test` runs every file in one process with no per-file isolation — lean into it. All lifecycle
-and cleanup is registered once in a package's `bunfig.toml` preload and applies process-wide; test
-files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what keeps the suite fast.
-
-- **MSW is the sanctioned mock at the external HTTP/service boundary** — mock there, never internal
-  abstractions. Each package with HTTP tests keeps one shared `server` (`setupServer()`) in a
-  `mocks/` module; its lifecycle (`listen({ onUnhandledRequest: 'error' })`, `resetHandlers`,
-  `close`) is wired globally by `registerMSWLifecycle(server)` (from `@vers/test-utils/bun`) in the
-  preload. Tests add per-test handlers with `server.use(...)` — including override and
-  upstream-failure cases. For oRPC procedures, build those handlers with `buildMockService` /
-  `mockService` (`@vers/client-test-utils/orpc`).
-- **Global mock reset** lives in the preload's `afterEach` (`mock.restore()`), never per-test.
-- **A test that mutates global or environment state** restores it in an `onTestFinished(...)`
-  callback registered inside the test — not `try`/`finally`, not a lifecycle hook — so teardown runs
-  after the test whether it passes or throws. A setup helper may register the `onTestFinished`
-  itself, giving callers restoration without wrapping their body.
-- **jest-extended matchers** come from the `@zgeoff/bun-test-extended` preload; a package-local
+- Never use `describe` — write flat `test(…)` blocks with behavioural titles that start with "it"
+  (`test('it pads before a return statement', …)`).
+- Test files are co-located with the module they test (`parse-source.ts` beside
+  `parse-source.test.ts`) — no `test/`, `tests/` or `__tests__` directories. Declaration emit
+  excludes `*.test.ts`, so they never ship.
+- `toStrictEqual`, not `toEqual`, for object assertions; asymmetric matchers inside it are fine.
+- Global mock reset lives in the preload's `afterEach` (`mock.restore()`), never per-test.
+- A test that mutates global or environment state restores it in an `onTestFinished(...)` callback
+  registered inside the test — not `try`/`finally`, not a lifecycle hook — so teardown runs whether
+  the test passes or throws. A setup helper may register it for its callers.
+- jest-extended matchers come from the `@zgeoff/bun-test-extended` preload; a package-local
   `augment-bun-test.ts` side-effect import brings their types into `tsc`.
-- `toStrictEqual`, not `toEqual`, for object assertions.
+- Test titles describe observable behaviour and never cite internal identifiers
+  (`it flags the run as invalid`, not `it sets isValid to false`).
 - Bound test-result names: `ctx` for a `setupTest(…)` result, `hook` for `renderHook(…)`, `rendered`
   for RTL `render(…)` — member-access off them, never pick properties into loose consts.
-- Behavioural test names describe observable behaviour and never cite internal identifiers
-  (`it flags the run as invalid`, not `it sets isValid to false`).
-- Declare test data inline per test in MSW-mocked packages (a client hitting a mocked service, or
-  app-web): each test states the fields its behavior and assertions depend on and leans on the
+- Reach for jest-extended matchers instead of hand-rolling assertions. Frequently useful:
+  - arrays: `toIncludeAllMembers`, `toIncludeSameMembers`, `toPartiallyContain`,
+    `toIncludeAllPartialMembers`, `toSatisfyAll`
+  - objects: `toContainEntry`, `toContainEntries`, `toContainAllKeys`, `toBeFrozen`
+  - strings: `toStartWith`, `toEndWith`, `toInclude`, `toEqualCaseInsensitive`,
+    `toEqualIgnoringWhitespace`
+  - values: `toBeNil`, `toBeOneOf`, `toSatisfy`, `toBeWithin`, `toBeEmpty`
+  - dates: `toBeAfter`, `toBeBefore`, `toBeBetween`, `toBeValidDate`
+  - mocks: `toHaveBeenCalledOnce`, `toHaveBeenCalledExactlyOnceWith`, `toHaveBeenCalledBefore`,
+    `toHaveBeenCalledAfter`
+  - errors/async: `toThrowWithMessage`, `toResolve`, `toReject` (both return a promise — always
+    `await`)
+- Matchers also work asymmetrically inside `toEqual`/`toMatchObject`
+  (`status: expect.toBeOneOf([…])`).
+- Known gaps: `expect.pass`/`expect.fail` are unimplemented upstream and excluded from our types.
+  It's `toEqualCaseInsensitive` — not `…Insensitively` as some docs claim; unknown matcher names
+  fail typecheck here.
+
+### MSW-mocked packages
+
+- MSW mocks the external HTTP/service boundary — never internal abstractions. One shared `server`
+  (`setupServer()`) per package in a `mocks/` module, its lifecycle wired by
+  `registerMSWLifecycle(server)` (`@vers/test-utils/bun`) in the preload with
+  `onUnhandledRequest: 'error'`. Tests add per-test handlers with `server.use(...)`, including
+  override and upstream-failure cases; for oRPC procedures, build them with `buildMockService` /
+  `mockService` (`@vers/client-test-utils/orpc`).
+- Test data is inline per test: state the fields the behavior and assertions depend on, lean on the
   collection schemas' defaults for the rest — no factory builders (`createUser`), no shared mutable
-  module-level fixtures, no restating a default. One-off helpers stay inline — reusable ones live in
-  `test-utils/`. Packages whose tests exercise a real postgres follow the real-database
-  factories-and-composites standard.
-- **Stateful backends** use `@msw/data`: build an in-memory store from a zod schema
-  (`new Collection({ schema: z.object({ … }) })`, `.create()`/`.createMany()`,
-  `.findFirst((q) => q.where(…))`/`.findMany()`, `.defineRelations()`) and read/write it directly
-  from the oRPC mock handlers. Models are zod schemas — never `@msw/data`'s `factory()` model
-  dictionary. Every field of a row schema carries a `.default()` — faker-driven where the value is
-  arbitrary — except a discriminator whose value gives a row its meaning; the preload seeds faker
-  once so runs are reproducible.
-- **React:** React Testing Library on happy-dom (bootstrapped via `@happy-dom/global-registrator` in
-  the preload); prefer a project `render` util over bare RTL and the utils it returns over the
-  imported `screen`; load data through the centralized MSW handlers + `@msw/data` in-memory store
-  rather than stubbing hooks or poking Zustand; `waitFor` the fetch before asserting.
+  module-level fixtures, no restating a default. One-off helpers stay inline; reusable ones live in
+  `test-utils/`.
+- Stateful backends use `@msw/data`: an in-memory store built from a zod schema
+  (`new Collection({ schema })`, `.create()`/`.createMany()`, `.findFirst()`/`.findMany()`,
+  `.defineRelations()`) read and written directly from the oRPC mock handlers — never `@msw/data`'s
+  `factory()` model dictionary. Every row-schema field carries a `.default()` — faker-driven where
+  the value is arbitrary — except a discriminator whose value gives a row its meaning; the preload
+  seeds faker once so runs are reproducible.
+- React: React Testing Library on happy-dom (registered in the preload). Prefer the project `render`
+  util over bare RTL and the utils it returns over the imported `screen`; load data through the MSW
+  handlers and `@msw/data` store rather than stubbing hooks or poking Zustand; `waitFor` the fetch
+  before asserting.
 
 ### RSC and server functions
 
 - Server functions are thin ambient shells: they read request context (`getRequestHeaders`, cookies)
-  and load data, then delegate to a pure component or handler that takes that data as explicit
+  and load data, then delegate to a pure component or handler taking that data as explicit
   props/args. A unit that needs ambient server context in a test has its ambient read in the wrong
   place — move the read up to the shell.
 - A function that returns React elements is a component: write it as one and test it by rendering.
-  Pure server components (props in, no ambient or server-only imports) render under RTL + happy-dom
-  like any component — render per state, assert visible behaviour; that covers branch selection.
+  Pure server components render under RTL + happy-dom like any component — render per state, assert
+  visible behaviour.
 - Server-fn bodies are named exported handlers that `createServerFn` wraps, so tests call the body
   directly.
 - An uncompiled `createServerFn` dispatch relays only a `Response` or a thrown redirect/error to its
   caller; a plain result object resolves as `undefined`. Component tests cover the branches that
   round-trip that way — plain-object branches are asserted at the handler layer.
 - The Flight pipeline (`renderServerComponent`, composite components) and ambient reads cannot run
-  under bun test (one module graph, no `react-server` export condition). Their coverage is the
-  real-runtime smoke suite, not unit tests.
-- **Ambient request context** (`@tanstack/react-start/server`) is a mockable boundary: stub it only
+  under bun test (one module graph, no `react-server` export condition); their coverage is the
+  real-runtime smoke suite.
+- Ambient request context (`@tanstack/react-start/server`) is a mockable boundary: stub it only
   through the shared `withRequestContext` util, installed once in the preload behind a mutable
-  holder. Never Start's RSC/render APIs, never modules we own; a direct `mock.module` in a test file
-  is a review finding. Every stubbed ambient path is also crossed by the smoke suite. Explicit args
-  stay preferred where they cost nothing.
+  holder — never Start's RSC/render APIs, never modules we own. A direct `mock.module` in a test
+  file is a review finding. Every stubbed ambient path is also crossed by the smoke suite.
 
 ### Forms (Conform)
 
@@ -288,17 +276,15 @@ files contain no `beforeAll`/`beforeEach`/`afterEach`/`afterAll`. This is what k
   the form's server function and it dispatches the `FormData`, returning `lastResult` for `useForm`,
   an in-flight flag, and the submit handler. The handler runs `parseWithZod(formData)` and returns
   `submission.reply()`; the honeypot check stays a server-side helper. Validation imports from
-  `@conform-to/zod/v4`, matching app-web's zod v4.
+  `@conform-to/zod/v4`.
 - The hook also takes an optional seed `lastResult`, which an island forwards from props beside the
-  action. Cover a form's result→UI mapping by rendering it with a hand-built
+  action. Cover a form's result→UI mapping by rendering with a hand-built
   `submission.reply()`-shaped `lastResult` and asserting the errors — a form-level message under the
   empty-string key, a field message under the field name. This reaches every branch with no submit
-  and no server, including the plain-object branch a live `createServerFn` dispatch collapses to
-  `undefined` under bun test. Inject an action to drive pending state and the `Response` fallback.
+  and no server. Inject an action to drive pending state and the `Response` fallback.
 
-### Real-database services (service/app/DB packages)
+### Real-database packages
 
-Services, apps, and DB-backed libraries whose tests exercise a real postgres follow this standard —
 `service-avatar` is the reference example.
 
 - **Production service factory.** A service exposes one `create<Service>Service({ db? })` in `src/`,
@@ -309,42 +295,32 @@ Services, apps, and DB-backed libraries whose tests exercise a real postgres fol
   `INSERT ... ON CONFLICT`, or a data-modifying CTE claims a single-row invariant and survives a
   serverless process kill with no orphaned transaction state. Reach for an interactive
   `db.transaction()` only for a genuine multi-row invariant that doesn't reduce to one statement —
-  and give that handler's suite `database` isolation (`createTestDB('database')`), since the default
-  transaction-isolation handle cannot nest.
+  and give that handler's suite `database` isolation, since the default transaction-isolation handle
+  cannot nest.
 - **Isolation strategy.** Acquire the database through `@vers/service-test-utils/bun`:
   `createTestDB()` returns an `await using` handle; `transaction` isolation (rollback on dispose) is
   the default, `database` isolation (a real, committed clone) is the opt-out for code that commits
   mid-op, takes advisory locks, or asserts something that only fires at COMMIT. Inject the handle's
-  `db` into the code under test — for a service, through its factory — since code that opens its own
-  connection bypasses the rollback.
-- **Test-setup layering, by scope.** A local `setupTest()` per suite — typed config in, named props
-  out, no `if`, declarative wiring — builds the db and boots the service, with no data. Never
-  centralise it: a shared `setupTest` accretes conditionals as services multiply.
-- **Composites build/register/return DATA, never runtime utils** (no clients, apps, servers) — the
-  approved-reuse shortcut, not a mandate; a test with more refined needs may still build actors
-  bespoke. Default to shared factories/composites for domain entities and DTOs, even on first use,
-  for consistency. `createViewer`/`createAnonymousViewer` (`@vers/service-test-utils/bun`) are the
-  shared s2s-actor composites, returning `{ user, token }` / `{ token }`; build the client in-test
-  via `buildRPCTestClient(app, { token })`.
+  `db` into the code under test — code that opens its own connection bypasses the rollback.
+- **Test setup.** A local `setupTest()` per suite — typed config in, named props out, no `if` —
+  builds the db and boots the service, with no data. Never centralise it: a shared `setupTest`
+  accretes conditionals as services multiply.
 - **Test data — factories + composites, always.** Every domain entity/DTO gets a faker-defaulted
   `create-mock-*.ts` factory in `test-utils/factories/` (a plain object, never persisted, never
   requiring a parent), each with its own test. Persisted or wired data goes through a
   composite/entity-util (`create-*.ts`, no `-mock-`) that sources its defaults from the factory.
-- **Assertions.** `toStrictEqual` + asymmetric matchers (`expect.toBeString()`, `expect.toInclude`,
-  …) for whole-shape assertions; a single-field `.toBe` after a mutation is fine.
-- **Naming.** Behavioural, plain English, never citing internal identifiers. Prefix `#procedureName`
-  only when one file holds several procedures' tests; plain `it …` when a file covers one unit.
-- **One export per file, filename = its kebab-cased export.** `types.ts`/`index.ts` excepted.
-- **Comments.** No JSDoc that only restates a name/signature; document only genuinely non-obvious
-  contract; never name another declaration in a comment.
+- **Composites build/register/return DATA, never runtime utils** (no clients, apps, servers).
+  Default to the shared factories/composites even on first use; a test with more refined needs may
+  still build actors bespoke. `createViewer`/`createAnonymousViewer`
+  (`@vers/service-test-utils/bun`) are the shared s2s-actor composites; build the client in-test via
+  `buildRPCTestClient(app, { token })`.
 - **Failure paths are contract.** Assert on the rejection directly —
-  `expect(promise).rejects.toMatchObject({ code })` — never try/catch. Bun's own matcher types
-  declare every `.rejects`/`.resolves` chain synchronous (`void`), matching its own doc examples, so
-  these calls are not `await`ed; awaiting one is exactly what oxlint's type-aware rules flag.
-  `toResolve()`/`toReject()` are the two matchers actually typed as promises, and are `await`ed.
-  Test each declared error.
-- **Env.** Permanent env is set in the preload via a direct `process.env` assignment; per-test
-  overrides go through `updateEnv`, restored by `removeEnvOverrides` in the preload's
-  `registerBunTestCleanup()`.
+  `expect(promise).rejects.toMatchObject({ code })` — never try/catch, and test each declared error.
+  Bun's matcher types declare `.rejects`/`.resolves` chains synchronous, so they are not `await`ed;
+  `toResolve()`/`toReject()` are the two matchers typed as promises and are `await`ed.
+- **Naming.** Prefix titles `#procedureName` only when one file holds several procedures' tests;
+  plain `it …` when a file covers one unit.
+- **Env.** Permanent env is a direct `process.env` assignment in the preload; per-test overrides go
+  through `updateEnv`, restored by `removeEnvOverrides` in the preload's `registerBunTestCleanup()`.
 - **Auth.** s2s tests use the real verification path: an asymmetric keypair from
   `getTestServiceKeyPair()`, tokens minted with `createServiceToken`.

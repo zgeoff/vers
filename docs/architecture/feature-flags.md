@@ -10,13 +10,16 @@ evaluation backend is a swap behind that interface, not a rewrite of every call 
 
 ## The registry
 
-`@vers/flags`'s `FLAGS` constant is the single source of truth for every flag: each entry declares a
-`defaultValue` and a `description` of what it gates. A flag's key derives its environment variable
-name mechanically — `FEATURE_` plus the key upper-cased and dash-joined, so `market` becomes
-`FEATURE_MARKET`. Setting that variable to `"true"` or `"false"` overrides the default for the
-process that reads it; any other value, or an unset variable, falls back to `defaultValue`. Flags
-are boolean-only: no percentage rollouts, no variants, no targeting rules. A flag is named for the
-state it turns on (`market`), never for the state it turns off (`disable-market`).
+`@vers/flags`'s `FLAGS` constant is the single source of truth for every flag; each entry declares a
+`defaultValue` and a `description` of what it gates.
+
+- A flag's key derives its environment variable name mechanically: `FEATURE_` plus the key
+  upper-cased and dash-joined, so `market` becomes `FEATURE_MARKET`.
+- Setting that variable to `"true"` or `"false"` overrides the default for the process that reads
+  it; any other value, or an unset variable, falls back to `defaultValue`.
+- Flags are boolean-only — no percentage rollouts, no variants, no targeting rules.
+- A flag is named for the state it turns on (`market`), never the state it turns off
+  (`disable-market`).
 
 Every flag's default is its safe state. An unset environment variable resolves to `defaultValue`, so
 a flag defaults to off unless a feature is meant to ship enabled everywhere until explicitly turned
