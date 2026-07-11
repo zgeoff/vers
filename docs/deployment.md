@@ -39,11 +39,17 @@ Secrets are set with `fly secrets set` and never committed.
 — every token's `aud` is the target's registered service name (`service-user`).
 `JWT_SIGNING_PRIVKEY` is the RS256 PKCS8 private key `service-session` signs user tokens with, under
 issuer and audience `API_IDENTIFIER`. `SESSION_SECRET` seals `app-web`'s cookies. `SENTRY_DSN` (a
-per-app Bugsink project DSN) and `OTEL_EXPORTER_OTLP_ENDPOINT` are optional on any app. The
-browser's DSN rides the `VITE_SENTRY_DSN` GitHub Actions variable: the deploy workflow bakes it into
-`app-web`'s client bundle, and the same value is set as a `vers-app-web` secret so the runtime can
-allow the ingest origin in its CSP. Source-map uploads authenticate with the `SENTRY_AUTH_TOKEN`
-GitHub secret — a Bugsink API token; when it's unset the build skips source maps entirely.
+per-app Bugsink project DSN) is optional on any app.
+
+Telemetry export rides the standard OTel env vars, optional on any app and set fleet-wide in
+practice: `OTEL_EXPORTER_OTLP_ENDPOINT` carries the backend's base URL (`https://api.axiom.co`), and
+`OTEL_EXPORTER_OTLP_TRACES_HEADERS` / `OTEL_EXPORTER_OTLP_LOGS_HEADERS` each carry the ingest token
+plus that signal's dataset (`Authorization=Bearer <token>,X-Axiom-Dataset=vers-traces` and
+`…=vers-logs`). A process with the endpoint unset emits no telemetry. The browser's DSN rides the
+`VITE_SENTRY_DSN` GitHub Actions variable: the deploy workflow bakes it into `app-web`'s client
+bundle, and the same value is set as a `vers-app-web` secret so the runtime can allow the ingest
+origin in its CSP. Source-map uploads authenticate with the `SENTRY_AUTH_TOKEN` GitHub secret — a
+Bugsink API token; when it's unset the build skips source maps entirely.
 
 ## Release
 
@@ -156,6 +162,35 @@ secret, and set the web project's DSN as the `VITE_SENTRY_DSN` GitHub Actions va
 `vers-app-web` secret of the same name. Mint an API token for CI source-map uploads
 (`SENTRY_AUTH_TOKEN` GitHub secret) and one for the MCP server, added to the vault item as
 `mcp-token`.
+
+Stand up the telemetry backend. The Axiom account is created in its UI; its standing tokens live on
+the `axiom` item in the `vers` 1Password vault: `ingest-token` (ingest on all datasets — the fleet's
+export credential) and `mcp-token` (query, for read-only investigation). Administration — creating
+datasets, dashboards, monitors, notifiers — uses a short-lived token minted in the UI with
+management scopes and revoked when the work is done. Create one dataset per signal and point the
+fleet at them:
+
+```sh
+ADMIN="<short-lived management token from the Axiom UI>"
+for ds in vers-traces vers-logs; do
+  curl -s -X POST https://api.axiom.co/v1/datasets \
+    -H "Authorization: Bearer $ADMIN" -H "Content-Type: application/json" \
+    -d "{\"name\":\"$ds\"}"
+done
+
+INGEST="$(op read 'op://vers/axiom/ingest-token')"
+for app in vers-app-web vers-service-avatar vers-service-session vers-service-user vers-service-verification; do
+  fly secrets set -a "$app" --stage \
+    OTEL_EXPORTER_OTLP_ENDPOINT="https://api.axiom.co" \
+    OTEL_EXPORTER_OTLP_TRACES_HEADERS="Authorization=Bearer ${INGEST},X-Axiom-Dataset=vers-traces" \
+    OTEL_EXPORTER_OTLP_LOGS_HEADERS="Authorization=Bearer ${INGEST},X-Axiom-Dataset=vers-logs"
+done
+```
+
+The `vers services — baseline` dashboard (request rate, 5xx responses, and p95 latency per service,
+plus an error-log stream) and the `vers 5xx responses` threshold monitor are created through the
+same API; the monitor notifies the `vers alerts` notifier. Agent access goes through the hosted MCP
+server (`https://mcp.axiom.co/mcp`, OAuth) declared in `.mcp.json`.
 
 The next push to `main` fills the machines.
 

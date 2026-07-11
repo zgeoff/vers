@@ -47,7 +47,7 @@ function serveClientAssets(request: Request, next: () => Promise<Response>): Pro
 const serverEntry = {
   fetch: withMiddleware(
     [
-      makeRequestLogger(logger),
+      makeRequestLogger(logger, { colorize: !env.isProduction }),
       removeTrailingSlash,
       enforceHTTPS,
       makeSecureHeaders({ sentryOrigin: SENTRY_ORIGIN }),

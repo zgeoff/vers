@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { implement } from '@orpc/server';
 import { authedRoute, publicRoute } from '@vers/contract-base';
 import { TOKEN_ALGORITHM, TOKEN_ISSUER } from '@vers/service-auth';
@@ -129,11 +129,15 @@ test('it parses a service-specific envShape variable onto env', async () => {
   expect(service.env.CUSTOM_GREETING).toBe('hi there');
 });
 
-test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugin at boot', async () => {
+test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugin and log shipping at boot', async () => {
   const keyPair = await createTestServiceKeyPair();
 
   process.env['OTEL_EXPORTER_OTLP_ENDPOINT'] = 'http://127.0.0.1:1/';
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+
+  onTestFinished(() => {
+    delete process.env['OTEL_EXPORTER_OTLP_ENDPOINT'];
+  });
 
   const contract = buildTestContract();
 

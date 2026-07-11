@@ -10,6 +10,7 @@ import {
   parseTraceparent,
   withTraceContext,
 } from '@vers/service-utils';
+import type { OTLPLogStream } from '@vers/service-utils/otel';
 import { Elysia } from 'elysia';
 import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
@@ -49,7 +50,15 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
   config: ServiceConfig<TEnvShape>,
 ): Promise<Service<TEnvShape>> {
   const env = parseServiceEnv(config.envShape);
-  const logger = createLogger({ level: env.LOG_LEVEL, name: config.name });
+
+  const otlpLogStream =
+    env.OTEL_EXPORTER_OTLP_ENDPOINT === undefined ? undefined : await createLogShipper(config.name);
+
+  const logger = createLogger({
+    level: env.LOG_LEVEL,
+    name: config.name,
+    ...(otlpLogStream !== undefined && { stream: otlpLogStream }),
+  });
 
   const publicKey = await jose.importSPKI(env.SERVICE_AUTH_PUBLIC_KEY, TOKEN_ALGORITHM);
 
@@ -66,12 +75,13 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
       import('@opentelemetry/exporter-trace-otlp-proto'),
     ]);
 
+    // constructed bare so the exporter derives its full configuration from the standard
+    // `OTEL_EXPORTER_OTLP_*` environment variables: the base endpoint gains the per-signal path,
+    // and shared plus per-signal headers (backend auth, dataset routing) merge from env
     app.use(
       opentelemetry({
         serviceName: config.name,
-        traceExporter: new OTLPTraceExporter({
-          url: env.OTEL_EXPORTER_OTLP_ENDPOINT,
-        }),
+        traceExporter: new OTLPTraceExporter(),
       }),
     );
   }
@@ -135,6 +145,16 @@ function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
   }
 
   return { ...base.data, ...extra.data };
+}
+
+/**
+ * Loads the OTLP log-shipping destination on demand, so the OpenTelemetry logs SDK never loads in
+ * a process that doesn't export telemetry.
+ */
+async function createLogShipper(serviceName: string): Promise<OTLPLogStream> {
+  const otelModule = await import('@vers/service-utils/otel');
+
+  return otelModule.createOTLPLogStream({ serviceName });
 }
 
 /**
