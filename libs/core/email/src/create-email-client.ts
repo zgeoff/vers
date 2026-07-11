@@ -45,10 +45,6 @@ export function createEmailClient(config: Readonly<CreateEmailClientConfig>): Em
         throw new Error(`failed to send email: ${result.error.message}`, { cause: result.error });
       }
 
-      if (!result.data) {
-        throw new Error('resend returned no data and no error');
-      }
-
       return { id: result.data.id };
     },
   };
