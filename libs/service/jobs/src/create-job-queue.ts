@@ -39,15 +39,15 @@ export interface CreateJobQueueConfig<TDefs extends JobDefs> {
 
   /**
    * Called for every pg-boss `error` event (a maintenance or connection fault, not a job
-   * failure — job failures surface through `drain`'s return counts). Defaults to logging via
-   * `console.error` so a fault is never silently swallowed.
+   * failure — job failures surface through the fetch/handle/complete loop's return counts).
+   * Defaults to logging via `console.error` so a fault is never silently swallowed.
    */
   readonly onError?: (error: Error) => void;
 }
 
 /**
  * The internal fetch/handle/complete loop only needs each job's schema and handler by name, so it
- * runs against this erased shape rather than threading `CreateJobQueueConfig`'s per-job generic
+ * runs against this erased shape rather than threading the factory config's per-job generic
  * through every helper.
  */
 type JobHandlers = Readonly<Record<string, (payload: object) => Promise<void>>>;
@@ -62,10 +62,10 @@ export function createJobQueue<TDefs extends JobDefs>(
   const boss = new PgBoss(config.connectionString);
 
   boss.on('error', (error) => {
-    (config.onError ?? logJobQueueError)(error);
+    (config.onError ?? printJobQueueError)(error);
   });
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- erases each job's payload type; drainJobs re-correlates a handler with its schema by their shared runtime key
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- erases each job's payload type; the fetch/handle/complete loop re-correlates a handler with its schema by their shared runtime key
   const handlers = config.handlers as JobHandlers;
 
   return {
@@ -76,7 +76,7 @@ export function createJobQueue<TDefs extends JobDefs>(
   };
 }
 
-function logJobQueueError(error: Error): void {
+function printJobQueueError(error: Error): void {
   console.error('[@vers/jobs] pg-boss error', error);
 }
 
