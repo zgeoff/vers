@@ -25,7 +25,6 @@ export const Route = createFileRoute('/')({
 });
 
 const heroStyles = css({ display: 'flex', flexDirection: 'column', gap: '2' });
-
 const linkRowStyles = css({ display: 'flex', gap: '4' });
 
 const diagnosticsStyles = css({

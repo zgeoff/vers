@@ -24,7 +24,6 @@ test('it serves the anonymous home page server-rendered and hydrates the session
   );
 
   await expect(page.getByTestId('current-user-panel-error')).toBeVisible();
-
   await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Sign up' })).toBeVisible();
 });
