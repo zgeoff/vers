@@ -15,11 +15,11 @@ services:
   service-avatar:
     build:
       context: .
-      dockerfile: projects/service-avatar/Dockerfile
+      dockerfile: services/avatar/Dockerfile
       args:
         BUILD_MODE: development
     env_file:
-      - projects/service-avatar/.env.development
+      - services/avatar/.env.development
     environment:
       - DATABASE_URL=postgresql://admin:password@postgres:5433/vers
     ports:
@@ -29,11 +29,11 @@ services:
   service-session:
     build:
       context: .
-      dockerfile: projects/service-session/Dockerfile
+      dockerfile: services/session/Dockerfile
       args:
         BUILD_MODE: development
     env_file:
-      - projects/service-session/.env.development
+      - services/session/.env.development
     environment:
       - DATABASE_URL=postgresql://admin:password@postgres:5433/vers
     ports:
@@ -43,11 +43,11 @@ services:
   service-user:
     build:
       context: .
-      dockerfile: projects/service-user/Dockerfile
+      dockerfile: services/user/Dockerfile
       args:
         BUILD_MODE: development
     env_file:
-      - projects/service-user/.env.development
+      - services/user/.env.development
     environment:
       - DATABASE_URL=postgresql://admin:password@postgres:5433/vers
     ports:
@@ -57,11 +57,11 @@ services:
   service-verification:
     build:
       context: .
-      dockerfile: projects/service-verification/Dockerfile
+      dockerfile: services/verification/Dockerfile
       args:
         BUILD_MODE: development
     env_file:
-      - projects/service-verification/.env.development
+      - services/verification/.env.development
     environment:
       - DATABASE_URL=postgresql://admin:password@postgres:5433/vers
     ports:

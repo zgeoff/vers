@@ -55,7 +55,7 @@ openssl pkey -pubout -in privkey.pem -out pubkey.crt
 ## creating a new fly deployment
 
 ```sh
-cd projects/<project-name>
+cd <project-dir> # e.g. services/user
 
 # initial deployment
 fly launch

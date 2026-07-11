@@ -36,8 +36,8 @@ jobs:
           DOTENV_APP_WEB_DEV: ${{ secrets.DOTENV_APP_WEB_DEV }}
           DOTENV_APP_WEB_E2E: ${{ secrets.DOTENV_APP_WEB_E2E }}
         run: |
-          printf '%s\n' "$DOTENV_APP_WEB_DEV" > projects/app-web/.env.development.local
-          printf '%s\n' "$DOTENV_APP_WEB_E2E" > projects/app-web-e2e/.env
+          printf '%s\n' "$DOTENV_APP_WEB_DEV" > apps/web/.env.development.local
+          printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
@@ -102,7 +102,7 @@ jobs:
         with:
           name: playwright-results
           include-hidden-files: true
-          path: projects/app-web-e2e/.test-results
+          path: apps/web-e2e/.test-results
 
       - name: Run Database Migrations
         # only on a fully green run, and exactly once per push — several
@@ -112,7 +112,7 @@ jobs:
         if: ${{ success() }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: bun run --cwd projects/lib-db db:migrate
+        run: bun run --cwd libs/data/db db:migrate
 
       - name: Record Affected Projects
         id: record-affected-projects
@@ -145,19 +145,19 @@ jobs:
         include:
           - app: vers-service-avatar
             pkg: '@vers/service-avatar'
-            dir: service-avatar
+            dir: services/avatar
           - app: vers-service-session
             pkg: '@vers/service-session'
-            dir: service-session
+            dir: services/session
           - app: vers-service-user
             pkg: '@vers/service-user'
-            dir: service-user
+            dir: services/user
           - app: vers-service-verification
             pkg: '@vers/service-verification'
-            dir: service-verification
+            dir: services/verification
           - app: vers-app-web
             pkg: '@vers/web'
-            dir: app-web
+            dir: apps/web
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
@@ -189,8 +189,8 @@ jobs:
             build_args="--build-arg SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN} --build-arg VITE_SENTRY_DSN=${VITE_SENTRY_DSN}"
           fi
           flyctl deploy --remote-only ${build_args} \
-            --config projects/${{ matrix.dir }}/fly.toml \
-            --dockerfile projects/${{ matrix.dir }}/Dockerfile
+            --config ${{ matrix.dir }}/fly.toml \
+            --dockerfile ${{ matrix.dir }}/Dockerfile
 
       # private services can't be reached from CI — their rollout health gate is the
       # smoke test. app-web is public, so verify it end-to-end after cutover.
@@ -233,7 +233,7 @@ jobs:
       - name: Detect config changes
         id: config-diff
         run: |
-          changed="$(git diff --name-only '${{ github.event.before }}' HEAD -- projects/app-bugsink/)"
+          changed="$(git diff --name-only '${{ github.event.before }}' HEAD -- apps/bugsink/)"
           if [ -n "${changed}" ]; then
             echo "changed=true" >> "${GITHUB_OUTPUT}"
           else
@@ -246,4 +246,4 @@ jobs:
 
       - name: Deploy vers-bugsink
         if: ${{ steps.config-diff.outputs.changed == 'true' }}
-        run: flyctl deploy --config projects/app-bugsink/fly.toml
+        run: flyctl deploy --config apps/bugsink/fly.toml

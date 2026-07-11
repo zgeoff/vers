@@ -5,8 +5,10 @@ rm -rf dist
 rm -rf node_modules
 rm -rf tmp
 
-rm -rf projects/**/.cache
-rm -rf projects/**/*.timestamp*.mjs
-rm -rf projects/**/build
-rm -rf projects/**/dist
-rm -rf projects/**/node_modules
+for dir in apps/* services/* contracts/* libs/*/* infra; do
+  rm -rf "$dir/.cache"
+  rm -rf "$dir"/*.timestamp*.mjs
+  rm -rf "$dir/build"
+  rm -rf "$dir/dist"
+  rm -rf "$dir/node_modules"
+done

@@ -19,7 +19,7 @@ pre-commit:
       run: node_modules/.bin/format-codemod --quiet {staged_files}
       stage_fixed: true
     - name: codegen:styles
-      glob: 'projects/**/*.{ts,tsx}'
+      glob: '{apps,services,contracts,libs,infra}/**/*.{ts,tsx}'
       run: bun run codegen:styles
     - name: graphql-format
       glob: '**/*.graphql'

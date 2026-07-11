@@ -2,8 +2,8 @@
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "ignorePatterns": [
     "bun.lock",
-    "projects/app-design-reference/public/**",
-    "projects/app-web/public/mockServiceWorker.js",
+    "apps/design-reference/public/**",
+    "apps/web/public/mockServiceWorker.js",
     "agents/shared.md",
     "AGENTS.md"
   ],

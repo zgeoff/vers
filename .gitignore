@@ -55,14 +55,20 @@ Thumbs.db
 # secrets & keys
 privkey.pem
 pubkey.crt
-projects/service-*/.env.production
-projects/app-web-e2e/.env
-projects/**/.env*.local
+services/*/.env.production
+apps/web-e2e/.env
+apps/**/.env*.local
+services/**/.env*.local
+contracts/**/.env*.local
+libs/**/.env*.local
+infra/.env*.local
 
 # cursor context files
 memory.md
 todo.md
 
-## Panda
-styled-system
+## Panda — generated output only; libs/design/styled-system is a real package
+apps/web/src/styled-system/
+libs/design/design-system/src/styled-system/
+libs/design/styled-system/styled-system/
 styled-system-studio

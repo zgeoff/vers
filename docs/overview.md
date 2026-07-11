@@ -49,7 +49,7 @@ One database, two shapes. Both live in the same Postgres on Neon, which scales t
 is playing. Provisioning, connection rules, and where the secrets live: [database](./database.md).
 
 - **Relational identity data** — users, sessions, verifications, avatars — accessed through Kysely,
-  migrated by kysely-ctl in `lib-db`.
+  migrated by kysely-ctl in `@vers/db`.
 - **Activity checkpoints** — an append-only table keyed by `(activity_id, version)`, one row per
   checkpoint batch, range-partitioned by time. The workload is append-heavy submissions, point reads
   for "latest progress" off a per-activity head row, and full-stream replays during verification — a
@@ -59,8 +59,8 @@ is playing. Provisioning, connection rules, and where the secrets live: [databas
 
 ## Game layer
 
-The simulation is deterministic: a seeded tick engine (`lib-idle-core`) runs combat in a
-SharedWorker on the client (`lib-idle-client`, cross-tab, fixed-timestep), emitting a stream of
+The simulation is deterministic: a seeded tick engine (`@vers/idle-core`) runs combat in a
+SharedWorker on the client (`@vers/idle-client`, cross-tab, fixed-timestep), emitting a stream of
 hash-chained checkpoints. Encounter derivation is a pure function of node seed and difficulty living
 in the shared libs — not a service — so client and verifier compute identical encounters from the
 same inputs.
@@ -70,15 +70,15 @@ server-side and compares results before progress is trusted. Checkpoint hashes c
 together but don't attest combat outcomes — replay is the proof. The same replay path generates
 offline progress: simulate forward from the last verified checkpoint.
 
-The star map (`lib-aether-*`) generates the world graph — concentric difficulty rings of baked nodes
-— and renders it with three.js via react-three-fiber. How the 3D world and the HTML UI share the
-screen: [game rendering](./game-rendering.md).
+The star map (`@vers/aether-*`) generates the world graph — concentric difficulty rings of baked
+nodes — and renders it with three.js via react-three-fiber. How the 3D world and the HTML UI share
+the screen: [game rendering](./game-rendering.md).
 
 ## Cross-cutting
 
 - **Service-to-service auth** — services trust no caller, private mesh included. Every request
   carries a short-lived signed service token minted at the edge with the acting user's ID; the
-  runtime plugin in `lib-service-runtime` verifies it before any handler runs.
+  runtime plugin in `@vers/service-runtime` verifies it before any handler runs.
 - **Contracts** — each service's API is declared in its own `@vers/contract-*` package, oRPC
   contract-first with Zod schemas owned by the contract that declares them. Mechanics, error
   taxonomy, and change discipline: [service contracts](./service-contracts.md).
@@ -86,7 +86,7 @@ screen: [game rendering](./game-rendering.md).
   unit from one SHA. Turborepo re-typechecks every consumer on any contract change, so divergence
   cannot land on `main`. There is no version matrix — the monorepo is the compatibility mechanism.
 - **Observability** — OpenTelemetry and Sentry are wired into every service by
-  `lib-service-runtime`; request IDs propagate edge to service.
+  `@vers/service-runtime`; request IDs propagate edge to service.
 
 ## Core technology
 
@@ -124,43 +124,54 @@ Development:
 
 ## Projects
 
-Applications & services:
+Applications (`apps/`):
 
-- `app-design-reference` - static host for the exported visual-direction design pages
-- `app-web` - TanStack Start web app; the trust edge and only public deployment
-- `app-web-e2e` - e2e test suite for the web app
-- `service-avatar` - avatar domain service
-- `service-session` - session domain service
-- `service-user` - user domain service
-- `service-verification` - OTP/TOTP verification domain service
+- `apps/design-reference` - static host for the exported visual-direction design pages
+- `apps/web` - TanStack Start web app; the trust edge and only public deployment
+- `apps/web-e2e` - e2e test suite for the web app
 
-Libraries:
+Services (`services/`):
 
-- `lib-aether-client` - client code (react, three, zustand) for the aether star map
-- `lib-aether-core` - platform-agnostic aether graph generation
-- `lib-client-test-utils` - react & web worker testing utilities
-- `lib-contract-avatar` - oRPC API declaration for the avatar service
-- `lib-contract-base` - shared contract error taxonomy and base builders
-- `lib-contract-session` - oRPC API declaration for the session service
-- `lib-contract-user` - oRPC API declaration for the user service
-- `lib-contract-verification` - oRPC API declaration for the verification service
-- `lib-data` - core static game data
-- `lib-db` - kysely connection helper, migrations, and generated database types
-- `lib-design-system` - ui component library (Ark UI primitives + Panda recipes)
-- `lib-email` - Resend wrapper and react-email template factories
-- `lib-flags` - OpenFeature-backed feature flag registry and env provider
-- `lib-game-rendering` - client rendering shell: scene/presentation state for the persistent
+- `services/avatar` - avatar domain service
+- `services/session` - session domain service
+- `services/user` - user domain service
+- `services/verification` - OTP/TOTP verification domain service
+
+Contracts (`contracts/`):
+
+- `contracts/avatar` - oRPC API declaration for the avatar service
+- `contracts/base` - shared contract error taxonomy and base builders
+- `contracts/session` - oRPC API declaration for the session service
+- `contracts/user` - oRPC API declaration for the user service
+- `contracts/verification` - oRPC API declaration for the verification service
+
+Libraries (`libs/`, grouped by domain):
+
+- `libs/core/email` - Resend wrapper and react-email template factories
+- `libs/core/flags` - OpenFeature-backed feature flag registry and env provider
+- `libs/core/utils` - low-level platform-agnostic utils
+- `libs/data/data` - core static game data
+- `libs/data/db` - kysely connection helper, migrations, and generated database types
+- `libs/design/design-system` - ui component library (Ark UI primitives + Panda recipes)
+- `libs/design/panda-preset` - design tokens & panda css config
+- `libs/design/styled-system` - generated code for panda css design system
+- `libs/game/aether-client` - client code (react, three, zustand) for the aether star map
+- `libs/game/aether-core` - platform-agnostic aether graph generation
+- `libs/game/game-rendering` - client rendering shell: scene/presentation state for the persistent
   three.js canvas
-- `lib-game-utils` - shared game logic (encounter derivation, rewards)
-- `lib-idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
-- `lib-idle-core` - deterministic seeded simulation engine
-- `lib-panda-preset` - design tokens & panda css config
-- `lib-service-runtime` - Elysia service runtime: createService, s2s auth, health, logging,
+- `libs/game/game-utils` - shared game logic (encounter derivation, rewards)
+- `libs/game/idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
+- `libs/game/idle-core` - deterministic seeded simulation engine
+- `libs/service/service-auth` - s2s token minting, parsing, and audience derivation
+- `libs/service/service-runtime` - Elysia service runtime: createService, s2s auth, health, logging,
   OTel/Sentry wiring
-- `lib-service-test-utils` - postgres test container & mock data utils
-- `lib-service-utils` - shared Elysia middleware (auth, logging, remote address) and service env
-  schemas
-- `lib-styled-system` - generated code for panda css design system
-- `lib-test-utils` - generic test helpers: env override/cleanup, MSW lifecycle wiring, JWT and
-  in-process RPC-client fixtures, and oRPC conformance-case collection
-- `lib-utils` - low-level platform-agnostic utils
+- `libs/service/service-utils` - shared Elysia middleware (auth, logging, remote address) and
+  service env schemas
+- `libs/testing/client-test-utils` - react & web worker testing utilities
+- `libs/testing/service-test-utils` - postgres test container & mock data utils
+- `libs/testing/test-utils` - generic test helpers: env override/cleanup, MSW lifecycle wiring, JWT
+  and in-process RPC-client fixtures, and oRPC conformance-case collection
+
+Infrastructure:
+
+- `infra` - pulumi infrastructure definitions

@@ -1,9 +1,0 @@
-{
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "types": ["node", "bun", "@zgeoff/bun-test-extended"]
-  },
-  "files": [],
-  "include": ["test-setup.ts", "src/**/*.ts"],
-  "exclude": []
-}

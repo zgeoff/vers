@@ -51,7 +51,7 @@ Three consumers, three stores — the string never lives in the repo:
 | ------------------------------ | ------ | -------------------------------------------------------------- |
 | Services at runtime (Fly)      | direct | `fly secrets set DATABASE_URL=…` per app, at provisioning time |
 | CI migrations (`main.yml`)     | direct | `DATABASE_URL` repository Actions secret                       |
-| Local dev (kysely-ctl, ad hoc) | direct | `projects/lib-db/.env.local` (gitignored)                      |
+| Local dev (kysely-ctl, ad hoc) | direct | `libs/data/db/.env.local` (gitignored)                         |
 
 Migrations run as a single `main.yml` step on a fully green run, not a Fly `release_command`:
 several services share the one database, and a per-service release command would run the same
@@ -62,12 +62,12 @@ Services never read `process.env` for this themselves — each service's `envSha
 
 ## Local dev
 
-`projects/lib-db/.env.local` holds `DATABASE_URL` pointing at the Neon `main` branch. Pass it
+`libs/data/db/.env.local` holds `DATABASE_URL` pointing at the Neon `main` branch. Pass it
 explicitly when running the kysely-ctl scripts — bun's automatic `.env` loading covers bun's own
 process but does not reach the node-shebang `kysely` binary a package script spawns:
 
 ```sh
-cd projects/lib-db
+cd libs/data/db
 bun --env-file=.env.local run db:migrate   # also db:seed, db:rollback
 ```
 
@@ -96,6 +96,6 @@ neonctl connection-string main --project-id <new-id> --database-name vers
 # then: rewrite sslmode to verify-full, drop channel_binding, and distribute to the consumer stores
 ```
 
-After provisioning, write the string into `projects/lib-db/.env.local`, then `db:migrate` and
-`db:seed` (run with `--env-file=.env.local`) bring the schema and dev seed data up from zero. Update
-the `DATABASE_URL` Actions secret and each Fly app's secret to the new string.
+After provisioning, write the string into `libs/data/db/.env.local`, then `db:migrate` and `db:seed`
+(run with `--env-file=.env.local`) bring the schema and dev seed data up from zero. Update the
+`DATABASE_URL` Actions secret and each Fly app's secret to the new string.

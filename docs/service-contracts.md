@@ -13,11 +13,11 @@ on the contract, neither on each other.
 
 ## The packages
 
-| Package                    | Folder                            | Contains                                                                                                                        | Depended on by                    |
-| -------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `@vers/contract-<service>` | `projects/lib-contract-<service>` | one service's API declaration                                                                                                   | that service and the web app      |
-| `@vers/contract-base`      | `projects/lib-contract-base`      | standard error taxonomy, base builders, conformance-test helper                                                                 | contract packages and the web app |
-| `@vers/service-runtime`    | `projects/lib-service-runtime`    | Elysia plugins every service composes: s2s token verification, health checks, OpenTelemetry, Sentry, request-id, env validation | services only                     |
+| Package                    | Folder                         | Contains                                                                                                                        | Depended on by                    |
+| -------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `@vers/contract-<service>` | `contracts/<service>`          | one service's API declaration                                                                                                   | that service and the web app      |
+| `@vers/contract-base`      | `contracts/base`               | standard error taxonomy, base builders, conformance-test helper                                                                 | contract packages and the web app |
+| `@vers/service-runtime`    | `libs/service/service-runtime` | Elysia plugins every service composes: s2s token verification, health checks, OpenTelemetry, Sentry, request-id, env validation | services only                     |
 
 Why one contract package per service rather than a single `@vers/contracts` with subpath exports:
 
@@ -32,11 +32,9 @@ Why one contract package per service rather than a single `@vers/contracts` with
 
 The per-package boilerplate this creates is exactly what the service scaffold template amortizes.
 
-Folder and package naming, repo-wide: `lib-` prefixes every importable workspace package — contracts
-included, since services and the web app all import them. **A package's name is its folder name
-minus the taxonomy prefix**: `lib-` and `app-` strip (`lib-contract-user` → `@vers/contract-user`,
-`app-web` → `@vers/web`) because they group folders without naming the thing; `service-` is part of
-the name and carries through (`service-user` → `@vers/service-user`).
+Folder and package naming, repo-wide: **a package's name is `@vers/` plus its leaf folder name**
+(`libs/core/utils` → `@vers/utils`, `apps/web` → `@vers/web`). Two roots drop a prefix the name
+keeps: `services/user` → `@vers/service-user` and `contracts/user` → `@vers/contract-user`.
 
 ## Anatomy of a contract package
 

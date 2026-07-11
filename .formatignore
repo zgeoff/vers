@@ -1,6 +1,8 @@
 # committed codegen
-projects/app-design-reference/public/**
-**/styled-system/**
+apps/design-reference/public/**
+apps/web/src/styled-system/**
+libs/design/design-system/src/styled-system/**
+libs/design/styled-system/styled-system/**
 **/.react-router/**
 **/routeTree.gen.ts
 
