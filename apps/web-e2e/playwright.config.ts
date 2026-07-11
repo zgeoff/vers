@@ -7,11 +7,11 @@ const productionBaseURL = process.env['PRODUCTION_BASE_URL'] ?? 'http://localhos
 // having a million issues trying to use __dirname to establish a reliable path
 // so it's easier to do this to handle the case when this file gets parsed for
 // building our task graph
-const projectRoot = process.cwd().includes('app-web-e2e')
+const projectRoot = process.cwd().includes('web-e2e')
   ? process.cwd()
   : `${process.cwd()}/apps/web-e2e`;
 
-const appWebRoot = path.resolve(projectRoot, '..', 'app-web');
+const appWebRoot = path.resolve(projectRoot, '..', 'web');
 
 const dotEnvFile = path.join(projectRoot, '.env');
 
