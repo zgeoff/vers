@@ -18,7 +18,6 @@
     "resend": "catalog:"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/bun": "catalog:",
@@ -26,7 +25,6 @@
     "@types/react": "catalog:",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
-    "happy-dom": "catalog:",
     "msw": "catalog:",
     "typescript": "catalog:"
   }

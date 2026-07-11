@@ -1,9 +1,8 @@
 import '@zgeoff/bun-test-extended';
 import { afterEach, expect } from 'bun:test';
 import { faker } from '@faker-js/faker';
-import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
-import { registerMSWLifecycle } from '@vers/test-utils/bun';
+import { registerHappyDOM, registerMSWLifecycle } from '@vers/test-utils/bun';
 import { server } from './src/mocks/node';
 import { registerAetherNodeCodexSlotMock } from './src/test-utils/register-aether-node-codex-slot-mock';
 import { registerAetherSceneMock } from './src/test-utils/register-aether-scene-mock';
@@ -22,7 +21,8 @@ MC4CAQAwBQYDK2VwBCIEIBMom57erggdVdDCIdRWS+NKMykK+I5BUKpuHziAq+0W
 
 // a fixed seed keeps faker-defaulted mock rows reproducible run-to-run
 faker.seed(1);
-GlobalRegistrator.register();
+
+registerHappyDOM();
 
 // happy-dom ships no `SharedWorker`; define a placeholder so the app's support check reports the
 // supported path real browsers take. The worker handle is mocked, so nothing constructs it. Tests
