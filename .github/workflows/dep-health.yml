@@ -31,7 +31,7 @@ jobs:
         id: audit
         run: |
           set +e
-          bun audit > audit.txt
+          bun run audit > audit.txt
           echo "exit=$?" >> "$GITHUB_OUTPUT"
           cat audit.txt
 

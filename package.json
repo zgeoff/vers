@@ -136,6 +136,7 @@
     "clean": "./scripts/clean.sh",
     "build": "turbo run build",
     "build:agents": "bash scripts/build-agents-md.sh agents/shared.md agents/project.md AGENTS.md",
+    "audit": "bun audit --ignore=GHSA-8988-4f7v-96qf --ignore=GHSA-q7rr-3cgh-j5r3",
     "boundaries": "turbo boundaries",
     "deadcode": "knip",
     "lint": "turbo run codegen typegen && oxlint --type-aware --type-check --report-unused-disable-directives-severity error",
@@ -189,7 +190,9 @@
   },
   "overrides": {
     "@types/react": "19.2.17",
-    "@types/react-dom": "19.2.3"
+    "@types/react-dom": "19.2.3",
+    "undici": "7.28.0",
+    "uuid": "11.1.1"
   },
   "packageManager": "bun@1.3.10",
   "patchedDependencies": {

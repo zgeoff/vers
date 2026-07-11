@@ -44,6 +44,11 @@ jobs:
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
+      # the audit script ignores only advisories with no fixed release reachable from
+      # our dependency graph; each --ignore drops when its parent ships a fixed line
+      - name: Audit
+        run: bun run audit
+
       - name: Check AGENTS.md Drift
         run: |
           bun run build:agents
