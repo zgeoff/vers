@@ -19,8 +19,6 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-checks-${{ github.ref }}
       cancel-in-progress: true
-    outputs:
-      affected-projects: ${{ steps.record-affected-projects.outputs.affected-projects }}
     env:
       TURBO_SCM_BASE: ${{ github.event.before }}
       # CI never commits, but skip hook install/execution regardless
@@ -114,24 +112,14 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: bun run --cwd libs/data/db db:migrate
 
-      - name: Record Affected Projects
-        id: record-affected-projects
-        # only a green run deploys; this feeds the deploy matrix's per-app gate
-        if: ${{ success() }}
-        run: |
-          # names are <>-wrapped so the contains() gates can't substring-match
-          affected="$(node_modules/.bin/turbo run build --affected --dry=json | jq -r '.packages[] | "<\(.)>"')"
-          echo "${affected}"
-          delimiter="$(openssl rand -hex 8)"
-          echo "affected-projects<<${delimiter}" >> "${GITHUB_OUTPUT}"
-          echo "${affected}" >> "${GITHUB_OUTPUT}"
-          echo "${delimiter}" >> "${GITHUB_OUTPUT}"
-
   deploy:
     name: Deploy
     needs: checks
-    # deploy only a fully green build; each leg self-gates on being affected. Runs
-    # after `checks`, so the migration step there has already applied to Neon.
+    # deploy only a fully green build. Runs after `checks`, so the migration step
+    # there has already applied to Neon. Each leg self-gates inside the deploy CLI:
+    # it compares HEAD against the GIT_SHA stamped on the app's machines, so a
+    # deploy skipped by an earlier failure or cancellation stays "stale" and
+    # ships on the next push instead of being lost with the push delta.
     if: ${{ needs.checks.result == 'success' }}
     runs-on: ubuntu-latest
     # never cancel a rollout mid-flight; a newer run's deploy waits its turn
@@ -142,128 +130,63 @@ jobs:
       # each app is independent — one rollout failing must not abandon the others
       fail-fast: false
       matrix:
-        include:
-          - app: vers-service-avatar
-            pkg: '@vers/service-avatar'
-            dir: services/avatar
-          - app: vers-service-session
-            pkg: '@vers/service-session'
-            dir: services/session
-          - app: vers-service-user
-            pkg: '@vers/service-user'
-            dir: services/user
-          - app: vers-service-verification
-            pkg: '@vers/service-verification'
-            dir: services/verification
-          - app: vers-app-web
-            pkg: '@vers/web'
-            dir: apps/web
-    env:
-      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        app:
+          - vers-service-avatar
+          - vers-service-session
+          - vers-service-user
+          - vers-service-verification
+          - vers-app-web
+          - vers-bugsink
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          # staleness runs turbo/git against each app's deployed SHA, which can
+          # be many pushes old — the CLI needs full history
+          fetch-depth: 0
 
-      - name: Setup flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@dfdfedc86b296f5e5384f755a18bf400409a15d0 # v1.4
-
-      # Fly's remote builder builds the image and pushes it inside Fly's network —
-      # avoiding a GitHub-runner-to-registry.fly.io blob upload, which 502s on the
-      # large compiled-binary layers. Each app's strategy (per fly.toml) gates cutover
-      # on the /health check, so a machine that fails to boot blocks the release.
+      # The CLI deploys via Fly's remote builder: the image builds and pushes
+      # inside Fly's network, avoiding a GitHub-runner-to-registry.fly.io blob
+      # upload, which 502s on the large compiled-binary layers. Each app's
+      # strategy (per fly.toml) gates cutover on the /health check, so a machine
+      # that fails to boot blocks the release.
       #
       # syd host capacity is intermittently tight: a rollout that can't reserve a
-      # machine fails with "insufficient resources / could not reserve resource" and
-      # Fly rolls it back cleanly — re-run the failed job.
+      # machine fails with "insufficient resources / could not reserve resource"
+      # and Fly rolls it back cleanly — re-run the failed job.
       #
-      # app-web's image build bakes the browser DSN into the client bundle and uploads
-      # source maps to the error tracker; both no-op when the token/DSN aren't configured.
+      # app-web's image build bakes the browser DSN into the client bundle and
+      # uploads source maps to the error tracker; both no-op when the token/DSN
+      # aren't configured (the CLI forwards build args only when set).
       - name: Deploy ${{ matrix.app }}
-        if: ${{ contains(needs.checks.outputs.affected-projects, format('<{0}>', matrix.pkg)) }}
+        uses: ./.github/actions/fly-deploy
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
-        run: |
-          build_args=""
-          if [ "${{ matrix.app }}" = "vers-app-web" ] && [ -n "${SENTRY_AUTH_TOKEN}" ]; then
-            build_args="--build-arg SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN} --build-arg VITE_SENTRY_DSN=${VITE_SENTRY_DSN}"
-          fi
-          flyctl deploy --remote-only ${build_args} \
-            --config ${{ matrix.dir }}/fly.toml \
-            --dockerfile ${{ matrix.dir }}/Dockerfile
+        with:
+          args: deploy --app ${{ matrix.app }}
+          fly-api-token: ${{ secrets.FLY_API_TOKEN }}
 
-      # private services can't be reached from CI — their rollout health gate is the
-      # smoke test. app-web is public, so verify it end-to-end after cutover: /health
-      # proves the app booted, then an anonymous call through the RPC proxy must come
-      # back as the contract's typed UNAUTHORIZED ("defined": true distinguishes it
-      # from a middleware 401 or a 500). That round-trip crosses app-web → flycast →
-      # service-user, so it fails on zero-machine services, key drift, and audience
-      # drift — none of which /health can see.
-      - name: Smoke check app-web
-        if:
-          ${{ matrix.app == 'vers-app-web' && contains(needs.checks.outputs.affected-projects,
-          '<@vers/web>') }}
-        run: |
-          for attempt in $(seq 1 10); do
-            code="$(curl -fsS -o /dev/null -w '%{http_code}' https://vers-app-web.fly.dev/health || true)"
-            if [ "${code}" = "200" ]; then
-              echo "app-web healthy"
-              break
-            fi
-            if [ "${attempt}" = "10" ]; then
-              echo "app-web /health never returned 200 after deploy"
-              exit 1
-            fi
-            echo "attempt ${attempt}: /health returned ${code:-no-response}"
-            sleep 5
-          done
-          for attempt in $(seq 1 10); do
-            body="$(curl -sS -X POST -H 'content-type: application/json' -d '{"json":{}}' \
-              https://vers-app-web.fly.dev/api/rpc/user/getCurrentUser || true)"
-            if jq -e '.json.defined == true and .json.code == "UNAUTHORIZED" and .json.data.reason == "missing-session"' \
-              > /dev/null 2>&1 <<< "${body}"; then
-              echo "rpc path healthy: typed UNAUTHORIZED round-tripped"
-              exit 0
-            fi
-            echo "attempt ${attempt}: rpc probe returned ${body:-no-response}"
-            sleep 5
-          done
-          echo "app-web rpc probe never returned the typed UNAUTHORIZED after deploy"
-          exit 1
-
-  deploy-bugsink:
-    name: Deploy vers-bugsink
-    needs: checks
-    # the error tracker isn't a workspace package, so turbo's affected detection
-    # can't see it — this leg self-gates on a diff of its config directory. It ships
-    # the pinned stock image: no build, just a machine update.
-    if: ${{ needs.checks.result == 'success' }}
+  verify-fleet:
+    name: Verify fleet
+    needs: [checks, deploy]
+    # the deploy gate: every app in the manifest must be online and current, on
+    # every green main push — even when every deploy leg skipped. This is what
+    # catches a silently-missing deploy (an app at zero machines, or a fleet
+    # still running code from before a cancelled rollout) and fails the run.
+    if: ${{ !cancelled() && needs.checks.result == 'success' }}
     runs-on: ubuntu-latest
     concurrency:
-      group: ${{ github.workflow }}-deploy-vers-bugsink
+      group: ${{ github.workflow }}-verify-fleet
       cancel-in-progress: false
-    env:
-      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
-      - name: Detect config changes
-        id: config-diff
-        run: |
-          changed="$(git diff --name-only '${{ github.event.before }}' HEAD -- apps/bugsink/)"
-          if [ -n "${changed}" ]; then
-            echo "changed=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "changed=false" >> "${GITHUB_OUTPUT}"
-          fi
-
-      - name: Setup flyctl
-        if: ${{ steps.config-diff.outputs.changed == 'true' }}
-        uses: superfly/flyctl-actions/setup-flyctl@dfdfedc86b296f5e5384f755a18bf400409a15d0 # v1.4
-
-      - name: Deploy vers-bugsink
-        if: ${{ steps.config-diff.outputs.changed == 'true' }}
-        run: flyctl deploy --config apps/bugsink/fly.toml
+      - name: Verify fleet
+        uses: ./.github/actions/fly-deploy
+        with:
+          args: verify
+          fly-api-token: ${{ secrets.FLY_API_TOKEN }}

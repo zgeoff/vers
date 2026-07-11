@@ -4,21 +4,29 @@
     "**/augment-bun-test.ts",
     "**/*.generated.ts",
     "apps/design-reference/public/**",
-    "libs/game/aether-core/generate-graph.ts"
+    "libs/game/aether-core/generate-graph.ts",
+    ".claude/**"
   ],
-  "ignoreBinaries": ["ladle", "op", "pulumi"],
-  "rules": { "enumMembers": "off" },
+  "ignoreBinaries": ["flyctl", "ladle", "op", "pulumi"],
+  "rules": {
+    "enumMembers": "off"
+  },
   "workspaces": {
     ".": {
-      "vite": { "config": [] },
-      "entry": ["scripts/**/*.ts"],
-      "project": ["scripts/**/*.ts"],
+      "vite": {
+        "config": []
+      },
+      "entry": ["deploy.config.ts"],
       "ignoreDependencies": [
         "@playwright/test",
         "@stylistic/eslint-plugin",
         "@zgeoff/bun-test-extended",
         "@zgeoff/oxlint-config"
       ]
+    },
+    "scripts": {
+      "entry": ["src/bin/*.ts"],
+      "project": ["src/**/*.ts"]
     },
     "apps/web": {
       "entry": [

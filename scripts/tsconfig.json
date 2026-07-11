@@ -1,17 +1,9 @@
 {
   "extends": "../tsconfig.base.json",
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "../apps/**/*.ts",
-    "../apps/**/*.tsx",
-    "../services/**/*.ts",
-    "../services/**/*.tsx",
-    "../contracts/**/*.ts",
-    "../contracts/**/*.tsx",
-    "../libs/**/*.ts",
-    "../libs/**/*.tsx",
-    "../infra/**/*.ts",
-    "../infra/**/*.tsx"
-  ]
+  "compilerOptions": {
+    "types": ["node", "bun", "@zgeoff/bun-test-extended"]
+  },
+  "files": [],
+  "include": ["src/**/*.ts"],
+  "exclude": []
 }

@@ -1,9 +1,7 @@
-#!/usr/bin/env node
-
+import { migrateToLatest } from '@vers/db';
 import { oraPromise } from 'ora';
-import { migrateToLatest } from '../libs/data/db/src/migrate-to-latest';
-import { env } from './postgres/env';
-import { pg } from './postgres/pg';
+import { env } from '../postgres/env';
+import { pg } from '../postgres/pg';
 
 async function resetDevDB() {
   const query = `
