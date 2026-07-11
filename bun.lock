@@ -634,6 +634,29 @@
         "typescript": "catalog:",
       },
     },
+    "services/activity": {
+      "name": "@vers/service-activity",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/server": "catalog:",
+        "@paralleldrive/cuid2": "catalog:",
+        "@vers/contract-activity": "workspace:*",
+        "@vers/db": "workspace:*",
+        "@vers/service-runtime": "workspace:*",
+        "kysely": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@faker-js/faker": "catalog:",
+        "@orpc/contract": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "services/avatar": {
       "name": "@vers/service-avatar",
       "version": "0.0.0",
@@ -2043,6 +2066,8 @@
     "@vers/panda-preset": ["@vers/panda-preset@workspace:libs/design/panda-preset"],
 
     "@vers/scripts": ["@vers/scripts@workspace:scripts"],
+
+    "@vers/service-activity": ["@vers/service-activity@workspace:services/activity"],
 
     "@vers/service-auth": ["@vers/service-auth@workspace:libs/service/service-auth"],
 
