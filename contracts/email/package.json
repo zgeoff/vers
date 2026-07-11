@@ -1,0 +1,26 @@
+{
+  "name": "@vers/contract-email",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@orpc/contract": "catalog:",
+    "@vers/contract-base": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@orpc/openapi": "catalog:",
+    "@orpc/zod": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@zgeoff/bun-test-extended": "catalog:",
+    "typescript": "catalog:"
+  }
+}
