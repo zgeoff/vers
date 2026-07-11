@@ -16,6 +16,9 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    # a hung step (a script that never exits, a wedged container) must fail the
+    # run, not burn runner hours — the suite's worst observed run is ~4 minutes
+    timeout-minutes: 10
     concurrency:
       group: ${{ github.workflow }}-checks-${{ github.ref }}
       cancel-in-progress: true
@@ -122,6 +125,9 @@ jobs:
     # ships on the next push instead of being lost with the push delta.
     if: ${{ needs.checks.result == 'success' }}
     runs-on: ubuntu-latest
+    # worst observed leg (app-web remote build + bluegreen cutover) is ~5
+    # minutes; 3× headroom for builder variance without holding the queue
+    timeout-minutes: 15
     # never cancel a rollout mid-flight; a newer run's deploy waits its turn
     concurrency:
       group: ${{ github.workflow }}-deploy-${{ matrix.app }}
@@ -176,6 +182,8 @@ jobs:
     # still running code from before a cancelled rollout) and fails the run.
     if: ${{ !cancelled() && needs.checks.result == 'success' }}
     runs-on: ubuntu-latest
+    # six fleet reads plus probe retries fit in ~3 minutes at worst
+    timeout-minutes: 10
     concurrency:
       group: ${{ github.workflow }}-verify-fleet
       cancel-in-progress: false

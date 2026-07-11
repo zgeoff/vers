@@ -94,7 +94,6 @@ async function runVerify(): Promise<void> {
 
     if (findings.length === 0) {
       console.log(`✓ ${target.app} — online and current at ${state.deployedSHA ?? 'unknown'}`);
-
       continue;
     }
 
