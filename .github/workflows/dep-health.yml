@@ -1,0 +1,99 @@
+name: Dep Health
+
+on:
+  schedule:
+    # Monday 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  # keep ANSI escapes out of the issue bodies
+  NO_COLOR: 1
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      # audit reads bun.lock and the advisory registry directly - no install needed
+      - name: Audit
+        id: audit
+        run: |
+          set +e
+          bun audit > audit.txt
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          cat audit.txt
+
+      - name: Escalate To Issue
+        if: steps.audit.outputs.exit != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Scheduled \`bun audit\` found advisories. [Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+            echo
+            echo '```'
+            cat audit.txt
+            echo '```'
+          } > body.md
+          existing=$(gh issue list --label dep-audit --state open --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file body.md
+          else
+            gh issue create --title "bun audit: advisories in locked dependencies" --label dep-audit --body-file body.md
+          fi
+
+      - name: Fail On Advisories
+        if: steps.audit.outputs.exit != '0'
+        run: exit 1
+
+  outdated:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      # every external version lives in the root catalog, so the root report covers the workspace
+      - name: Outdated Report
+        run: |
+          bun outdated > outdated.txt
+          cat outdated.txt
+
+      # one open dep-outdated issue holds the latest report; closed when nothing is outdated
+      - name: Refresh Report Issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          existing=$(gh issue list --label dep-outdated --state open --json number --jq '.[0].number')
+          if [ -s outdated.txt ]; then
+            {
+              echo "Weekly \`bun outdated\` report. [Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+              echo
+              echo '```'
+              cat outdated.txt
+              echo '```'
+            } > body.md
+            if [ -n "$existing" ]; then
+              gh issue edit "$existing" --body-file body.md
+            else
+              gh issue create --title "outdated dependencies: weekly report" --label dep-outdated --body-file body.md
+            fi
+          elif [ -n "$existing" ]; then
+            gh issue close "$existing" --comment "Nothing outdated this week."
+          fi
