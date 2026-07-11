@@ -81,29 +81,30 @@ note owns them.
 
 ## Juice
 
-Juice is spending to modify an expedition instance, in two forms split by one boundary: whether
-randomness is involved at decision time.
+Juice is spending to modify an expedition instance. Where its randomness lives follows the tail
+rule, not the mechanic:
 
-- **Invested difficulty** — choose a tier, pay its cost, and the instance hardens and yields more
-  drop slots, deterministically. Nothing rolls when the choice is made, so there is nothing to peek
-  and nothing to fish: the spend buys known throughput, and the loot it yields stays sealed like any
-  other slot. Invested runs work anywhere, offline included.
-- **Crafted instances** — modifiers are rolled, previewed, rerolled, and locked. Rolling at decision
-  time needs entropy sealed while the player decides, which takes a live exchange: crafted content
-  is online content. Self-found avatars craft against their own key — nothing is sealed from them,
-  and nothing they make can leave.
+- **Tiers and instance modifiers** — choose a tier, roll and reroll the instance's modifiers, lock
+  in. Modifier outcomes are normalized by design: bounded scalars on difficulty and yield, no
+  jackpot combinations, never coupled to a reward tail. A tail-free distribution reveals nothing
+  worth selecting, so instance rolling is client-trustable and works anywhere, offline included,
+  rerolls and all. Keeping modifiers jackpot-free is a standing content constraint, the same
+  obligation as drop density.
+- **Item crafting** — affix rolls are the tail; shaping items is the point. Crafting rolls draw
+  sealed server entropy behind the preview flow, online. Self-found avatars craft against their own
+  key — nothing is sealed from them, and nothing they make can leave.
 
-Base drops fall everywhere; juice in either form is deliberate investment layered on top. Its value
-is aim, not access: crafted instances are the targeted-outcome market — shaping what kind of reward
-a run can produce — beside base play's open lottery, and their costs are a real consumption of
-wealth. Its constraints hold regardless of how juice mechanics evolve:
+Base drops fall everywhere; juice is deliberate investment layered on top, and item crafting is the
+targeted-outcome market — shaping what kind of reward play can produce — beside base play's open
+lottery, its costs a real consumption of wealth. The constraints hold regardless of how juice
+mechanics evolve:
 
 - Juiced rewards are a separable overlay — never a multiplier on a quantity the player could
   foresee. A multiplier on foreseeable value invites scanning for the best base outcome and
   amplifying it; the overlay form has nothing to scan.
 - Difficulty conditions on the chosen tier alone, with flat expected value per cost across tiers.
-- A crafted bundle settles all-or-nothing, and a committed instance always resolves — bailing
-  forfeits the bundle, so peeking-then-declining has zero option value.
+- A sealed craft settles all-or-nothing, and a committed craft always resolves — bailing forfeits
+  the bundle, so peeking-then-declining has zero option value.
 - Juiced failure costs only the forgone yield, never experience.
 
 ## Extraction & Settlement
@@ -116,9 +117,9 @@ checkpoints to the front of the verification queue, so honest players feel a bri
 they transfer and nowhere else.
 
 The verification gate follows value through transformation: an output crafted, salvaged, or combined
-from an unverified input inherits the gate until every contributing input verifies. Interactive
-crafting that consumes tradeable currency rolls server-side — decision-time randomness is the same
-boundary everywhere — and applies exactly once per action.
+from an unverified input inherits the gate until every contributing input verifies. Item crafting
+that consumes tradeable currency rolls server-side — the tail rule is the same boundary everywhere —
+and applies exactly once per action.
 
 Experience and levels are never tradeable, render optimistically, and reconcile lazily. Defeat costs
 follow the core note, with one constraint from foresight: survival is trajectory knowledge, so a

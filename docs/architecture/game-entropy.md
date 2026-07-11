@@ -73,8 +73,8 @@ deploy — so reveal, replay, and mint agree across deploys, parks, and master r
 
 ## Sealed pre-commit salt
 
-Content the player crafts against a preview — rolled modifiers, reroll-and-lock decisions — draws
-entropy that must stay sealed while the decision is open, revealed in two commits:
+Outcomes whose distribution carries a tail worth selecting — item affix rolls, rare content — draw
+entropy that must stay sealed while a crafting decision is open, revealed in two commits:
 
 1. **Commit.** The player locks in the spend. The server mints the salt from a server-held secret
    key and stores it sealed, returning only a lossy derived projection — modifier families,
@@ -96,11 +96,13 @@ same salt, so a lost packet cannot fork the timeline, and until the release arri
 start. The build snapshot pins at mint, so deferring resolution cannot improve an outcome by
 out-leveling it first.
 
-Sealed salt requires a live round trip, so preview-crafted content is online content. Deterministic
-investment — a chosen tier with a known effect on difficulty and drop density — involves no
-decision-time randomness, needs no salt, and runs anywhere: the boundary is randomness at decision
-time, not investment itself. For self-found avatars no entropy is sealable at all — the player holds
-the key — which is consistent with their earnings never reaching the market.
+Sealed salt requires a live round trip, so tail-bearing crafted content is online content. Entropy
+placement follows the outcome distribution, not the mechanic: a normalized outcome — a chosen tier,
+an instance modifier bounded to modest scalars with no jackpot combination — carries no tail worth
+selecting, so it rides client-computable entropy anywhere, interactive rerolls included. Peeking a
+tail-free distribution reveals nothing worth acting on; only a tailed distribution needs the seal.
+For self-found avatars no entropy is sealable at all — the player holds the key — which is
+consistent with their earnings never reaching the market.
 
 ## Provenance
 
