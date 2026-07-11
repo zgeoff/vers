@@ -353,8 +353,6 @@ PR and promotes it into `@vers/design-system` when a second consumer appears.
   with the same ignores).
 - `bun run build` — `turbo run build`; one project via `--filter`.
 - `bun run e2e` — `turbo run e2e` (Playwright, `@vers/web-e2e`).
-- Verifying a domain service's transport behaviour at a real socket (serve entrypoint, env wiring,
-  error envelope, trace headers) — the `verifier-service-socket` skill.
 - `bun run boundaries` — `turbo boundaries`.
 - `bun run deadcode` — knip (`knip.json`); blocking in CI and pre-push. Needs codegen output
   present; a dependency knip can't see gets a `knip.json` ignore in the PR that introduces it.
