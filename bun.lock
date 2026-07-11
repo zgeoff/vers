@@ -113,6 +113,23 @@
         "typescript": "catalog:",
       },
     },
+    "contracts/activity": {
+      "name": "@vers/contract-activity",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@vers/contract-base": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@orpc/openapi": "catalog:",
+        "@orpc/zod": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "contracts/avatar": {
       "name": "@vers/contract-avatar",
       "version": "0.0.0",
@@ -633,6 +650,29 @@
       "devDependencies": {
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "services/activity": {
+      "name": "@vers/service-activity",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/server": "catalog:",
+        "@paralleldrive/cuid2": "catalog:",
+        "@vers/contract-activity": "workspace:*",
+        "@vers/db": "workspace:*",
+        "@vers/service-runtime": "workspace:*",
+        "kysely": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@faker-js/faker": "catalog:",
+        "@orpc/contract": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "typescript": "catalog:",
       },
@@ -2015,6 +2055,8 @@
 
     "@vers/client-test-utils": ["@vers/client-test-utils@workspace:libs/testing/client-test-utils"],
 
+    "@vers/contract-activity": ["@vers/contract-activity@workspace:contracts/activity"],
+
     "@vers/contract-avatar": ["@vers/contract-avatar@workspace:contracts/avatar"],
 
     "@vers/contract-base": ["@vers/contract-base@workspace:contracts/base"],
@@ -2050,6 +2092,8 @@
     "@vers/panda-preset": ["@vers/panda-preset@workspace:libs/design/panda-preset"],
 
     "@vers/scripts": ["@vers/scripts@workspace:scripts"],
+
+    "@vers/service-activity": ["@vers/service-activity@workspace:services/activity"],
 
     "@vers/service-auth": ["@vers/service-auth@workspace:libs/service/service-auth"],
 

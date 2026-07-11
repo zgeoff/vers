@@ -5,6 +5,8 @@
 
 import type { ColumnType } from 'kysely';
 
+export type ActivityStatus = 'active' | 'capped' | 'quarantined' | 'rejected' | 'stopped';
+
 export type AvatarClass = 'brute' | 'scholar' | 'scoundrel';
 
 export type Generated<T> =
@@ -12,9 +14,51 @@ export type Generated<T> =
     ? ColumnType<S, I | undefined, U>
     : ColumnType<T, T | undefined, T>;
 
+export type Json = JsonValue;
+
+export type JsonArray = Array<JsonValue>;
+
+export interface JsonObject {
+  [x: string]: JsonValue | undefined;
+}
+
+export type JsonPrimitive = boolean | number | string | null;
+
+export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export type VerificationType = '2fa' | '2fa-setup' | 'change-email' | 'onboarding';
+
+export interface Activities {
+  appendedAt: Timestamp | null;
+  appendedHead: Generated<number>;
+  avatarId: string;
+  buildSnapshot: Json;
+  contentVersion: string;
+  createdAt: Generated<Timestamp>;
+  id: string;
+  lastHash: string;
+  nodeId: string;
+  seed: string;
+  simVersion: string;
+  startedAt: Generated<Timestamp>;
+  startHash: string;
+  status: Generated<ActivityStatus>;
+  stoppedAt: Timestamp | null;
+  updatedAt: Generated<Timestamp>;
+  verifiedAt: Timestamp | null;
+  verifiedHead: Generated<number>;
+}
+
+export interface ActivityCheckpoints {
+  activityId: string;
+  appendedAt: Generated<Timestamp>;
+  hash: string;
+  payload: Json;
+  prevHash: string;
+  version: number;
+}
 
 export interface Avatars {
   class: AvatarClass;
@@ -86,6 +130,8 @@ export interface Verifications {
 }
 
 export interface DB {
+  activities: Activities;
+  activityCheckpoints: ActivityCheckpoints;
   avatars: Avatars;
   consumedTransactionTokens: ConsumedTransactionTokens;
   pendingTransactions: PendingTransactions;

@@ -1,0 +1,38 @@
+import { implement } from '@orpc/server';
+import { activityContract } from '@vers/contract-activity';
+import type { DB } from '@vers/db';
+import type { ServiceContext } from '@vers/service-runtime';
+import type { Kysely } from 'kysely';
+import { getCurrentActivity } from './handlers/get-current-activity';
+import { getLatestActivityProgress } from './handlers/get-latest-activity-progress';
+import { startActivity } from './handlers/start-activity';
+import { stopActivity } from './handlers/stop-activity';
+import { trackActivityProgress } from './handlers/track-activity-progress';
+
+interface BuildActivityRouterDeps {
+  readonly contentVersion: string;
+  readonly db: Kysely<DB>;
+  readonly simVersion: string;
+}
+
+/**
+ * Assembles the activities service's oRPC router, closing each handler over the shared db client
+ * (and, for `startActivity`, the version stamps new activities are minted against).
+ */
+export function buildActivityRouter(deps: BuildActivityRouterDeps) {
+  const os = implement(activityContract).$context<ServiceContext>();
+
+  return {
+    getCurrentActivity: os.getCurrentActivity.handler((opts) => getCurrentActivity(deps.db, opts)),
+    getLatestActivityProgress: os.getLatestActivityProgress.handler((opts) =>
+      getLatestActivityProgress(deps.db, opts),
+    ),
+    startActivity: os.startActivity.handler((opts) => startActivity(deps, opts)),
+    stopActivity: os.stopActivity.handler((opts) => stopActivity(deps.db, opts)),
+    trackActivityProgress: os.trackActivityProgress.handler((opts) =>
+      trackActivityProgress(deps.db, opts),
+    ),
+  };
+}
+
+export type ActivityRouter = ReturnType<typeof buildActivityRouter>;

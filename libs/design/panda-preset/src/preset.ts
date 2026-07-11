@@ -10,6 +10,8 @@ export const preset = definePreset({
     html: {
       '--global-color-border': 'colors.border.subtle',
       '--global-color-placeholder': 'colors.ink.500',
+      '--global-font-body': 'fonts.sans',
+      '--global-font-mono': 'fonts.mono',
     },
   },
   name: 'vers-preset',
