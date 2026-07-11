@@ -5,18 +5,20 @@ on:
     branches:
       - main
 
-# a newer push to main supersedes an in-flight run instead of piling up behind it
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   actions: read
   contents: read
 
+# Concurrency is per-job, not per-workflow: a workflow-level cancel-in-progress
+# kills flyctl mid-bluegreen rollout, stranding the green machines and failing
+# every later deploy with "found multiple image versions". Checks stay
+# cancellable (a newer push supersedes them); deploy jobs queue instead.
 jobs:
   checks:
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-checks-${{ github.ref }}
+      cancel-in-progress: true
     outputs:
       affected-projects: ${{ steps.record-affected-projects.outputs.affected-projects }}
     env:
@@ -132,6 +134,10 @@ jobs:
     # after `checks`, so the migration step there has already applied to Neon.
     if: ${{ needs.checks.result == 'success' }}
     runs-on: ubuntu-latest
+    # never cancel a rollout mid-flight; a newer run's deploy waits its turn
+    concurrency:
+      group: ${{ github.workflow }}-deploy-${{ matrix.app }}
+      cancel-in-progress: false
     strategy:
       # each app is independent — one rollout failing must not abandon the others
       fail-fast: false
@@ -213,6 +219,9 @@ jobs:
     # the pinned stock image: no build, just a machine update.
     if: ${{ needs.checks.result == 'success' }}
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-deploy-vers-bugsink
+      cancel-in-progress: false
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
