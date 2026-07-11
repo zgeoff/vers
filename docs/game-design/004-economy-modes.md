@@ -12,7 +12,7 @@ offline progress possible — and it means a motivated player can compute their 
 the runs ahead, see what happens, and choose which futures to play. This cannot be prevented, only
 priced.
 
-Foresight is harmless when outcomes are steady and devastating when they are rare: a player who can
+Foresight is harmless when outcomes are steady and devastating when they are rare. A player who can
 scan thousands of regions for the one future holding a great roll gets that roll's value without
 playing for it, and a market lets them sell it. The economy's one hard rule follows:
 
@@ -20,17 +20,17 @@ playing for it, and a market lets them sell it. The economy's one hard rule foll
 
 ## The Mode Choice
 
-Every avatar chooses its economy at creation, and the choice is a single fact: who holds the
-avatar's loot key.
+Every avatar chooses its economy at creation: **Trade** or **Self-Found** (working labels). The
+choice is a single fact — who holds the avatar's loot key.
 
-- **Trade** (working label) — full market access. The avatar's loot key stays on the server, so
-  drops resolve as the run's records land: live while connected, and in one reveal on returning from
-  offline. The same expedition yields the same loot either way — being away changes when loot is
-  seen, never what it is worth.
-- **Self-Found** (working label) — the avatar's loot key lives with the player, so loot resolves
-  locally, offline, in real time, juice included. Nothing the avatar earns can ever be traded,
-  gifted, or moved to another avatar. Foresight is legitimate texture: planning around a computed
-  future is the mode's own kind of mastery.
+- **Trade** — full market access. The avatar's loot key stays on the server, so drops resolve as the
+  run's records land: live while connected, in one reveal on returning from offline. The same
+  expedition yields the same loot either way — being away changes when loot is seen, never what it
+  is worth.
+- **Self-Found** — the avatar's loot key lives with the player, so loot resolves locally, offline,
+  in real time, juice included. Nothing the avatar earns can ever be traded, gifted, or moved to
+  another avatar. Foresight is legitimate texture: planning around a computed future is the mode's
+  own kind of mastery.
 
 Trade is the default and the pre-selected choice at creation. Self-Found is a deliberate opt-in
 behind an explicit warning, because the choice is permanent: a self-found avatar's wealth was rolled
@@ -43,12 +43,14 @@ finds — that is why they take a moment to appear and why they can be sold — 
 avatar's haul is off the books, never assayed, kept in its own hands. Both labels follow the naming
 grammar in the core note before they reach the UI.
 
-Mode partitions every economic container and every reward-bearing space, as a standing invariant
-rather than a list: stashes, banks, ladders, prize events — anything that stores value or pays it
-out is scoped to one mode, and no container is ever shared across the boundary, including between
-one account's own avatars. Self-found ladders rank on server-verifiable play — depth, level, clear
-speed — never on gear, which only the player's own device rolled. Avatars are league-scoped, so
-league resets contain self-found holdings with no extra rule.
+Mode partitions every economic container and every reward-bearing space — a standing invariant, not
+a list of today's features:
+
+- No container is shared across the boundary — stashes, banks, prize pools — including between one
+  account's own avatars.
+- Self-found ladders rank on server-verifiable play — depth, level, clear speed — never on gear,
+  which only the player's own device rolled.
+- Avatars are league-scoped, so league resets contain self-found holdings with no extra rule.
 
 ## Predictable Outcomes
 
@@ -62,8 +64,8 @@ everything the trajectory carries is priced for foresight:
 - **Drop slots.** Which kills yield loot, and how many, is trajectory knowledge: foreseeing it
   reveals a route's throughput, never what any slot contains.
 
-Because slot counts are foreseeable and every slot carries market value for a trade avatar, drop
-density obeys the tail rule that drop quality no longer needs: routes may differ modestly in drops
+Slot counts are foreseeable, and every slot carries market value for a trade avatar. Drop density
+therefore obeys the tail rule that drop quality no longer needs: routes may differ modestly in drops
 per hour — grindy play averages out — but no route is a density jackpot worth scanning thousands of
 futures to find. Density outliers belong in invested content, priced by their cost.
 
@@ -72,12 +74,11 @@ key only after every choice that produced the slot is committed. Loot therefore 
 base expeditions, invested expeditions, the offline loop — with full ordinary variance, and none of
 it can be fished for.
 
-Two consequences the wider economy design carries as obligations. Offline accrual is wall-clock
-metered and non-resettable — an hour of absence yields an hour of progress, capped, with no way to
-bank a window and immediately re-arm it — and because unattended play now mints market-grade loot,
-per-account throughput limits and account-legitimacy gates at market access are economy-design
-prerequisites, alongside sinks sized to a faucet that runs while players sleep. The economy-loop
-note owns them.
+The wider economy design inherits two obligations. First, offline accrual is wall-clock metered and
+non-resettable: an hour of absence yields an hour of progress, capped, and a window cannot be banked
+and immediately re-armed. Second, unattended play mints market-grade loot, so market access needs
+per-account throughput limits and account-legitimacy gates, with sinks sized to a faucet that runs
+while players sleep. The economy-loop note owns both.
 
 ## Juice
 
@@ -94,10 +95,10 @@ rule, not the mechanic:
   sealed server entropy behind the preview flow, online. Self-found avatars craft against their own
   key — nothing is sealed from them, and nothing they make can leave.
 
-Base drops fall everywhere; juice is deliberate investment layered on top, and item crafting is the
-targeted-outcome market — shaping what kind of reward play can produce — beside base play's open
-lottery, its costs a real consumption of wealth. The constraints hold regardless of how juice
-mechanics evolve:
+Base drops fall everywhere; juice is deliberate investment layered on top. Item crafting is the
+targeted-outcome market beside base play's open lottery — it shapes what kind of reward play can
+produce, and its costs are a real consumption of wealth. The constraints hold regardless of how
+juice mechanics evolve:
 
 - Juiced rewards are a separable overlay — never a multiplier on a quantity the player could
   foresee. A multiplier on foreseeable value invites scanning for the best base outcome and
@@ -110,7 +111,7 @@ mechanics evolve:
 ## Extraction & Settlement
 
 Progress and yield render instantly; verification is latency, not a gate on play. Extraction — the
-core note's mid-run banking policy — is where the economy's gate sits: extracted yield joins the
+core note's mid-run banking policy — is where the economy's gate sits. Extracted yield joins the
 avatar's holdings immediately, but for a trade avatar it leaves the account (trade, market, guild)
 only once the checkpoints that produced it verify. Opening a trade bumps the player's unverified
 checkpoints to the front of the verification queue, so honest players feel a brief gate exactly when
