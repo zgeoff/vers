@@ -14,7 +14,7 @@ import { toActivityData } from './to-activity-data';
 /**
  * Db handle plus the version stamps every new activity is minted against.
  */
-export interface StartActivityDeps {
+interface StartActivityDeps {
   readonly contentVersion: string;
   readonly db: Kysely<DB>;
   readonly simVersion: string;

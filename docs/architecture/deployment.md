@@ -6,10 +6,10 @@ Where the stack runs, how a merge reaches production, and how to re-provision it
 
 The stack runs on Fly.io in the `syd` region. `app-web` and `vers-bugsink` (the error tracker,
 `apps/bugsink` — public because browsers post error envelopes directly to it) hold the public
-addresses. The domain services — `service-avatar`, `service-session`, `service-user`,
-`service-verification` — are private, reachable only across the organization's 6PN WireGuard mesh.
-Postgres is a Neon project (see [database](./database.md)); no app runs its own database, Bugsink
-included.
+addresses. The domain services — `service-activity`, `service-avatar`, `service-session`,
+`service-user`, `service-verification` — are private, reachable only across the organization's 6PN
+WireGuard mesh. Postgres is a Neon project (see [database](./database.md)); no app runs its own
+database, Bugsink included.
 
 Every app scales to zero. `auto_stop_machines = 'suspend'` parks an idle machine with its memory
 snapshot for sub-second wake. `app-web` keeps one machine warm (`min_machines_running = 1`) so a
@@ -27,12 +27,12 @@ and mesh traffic is already encrypted, so services set `force_https = false`.
 Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.toml` or Dockerfile.
 Secrets are set with `fly secrets set` and never committed.
 
-| App                                                      | Secrets                                                       |
-| -------------------------------------------------------- | ------------------------------------------------------------- |
-| `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`                     |
-| `service-session`                                        | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY`           |
-| `app-web`                                                | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY` |
-| `vers-bugsink`                                           | `SECRET_KEY`, `DATABASE_URL`, `CREATE_SUPERUSER` (first boot) |
+| App                                                                          | Secrets                                                       |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `service-activity`, `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`                     |
+| `service-session`                                                            | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY`           |
+| `app-web`                                                                    | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY` |
+| `vers-bugsink`                                                               | `SECRET_KEY`, `DATABASE_URL`, `CREATE_SUPERUSER` (first boot) |
 
 - `SERVICE_AUTH_PUBLIC_KEY` — Ed25519 SPKI public key a service verifies inbound calls with.
 - `SERVICE_AUTH_PRIVATE_KEY` — its PKCS8 private half; `app-web` signs outbound s2s tokens with it,
@@ -98,8 +98,8 @@ install stages read that. Each `bun install` layer mounts a BuildKit cache
 
 ### Services
 
-`service-avatar`, `service-session`, `service-user`, and `service-verification` share one
-Dockerfile, compiling to a single executable:
+`service-activity`, `service-avatar`, `service-session`, `service-user`, and `service-verification`
+share one Dockerfile, compiling to a single executable:
 
 1. **pruner** — as above.
 2. **builder** — installs the service's graph from `/manifests`, copies the pruned source, and runs
@@ -134,7 +134,7 @@ Requires `flyctl` authenticated to the `vers` org, the Neon pooled `DATABASE_URL
 Create the apps:
 
 ```sh
-for app in app-web service-avatar service-session service-user service-verification; do
+for app in app-web service-activity service-avatar service-session service-user service-verification; do
   fly apps create "vers-$app" --org vers
 done
 ```
@@ -144,7 +144,7 @@ Give `app-web` public addresses; give each service a private Flycast address and
 ```sh
 fly ips allocate-v4 --shared -a vers-app-web
 fly ips allocate-v6 -a vers-app-web
-for svc in avatar session user verification; do
+for svc in activity avatar session user verification; do
   fly ips allocate-v6 --private -a "vers-service-$svc"
 done
 ```
@@ -155,14 +155,20 @@ Mint the CI deploy token and store it for the workflow:
 fly tokens create deploy --name github-ci | gh secret set FLY_API_TOKEN
 ```
 
-Generate the keys and set each app's secrets:
+Generate the keys and set each app's secrets. The s2s public key also goes into the `vers` 1Password
+vault (`s2s-auth` item, `public-key` field): provisioning a single service later reads it with
+`op read 'op://vers/s2s-auth/public-key'` — the key files below are deleted, and the deployed value
+lives only in Fly's secret store.
 
 ```sh
 openssl genpkey -algorithm ed25519 -out s2s.key
 openssl pkey -in s2s.key -pubout -out s2s.pub
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out session.key
 
-for svc in avatar user verification; do
+op item create --vault vers --category "API Credential" --title s2s-auth \
+  "public-key[text]=$(cat s2s.pub)"
+
+for svc in activity avatar user verification; do
   fly secrets set -a "vers-service-$svc" \
     DATABASE_URL="$DATABASE_URL" \
     SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)"
@@ -230,7 +236,7 @@ for ds in vers-traces vers-logs; do
 done
 
 INGEST="$(op read 'op://vers/axiom/ingest-token')"
-for app in vers-app-web vers-service-avatar vers-service-session vers-service-user vers-service-verification; do
+for app in vers-app-web vers-service-activity vers-service-avatar vers-service-session vers-service-user vers-service-verification; do
   fly secrets set -a "$app" --stage \
     OTEL_EXPORTER_OTLP_ENDPOINT="https://api.axiom.co" \
     OTEL_EXPORTER_OTLP_TRACES_HEADERS="Authorization=Bearer ${INGEST},X-Axiom-Dataset=vers-traces" \
