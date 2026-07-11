@@ -38,8 +38,8 @@ Each service is its own Fly deployment, scale-to-zero, reachable only on the pri
   sessions (RS256 JWTs signed by the session service), and the OTP/TOTP verification flows. The auth
   design is specified in [auth](./auth.md).
 - `service-avatar` — the game-domain service: avatars and their progression.
-- `service-activities` (in build) — owns the game's event store: activity streams of simulation
-  checkpoint batches, and the "current activity" / "latest progress" reads the client resumes from.
+- `service-activity` — owns the game's event store: activity streams of simulation checkpoint
+  batches, and the "current activity" / "latest progress" reads the client resumes from.
 - `service-verifier` (in build) — queue-fed checkpoint-replay worker. Replaying a simulation is
   CPU-bound, so verification runs off the request path with its own scaling profile.
 
@@ -50,12 +50,13 @@ is playing. Provisioning, connection rules, and where the secrets live: [databas
 
 - **Relational identity data** — users, sessions, verifications, avatars — accessed through Kysely,
   migrated by kysely-ctl in `@vers/db`.
-- **Activity checkpoints** (in build) — an append-only table keyed by `(activity_id, version)`, one
-  row per checkpoint batch, range-partitioned by time. The workload is append-heavy submissions,
-  point reads for "latest progress" off a per-activity head row, and full-stream replays during
-  verification — a natural fit for indexed Postgres, with `UNIQUE(activity_id, version)` optimistic
-  concurrency backing the checkpoint hash chain. Verified streams age out on a retention window and
-  cold-archive to object storage, so the hot partitions stay bounded regardless of lifetime volume.
+- **Activity checkpoints** — an append-only table keyed by `(activity_id, version)`, one row per
+  checkpoint batch, alongside a per-activity head row carrying the appended and verified cursors.
+  The workload is append-heavy submissions, point reads for "latest progress" off the head row, and
+  full-stream replays during verification — a natural fit for indexed Postgres, with the head row's
+  compare-and-swap backing the checkpoint hash chain. The table carries no inbound foreign keys and
+  no global uniqueness constraint, so time-range partitioning with a retention window that
+  cold-archives verified streams to object storage is a storage change, not a schema change.
 
 ## Game layer
 
@@ -134,6 +135,7 @@ Applications (`apps/`):
 
 Services (`services/`):
 
+- `services/activity` - activities domain service
 - `services/avatar` - avatar domain service
 - `services/session` - session domain service
 - `services/user` - user domain service
@@ -141,6 +143,7 @@ Services (`services/`):
 
 Contracts (`contracts/`):
 
+- `contracts/activity` - oRPC API declaration for the activities service
 - `contracts/avatar` - oRPC API declaration for the avatar service
 - `contracts/base` - shared contract error taxonomy and base builders
 - `contracts/session` - oRPC API declaration for the session service

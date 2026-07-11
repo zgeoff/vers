@@ -23,11 +23,20 @@ meaningfully longer or shorter when provisioning apps.
 
 ## Activity checkpoint store
 
-The activity checkpoint log shares this Postgres. It is an append-only table keyed by
-`(activity_id, version)`, range-partitioned by time, alongside a per-activity head row carrying the
-appended and verified cursors that the resume read and the verification lock target. Retention is a
-`DROP PARTITION` over streams already verified and cold-archived to object storage — a bulk delete
-that avoids row-by-row churn and keeps the hot set bounded no matter how long the game runs.
+The activities service owns two tables in this Postgres. `activities` is a head row per activity
+stream, carrying the appended and verified cursors plus their timestamps; a partial unique index
+allows only one active row per avatar at a time. `activity_checkpoints` is a plain, append-only log
+keyed by `(activity_id, version)`.
+
+The head row's compare-and-swap is the log's whole concurrency contract: appending a batch updates
+`activities` with a `WHERE appended_head = <expected>` clause, and only a matching row's update
+inserts the batch's checkpoint rows, in the same transaction. A losing race updates zero rows and
+reports the row's current head back to the caller instead of corrupting the stream.
+
+`activity_checkpoints` carries no foreign keys pointing into it and no uniqueness constraint beyond
+its own primary key, so it is partition-ready by construction: time-range partitioning with
+retention that drops whole partitions of already-verified, cold-archived streams is a storage
+change, not a schema or contract change.
 
 ## Connection strings
 
