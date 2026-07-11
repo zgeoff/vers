@@ -20,7 +20,6 @@ test('it updates a verification record', async () => {
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const verification = await createVerificationRow(ctx.db, { type: 'onboarding' });
-
   const result = await client.updateVerification({ id: verification.id, type: '2fa' });
 
   expect(result).toStrictEqual({ updatedID: verification.id });
@@ -42,7 +41,6 @@ test('it leaves the record unchanged when no fields are provided', async () => {
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const verification = await createVerificationRow(ctx.db, { type: 'onboarding' });
-
   const result = await client.updateVerification({ id: verification.id });
 
   expect(result).toStrictEqual({ updatedID: verification.id });

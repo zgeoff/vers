@@ -30,7 +30,6 @@ test('it returns the expected activity state for a client app', () => {
   const ctx = createMockSimulationContext();
   const activityData = createMockActivityData();
   const activity = createActivity(activityData, ctx);
-
   const state = activity.getAppState();
 
   expect(state).toStrictEqual({

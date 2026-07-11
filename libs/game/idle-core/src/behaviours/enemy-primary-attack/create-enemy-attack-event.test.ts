@@ -10,7 +10,6 @@ test('it creates an enemy attack event', () => {
   const ctx = createMockSimulationContext();
   const enemy = createEnemy(enemyData, ctx);
   const time = 1000;
-
   const event = createEnemyAttackEvent(enemy, time);
 
   expect(event).toStrictEqual({

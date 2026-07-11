@@ -14,7 +14,6 @@ function createConnection(runtime: WorkerRuntime): MessagePort {
   const channel = new MessageChannel();
 
   runtime.handleConnect(new MessageEvent('connect', { ports: [channel.port2] }));
-
   channel.port1.start();
 
   return channel.port1;
@@ -98,7 +97,6 @@ test('it stops broadcasting to a connection after it disconnects', async () => {
 
   const survivor = createConnection(runtime);
   const leaving = createConnection(runtime);
-
   const survivorInitialized = waitForMessage(survivor);
 
   survivor.postMessage({ type: ClientMessageType.Initialize } satisfies InitializeMessage);

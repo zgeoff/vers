@@ -7,7 +7,6 @@ import { getRandomEnemies } from './get-random-enemies';
 test('returns the correct number of enemies', () => {
   const activity = createMockActivityData();
   const ctx = createMockSimulationContext();
-
   const enemies = getRandomEnemies(activity, 3, ctx);
 
   expect(enemies).toHaveLength(3);

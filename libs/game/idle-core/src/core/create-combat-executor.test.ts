@@ -47,7 +47,6 @@ test('it processes events', () => {
   });
 
   const enemyGroup = activity.currentEnemyGroup;
-
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
 
   // run the combat for 1s so that all entities should attack once
@@ -64,7 +63,6 @@ test('it returns the expected combat executor state for a client app', () => {
   const activity = createActivity(createMockActivityData(), ctx);
   const avatar = createAvatar(createMockAvatarData(), ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-
   const state = combatExecutor.getAppState();
 
   expect(state).toStrictEqual({

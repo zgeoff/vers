@@ -19,7 +19,6 @@ test('it leaves the pending transaction intact through the fourth failure', asyn
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
 
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
-
   let result;
 
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -44,7 +43,6 @@ test('it deletes the pending transaction after the fifth failed attempt', async 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
 
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
-
   let result;
 
   for (let attempt = 0; attempt < 5; attempt++) {

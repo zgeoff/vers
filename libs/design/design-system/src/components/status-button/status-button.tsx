@@ -87,7 +87,6 @@ export function StatusButton(props: Readonly<Props>) {
   }, [restProps.status]);
 
   const statusIcon = getStatusIcon(lastNonIdleStatus);
-
   const isError = lastNonIdleStatus === StatusButtonStatus.Error;
 
   return (

@@ -22,7 +22,6 @@ function toDraftNode(node: AetherNode): AetherNodeDraft {
  */
 export function generateGraphNodes(maxDifficulty: number): Array<AetherNode> {
   const graph: Array<AetherNodeDraft> = [];
-
   const centralNode = toDraftNode(createAetherNode(0, 0));
 
   graph.push(centralNode);
@@ -42,7 +41,6 @@ export function generateGraphNodes(maxDifficulty: number): Array<AetherNode> {
     const nodesInCurrentLevel = 4 * node.difficulty;
     const nodesInPreviousLevel = nodesInCurrentLevel - 4;
     const nodesInNextLevel = nodesInCurrentLevel + 4;
-
     const startIndexOfCurrentLevel = i - node.index;
     const startIndexOfPreviousLevel = startIndexOfCurrentLevel - nodesInPreviousLevel;
     const startIndexOfNextLevel = startIndexOfCurrentLevel + nodesInCurrentLevel;
@@ -53,7 +51,6 @@ export function generateGraphNodes(maxDifficulty: number): Array<AetherNode> {
       let prevIndex2: number;
       let nextIndex1: number;
       let nextIndex2: number;
-
       const segment = Math.floor(node.index / node.difficulty);
 
       // a good mental model for this is as we get further away from our +X axis (which is represented

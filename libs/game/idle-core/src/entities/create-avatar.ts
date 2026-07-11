@@ -26,7 +26,6 @@ interface ResetConfig {
 
 export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
   const label = createLogLabel('avatar', data.id);
-
   let state = getInitialState(data);
 
   // TODO: pull this out into a util

@@ -24,7 +24,6 @@ test('it renders no canvas of its own', () => {
 
 test('it shows the selected node once the graph reports one', async () => {
   setSelectedNode(node, null);
-
   renderWithRouter(<ExplorePanel />);
 
   const nodeID = await screen.findByTestId('selected-node-id');

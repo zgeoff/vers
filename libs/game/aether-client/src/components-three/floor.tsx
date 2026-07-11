@@ -8,7 +8,6 @@ const position = new Vector3(0, -0.1, 0);
 
 const color = sceneColors.ground;
 const size = 10_000;
-
 const FloorMaterial = extend(MeshBasicNodeMaterial);
 
 export function Floor() {

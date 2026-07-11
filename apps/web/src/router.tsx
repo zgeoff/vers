@@ -26,7 +26,6 @@ const getCSPNonce = createIsomorphicFn()
  */
 export function getRouter() {
   const queryClient = buildQueryClient();
-
   const nonce = getCSPNonce();
 
   const router = createRouter({

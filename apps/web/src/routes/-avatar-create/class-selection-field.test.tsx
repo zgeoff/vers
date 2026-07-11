@@ -14,7 +14,6 @@ function ClassSelectionFieldHarness() {
 
 test('it renders every class as an unselected option with no description shown', () => {
   render(<ClassSelectionField selected={undefined} onSelect={() => {}} />);
-
   expect(screen.getByRole('radio', { name: 'Brute' })).toHaveAttribute('aria-checked', 'false');
   expect(screen.getByRole('radio', { name: 'Scoundrel' })).toHaveAttribute('aria-checked', 'false');
   expect(screen.getByRole('radio', { name: 'Scholar' })).toHaveAttribute('aria-checked', 'false');
@@ -23,7 +22,6 @@ test('it renders every class as an unselected option with no description shown',
 
 test('it marks the selected class and shows its description', () => {
   render(<ClassSelectionField selected="brute" onSelect={() => {}} />);
-
   expect(screen.getByRole('radio', { name: 'Brute' })).toHaveAttribute('aria-checked', 'true');
 
   expect(screen.getByTestId('class-selection-description')).toHaveTextContent(

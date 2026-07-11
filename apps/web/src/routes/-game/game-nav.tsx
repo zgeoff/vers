@@ -35,7 +35,6 @@ const navList = css({ display: 'flex', flexDirection: 'column', gap: '2' });
 export function GameNav() {
   const isVisible = useNavigationVisible();
   const routeContext = useRouteContext({ from: '/_game' });
-
   const links = GAME_NAV_LINKS.filter((link) => !link.flag || routeContext.flags[link.flag]);
 
   return (

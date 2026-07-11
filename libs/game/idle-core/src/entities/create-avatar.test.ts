@@ -16,7 +16,6 @@ import { createAvatar } from './create-avatar';
 test('it creates an avatar with correct initial values', () => {
   const ctx = createMockSimulationContext();
   const data = createMockAvatarData();
-
   const avatar = createAvatar(data, ctx);
 
   expect(avatar.id).toBeString();
@@ -69,7 +68,6 @@ test('it calls all registered handlers when handling a tick', () => {
   const activityData = createMockActivityData();
   const activity = createActivity(activityData, ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-
   const handlerSpy = mock<CombatLifecycleHandler<Avatar>>();
 
   const behaviour: AvatarTestBehaviour = {
@@ -96,7 +94,6 @@ test('it allows removing behaviours', () => {
   const activityData = createMockActivityData();
   const activity = createActivity(activityData, ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-
   const handlerSpy = mock<CombatLifecycleHandler<Avatar>>();
 
   const behaviour: AvatarTestBehaviour = {
@@ -139,7 +136,6 @@ test('it resets all behaviour states when resetting the avatar', () => {
   const ctx = createMockSimulationContext();
   const avatarData = createMockAvatarData();
   const avatar = createAvatar(avatarData, ctx);
-
   const resetHandlerSpy = mock<LifecycleHandler<Avatar>>();
 
   const behaviour: AvatarTestBehaviour = {
@@ -154,7 +150,6 @@ test('it resets all behaviour states when resetting the avatar', () => {
   };
 
   avatar.addBehaviour(behaviour);
-
   avatar.reset();
 
   expect(resetHandlerSpy).toHaveBeenCalledWith(avatar, ctx);
@@ -164,7 +159,6 @@ test('it allows for preserving avatar state when resetting', () => {
   const ctx = createMockSimulationContext();
   const avatarData = createMockAvatarData({ life: 100 });
   const avatar = createAvatar(avatarData, ctx);
-
   const resetHandlerSpy = mock<LifecycleHandler<Avatar>>();
 
   const behaviour: AvatarTestBehaviour = {
@@ -199,7 +193,6 @@ test('it returns the expected avatar state for a client app', () => {
   const ctx = createMockSimulationContext();
   const data = createMockAvatarData();
   const avatar = createAvatar(data, ctx);
-
   const state = avatar.getAppState();
 
   expect(state).toStrictEqual({

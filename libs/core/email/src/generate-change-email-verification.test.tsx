@@ -14,7 +14,6 @@ test('it generates a verification email with the provided configuration', async 
   expect(email.html).toContain(config.newEmail);
   expect(email.html).toContain(config.verificationCode);
   expect(email.html).toContain(config.verificationURL);
-
   expect(email.plainText).toContain('VERIFY YOUR NEW EMAIL ADDRESS');
   expect(email.plainText).toContain(config.newEmail);
   expect(email.plainText).toContain(config.verificationCode);

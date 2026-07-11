@@ -20,7 +20,6 @@ test('it deletes an owned avatar and reports the deleted id', async () => {
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
   const created = await client.createAvatar({ class: 'brute', name: 'Removable' });
-
   const result = await client.deleteAvatar({ id: created.id });
 
   expect(result).toStrictEqual({ deletedID: created.id });

@@ -24,7 +24,6 @@ test('it renders all dev tool controls', () => {
 
 test('it toggles the axes helper visibility', async () => {
   const ctx = setupTest();
-
   const axesHelperCheckbox = screen.getByLabelText('Axes Helper');
 
   expect(axesHelperCheckbox).not.toBeChecked();
@@ -40,7 +39,6 @@ test('it toggles the axes helper visibility', async () => {
 
 test('it toggles the dev camera', async () => {
   const ctx = setupTest();
-
   const devCameraCheckbox = screen.getByLabelText('Dev Camera');
 
   expect(devCameraCheckbox).not.toBeChecked();

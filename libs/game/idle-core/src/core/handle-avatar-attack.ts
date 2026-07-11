@@ -12,7 +12,6 @@ export function handleAvatarAttack(_event: AvatarAttackEvent, avatar: Avatar, ac
     const damage = avatar.calcAttackDamage();
 
     logger.debug(`${label} --> ${damage} damage to ${enemy.id}`);
-
     enemy.receiveDamage(damage);
   }
 }

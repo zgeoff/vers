@@ -157,7 +157,6 @@ function buildProxyNode<
   path: ReadonlyArray<string>,
 ): unknown {
   const untypedOptions: UntypedMockServiceOptions = options;
-
   const target = { handler: (mock: unknown) => buildProcedureHandler(untypedOptions, path, mock) };
 
   return new Proxy(target, {
@@ -254,7 +253,6 @@ function buildMockProcedure(
 
     if (output instanceof Response) {
       onRawResponse(output);
-
       throw new Error('buildContractMock: handler returned a raw Response');
     }
 

@@ -68,7 +68,6 @@ function fakeUpdateSession(
 ): Promise<FakeSession> {
   const state = requireContext();
   const session = findOrCreateSession(state, config.name ?? 'h3');
-
   const partial = typeof update === 'function' ? update(session.data) : update;
 
   if (partial !== undefined) {

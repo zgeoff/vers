@@ -30,7 +30,6 @@ export const verifySession = os.verifySession.handler(async (opts) => {
 
   for (const otherSession of otherSessions) {
     db.pendingTransactionCollection.deleteMany((q) => q.where({ sessionID: otherSession.id }));
-
     db.sessionCollection.delete(otherSession);
   }
 

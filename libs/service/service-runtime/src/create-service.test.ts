@@ -80,7 +80,6 @@ function createTestServiceToken(options: Readonly<CreateTestServiceTokenOptions>
 
 test('it throws at boot when SERVICE_AUTH_PUBLIC_KEY is missing', () => {
   delete process.env['SERVICE_AUTH_PUBLIC_KEY'];
-
   const contract = buildTestContract();
 
   expect(

@@ -16,7 +16,6 @@ export const refreshTokens = os.refreshTokens.handler(async (opts) => {
 
   if (session.expiresAt.getTime() <= Date.now()) {
     db.sessionCollection.delete(session);
-
     throw opts.errors.SESSION_EXPIRED({ data: {} });
   }
 
@@ -25,7 +24,6 @@ export const refreshTokens = os.refreshTokens.handler(async (opts) => {
     opts.input.refreshToken === session.previousRefreshToken
   ) {
     db.sessionCollection.delete(session);
-
     throw opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
   }
 

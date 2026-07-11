@@ -37,7 +37,6 @@ export function Text<C extends React.ElementType = 'p'>(
   props: Readonly<PolymorphicComponentProps<C, TextProps>>,
 ) {
   const { align, as, bold, className, ...restProps } = props;
-
   const Element = as ?? 'p';
 
   return (

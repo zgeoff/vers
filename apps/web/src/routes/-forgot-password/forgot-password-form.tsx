@@ -17,7 +17,6 @@ interface ForgotPasswordFormProps {
 }
 
 const pageInfo = css({ marginBottom: '8', textAlign: 'center' });
-
 const formStyles = css({ marginBottom: '6', width: '96' });
 
 /**

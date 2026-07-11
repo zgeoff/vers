@@ -20,7 +20,6 @@ test('it updates the name of an owned avatar and reports the updated id', async 
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
   const created = await client.createAvatar({ class: 'brute', name: 'Renameable' });
-
   const result = await client.updateAvatar({ id: created.id, name: 'Renamed' });
 
   expect(result).toStrictEqual({ updatedID: created.id });

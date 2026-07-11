@@ -164,7 +164,6 @@ export type Props<C extends React.ElementType = 'button'> = PolymorphicComponent
 
 export function Button<C extends React.ElementType>(props: Readonly<Props<C>>) {
   const { as, className, fullWidth, size, variant, ...restProps } = props;
-
   const Element = as ?? 'button';
 
   return (

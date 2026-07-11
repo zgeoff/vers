@@ -15,7 +15,6 @@ export function filterDistanceGraph(
   graphData: AetherGraph,
 ): AetherGraph {
   const position = selectedNode?.position ?? new Vector3();
-
   const nodes: Record<string, AetherNode> = {};
 
   for (const [id, node] of Object.entries(graphData.nodes)) {

@@ -4,13 +4,11 @@ import { HomeContent } from './home-content';
 
 test('it shows the signed-out message when there is no active session', () => {
   render(<HomeContent result={{ authenticated: false, reason: 'missing-session' }} />);
-
   expect(screen.getByTestId('home-anon')).toHaveTextContent('You are not signed in.');
 });
 
 test('it shows the signed-out message when the session read fails', () => {
   render(<HomeContent result={{ authenticated: false, reason: 'transport-error' }} />);
-
   expect(screen.getByTestId('home-anon')).toHaveTextContent('You are not signed in.');
 });
 

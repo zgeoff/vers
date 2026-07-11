@@ -31,7 +31,6 @@ export function IsometricCamera() {
   const camera = useCamera();
   const isDevCameraActive = useIsDevCameraActive();
   const selectedNode = useSelectedNode();
-
   const [positionX, positionY, positionZ] = getNodeCameraPosition(selectedNode.object3D);
 
   const spring = useSpring({
@@ -70,7 +69,6 @@ export function IsometricCamera() {
     cameraRigRef.current.rotation.copy(ISOMETRIC_CAMERA_ROTATION);
 
     cameraRigRef.current.position.y = CAMERA_DISTANCE;
-
     camera.aspect = state.size.width / state.size.height;
 
     camera.updateProjectionMatrix();
@@ -136,7 +134,6 @@ function useCameraHelper(camera: null | PerspectiveCameraImpl) {
       helperRef.current = null;
 
       scene.remove(helper);
-
       helper.dispose();
     };
   }, [camera, scene]);

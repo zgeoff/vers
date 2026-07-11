@@ -69,7 +69,6 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     // ensure we're only running one loop per worker
     if (!running) {
       running = true;
-
       void tick();
     }
   };

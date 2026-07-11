@@ -9,7 +9,6 @@ try {
 } catch (error) {
   console.error('failed to render email previews');
   console.error(error);
-
   process.exit(1);
 }
 

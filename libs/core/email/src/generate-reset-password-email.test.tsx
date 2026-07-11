@@ -10,7 +10,6 @@ test('it generates a reset password email with the provided configuration', asyn
 
   expect(email.html).toInclude('Forgot your password?');
   expect(email.html).toInclude('https://versidle.com/reset?token=123456');
-
   expect(email.plainText).toInclude('FORGOT YOUR PASSWORD?');
   expect(email.plainText).toInclude('https://versidle.com/reset?token=123456');
 });

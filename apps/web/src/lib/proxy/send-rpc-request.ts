@@ -26,7 +26,6 @@ export async function sendRPCRequest(request: Request, service: ServiceName): Pr
   const headers = new Headers(request.headers);
 
   const actingUserID = await loadSessionActor();
-
   const token = await createEdgeServiceToken({ actingUserID, audience: service });
 
   headers.set('authorization', `Bearer ${token}`);

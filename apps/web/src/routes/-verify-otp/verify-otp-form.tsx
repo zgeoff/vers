@@ -90,7 +90,6 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
   }, [props.type, router, submission.lastResult]);
 
   const { key: _codeKey, ...codeProps } = getInputProps(fields.code, { type: 'text' });
-
   const codeErrors = [...(fields.code.errors ?? []), ...(form.errors ?? [])];
 
   return (

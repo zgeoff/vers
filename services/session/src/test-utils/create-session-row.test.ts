@@ -6,7 +6,6 @@ test('it inserts a session row owned by the given user', async () => {
   await using testDB = await createTestDB();
 
   const created = await createTestUser(testDB.db);
-
   const session = await createSessionRow(testDB.db, { userId: created.user.id });
 
   const row = await testDB.db

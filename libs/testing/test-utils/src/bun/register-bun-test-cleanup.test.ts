@@ -6,7 +6,6 @@ import { updateEnv } from './update-env';
 
 test('it overrides an env var for this test only', () => {
   updateEnv('REGISTER_BUN_TEST_CLEANUP_PROBE', 'overridden');
-
   expect(process.env['REGISTER_BUN_TEST_CLEANUP_PROBE']).toBe('overridden');
 });
 

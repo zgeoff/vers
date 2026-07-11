@@ -12,7 +12,6 @@ import { resolveTestDBTarget } from './test-support/resolve-test-db-target';
 async function createEmptyDB() {
   const baseURI = resolveTestDBTarget().baseURI;
   const dbName = `test_${createId()}`;
-
   const setupClient = postgres(`${baseURI}/postgres`);
 
   await setupClient.unsafe(/* SQL */ `CREATE DATABASE ${dbName}`);
@@ -23,7 +22,6 @@ async function createEmptyDB() {
 
 test('it applies pending migrations once and is a no-op the second time', async () => {
   const databaseURL = await createEmptyDB();
-
   const first = await migrateToLatest({ databaseURL });
 
   expect(first.error).toBeUndefined();

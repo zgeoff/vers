@@ -11,9 +11,7 @@ interface AvatarInfoProps {
 
 export function AvatarInfo(props: Readonly<AvatarInfoProps>) {
   const classData = classes[props.avatar.class];
-
   const lastAttackTime = props.avatar.behaviours.avatarWeaponAttack?.lastAttackTime ?? 0;
-
   const attackSpeed = props.avatar.mainHandAttack?.speed ?? 0;
   const nextAttackTime = lastAttackTime + 1000 / attackSpeed;
 

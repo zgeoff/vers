@@ -20,7 +20,6 @@ test('it deletes a verification record', async () => {
   const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
 
   const verification = await createVerificationRow(ctx.db);
-
   const result = await client.deleteVerification({ id: verification.id });
 
   expect(result).toStrictEqual({ deletedID: verification.id });

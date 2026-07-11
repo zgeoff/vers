@@ -4,7 +4,6 @@ import { generateGraphNodes } from './src/generate-graph-nodes';
 import { getCompressedAetherGraph } from './src/get-compressed-aether-graph';
 
 const MAX_DIFFICULTY = 100;
-
 const graph = generateGraphNodes(MAX_DIFFICULTY);
 const graphData = getCompressedAetherGraph(graph);
 

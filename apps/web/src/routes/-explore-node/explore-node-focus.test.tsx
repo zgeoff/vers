@@ -21,7 +21,6 @@ const graph: AetherGraph = {
 test('it selects the graph node matching the route param', () => {
   setAetherGraph(graph);
   setSelectedNode(null);
-
   render(<ExploreNodeFocus nodeID="node1" />);
 
   const hook = renderHook(() => useSelectedNode());

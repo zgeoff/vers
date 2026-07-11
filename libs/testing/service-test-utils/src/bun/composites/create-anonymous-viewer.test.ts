@@ -6,9 +6,7 @@ import { createAnonymousViewer } from './create-anonymous-viewer';
 
 test('it mints a valid token carrying no acting subject', async () => {
   const keyPair = await getTestServiceKeyPair();
-
   const viewer = await createAnonymousViewer({ audience: 'create-anonymous-viewer-spec' });
-
   const publicKey = await jose.importSPKI(keyPair.publicKeyPEM, TOKEN_ALGORITHM);
 
   const verified = await jose.jwtVerify(viewer.token, publicKey, {

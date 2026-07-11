@@ -27,7 +27,6 @@ test('it returns true when elapsed time is equal or greater than the next attack
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-
   const state = { lastAttackTime: 0 };
 
   executor.run(1000);
@@ -57,7 +56,6 @@ test('it returns false when elapsed time is less than the next attack time', () 
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-
   const state = { lastAttackTime: 0 };
 
   executor.run(999);
@@ -83,7 +81,6 @@ test('it uses the last attacked time to calculate the next attack time', () => {
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-
   const state = { lastAttackTime: 999 };
 
   expect(isAttackReady(avatar, state, executor)).toBeFalse();
@@ -109,12 +106,10 @@ test('it returns false when the avatar is dead', () => {
   });
 
   const activityData = createMockActivityData({ enemies: [enemyData] });
-
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
   const activity = createActivity(activityData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-
   const state = { lastAttackTime: 0 };
 
   avatar.receiveDamage(100);

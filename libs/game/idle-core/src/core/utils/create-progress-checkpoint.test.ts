@@ -31,7 +31,6 @@ test('it includes a hash based on checkpoint data', () => {
   activity.elapseTime(2500);
 
   const checkpoint = createProgressCheckpoint(activity, ctx);
-
   const { hash, ...hashParts } = checkpoint;
 
   expect(hash).toStrictEqual(hashObject(ctx.hasher, hashParts));

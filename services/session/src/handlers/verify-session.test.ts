@@ -58,7 +58,6 @@ test("it mints tokens verifiable with the signing key's public half", async () =
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const result = await client.verifySession({ id: session.id });
-
   const keyPair = await getTestJWTKeyPair();
   const publicKey = await jose.importSPKI(keyPair.publicKeyPEM, 'RS256');
   const accessVerification = await jose.jwtVerify(result.accessToken, publicKey);

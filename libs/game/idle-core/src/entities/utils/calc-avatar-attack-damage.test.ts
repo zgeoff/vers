@@ -20,7 +20,6 @@ test('it calculates the damage for an avatar attack', () => {
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-
   const damage = calcAvatarAttackDamage(avatar, ctx);
 
   expect(damage).toBe(10);

@@ -30,7 +30,6 @@ test('it sends nothing before a worker has connected', async () => {
 
   await withIdleWorkerHandle({ activity: undefined, initialized: false, worker: undefined }, () => {
     render(<GameSimulationMount />);
-
     expect(calls).toStrictEqual([]);
   });
 });

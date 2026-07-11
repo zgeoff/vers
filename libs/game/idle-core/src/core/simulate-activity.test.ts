@@ -27,7 +27,6 @@ test('it immediately generates a started checkpoint', async () => {
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-
   const generator = simulateActivity(executor, activity, avatar, ctx);
 
   const firstResult = await generator.next();
@@ -70,7 +69,6 @@ test('it generates enemy group killed checkpoints', async () => {
   const activity = createActivity(activityData, ctx, { groupSize: 5 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-
   const generator = simulateActivity(executor, activity, avatar, ctx);
 
   // skip the started checkpoint
@@ -118,7 +116,6 @@ test('it generates a failed checkpoint when the avatar dies', async () => {
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-
   const generator = simulateActivity(executor, activity, avatar, ctx);
 
   let result = await generator.next(1000);
@@ -165,7 +162,6 @@ test('it returns a completed checkpoint when all enemies are defeated', async ()
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-
   const generator = simulateActivity(executor, activity, avatar, ctx);
 
   let result = await generator.next(1000);

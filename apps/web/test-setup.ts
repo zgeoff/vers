@@ -22,7 +22,6 @@ MC4CAQAwBQYDK2VwBCIEIBMom57erggdVdDCIdRWS+NKMykK+I5BUKpuHziAq+0W
 
 // a fixed seed keeps faker-defaulted mock rows reproducible run-to-run
 faker.seed(1);
-
 GlobalRegistrator.register();
 
 // happy-dom ships no `SharedWorker`; define a placeholder so the app's support check reports the
@@ -33,23 +32,15 @@ function SharedWorkerPlaceholder(): void {
 }
 
 Reflect.set(globalThis, 'SharedWorker', SharedWorkerPlaceholder);
-
 expect.extend(jestDOMMatchers);
 
 registerMSWLifecycle(server);
-
 registerRequestContextMock();
-
 registerIdleWorkerHandleMock();
-
 registerGameCanvasMock();
-
 registerAvatarViewerMock();
-
 registerAetherSceneMock();
-
 registerRespiteSceneMock();
-
 registerAetherNodeCodexSlotMock();
 
 // Imported dynamically, after `GlobalRegistrator.register()`: `@testing-library/react` reads

@@ -43,16 +43,19 @@ function isTestContainerReachable(): Promise<boolean> {
 
     socket.once('connect', () => {
       socket.destroy();
+
       resolve(true);
     });
 
     socket.once('timeout', () => {
       socket.destroy();
+
       resolve(false);
     });
 
     socket.once('error', () => {
       socket.destroy();
+
       resolve(false);
     });
   });

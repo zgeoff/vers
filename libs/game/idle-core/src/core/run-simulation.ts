@@ -48,7 +48,6 @@ export async function runSimulation(
     // bail out if we've reached our desired seed
     if (simulation.seed === config.stopAtSeed) {
       logger.debug(`${label} stopping at seed ${simulation.seed}`);
-
       break;
     }
 
@@ -66,7 +65,6 @@ export async function runSimulation(
       await simulation.stopActivity();
 
       logger.debug(`${label} activity exceeded duration, aborting`);
-
       break;
     }
 
@@ -75,7 +73,6 @@ export async function runSimulation(
 
     if (isStartedCheckpoint(checkpoint)) {
       logger.debug(`${label} activity started`);
-
       continue;
     }
 
@@ -83,29 +80,23 @@ export async function runSimulation(
 
     if (isFailed && activity.failureAction === ActivityFailureAction.Abort) {
       logger.debug(`${label} activity failed, aborting`);
-
       break;
     }
 
     if (isFailed && activity.failureAction === ActivityFailureAction.Retry) {
       logger.debug(`${label} activity failed, retrying`);
-
       simulation.restartActivity();
-
       continue;
     }
 
     if (isProgressCheckpoint(checkpoint)) {
       logger.debug(`${label} progress checkpoint`);
-
       continue;
     }
 
     if (isCompletedCheckpoint(checkpoint)) {
       logger.debug(`${label} activity completed`);
-
       simulation.restartActivity();
-
       continue;
     }
 

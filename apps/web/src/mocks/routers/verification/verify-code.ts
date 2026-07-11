@@ -18,7 +18,6 @@ export const verifyCode = os.verifyCode.handler((opts) => {
 
   if (row.expiresAt !== null && row.expiresAt < new Date()) {
     db.verificationCollection.delete(row);
-
     throw opts.errors.CODE_EXPIRED({ data: {} });
   }
 

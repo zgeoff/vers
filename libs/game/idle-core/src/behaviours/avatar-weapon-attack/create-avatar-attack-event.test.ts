@@ -10,7 +10,6 @@ test('it creates an avatar attack event', () => {
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
   const time = 1000;
-
   const event = createAvatarAttackEvent(avatar, time);
 
   expect(event).toStrictEqual({
