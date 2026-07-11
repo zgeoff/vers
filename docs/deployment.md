@@ -163,17 +163,18 @@ secret, and set the web project's DSN as the `VITE_SENTRY_DSN` GitHub Actions va
 (`SENTRY_AUTH_TOKEN` GitHub secret) and one for the MCP server, added to the vault item as
 `mcp-token`.
 
-Stand up the telemetry backend. The Axiom account is created in its UI; its tokens live on the
-`axiom` item in the `vers` 1Password vault: `ingest-token` (ingest on all datasets — the fleet's
-export credential), `mcp-token` (query, for read-only investigation), and `break-glass-token` (every
-permission except billing, for dataset/dashboard/monitor administration). Create one dataset per
-signal and point the fleet at them:
+Stand up the telemetry backend. The Axiom account is created in its UI; its standing tokens live on
+the `axiom` item in the `vers` 1Password vault: `ingest-token` (ingest on all datasets — the fleet's
+export credential) and `mcp-token` (query, for read-only investigation). Administration — creating
+datasets, dashboards, monitors, notifiers — uses a short-lived token minted in the UI with
+management scopes and revoked when the work is done. Create one dataset per signal and point the
+fleet at them:
 
 ```sh
-BREAK_GLASS="$(op read 'op://vers/axiom/break-glass-token')"
+ADMIN="<short-lived management token from the Axiom UI>"
 for ds in vers-traces vers-logs; do
   curl -s -X POST https://api.axiom.co/v1/datasets \
-    -H "Authorization: Bearer $BREAK_GLASS" -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $ADMIN" -H "Content-Type: application/json" \
     -d "{\"name\":\"$ds\"}"
 done
 
@@ -188,8 +189,8 @@ done
 
 The `vers services — baseline` dashboard (request rate, 5xx responses, and p95 latency per service,
 plus an error-log stream) and the `vers 5xx responses` threshold monitor are created through the
-same API with the break-glass token; the monitor notifies the `vers alerts` notifier. Agent access
-goes through the hosted MCP server (`https://mcp.axiom.co/mcp`, OAuth) declared in `.mcp.json`.
+same API; the monitor notifies the `vers alerts` notifier. Agent access goes through the hosted MCP
+server (`https://mcp.axiom.co/mcp`, OAuth) declared in `.mcp.json`.
 
 The next push to `main` fills the machines.
 
