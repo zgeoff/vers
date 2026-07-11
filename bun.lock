@@ -113,6 +113,23 @@
         "typescript": "catalog:",
       },
     },
+    "contracts/activity": {
+      "name": "@vers/contract-activity",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@vers/contract-base": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@orpc/openapi": "catalog:",
+        "@orpc/zod": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "contracts/avatar": {
       "name": "@vers/contract-avatar",
       "version": "0.0.0",
@@ -1990,6 +2007,8 @@
     "@ver0/deep-equal": ["@ver0/deep-equal@1.0.1", "", {}, "sha512-XSvL5wKXBZIv7fflMqhQx936sRpEtzxeV25xAEt0rLLXzbF6RCQaRA1jrVIn8JCubMyn/y0TaidphUtilLzl1A=="],
 
     "@vers/client-test-utils": ["@vers/client-test-utils@workspace:libs/testing/client-test-utils"],
+
+    "@vers/contract-activity": ["@vers/contract-activity@workspace:contracts/activity"],
 
     "@vers/contract-avatar": ["@vers/contract-avatar@workspace:contracts/avatar"],
 
