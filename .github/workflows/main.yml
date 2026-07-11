@@ -105,26 +105,48 @@ jobs:
           include-hidden-files: true
           path: apps/web-e2e/.test-results
 
+  migrate:
+    name: Migrate database
+    needs: checks
+    # migrations are a deploy action, not a check: they run exactly once per
+    # green push — several services share the one database, so they never run
+    # per-service — and, like rollouts, are never cancelled mid-run; a newer
+    # push queues behind them. Idempotent: kysely-ctl no-ops when up to date.
+    if: ${{ needs.checks.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    concurrency:
+      group: ${{ github.workflow }}-migrate
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
       - name: Run Database Migrations
-        # only on a fully green run, and exactly once per push — several
-        # services share the one database, so migrations never run
-        # per-service. Idempotent: kysely-ctl no-ops when up to date.
-        # The deploy job orders after this via `needs: checks`.
-        if: ${{ success() }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: bun run --cwd libs/data/db db:migrate
 
   deploy:
     name: Deploy
-    needs: checks
-    # deploy only a fully green build. Runs after `checks`, so the migration step
-    # there has already applied to Neon. Each leg self-gates inside the deploy CLI:
-    # it compares HEAD against the GIT_SHA stamped on the app's machines, so a
-    # deploy skipped by an earlier failure or cancellation stays "stale" and
-    # ships on the next push instead of being lost with the push delta.
-    if: ${{ needs.checks.result == 'success' }}
+    needs: [checks, migrate]
+    # deploy only a fully green build, after the shared schema is current. Each
+    # leg self-gates inside the deploy CLI: it compares HEAD against the GIT_SHA
+    # stamped on the app's machines, so a deploy skipped by an earlier failure
+    # or cancellation stays "stale" and ships on the next push instead of being
+    # lost with the push delta.
+    if: ${{ needs.checks.result == 'success' && needs.migrate.result == 'success' }}
     runs-on: ubuntu-latest
+    environment: production
     # worst observed leg (app-web remote build + bluegreen cutover) is ~5
     # minutes; 3× headroom for builder variance without holding the queue
     timeout-minutes: 15
@@ -182,6 +204,7 @@ jobs:
     # still running code from before a cancelled rollout) and fails the run.
     if: ${{ !cancelled() && needs.checks.result == 'success' }}
     runs-on: ubuntu-latest
+    environment: production
     # six fleet reads plus probe retries fit in ~3 minutes at worst
     timeout-minutes: 10
     concurrency:
@@ -198,3 +221,36 @@ jobs:
         with:
           args: verify
           fly-api-token: ${{ secrets.FLY_API_TOKEN }}
+
+  alert:
+    name: Alert on failure
+    needs: [checks, migrate, deploy, verify-fleet]
+    # a red main pipeline pages the team channel: agent-driven pushes mean
+    # nobody is necessarily watching the Actions tab, and a failed deploy or
+    # fleet verification left unnoticed is exactly how version skew lingers
+    if: ${{ !cancelled() && contains(join(needs.*.result, ','), 'failure') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - name: Send Discord alert
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FAILED: >-
+            checks=${{ needs.checks.result }}, migrate=${{ needs.migrate.result }}, deploy=${{
+            needs.deploy.result }}, verify-fleet=${{ needs.verify-fleet.result }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          if [ -z "${WEBHOOK_URL}" ]; then
+            echo "DISCORD_WEBHOOK_URL not configured; skipping alert"
+            exit 0
+          fi
+          subject="$(printf '%s' "${COMMIT_MSG}" | head -n 1)"
+          payload="$(jq -n \
+            --arg title "main pipeline failed: ${subject}" \
+            --arg url "${RUN_URL}" \
+            --arg desc "${FAILED}" \
+            '{embeds: [{title: $title, url: $url, description: $desc, color: 15548997}]}')"
+          curl -fsS -H 'content-type: application/json' -d "${payload}" "${WEBHOOK_URL}"

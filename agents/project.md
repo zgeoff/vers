@@ -110,7 +110,11 @@ the new SHA, then runs the app's probes; `verify` asserts every manifest app is 
 exist, warm floors met) and current, failing on any finding. CI's deploy matrix and its
 `verify-fleet` job — the gate that runs on every green main push even when no deploy leg fired —
 both call the CLI through the `.github/actions/fly-deploy` composite action; locally the CLI needs
-only a `FLY_API_TOKEN`.
+only a `FLY_API_TOKEN`. Database migrations run in their own never-cancelled `migrate` job between
+`checks` and the deploy fan-out, once per green push. The deploy-phase jobs target the `production`
+GitHub environment, which holds the Fly, database, and error-tracker secrets — repo-level secrets
+carry only what PR checks need. A red main pipeline posts to Discord through the environment's
+webhook secret.
 
 ## Styling
 
