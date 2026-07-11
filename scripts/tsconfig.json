@@ -1,4 +1,17 @@
 {
   "extends": "../tsconfig.base.json",
-  "include": ["**/*.ts", "**/*.tsx", "../projects/**/*.ts", "../projects/**/*.tsx"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "../apps/**/*.ts",
+    "../apps/**/*.tsx",
+    "../services/**/*.ts",
+    "../services/**/*.tsx",
+    "../contracts/**/*.ts",
+    "../contracts/**/*.tsx",
+    "../libs/**/*.ts",
+    "../libs/**/*.tsx",
+    "../infra/**/*.ts",
+    "../infra/**/*.tsx"
+  ]
 }

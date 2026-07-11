@@ -6,7 +6,11 @@
   "author": "Geoff Whatley <me@geoffwhatley.com> (http://github.com/meatwallace)",
   "workspaces": {
     "packages": [
-      "projects/*"
+      "apps/*",
+      "services/*",
+      "contracts/*",
+      "libs/*/*",
+      "infra"
     ],
     "catalog": {
       "@ark-ui/react": "5.37.2",
@@ -143,16 +147,16 @@
     "pg:reset-dev": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/pg-reset-dev-db.ts",
     "pg:test-container:start": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/pg-test-container-start.ts",
     "pg:test-container:stop": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/pg-test-container-stop.ts",
-    "ladle:dev": "cd projects/lib-design-system && ./node_modules/.bin/ladle dev",
+    "ladle:dev": "cd libs/design/design-system && ./node_modules/.bin/ladle dev",
     "stack": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/stack-cli.ts",
     "---PROJECT-SPECIFIC": "",
     "dev:app-web": "turbo run dev --filter=@vers/web",
-    "dev:service-avatar": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/stack-cli.ts stop service-avatar && dotenvx run -f projects/service-avatar/.env.development -- turbo run dev --filter=@vers/service-avatar",
-    "dev:service-session": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/stack-cli.ts stop service-session && dotenvx run -f projects/service-session/.env.development -- turbo run dev --filter=@vers/service-session",
-    "dev:service-user": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/stack-cli.ts stop service-user && dotenvx run -f projects/service-user/.env.development -- turbo run dev --filter=@vers/service-user",
-    "dev:service-verification": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/stack-cli.ts stop service-verification && dotenvx run -f projects/service-verification/.env.development -- turbo run dev --filter=@vers/service-verification",
+    "dev:service-avatar": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/stack-cli.ts stop service-avatar && dotenvx run -f services/avatar/.env.development -- turbo run dev --filter=@vers/service-avatar",
+    "dev:service-session": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/stack-cli.ts stop service-session && dotenvx run -f services/session/.env.development -- turbo run dev --filter=@vers/service-session",
+    "dev:service-user": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/stack-cli.ts stop service-user && dotenvx run -f services/user/.env.development -- turbo run dev --filter=@vers/service-user",
+    "dev:service-verification": "tsx --tsconfig ./scripts/tsconfig.json ./scripts/stack-cli.ts stop service-verification && dotenvx run -f services/verification/.env.development -- turbo run dev --filter=@vers/service-verification",
     "e2e:app-web": "turbo run e2e --filter=@vers/web-e2e",
-    "serve:app-web": "dotenvx run -f projects/app-web/.env.development.local -- node ./projects/app-web/server.mjs",
+    "serve:app-web": "dotenvx run -f apps/web/.env.development.local -- node ./apps/web/server.mjs",
     "---UTILITY": "",
     "prepare": "command -v git > /dev/null 2>&1 && lefthook install --force || true"
   },

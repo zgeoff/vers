@@ -166,7 +166,7 @@
           { "from": "package", "name": "PostgresError", "package": "postgres" },
           // stateful factory-return handle: getInt/getSeries/generateNewSeed
           // close over a mutable seed, so there is no readonly form to consume
-          { "from": "file", "name": "RNG", "path": "../lib-game-utils/src/types.ts" },
+          { "from": "file", "name": "RNG", "path": "../game-utils/src/types.ts" },
           // three.js scene-graph handles: mutated in place every frame
           // (position/rotation writes, matrix updates) by design, so no
           // readonly form of them is useful to a caller
@@ -186,27 +186,39 @@
           {
             "from": "file",
             "name": ["ActivityData", "ActivityAppState", "AetherNodeActivityData", "Activity"],
-            "path": "../lib-idle-core/src/types/activity.ts"
+            "path": "../idle-core/src/types/activity.ts"
+          },
+          // from-file paths resolve against the consuming package's directory, so
+          // consumers outside libs/game/ need their own entry per depth
+          {
+            "from": "file",
+            "name": ["ActivityData", "ActivityAppState", "AetherNodeActivityData", "Activity"],
+            "path": "../../libs/game/idle-core/src/types/activity.ts"
           },
           {
             "from": "file",
             "name": ["AvatarData", "EnemyData", "Avatar", "Enemy", "EnemyGroup"],
-            "path": "../lib-idle-core/src/types/entities.ts"
+            "path": "../idle-core/src/types/entities.ts"
+          },
+          {
+            "from": "file",
+            "name": ["AvatarData", "EnemyData", "Avatar", "Enemy", "EnemyGroup"],
+            "path": "../../libs/game/idle-core/src/types/entities.ts"
           },
           {
             "from": "file",
             "name": ["Simulation", "SimulationContext"],
-            "path": "../lib-idle-core/src/types/simulation.ts"
+            "path": "../idle-core/src/types/simulation.ts"
           },
           {
             "from": "file",
             "name": "CombatExecutor",
-            "path": "../lib-idle-core/src/types/combat.ts"
+            "path": "../idle-core/src/types/combat.ts"
           },
           {
             "from": "file",
             "name": ["Behaviour", "AvatarBehaviour", "EnemyBehaviour"],
-            "path": "../lib-idle-core/src/types/behaviour.ts"
+            "path": "../idle-core/src/types/behaviour.ts"
           }
         ]
       }
@@ -305,7 +317,7 @@
       // playwright resolves fixtures by statically parsing the destructure
       // pattern in a test callback's first parameter — a plain parameter
       // fails at collection, so the framework convention wins here
-      "files": ["**/projects/app-web-e2e/src/**"],
+      "files": ["**/apps/web-e2e/src/**"],
       "rules": {
         "zgeoff/no-destructured-params": "off"
       }
@@ -316,10 +328,10 @@
       // Error instance. all 9 violations `lint:type-aware` found here are that
       // idiom, not a bug
       "files": [
-        "**/projects/app-web/src/routes/**/*.ts",
-        "**/projects/app-web/src/routes/**/*.tsx",
-        "**/projects/app-web/src/lib/auth/**/*.ts",
-        "**/projects/app-web/src/lib/avatar/**/*.tsx"
+        "**/apps/web/src/routes/**/*.ts",
+        "**/apps/web/src/routes/**/*.tsx",
+        "**/apps/web/src/lib/auth/**/*.ts",
+        "**/apps/web/src/lib/avatar/**/*.tsx"
       ],
       "rules": {
         "typescript/only-throw-error": "off"
@@ -328,7 +340,7 @@
     {
       // react-three-fiber props aren't DOM attributes — same ignore list the
       // eslint config carried for the r3f renderer
-      "files": ["**/projects/lib-aether-client/**/*.ts", "**/projects/lib-aether-client/**/*.tsx"],
+      "files": ["**/libs/game/aether-client/**/*.ts", "**/libs/game/aether-client/**/*.tsx"],
       "rules": {
         "react/no-unknown-property": [
           "error",
@@ -365,9 +377,11 @@
     "**/*.json",
     "**/*timestamp*.mjs",
     "**/mockServiceWorker.js",
-    "**/projects/app-design-reference/public/**",
+    "**/apps/design-reference/public/**",
     "**/.react-router/**",
-    "**/styled-system/**",
+    "**/apps/web/src/styled-system/**",
+    "**/libs/design/design-system/src/styled-system/**",
+    "**/libs/design/styled-system/styled-system/**",
     "**/.ladle/**"
   ]
 }

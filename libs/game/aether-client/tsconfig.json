@@ -1,0 +1,10 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
+    "types": ["node", "bun", "vite/client", "@zgeoff/bun-test-extended"]
+  },
+  "files": [],
+  "include": ["test-setup.ts", "augment-bun-test.ts", "src/**/*.ts", "src/**/*.tsx"],
+  "exclude": []
+}

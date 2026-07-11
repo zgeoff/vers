@@ -15,12 +15,12 @@ platform: the app owns the pipe, the provider owns one job.
 
 ## Communication
 
-- **Resend** — transactional email, sent from React Email templates in `lib-email`.
+- **Resend** — transactional email, sent from React Email templates in `@vers/email`.
 
 ## Observability
 
-- **Bugsink** — error tracking, self-hosted on Fly (`projects/app-bugsink`). Browser and server
-  exceptions ingest over the Sentry protocol.
+- **Bugsink** — error tracking, self-hosted on Fly (`apps/bugsink`). Browser and server exceptions
+  ingest over the Sentry protocol.
 - **Axiom** — traces, logs, and metrics. The OpenTelemetry export path from every service and the
   web server lands here.
 

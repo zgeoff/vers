@@ -3,8 +3,8 @@
   "ignore": [
     "**/augment-bun-test.ts",
     "**/*.generated.ts",
-    "projects/app-design-reference/public/**",
-    "projects/lib-aether-core/generate-graph.ts"
+    "apps/design-reference/public/**",
+    "libs/game/aether-core/generate-graph.ts"
   ],
   "ignoreBinaries": ["ladle", "op", "pulumi"],
   "rules": { "enumMembers": "off" },
@@ -20,7 +20,7 @@
         "@zgeoff/oxlint-config"
       ]
     },
-    "projects/app-web": {
+    "apps/web": {
       "entry": [
         "src/routes/**/*.{ts,tsx}",
         "src/server.ts",
@@ -32,17 +32,17 @@
       ],
       "ignoreDependencies": ["pino", "pino-pretty"]
     },
-    "projects/lib-db": {
+    "libs/data/db": {
       "entry": ["kysely.config.ts", "migrations/*.ts", "seeds/*.ts"]
     },
-    "projects/service-*": {
+    "services/*": {
       "entry": ["src/serve.ts"],
       "ignoreDependencies": ["@orpc/contract"]
     },
-    "projects/lib-service-utils": {
+    "libs/service/service-utils": {
       "ignoreDependencies": ["pino-pretty"]
     },
-    "projects/lib-design-system": {
+    "libs/design/design-system": {
       "ignoreDependencies": [
         "@fontsource-variable/manrope",
         "@fontsource/chakra-petch",
@@ -50,19 +50,19 @@
         "happy-dom"
       ]
     },
-    "projects/lib-styled-system": {
+    "libs/design/styled-system": {
       "ignoreDependencies": ["react"]
     },
-    "projects/lib-aether-client": {
+    "libs/game/aether-client": {
       "ignoreDependencies": ["happy-dom"]
     },
-    "projects/lib-email": {
+    "libs/core/email": {
       "ignoreDependencies": ["happy-dom"]
     },
-    "projects/lib-idle-client": {
+    "libs/game/idle-client": {
       "ignoreDependencies": ["happy-dom"]
     },
-    "projects/lib-game-rendering": {
+    "libs/game/game-rendering": {
       "ignoreDependencies": ["happy-dom"]
     }
   }

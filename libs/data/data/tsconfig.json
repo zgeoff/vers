@@ -1,0 +1,9 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "files": [],
+  "include": ["src/**/*.ts"],
+  "exclude": []
+}

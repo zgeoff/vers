@@ -5,8 +5,8 @@ Where the stack runs, how a merge reaches production, and how to re-provision it
 ## Topology
 
 The stack runs on Fly.io in the `syd` region. `app-web` and `vers-bugsink` (the error tracker,
-`projects/app-bugsink` — public because browsers post error envelopes directly to it) hold the
-public addresses. The domain services — `service-avatar`, `service-session`, `service-user`,
+`apps/bugsink` — public because browsers post error envelopes directly to it) hold the public
+addresses. The domain services — `service-avatar`, `service-session`, `service-user`,
 `service-verification` — are private, reachable only across the organization's 6PN WireGuard mesh.
 Postgres is a Neon project (see [database](./database.md)); no app runs its own database, Bugsink
 included.
@@ -66,8 +66,8 @@ host-capacity refusals ("could not reserve resource"); Fly rolls it back cleanly
 failed job.
 
 `vers-bugsink` ships in its own workflow leg. It isn't a workspace package, so turbo's affected
-detection can't see it — the leg gates on a diff of `projects/app-bugsink/` instead, and deploys the
-pinned stock image with no build. Upgrading Bugsink is a tag bump in its `fly.toml`.
+detection can't see it — the leg gates on a diff of `apps/bugsink/` instead, and deploys the pinned
+stock image with no build. Upgrading Bugsink is a tag bump in its `fly.toml`.
 
 ## Provision from nothing
 
@@ -147,7 +147,7 @@ fly secrets set -a vers-bugsink \
   DATABASE_URL="<the bugsink database's pooled connection URL>" \
   CREATE_SUPERUSER="me@$DOMAIN:$BUGSINK_ADMIN_PASSWORD"
 
-fly deploy --config projects/app-bugsink/fly.toml --ha=false
+fly deploy --config apps/bugsink/fly.toml --ha=false
 fly secrets unset CREATE_SUPERUSER -a vers-bugsink
 ```
 

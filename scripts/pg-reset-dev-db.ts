@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { oraPromise } from 'ora';
-import { migrateToLatest } from '../projects/lib-db/src/migrate-to-latest';
+import { migrateToLatest } from '../libs/data/db/src/migrate-to-latest';
 import { env } from './postgres/env';
 import { pg } from './postgres/pg';
 
