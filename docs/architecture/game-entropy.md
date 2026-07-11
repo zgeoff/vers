@@ -10,11 +10,11 @@ player can peek: simulate the future, inspect the outcome, and choose whether �
 it. Look-ahead cannot be prevented in a deterministic client-simulated game; anything the client can
 describe, it can pre-compute. The design prices look-ahead instead of chasing it.
 
-A scanner does not play the average future. It simulates the next hour on every reachable node,
-across the whole offline window, and plays only the best one. Out of twenty thousand simulated
-futures the one that matters is the single best, so a reward distribution's danger lives in its
-tail, not its variance — modest per-run variance with a rare outlier still hands the scanner a
-jackpot. That best-of-N selection value is what every rule below prices; the
+A scanner does not play the average future. It simulates the future on every reachable node, across
+the whole offline window, and plays only the best one. Out of twenty thousand simulated futures the
+one that matters is the single best, so a reward distribution's danger lives in its tail, not its
+variance — modest per-run variance with a rare outlier still hands the scanner a jackpot. That
+best-of-N selection value is what every rule below prices; the
 [economy modes note](../game-design/004-economy-modes.md) turns it into the reward-design rules.
 
 ## The anchored seed chain
