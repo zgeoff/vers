@@ -30,3 +30,14 @@ test('it produces a 64-character hex digest', () => {
 
   expect(hash).toMatch(/^[a-f0-9]{64}$/);
 });
+
+test('it derives the frozen canonical digest for a known input', () => {
+  const hash = buildStartHash({
+    activityID: 'act_1',
+    contentVersion: '0.0.0-dev',
+    seed: 'seed_0',
+    simVersion: '0.0.0-dev',
+  });
+
+  expect(hash).toBe('b28253a4cefb706f043390394294d2f528c71fc90b9e42867612e7e4032f4d4c');
+});

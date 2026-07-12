@@ -59,3 +59,17 @@ test('it produces a 64-character hex digest', () => {
 
   expect(hash).toMatch(/^[a-f0-9]{64}$/);
 });
+
+test('it derives the frozen canonical digest for a known input', () => {
+  const hash = buildCheckpointHash({
+    entropySource: 'chain',
+    nextSeed: 'seed_1',
+    prevHash: 'hash_0',
+    seed: 'seed_0',
+    time: 12,
+    type: 'tick',
+    version: 1,
+  });
+
+  expect(hash).toBe('6079d244605014de9d91fcd80080ddad169ab684fccbcbd1d5523bcd512e30d6');
+});
