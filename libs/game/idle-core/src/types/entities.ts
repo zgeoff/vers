@@ -25,6 +25,7 @@ export interface EnemyData {
   life: number;
   name: string;
   primaryAttack: AttackData;
+  xp: number;
 }
 
 export type HandleTickFn = (combatExecutor: CombatExecutor) => void;
@@ -123,6 +124,7 @@ export interface Enemy extends IEntity<EnemyState, EnemyAppState> {
   // meta
   readonly name: string;
   readonly type: EntityType.Enemy;
+  readonly xp: number;
 
   // getters
   get primaryAttack(): AttackData;

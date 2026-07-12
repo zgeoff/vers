@@ -13,6 +13,7 @@ test('it creates enemy data with expected properties', () => {
       minDamage: 1,
       speed: 0.5,
     },
+    xp: 10,
   });
 });
 
@@ -26,6 +27,7 @@ test('it creates enemy data with custom properties', () => {
       minDamage: 5,
       speed: 1,
     },
+    xp: 25,
   });
 
   expect(enemy).toStrictEqual({
@@ -37,5 +39,6 @@ test('it creates enemy data with custom properties', () => {
       minDamage: 5,
       speed: 1,
     },
+    xp: 25,
   });
 });

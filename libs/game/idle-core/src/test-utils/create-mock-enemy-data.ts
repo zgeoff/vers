@@ -5,6 +5,7 @@ export function createMockEnemyData(overrides: Partial<EnemyData> = {}): EnemyDa
     level: 1,
     life: 30,
     name: 'Test Enemy',
+    xp: 10,
     ...overrides,
     primaryAttack: {
       maxDamage: 3,
