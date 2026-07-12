@@ -24,6 +24,7 @@ export function toActivityData(row: Readonly<Selectable<Activities>>): ActivityD
     nodeID: row.nodeId,
     seed: row.seed,
     simVersion: row.simVersion,
+    startChainIndex: row.startChainIndex,
     startHash: row.startHash,
     startedAt: row.startedAt,
     status: row.status,
