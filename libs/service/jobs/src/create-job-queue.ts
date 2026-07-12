@@ -24,8 +24,16 @@ export interface JobQueue<TDefs extends JobDefs> {
     name: TName,
     payload: Readonly<z.infer<TDefs[TName]['schema']>>,
     opts?: Readonly<SendJobOptions>,
-  ) => Promise<void>;
+  ) => Promise<string>;
   readonly drain: (name?: Extract<keyof TDefs, string>) => Promise<DrainResult>;
+}
+
+/**
+ * Every job handler's second argument: per-delivery context pg-boss assigns, independent of the
+ * job's own payload.
+ */
+export interface JobContext {
+  readonly jobID: string;
 }
 
 export interface CreateJobQueueConfig<TDefs extends JobDefs> {
@@ -33,6 +41,7 @@ export interface CreateJobQueueConfig<TDefs extends JobDefs> {
   readonly handlers: {
     readonly [TName in keyof TDefs & string]: (
       payload: Readonly<z.infer<TDefs[TName]['schema']>>,
+      context: Readonly<JobContext>,
     ) => Promise<void>;
   };
 
@@ -49,14 +58,18 @@ export interface CreateJobQueueConfig<TDefs extends JobDefs> {
  * runs against this erased shape rather than threading the factory config's per-job generic
  * through every helper.
  */
-type JobHandlers = Readonly<Record<string, (payload: object) => Promise<void>>>;
+type JobHandlers = Readonly<
+  Record<string, (payload: object, context: Readonly<JobContext>) => Promise<void>>
+>;
 
 /**
  * Wraps `pg-boss` behind this package's typed API so consumers never import `pg-boss` directly.
+ * `config` is a `NoInfer` site: `TDefs` comes from `defs` alone, so a handler that omits its
+ * payload parameter can't widen every job's payload type to `object`.
  */
 export function createJobQueue<TDefs extends JobDefs>(
   defs: Readonly<TDefs>,
-  config: Readonly<CreateJobQueueConfig<TDefs>>,
+  config: Readonly<CreateJobQueueConfig<NoInfer<TDefs>>>,
 ): JobQueue<TDefs> {
   const boss = new PgBoss(config.connectionString);
 
@@ -98,6 +111,7 @@ async function startQueues(boss: PgBoss, defs: JobDefs): Promise<void> {
 
     await boss.createQueue(name, {
       ...(deadLetterName === undefined ? {} : { deadLetter: deadLetterName }),
+      ...(def.retryBackoff === undefined ? {} : { retryBackoff: def.retryBackoff }),
       ...(def.retryDelay === undefined ? {} : { retryDelay: def.retryDelay }),
       ...(def.retryLimit === undefined ? {} : { retryLimit: def.retryLimit }),
     });
@@ -110,7 +124,7 @@ async function sendJob(
   name: string,
   payload: object,
   opts: Readonly<SendJobOptions> | undefined,
-): Promise<void> {
+): Promise<string> {
   const def = defs[name];
 
   invariant(def, `job "${name}" is not defined`);
@@ -118,7 +132,11 @@ async function sendJob(
   const data: object = def.schema.parse(payload);
   const sendOptions = opts?.trx === undefined ? undefined : { db: fromKysely(opts.trx) };
 
-  await boss.send(name, data, sendOptions);
+  const jobID = await boss.send(name, data, sendOptions);
+
+  invariant(jobID !== null, `pg-boss accepted the send but returned no job id for "${name}"`);
+
+  return jobID;
 }
 
 /**
@@ -163,7 +181,7 @@ async function drainJobs(
         }
 
         try {
-          await handler(parsed.data);
+          await handler(parsed.data, { jobID: job.id });
 
           await boss.complete(queueName, job.id);
 

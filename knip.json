@@ -46,6 +46,10 @@
       "entry": ["src/serve.ts"],
       "ignoreDependencies": ["@orpc/contract"]
     },
+    "services/email": {
+      "entry": ["src/serve.ts", "src/sweep.ts"],
+      "ignoreDependencies": ["@orpc/contract"]
+    },
     "libs/service/service-utils": {
       "ignoreDependencies": ["pino-pretty"]
     },

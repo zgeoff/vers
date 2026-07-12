@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./mocks": "./src/mocks/node.ts"
   },
   "scripts": {
     "preview": "bun run scripts/preview.ts",
@@ -26,6 +27,7 @@
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "msw": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "zod": "catalog:"
   }
 }

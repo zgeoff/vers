@@ -1,7 +1,7 @@
 import { afterEach, expect } from 'bun:test';
 import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
 import { registerHappyDOM, registerMSWLifecycle } from '@vers/test-utils/bun';
-import { server } from './src/mocks/node';
+import { sentEmails, server } from './src/mocks/node';
 
 registerHappyDOM();
 
@@ -14,4 +14,5 @@ const reactTestingLibrary = await import('@testing-library/react');
 
 afterEach(() => {
   reactTestingLibrary.cleanup();
+  sentEmails.clear();
 });

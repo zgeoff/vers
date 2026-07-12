@@ -1,0 +1,33 @@
+{
+  "name": "@vers/service-email",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "bun --watch src/serve.ts",
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@orpc/server": "catalog:",
+    "@vers/contract-email": "workspace:*",
+    "@vers/email": "workspace:*",
+    "@vers/jobs": "workspace:*",
+    "@vers/service-runtime": "workspace:*",
+    "tiny-invariant": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@orpc/contract": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@vers/service-test-utils": "workspace:*",
+    "@vers/test-utils": "workspace:*",
+    "@zgeoff/bun-test-extended": "catalog:",
+    "msw": "catalog:",
+    "typescript": "catalog:"
+  }
+}
