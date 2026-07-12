@@ -156,6 +156,7 @@ function findInvalidReason(
     }
 
     const expectedHash = buildCheckpointHash({
+      entropySource: checkpoint.payload.entropySource,
       nextSeed: checkpoint.payload.nextSeed,
       prevHash: checkpoint.prevHash,
       seed: checkpoint.payload.seed,

@@ -29,6 +29,7 @@ test('it computes each hash via buildCheckpointHash', () => {
 
   expect(entry?.hash).toBe(
     buildCheckpointHash({
+      entropySource: entry?.payload.entropySource ?? '',
       nextSeed: entry?.payload.nextSeed ?? '',
       prevHash: entry?.prevHash ?? '',
       seed: entry?.payload.seed ?? '',
@@ -37,4 +38,10 @@ test('it computes each hash via buildCheckpointHash', () => {
       version: entry?.version ?? 0,
     }),
   );
+});
+
+test('it defaults entropySource to chain', () => {
+  const [entry] = createMockCheckpointBatch({ startPrevHash: 'hash_0', startVersion: 1 });
+
+  expect(entry?.payload.entropySource).toBe('chain');
 });
