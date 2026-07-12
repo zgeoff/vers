@@ -24,6 +24,14 @@ export interface WorldNodeActivityData extends IActivityData {
 
 export type ActivityData = WorldNodeActivityData;
 
+/**
+ * An open keyed map of signed reward deltas. Future keys are added as optional and never
+ * repurposed, so an older reader that doesn't know a key can ignore it safely.
+ */
+export interface ActivityRewards {
+  readonly xp: number;
+}
+
 export interface ActivityAppState {
   readonly currentEnemyGroup: EnemyGroupAppState | null;
   readonly elapsed: number;
@@ -32,6 +40,7 @@ export interface ActivityAppState {
   readonly enemyGroupsRemaining: number;
   readonly id: string;
   readonly name: string;
+  readonly rewards: ActivityRewards;
 }
 
 export interface Activity {
@@ -45,8 +54,10 @@ export interface Activity {
   get currentEnemyGroup(): EnemyGroup | null;
   get elapsed(): number;
   get isEnemyGroupsRemaining(): boolean;
+  get rewards(): ActivityRewards;
 
   // utils
+  updateRewards: (delta: ActivityRewards) => void;
   elapseTime: (time: number) => void;
   getAppState: () => ActivityAppState;
   moveToNextEnemyGroup: () => void;
@@ -60,6 +71,7 @@ export type ActivityCheckpointGenerator = AsyncGenerator<
 
 interface IActivityCheckpoint {
   readonly hash: string;
+  readonly rewards: ActivityRewards;
   readonly time: number;
   readonly type: ActivityCheckpointType;
 }

@@ -6,6 +6,7 @@ import type {
   SimulationContext,
 } from '../types';
 import { logger } from '../utils/logger';
+import { buildGroupClearRewards } from './utils/build-group-clear-rewards';
 import { createCompletedCheckpoint } from './utils/create-completed-checkpoint';
 import { createFailedCheckpoint } from './utils/create-failed-checkpoint';
 import { createProgressCheckpoint } from './utils/create-progress-checkpoint';
@@ -31,7 +32,10 @@ export async function* simulateActivity(
     executor.run(timestep);
 
     if (activity.currentEnemyGroup?.remaining === 0) {
-      yield createProgressCheckpoint(activity, ctx);
+      const rewards = buildGroupClearRewards(activity.currentEnemyGroup);
+
+      activity.updateRewards(rewards);
+      yield createProgressCheckpoint(activity, ctx, rewards);
       logger.debug(`${label} moving to next enemy group`);
 
       // move to the next enemy group

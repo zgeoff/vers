@@ -12,6 +12,7 @@ test('returns true for progress checkpoints', () => {
   const progressCheckpoint: ActivityProgressCheckpoint = {
     hash: 'abc123',
     nextSeed: 12_345,
+    rewards: { xp: 0 },
     time: 300,
     type: ActivityCheckpointType.Progress,
   };
@@ -23,6 +24,7 @@ test('returns false for non-progress checkpoints', () => {
   const startedCheckpoint: ActivityStartedCheckpoint = {
     hash: 'def456',
     seed: 54_321,
+    rewards: { xp: 0 },
     time: 0,
     type: ActivityCheckpointType.Started,
   };
@@ -30,6 +32,7 @@ test('returns false for non-progress checkpoints', () => {
   const completedCheckpoint: ActivityCompletedCheckpoint = {
     hash: 'ghi789',
     nextSeed: 98_765,
+    rewards: { xp: 0 },
     time: 1000,
     type: ActivityCheckpointType.Completed,
   };
@@ -37,6 +40,7 @@ test('returns false for non-progress checkpoints', () => {
   const failedCheckpoint: ActivityFailedCheckpoint = {
     hash: 'jkl012',
     nextSeed: 24_680,
+    rewards: { xp: 0 },
     time: 500,
     type: ActivityCheckpointType.Failed,
   };

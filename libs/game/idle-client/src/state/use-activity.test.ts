@@ -13,6 +13,7 @@ test('it provides activity state', () => {
     enemyGroupsRemaining: 4,
     id: 'test-activity',
     name: 'Test Activity',
+    rewards: { xp: 0 },
   };
 
   setActivity(activity);
@@ -27,5 +28,6 @@ test('it provides activity state', () => {
     enemyGroupsRemaining: 4,
     id: 'test-activity',
     name: 'Test Activity',
+    rewards: { xp: 0 },
   });
 });

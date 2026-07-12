@@ -17,6 +17,7 @@ test('it creates activity data with expected properties', () => {
           minDamage: 1,
           speed: 0.5,
         },
+        xp: 10,
       },
     ],
     failureAction: ActivityFailureAction.Retry,

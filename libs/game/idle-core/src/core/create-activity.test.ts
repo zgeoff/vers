@@ -43,5 +43,18 @@ test('it returns the expected activity state for a client app', () => {
     enemyGroupsRemaining: expect.toBeNumber(),
     id: activity.id,
     name: activity.name,
+    rewards: { xp: 0 },
   });
+});
+
+test('it accrues rewards across multiple calls', () => {
+  const ctx = createMockSimulationContext();
+  const activityData = createMockActivityData();
+  const activity = createActivity(activityData, ctx);
+
+  activity.updateRewards({ xp: 10 });
+  activity.updateRewards({ xp: 5 });
+
+  expect(activity.rewards).toStrictEqual({ xp: 15 });
+  expect(activity.getAppState().rewards).toStrictEqual({ xp: 15 });
 });

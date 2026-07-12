@@ -24,6 +24,7 @@ test('it creates an enemy with correct initial values', () => {
   expect(enemy.life).toBe(data.life);
   expect(enemy.status).toBe(EntityStatus.Alive);
   expect(enemy.isAlive).toBeTrue();
+  expect(enemy.xp).toBe(data.xp);
 });
 
 test('it exposes a method for setting the enemy state', () => {

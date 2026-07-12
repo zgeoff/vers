@@ -74,6 +74,7 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
     level: data.level,
     name: data.name,
     type: EntityType.Enemy,
+    xp: data.xp,
 
     // getters
     get isAlive() {
