@@ -6,26 +6,26 @@ import { ActivityInfo } from './activity-info';
 
 test('it renders info about the provided activity', () => {
   const activity: ActivityAppState = {
-    currentEnemyGroup: null,
+    currentWave: null,
     elapsed: 0,
     enemiesRemaining: 20,
-    enemyGroups: [],
-    enemyGroupsRemaining: 4,
     id: 'test-activity',
     levelUp: null,
     name: 'Test Activity',
     rewards: { xp: 150 },
+    waves: [],
+    wavesRemaining: 4,
   };
 
   render(<ActivityInfo activity={activity} />);
 
   const activityName = screen.getByText('Test Activity');
   const enemiesRemaining = screen.getByText(nodeHasText('20 enemies remain'));
-  const enemyGroupsRemaining = screen.getByText(nodeHasText('4 enemy groups remain'));
+  const wavesRemaining = screen.getByText(nodeHasText('4 waves remain'));
   const xpEarned = screen.getByText(nodeHasText('150 xp earned'));
 
   expect(activityName).toBeInTheDocument();
   expect(enemiesRemaining).toBeInTheDocument();
-  expect(enemyGroupsRemaining).toBeInTheDocument();
+  expect(wavesRemaining).toBeInTheDocument();
   expect(xpEarned).toBeInTheDocument();
 });

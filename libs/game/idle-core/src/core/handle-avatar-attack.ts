@@ -6,7 +6,7 @@ export function handleAvatarAttack(_event: AvatarAttackEvent, avatar: Avatar, ac
   const label = createLogLabel('avatar', avatar.id);
 
   // find the first enemy that is alive
-  const enemy = activity.currentEnemyGroup?.nextLivingEnemy;
+  const enemy = activity.currentWave?.nextLivingEnemy;
 
   if (enemy) {
     const damage = avatar.calcAttackDamage();

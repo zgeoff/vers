@@ -6,15 +6,15 @@ import { useActivityStore } from './use-activity-store';
 
 test('it updates the activity state', () => {
   const activity: ActivityAppState = {
-    currentEnemyGroup: null,
+    currentWave: null,
     elapsed: 0,
     enemiesRemaining: 20,
-    enemyGroups: [],
-    enemyGroupsRemaining: 4,
     id: '1',
     levelUp: null,
     name: 'Test Activity',
     rewards: { xp: 0 },
+    waves: [],
+    wavesRemaining: 4,
   };
 
   setActivity(activity);
@@ -22,14 +22,14 @@ test('it updates the activity state', () => {
   const hook = renderHook(() => useActivityStore((state) => state.activity));
 
   expect(hook.result.current).toStrictEqual({
-    currentEnemyGroup: null,
+    currentWave: null,
     elapsed: 0,
     enemiesRemaining: 20,
-    enemyGroups: [],
-    enemyGroupsRemaining: 4,
     id: '1',
     levelUp: null,
     name: 'Test Activity',
     rewards: { xp: 0 },
+    waves: [],
+    wavesRemaining: 4,
   });
 });

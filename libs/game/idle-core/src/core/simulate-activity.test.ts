@@ -212,7 +212,7 @@ test('it returns a completed checkpoint that folds in the completion bonus', asy
   });
 
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupCount: 1, groupSize: 1 });
+  const activity = createActivity(activityData, ctx, { waveCount: 1, waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const generator = simulateActivity(executor, activity, avatar, ctx);
@@ -258,7 +258,7 @@ test('it carries a levelUp when a completion bonus crosses a level threshold', a
   });
 
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupCount: 1, groupSize: 1 });
+  const activity = createActivity(activityData, ctx, { waveCount: 1, waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const generator = simulateActivity(executor, activity, avatar, ctx);
@@ -295,7 +295,7 @@ test('it records a levelUp checkpoint when a group clear crosses a level thresho
   const enemyData = createMockEnemyData({ life: 1, xp: 250 });
   const activityData = createMockActivityData({ difficulty: 1, enemies: [enemyData] });
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupCount: 1, groupSize: 1 });
+  const activity = createActivity(activityData, ctx, { waveCount: 1, waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const generator = simulateActivity(executor, activity, avatar, ctx);
@@ -341,7 +341,7 @@ test('it keeps xp and a level-up earned on the same tick the avatar dies', async
 
   const activityData = createMockActivityData({ difficulty: 1, enemies: [enemyData] });
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupCount: 1, groupSize: 1 });
+  const activity = createActivity(activityData, ctx, { waveCount: 1, waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const generator = simulateActivity(executor, activity, avatar, ctx);

@@ -4,14 +4,14 @@ import type {
   ActivityData,
   ActivityLevelUp,
   ActivityRewards,
-  EnemyGroup,
   SimulationContext,
+  Wave,
 } from '../types';
-import { getEnemyGroups } from './utils/get-enemy-groups';
+import { getWaves } from './utils/get-waves';
 
 interface ActivityConfig {
-  readonly groupCount?: number;
-  readonly groupSize?: number;
+  readonly waveCount?: number;
+  readonly waveSize?: number;
 }
 
 export function createActivity(
@@ -20,14 +20,14 @@ export function createActivity(
   config: ActivityConfig = {},
 ): Activity {
   let elapsed = 0;
-  let currentEnemyGroupIdx = 0;
+  let currentWaveIdx = 0;
   let rewards: ActivityRewards = { xp: 0 };
   let levelUp: ActivityLevelUp | null = null;
-  const enemyGroups: Array<EnemyGroup> = getEnemyGroups(data, ctx, config);
-  const isEnemyGroupsRemaining = () => enemyGroups.some((group) => group.remaining > 0);
+  const waves: Array<Wave> = getWaves(data, ctx, config);
+  const isWavesRemaining = () => waves.some((wave) => wave.remaining > 0);
 
-  const moveToNextEnemyGroup = () => {
-    currentEnemyGroupIdx++;
+  const moveToNextWave = () => {
+    currentWaveIdx++;
   };
 
   const elapseTime = (time: number) => {
@@ -43,40 +43,40 @@ export function createActivity(
   };
 
   const getAppState = (): ActivityAppState => {
-    const currentEnemyGroup = enemyGroups[currentEnemyGroupIdx]?.getAppState() ?? null;
-    const enemiesRemaining = enemyGroups.reduce((acc, group) => acc + group.remaining, 0);
-    const enemyGroupsRemaining = enemyGroups.filter((group) => group.remaining > 0).length;
+    const currentWave = waves[currentWaveIdx]?.getAppState() ?? null;
+    const enemiesRemaining = waves.reduce((acc, wave) => acc + wave.remaining, 0);
+    const wavesRemaining = waves.filter((wave) => wave.remaining > 0).length;
 
     return {
-      currentEnemyGroup,
+      currentWave,
       elapsed,
       enemiesRemaining,
-      enemyGroups: enemyGroups.map((group) => group.getAppState()),
-      enemyGroupsRemaining,
       id: data.id,
       levelUp,
       name: data.name,
       rewards,
+      waves: waves.map((wave) => wave.getAppState()),
+      wavesRemaining,
     };
   };
 
   return {
     // meta
     difficulty: data.difficulty,
-    enemyGroups,
     id: data.id,
     name: data.name,
     type: data.type,
+    waves,
 
     // getters
-    get currentEnemyGroup() {
-      return enemyGroups[currentEnemyGroupIdx] ?? null;
+    get currentWave() {
+      return waves[currentWaveIdx] ?? null;
     },
     get elapsed() {
       return elapsed;
     },
-    get isEnemyGroupsRemaining() {
-      return isEnemyGroupsRemaining();
+    get isWavesRemaining() {
+      return isWavesRemaining();
     },
     get levelUp() {
       return levelUp;
@@ -91,7 +91,7 @@ export function createActivity(
     // utils
     updateRewards,
     elapseTime,
-    moveToNextEnemyGroup,
+    moveToNextWave,
     setLevelUp,
   };
 }

@@ -6,15 +6,15 @@ import { useActivity } from './use-activity';
 
 test('it provides activity state', () => {
   const activity: ActivityAppState = {
-    currentEnemyGroup: null,
+    currentWave: null,
     elapsed: 0,
     enemiesRemaining: 20,
-    enemyGroups: [],
-    enemyGroupsRemaining: 4,
     id: 'test-activity',
     levelUp: null,
     name: 'Test Activity',
     rewards: { xp: 0 },
+    waves: [],
+    wavesRemaining: 4,
   };
 
   setActivity(activity);
@@ -22,14 +22,14 @@ test('it provides activity state', () => {
   const hook = renderHook(() => useActivity());
 
   expect(hook.result.current).toStrictEqual({
-    currentEnemyGroup: null,
+    currentWave: null,
     elapsed: 0,
     enemiesRemaining: 20,
-    enemyGroups: [],
-    enemyGroupsRemaining: 4,
     id: 'test-activity',
     levelUp: null,
     name: 'Test Activity',
     rewards: { xp: 0 },
+    waves: [],
+    wavesRemaining: 4,
   });
 });

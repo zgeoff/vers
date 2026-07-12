@@ -6,7 +6,7 @@ import type {
   SimulationContext,
 } from '../types';
 import { logger } from '../utils/logger';
-import { buildGroupClearRewards } from './utils/build-group-clear-rewards';
+import { buildWaveClearRewards } from './utils/build-wave-clear-rewards';
 import { createCompletedCheckpoint } from './utils/create-completed-checkpoint';
 import { createFailedCheckpoint } from './utils/create-failed-checkpoint';
 import { createProgressCheckpoint } from './utils/create-progress-checkpoint';
@@ -22,17 +22,17 @@ export async function* simulateActivity(
   const timestep = yield createStartedCheckpoint(ctx);
   const label = `[activity:${activity.type}]`;
 
-  logger.debug(`${label} starting activity with ${activity.enemyGroups.length} enemy groups`);
+  logger.debug(`${label} starting activity with ${activity.waves.length} waves`);
 
   logger.debug(
-    `${label} starting combat with first group of ${activity.currentEnemyGroup?.enemies.length} enemies`,
+    `${label} starting combat with first wave of ${activity.currentWave?.enemies.length} enemies`,
   );
 
-  while (avatar.isAlive && activity.isEnemyGroupsRemaining) {
+  while (avatar.isAlive && activity.isWavesRemaining) {
     executor.run(timestep);
 
-    if (activity.currentEnemyGroup?.remaining === 0) {
-      const rewards = buildGroupClearRewards(activity.currentEnemyGroup, activity.difficulty);
+    if (activity.currentWave?.remaining === 0) {
+      const rewards = buildWaveClearRewards(activity.currentWave, activity.difficulty);
 
       activity.updateRewards(rewards);
 
@@ -44,11 +44,11 @@ export async function* simulateActivity(
       }
 
       yield checkpoint;
-      logger.debug(`${label} moving to next enemy group`);
+      logger.debug(`${label} moving to next wave`);
 
-      // move to the next enemy group
+      // move to the next wave
       executor.reset();
-      activity.moveToNextEnemyGroup();
+      activity.moveToNextWave();
     } else {
       yield null;
     }
