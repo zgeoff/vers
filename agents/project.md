@@ -102,6 +102,12 @@ test, lint, boundaries, and knip like any project.
 - Root-manifest entries (`bun run deploy`, `bun run stack`, `pg:*`) invoke the bin files with plain
   `bun`.
 
+## Env files
+
+Each env-consuming project ships a committed `.env.example` documenting its keys. Real values come
+from `bun run env:pull`, which pulls each managed file from the `vers` 1Password vault via the `op`
+CLI. `.env` files themselves are never committed.
+
 ## Deploys
 
 `bun run deploy` drives every Fly rollout from the `deploy.config.ts` manifest at the repo root;
