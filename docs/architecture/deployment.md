@@ -60,10 +60,11 @@ rolls out:
 1. Neon migrations apply once, in their own never-cancelled `migrate` job — several services share
    the one database, so migration never runs per service.
 2. A deploy matrix runs the deploy CLI (`bun run deploy -- deploy --app <name>`) per manifest app
-   through the `.github/actions/fly-deploy` composite action. Each leg self-gates: the CLI compares
-   HEAD against the `GIT_SHA` stamped on the app's machines, so a rollout lost to an earlier failure
-   ships on the next push. Images build on Fly's remote builder — no image blob crosses from the
-   GitHub runner.
+   through the `.github/actions/fly-deploy` composite action. The matrix itself is derived from
+   `deploy.config.ts` by a `manifest` job (the CLI's `list` command), so adding an app to the
+   manifest is the whole change. Each leg self-gates: the CLI compares HEAD against the `GIT_SHA`
+   stamped on the app's machines, so a rollout lost to an earlier failure ships on the next push.
+   Images build on Fly's remote builder — no image blob crosses from the GitHub runner.
 3. After deploying, the CLI waits for the fleet to report the new SHA, then runs the app's
    post-deploy probes from `deploy.config.ts`.
 4. `verify-fleet` runs on every green push — even when every deploy leg skipped — and asserts every
