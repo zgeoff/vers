@@ -61,6 +61,7 @@ export function parseAppState(json: unknown): AppState {
  * never a service machine either — its process group is always stamped
  * explicitly, unlike a bare app machine's, so the default only applies there.
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- z.infer of machineSchema, a ZodType-bearing shape with no readonly form
 function isServiceMachine(machine: MachineRecord): boolean {
   return (
     machine.config?.schedule === undefined &&
@@ -78,6 +79,7 @@ function pickDeployedSHA(machines: ReadonlyArray<AppMachine>): string | null {
   return [...shas][0] ?? null;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- z.infer of machineSchema, a ZodType-bearing shape with no readonly form
 function pickServiceImage(serviceRecords: ReadonlyArray<MachineRecord>): string | null {
   const images = new Set(serviceRecords.map((machine) => machine.config?.image ?? null));
 
