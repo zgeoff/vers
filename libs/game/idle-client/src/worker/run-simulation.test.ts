@@ -12,7 +12,7 @@ import { runSimulation } from './run-simulation';
 
 const hasher = await xxhash();
 
-async function driveSimulation(
+async function runSimulationSteps(
   simulation: ReturnType<typeof createSimulation>,
   timestep: number,
   steps: number,
@@ -33,7 +33,7 @@ test('it restarts the activity if it fails and the failure action is retry', asy
   simulation.startActivity(avatar, activity);
   simulation.addEventListener('restarted', restartedSpy);
 
-  await driveSimulation(simulation, 100, 50);
+  await runSimulationSteps(simulation, 100, 50);
 
   expect(restartedSpy).toHaveBeenCalled();
   expect(simulation.activity).not.toBeNull();
@@ -52,7 +52,7 @@ test('it does not restart the activity if it fails and the failure action is abo
   simulation.addEventListener('restarted', restartedSpy);
   simulation.addEventListener('stopped', stoppedSpy);
 
-  await driveSimulation(simulation, 100, 50);
+  await runSimulationSteps(simulation, 100, 50);
 
   expect(restartedSpy).not.toHaveBeenCalled();
   expect(stoppedSpy).toHaveBeenCalled();
@@ -73,7 +73,7 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
 
     simulation.addEventListener('restarted', restartedSpy);
 
-    await driveSimulation(simulation, 100, 700);
+    await runSimulationSteps(simulation, 100, 700);
 
     expect(restartedSpy).toHaveBeenCalled();
     expect(simulation.activity).not.toBe(startingActivity);
