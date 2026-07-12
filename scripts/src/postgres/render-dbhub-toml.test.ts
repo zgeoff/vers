@@ -2,8 +2,8 @@ import { expect, test } from 'bun:test';
 import { renderDBHubTOML } from './render-dbhub-toml';
 
 const config = {
-  devDSN: 'postgresql://mcp_dev:pw@dev-host/dev_geoffbox_main?sslmode=verify-full',
-  ensureCommand: 'bun /repo/scripts/src/bin/pg-dev-ensure.ts dev_geoffbox_main',
+  devDSN: 'postgresql://mcp_dev:pw@dev-host/dev_devbox_main?sslmode=verify-full',
+  ensureCommand: 'bun /repo/scripts/src/bin/pg-dev-ensure.ts dev_devbox_main',
   prodDSN: 'postgresql://mcp_ro:pw@prod-host/vers?sslmode=verify-full',
 };
 

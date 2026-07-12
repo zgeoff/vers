@@ -54,7 +54,7 @@ Two hosts per endpoint: **direct** (`ep-<endpoint>.<region>.aws.neon.tech`) and 
 
 ## Who connects, and where the string lives
 
-Four consumers, four stores — the string never lives in the repo:
+Every consumer has its own store — the string never lives in the repo:
 
 | Consumer                       | String | Store                                                          |
 | ------------------------------ | ------ | -------------------------------------------------------------- |
