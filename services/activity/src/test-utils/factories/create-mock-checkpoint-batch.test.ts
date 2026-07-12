@@ -15,6 +15,12 @@ test('it builds a chain of the requested length with contiguous versions', () =>
   expect(batch.map((entry) => entry.version)).toStrictEqual([1, 2, 3]);
 });
 
+test('it defaults chainIndex to the checkpoint version', () => {
+  const batch = createMockCheckpointBatch({ count: 3, startPrevHash: 'hash_0', startVersion: 1 });
+
+  expect(batch.map((entry) => entry.payload.chainIndex)).toStrictEqual([1, 2, 3]);
+});
+
 test('it chains each entry onto the previous one', () => {
   const batch = createMockCheckpointBatch({ count: 3, startPrevHash: 'hash_0', startVersion: 1 });
 
@@ -29,6 +35,7 @@ test('it computes each hash via buildCheckpointHash', () => {
 
   expect(entry?.hash).toBe(
     buildCheckpointHash({
+      chainIndex: entry?.payload.chainIndex ?? 0,
       entropySource: entry?.payload.entropySource ?? '',
       nextSeed: entry?.payload.nextSeed ?? '',
       prevHash: entry?.prevHash ?? '',
@@ -69,6 +76,7 @@ test('it keeps the last entry chain-valid after the payload override', () => {
 
   expect(entry?.hash).toBe(
     buildCheckpointHash({
+      chainIndex: entry?.payload.chainIndex ?? 0,
       entropySource: entry?.payload.entropySource ?? '',
       nextSeed: entry?.payload.nextSeed ?? '',
       prevHash: entry?.prevHash ?? '',
