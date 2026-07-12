@@ -16,7 +16,10 @@ Foresight is harmless when outcomes are steady and devastating when they are rar
 scan thousands of regions for the one future holding a great roll gets that roll's value without
 playing for it, and a market lets them sell it. The economy's one hard rule follows:
 
-**An outcome may be predictable, or it may reach the market — never both.**
+**An outcome worth selecting may be predictable, or it may reach the market — never both.**
+
+Steady outcomes carry both properties safely — they give a scanner nothing to select. The rule bites
+only where a distribution has a tail.
 
 ## The Mode Choice
 
