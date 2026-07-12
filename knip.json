@@ -25,7 +25,8 @@
     },
     "scripts": {
       "entry": ["src/bin/*.ts"],
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["@zgeoff/dbhub", "dbhub"]
     },
     "apps/web": {
       "entry": [

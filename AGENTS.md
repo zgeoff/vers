@@ -258,6 +258,20 @@ container builds, and secrets: `docs/architecture/deployment.md`.
 - Deploy-phase jobs target the `production` GitHub environment; repo-level secrets carry only what
   PR checks need.
 
+## Postgres access (MCP)
+
+The `postgres` MCP server exposes production and dev sources; mechanics and provisioning live in
+`docs/architecture/database.md`.
+
+- `execute_sql_prod` / `search_objects_prod` query production read-only — writes are refused at both
+  the tool and role layer.
+- `execute_sql_dev` / `search_objects_dev` hit a disposable database cloned for the current worktree
+  on its first use: no setup step, full read/write, migrated and seeded. Sessions that never query
+  postgres never touch the database.
+- Tests never point at the dev database — postgres-backed suites own the local test container.
+- After removing a worktree, `bun run pg:dev:sweep` drops its database;
+  `bun run pg:dev:refresh-base` rebuilds the clone template when seed data changes.
+
 ## Styling
 
 Panda CSS 2.0 spans `@vers/panda-preset`, `@vers/styled-system`, `@vers/design-system`, and app-web,

@@ -13,6 +13,7 @@
   "dependencies": {
     "@vers/db": "workspace:*",
     "@vers/service-test-utils": "workspace:*",
+    "@zgeoff/dbhub": "catalog:",
     "commander": "catalog:",
     "execa": "catalog:",
     "ora": "catalog:",
