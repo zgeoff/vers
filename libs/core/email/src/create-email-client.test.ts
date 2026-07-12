@@ -1,20 +1,9 @@
 import { expect, test } from 'bun:test';
 import { HttpResponse, http } from 'msw';
 import { createEmailClient } from './create-email-client';
-import { ENDPOINT_URL as RESEND_EMAIL_ENDPOINT_URL } from './mocks/handlers/http/resend-emails';
-import { server } from './mocks/node';
+import { RESEND_ENDPOINT_URL, sentEmails, server } from './mocks/node';
 
 test('it sends an email with the default from address', async () => {
-  let capturedBody: unknown;
-
-  server.use(
-    http.post(RESEND_EMAIL_ENDPOINT_URL, async (info) => {
-      capturedBody = await info.request.json();
-
-      return HttpResponse.json({ id: 'mock-email-id' });
-    }),
-  );
-
   const client = createEmailClient({ apiKey: 'test-api-key' });
 
   const result = await client.sendEmail({
@@ -26,26 +15,17 @@ test('it sends an email with the default from address', async () => {
 
   expect(result).toStrictEqual({ id: 'mock-email-id' });
 
-  expect(capturedBody).toStrictEqual({
+  expect(sentEmails.get('test@example.com')).toStrictEqual({
     from: 'noreply@transactional.versidle.com',
     html: '<p>Test content</p>',
+    idempotencyKey: null,
+    plainText: 'Test content',
     subject: 'Test Subject',
-    text: 'Test content',
     to: 'test@example.com',
   });
 });
 
 test('it sends an email from a configured from address override', async () => {
-  let capturedBody: unknown;
-
-  server.use(
-    http.post(RESEND_EMAIL_ENDPOINT_URL, async (info) => {
-      capturedBody = await info.request.json();
-
-      return HttpResponse.json({ id: 'mock-email-id' });
-    }),
-  );
-
   const client = createEmailClient({ apiKey: 'test-api-key', from: 'hello@example.com' });
 
   await client.sendEmail({
@@ -55,20 +35,10 @@ test('it sends an email from a configured from address override', async () => {
     to: 'test@example.com',
   });
 
-  expect(capturedBody).toMatchObject({ from: 'hello@example.com' });
+  expect(sentEmails.get('test@example.com')).toMatchObject({ from: 'hello@example.com' });
 });
 
 test('it sends the idempotency key as a header', async () => {
-  let capturedHeader: unknown;
-
-  server.use(
-    http.post(RESEND_EMAIL_ENDPOINT_URL, (info) => {
-      capturedHeader = info.request.headers.get('Idempotency-Key');
-
-      return HttpResponse.json({ id: 'mock-email-id' });
-    }),
-  );
-
   const client = createEmailClient({ apiKey: 'test-api-key' });
 
   await client.sendEmail({
@@ -79,20 +49,10 @@ test('it sends the idempotency key as a header', async () => {
     to: 'test@example.com',
   });
 
-  expect(capturedHeader).toBe('job-123');
+  expect(sentEmails.get('test@example.com')).toMatchObject({ idempotencyKey: 'job-123' });
 });
 
 test('it omits the idempotency key header when none is given', async () => {
-  let capturedHeader: unknown;
-
-  server.use(
-    http.post(RESEND_EMAIL_ENDPOINT_URL, (info) => {
-      capturedHeader = info.request.headers.get('Idempotency-Key');
-
-      return HttpResponse.json({ id: 'mock-email-id' });
-    }),
-  );
-
   const client = createEmailClient({ apiKey: 'test-api-key' });
 
   await client.sendEmail({
@@ -102,11 +62,11 @@ test('it omits the idempotency key header when none is given', async () => {
     to: 'test@example.com',
   });
 
-  expect(capturedHeader).toBeNull();
+  expect(sentEmails.get('test@example.com')).toMatchObject({ idempotencyKey: null });
 });
 
 test('it throws when resend reports an error', () => {
-  server.use(http.post(RESEND_EMAIL_ENDPOINT_URL, () => HttpResponse.error()));
+  server.use(http.post(RESEND_ENDPOINT_URL, () => HttpResponse.error()));
 
   const client = createEmailClient({ apiKey: 'test-api-key' });
 

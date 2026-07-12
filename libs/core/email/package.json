@@ -27,6 +27,7 @@
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "msw": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "zod": "catalog:"
   }
 }

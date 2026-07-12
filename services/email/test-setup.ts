@@ -1,5 +1,6 @@
 import '@zgeoff/bun-test-extended';
-import { server } from '@vers/email/mocks';
+import { afterEach } from 'bun:test';
+import { sentEmails, server } from '@vers/email/mocks';
 import {
   getTestServiceKeyPair,
   resolveTestDBTarget,
@@ -19,3 +20,7 @@ process.env['DATABASE_URL'] = `${resolveTestDBTarget().baseURI}/postgres`;
 
 registerMSWLifecycle(server);
 registerBunTestCleanup();
+
+afterEach(() => {
+  sentEmails.clear();
+});

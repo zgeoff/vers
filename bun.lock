@@ -262,6 +262,7 @@
         "@zgeoff/bun-test-extended": "catalog:",
         "msw": "catalog:",
         "typescript": "catalog:",
+        "zod": "catalog:",
       },
     },
     "libs/core/flags": {

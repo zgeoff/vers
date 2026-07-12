@@ -1,14 +1,9 @@
 import { expect, test } from 'bun:test';
 import { createEmailClient } from '@vers/email';
-import { server } from '@vers/email/mocks';
+import { sentEmails } from '@vers/email/mocks';
 import { createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
-import { HttpResponse, http } from 'msw';
-import * as z from 'zod';
 import { createEmailJobQueue } from './create-email-job-queue';
 import { createEmailService } from './create-email-service';
-
-const RESEND_ENDPOINT_URL = 'https://api.resend.com/emails';
-const SentEmailBodySchema = z.object({ to: z.string() });
 
 test('it boots from env.DATABASE_URL when no queue connection string is injected', async () => {
   const emailService = await createEmailService();
@@ -55,25 +50,11 @@ test('it delivers a job enqueued while the process was down, once booted and its
 
   await writerQueue.stop();
 
-  let capturedTo: unknown;
-
-  server.use(
-    http.post(RESEND_ENDPOINT_URL, async (info) => {
-      const requestBody = await info.request.json();
-
-      const body = SentEmailBodySchema.parse(requestBody);
-
-      capturedTo = body.to;
-
-      return HttpResponse.json({ id: 'mock-email-id' });
-    }),
-  );
-
   const emailService = await createEmailService({ queueConnectionString });
 
   await emailService.queue.start();
   await emailService.queue.drain();
   await emailService.queue.stop();
 
-  expect(capturedTo).toBe('player@example.com');
+  expect(sentEmails.get('player@example.com')).toMatchObject({ to: 'player@example.com' });
 });

@@ -1,51 +1,22 @@
 import { expect, test } from 'bun:test';
 import type { EmailContract } from '@vers/contract-email';
-import { server } from '@vers/email/mocks';
+import { RESEND_ENDPOINT_URL, sentEmails, server } from '@vers/email/mocks';
+import type { CapturedEmail } from '@vers/email/mocks';
 import { createAnonymousViewer, createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { HttpResponse, http } from 'msw';
-import * as z from 'zod';
 import { createEmailService } from './create-email-service';
-
-const RESEND_ENDPOINT_URL = 'https://api.resend.com/emails';
-const SentEmailBodySchema = z.object({ to: z.string() });
-
-interface CapturedDelivery {
-  readonly idempotencyKey: null | string;
-  readonly to: string;
-}
-
-/**
- * Intercepts one delivery attempt and hands its recipient and idempotency key to `onCapture` — the
- * shared shape every send procedure's delivery test asserts on.
- */
-function buildDeliveryCaptureHandler(onCapture: (delivery: CapturedDelivery) => void) {
-  return http.post(RESEND_ENDPOINT_URL, async (info) => {
-    const requestBody = await info.request.json();
-
-    const body = SentEmailBodySchema.parse(requestBody);
-
-    onCapture({
-      idempotencyKey: info.request.headers.get('Idempotency-Key'),
-      to: body.to,
-    });
-
-    return HttpResponse.json({ id: 'mock-email-id' });
-  });
-}
 
 /**
  * A send procedure nudges its own background drain, so a test's explicit drain races it — either
- * one may deliver the job. Polls until the capture lands instead of trusting one drain to have
- * won.
+ * one may deliver the job. Polls the shared capture until the delivery lands instead of trusting
+ * one drain to have won.
  */
-async function waitForDelivery(
-  findCaptured: () => CapturedDelivery | undefined,
-): Promise<CapturedDelivery> {
+async function waitForDelivery(to: string): Promise<CapturedEmail> {
   const deadline = Date.now() + 5000;
 
   for (;;) {
-    const delivery = findCaptured();
+    const delivery = sentEmails.get(to);
 
     if (delivery !== undefined) {
       return delivery;
@@ -95,14 +66,6 @@ test('#sendWelcome it enqueues and returns a job id', async () => {
 test('#sendWelcome it delivers the email on drain, sending the job id as the idempotency key', async () => {
   await using ctx = await setupTest();
 
-  let captured: CapturedDelivery | undefined;
-
-  server.use(
-    buildDeliveryCaptureHandler((delivery) => {
-      captured = delivery;
-    }),
-  );
-
   const result = await ctx.client.sendWelcome({
     to: 'player@example.com',
     verificationCode: '123456',
@@ -111,9 +74,9 @@ test('#sendWelcome it delivers the email on drain, sending the job id as the ide
 
   await ctx.queue.drain('send-welcome');
 
-  const delivery = await waitForDelivery(() => captured);
+  const delivery = await waitForDelivery('player@example.com');
 
-  expect(delivery).toStrictEqual({ idempotencyKey: result.jobID, to: 'player@example.com' });
+  expect(delivery).toMatchObject({ idempotencyKey: result.jobID, to: 'player@example.com' });
 });
 
 test('#sendWelcome it rejects invalid input', async () => {
@@ -128,14 +91,6 @@ test('#sendWelcome it rejects invalid input', async () => {
 test('#sendExistingAccount it enqueues and delivers with the tried-to-signup address as a prop', async () => {
   await using ctx = await setupTest();
 
-  let captured: CapturedDelivery | undefined;
-
-  server.use(
-    buildDeliveryCaptureHandler((delivery) => {
-      captured = delivery;
-    }),
-  );
-
   const result = await ctx.client.sendExistingAccount({
     email: 'existing@example.com',
     to: 'existing@example.com',
@@ -143,21 +98,13 @@ test('#sendExistingAccount it enqueues and delivers with the tried-to-signup add
 
   await ctx.queue.drain('send-existing-account');
 
-  const delivery = await waitForDelivery(() => captured);
+  const delivery = await waitForDelivery('existing@example.com');
 
-  expect(delivery).toStrictEqual({ idempotencyKey: result.jobID, to: 'existing@example.com' });
+  expect(delivery).toMatchObject({ idempotencyKey: result.jobID, to: 'existing@example.com' });
 });
 
 test('#sendChangeEmailVerification it enqueues and delivers to the account s current address', async () => {
   await using ctx = await setupTest();
-
-  let captured: CapturedDelivery | undefined;
-
-  server.use(
-    buildDeliveryCaptureHandler((delivery) => {
-      captured = delivery;
-    }),
-  );
 
   const result = await ctx.client.sendChangeEmailVerification({
     newEmail: 'new@example.com',
@@ -168,41 +115,25 @@ test('#sendChangeEmailVerification it enqueues and delivers to the account s cur
 
   await ctx.queue.drain('send-change-email-verification');
 
-  const delivery = await waitForDelivery(() => captured);
+  const delivery = await waitForDelivery('old@example.com');
 
-  expect(delivery).toStrictEqual({ idempotencyKey: result.jobID, to: 'old@example.com' });
+  expect(delivery).toMatchObject({ idempotencyKey: result.jobID, to: 'old@example.com' });
 });
 
 test('#sendChangeEmailNotification it enqueues and delivers with no props beyond the recipient', async () => {
   await using ctx = await setupTest();
 
-  let captured: CapturedDelivery | undefined;
-
-  server.use(
-    buildDeliveryCaptureHandler((delivery) => {
-      captured = delivery;
-    }),
-  );
-
   const result = await ctx.client.sendChangeEmailNotification({ to: 'player@example.com' });
 
   await ctx.queue.drain('send-change-email-notification');
 
-  const delivery = await waitForDelivery(() => captured);
+  const delivery = await waitForDelivery('player@example.com');
 
-  expect(delivery).toStrictEqual({ idempotencyKey: result.jobID, to: 'player@example.com' });
+  expect(delivery).toMatchObject({ idempotencyKey: result.jobID, to: 'player@example.com' });
 });
 
 test('#sendResetPassword it enqueues and delivers', async () => {
   await using ctx = await setupTest();
-
-  let captured: CapturedDelivery | undefined;
-
-  server.use(
-    buildDeliveryCaptureHandler((delivery) => {
-      captured = delivery;
-    }),
-  );
 
   const result = await ctx.client.sendResetPassword({
     resetURL: 'https://versidle.com/reset-password',
@@ -211,21 +142,13 @@ test('#sendResetPassword it enqueues and delivers', async () => {
 
   await ctx.queue.drain('send-reset-password');
 
-  const delivery = await waitForDelivery(() => captured);
+  const delivery = await waitForDelivery('player@example.com');
 
-  expect(delivery).toStrictEqual({ idempotencyKey: result.jobID, to: 'player@example.com' });
+  expect(delivery).toMatchObject({ idempotencyKey: result.jobID, to: 'player@example.com' });
 });
 
 test('#sendPasswordChanged it enqueues and delivers', async () => {
   await using ctx = await setupTest();
-
-  let captured: CapturedDelivery | undefined;
-
-  server.use(
-    buildDeliveryCaptureHandler((delivery) => {
-      captured = delivery;
-    }),
-  );
 
   const result = await ctx.client.sendPasswordChanged({
     email: 'player@example.com',
@@ -234,9 +157,9 @@ test('#sendPasswordChanged it enqueues and delivers', async () => {
 
   await ctx.queue.drain('send-password-changed');
 
-  const delivery = await waitForDelivery(() => captured);
+  const delivery = await waitForDelivery('player@example.com');
 
-  expect(delivery).toStrictEqual({ idempotencyKey: result.jobID, to: 'player@example.com' });
+  expect(delivery).toMatchObject({ idempotencyKey: result.jobID, to: 'player@example.com' });
 });
 
 test('a job left failed by a downstream error survives for a later sweep instead of vanishing', async () => {
