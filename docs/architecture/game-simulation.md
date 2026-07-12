@@ -96,4 +96,4 @@ requires a resync. The fast-forward simulates from the last verified anchor; re-
 already-submitted minutes is harmless — the results are deterministic and resubmission dedupes.
 
 Which rewards offline simulation may produce is an economy rule, not a protocol one: the
-[economy modes note](../game-design/004-economy-modes.md) owns it.
+[economy modes note](../game-design/economy-modes.md) owns it.

@@ -15,7 +15,7 @@ the whole offline window, and plays only the best one. Out of twenty thousand si
 one that matters is the single best, so a reward distribution's danger lives in its tail, not its
 variance — modest per-run variance with a rare outlier still hands the scanner a jackpot. That
 best-of-N selection value is what every rule below prices; the
-[economy modes note](../game-design/004-economy-modes.md) turns it into the reward-design rules.
+[economy modes note](../game-design/economy-modes.md) turns it into the reward-design rules.
 
 ## The anchored seed chain
 
@@ -124,7 +124,7 @@ appears.
 Only a tailed distribution needs the seal. A normalized outcome — a chosen tier, an instance
 modifier bounded to modest scalars with no jackpot combination — carries no tail worth selecting, so
 it rides client-computable entropy anywhere, interactive rerolls included; the
-[economy modes note](../game-design/004-economy-modes.md) owns that rule.
+[economy modes note](../game-design/economy-modes.md) owns that rule.
 
 For self-found avatars no entropy is sealable at all — the player holds the key — which is
 consistent with their earnings never reaching the market.
@@ -144,6 +144,6 @@ the property; device-custody rolls do not. The delivery channel is irrelevant.
 
 ## Mode enforcement
 
-An avatar's economy mode (the [economy modes note](../game-design/004-economy-modes.md) owns the
+An avatar's economy mode (the [economy modes note](../game-design/economy-modes.md) owns the
 choice) fixes its key custody at creation, permanently. No path converts one custody into the other,
 and a device-held key is never repatriated into market eligibility.
