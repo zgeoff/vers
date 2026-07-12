@@ -1,4 +1,3 @@
-import type { ClassID } from '@vers/data';
 import type { AvatarBehaviour, Behaviour, BehaviourID, EnemyBehaviour } from './behaviour';
 import type { CombatExecutor } from './combat';
 import type { SetEntityStateFn } from './core';
@@ -6,7 +5,6 @@ import type { EquipmentSlot, EquipmentWeapon } from './equipment';
 import type { SimulationContext } from './simulation';
 
 export interface AvatarData {
-  class: ClassID;
   id: string;
   level: number;
   life: number;
@@ -71,7 +69,6 @@ export type AvatarBehaviourAppState = {
 
 export interface AvatarAppState {
   readonly behaviours: AvatarBehaviourAppState;
-  readonly class: ClassID;
   readonly id: string;
   readonly isAlive: boolean;
   readonly level: number;

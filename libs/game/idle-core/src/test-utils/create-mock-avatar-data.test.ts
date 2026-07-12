@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import { Class } from '@vers/data';
 import { EquipmentSlot } from '../types';
 import { createMockAvatarData } from './create-mock-avatar-data';
 
@@ -7,7 +6,6 @@ test('it creates avatar data with expected properties', () => {
   const avatar = createMockAvatarData();
 
   expect(avatar).toStrictEqual({
-    class: Class.Brute,
     id: expect.toBeString(),
     level: 1,
     life: 200,
@@ -26,7 +24,6 @@ test('it creates avatar data with expected properties', () => {
 
 test('it creates avatar data with custom properties', () => {
   const avatar = createMockAvatarData({
-    class: Class.Scholar,
     id: 'test-id',
     level: 2,
     life: 100,
@@ -43,7 +40,6 @@ test('it creates avatar data with custom properties', () => {
   });
 
   expect(avatar).toStrictEqual({
-    class: Class.Scholar,
     id: 'test-id',
     level: 2,
     life: 100,

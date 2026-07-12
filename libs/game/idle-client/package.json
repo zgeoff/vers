@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@vers/client-test-utils": "workspace:*",
-    "@vers/data": "workspace:*",
     "@vers/design-system": "workspace:*",
     "@vers/idle-core": "workspace:*",
     "@vers/styled-system": "workspace:*",

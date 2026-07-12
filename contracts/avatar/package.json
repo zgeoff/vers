@@ -13,7 +13,6 @@
   "dependencies": {
     "@orpc/contract": "catalog:",
     "@vers/contract-base": "workspace:*",
-    "@vers/data": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

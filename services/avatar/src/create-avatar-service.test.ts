@@ -12,7 +12,7 @@ test('it wires an injected db into the router instead of building one from env',
 
   const client = buildRPCTestClient<AvatarContract>(service.app, { token: viewer.token });
 
-  await client.createAvatar({ class: 'brute', name: 'Wired' });
+  await client.createAvatar({ name: 'Wired' });
 
   const rows = await db.db.selectFrom('avatars').selectAll().execute();
 

@@ -24,7 +24,7 @@ export function createMockActivity(
 
   return {
     avatarId: createId(),
-    buildSnapshot: { class: 'brute', level: 1, xp: 0 },
+    buildSnapshot: { level: 1, xp: 0 },
     contentVersion,
     id,
     lastHash: startHash,

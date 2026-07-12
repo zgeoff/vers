@@ -1,10 +1,8 @@
 import { useServerFn } from '@tanstack/react-start';
-import type { ClassID } from '@vers/data';
 import { Field, Heading, StatusButton } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { avatarCreate } from './avatar-create';
-import { ClassSelectionField } from './class-selection-field';
 import type { AvatarCreateResult } from './types';
 
 const formStyles = css({
@@ -17,7 +15,6 @@ const formStyles = css({
 
 export function AvatarCreateForm() {
   const avatarCreateFn = useServerFn(avatarCreate);
-  const [selectedClass, setSelectedClass] = useState<ClassID | undefined>(undefined);
   const [fieldErrors, setFieldErrors] = useState<AvatarCreateResult['fieldErrors']>({});
   const [isPending, setIsPending] = useState(false);
 
@@ -52,12 +49,6 @@ export function AvatarCreateForm() {
           void handleSubmit(event.currentTarget);
         }}
       >
-        <input name="class" type="hidden" value={selectedClass ?? ''} />
-        <ClassSelectionField
-          error={fieldErrors.class}
-          selected={selectedClass}
-          onSelect={setSelectedClass}
-        />
         <Field
           errors={fieldErrors.name === undefined ? [] : [fieldErrors.name]}
           inputProps={{

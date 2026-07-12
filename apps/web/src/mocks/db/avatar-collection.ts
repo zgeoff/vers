@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { Collection } from '@msw/data';
 import { createId } from '@paralleldrive/cuid2';
-import { AvatarClassSchema, AvatarDataSchema } from '@vers/contract-avatar';
+import { AvatarDataSchema } from '@vers/contract-avatar';
 import * as z from 'zod';
 
 /**
@@ -9,7 +9,6 @@ import * as z from 'zod';
  * state only the fields they assert on. `userID` defaults to a random id, not a real user's.
  */
 const AvatarRowSchema = AvatarDataSchema.extend({
-  class: AvatarClassSchema.default('brute'),
   createdAt: z.date().default(() => new Date()),
   id: z.string().default(() => createId()),
   level: z.int().default(1),

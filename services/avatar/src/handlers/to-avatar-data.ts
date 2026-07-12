@@ -7,7 +7,6 @@ import type { Selectable } from 'kysely';
  */
 export function toAvatarData(row: Readonly<Selectable<Avatars>>): AvatarData {
   return {
-    class: row.class,
     createdAt: row.createdAt,
     id: row.id,
     level: row.level,

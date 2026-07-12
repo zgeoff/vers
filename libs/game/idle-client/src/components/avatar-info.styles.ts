@@ -15,11 +15,3 @@ export const avatarName = css({
   textAlign: 'right',
   zIndex: '[1]',
 });
-
-export const avatarImage = css({
-  left: '[-80px]',
-  objectFit: 'cover',
-  objectPosition: 'top left',
-  position: 'absolute',
-  top: '[-90px]',
-});

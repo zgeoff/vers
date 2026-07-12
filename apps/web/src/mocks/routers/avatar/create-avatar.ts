@@ -19,7 +19,6 @@ export const createAvatar = os.createAvatar.handler((opts) => {
   const now = new Date();
 
   return db.avatarCollection.create({
-    class: opts.input.class,
     createdAt: now,
     id: createId(),
     level: 1,

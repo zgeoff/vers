@@ -19,7 +19,7 @@ test('it passes every conformance case collected from its contract', async () =>
   const cases = collectConformanceCases(avatarContract, {
     anonymousHeaders: { authorization: `Bearer ${viewer.token}` },
     authedSamples: {
-      createAvatar: { class: 'brute', name: 'Conformance' },
+      createAvatar: { name: 'Conformance' },
       deleteAvatar: { id: 'x' },
       getAvatar: { id: 'x' },
       getAvatars: {},
