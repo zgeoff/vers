@@ -55,3 +55,5 @@ The game's design language and systems.
   reward-design rules
 - [Base classes](./game-design/base-classes.md) — a class as a signature mechanic, the class-design
   laws, and the specialization model
+- [Base class template](./game-design/base-class-template.md) — the fill-in sheet for speccing a
+  single class against the base-class model
