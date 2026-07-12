@@ -45,11 +45,13 @@ How the platform is built — system design, data flows, and operational wiring.
 
 The game's design language and systems.
 
-- [Core themes and world fiction](./game-design/core-themes-world-fiction.md) — the world's
-  pillars, tone, factions, and the vocabulary every other note inherits
+- [Core themes and world fiction](./game-design/core-themes-world-fiction.md) — the world's pillars,
+  tone, factions, and the vocabulary every other note inherits
 - [Attributes and damage model](./game-design/attributes-damage-model.md) — damage types, the
   Azimuth attribute system, and the defensive-layer structure
-- [Defensive archetypes](./game-design/defensive-archetypes.md) — the emergent defensive layers
-  and the activity/encounter structure they defend inside
+- [Defensive archetypes](./game-design/defensive-archetypes.md) — the emergent defensive layers and
+  the activity/encounter structure they defend inside
 - [Economy modes and reward integrity](./game-design/economy-modes.md) — economy modes and the
   reward-design rules
+- [Base classes](./game-design/base-classes.md) — a class as a signature mechanic, the class-design
+  laws, and the ascendancy model
