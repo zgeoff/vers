@@ -45,11 +45,10 @@ always played in full. Depth self-limits, because difficulty scales with depth u
 longer clear regardless of re-attempts.
 
 Where a metric is open enough that near-free abandoned attempts can churn the chain forward, cost
-stops gating and detection takes over: an avatar whose
-results ride the favorable tail of its verified history is a behavioural cheat signal, scored
-offline. Bounded margins keep any single attempt's edge small throughout. The residual is a wealthy,
-motivated actor with a purpose-built tool: defended in layers, never zero, the ceiling of anti-cheat
-in any game.
+stops gating and detection takes over: an avatar whose results ride the favorable tail of its
+verified history is a behavioural cheat signal, scored offline. Bounded margins keep any single
+attempt's edge small throughout. The residual is a wealthy, motivated actor with a purpose-built
+tool: defended in layers, never zero, the ceiling of anti-cheat in any game.
 
 ## Rolled rewards and the avatar key
 
@@ -63,13 +62,13 @@ than reused, and `ordinal` indexes the rolled rewards within a checkpoint under 
 canonical ordering, independent of how checkpoints are batched. The coordinate derives only from the
 hashed checkpoint subset, so replaying the chain reproduces every coordinate exactly.
 
-A failed or abandoned attempt advances the chain past its spent indices, so the next attempt rolls at
-fresh coordinates rather than re-reaching the old ones. The reveal needs no replay-identity to stay
-safe: content resolves at equal expected value regardless of position, and under server custody a
-coordinate cannot be read until its checkpoint is appended, so re-reaching a position trades one
+A failed or abandoned attempt advances the chain past its spent indices, so the next attempt rolls
+at fresh coordinates rather than re-reaching the old ones. The reveal needs no replay-identity to
+stay safe: content resolves at equal expected value regardless of position, and under server custody
+a coordinate cannot be read until its checkpoint is appended, so re-reaching a position trades one
 blind roll for an independent roll of equal worth. Device custody lets a self-found avatar read its
-own rolls before committing, but its loot never reaches a market, and any standing it earns rides the
-same appended, verifiable record.
+own rolls before committing, but its loot never reaches a market, and any standing it earns rides
+the same appended, verifiable record.
 
 Rolled content is `f(key, coordinate)`, where `f` is a keyed PRF — a pseudorandom function whose
 revealed outputs carry no predictive power over unrevealed coordinates. The property matters because
@@ -134,11 +133,12 @@ Three rules keep the seal honest, independent of what consumes it:
 - Every input the outcome depends on pins at mint, so deferring resolution cannot improve it.
 
 The mechanism admits any tail-bearing outcome; each consumer defines its own position, resolution,
-and pinned inputs. Item crafting is the worked case: the position is the craft action in the avatar's
-crafting sequence, the resolution is applying the result to the item, and the pinned inputs are the
-target item and the consumed currency at commit. Application is exactly-once per action — a network
-retry never applies a spend twice. A craft's affixes draw this sealed salt; a base drop's content
-resolves under the avatar key instead, and the two mechanisms never compose within one outcome.
+and pinned inputs. Item crafting is the worked case: the position is the craft action in the
+avatar's crafting sequence, the resolution is applying the result to the item, and the pinned inputs
+are the target item and the consumed currency at commit. Application is exactly-once per action — a
+network retry never applies a spend twice. A craft's affixes draw this sealed salt; a base drop's
+content resolves under the avatar key instead, and the two mechanisms never compose within one
+outcome.
 
 Sealed salt requires a live round trip, so tail-bearing content is online content wherever it
 appears.
@@ -147,8 +147,8 @@ Only a rolled tail needs the seal. A chosen tier at a published scalar carries n
 selecting and rides client-computable entropy anywhere, interactive selection included. A rolled
 magnitude does carry a tail: bounded is not flat, and best-of-N selects the maximum of a bounded
 spread as readily as an unbounded one. So any modifier that rolls a market-grade quantity — yield,
-roll or pack count, density — is a rolled reward under the tail rule, and must be sealed or forbidden.
-The [economy modes note](../game-design/economy-modes.md) owns the content rule.
+roll or pack count, density — is a rolled reward under the tail rule, and must be sealed or
+forbidden. The [economy modes note](../game-design/economy-modes.md) owns the content rule.
 
 For self-found avatars no entropy is sealable at all — the player holds the key — which is
 consistent with their earnings never reaching the market.
@@ -159,9 +159,9 @@ Every checkpoint's hashed subset carries an entropy-source tag identifying which
 outcomes, present from the first row ever written. The subset is frozen, so the tag cannot be added
 later. The two sources it distinguishes today are server-custody and device-custody rolls, and the
 tag is what lets further sources — a verifiable-randomness beacon, a rotated key generation — join
-without a migration. Verification validates the tag against
-the avatar's server-recorded mode; a mismatch is divergence. Settlement stamps an outcome's
-provenance from server records and the tag — never from a client claim.
+without a migration. Verification validates the tag against the avatar's server-recorded mode; a
+mismatch is divergence. Settlement stamps an outcome's provenance from server records and the tag —
+never from a client claim.
 
 Tradeability keys on the security property: entropy unpredictable at the moment the outcome was
 committed, and provably tied to the party that minted it. Server-custody rolls and sealed salt have

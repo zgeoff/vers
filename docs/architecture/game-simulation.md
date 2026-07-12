@@ -6,10 +6,10 @@ replay.
 ## Activities and encounters
 
 An **activity** is one attempt at a piece of content, recorded as a single append-only checkpoint
-stream and verified as a unit. Every activity has a type. A **world map encounter** is the type where
-an avatar fights through a node's enemies, arranged in **waves** — ordered groups the avatar clears
-one at a time. `@vers/idle-core` runs any activity type; `@vers/game-utils` derives a world map
-encounter's waves, enemies, and timing from `(node, seed, content)` as a pure function.
+stream and verified as a unit. Every activity has a type. A **world map encounter** is the type
+where an avatar fights through a node's enemies, arranged in **waves** — ordered groups the avatar
+clears one at a time. `@vers/idle-core` runs any activity type; `@vers/game-utils` derives a world
+map encounter's waves, enemies, and timing from `(node, seed, content)` as a pure function.
 
 ## The deterministic core
 
@@ -73,10 +73,10 @@ boundary — never mid-session. A stream that fails verification repeatedly is q
 on rather than retried forever.
 
 Replay divergence is not the only cheat signal. Because every attempt at a node is a link in the
-append-only, server-verified chain, reroll-scanning leaves a record: an avatar whose results ride the
-favorable tail of its own verified history — faster clears, better positions, more often than the
-distribution predicts — stands out from honest play, whether it reached them by failing attempts or
-by completing and discarding them. This is a behavioural signal, not a divergence, and it is
+append-only, server-verified chain, reroll-scanning leaves a record: an avatar whose results ride
+the favorable tail of its own verified history — faster clears, better positions, more often than
+the distribution predicts — stands out from honest play, whether it reached them by failing attempts
+or by completing and discarding them. This is a behavioural signal, not a divergence, and it is
 scored with the same restraint: a soft consequence before a hard one, always at a session boundary.
 Honest grinders swing too, and a false accusation costs more than the edge it denies.
 
@@ -93,8 +93,8 @@ crashed worker retries idempotently.
 
 - First-clears, achievements, and other one-shot grants insert into a unique-keyed grant table with
   `ON CONFLICT DO NOTHING` inside the same transaction — idempotent across re-farms and replays.
-- Item instances mint at settlement: identity is the reward coordinate and content is rolled from the
-  avatar's key under the activity's pinned versions (see [game entropy](./game-entropy.md)), so
+- Item instances mint at settlement: identity is the reward coordinate and content is rolled from
+  the avatar's key under the activity's pinned versions (see [game entropy](./game-entropy.md)), so
   re-verification never duplicates or re-rolls an item.
 - Rolled content is revealed only for coordinates whose producing checkpoint is durably appended,
   and the reveal is a pure function of the coordinate — append retries and bulk offline resends
