@@ -10,9 +10,9 @@ export function createMockActivityData(overrides: Partial<ActivityData> = {}): A
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,
     id: createId(),
-    name: 'World Node',
+    name: 'World Map Encounter',
     seed: 1,
-    type: ActivityType.WorldNode,
+    type: ActivityType.WorldMapEncounter,
     ...overrides,
   };
 

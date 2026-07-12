@@ -1,4 +1,4 @@
-import type { EnemyData, EnemyGroup, EnemyGroupAppState } from './entities';
+import type { EnemyData, Wave, WaveAppState } from './entities';
 
 interface IActivityData {
   difficulty: number;
@@ -9,7 +9,7 @@ interface IActivityData {
 }
 
 export enum ActivityType {
-  WorldNode = 'world_node',
+  WorldMapEncounter = 'world_map_encounter',
 }
 
 export enum ActivityFailureAction {
@@ -17,13 +17,13 @@ export enum ActivityFailureAction {
   Retry = 'retry',
 }
 
-export interface WorldNodeActivityData extends IActivityData {
+export interface WorldMapEncounterActivityData extends IActivityData {
   enemies: Array<EnemyData>;
   seed: number;
-  type: ActivityType.WorldNode;
+  type: ActivityType.WorldMapEncounter;
 }
 
-export type ActivityData = WorldNodeActivityData;
+export type ActivityData = WorldMapEncounterActivityData;
 
 /**
  * An open keyed map of signed reward deltas. Future keys are added as optional and never
@@ -42,29 +42,29 @@ export interface ActivityLevelUp {
 }
 
 export interface ActivityAppState {
-  readonly currentEnemyGroup: EnemyGroupAppState | null;
+  readonly currentWave: WaveAppState | null;
   readonly elapsed: number;
   readonly enemiesRemaining: number;
-  readonly enemyGroups: Array<EnemyGroupAppState>;
-  readonly enemyGroupsRemaining: number;
   readonly id: string;
   readonly levelUp: ActivityLevelUp | null;
   readonly name: string;
   readonly rewards: ActivityRewards;
+  readonly waves: Array<WaveAppState>;
+  readonly wavesRemaining: number;
 }
 
 export interface Activity {
   // meta
   readonly difficulty: number;
-  readonly enemyGroups: Array<EnemyGroup>;
   readonly id: string;
   readonly name: string;
   readonly type: ActivityType;
+  readonly waves: Array<Wave>;
 
   // getters
-  get currentEnemyGroup(): EnemyGroup | null;
+  get currentWave(): Wave | null;
   get elapsed(): number;
-  get isEnemyGroupsRemaining(): boolean;
+  get isWavesRemaining(): boolean;
   get levelUp(): ActivityLevelUp | null;
   get rewards(): ActivityRewards;
 
@@ -72,7 +72,7 @@ export interface Activity {
   updateRewards: (delta: ActivityRewards) => void;
   elapseTime: (time: number) => void;
   getAppState: () => ActivityAppState;
-  moveToNextEnemyGroup: () => void;
+  moveToNextWave: () => void;
   setLevelUp: (levelUp: ActivityLevelUp) => void;
 }
 

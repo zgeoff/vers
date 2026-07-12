@@ -198,24 +198,34 @@
           // readonly form a caller can consume, so they are exempted by type
           {
             "from": "file",
-            "name": ["ActivityData", "ActivityAppState", "WorldNodeActivityData", "Activity"],
+            "name": [
+              "ActivityData",
+              "ActivityAppState",
+              "WorldMapEncounterActivityData",
+              "Activity"
+            ],
             "path": "../idle-core/src/types/activity.ts"
           },
           // from-file paths resolve against the consuming package's directory, so
           // consumers outside libs/game/ need their own entry per depth
           {
             "from": "file",
-            "name": ["ActivityData", "ActivityAppState", "WorldNodeActivityData", "Activity"],
+            "name": [
+              "ActivityData",
+              "ActivityAppState",
+              "WorldMapEncounterActivityData",
+              "Activity"
+            ],
             "path": "../../libs/game/idle-core/src/types/activity.ts"
           },
           {
             "from": "file",
-            "name": ["AvatarData", "EnemyData", "Avatar", "Enemy", "EnemyGroup"],
+            "name": ["AvatarData", "EnemyData", "Avatar", "Enemy", "Wave"],
             "path": "../idle-core/src/types/entities.ts"
           },
           {
             "from": "file",
-            "name": ["AvatarData", "EnemyData", "Avatar", "Enemy", "EnemyGroup"],
+            "name": ["AvatarData", "EnemyData", "Avatar", "Enemy", "Wave"],
             "path": "../../libs/game/idle-core/src/types/entities.ts"
           },
           {

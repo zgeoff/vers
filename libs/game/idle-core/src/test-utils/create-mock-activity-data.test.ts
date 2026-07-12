@@ -23,9 +23,9 @@ test('it creates activity data with expected properties', () => {
     ],
     failureAction: ActivityFailureAction.Retry,
     id: expect.toBeString(),
-    name: 'World Node',
+    name: 'World Map Encounter',
     seed: expect.toBeNumber(),
-    type: ActivityType.WorldNode,
+    type: ActivityType.WorldMapEncounter,
   });
 });
 
@@ -38,7 +38,7 @@ test('it creates activity data with custom properties', () => {
     id: 'custom-activity',
     name: 'Custom Activity',
     seed: 123,
-    type: ActivityType.WorldNode,
+    type: ActivityType.WorldMapEncounter,
   });
 
   expect(activity).toStrictEqual({
@@ -48,6 +48,6 @@ test('it creates activity data with custom properties', () => {
     id: 'custom-activity',
     name: 'Custom Activity',
     seed: 123,
-    type: ActivityType.WorldNode,
+    type: ActivityType.WorldMapEncounter,
   });
 });
