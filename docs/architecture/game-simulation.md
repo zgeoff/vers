@@ -73,11 +73,12 @@ boundary — never mid-session. A stream that fails verification repeatedly is q
 on rather than retried forever.
 
 Replay divergence is not the only cheat signal. Because every attempt at a node is a link in the
-append-only, server-verified chain, reroll-scanning is visible in the record: an avatar whose
-completions land in the favorable tail of a node's distribution after abnormally many failed attempts
-stands out from honest play. It is a behavioural signal, not a divergence, scored under the same
-restraint — a soft consequence before a hard one, at a session boundary — because an honest grinder
-also fails, and a false accusation costs more than the edge it denies.
+append-only, server-verified chain, reroll-scanning leaves a record: an avatar whose results ride the
+favorable tail of its own verified history — faster clears, better positions, more often than the
+distribution predicts — stands out from honest play, whether it reached them by failing attempts or
+by completing and discarding them. It is a behavioural signal, not a divergence, scored under the
+same restraint — a soft consequence before a hard one, at a session boundary — because an honest
+grinder also swings, and a false accusation costs more than the edge it denies.
 
 The primary health gauge is verification lag: the oldest unverified append across all streams.
 Rejection rates are tracked split by cause — an integrity-mismatch spike is almost always a bad
