@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { stateFromSeed } from '@vers/game-utils';
+import { buildStateFromSeed } from '@vers/game-utils';
 import type { ActivityData } from '../types';
 import { ActivityFailureAction, ActivityType } from '../types';
 import { createMockEnemyData } from './create-mock-enemy-data';
@@ -12,7 +12,7 @@ export function createMockActivityData(overrides: Partial<ActivityData> = {}): A
     failureAction: ActivityFailureAction.Retry,
     id: createId(),
     name: 'World Map Encounter',
-    seed: stateFromSeed(1),
+    seed: buildStateFromSeed(1),
     type: ActivityType.WorldMapEncounter,
     ...overrides,
   };

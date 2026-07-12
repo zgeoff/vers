@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { stateFromSeed } from '@vers/game-utils';
+import { buildStateFromSeed } from '@vers/game-utils';
 import { ActivityFailureAction, ActivityType } from '../types';
 import { createMockActivityData } from './create-mock-activity-data';
 import { createMockEnemyData } from './create-mock-enemy-data';
@@ -38,7 +38,7 @@ test('it creates activity data with custom properties', () => {
     failureAction: ActivityFailureAction.Abort,
     id: 'custom-activity',
     name: 'Custom Activity',
-    seed: stateFromSeed(123),
+    seed: buildStateFromSeed(123),
     type: ActivityType.WorldMapEncounter,
   });
 
@@ -48,7 +48,7 @@ test('it creates activity data with custom properties', () => {
     failureAction: ActivityFailureAction.Abort,
     id: 'custom-activity',
     name: 'Custom Activity',
-    seed: stateFromSeed(123),
+    seed: buildStateFromSeed(123),
     type: ActivityType.WorldMapEncounter,
   });
 });

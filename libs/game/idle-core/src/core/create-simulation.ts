@@ -1,4 +1,4 @@
-import { createRNG, stateFromSeed } from '@vers/game-utils';
+import { buildStateFromSeed, createRNG } from '@vers/game-utils';
 import { deepEqual } from 'fast-equals';
 import invariant from 'tiny-invariant';
 import type { XXHashAPI } from 'xxhash-wasm';
@@ -24,7 +24,7 @@ import { simulateActivity } from './simulate-activity';
 import { getAppState } from './utils/get-app-state';
 
 export function createSimulation(hasher: XXHashAPI): Simulation {
-  let _rng = createRNG(stateFromSeed(0));
+  let _rng = createRNG(buildStateFromSeed(0));
   let _avatar: Avatar | null = null;
   let _activityData: ActivityData | null = null;
   let _activity: Activity | null = null;
