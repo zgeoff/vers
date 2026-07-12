@@ -4,6 +4,10 @@
       "type": "http",
       "url": "https://mcp.axiom.co/mcp"
     },
+    "neon": {
+      "type": "http",
+      "url": "https://mcp.neon.tech/mcp?readonly=true"
+    },
     "bugsink": {
       "command": "sh",
       "args": [
