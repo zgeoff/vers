@@ -1,19 +1,19 @@
-# The Bugsink R2 storage adapter is Python, so it sits outside the Bun test graph.
-# This runs its pytest suite (moto-mocked S3) via uv, only when the app changes.
-name: Bugsink adapter test
+# Python packages sit outside the Bun test graph; this runs their pytest suites
+# under uv on change. Only apps/bugsink (the Bugsink R2 storage adapter) has one.
+name: Python tests
 
 on:
   pull_request:
     paths:
       - 'apps/bugsink/**'
-      - '.github/workflows/bugsink-adapter-test.yml'
+      - '.github/workflows/python-tests.yml'
 
 permissions:
   contents: read
 
 jobs:
-  adapter-test:
-    name: R2 adapter
+  pytest:
+    name: pytest
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

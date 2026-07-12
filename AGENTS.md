@@ -306,7 +306,7 @@ Screens and routes are built workable-only:
 - `bun install` — whole workspace (`--frozen-lockfile` in CI; `bun.lock` is committed).
 - `bun run typecheck` — `turbo run typecheck`; one project via `--filter=@vers/<name>`.
 - `bun run test` — `turbo run test`, each project's own runner; one project via `--filter`. Every
-  package runs on `bun test` — never add vitest. Postgres-backed suites need
+  JS/TS package runs on `bun test` — never add vitest. Postgres-backed suites need
   `bun run pg:test-container:start` first. bunfig is read from cwd, not merged up, but root-invoked
   `bun test <file>` still resolves jest-extended matchers from the root preload.
 - `bun run lint` / `bun run lint:fix` — `turbo run codegen typegen`, then type-aware oxlint over the
@@ -323,6 +323,8 @@ Screens and routes are built workable-only:
   present; a dependency knip can't see gets a `knip.json` ignore in the PR that introduces it.
 - Git hooks: lefthook (`lefthook.yml`, installed by `prepare`). Pre-push tests changed files only
   (`turbo run test --affected`); `LEFTHOOK=0` skips all hooks.
+- Python (`apps/bugsink` only) runs `pytest` under `uv` via its `test:adapter` script, outside the
+  Bun graph; the `python-tests` workflow runs it on change.
 
 ## Lint policy
 

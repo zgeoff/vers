@@ -12,8 +12,8 @@ image's config and overrides only the file object storage, so the rest of Bugsin
 settings stay upstream's.
 
 The Python here (`r2_storage.py`) sits outside the Bun test graph, so `@vers/bugsink` carries a
-`test:adapter` script that runs its pytest suite (moto-mocked S3) under `uv`, and the
-`bugsink-adapter-test` workflow runs it on changes to this directory.
+`test:adapter` script that runs its pytest suite (moto-mocked S3) under `uv`, and the `python-tests`
+workflow runs it on changes to this directory.
 
 ## Storage
 
