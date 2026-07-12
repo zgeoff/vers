@@ -27,6 +27,7 @@ interface ResetConfig {
 export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
   const label = createLogLabel('avatar', data.id);
   let state = getInitialState(data);
+  let currentLevel = data.level;
 
   // TODO: pull this out into a util
   const getAppState = (): AvatarAppState => {
@@ -51,7 +52,7 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
       behaviours: behaviourState,
       id: data.id,
       isAlive: state.status === EntityStatus.Alive,
-      level: data.level,
+      level: currentLevel,
       mainHandAttack,
       name: data.name,
     };
@@ -96,7 +97,6 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
   const avatar: Avatar = {
     // meta
     id: data.id,
-    level: data.level,
     type: EntityType.Avatar,
     xp: data.xp,
 
@@ -106,6 +106,9 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     },
     get life() {
       return state.life;
+    },
+    get level() {
+      return currentLevel;
     },
     get mainHandEquipment() {
       return data.paperdoll[EquipmentSlot.MainHand];
@@ -129,6 +132,9 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
       logger.debug(`${label} <-- ${amount} damage (${state.life} life remains)`);
     },
     reset,
+    updateLevel: (level: number) => {
+      currentLevel = level;
+    },
   };
 
   DEFAULT_BEHAVIOUR_FACTORIES

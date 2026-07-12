@@ -40,6 +40,7 @@ export async function* simulateActivity(
 
       if (checkpoint.levelUp) {
         activity.setLevelUp(checkpoint.levelUp);
+        avatar.updateLevel(checkpoint.levelUp.to);
       }
 
       yield checkpoint;
@@ -61,6 +62,7 @@ export async function* simulateActivity(
 
   if (completedCheckpoint.levelUp) {
     activity.setLevelUp(completedCheckpoint.levelUp);
+    avatar.updateLevel(completedCheckpoint.levelUp.to);
   }
 
   return completedCheckpoint;

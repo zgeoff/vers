@@ -28,25 +28,4 @@ test('it renders info about the provided activity', () => {
   expect(enemiesRemaining).toBeInTheDocument();
   expect(enemyGroupsRemaining).toBeInTheDocument();
   expect(xpEarned).toBeInTheDocument();
-  expect(screen.queryByText(nodeHasText('Leveled up'))).not.toBeInTheDocument();
-});
-
-test('it renders a level-up indication when the activity carries one', () => {
-  const activity: ActivityAppState = {
-    currentEnemyGroup: null,
-    elapsed: 0,
-    enemiesRemaining: 20,
-    enemyGroups: [],
-    enemyGroupsRemaining: 4,
-    id: 'test-activity',
-    levelUp: { from: 3, to: 4 },
-    name: 'Test Activity',
-    rewards: { xp: 150 },
-  };
-
-  render(<ActivityInfo activity={activity} />);
-
-  const levelUp = screen.getByText(nodeHasText('Leveled up to 4!'));
-
-  expect(levelUp).toBeInTheDocument();
 });

@@ -95,6 +95,7 @@ export interface Avatar extends IEntity<AvatarState, AvatarAppState> {
   // utils
   calcAttackDamage: () => number;
   reset: (config?: ResetConfig) => void;
+  updateLevel: (level: number) => void;
 }
 
 export interface EnemyState {

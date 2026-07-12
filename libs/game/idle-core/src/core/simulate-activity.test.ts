@@ -273,6 +273,7 @@ test('it carries a levelUp when a completion bonus crosses a level threshold', a
 
   expect(checkpoint.type).toBe(ActivityCheckpointType.Completed);
   expect(checkpoint.levelUp).toStrictEqual({ from: 1, to: 2 });
+  expect(avatar.getAppState().level).toBe(2);
 });
 
 test('it records a levelUp checkpoint when a group clear crosses a level threshold', async () => {
@@ -308,6 +309,7 @@ test('it records a levelUp checkpoint when a group clear crosses a level thresho
 
   expect(checkpoint?.type).toBe(ActivityCheckpointType.Progress);
   expect(checkpoint?.levelUp).toStrictEqual({ from: 1, to: 2 });
+  expect(avatar.getAppState().level).toBe(2);
 });
 
 test('it keeps xp and a level-up earned on the same tick the avatar dies', async () => {
@@ -355,6 +357,7 @@ test('it keeps xp and a level-up earned on the same tick the avatar dies', async
   expect(avatar.isAlive).toBeFalse();
   expect(progressCheckpoint?.type).toBe(ActivityCheckpointType.Progress);
   expect(progressCheckpoint?.levelUp).toStrictEqual({ from: 1, to: 2 });
+  expect(avatar.getAppState().level).toBe(2);
 
   const failedResult = await generator.next(1000);
 

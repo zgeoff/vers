@@ -24,11 +24,6 @@ export function ActivityInfo(props: Readonly<ActivityInfoProps>) {
       <Text>
         <strong>{props.activity.rewards.xp}</strong> xp earned
       </Text>
-      {props.activity.levelUp && (
-        <Text>
-          Leveled up to <strong>{props.activity.levelUp.to}</strong>!
-        </Text>
-      )}
     </section>
   );
 }
