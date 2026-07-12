@@ -21,6 +21,11 @@ interface CreateMockCheckpointBatchConfig {
   readonly startPrevHash: string;
 
   /**
+   * The activity's `startChainIndex` each entry's `chainIndex` is offset from. Default 0.
+   */
+  readonly startChainIndex?: number;
+
+  /**
    * The batch's first entry version — the activity's current `appendedHead + 1` for a batch that
    * will apply cleanly.
    */
@@ -35,6 +40,7 @@ export function createMockCheckpointBatch(
   config: Readonly<CreateMockCheckpointBatchConfig>,
 ): Array<CheckpointBatchEntry> {
   const count = config.count ?? 1;
+  const startChainIndex = config.startChainIndex ?? 0;
   const entries: Array<CheckpointBatchEntry> = [];
   let prevHash = config.startPrevHash;
 
@@ -43,7 +49,7 @@ export function createMockCheckpointBatch(
     const isLast = index === count - 1;
 
     const payload = {
-      chainIndex: version,
+      chainIndex: startChainIndex + version,
       entropySource: 'chain',
       nextSeed: faker.string.alphanumeric({ casing: 'lower', length: 16 }),
       seed: faker.string.alphanumeric({ casing: 'lower', length: 16 }),

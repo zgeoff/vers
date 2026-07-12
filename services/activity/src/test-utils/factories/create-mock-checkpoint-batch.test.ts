@@ -21,6 +21,17 @@ test('it defaults chainIndex to the checkpoint version', () => {
   expect(batch.map((entry) => entry.payload.chainIndex)).toStrictEqual([1, 2, 3]);
 });
 
+test('it offsets chainIndex by startChainIndex when given', () => {
+  const batch = createMockCheckpointBatch({
+    count: 3,
+    startChainIndex: 10,
+    startPrevHash: 'hash_0',
+    startVersion: 1,
+  });
+
+  expect(batch.map((entry) => entry.payload.chainIndex)).toStrictEqual([11, 12, 13]);
+});
+
 test('it chains each entry onto the previous one', () => {
   const batch = createMockCheckpointBatch({ count: 3, startPrevHash: 'hash_0', startVersion: 1 });
 
