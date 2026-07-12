@@ -1,29 +1,23 @@
-import { faker } from '@faker-js/faker';
 import { Collection } from '@msw/data';
 import { createId } from '@paralleldrive/cuid2';
 import * as z from 'zod';
 
 /**
- * A stored mock sent-email row, one per enqueued send. `template` stays required — it's what the
- * row is for — and every other field defaults, including the templates' own optional payload
- * fields, so tests state only the fields their assertions depend on.
+ * A stored mock sent-email row, one per enqueued send, mirroring the email service's delivery
+ * queue rows: `template` is the queue's job name and `payload` its job data — the verbatim send
+ * input, `to` included.
  */
 const SentEmailRowSchema = z.object({
-  email: z.string().default(() => faker.internet.email()),
   id: z.string().default(() => createId()),
-  newEmail: z.string().default(() => faker.internet.email()),
-  resetURL: z.string().default(() => faker.internet.url()),
+  payload: z.record(z.string(), z.string()).default({}),
   template: z.enum([
-    'welcome',
-    'existing-account',
-    'change-email-verification',
-    'change-email-notification',
-    'reset-password',
-    'password-changed',
+    'send-change-email-notification',
+    'send-change-email-verification',
+    'send-existing-account',
+    'send-password-changed',
+    'send-reset-password',
+    'send-welcome',
   ]),
-  to: z.string().default(() => faker.internet.email()),
-  verificationCode: z.string().default(() => faker.string.numeric(6)),
-  verificationURL: z.string().default(() => faker.internet.url()),
 });
 
 export const sentEmailCollection = new Collection({ schema: SentEmailRowSchema });

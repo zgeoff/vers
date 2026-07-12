@@ -3,8 +3,8 @@ import { os } from './os';
 
 export const sendPasswordChanged = os.sendPasswordChanged.handler(async (opts) => {
   const row = await db.sentEmailCollection.create({
-    ...opts.input,
-    template: 'password-changed',
+    payload: { ...opts.input },
+    template: 'send-password-changed',
   });
 
   return { jobID: row.id };

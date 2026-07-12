@@ -40,13 +40,13 @@ test('it starts a change-email verification and redirects to verify-otp for a ca
   expect(verification).toMatchObject({ type: 'change-email' });
 
   const verificationEmail = db.sentEmailCollection.findFirst((q) =>
-    q.where({ template: 'change-email-verification', to: 'new@vers.test' }),
+    q.where({ payload: { to: 'new@vers.test' }, template: 'send-change-email-verification' }),
   );
 
-  expect(verificationEmail).toMatchObject({
+  expect(verificationEmail?.payload).toStrictEqual({
     newEmail: 'new@vers.test',
     to: 'new@vers.test',
-    verificationCode: verification?.code,
+    verificationCode: verification?.code ?? '',
     verificationURL: `http://localhost/verify-otp?${new URLSearchParams({ code: verification?.code ?? '', target: 'new@vers.test', type: 'change-email' }).toString()}`,
   });
 });
