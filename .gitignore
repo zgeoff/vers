@@ -55,13 +55,13 @@ Thumbs.db
 # secrets & keys
 privkey.pem
 pubkey.crt
-services/*/.env.production
-apps/web-e2e/.env
-apps/**/.env*.local
-services/**/.env*.local
-contracts/**/.env*.local
-libs/**/.env*.local
-infra/.env*.local
+# Env files anywhere: only .env.example, .env.development, and .env.test are committed
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.development
+!.env.test
 
 # cursor context files
 memory.md
