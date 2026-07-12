@@ -23,7 +23,7 @@ playing for it, and a market lets them sell it. The economy's one hard rule foll
 Every avatar chooses its economy at creation: **Trade** or **Self-Found** (working labels). The
 choice is a single fact — who holds the avatar's loot key.
 
-- **Trade** — full market access. The avatar's loot key stays on the server, so drops resolve as the
+- **Trade** — full market access. The avatar's loot key stays on the server, so loot resolves as the
   run's records land: live while connected, in one reveal on returning from offline. The same
   expedition yields the same loot either way — being away changes when loot is seen, never what it
   is worth.
@@ -52,25 +52,30 @@ a list of today's features:
   which only the player's own device rolled.
 - Avatars are league-scoped, so league resets contain self-found holdings with no extra rule.
 
-## Predictable Outcomes
+## Reward Classes
 
-The simulation's trajectory is predictable by design — offline play depends on computing it — so
-everything the trajectory carries is priced for foresight:
+Every reward is either steady or rolled, and the class decides what may be predictable.
+
+**Steady rewards** accrue from the trajectory, which is predictable by design — offline play depends
+on computing it — so they are priced for foresight:
 
 - **Experience.** Per-encounter variance is acceptable — foreseeing it only improves routing, which
   is calculator play, not arbitrage.
 - **Fixed material and currency trickles** at published rates.
 - **Completion payouts** — first-clear bonuses and unlock grants, fixed per region.
-- **Drop slots.** Which kills yield loot, and how many, is trajectory knowledge: foreseeing it
-  reveals a route's throughput, never what any slot contains.
 
-Slot counts are foreseeable, and every slot carries market value for a trade avatar. Drop density
-therefore obeys the tail rule that drop quality no longer needs: routes may differ modestly in drops
-per hour — grindy play averages out — but no route is a density jackpot worth scanning thousands of
-futures to find. Density outliers belong in invested content, priced by their cost.
+**Rolled rewards** are rewards whose value lives in the roll — item drops are the concrete case. The
+trajectory commits them, and which kills produce them, and how many, is trajectory knowledge:
+foreseeing that reveals a route's throughput, never what any roll contains.
 
-What a slot contains is never predictable for a trade avatar: content rolls under the server-held
-key only after every choice that produced the slot is committed. Loot therefore drops everywhere —
+Roll counts are foreseeable, and every rolled reward carries market value for a trade avatar. Roll
+density therefore obeys the tail rule that rolled content no longer needs: routes may differ
+modestly in rolls per hour — grindy play averages out — but no route is a density jackpot worth
+scanning thousands of futures to find. Density outliers belong in invested content, priced by their
+cost.
+
+What a roll contains is never predictable for a trade avatar: content resolves under the server-held
+key only after every choice that produced the roll is committed. Loot therefore drops everywhere —
 base expeditions, invested expeditions, the offline loop — with full ordinary variance, and none of
 it can be fished for.
 
@@ -90,7 +95,7 @@ rule, not the mechanic:
   jackpot combinations, never coupled to a reward tail. A tail-free distribution reveals nothing
   worth selecting, so instance rolling is client-trustable and works anywhere, offline included,
   rerolls and all. Keeping modifiers jackpot-free is a standing content constraint, the same
-  obligation as drop density.
+  obligation as roll density.
 - **Item crafting** — affix rolls are the tail; shaping items is the point. Crafting rolls draw
   sealed server entropy behind the preview flow, online. Self-found avatars craft against their own
   key — nothing is sealed from them, and nothing they make can leave.

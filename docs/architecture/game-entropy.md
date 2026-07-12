@@ -27,17 +27,18 @@ and restarting therefore replays the same continuation — there is nothing to r
 rule closes seed-fishing, death-scumming via early flush, and retry-branch selection.
 
 The chain is client-computable by design — offline simulation depends on it. It seeds the
-simulation's trajectory only: enemies, timing, survival, experience, and which kills yield drop
-slots. Drop content never derives from it. Foreseeing the trajectory is throughput knowledge —
+simulation's trajectory only: enemies, timing, survival, experience, and which kills commit rolled
+rewards. Rolled content never derives from it. Foreseeing the trajectory is throughput knowledge —
 routing, kill counts, survival — and the economy prices it as such.
 
-## Drop rolls and the avatar key
+## Rolled rewards and the avatar key
 
-The slot is a commitment; the item is its reveal. A kill that yields loot commits a drop slot at a
-deterministic coordinate, and the item is rolled from that coordinate later, under a key.
+A rolled reward is a reward whose value lives in its roll — an item drop is the concrete case. The
+commitment comes first, the reveal second: a kill that produces one commits it at a deterministic
+coordinate, and its content is rolled from that coordinate later, under a key.
 
 The coordinate is `(avatarID, nodeID, chainIndex, ordinal)`: `chainIndex` counts checkpoints from
-the node's seed-chain anchor, and `ordinal` indexes the drops within a checkpoint under the
+the node's seed-chain anchor, and `ordinal` indexes the rolled rewards within a checkpoint under the
 simulation's canonical ordering, independent of how checkpoints are batched. The coordinate derives
 only from the hashed checkpoint subset.
 
@@ -45,23 +46,24 @@ The coordinate is also restart-stable: the chain replays the same continuation, 
 restarting reproduces the identical coordinate. That stability is what makes the reveal safe.
 Peeking a roll and replaying the position shows the same roll — a peek has zero option value.
 
-Drop content is `f(key, coordinate)`, where `f` is a keyed PRF — a pseudorandom function whose
+Rolled content is `f(key, coordinate)`, where `f` is a keyed PRF — a pseudorandom function whose
 revealed outputs carry no predictive power over unrevealed coordinates. The property matters because
-every reveal hands the client a known input/output pair. Item identity is the coordinate, so minting
-is idempotent and re-verification can neither duplicate nor re-roll an item.
+every reveal hands the client a known input/output pair. The reward's identity is its coordinate, so
+minting is idempotent and re-verification can neither duplicate nor re-roll a reward.
 
 Key custody is the economy boundary:
 
 - **Server-held key** (trade avatars): the key never leaves the server. Content resolves only for
   coordinates whose producing checkpoint is durably appended — no protocol path returns content
-  earlier. The append is the commitment, the roll is the reveal. Connected play reveals drops within
-  a batch cadence of the kill; a return from offline reveals the window's drops at once. No
-  connectivity state changes what a slot is worth.
-- **Device-held key** (self-found avatars): the avatar rolls its own loot locally, offline, in real
-  time. A disclosed key makes every future roll computable, so the key ships only to avatars whose
-  earnings can never reach the market. Disclosure is the mode's normal operation, not a compromise.
-  The server derives the same key — that is what lets it verify self-found streams and restore the
-  key to a new device — so self-found custody is an economic wall, not a privacy guarantee.
+  earlier. The append is the commitment, the roll is the reveal. Connected play reveals a kill's
+  rewards within a batch cadence; a return from offline reveals the window's rewards at once. No
+  connectivity state changes what a committed reward is worth.
+- **Device-held key** (self-found avatars): the avatar rolls its own rewards locally, offline, in
+  real time. A disclosed key makes every future roll computable, so the key ships only to avatars
+  whose earnings can never reach the market. Disclosure is the mode's normal operation, not a
+  compromise. The server derives the same key — that is what lets it verify self-found streams and
+  restore the key to a new device — so self-found custody is an economic wall, not a privacy
+  guarantee.
 
 Key derivation obeys three rules:
 
@@ -100,7 +102,7 @@ Two rules keep the seal honest:
   insufficient: salt derived from client-visible state under a different label is still
   client-computable, and the sealing property collapses.
 - Salt is minted once per node-anchored chain position — the same restart-stable index that keys
-  drop coordinates — and re-fetch is idempotent. A client that loses the response retries and
+  reward coordinates — and re-fetch is idempotent. A client that loses the response retries and
   receives the same salt, so a lost packet cannot fork the timeline; until the release arrives, the
   run does not start. The build snapshot pins at mint, so deferring resolution cannot improve an
   outcome by out-leveling it first.

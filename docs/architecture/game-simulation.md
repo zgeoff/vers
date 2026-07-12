@@ -75,14 +75,14 @@ crashed worker retries idempotently.
 
 - First-clears, achievements, and other one-shot grants insert into a unique-keyed grant table with
   `ON CONFLICT DO NOTHING` inside the same transaction — idempotent across re-farms and replays.
-- Item instances mint at settlement: identity is the restart-stable drop coordinate and content is
+- Item instances mint at settlement: identity is the restart-stable reward coordinate and content is
   rolled from the avatar's key under the activity's pinned versions (see
   [game entropy](./game-entropy.md)), so re-verification never duplicates or re-rolls an item.
-- Drop content is revealed only for coordinates whose producing checkpoint is durably appended, and
-  the reveal is a pure function of the coordinate — append retries and bulk offline resends return
-  identical reveals.
+- Rolled content is revealed only for coordinates whose producing checkpoint is durably appended,
+  and the reveal is a pure function of the coordinate — append retries and bulk offline resends
+  return identical reveals.
 - A rejected claim rolls back by forward compensating events, never by snapshot restore: the node's
-  seed anchor resets to the verified prefix and revealed-but-unsettled drops past it are cleared
+  seed anchor resets to the verified prefix and revealed-but-unsettled rewards past it are cleared
   from optimistic display.
 
 Resume always anchors on the last verified checkpoint. The client rebuilds optimistic state by
