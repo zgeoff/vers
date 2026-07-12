@@ -30,7 +30,7 @@ never a replay of the one that failed.
 
 The chain seeds the trajectory only — enemies, timing, survival, experience, and which kills commit
 rolled rewards — and rolled content resolves separately, under a key keyed to the committing kill.
-For a market reward a different continuation is worth nothing: steady rewards are published,
+In reward terms one continuation is worth no more than another: steady rewards are published,
 rolled-reward density varies only within bounded margins, and each roll's content carries equal
 expected value regardless of position, so steering the chain for a better reward returns less than
 the attempts it costs.
