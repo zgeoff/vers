@@ -18,8 +18,8 @@ playing for it, and a market lets them sell it. The economy's one hard rule foll
 
 **An outcome worth selecting may be predictable, or it may reach the market — never both.**
 
-Steady outcomes carry both properties safely — they give a scanner nothing to select. The rule bites
-only where a distribution has a tail.
+Steady outcomes carry both properties safely — they give a scanner nothing to select. The rule
+applies only where a distribution has a tail.
 
 ## The Mode Choice
 
