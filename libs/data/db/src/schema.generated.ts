@@ -49,6 +49,17 @@ export interface Activities {
   verifiedHead: Generated<number>;
 }
 
+export interface ActivityChains {
+  appendedChainIndex: Generated<number>;
+  appendedNextSeed: string;
+  avatarId: string;
+  createdAt: Generated<Timestamp>;
+  genesisSeed: string;
+  nodeId: string;
+  verifiedChainIndex: Generated<number>;
+  verifiedNextSeed: string;
+}
+
 export interface ActivityCheckpoints {
   activityId: string;
   appendedAt: Generated<Timestamp>;
@@ -128,6 +139,7 @@ export interface Verifications {
 
 export interface DB {
   activities: Activities;
+  activityChains: ActivityChains;
   activityCheckpoints: ActivityCheckpoints;
   avatars: Avatars;
   consumedTransactionTokens: ConsumedTransactionTokens;

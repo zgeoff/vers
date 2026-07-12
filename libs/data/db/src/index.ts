@@ -3,6 +3,7 @@ export { migrateToLatest, migrationsFolder } from './migrate-to-latest';
 
 export type {
   Activities,
+  ActivityChains,
   ActivityCheckpoints,
   Avatars,
   ConsumedTransactionTokens,
