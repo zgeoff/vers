@@ -1,4 +1,4 @@
-import { createRNG } from '@vers/game-utils';
+import { createRNG, stateFromSeed } from '@vers/game-utils';
 import { getRandomizedPosition } from './get-randomized-position';
 import type { CompressedWorldMapNode, WorldMapNode, WorldMapNodeMap } from './types';
 
@@ -8,7 +8,7 @@ export function getWorldMapNodeMap(
   const nodes: Record<string, WorldMapNode> = {};
 
   for (const node of compressedNodes) {
-    const rng = createRNG(node.s);
+    const rng = createRNG(stateFromSeed(node.s));
 
     const worldMapNode: WorldMapNode = {
       connections: node.c,

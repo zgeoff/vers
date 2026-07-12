@@ -12,12 +12,12 @@ import { createSimulation } from './create-simulation';
 /**
  * @property duration - how long to run the simulation for. derive from the checkpoint data submitted by the
  * cient, or if simulating offline progress the duration since the last checkpoint (if any)
- * @property stopAtSeed - if a final seed is provided we will stop processing once we've reached it. useful for
+ * @property stopAtState - if a final rng state is provided we will stop processing once we've reached it. useful for
  * verifying client progress.
  */
 interface SimulationConfig {
   readonly duration: number;
-  readonly stopAtSeed?: number;
+  readonly stopAtState?: string;
 }
 
 interface SimulationOutput {
@@ -45,9 +45,9 @@ export async function runSimulation(
   const checkpoints: Array<ActivityCheckpoint> = [];
 
   while (simulation.elapsed < config.duration) {
-    // bail out if we've reached our desired seed
-    if (simulation.seed === config.stopAtSeed) {
-      logger.debug(`${label} stopping at seed ${simulation.seed}`);
+    // bail out if we've reached our desired rng state
+    if (simulation.rngState === config.stopAtState) {
+      logger.debug(`${label} stopping at rng state ${simulation.rngState}`);
       break;
     }
 

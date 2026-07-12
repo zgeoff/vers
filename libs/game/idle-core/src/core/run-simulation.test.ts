@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { stateFromSeed } from '@vers/game-utils';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
@@ -12,7 +13,7 @@ test('runs a simulation with default configuration', async () => {
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
-    seed: 3_047_525_658,
+    seed: stateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,
   });
 
@@ -26,17 +27,17 @@ test('runs a simulation with default configuration', async () => {
     {
       "checkpoints": [
         {
-          "hash": "cbd6cc9427a79b1e",
+          "hash": "407d7906bdd4db82",
           "rewards": {
             "xp": 0,
           },
-          "seed": 3047525658,
+          "seed": "63298078c2177576c07e0321584c2a05",
           "time": 0,
           "type": "started",
         },
         {
-          "hash": "611b08f1de148c51",
-          "nextSeed": 685112472,
+          "hash": "d1ace45dda64f2ef",
+          "nextSeed": "20c0dac3c8da96ee1a82332c38c2e8ae",
           "rewards": {
             "xp": 60,
           },
@@ -44,61 +45,61 @@ test('runs a simulation with default configuration', async () => {
           "type": "progress",
         },
         {
-          "hash": "d0100e711451eca4",
+          "hash": "17c6aebfd6dfea7c",
           "levelUp": {
             "from": 1,
             "to": 2,
           },
-          "nextSeed": 2866488649,
+          "nextSeed": "651b7bac24e8282ac2345557ee733dc5",
           "rewards": {
             "xp": 60,
           },
-          "time": 36300,
+          "time": 33800,
           "type": "progress",
         },
         {
-          "hash": "754e2d41cc9f551d",
-          "nextSeed": 2249575321,
+          "hash": "6967c8efdd0347d2",
+          "nextSeed": "183a8b662f0c22f40b637a9f83c410ca",
           "rewards": {
             "xp": 30,
           },
-          "time": 46300,
+          "time": 43800,
           "type": "progress",
         },
         {
-          "hash": "e9f8306aa299f8cc",
-          "nextSeed": 3183217100,
+          "hash": "05509deb38464e85",
+          "nextSeed": "0d1c5f2ed8a45260129c426ab502cbb3",
           "rewards": {
             "xp": 40,
           },
-          "time": 57600,
+          "time": 56300,
           "type": "progress",
         },
         {
-          "hash": "0ad2f691a6d94aa0",
-          "nextSeed": 4197947599,
+          "hash": "6a6629b7772afe49",
+          "nextSeed": "0d1c5f2ed8a45260129c426ab502cbb3",
           "rewards": {
             "xp": 215,
           },
-          "time": 57600,
+          "time": 56300,
           "type": "completed",
         },
         {
-          "hash": "f1dd0c3fcae677d9",
+          "hash": "d1e97ebd0eb2c79b",
           "rewards": {
             "xp": 0,
           },
-          "seed": 4197947599,
+          "seed": "664be6d955fc249bfe89a1dbcdfd99cc",
           "time": 0,
           "type": "started",
         },
         {
-          "hash": "18975faf33fdc719",
-          "nextSeed": 2381219441,
+          "hash": "580d0847a0d4356d",
+          "nextSeed": "dd5a3353a7f6c0c6afcb296684176982",
           "rewards": {
-            "xp": 60,
+            "xp": 40,
           },
-          "time": 18800,
+          "time": 13800,
           "type": "progress",
         },
       ],
@@ -114,7 +115,7 @@ test('it respects duration limit and stops the simulation accordingly', async ()
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
-    seed: 3_047_525_658,
+    seed: stateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,
   });
 
@@ -130,7 +131,7 @@ test('it respects duration limit and stops the simulation accordingly', async ()
   expect(result.elapsed).toBe(10_000);
 });
 
-test('it stops at the specified seed if provided', async () => {
+test('it stops at the specified rng state if provided', async () => {
   const avatar = createMockAvatarData();
   const enemy = createMockEnemyData();
 
@@ -138,7 +139,7 @@ test('it stops at the specified seed if provided', async () => {
     enemies: [enemy],
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
-    seed: 3_047_525_658,
+    seed: stateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,
   });
 
@@ -146,9 +147,9 @@ test('it stops at the specified seed if provided', async () => {
     // set a long duration so we always reach the right value
     duration: 200_000,
 
-    // when our algo changes, can just pull this seed to something valid from our
+    // when our algo changes, can just pull this state to something valid from our
     // happy path snapshot test ouput
-    stopAtSeed: 4_197_947_599,
+    stopAtState: '20c0dac3c8da96ee1a82332c38c2e8ae',
   };
 
   const result = await runSimulation(activity, avatar, config);
@@ -157,10 +158,10 @@ test('it stops at the specified seed if provided', async () => {
 
   expect(finalCheckpoint).toStrictEqual({
     hash: expect.toBeString(),
-    nextSeed: config.stopAtSeed,
+    nextSeed: config.stopAtState,
     rewards: expect.toBeObject(),
     time: expect.toBeNumber(),
-    type: ActivityCheckpointType.Completed,
+    type: ActivityCheckpointType.Progress,
   });
 });
 
@@ -173,7 +174,7 @@ test('it aborts on failure if failure action is set to abort', async () => {
     enemies: [enemy],
     failureAction: ActivityFailureAction.Abort,
     id: 'world_map_encounter_1',
-    seed: 3_047_525_658,
+    seed: stateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,
   });
 
@@ -193,7 +194,7 @@ test('it aborts on failure if failure action is set to abort', async () => {
 
   expect(lastCheckpoint).toStrictEqual({
     hash: expect.toBeString(),
-    nextSeed: expect.toBeNumber(),
+    nextSeed: expect.toBeString(),
     rewards: { xp: 0 },
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Failed,
@@ -209,7 +210,7 @@ test('it retries when failure action is set to retry', async () => {
     enemies: [enemy],
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
-    seed: 3_047_525_658,
+    seed: stateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,
   });
 

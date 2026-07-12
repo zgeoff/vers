@@ -17,7 +17,7 @@ export function createFailedCheckpoint(
   // hash chain covers only this frozen subset — rewards ride outside it, verified by server
   // replay-recompute instead
   const hashed: Omit<ActivityFailedCheckpoint, 'hash' | 'rewards'> = {
-    nextSeed: ctx.rng.generateNewSeed(),
+    nextSeed: ctx.rng.getState(),
     time: activity.elapsed,
     type: ActivityCheckpointType.Failed,
   };

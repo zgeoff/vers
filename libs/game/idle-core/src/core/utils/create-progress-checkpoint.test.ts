@@ -21,7 +21,7 @@ test('it creates a progress checkpoint', () => {
 
   expect(checkpoint).toStrictEqual({
     hash: expect.toBeString(),
-    nextSeed: expect.toBeNumber(),
+    nextSeed: expect.toBeString(),
     rewards: { xp: 15 },
     time: 2500,
     type: ActivityCheckpointType.Progress,
