@@ -38,6 +38,12 @@ move across with `bugsink-manage migrate_to_current_objectstorage`.
 The R2 credentials also live on the `bugsink-r2` item in the `vers` 1Password vault. Unset the four
 `R2_*` secrets and Bugsink falls back to storing files in the database.
 
+## Housekeeping
+
+The `.github/workflows/bugsink-vacuum.yml` workflow runs `bugsink-manage vacuum_files` monthly (and
+on manual dispatch) to drop unused sourcemap `File`/`Chunk` rows before they accumulate in the
+shared Neon database. It enqueues a snappea background task, so the run returns immediately.
+
 ## API tokens
 
 Tokens are minted in the Bugsink UI or with `bugsink-manage create_auth_token` over
