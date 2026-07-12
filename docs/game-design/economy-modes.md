@@ -79,10 +79,12 @@ modestly in rolls per hour — grindy play averages out — but no route is a de
 scanning thousands of futures to find. Density outliers belong in invested content, priced by their
 cost.
 
-What a roll contains is never predictable for a trade avatar: content resolves under the server-held
-key only after every choice that produced the roll is committed. Loot therefore drops everywhere —
-base expeditions, invested expeditions, the offline loop — with full ordinary variance, and none of
-it can be fished for.
+What a roll contains is never client-computable for a trade avatar: content resolves under the
+server-held key, revealed only once its checkpoint is durably appended. A revealed roll can be
+observed before it verifies but cannot leave the account until it does, and re-reaching its
+coordinate means re-appending the path — so early observation yields no tradeable edge. Loot
+therefore drops everywhere — base expeditions, invested expeditions, the offline loop — with full
+ordinary variance.
 
 The wider economy design inherits two obligations. First, offline accrual is wall-clock metered and
 non-resettable: an hour of absence yields an hour of progress, capped, and a window cannot be banked
@@ -117,8 +119,9 @@ juice mechanics evolve:
   classified by the tail rule like any reward.
 - Difficulty conditions on the chosen tier alone, with flat expected value per cost across tiers.
 - A sealed craft settles all-or-nothing, and a committed craft always resolves — as bailed when
-  abandoned. Bailing forfeits the bundle, and rolled content stays sealed under the avatar key even
-  after the salt releases, so a bail can never select rewards.
+  abandoned. Bailing forfeits the bundle; under server custody rolled content stays sealed even after
+  the salt releases, so a trade bail selects nothing. A self-found craft has nothing sealed from it,
+  so a bail there can select — priced by the forfeited bundle and confined off-market.
 - Death costs are uniform: the core note's rules apply to juiced and base play alike. Avoiding a
   foreseen death — routing before a spend, bailing after one — is accepted texture, and the bundle
   forfeit is the bail's price.

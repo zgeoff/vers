@@ -28,12 +28,12 @@ decide whether to trust what the client submitted.
 ## Server-authored inputs
 
 `startActivity` is a server action that owns every simulation input: it mints the seed for a node's
-first activity and derives each continuation's seed from the previous activity's committed checkpoint
+first activity and derives each continuation's seed from the previous activity's appended checkpoint
 (see [game entropy](./game-entropy.md)), resolves the node's enemy content, snapshots the avatar's
 build (equipment, passives, level) from server truth, and stamps the engine and content versions.
 Client-submitted activity and avatar payloads are display hints, and a continuation's seed is a
-client computation the verifier reproduces from the committed chain — never a round-tripped value
-taken on trust.
+client computation the verifier reproduces from the appended chain — online and offline alike, never
+a round-tripped value taken on trust.
 
 Build mutations are gated while an activity is active: level-ups render optimistically and apply
 between activities. A snapshot that cannot change mid-activity is what makes replay exact.
