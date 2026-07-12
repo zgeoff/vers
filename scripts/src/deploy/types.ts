@@ -10,6 +10,20 @@ export interface DeployTarget {
   readonly minStartedMachines?: number;
   readonly buildArgsFromEnv?: ReadonlyArray<string>;
   readonly probes?: ReadonlyArray<Probe>;
+  readonly scheduledMachines?: ReadonlyArray<ScheduledMachine>;
+}
+
+/**
+ * A `fly machine run --schedule` machine the deploy CLI reconciles on every
+ * deploy of its app — created at the fleet's default sizing (shared-cpu-1x,
+ * 256MB) when absent, and moved onto the app's just-deployed image when it
+ * drifts.
+ */
+export interface ScheduledMachine {
+  readonly name: string;
+  readonly command: ReadonlyArray<string>;
+  readonly schedule: 'hourly' | 'daily' | 'weekly' | 'monthly';
+  readonly region?: string;
 }
 
 export type DeployTrigger =
@@ -33,7 +47,9 @@ interface JSONPostProbe {
 
 export interface AppState {
   readonly machines: ReadonlyArray<AppMachine>;
+  readonly scheduledMachines: ReadonlyArray<ScheduledMachineState>;
   readonly deployedSHA: string | null;
+  readonly serviceImage: string | null;
 }
 
 export interface AppMachine {
@@ -41,6 +57,20 @@ export interface AppMachine {
   readonly state: string;
   readonly gitSHA: string | null;
 }
+
+/**
+ * A scheduled machine as it currently exists on Fly, keyed by name for
+ * matching against the manifest's declarations.
+ */
+export interface ScheduledMachineState {
+  readonly id: string;
+  readonly name: string;
+  readonly image: string;
+}
+
+export type ScheduledMachineAction =
+  | { readonly kind: 'create'; readonly machine: ScheduledMachine; readonly image: string }
+  | { readonly kind: 'update-image'; readonly machineID: string; readonly image: string };
 
 export interface ChangeSet {
   readonly affectedPkgs: ReadonlyArray<string>;
