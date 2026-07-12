@@ -70,6 +70,14 @@ rolls out:
 4. `verify-fleet` runs on every green push — even when every deploy leg skipped — and asserts every
    manifest app is online and current, catching an app at zero machines or a fleet behind HEAD.
 
+A `fly machine run --schedule` machine is unmanaged: `fly deploy` never rolls its image forward. An
+app entry's `scheduledMachines` in `deploy.config.ts` declares each one (name, command, schedule,
+region), and the CLI reconciles them right after the app's rollout lands — creating a declared
+machine that doesn't exist yet on the app's just-deployed image, and moving one on a stale image
+onto it. Provisioning a new scheduled machine is a manifest edit; creation happens on the app's next
+deploy, not a manual `fly machine run`. `verify-fleet` reds if a declared scheduled machine is
+missing or drifts onto a different image than the app's service machines.
+
 `app-web` rolls out `bluegreen` — a full parallel fleet passes `/health` before traffic cuts over —
 because it is the user-facing app. Services use `rolling` with `max_unavailable = 1`: a broken boot
 fails the health gate with the old machine still up. Deploy jobs queue rather than cancel — killing

@@ -34,7 +34,8 @@ awake around the clock. Delivery instead rides three one-shot drains:
    was down.
 3. **Hourly sweep** — a Fly scheduled machine (`--schedule hourly`) runs the service's sweep binary:
    start the queue, drain to completion, exit. It catches retries whose delay elapsed while no
-   machine was awake, and anything a crash orphaned.
+   machine was awake, and anything a crash orphaned. The machine is declared in the deploy manifest
+   and reconciled onto the service's current image on every deploy.
 
 Durability lives in Postgres, so a job between drains is late, never lost.
 

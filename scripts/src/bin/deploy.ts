@@ -1,9 +1,11 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
 import { applyDeploy } from '../deploy/apply-deploy';
+import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-actions';
 import { checkTarget } from '../deploy/check-target';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
+import { planScheduledMachineActions } from '../deploy/plan-scheduled-machine-actions';
 import { readAppState } from '../deploy/read-app-state';
 import { readChangesSince } from '../deploy/read-changes-since';
 import { runProbes } from '../deploy/run-probes';
@@ -58,6 +60,8 @@ async function runDeploy(app: string): Promise<void> {
   if (staleReason === null) {
     console.log(`${target.app} is current at ${state.deployedSHA ?? 'unknown'} — skipping`);
 
+    await runScheduledMachineReconcile(target);
+
     return;
   }
 
@@ -65,6 +69,7 @@ async function runDeploy(app: string): Promise<void> {
 
   await applyDeploy(target, sha);
   await waitForDeployedSHA(target.app, sha);
+  await runScheduledMachineReconcile(target);
 
   const findings = await runProbes(target.probes ?? []);
 
@@ -75,6 +80,39 @@ async function runDeploy(app: string): Promise<void> {
 
     process.exitCode = 1;
   }
+}
+
+/**
+ * Reconciles a target's declared scheduled machines against its fleet,
+ * aligning them to the image and SHA the service machines currently agree
+ * on. Runs after a rollout's SHA is confirmed and on skipped deploys alike,
+ * so a machine created behind the fleet converges on the next push rather
+ * than waiting for a commit that redeploys its app. Without a single fleet
+ * image to reconcile against nothing happens — the verify pass reports the
+ * drift instead.
+ */
+async function runScheduledMachineReconcile(target: DeployTarget): Promise<void> {
+  const declarations = target.scheduledMachines ?? [];
+
+  if (declarations.length === 0) {
+    return;
+  }
+
+  const state = await readAppState(target.app);
+
+  if (state.serviceImage === null || state.deployedSHA === null) {
+    console.log(`${target.app} has no single service image — skipping scheduled machines`);
+
+    return;
+  }
+
+  const actions = planScheduledMachineActions(
+    declarations,
+    state.serviceImage,
+    state.scheduledMachines,
+  );
+
+  await applyScheduledMachineActions(target.app, state.deployedSHA, actions);
 }
 
 async function runVerify(): Promise<void> {

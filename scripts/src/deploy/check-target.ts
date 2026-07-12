@@ -31,5 +31,26 @@ export function checkTarget(
     findings.push(`stale: ${staleReason}`);
   }
 
+  findings.push(...checkScheduledMachines(target, state));
+
+  return findings;
+}
+
+function checkScheduledMachines(target: DeployTarget, state: AppState): ReadonlyArray<string> {
+  const findings: Array<string> = [];
+
+  for (const declared of target.scheduledMachines ?? []) {
+    const existing = state.scheduledMachines.find((machine) => machine.name === declared.name);
+
+    if (existing === undefined) {
+      findings.push(`scheduled machine ${declared.name} missing`);
+      continue;
+    }
+
+    if (state.serviceImage !== null && existing.image !== state.serviceImage) {
+      findings.push(`scheduled machine ${declared.name} image differs from service machines`);
+    }
+  }
+
   return findings;
 }
