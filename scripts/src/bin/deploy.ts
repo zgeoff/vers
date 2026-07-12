@@ -1,9 +1,12 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
+import invariant from 'tiny-invariant';
 import { applyDeploy } from '../deploy/apply-deploy';
+import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-actions';
 import { checkTarget } from '../deploy/check-target';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
+import { planScheduledMachineActions } from '../deploy/plan-scheduled-machine-actions';
 import { readAppState } from '../deploy/read-app-state';
 import { readChangesSince } from '../deploy/read-changes-since';
 import { runProbes } from '../deploy/run-probes';
@@ -65,6 +68,7 @@ async function runDeploy(app: string): Promise<void> {
 
   await applyDeploy(target, sha);
   await waitForDeployedSHA(target.app, sha);
+  await runScheduledMachineReconcile(target, sha);
 
   const findings = await runProbes(target.probes ?? []);
 
@@ -75,6 +79,34 @@ async function runDeploy(app: string): Promise<void> {
 
     process.exitCode = 1;
   }
+}
+
+/**
+ * Reconciles a target's declared scheduled machines against its fleet.
+ * Runs after `waitForDeployedSHA` so `state.serviceImage` reflects the
+ * rollout that just landed, not a mid-cutover mix.
+ */
+async function runScheduledMachineReconcile(target: DeployTarget, sha: string): Promise<void> {
+  const declarations = target.scheduledMachines ?? [];
+
+  if (declarations.length === 0) {
+    return;
+  }
+
+  const state = await readAppState(target.app);
+
+  invariant(
+    state.serviceImage !== null,
+    `${target.app} has no single service image to reconcile scheduled machines against`,
+  );
+
+  const actions = planScheduledMachineActions(
+    declarations,
+    state.serviceImage,
+    state.scheduledMachines,
+  );
+
+  await applyScheduledMachineActions(target.app, sha, actions);
 }
 
 async function runVerify(): Promise<void> {
