@@ -1,5 +1,6 @@
 import { buildMockService } from '@vers/client-test-utils/orpc';
 import { avatarContract } from '@vers/contract-avatar';
+import { emailContract } from '@vers/contract-email';
 import { sessionContract } from '@vers/contract-session';
 import { userContract } from '@vers/contract-user';
 import { verificationContract } from '@vers/contract-verification';
@@ -8,6 +9,7 @@ import { SERVICE_URLS } from '../lib/rpc/service-urls';
 import { createDemoSeed } from './db/create-demo-seed';
 import { resolveSessionContext } from './resolve-session-context';
 import { avatarRouter } from './routers/avatar/avatar-router';
+import { emailRouter } from './routers/email/email-router';
 import { sessionRouter } from './routers/session/session-router';
 import { userRouter } from './routers/user/user-router';
 import { verificationRouter } from './routers/verification/verification-router';
@@ -38,5 +40,11 @@ export const handlers: Array<HttpHandler> = [
     contract: avatarContract,
     resolveContext: resolveSessionContext,
     router: avatarRouter,
+  }),
+  ...buildMockService({
+    baseUrl: SERVICE_URLS.email,
+    contract: emailContract,
+    resolveContext: resolveSessionContext,
+    router: emailRouter,
   }),
 ];
