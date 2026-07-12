@@ -1,3 +1,3 @@
-export type ServiceName = 'avatar' | 'session' | 'user' | 'verification';
+export type ServiceName = 'avatar' | 'email' | 'session' | 'user' | 'verification';
 
 export type ServiceAudience = `service-${ServiceName}`;
