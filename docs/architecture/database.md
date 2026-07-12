@@ -125,6 +125,10 @@ database catches up with migrations that landed after the template was last refr
   `dev_base` never matches it.
 - Provisioning and sweeping connect to `vers` on the dev branch, never to `dev_base`: postgres
   refuses to clone a template that has open connections.
+- `dev_base` refuses connections outright (`ALLOW_CONNECTIONS false`, like template0) except during
+  a rebuild — Neon parks invisible backends on recently connected databases for minutes, and any
+  session on the template blocks cloning. Neon's compute also opens short-lived internal sessions
+  while waking from scale-to-zero, so provisioning retries a busy-template failure briefly.
 
 ### Provisioning agent access from nothing
 
