@@ -21,8 +21,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     // self-assigns `genesis_seed` and must not bump a timestamp.
     .addColumn('created_at', 'timestamp', (col) => col.notNull().defaultTo(sql`now()`))
 
-    // Deliberately no `mode` column yet — economy-mode key custody is added with the economy
-    // modes work (#472).
+    // Deliberately no `mode` column — economy-mode key custody is a separate concern, owned by
+    // the economy-mode partitioning rather than the seed chain.
     .addPrimaryKeyConstraint('activity_chains_pk', ['avatar_id', 'node_id'])
     .addForeignKeyConstraint(
       'activity_chains_avatar_id_avatars_id_fk',
