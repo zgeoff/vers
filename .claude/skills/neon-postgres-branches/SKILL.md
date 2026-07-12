@@ -10,6 +10,10 @@ description: >-
 
 # Neon Postgres Branching
 
+> Vendored from
+> [neondatabase/agent-skills](https://github.com/neondatabase/agent-skills/blob/53566ea4057c7381749c745544819403ff692862/skills/neon-postgres-branches/SKILL.md)
+> (Apache-2.0); reflowed to repo format.
+
 The outcome of this skill should be a created Neon branch (or a clear, actionable next step if
 creation cannot proceed). Choose the correct branch type, then execute branch creation via MCP or
 CLI.

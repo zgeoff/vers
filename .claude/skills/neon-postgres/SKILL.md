@@ -11,6 +11,10 @@ description: >-
 
 # Neon Serverless Postgres
 
+> Vendored from
+> [neondatabase/agent-skills](https://github.com/neondatabase/agent-skills/blob/53566ea4057c7381749c745544819403ff692862/skills/neon-postgres/SKILL.md)
+> (Apache-2.0); reflowed to repo format.
+
 Guide the user through any Neon-related task: setup, connections, branching, and advanced features.
 Deliver a working Neon connection, a completed feature configuration, or a specific answer from the
 official Neon docs.

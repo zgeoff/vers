@@ -11,6 +11,10 @@ description: >-
 
 # Postgres Egress Optimizer
 
+> Vendored from
+> [neondatabase/agent-skills](https://github.com/neondatabase/agent-skills/blob/53566ea4057c7381749c745544819403ff692862/skills/neon-postgres-egress-optimizer/SKILL.md)
+> (Apache-2.0); reflowed to repo format.
+
 Guide the user through diagnosing and fixing application-side query patterns that cause excessive
 data transfer (egress) from their Postgres database. Most high egress bills come from the
 application fetching more data than it uses.
