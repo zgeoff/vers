@@ -37,15 +37,17 @@ the attempts it costs.
 
 Competition scores the trajectory itself — depth, boss-kill speed — which is client-computable and
 varies across attempts, so reward-flatness does not cover it. Meaningful competition is endgame, and
-the edge a re-attempt buys is bounded by the cost of reaching the position, not by hiding it: the
-peek is free, but the walk is not. Each attempt appends to the chain and spends its metered offline
-time, an entry-gated target burns a non-refundable entry per attempt, and a second competitive avatar
-is a full endgame build's worth of investment. Depth self-limits, because difficulty scales with
-depth until a build can no longer clear regardless of re-attempts. Bounded margins keep any single
-attempt's edge small on top. What survives is caught, not prevented — an avatar whose results ride
-the favorable tail of its verified history is a behavioural cheat signal, scored offline. The
-residual is a wealthy, motivated actor with a purpose-built tool: defended in layers, never zero, the
-ceiling of anti-cheat in any game.
+the edge a re-attempt buys is bounded by the cost of reaching the position rather than by hiding it.
+The peek is free; the position is not. An entry-gated target burns a non-refundable entry on every
+attempt, abandons included, so walking the chain toward a favorable seed is paid for in resources; a
+second competitive avatar is a full endgame build's worth of investment; and the counted attempt is
+always played in full. Depth self-limits, because difficulty scales with depth until a build can no
+longer clear regardless of re-attempts. Where a metric is open enough that near-free abandoned
+attempts can churn the chain forward, cost stops gating and detection takes over: an avatar whose
+results ride the favorable tail of its verified history is a behavioural cheat signal, scored
+offline. Bounded margins keep any single attempt's edge small throughout. The residual is a wealthy,
+motivated actor with a purpose-built tool: defended in layers, never zero, the ceiling of anti-cheat
+in any game.
 
 ## Rolled rewards and the avatar key
 
