@@ -41,8 +41,8 @@ across attempts, so a re-attempt is a comparable node rather than an easier one,
 scales with depth, so re-attempting walls out rather than compounding. The variance that survives is
 caught rather than prevented: every attempt at a node is a link in the append-only, server-verified
 chain, so reroll-scanning is observable and enforced against as a cheat signal. Exploiting the
-residual takes a purpose-built cheat tool, and no detection catches all of it — the limit inherent to
-any client-simulated game.
+residual takes a purpose-built cheat tool, and no detection catches all of it — the ceiling of
+anti-cheat in any game.
 
 ## Rolled rewards and the avatar key
 
