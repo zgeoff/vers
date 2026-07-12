@@ -1,4 +1,5 @@
-import { createHash } from 'node:crypto';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 
 interface BuildCheckpointHashInput {
   readonly entropySource: string;
@@ -27,5 +28,5 @@ export function buildCheckpointHash(input: Readonly<BuildCheckpointHashInput>): 
     input.entropySource,
   ]);
 
-  return createHash('sha256').update(canonical).digest('hex');
+  return bytesToHex(sha256(utf8ToBytes(canonical)));
 }

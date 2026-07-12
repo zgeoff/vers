@@ -110,6 +110,7 @@
       "devDependencies": {
         "@playwright/test": "catalog:",
         "@types/node": "catalog:",
+        "@vers/contract-activity": "workspace:*",
         "typescript": "catalog:",
       },
     },
@@ -117,6 +118,7 @@
       "name": "@vers/contract-activity",
       "version": "0.0.0",
       "dependencies": {
+        "@noble/hashes": "catalog:",
         "@orpc/contract": "catalog:",
         "@vers/contract-base": "workspace:*",
         "zod": "catalog:",
@@ -838,6 +840,7 @@
     "@happy-dom/global-registrator": "20.10.6",
     "@ladle/react": "5.1.1",
     "@msw/data": "1.1.6",
+    "@noble/hashes": "2.2.0",
     "@openfeature/core": "1.11.0",
     "@openfeature/server-sdk": "1.22.0",
     "@opentelemetry/api-logs": "0.220.0",
