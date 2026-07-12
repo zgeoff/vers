@@ -113,6 +113,8 @@
             "name": "StartedPostgreSqlContainer",
             "package": "@testcontainers/postgresql"
           },
+          // a live postgres.js client handle: connection pool state, no readonly form
+          { "from": "package", "name": "Sql", "package": "postgres" },
           {
             "from": "package",
             "name": ["AnyContractRouter", "AnyContractProcedure"],
