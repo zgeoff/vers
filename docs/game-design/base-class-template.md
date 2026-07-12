@@ -26,12 +26,16 @@ Per specialization:
 - **Name** — working name.
 - **System drawn on** — the universal system it interlocks with (a resource pool, a defensive layer,
   the beat cadence) or the mechanic itself. Never a damage type or a build archetype.
-- **Tier 1** — the choices offered, one exclusive pick.
-- **Tier 2** — the choices offered, one exclusive pick.
-- **Tier 3** — the choices offered, one exclusive pick.
+- **Tier 1 / Tier 2 / Tier 3** — two or three nodes each; the avatar takes one per tier. For every
+  node, state its effect and the **edge** it holds: the build, region, or encounter shape it is
+  strongest in. Nodes in a tier point in different directions — that divergence is the choice.
 
-The tiers may follow any internal framework. One example runs output, then fuel, then fusion: what
-the mechanic drives, then how it scales, then how it and the coupled system become one engine.
+Check the specialization as a set of paths, not tier by tier:
+
+- No node erases the value of an earlier one; a node bound to a durable quantity survives a capstone
+  that a node bound to a transient state does not.
+- No node wins in every context — each holds a different edge, or the tier collapses to one pick.
+- A capstone that reshapes the mechanic leaves no earlier node orphaned.
 
 ## Open Questions
 
