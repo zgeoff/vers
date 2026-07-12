@@ -52,8 +52,8 @@ test('it accrues rewards across multiple calls', () => {
   const activityData = createMockActivityData();
   const activity = createActivity(activityData, ctx);
 
-  activity.accrueRewards({ xp: 10 });
-  activity.accrueRewards({ xp: 5 });
+  activity.updateRewards({ xp: 10 });
+  activity.updateRewards({ xp: 5 });
 
   expect(activity.rewards).toStrictEqual({ xp: 15 });
   expect(activity.getAppState().rewards).toStrictEqual({ xp: 15 });

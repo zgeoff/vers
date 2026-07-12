@@ -32,7 +32,7 @@ export function createActivity(
     elapsed += time;
   };
 
-  const accrueRewards = (delta: ActivityRewards) => {
+  const updateRewards = (delta: ActivityRewards) => {
     rewards = mergeRewards(rewards, delta);
   };
 
@@ -78,15 +78,12 @@ export function createActivity(
     getAppState,
 
     // utils
-    accrueRewards,
+    updateRewards,
     elapseTime,
     moveToNextEnemyGroup,
   };
 }
 
-/**
- * Adds two reward maps keywise. A key an interface later adds is a mechanical addition here.
- */
 function mergeRewards(base: ActivityRewards, delta: ActivityRewards): ActivityRewards {
   return { xp: base.xp + delta.xp };
 }

@@ -34,7 +34,7 @@ export async function* simulateActivity(
     if (activity.currentEnemyGroup?.remaining === 0) {
       const rewards = buildGroupClearRewards(activity.currentEnemyGroup);
 
-      activity.accrueRewards(rewards);
+      activity.updateRewards(rewards);
       yield createProgressCheckpoint(activity, ctx, rewards);
       logger.debug(`${label} moving to next enemy group`);
 

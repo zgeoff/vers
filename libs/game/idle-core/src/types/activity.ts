@@ -57,7 +57,7 @@ export interface Activity {
   get rewards(): ActivityRewards;
 
   // utils
-  accrueRewards: (delta: ActivityRewards) => void;
+  updateRewards: (delta: ActivityRewards) => void;
   elapseTime: (time: number) => void;
   getAppState: () => ActivityAppState;
   moveToNextEnemyGroup: () => void;
