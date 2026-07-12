@@ -36,3 +36,14 @@ test('it rejects a payload missing a hashed field', () => {
 
   expect(result.success).toBeFalse();
 });
+
+test('it rejects a payload missing the entropy-source tag', () => {
+  const result = CheckpointPayloadSchema.safeParse({
+    nextSeed: 'seed_1',
+    seed: 'seed_0',
+    time: 12,
+    type: 'tick',
+  });
+
+  expect(result.success).toBeFalse();
+});
