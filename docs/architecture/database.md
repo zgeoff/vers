@@ -54,13 +54,14 @@ Two hosts per endpoint: **direct** (`ep-<endpoint>.<region>.aws.neon.tech`) and 
 
 ## Who connects, and where the string lives
 
-Three consumers, three stores — the string never lives in the repo:
+Four consumers, four stores — the string never lives in the repo:
 
 | Consumer                       | String | Store                                                          |
 | ------------------------------ | ------ | -------------------------------------------------------------- |
 | Services at runtime (Fly)      | direct | `fly secrets set DATABASE_URL=…` per app, at provisioning time |
 | CI migrations (`main.yml`)     | direct | `DATABASE_URL` repository Actions secret                       |
 | Local dev (kysely-ctl, ad hoc) | direct | `libs/data/db/.env.local` (gitignored)                         |
+| Agent MCP sessions (dbhub)     | direct | 1Password `vers` vault items `neon-mcp-ro` and `neon-mcp-dev`  |
 
 Migrations run as a single `main.yml` step on a fully green run, not a Fly `release_command`:
 several services share the one database, and a per-service release command would run the same
@@ -92,6 +93,71 @@ neonctl connection-string <name> --project-id patient-dust-07220142 --database-n
 
 A branch is a full copy-on-write postgres — run migrations against it, introspect it with
 `db:codegen`, delete it when done (`neonctl branches delete`).
+
+## Agent access (MCP)
+
+The `postgres` entry in `.mcp.json` runs `scripts/src/bin/pg-mcp-launch.ts`, which renders a
+per-session dbhub config — DSNs read from 1Password, the dev source pinned to the worktree's
+database — and hands stdio to `@zgeoff/dbhub`. Both sources are lazy: a session that never queries
+postgres never opens a connection, and Neon stays suspended.
+
+- The `prod` source queries `vers` on the `main` branch as `mcp_ro`. Read-only holds at two
+  independent layers: dbhub's readonly tool mode refuses non-SELECT statements, and the role has
+  SELECT-only grants with `default_transaction_read_only = on`, so writes are refused even if the
+  tool layer fails.
+- The `dev` source connects to the `dev` branch as `mcp_dev` (`LOGIN CREATEDB`), each session pinned
+  to its worktree's own database — concurrent agent sessions on different branches never share
+  state.
+
+### Per-worktree dev databases
+
+A worktree's database is named `dev_<machine>_<branch>`: both fragments sanitized to `[a-z0-9_]`,
+the machine fragment (from the hostname) capped at 16 chars, and names over postgres's 63-byte
+identifier limit truncated with a hash suffix. The first dev tool call of a session provisions it —
+dbhub's `init_command` clones the template (`CREATE DATABASE … TEMPLATE dev_base`), stamps machine,
+branch, and creation time as a database comment, and migrates the clone forward, so an existing
+database catches up with migrations that landed after the template was last refreshed.
+
+- `dev_base` is the migrated, seeded clone template. `bun run pg:dev:refresh-base` rebuilds it
+  (drop, create, migrate, seed); existing clones are untouched. Run it when seed data changes.
+- `bun run pg:dev:sweep` drops this machine's databases whose branch no longer exists locally. The
+  machine prefix scopes the sweep — one machine's sweep can never drop another's databases — and
+  `dev_base` never matches it.
+- Provisioning and sweeping connect to `vers` on the dev branch, never to `dev_base`: postgres
+  refuses to clone a template that has open connections.
+
+### Provisioning agent access from nothing
+
+Create the branch, the roles, the vault items, then the template:
+
+```sh
+neonctl branches create --project-id patient-dust-07220142 --name dev
+```
+
+As `neondb_owner` against `vers` on `main`:
+
+```sql
+CREATE ROLE mcp_ro LOGIN PASSWORD '<generated>';
+GRANT USAGE ON SCHEMA public TO mcp_ro;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO mcp_ro;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO mcp_ro;
+ALTER ROLE mcp_ro SET default_transaction_read_only = on;
+```
+
+As `neondb_owner` against `vers` on `dev`:
+
+```sql
+CREATE ROLE mcp_dev LOGIN CREATEDB PASSWORD '<generated>';
+```
+
+Both DSNs point at the `vers` database with `sslmode=verify-full` — `mcp_ro` on the `main` host,
+`mcp_dev` on the `dev` host:
+
+```sh
+op item create --vault vers --category Password --title neon-mcp-ro "dsn[concealed]=<mcp_ro DSN>"
+op item create --vault vers --category Password --title neon-mcp-dev "dsn[concealed]=<mcp_dev DSN>"
+bun run pg:dev:refresh-base
+```
 
 ## Re-provisioning from nothing
 
