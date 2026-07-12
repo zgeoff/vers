@@ -13,6 +13,7 @@ test('it renders info about the provided activity', () => {
     enemyGroupsRemaining: 4,
     id: 'test-activity',
     name: 'Test Activity',
+    rewards: { xp: 150 },
   };
 
   render(<ActivityInfo activity={activity} />);
@@ -20,8 +21,10 @@ test('it renders info about the provided activity', () => {
   const activityName = screen.getByText('Test Activity');
   const enemiesRemaining = screen.getByText(nodeHasText('20 enemies remain'));
   const enemyGroupsRemaining = screen.getByText(nodeHasText('4 enemy groups remain'));
+  const xpEarned = screen.getByText(nodeHasText('150 xp earned'));
 
   expect(activityName).toBeInTheDocument();
   expect(enemiesRemaining).toBeInTheDocument();
   expect(enemyGroupsRemaining).toBeInTheDocument();
+  expect(xpEarned).toBeInTheDocument();
 });

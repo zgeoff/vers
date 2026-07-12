@@ -15,6 +15,7 @@ test('it creates a simulation update message', () => {
       enemyGroupsRemaining: 0,
       id: '1',
       name: 'Test Activity',
+      rewards: { xp: 0 },
     },
     avatar: {
       behaviours: {},

@@ -21,6 +21,9 @@ export function ActivityInfo(props: Readonly<ActivityInfoProps>) {
       <Text>
         <strong>{props.activity.enemiesRemaining}</strong> enemies remain
       </Text>
+      <Text>
+        <strong>{props.activity.rewards.xp}</strong> xp earned
+      </Text>
     </section>
   );
 }
