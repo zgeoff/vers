@@ -108,13 +108,17 @@ targeted-outcome market beside base play's open lottery — it shapes what kind 
 produce, and its costs are a real consumption of wealth. The constraints hold regardless of how
 juice mechanics evolve:
 
-- Juiced rewards are a separable overlay — never a multiplier on a quantity the player could
-  foresee. A multiplier on foreseeable value invites scanning for the best base outcome and
-  amplifying it; the overlay form has nothing to scan.
+- An investment's effect commits before the reveal of anything it touches. Scaling a steady quantity
+  deterministically — more difficulty, more rolls per hour — is buying throughput and is safe
+  anywhere; nothing may scale or select on a revealed roll. An effect that is itself rolled is
+  classified by the tail rule like any reward.
 - Difficulty conditions on the chosen tier alone, with flat expected value per cost across tiers.
-- A sealed craft settles all-or-nothing, and a committed craft always resolves — bailing forfeits
-  the bundle, so peeking-then-declining has zero option value.
-- Juiced failure costs only the forgone yield, never experience.
+- A sealed craft settles all-or-nothing, and a committed craft always resolves — as bailed when
+  abandoned. Bailing forfeits the bundle, and rolled content stays sealed under the avatar key even
+  after the salt releases, so a bail can never select rewards.
+- Death costs are uniform: the core note's rules apply to juiced and base play alike. Avoiding a
+  foreseen death — routing before a spend, bailing after one — is accepted texture, and the bundle
+  forfeit is the bail's price.
 
 ## Extraction & Settlement
 
