@@ -67,8 +67,9 @@ Key custody is the economy boundary:
 
 Key derivation obeys three rules:
 
-- Every key comes from a one-way KDF over a master secret, and the trade and self-found populations
-  are separately rooted: a self-found key shares no recoverable root with any trade key.
+- Every key comes from a one-way KDF (key derivation function) over a master secret, and the trade
+  and self-found populations are separately rooted: a self-found key shares no recoverable root with
+  any trade key.
 - A self-found key is a pure function of `(master, avatarID, keyVersion)` — re-derivable
   bit-for-bit, never re-randomized.
 - The master secret lives in managed-key custody with rotation and audit, never in an application
