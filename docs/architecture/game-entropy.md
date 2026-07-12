@@ -85,30 +85,41 @@ deploy — so reveal, replay, and mint agree across deploys, parks, and master r
 ## Sealed pre-commit salt
 
 Some outcomes carry a tail worth selecting — item affix rolls, rare content. Their entropy stays
-sealed while a crafting decision is open, revealed in two commits:
+sealed while the decision is open, revealed in two commits:
 
 1. **Commit.** The player locks in the spend. The server mints the salt from a server-held secret
    key and stores it sealed. The player sees only a lossy projection derived from it — modifier
    families, difficulty, reward budget — for the preview window. The projection is a distribution
    summary and never narrows the realized roll: walking away must never beat resolving, at any tier,
-   and that rule bounds how much the projection may reveal. Every crafting decision happens against
-   this metadata; the client never holds simulatable entropy while a decision is open.
-2. **Run-commit.** The server releases the salt and the client simulates. Release is commitment: a
-   committed position the client never resolves is force-resolved as forfeited at a server-side
-   deadline inside the replay-retention window — the bundle is lost and the node's gate lifts.
+   and that rule bounds how much the projection may reveal. Every decision happens against this
+   metadata; the client never holds computable entropy while a decision is open.
+2. **Release.** The server releases the salt and the outcome resolves. Release is commitment: a
+   released position the client never resolves is force-resolved as forfeited — the bundle is lost —
+   at a server-side deadline inside the replay-retention window.
 
-Two rules keep the seal honest:
+Three rules keep the seal honest, independent of what consumes it:
 
 - The salt's keying material is a server-held secret. Domain-separation labels alone are
   insufficient: salt derived from client-visible state under a different label is still
   client-computable, and the sealing property collapses.
-- Salt is minted once per node-anchored chain position — the same restart-stable index that keys
-  reward coordinates — and re-fetch is idempotent. A client that loses the response retries and
-  receives the same salt, so a lost packet cannot fork the timeline; until the release arrives, the
-  run does not start. The build snapshot pins at mint, so deferring resolution cannot improve an
-  outcome by out-leveling it first.
+- Salt is minted once per position and re-fetch is idempotent. A client that loses the response
+  retries and receives the same salt, so a lost packet cannot fork the timeline; until the release
+  arrives, nothing resolves.
+- Every input the outcome depends on pins at mint, so deferring resolution cannot improve it.
 
-Sealed salt requires a live round trip, so tail-bearing crafted content is online content.
+Each consumer of the mechanism defines its own position, resolution, and pinned inputs:
+
+- **Juiced instances**: the position is the node-anchored chain position — the same restart-stable
+  index that keys reward coordinates — the resolution is the run itself, and the pinned input is the
+  build snapshot, so a peeked outcome cannot be beaten by out-leveling first. Forfeiture lifts the
+  node's gate.
+- **Item crafting**: the position is the craft action in the avatar's crafting sequence, the
+  resolution is applying the result to the item, and the pinned inputs are the target item and the
+  consumed currency at commit. Application is exactly-once per action — a network retry never
+  applies a spend twice.
+
+Sealed salt requires a live round trip, so tail-bearing content is online content wherever it
+appears.
 
 Only a tailed distribution needs the seal. A normalized outcome — a chosen tier, an instance
 modifier bounded to modest scalars with no jackpot combination — carries no tail worth selecting, so
