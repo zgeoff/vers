@@ -198,6 +198,7 @@ The full conventions — taxonomy, code registry, trace context, reporting split
 Overused jargon a plainer word covers; applies to all prose — docs, comments, PR descriptions, issue
 text.
 
+- `bites` (figurative) — "applies", "takes effect", or name the consequence.
 - `load-bearing` — "required", "essential", or name what breaks without it.
 - `seam` — "boundary", "join", "integration point".
 - `surface` — noun: "area", "API", the concrete thing itself; verb: "show", "raise", "report".

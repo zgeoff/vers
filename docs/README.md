@@ -36,6 +36,10 @@ How the platform is built — system design, data flows, and operational wiring.
   gating
 - [Game rendering](./architecture/game-rendering.md) — the persistent three.js canvas and scene
   state
+- [Game simulation](./architecture/game-simulation.md) — the deterministic client sim, checkpoint
+  streams, and replay verification
+- [Game entropy](./architecture/game-entropy.md) — entropy sources, sealed salt, and reward
+  provenance
 
 ## Game design
 
@@ -44,3 +48,4 @@ The game's design language and systems, numbered in reading order.
 - [Core themes and world fiction](./game-design/001-core-themes-world-fiction.md)
 - [Attributes and damage model](./game-design/002-attributes-damage-model.md)
 - [Defensive archetypes](./game-design/003-defensive-archetypes.md)
+- [Economy modes and reward integrity](./game-design/004-economy-modes.md)
