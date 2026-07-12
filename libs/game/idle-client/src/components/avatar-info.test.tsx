@@ -30,7 +30,9 @@ test('it renders avatar information', () => {
 
   const avatarName = screen.getByText('Test Avatar');
   const [lifeBar] = screen.getAllByText(nodeHasText('Life: 75 / 100'));
+  const level = screen.getByText(nodeHasText('Level 1'));
 
   expect(avatarName).toBeInTheDocument();
   expect(lifeBar).toBeInTheDocument();
+  expect(level).toBeInTheDocument();
 });

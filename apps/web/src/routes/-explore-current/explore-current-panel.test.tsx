@@ -25,6 +25,7 @@ function buildFakeActivityAppState(id: string): ActivityAppState {
     enemyGroups: [],
     enemyGroupsRemaining: 0,
     id,
+    levelUp: null,
     name: 'World Node',
     rewards: { xp: 0 },
   };

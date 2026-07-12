@@ -12,6 +12,7 @@ test('it updates the activity state', () => {
     enemyGroups: [],
     enemyGroupsRemaining: 4,
     id: '1',
+    levelUp: null,
     name: 'Test Activity',
     rewards: { xp: 0 },
   };
@@ -27,6 +28,7 @@ test('it updates the activity state', () => {
     enemyGroups: [],
     enemyGroupsRemaining: 4,
     id: '1',
+    levelUp: null,
     name: 'Test Activity',
     rewards: { xp: 0 },
   });
