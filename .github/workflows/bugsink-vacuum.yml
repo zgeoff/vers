@@ -1,0 +1,31 @@
+# Monthly housekeeping for the self-hosted Bugsink error tracker: drop unused
+# sourcemap File/Chunk rows so they don't accumulate in the shared Neon database.
+# vacuum_files enqueues a snappea background task and returns immediately, so the
+# job just triggers it. Runs in the production environment for the Fly token.
+name: Bugsink vacuum
+
+on:
+  schedule:
+    # 03:17 UTC on the 1st of each month — off the hour to dodge cron congestion
+    - cron: '17 3 1 * *'
+  workflow_dispatch:
+
+concurrency:
+  group: bugsink-vacuum
+  cancel-in-progress: false
+
+jobs:
+  vacuum:
+    name: Vacuum sourcemap files
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+
+      - name: Enqueue vacuum_files
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        # --user bugsink: snappea refuses to enqueue as any other uid
+        run: flyctl ssh console --app vers-bugsink --user bugsink -C 'bugsink-manage vacuum_files'
