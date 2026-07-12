@@ -16,7 +16,9 @@ export async function applyScheduledMachineActions(
   actions: ReadonlyArray<ScheduledMachineAction>,
 ): Promise<void> {
   for (const action of actions) {
-    await (action.kind === 'create' ? runCreate(app, sha, action) : runUpdateImage(app, action));
+    await (action.kind === 'create'
+      ? runCreate(app, sha, action)
+      : runUpdateImage(app, sha, action));
   }
 }
 
@@ -50,6 +52,7 @@ async function runCreate(
 
 async function runUpdateImage(
   app: string,
+  sha: string,
   action: Extract<ScheduledMachineAction, { kind: 'update-image' }>,
 ): Promise<void> {
   await withRetry(
@@ -62,6 +65,8 @@ async function runUpdateImage(
         app,
         '--image',
         action.image,
+        '--env',
+        `GIT_SHA=${sha}`,
         '--yes',
       ]),
     { attempts: UPDATE_ATTEMPTS, delayMS: UPDATE_RETRY_DELAY_MS },

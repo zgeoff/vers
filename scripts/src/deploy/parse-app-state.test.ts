@@ -95,6 +95,33 @@ test('it separates a scheduled machine from the app process group by its schedul
   });
 });
 
+test('it reads images with the resolved digest stripped', () => {
+  const json = [
+    {
+      config: { env: { GIT_SHA: 'abc123' }, image: 'registry.fly.io/x:tag1' },
+      id: 'm1',
+      name: 'm1',
+      state: 'started',
+    },
+    {
+      config: {
+        image: 'registry.fly.io/x:tag1@sha256:753a468f590de55c28f75131897f9242',
+        schedule: 'hourly',
+      },
+      id: 'm2',
+      name: 'sweeper',
+      state: 'stopped',
+    },
+  ];
+
+  expect(parseAppState(json)).toStrictEqual({
+    deployedSHA: 'abc123',
+    machines: [{ gitSHA: 'abc123', id: 'm1', state: 'started' }],
+    scheduledMachines: [{ id: 'm2', image: 'registry.fly.io/x:tag1', name: 'sweeper' }],
+    serviceImage: 'registry.fly.io/x:tag1',
+  });
+});
+
 test('it parses an empty fleet', () => {
   expect(parseAppState([])).toStrictEqual({
     deployedSHA: null,

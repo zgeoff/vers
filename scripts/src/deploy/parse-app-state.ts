@@ -45,7 +45,7 @@ export function parseAppState(json: unknown): AppState {
     .map((machine) => ({
       id: machine.id,
       name: machine.name,
-      image: machine.config?.image ?? '',
+      image: normalizeImage(machine.config?.image) ?? '',
     }));
 
   return {
@@ -69,6 +69,20 @@ function isServiceMachine(machine: MachineRecord): boolean {
   );
 }
 
+/**
+ * `flyctl deploy` records a machine's image as a bare tag, while
+ * `flyctl machine run`/`update` store the same release with its resolved
+ * `@sha256:…` digest appended — so images compare with the digest stripped,
+ * or a reconciled scheduled machine would read as drifted forever.
+ */
+function normalizeImage(image: string | undefined): string | null {
+  if (image === undefined) {
+    return null;
+  }
+
+  return image.split('@')[0] ?? null;
+}
+
 function pickDeployedSHA(machines: ReadonlyArray<AppMachine>): string | null {
   const shas = new Set(machines.map((machine) => machine.gitSHA));
 
@@ -81,7 +95,7 @@ function pickDeployedSHA(machines: ReadonlyArray<AppMachine>): string | null {
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- z.infer of the machine-list row schema, a ZodType-bearing shape with no readonly form
 function pickServiceImage(serviceRecords: ReadonlyArray<MachineRecord>): string | null {
-  const images = new Set(serviceRecords.map((machine) => machine.config?.image ?? null));
+  const images = new Set(serviceRecords.map((machine) => normalizeImage(machine.config?.image)));
 
   if (images.size !== 1) {
     return null;
