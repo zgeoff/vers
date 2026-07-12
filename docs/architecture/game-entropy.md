@@ -17,19 +17,38 @@ variance — modest per-run variance with a rare outlier still hands the scanner
 best-of-N selection value is what every rule below prices; the
 [economy modes note](../game-design/economy-modes.md) turns it into the reward-design rules.
 
-## The anchored seed chain
+## The seed chain
 
-Per `(avatar, node)`, the server anchors an append-only seed chain: the next run's seed derives
-deterministically from the stored end of the previous run at that node. The anchor is the last
-**verified** checkpoint's end-state at that node. Terminal activity states never advance it past the
-verified prefix, and rejecting a stream at version N resets it to the end of version N−1. Abandoning
-and restarting therefore replays the same continuation — there is nothing to re-roll. This single
-rule closes seed-fishing, death-scumming via early flush, and retry-branch selection.
+Per `(avatar, node)`, an append-only seed chain runs forward. The node's first activity takes a
+server-minted seed; every continuation derives its seed deterministically from the previous
+activity's final checkpoint — the `nextSeed` in its frozen hashed subset, which the verifier
+reproduces byte-for-byte. Deriving from an appended-but-unverified checkpoint is safe because
+settlement trusts only the verified prefix and claws back any rejected suffix. The chain is
+client-computable — offline simulation depends on it — and every activity advances it, a failed or
+abandoned attempt exactly as a completed one. The attempt after a failure is a fresh continuation,
+never a replay of the one that failed.
 
-The chain is client-computable by design — offline simulation depends on it. It seeds the
-simulation's trajectory only: enemies, timing, survival, experience, and which kills commit rolled
-rewards. Rolled content never derives from it. Foreseeing the trajectory is throughput knowledge —
-routing, kill counts, survival — and the economy prices it as such.
+The chain seeds the trajectory only — enemies, timing, survival, experience, and which kills commit
+rolled rewards — and rolled content resolves separately, at a coordinate fixed by the kill that
+commits it. In reward terms one continuation is worth no more than another: steady rewards are
+published, rolled-reward density varies only within bounded margins, and each roll's content carries
+equal expected value regardless of position, so steering the chain for a better tradeable reward
+returns less than the attempts it costs.
+
+Competition scores the trajectory itself — depth, boss-kill speed — which is client-computable and
+varies across attempts, so reward-flatness does not cover it. Meaningful competition is endgame, and
+the edge a re-attempt buys is bounded by the cost of reaching the position rather than by hiding it.
+The peek is free; the position is not. An entry-gated target burns a non-refundable entry on every
+attempt, abandons included, so walking the chain toward a favorable seed is paid for in resources; a
+second competitive avatar is a full endgame build's worth of investment; and the counted attempt is
+always played in full. Depth self-limits, because difficulty scales with depth until a build can no
+longer clear regardless of re-attempts.
+
+Where a metric is open enough that near-free abandoned attempts can churn the chain forward, cost
+stops gating and detection takes over: an avatar whose results ride the favorable tail of its
+verified history is a behavioural cheat signal, scored offline. Bounded margins keep any single
+attempt's edge small throughout. The residual is a wealthy, motivated actor with a purpose-built
+tool: defended in layers, never zero, the ceiling of anti-cheat in any game.
 
 ## Rolled rewards and the avatar key
 
@@ -37,14 +56,19 @@ A rolled reward is a reward whose value lives in its roll — an item drop is th
 commitment comes first, the reveal second: a kill that produces one commits it at a deterministic
 coordinate, and its content is rolled from that coordinate later, under a key.
 
-The coordinate is `(avatarID, nodeID, chainIndex, ordinal)`: `chainIndex` counts checkpoints from
-the node's seed-chain anchor, and `ordinal` indexes the rolled rewards within a checkpoint under the
-simulation's canonical ordering, independent of how checkpoints are batched. The coordinate derives
-only from the hashed checkpoint subset.
+The coordinate is `(avatarID, nodeID, chainIndex, ordinal)`: `chainIndex` counts checkpoints along
+the node's seed chain, monotonic across activities so a failed attempt's indices are spent rather
+than reused, and `ordinal` indexes the rolled rewards within a checkpoint under the simulation's
+canonical ordering, independent of how checkpoints are batched. The coordinate derives only from the
+hashed checkpoint subset, so replaying the chain reproduces every coordinate exactly.
 
-The coordinate is also restart-stable: the chain replays the same continuation, so abandoning and
-restarting reproduces the identical coordinate. That stability is what makes the reveal safe.
-Peeking a roll and replaying the position shows the same roll — a peek has zero option value.
+A failed or abandoned attempt advances the chain past its spent indices, so the next attempt rolls
+at fresh coordinates rather than re-reaching the old ones. The reveal needs no replay-identity to
+stay safe: content resolves at equal expected value regardless of position, and under server custody
+a coordinate cannot be read until its checkpoint is appended, so re-reaching a position trades one
+blind roll for an independent roll of equal worth. Device custody lets a self-found avatar read its
+own rolls before committing, but its loot never reaches a market, and any standing it earns rides
+the same appended, verifiable record.
 
 Rolled content is `f(key, coordinate)`, where `f` is a keyed PRF — a pseudorandom function whose
 revealed outputs carry no predictive power over unrevealed coordinates. The property matters because
@@ -80,12 +104,12 @@ this design has.
 
 Every roll is pinned by its activity's `Started` snapshot: `keyVersion` is stamped there beside the
 engine and content versions, and `f` resolves content under the pinned versions — never the live
-deploy — so reveal, replay, and mint agree across deploys, parks, and master rotations.
+deploy — so reveal, replay, and mint agree across deploys and master rotations.
 
 ## Sealed pre-commit salt
 
-Some outcomes carry a tail worth selecting — item affix rolls, rare content. Their entropy stays
-sealed while the decision is open, revealed in two commits:
+Some outcomes carry a tail worth selecting — item affix rolls are the concrete case. Their entropy
+stays sealed while the decision is open, revealed in two commits:
 
 1. **Commit.** The player locks in the spend. The server mints the salt from a server-held secret
    key and stores it sealed. The player sees only a lossy projection derived from it — modifier
@@ -93,9 +117,10 @@ sealed while the decision is open, revealed in two commits:
    summary and never narrows the realized roll: walking away must never beat resolving, at any tier,
    and that rule bounds how much the projection may reveal. Every decision happens against this
    metadata; the client never holds computable entropy while a decision is open.
-2. **Release.** The server releases the salt and the outcome resolves. Release is commitment: a
-   released position the client never resolves is force-resolved as forfeited — the bundle is lost —
-   at a server-side deadline inside the replay-retention window.
+2. **Release.** The server resolves the outcome under the salt and returns the result; under server
+   custody the salt itself never reaches the client. Release is commitment: a released position the
+   client never resolves is force-resolved as forfeited — the bundle is lost — at a server-side
+   deadline inside the replay-retention window.
 
 Three rules keep the seal honest, independent of what consumes it:
 
@@ -107,24 +132,23 @@ Three rules keep the seal honest, independent of what consumes it:
   arrives, nothing resolves.
 - Every input the outcome depends on pins at mint, so deferring resolution cannot improve it.
 
-Each consumer of the mechanism defines its own position, resolution, and pinned inputs:
-
-- **Juiced instances**: the position is the node-anchored chain position — the same restart-stable
-  index that keys reward coordinates — the resolution is the run itself, and the pinned input is the
-  build snapshot, so a peeked outcome cannot be beaten by out-leveling first. Forfeiture lifts the
-  node's gate.
-- **Item crafting**: the position is the craft action in the avatar's crafting sequence, the
-  resolution is applying the result to the item, and the pinned inputs are the target item and the
-  consumed currency at commit. Application is exactly-once per action — a network retry never
-  applies a spend twice.
+The mechanism admits any tail-bearing outcome; each consumer defines its own position, resolution,
+and pinned inputs. Item crafting is the worked case: the position is the craft action in the
+avatar's crafting sequence, the resolution is applying the result to the item, and the pinned inputs
+are the target item and the consumed currency at commit. Application is exactly-once per action — a
+network retry never applies a spend twice. A craft's affixes draw this sealed salt; a base drop's
+content resolves under the avatar key instead, and the two mechanisms never compose within one
+outcome.
 
 Sealed salt requires a live round trip, so tail-bearing content is online content wherever it
 appears.
 
-Only a tailed distribution needs the seal. A normalized outcome — a chosen tier, an instance
-modifier bounded to modest scalars with no jackpot combination — carries no tail worth selecting, so
-it rides client-computable entropy anywhere, interactive rerolls included; the
-[economy modes note](../game-design/economy-modes.md) owns that rule.
+Only a rolled tail needs the seal. A chosen tier at a published scalar carries no tail worth
+selecting and rides client-computable entropy anywhere, interactive selection included. A rolled
+magnitude does carry a tail: bounded is not flat, and best-of-N selects the maximum of a bounded
+spread as readily as an unbounded one. So any modifier that rolls a market-grade quantity — yield,
+roll or pack count, density — is a rolled reward under the tail rule, and must be sealed or
+forbidden. The [economy modes note](../game-design/economy-modes.md) owns the content rule.
 
 For self-found avatars no entropy is sealable at all — the player holds the key — which is
 consistent with their earnings never reaching the market.
@@ -133,10 +157,11 @@ consistent with their earnings never reaching the market.
 
 Every checkpoint's hashed subset carries an entropy-source tag identifying which source rolled its
 outcomes, present from the first row ever written. The subset is frozen, so the tag cannot be added
-later — and the tag is what lets entropy sources beyond the current two (a verifiable-randomness
-beacon, a rotated key generation) join without a migration. Verification validates the tag against
-the avatar's server-recorded mode; a mismatch is divergence. Settlement stamps an outcome's
-provenance from server records and the tag — never from a client claim.
+later. The two sources it distinguishes today are server-custody and device-custody rolls, and the
+tag is what lets further sources — a verifiable-randomness beacon, a rotated key generation — join
+without a migration. Verification validates the tag against the avatar's server-recorded mode; a
+mismatch is divergence. Settlement stamps an outcome's provenance from server records and the tag —
+never from a client claim.
 
 Tradeability keys on the security property: entropy unpredictable at the moment the outcome was
 committed, and provably tied to the party that minted it. Server-custody rolls and sealed salt have
