@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { SimulationAppState } from '@vers/idle-core';
-import { EntityStatus } from '@vers/idle-core';
+import { ActivityFailureAction, EntityStatus } from '@vers/idle-core';
 import { WorkerMessageType } from '../types';
 import { createSimulationUpdateMessage } from './create-simulation-update-message';
 
@@ -29,6 +29,7 @@ test('it creates a simulation update message', () => {
       status: EntityStatus.Alive,
     },
     combat: { elapsed: 1000 },
+    failureAction: ActivityFailureAction.Abort,
   };
 
   const message = createSimulationUpdateMessage(state);

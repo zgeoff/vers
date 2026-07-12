@@ -1,6 +1,8 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ActivityAppState } from '@vers/idle-core';
+import { ActivityFailureAction } from '@vers/idle-core';
 import { setSelectedNode } from '@vers/worldmap-client';
 import { removeSharedWorker } from '../../test-utils/remove-shared-worker';
 import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
@@ -37,9 +39,17 @@ test('it shows a spinner and sends initialize before the worker reports its stat
 
   setSelectedNode(null);
 
-  await withIdleWorkerHandle({ activity: undefined, initialized: false, worker }, () => {
-    render(<ExploreCurrentPanel />);
-  });
+  await withIdleWorkerHandle(
+    {
+      activity: undefined,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: false,
+      worker,
+    },
+    () => {
+      render(<ExploreCurrentPanel />);
+    },
+  );
 
   expect(calls).toStrictEqual([{ type: 'initialize' }]);
   expect(screen.queryByTestId('world-map-node-codex-stub')).not.toBeInTheDocument();
@@ -49,9 +59,17 @@ test('it reports the simulation as unavailable when SharedWorker is unsupported'
   setSelectedNode(null);
   removeSharedWorker();
 
-  await withIdleWorkerHandle({ activity: undefined, initialized: false, worker: undefined }, () => {
-    render(<ExploreCurrentPanel />);
-  });
+  await withIdleWorkerHandle(
+    {
+      activity: undefined,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: false,
+      worker: undefined,
+    },
+    () => {
+      render(<ExploreCurrentPanel />);
+    },
+  );
 
   expect(screen.getByRole('status')).toHaveTextContent(/activity simulation is unavailable/i);
 });
@@ -62,9 +80,12 @@ test('it sends set-activity once initialized but the worker has not caught up ye
 
   setSelectedNode(null);
 
-  await withIdleWorkerHandle({ activity: undefined, initialized: true, worker }, () => {
-    render(<ExploreCurrentPanel />);
-  });
+  await withIdleWorkerHandle(
+    { activity: undefined, failureAction: ActivityFailureAction.Abort, initialized: true, worker },
+    () => {
+      render(<ExploreCurrentPanel />);
+    },
+  );
 
   expect(calls).toHaveLength(1);
 
@@ -86,9 +107,12 @@ test('it renders the node and its codex fragment once the worker reports the sen
 
   // a first render captures which activity id the panel sent, so the second render can report
   // the worker as having caught up to that exact activity
-  await withIdleWorkerHandle({ activity: undefined, initialized: true, worker }, () => {
-    render(<ExploreCurrentPanel />);
-  });
+  await withIdleWorkerHandle(
+    { activity: undefined, failureAction: ActivityFailureAction.Abort, initialized: true, worker },
+    () => {
+      render(<ExploreCurrentPanel />);
+    },
+  );
 
   const [sentMessage] = calls;
 
@@ -99,6 +123,7 @@ test('it renders the node and its codex fragment once the worker reports the sen
   await withIdleWorkerHandle(
     {
       activity: buildFakeActivityAppState(sentMessage.activity.id),
+      failureAction: ActivityFailureAction.Abort,
       initialized: true,
       worker,
     },
@@ -108,6 +133,52 @@ test('it renders the node and its codex fragment once the worker reports the sen
       const codex = await screen.findByTestId('world-map-node-codex-stub');
 
       expect(codex).toBeVisible();
+    },
+  );
+});
+
+test('it renders the auto-retry checkbox unchecked by default and dispatches the toggle', async () => {
+  const calls: Array<unknown> = [];
+  const worker = { port: { postMessage: (message: unknown) => calls.push(message) } };
+  const user = userEvent.setup();
+
+  setSelectedNode(null);
+
+  // a first render captures which activity id the panel sent, so the second render can report
+  // the worker as having caught up to that exact activity
+  await withIdleWorkerHandle(
+    { activity: undefined, failureAction: ActivityFailureAction.Abort, initialized: true, worker },
+    () => {
+      render(<ExploreCurrentPanel />);
+    },
+  );
+
+  const [sentMessage] = calls;
+
+  if (!isSetActivityMessage(sentMessage)) {
+    throw new Error('expected a set-activity message');
+  }
+
+  await withIdleWorkerHandle(
+    {
+      activity: buildFakeActivityAppState(sentMessage.activity.id),
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      worker,
+    },
+    async () => {
+      render(<ExploreCurrentPanel />);
+
+      const checkbox = screen.getByLabelText('Auto-retry on failure');
+
+      expect(checkbox).not.toBeChecked();
+
+      await user.click(checkbox);
+
+      expect(calls).toContainEqual({
+        failureAction: ActivityFailureAction.Retry,
+        type: 'set-failure-action',
+      });
     },
   );
 });

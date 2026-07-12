@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { setActivity } from '../state/set-activity';
 import { setAvatar } from '../state/set-avatar';
 import { setCombat } from '../state/set-combat';
+import { setFailureAction } from '../state/set-failure-action';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationWorker } from '../state/set-simulation-worker';
 import { useSimulationStore } from '../state/use-simulation-store';
@@ -60,6 +61,7 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
     setAvatar(event.data.state.avatar);
     setActivity(event.data.state.activity);
     setCombat(event.data.state.combat);
+    setFailureAction(event.data.state.failureAction);
   }
 }
 

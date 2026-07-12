@@ -17,6 +17,7 @@ import type {
   SimulationListener,
   SimulationState,
 } from '../types';
+import { ActivityFailureAction } from '../types';
 import { createActivity } from './create-activity';
 import { createCombatExecutor } from './create-combat-executor';
 import { simulateActivity } from './simulate-activity';
@@ -31,6 +32,7 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
   let _generator: ActivityCheckpointGenerator | null = null;
   let _done = false;
   let _elapsed = 0;
+  let _failureAction = ActivityFailureAction.Abort;
 
   const ctx: SimulationContext = {
     get elapsed() {
@@ -55,6 +57,9 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     get elapsed() {
       return _elapsed;
     },
+    get failureAction() {
+      return _failureAction;
+    },
   };
 
   const listeners: Record<SimulationEventName, Array<SimulationListener>> = {
@@ -77,6 +82,7 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     }
 
     _activityData = activityData;
+    _failureAction = activityData.failureAction;
     _rng = createRNG(activityData.seed);
     _avatar = createAvatar(avatarData, ctx);
     _activity = createActivity(activityData, ctx);
@@ -117,6 +123,14 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     _generator = simulateActivity(_combat, _activity, _avatar, ctx);
 
     for (const listener of listeners.restarted) {
+      listener(state);
+    }
+  };
+
+  const setFailureAction = (action: ActivityFailureAction) => {
+    _failureAction = action;
+
+    for (const listener of listeners.updated) {
       listener(state);
     }
   };
@@ -168,6 +182,9 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     get elapsed(): number {
       return state.elapsed;
     },
+    get failureAction(): ActivityFailureAction {
+      return state.failureAction;
+    },
     get seed(): number {
       return _rng.seed;
     },
@@ -182,6 +199,7 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     getAppState: () => getAppState(state),
     restartActivity,
     run,
+    setFailureAction,
     startActivity: (avatarData: AvatarData, activityData: ActivityData) => {
       void startActivity(avatarData, activityData);
     },

@@ -3,7 +3,7 @@ import xxhash from 'xxhash-wasm';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import type { SimulationListener } from '../types';
-import { ActivityCheckpointType } from '../types';
+import { ActivityCheckpointType, ActivityFailureAction } from '../types';
 import { createSimulation } from './create-simulation';
 
 const hasher = await xxhash();
@@ -160,5 +160,34 @@ test('it returns the expected simulation state for a client app', () => {
   const simulation = createSimulation(hasher);
   const state = simulation.getAppState();
 
-  expect(state).toStrictEqual({});
+  expect(state).toStrictEqual({ failureAction: ActivityFailureAction.Abort });
+});
+
+test('it seeds the failure action from the started activity', () => {
+  const avatarData = createMockAvatarData();
+  const activityData = createMockActivityData({ failureAction: ActivityFailureAction.Retry });
+  const simulation = createSimulation(hasher);
+
+  simulation.startActivity(avatarData, activityData);
+
+  expect(simulation.failureAction).toBe(ActivityFailureAction.Retry);
+});
+
+test('it updates the failure action', () => {
+  const simulation = createSimulation(hasher);
+
+  simulation.setFailureAction(ActivityFailureAction.Retry);
+
+  expect(simulation.failureAction).toBe(ActivityFailureAction.Retry);
+  expect(simulation.getAppState().failureAction).toBe(ActivityFailureAction.Retry);
+});
+
+test('it calls an event listener when the failure action updates', () => {
+  const simulation = createSimulation(hasher);
+  const listenerSpy = mock<SimulationListener>();
+
+  simulation.addEventListener('updated', listenerSpy);
+  simulation.setFailureAction(ActivityFailureAction.Retry);
+
+  expect(listenerSpy).toHaveBeenCalledExactlyOnceWith(simulation.state);
 });

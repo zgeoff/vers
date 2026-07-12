@@ -25,6 +25,12 @@ export function registerIdleWorkerHandleMock(): void {
     },
   }));
 
+  void mock.module('../lib/idle/send-idle-set-failure-action', () => ({
+    sendIdleSetFailureAction: (worker: FakeSimulationWorker, failureAction: unknown) => {
+      worker.port.postMessage({ failureAction, type: 'set-failure-action' });
+    },
+  }));
+
   void mock.module('../lib/idle/idle-world-map-encounter-activity', () => ({
     IdleWorldMapEncounterActivity: () => 'IDLE_WORLD_MAP_ENCOUNTER',
   }));

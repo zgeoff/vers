@@ -9,5 +9,6 @@ export function getAppState(state: SimulationState): SimulationAppState {
     ...(activity !== undefined && { activity }),
     ...(avatar !== undefined && { avatar }),
     ...(combat !== undefined && { combat }),
+    failureAction: state.failureAction,
   };
 }

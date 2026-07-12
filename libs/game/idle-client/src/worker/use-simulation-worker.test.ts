@@ -1,8 +1,10 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { renderHook, waitFor } from '@testing-library/react';
+import { ActivityFailureAction } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { setSimulationWorker } from '../state/set-simulation-worker';
 import { useCombatStore } from '../state/use-combat-store';
+import { useFailureActionStore } from '../state/use-failure-action-store';
 import { useSimulationStore } from '../state/use-simulation-store';
 import type { ClientMessage, InitialStateMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
@@ -88,7 +90,7 @@ test('it updates simulation state from worker messages', async () => {
   worker.channel.port2.start();
 
   const message: InitialStateMessage = {
-    state: { combat: { elapsed: 1000 } },
+    state: { combat: { elapsed: 1000 }, failureAction: ActivityFailureAction.Retry },
     type: WorkerMessageType.InitialState,
   };
 
@@ -99,6 +101,7 @@ test('it updates simulation state from worker messages', async () => {
   });
 
   expect(useCombatStore.getState().combat).toStrictEqual({ elapsed: 1000 });
+  expect(useFailureActionStore.getState().failureAction).toBe(ActivityFailureAction.Retry);
 });
 
 test('it sends a disconnect message on pagehide', async () => {
