@@ -1,12 +1,13 @@
 # Self-hosted Bugsink error tracker. Public because browsers post error envelopes
-# directly to it; every other client is a server SDK. Runs the pinned stock image —
-# no build — and a merge to main touching this directory redeploys it, so upgrading
-# Bugsink is a tag bump here.
+# directly to it; every other client is a server SDK. Builds a thin image over the
+# pinned stock Bugsink that adds an R2 object-storage backend for uploaded files; a
+# merge to main touching this directory redeploys it, and upgrading Bugsink is a tag
+# bump on the Dockerfile's FROM line.
 app = 'vers-bugsink'
 primary_region = 'syd'
 
 [build]
-image = 'bugsink/bugsink:2.4.0'
+dockerfile = 'Dockerfile'
 
 [http_service]
 internal_port = 8000
