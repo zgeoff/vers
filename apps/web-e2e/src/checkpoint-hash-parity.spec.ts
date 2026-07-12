@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { buildCheckpointHash } from '@vers/contract-activity';
 
-const FROZEN_DIGEST = '6079d244605014de9d91fcd80080ddad169ab684fccbcbd1d5523bcd512e30d6';
-const CANONICAL_JSON = JSON.stringify(['hash_0', 1, 'seed_0', 'seed_1', 12, 'tick', 'chain']);
+const FROZEN_DIGEST = 'a2a741f37fd2cffb06c6b5e1ad737106670c1203d89206040b5260de4b632408';
+const CANONICAL_JSON = JSON.stringify(['hash_0', 1, 1, 'seed_0', 'seed_1', 12, 'tick', 'chain']);
 
 /**
  * Every party on the checkpoint hash chain — service, verifier, browser client — must derive
@@ -14,6 +14,7 @@ test('it derives the same frozen digest from the contract call and from browser 
 }) => {
   expect(
     buildCheckpointHash({
+      chainIndex: 1,
       entropySource: 'chain',
       nextSeed: 'seed_1',
       prevHash: 'hash_0',
