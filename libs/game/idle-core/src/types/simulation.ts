@@ -1,6 +1,12 @@
 import type { RNG } from '@vers/game-utils';
 import type { XXHashAPI } from 'xxhash-wasm';
-import type { Activity, ActivityAppState, ActivityCheckpoint, ActivityData } from './activity';
+import type {
+  Activity,
+  ActivityAppState,
+  ActivityCheckpoint,
+  ActivityData,
+  ActivityFailureAction,
+} from './activity';
 import type { CombatExecutor, CombatExecutorAppState } from './combat';
 import type { Avatar, AvatarAppState, AvatarData } from './entities';
 
@@ -8,6 +14,7 @@ export interface SimulationAppState {
   readonly activity?: ActivityAppState;
   readonly avatar?: AvatarAppState;
   readonly combat?: CombatExecutorAppState;
+  readonly failureAction: ActivityFailureAction;
 }
 
 export interface SimulationState {
@@ -15,6 +22,7 @@ export interface SimulationState {
   readonly avatar: Avatar | null;
   readonly combat: CombatExecutor | null;
   readonly elapsed: number;
+  readonly failureAction: ActivityFailureAction;
 }
 
 export type SimulationEventName = 'restarted' | 'started' | 'stopped' | 'updated';
@@ -28,6 +36,7 @@ export interface Simulation {
   get avatar(): Avatar | null;
   get ctx(): SimulationContext;
   get elapsed(): number;
+  get failureAction(): ActivityFailureAction;
   get seed(): number;
   get state(): SimulationState;
 
@@ -36,6 +45,7 @@ export interface Simulation {
   getAppState: () => SimulationAppState;
   restartActivity: () => void;
   run: (time: number) => Promise<ActivityCheckpoint | null>;
+  setFailureAction: (action: ActivityFailureAction) => void;
   startActivity: (avatarData: AvatarData, activityData: ActivityData) => void;
   stopActivity: () => Promise<void>;
 }
