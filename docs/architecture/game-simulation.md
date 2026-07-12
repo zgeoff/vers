@@ -29,7 +29,7 @@ decide whether to trust what the client submitted.
 
 `startActivity` is a server action that owns every simulation input: it mints the seed for a node's
 first activity and derives each continuation's seed from the previous activity's appended checkpoint
-(see [game entropy](./game-entropy.md)), resolves the node's enemy content, snapshots the avatar's
+(see [the seed chain](./seed-chain.md)), resolves the node's enemy content, snapshots the avatar's
 build (equipment, passives, level) from server truth, and stamps the engine and content versions.
 Client-submitted activity and avatar payloads are display hints, and a continuation's seed is a
 client computation the verifier reproduces from the appended chain — online and offline alike, never

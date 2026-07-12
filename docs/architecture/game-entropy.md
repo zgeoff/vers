@@ -26,7 +26,8 @@ reproduces byte-for-byte. Deriving from an appended-but-unverified checkpoint is
 settlement trusts only the verified prefix and claws back any rejected suffix. The chain is
 client-computable — offline simulation depends on it — and every activity advances it, a failed or
 abandoned attempt exactly as a completed one. The attempt after a failure is a fresh continuation,
-never a replay of the one that failed.
+never a replay of the one that failed. The [seed chain](./seed-chain.md) holds this state in a
+per-pair row of two anchors and fixes the transitions that advance and rewind them.
 
 The chain seeds the trajectory only — enemies, timing, survival, experience, and which kills commit
 rolled rewards — and rolled content resolves separately, at a coordinate fixed by the kill that
