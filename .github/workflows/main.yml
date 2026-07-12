@@ -161,6 +161,7 @@ jobs:
         app:
           - vers-service-activity
           - vers-service-avatar
+          - vers-service-email
           - vers-service-session
           - vers-service-user
           - vers-service-verification
