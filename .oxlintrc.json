@@ -124,6 +124,8 @@
             "package": "@orpc/server"
           },
           { "from": "package", "name": "SetupServer", "package": "msw" },
+          // a response resolver's request context: wraps the live fetch Request; no readonly form
+          { "from": "package", "name": "ResponseResolverInfo", "package": "msw" },
           { "from": "package", "name": "Collection", "package": "@msw/data" },
           {
             "from": "package",
