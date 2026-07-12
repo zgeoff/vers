@@ -1,8 +1,7 @@
-import { AvatarClassSchema, AvatarNameSchema } from '@vers/contract-avatar';
+import { AvatarNameSchema } from '@vers/contract-avatar';
 import * as z from 'zod';
 
 export const AvatarCreateFormSchema = z.object({
-  class: AvatarClassSchema,
   name: AvatarNameSchema,
 });
 

@@ -6,22 +6,11 @@ import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { avatarCreateHandler } from './avatar-create-handler';
 
-test('it reports a field error for a missing class', async () => {
-  const signedIn = await createSignedInUser();
-
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
-    avatarCreateHandler(buildFormData({ class: '', name: 'Karnak' })),
-  );
-
-  expect(outcome.value.status).toBe('invalid-fields');
-  expect(outcome.value.fieldErrors.class).toBeString();
-});
-
 test('it reports a field error for an invalid name', async () => {
   const signedIn = await createSignedInUser();
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
-    avatarCreateHandler(buildFormData({ class: 'brute', name: 'x' })),
+    avatarCreateHandler(buildFormData({ name: 'x' })),
   );
 
   expect(outcome.value).toStrictEqual({
@@ -36,7 +25,7 @@ test('it reports a field error for a name that is already taken', async () => {
   await db.avatarCollection.create({ name: 'Taken' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
-    avatarCreateHandler(buildFormData({ class: 'brute', name: 'Taken' })),
+    avatarCreateHandler(buildFormData({ name: 'Taken' })),
   );
 
   expect(outcome.value).toStrictEqual({
@@ -49,9 +38,7 @@ test('it creates the avatar and redirects to the avatar page', async () => {
   const signedIn = await createSignedInUser();
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const redirectHref = await avatarCreateHandler(
-      buildFormData({ class: 'scoundrel', name: 'Karnak' }),
-    )
+    const redirectHref = await avatarCreateHandler(buildFormData({ name: 'Karnak' }))
       .then(() => null)
       .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
 
@@ -64,5 +51,5 @@ test('it creates the avatar and redirects to the avatar page', async () => {
     q.where({ name: 'Karnak', userID: signedIn.userID }),
   );
 
-  expect(created).toMatchObject({ class: 'scoundrel', level: 1, name: 'Karnak', xp: 0 });
+  expect(created).toMatchObject({ level: 1, name: 'Karnak', xp: 0 });
 });
