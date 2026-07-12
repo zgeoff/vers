@@ -58,6 +58,21 @@ test('it redirects to verify-otp without creating a verification for an email al
   );
 
   expect(verification).toBeUndefined();
+
+  const existingAccountEmail = db.sentEmailCollection.findFirst((q) =>
+    q.where({ template: 'existing-account', to: 'signup-existing@vers.test' }),
+  );
+
+  expect(existingAccountEmail).toMatchObject({
+    email: 'signup-existing@vers.test',
+    to: 'signup-existing@vers.test',
+  });
+
+  const welcomeEmail = db.sentEmailCollection.findFirst((q) =>
+    q.where({ template: 'welcome', to: 'signup-existing@vers.test' }),
+  );
+
+  expect(welcomeEmail).toBeUndefined();
 });
 
 test('it creates an onboarding verification and redirects to verify-otp', async () => {
@@ -76,4 +91,14 @@ test('it creates an onboarding verification and redirects to verify-otp', async 
   );
 
   expect(verification).toBeDefined();
+
+  const welcomeEmail = db.sentEmailCollection.findFirst((q) =>
+    q.where({ template: 'welcome', to: 'signup-new@vers.test' }),
+  );
+
+  expect(welcomeEmail).toMatchObject({
+    to: 'signup-new@vers.test',
+    verificationCode: verification?.code,
+    verificationURL: `http://localhost/verify-otp?${new URLSearchParams({ code: verification?.code ?? '', target: 'signup-new@vers.test', type: 'onboarding' }).toString()}`,
+  });
 });

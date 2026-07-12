@@ -58,6 +58,15 @@ test('it mints a reset token for a matching account and redirects', async () => 
   const updated = db.userCollection.findFirst((q) => q.where({ id: user.id }));
 
   expect(updated?.passwordResetToken).toBeString();
+
+  const resetPasswordEmail = db.sentEmailCollection.findFirst((q) =>
+    q.where({ template: 'reset-password', to: 'forgot-password-existing@vers.test' }),
+  );
+
+  expect(resetPasswordEmail).toMatchObject({
+    resetURL: `http://localhost/reset-password?${new URLSearchParams({ email: 'forgot-password-existing@vers.test', token: updated?.passwordResetToken ?? '' }).toString()}`,
+    to: 'forgot-password-existing@vers.test',
+  });
 });
 
 test('it redirects the same way for an email with no matching account', async () => {
@@ -72,4 +81,10 @@ test('it redirects the same way for an email with no matching account', async ()
   });
 
   expect(outcome.value).toBe('/reset-password-started');
+
+  expect(
+    db.sentEmailCollection.findFirst((q) =>
+      q.where({ template: 'reset-password', to: 'forgot-password-unknown@vers.test' }),
+    ),
+  ).toBeUndefined();
 });

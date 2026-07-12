@@ -33,9 +33,22 @@ test('it starts a change-email verification and redirects to verify-otp for a ca
 
   expect(outcome.value).toBe('/verify-otp?target=new%40vers.test&type=change-email');
 
-  expect(
-    db.verificationCollection.findFirst((q) => q.where({ target: 'new@vers.test' })),
-  ).toMatchObject({ type: 'change-email' });
+  const verification = db.verificationCollection.findFirst((q) =>
+    q.where({ target: 'new@vers.test' }),
+  );
+
+  expect(verification).toMatchObject({ type: 'change-email' });
+
+  const verificationEmail = db.sentEmailCollection.findFirst((q) =>
+    q.where({ template: 'change-email-verification', to: 'new@vers.test' }),
+  );
+
+  expect(verificationEmail).toMatchObject({
+    newEmail: 'new@vers.test',
+    to: 'new@vers.test',
+    verificationCode: verification?.code,
+    verificationURL: `http://localhost/verify-otp?${new URLSearchParams({ code: verification?.code ?? '', target: 'new@vers.test', type: 'change-email' }).toString()}`,
+  });
 });
 
 test('it reports step-up-required for a 2FA-enabled caller with no transaction token', async () => {
