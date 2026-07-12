@@ -1,4 +1,4 @@
-import { createRNG, stateFromSeed } from '@vers/game-utils';
+import { buildStateFromSeed, createRNG } from '@vers/game-utils';
 import xxhash from 'xxhash-wasm';
 import type { SimulationContext } from '../types';
 
@@ -10,7 +10,7 @@ export function createMockSimulationContext(overrides: Overrides = {}): Simulati
   const ctx: SimulationContext = {
     elapsed: 0,
     hasher,
-    rng: createRNG(stateFromSeed(999_999_999)),
+    rng: createRNG(buildStateFromSeed(999_999_999)),
     ...overrides,
   };
 

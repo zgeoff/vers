@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { stateFromSeed } from '@vers/game-utils';
+import { buildStateFromSeed } from '@vers/game-utils';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
@@ -13,7 +13,7 @@ test('runs a simulation with default configuration', async () => {
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
-    seed: stateFromSeed(3_047_525_658),
+    seed: buildStateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,
   });
 
@@ -115,7 +115,7 @@ test('it respects duration limit and stops the simulation accordingly', async ()
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
-    seed: stateFromSeed(3_047_525_658),
+    seed: buildStateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,
   });
 
@@ -139,7 +139,7 @@ test('it stops at the specified rng state if provided', async () => {
     enemies: [enemy],
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
-    seed: stateFromSeed(3_047_525_658),
+    seed: buildStateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,
   });
 
@@ -174,7 +174,7 @@ test('it aborts on failure if failure action is set to abort', async () => {
     enemies: [enemy],
     failureAction: ActivityFailureAction.Abort,
     id: 'world_map_encounter_1',
-    seed: stateFromSeed(3_047_525_658),
+    seed: buildStateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,
   });
 
@@ -210,7 +210,7 @@ test('it retries when failure action is set to retry', async () => {
     enemies: [enemy],
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
-    seed: stateFromSeed(3_047_525_658),
+    seed: buildStateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,
   });
 

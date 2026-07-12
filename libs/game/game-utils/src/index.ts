@@ -1,4 +1,7 @@
+export { buildStateFromSeed } from './build-state-from-seed';
 export { combineSeeds } from './combine-seeds';
-export { createRNG, decodeState, encodeState, stateFromSeed } from './create-rng';
+export { createRNG } from './create-rng';
 export { createSeed } from './create-seed';
+export { decodeState } from './decode-state';
+export { encodeState } from './encode-state';
 export type * from './types';
