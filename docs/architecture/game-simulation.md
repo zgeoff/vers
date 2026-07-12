@@ -76,9 +76,9 @@ Replay divergence is not the only cheat signal. Because every attempt at a node 
 append-only, server-verified chain, reroll-scanning leaves a record: an avatar whose results ride the
 favorable tail of its own verified history — faster clears, better positions, more often than the
 distribution predicts — stands out from honest play, whether it reached them by failing attempts or
-by completing and discarding them. It is a behavioural signal, not a divergence, scored under the
-same restraint — a soft consequence before a hard one, at a session boundary — because an honest
-grinder also swings, and a false accusation costs more than the edge it denies.
+by completing and discarding them. This is a behavioural signal, not a divergence, and it is
+scored with the same restraint: a soft consequence before a hard one, always at a session boundary.
+Honest grinders swing too, and a false accusation costs more than the edge it denies.
 
 The primary health gauge is verification lag: the oldest unverified append across all streams.
 Rejection rates are tracked split by cause — an integrity-mismatch spike is almost always a bad

@@ -1,9 +1,10 @@
 # Economy Modes & Reward Integrity
 
 This note defines how Vers keeps a fair player economy when the simulation runs on the player's
-machine: the mode chosen at avatar creation, the rules for which outcomes may be predictable, and
-juice's economic role. The entropy architecture doc owns the mechanisms; this note owns the design
-they enforce.
+machine: the mode chosen at avatar creation, the rules for which outcomes may be predictable, and the
+economic role of juice — spending that modifies an expedition instance. The
+[entropy architecture doc](../architecture/game-entropy.md) owns the mechanisms; this note owns the
+design they enforce.
 
 ## Perfect Foresight
 
@@ -36,9 +37,9 @@ choice is a single fact — who holds the avatar's loot key.
   own kind of mastery.
 
 Trade is the default and the pre-selected choice at creation. Self-Found is a deliberate opt-in
-behind an explicit warning, because the choice is permanent: a self-found avatar's wealth was rolled
-under a key its player holds — accumulated under perfect foresight — so migrating it into a market
-would launder foresight-selected value. Permanence is the price of a key of one's own. A new player
+behind an explicit warning, because the choice is permanent. A self-found avatar accumulates its
+wealth under perfect foresight, rolled against a key its own player holds; migrating that wealth into
+a market would launder foresight-selected value. Permanence is the price of a key of one's own. A new player
 who never touches the market loses nothing by staying Trade; only Self-Found forecloses anything.
 
 The mode difference carries its own fiction: the market institution assays and logs a trade avatar's
@@ -73,10 +74,10 @@ on computing it — so they are priced for foresight:
 trajectory commits them, and which kills produce them, and how many, is trajectory knowledge:
 foreseeing that reveals a route's throughput, never what any roll contains.
 
-Roll counts are foreseeable, and every rolled reward carries market value for a trade avatar. Roll
-density therefore obeys the tail rule that rolled content no longer needs: routes may differ
-modestly in rolls per hour — grindy play averages out — but no route is a density jackpot worth
-scanning thousands of futures to find. Density outliers belong in invested content, priced by their
+Roll counts are foreseeable, and every rolled reward carries market value for a trade avatar. Density
+is foreseeable where content is not, so it must obey the tail rule: routes may differ modestly in
+rolls per hour — grindy play averages out — but no route is a density jackpot worth scanning
+thousands of futures to find. Density outliers belong in invested content, priced by their
 cost.
 
 What a roll contains is never client-computable for a trade avatar: content resolves under the
