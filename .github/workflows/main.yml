@@ -136,15 +136,44 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: bun run --cwd libs/data/db db:migrate
 
+  manifest:
+    name: Read deploy manifest
+    needs: checks
+    # the deploy matrix derives from deploy.config.ts, so adding an app to the
+    # manifest is the whole change — a hand-maintained matrix drifts, and a
+    # manifest app with no deploy leg is a guaranteed verify-fleet failure
+    if: ${{ needs.checks.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      apps: ${{ steps.list.outputs.apps }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: List manifest apps
+        id: list
+        run: echo "apps=$(bun scripts/src/bin/deploy.ts list)" >> "$GITHUB_OUTPUT"
+
   deploy:
     name: Deploy
-    needs: [checks, migrate]
+    needs: [checks, migrate, manifest]
     # deploy only a fully green build, after the shared schema is current. Each
     # leg self-gates inside the deploy CLI: it compares HEAD against the GIT_SHA
     # stamped on the app's machines, so a deploy skipped by an earlier failure
     # or cancellation stays "stale" and ships on the next push instead of being
     # lost with the push delta.
-    if: ${{ needs.checks.result == 'success' && needs.migrate.result == 'success' }}
+    if:
+      ${{ needs.checks.result == 'success' && needs.migrate.result == 'success' &&
+      needs.manifest.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
     # worst observed leg (app-web remote build + bluegreen cutover) is ~5
@@ -158,15 +187,7 @@ jobs:
       # each app is independent — one rollout failing must not abandon the others
       fail-fast: false
       matrix:
-        app:
-          - vers-service-activity
-          - vers-service-avatar
-          - vers-service-email
-          - vers-service-session
-          - vers-service-user
-          - vers-service-verification
-          - vers-app-web
-          - vers-bugsink
+        app: ${{ fromJSON(needs.manifest.outputs.apps) }}
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -226,7 +247,7 @@ jobs:
 
   alert:
     name: Alert on failure
-    needs: [checks, migrate, deploy, verify-fleet]
+    needs: [checks, migrate, manifest, deploy, verify-fleet]
     # a red main pipeline pages the team channel: agent-driven pushes mean
     # nobody is necessarily watching the Actions tab, and a failed deploy or
     # fleet verification left unnoticed is exactly how version skew lingers
@@ -241,8 +262,9 @@ jobs:
           RUN_URL:
             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           FAILED: >-
-            checks=${{ needs.checks.result }}, migrate=${{ needs.migrate.result }}, deploy=${{
-            needs.deploy.result }}, verify-fleet=${{ needs.verify-fleet.result }}
+            checks=${{ needs.checks.result }}, migrate=${{ needs.migrate.result }}, manifest=${{
+            needs.manifest.result }}, deploy=${{ needs.deploy.result }}, verify-fleet=${{
+            needs.verify-fleet.result }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           if [ -z "${WEBHOOK_URL}" ]; then
