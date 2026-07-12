@@ -1,17 +1,17 @@
 import { createId } from '@paralleldrive/cuid2';
-import type { ActivityData, EnemyGroup, EnemyGroupAppState, SimulationContext } from '../../types';
+import type { ActivityData, SimulationContext, Wave, WaveAppState } from '../../types';
 import { getRandomEnemies } from './get-random-enemies';
 
-export function createEnemyGroup(
+export function createWave(
   activity: ActivityData,
   ctx: SimulationContext,
   enemyCount: number,
-): EnemyGroup {
+): Wave {
   const id = createId();
   const enemies = getRandomEnemies(activity, enemyCount, ctx);
   const getRemainingEnemies = () => enemies.filter((enemy) => enemy.isAlive);
 
-  const getAppState = (): EnemyGroupAppState => ({
+  const getAppState = (): WaveAppState => ({
     enemies: enemies.map((enemy) => enemy.getAppState()),
     id,
   });

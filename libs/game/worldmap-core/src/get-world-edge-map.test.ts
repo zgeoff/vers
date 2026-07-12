@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
 import { getWorldEdgeMap } from './get-world-edge-map';
-import type { WorldNodeMap } from './types';
+import type { WorldMapNodeMap } from './types';
 
 test('it creates an edge map from a valid node map', () => {
-  const nodeMap: WorldNodeMap = {
+  const nodeMap: WorldMapNodeMap = {
     node1: {
       connections: ['node2', null, null, null],
       difficulty: 0,

@@ -8,7 +8,7 @@ import { Floor } from './floor';
 import { Fog } from './fog';
 import { IsometricCamera } from './isometric-camera';
 import { WorldEdges } from './world-edges';
-import { WorldNodes } from './world-nodes';
+import { WorldMapNodes } from './world-map-nodes';
 
 function useFilteredGraph() {
   const graph = useWorldGraph();
@@ -28,7 +28,7 @@ export function Scene() {
       <ambientLight intensity={0.8} />
 
       <group rotation={[-Math.PI / 2, 0, 0]}>
-        <WorldNodes nodes={nodes} />
+        <WorldMapNodes nodes={nodes} />
         <WorldEdges edges={edges} />
       </group>
 

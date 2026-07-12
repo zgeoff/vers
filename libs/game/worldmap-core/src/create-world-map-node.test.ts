@@ -1,21 +1,21 @@
 import { expect, test } from 'bun:test';
-import { createWorldNode } from './create-world-node';
+import { createWorldMapNode } from './create-world-map-node';
 
-test('it returns an world node with no connections', () => {
-  const node = createWorldNode(0, 1);
+test('it returns a world map node with no connections', () => {
+  const node = createWorldMapNode(0, 1);
 
   expect(node.connections).toStrictEqual([null, null, null, null]);
 });
 
 test('it generates an ID 6 avatars long', () => {
-  const node = createWorldNode(0, 1);
+  const node = createWorldMapNode(0, 1);
 
   expect(node.id).toHaveLength(6);
 });
 
 test('it generates a random seed', () => {
-  const node1 = createWorldNode(0, 1);
-  const node2 = createWorldNode(0, 1);
+  const node1 = createWorldMapNode(0, 1);
+  const node2 = createWorldMapNode(0, 1);
 
   expect(node1.seed).not.toBe(node2.seed);
 });

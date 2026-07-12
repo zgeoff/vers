@@ -44,7 +44,7 @@ test('it immediately generates a started checkpoint', async () => {
   });
 });
 
-test('it generates enemy group killed checkpoints', async () => {
+test('it generates wave killed checkpoints', async () => {
   const weapon: EquipmentWeapon = {
     id: 'test-weapon',
     maxDamage: 9999,
@@ -66,12 +66,12 @@ test('it generates enemy group killed checkpoints', async () => {
   const activityData = createMockActivityData({
     enemies: [enemyData],
     failureAction: ActivityFailureAction.Retry,
-    id: 'world_node_1',
-    type: ActivityType.WorldNode,
+    id: 'world_map_encounter_1',
+    type: ActivityType.WorldMapEncounter,
   });
 
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupSize: 5 });
+  const activity = createActivity(activityData, ctx, { waveSize: 5 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const generator = simulateActivity(executor, activity, avatar, ctx);
@@ -106,7 +106,7 @@ test('it generates enemy group killed checkpoints', async () => {
   });
 });
 
-test('it accrues rewards across multiple cleared groups', async () => {
+test('it accrues rewards across multiple cleared waves', async () => {
   const weapon: EquipmentWeapon = {
     id: 'test-weapon',
     maxDamage: 9999,
@@ -126,12 +126,12 @@ test('it accrues rewards across multiple cleared groups', async () => {
   const activityData = createMockActivityData({
     enemies: [enemyData],
     failureAction: ActivityFailureAction.Retry,
-    id: 'world_node_1',
-    type: ActivityType.WorldNode,
+    id: 'world_map_encounter_1',
+    type: ActivityType.WorldMapEncounter,
   });
 
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupCount: 2, groupSize: 5 });
+  const activity = createActivity(activityData, ctx, { waveCount: 2, waveSize: 5 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const generator = simulateActivity(executor, activity, avatar, ctx);
@@ -139,12 +139,12 @@ test('it accrues rewards across multiple cleared groups', async () => {
   // skip the started checkpoint
   await generator.next(1000);
 
-  // clear the first group
+  // clear the first wave
   await generator.next(1000);
 
   expect(activity.rewards).toStrictEqual({ xp: 50 });
 
-  // clear the second group
+  // clear the second wave
   await generator.next(1000);
 
   expect(activity.rewards).toStrictEqual({ xp: 100 });
@@ -207,12 +207,12 @@ test('it returns a completed checkpoint that folds in the completion bonus', asy
     difficulty: 1,
     enemies: [enemyData],
     failureAction: ActivityFailureAction.Retry,
-    id: 'world_node_1',
-    type: ActivityType.WorldNode,
+    id: 'world_map_encounter_1',
+    type: ActivityType.WorldMapEncounter,
   });
 
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupCount: 1, groupSize: 1 });
+  const activity = createActivity(activityData, ctx, { waveCount: 1, waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const generator = simulateActivity(executor, activity, avatar, ctx);
@@ -258,7 +258,7 @@ test('it carries a levelUp when a completion bonus crosses a level threshold', a
   });
 
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupCount: 1, groupSize: 1 });
+  const activity = createActivity(activityData, ctx, { waveCount: 1, waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const generator = simulateActivity(executor, activity, avatar, ctx);
@@ -295,7 +295,7 @@ test('it records a levelUp checkpoint when a group clear crosses a level thresho
   const enemyData = createMockEnemyData({ life: 1, xp: 250 });
   const activityData = createMockActivityData({ difficulty: 1, enemies: [enemyData] });
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupCount: 1, groupSize: 1 });
+  const activity = createActivity(activityData, ctx, { waveCount: 1, waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const generator = simulateActivity(executor, activity, avatar, ctx);
@@ -341,7 +341,7 @@ test('it keeps xp and a level-up earned on the same tick the avatar dies', async
 
   const activityData = createMockActivityData({ difficulty: 1, enemies: [enemyData] });
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupCount: 1, groupSize: 1 });
+  const activity = createActivity(activityData, ctx, { waveCount: 1, waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const generator = simulateActivity(executor, activity, avatar, ctx);

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import type { WorldNode } from '@vers/worldmap-core';
+import type { WorldMapNode } from '@vers/worldmap-core';
 import { Object3D } from 'three';
 import { getScenePosition } from '../utils/get-scene-position';
 import { setSelectedNode } from './set-selected-node';
@@ -9,7 +9,7 @@ import { useSelectedNode } from './use-selected-node';
 test('it returns the current selected node and object3D', () => {
   const ref = new Object3D();
 
-  const node: WorldNode = {
+  const node: WorldMapNode = {
     connections: [null, null, null, null],
     difficulty: 1,
     id: 'node1',
@@ -36,7 +36,7 @@ test('it returns the current selected node and object3D', () => {
 });
 
 test('it derives an object3D positioned at the node when none was provided', () => {
-  const node: WorldNode = {
+  const node: WorldMapNode = {
     connections: [null, null, null, null],
     difficulty: 1,
     id: 'node2',

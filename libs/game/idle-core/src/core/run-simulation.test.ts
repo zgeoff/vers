@@ -11,9 +11,9 @@ test('runs a simulation with default configuration', async () => {
   const activity = createMockActivityData({
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,
-    id: 'world_node_1',
+    id: 'world_map_encounter_1',
     seed: 3_047_525_658,
-    type: ActivityType.WorldNode,
+    type: ActivityType.WorldMapEncounter,
   });
 
   const config = {
@@ -113,13 +113,13 @@ test('it respects duration limit and stops the simulation accordingly', async ()
   const activity = createMockActivityData({
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,
-    id: 'world_node_1',
+    id: 'world_map_encounter_1',
     seed: 3_047_525_658,
-    type: ActivityType.WorldNode,
+    type: ActivityType.WorldMapEncounter,
   });
 
   const config = {
-    // the first group is killed at ~17 seconds on this seed
+    // the first wave is killed at ~17 seconds on this seed
     duration: 10_000,
   };
 
@@ -137,9 +137,9 @@ test('it stops at the specified seed if provided', async () => {
   const activity = createMockActivityData({
     enemies: [enemy],
     failureAction: ActivityFailureAction.Retry,
-    id: 'world_node_1',
+    id: 'world_map_encounter_1',
     seed: 3_047_525_658,
-    type: ActivityType.WorldNode,
+    type: ActivityType.WorldMapEncounter,
   });
 
   const config = {
@@ -172,9 +172,9 @@ test('it aborts on failure if failure action is set to abort', async () => {
   const activity = createMockActivityData({
     enemies: [enemy],
     failureAction: ActivityFailureAction.Abort,
-    id: 'world_node_1',
+    id: 'world_map_encounter_1',
     seed: 3_047_525_658,
-    type: ActivityType.WorldNode,
+    type: ActivityType.WorldMapEncounter,
   });
 
   const config = {
@@ -208,9 +208,9 @@ test('it retries when failure action is set to retry', async () => {
   const activity = createMockActivityData({
     enemies: [enemy],
     failureAction: ActivityFailureAction.Retry,
-    id: 'world_node_1',
+    id: 'world_map_encounter_1',
     seed: 3_047_525_658,
-    type: ActivityType.WorldNode,
+    type: ActivityType.WorldMapEncounter,
   });
 
   const config = {

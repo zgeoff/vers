@@ -1,10 +1,10 @@
 import { expect, test } from 'bun:test';
 import { render, renderHook } from '@testing-library/react';
 import { setSelectedNode, setWorldGraph, useSelectedNode } from '@vers/worldmap-client';
-import type { WorldGraph, WorldNode } from '@vers/worldmap-core';
+import type { WorldGraph, WorldMapNode } from '@vers/worldmap-core';
 import { ExploreNodeFocus } from './explore-node-focus';
 
-const node1: WorldNode = {
+const node1: WorldMapNode = {
   connections: [null, null, null, null],
   difficulty: 1,
   id: 'node1',

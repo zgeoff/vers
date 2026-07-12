@@ -7,15 +7,15 @@ import { createSimulationUpdateMessage } from './create-simulation-update-messag
 test('it creates a simulation update message', () => {
   const state: SimulationAppState = {
     activity: {
-      currentEnemyGroup: null,
+      currentWave: null,
       elapsed: 1000,
       enemiesRemaining: 0,
-      enemyGroups: [],
-      enemyGroupsRemaining: 0,
       id: '1',
       levelUp: null,
       name: 'Test Activity',
       rewards: { xp: 0 },
+      waves: [],
+      wavesRemaining: 0,
     },
     avatar: {
       behaviours: {},

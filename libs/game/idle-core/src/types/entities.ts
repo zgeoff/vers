@@ -153,12 +153,12 @@ export interface AttackData {
   readonly speed: number;
 }
 
-export interface EnemyGroupAppState {
+export interface WaveAppState {
   readonly enemies: Array<EnemyAppState>;
   readonly id: string;
 }
 
-export interface EnemyGroup {
+export interface Wave {
   // meta
   readonly enemies: Array<Enemy>;
   readonly id: string;
@@ -168,5 +168,5 @@ export interface EnemyGroup {
   get remaining(): number;
 
   // utils
-  getAppState: () => EnemyGroupAppState;
+  getAppState: () => WaveAppState;
 }

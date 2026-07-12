@@ -16,7 +16,7 @@ export function ActivityInfo(props: Readonly<ActivityInfoProps>) {
     <section className={activityInfo}>
       <Heading level={2}>{props.activity.name}</Heading>
       <Text>
-        <strong>{props.activity.enemyGroupsRemaining}</strong> enemy groups remain
+        <strong>{props.activity.wavesRemaining}</strong> waves remain
       </Text>
       <Text>
         <strong>{props.activity.enemiesRemaining}</strong> enemies remain

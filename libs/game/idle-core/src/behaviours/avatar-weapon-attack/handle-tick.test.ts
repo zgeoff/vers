@@ -26,10 +26,10 @@ test('it schedules attacks on the tick event', () => {
   const enemyData = createMockEnemyData({ life: 10 });
   const activityData = createMockActivityData({ enemies: [enemyData] });
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupSize: 1 });
+  const activity = createActivity(activityData, ctx, { waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-  const enemyGroup = activity.currentEnemyGroup;
+  const wave = activity.currentWave;
 
   // we need to remove the behaviour from the avatar as it's already added
   // by default and would get ran when we run our combat executor
@@ -40,12 +40,12 @@ test('it schedules attacks on the tick event', () => {
   combatExecutor.run(1000);
 
   handleTick(avatar, behaviour, combatExecutor);
-  expect(enemyGroup?.remaining).toBe(1);
+  expect(wave?.remaining).toBe(1);
 
   combatExecutor.run(1);
 
   handleTick(avatar, behaviour, combatExecutor);
-  expect(enemyGroup?.remaining).toBe(0);
+  expect(wave?.remaining).toBe(0);
   expect(behaviour.state.lastAttackTime).toBe(1000);
 });
 
@@ -65,10 +65,10 @@ test('it schedules multiple attacks for high APS weapons', () => {
   const enemyData = createMockEnemyData({ life: 10 });
   const activityData = createMockActivityData({ enemies: [enemyData] });
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupSize: 5 });
+  const activity = createActivity(activityData, ctx, { waveSize: 5 });
   const avatar = createAvatar(avatarData, ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-  const enemyGroup = activity.currentEnemyGroup;
+  const wave = activity.currentWave;
 
   // we need to remove the behaviour from the avatar as it's already added
   // by default and would get ran when we run our combat executor
@@ -82,6 +82,6 @@ test('it schedules multiple attacks for high APS weapons', () => {
 
   combatExecutor.run(1);
 
-  expect(enemyGroup?.remaining).toBe(0);
+  expect(wave?.remaining).toBe(0);
   expect(behaviour.state.lastAttackTime).toBe(2500);
 });

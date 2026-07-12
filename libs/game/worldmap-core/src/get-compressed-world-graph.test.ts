@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
 import { getCompressedWorldGraph } from './get-compressed-world-graph';
-import type { WorldNode } from './types';
+import type { WorldMapNode } from './types';
 
-test('it compresses an array of world nodes', () => {
-  const nodes: Array<WorldNode> = [
+test('it compresses an array of world map nodes', () => {
+  const nodes: Array<WorldMapNode> = [
     {
       connections: [null, null, null, null],
       difficulty: 0,

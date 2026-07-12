@@ -19,15 +19,15 @@ function isSetActivityMessage(value: unknown): value is SetActivityMessage {
 
 function buildFakeActivityAppState(id: string): ActivityAppState {
   return {
-    currentEnemyGroup: null,
+    currentWave: null,
     elapsed: 0,
     enemiesRemaining: 0,
-    enemyGroups: [],
-    enemyGroupsRemaining: 0,
     id,
     levelUp: null,
-    name: 'World Node',
+    name: 'World Map Encounter',
     rewards: { xp: 0 },
+    waves: [],
+    wavesRemaining: 0,
   };
 }
 
@@ -42,7 +42,7 @@ test('it shows a spinner and sends initialize before the worker reports its stat
   });
 
   expect(calls).toStrictEqual([{ type: 'initialize' }]);
-  expect(screen.queryByTestId('world-node-codex-stub')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('world-map-node-codex-stub')).not.toBeInTheDocument();
 });
 
 test('it reports the simulation as unavailable when SharedWorker is unsupported', async () => {
@@ -75,7 +75,7 @@ test('it sends set-activity once initialized but the worker has not caught up ye
   }
 
   expect(sentMessage.activity.id).toBeString();
-  expect(screen.queryByTestId('world-node-codex-stub')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('world-map-node-codex-stub')).not.toBeInTheDocument();
 });
 
 test('it renders the node and its codex fragment once the worker reports the sent activity', async () => {
@@ -105,7 +105,7 @@ test('it renders the node and its codex fragment once the worker reports the sen
     async () => {
       render(<ExploreCurrentPanel />);
 
-      const codex = await screen.findByTestId('world-node-codex-stub');
+      const codex = await screen.findByTestId('world-map-node-codex-stub');
 
       expect(codex).toBeVisible();
     },

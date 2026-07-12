@@ -23,11 +23,11 @@ test('it schedules attacks on the tick event', () => {
   const avatarData = createMockAvatarData({ life: 10 });
   const activityData = createMockActivityData({ enemies: [enemyData] });
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupSize: 1 });
+  const activity = createActivity(activityData, ctx, { waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
-  const enemyGroup = activity.currentEnemyGroup;
+  const wave = activity.currentWave;
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-  const enemy = enemyGroup!.enemies[0]!;
+  const enemy = wave!.enemies[0]!;
   const behaviour = create(enemy);
 
   // we need to remove the behaviour from the enemy as it's already added
@@ -58,11 +58,11 @@ test('it schedules multiple attacks for high APS weapons', () => {
   const avatarData = createMockAvatarData({ life: 50 });
   const activityData = createMockActivityData({ enemies: [enemyData] });
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { groupSize: 1 });
+  const activity = createActivity(activityData, ctx, { waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
-  const enemyGroup = activity.currentEnemyGroup;
+  const wave = activity.currentWave;
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-  const enemy = enemyGroup!.enemies[0]!;
+  const enemy = wave!.enemies[0]!;
   const behaviour = create(enemy);
 
   // we need to remove the behaviour from the enemy as it's already added

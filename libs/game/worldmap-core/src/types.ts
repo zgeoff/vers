@@ -1,13 +1,13 @@
 export interface WorldGraph {
   readonly edges: WorldEdgeMap;
-  readonly nodes: WorldNodeMap;
+  readonly nodes: WorldMapNodeMap;
 }
 
 export type WorldEdgeMap = Readonly<Record<string, WorldEdge>>;
 
-export type WorldNodeMap = Readonly<Record<string, WorldNode>>;
+export type WorldMapNodeMap = Readonly<Record<string, WorldMapNode>>;
 
-export interface WorldNode {
+export interface WorldMapNode {
   readonly connections: readonly [null | string, null | string, null | string, null | string];
   readonly difficulty: number;
   readonly id: string;
@@ -22,7 +22,7 @@ export interface WorldEdge {
   readonly start: readonly [number, number];
 }
 
-export interface CompressedWorldNode {
+export interface CompressedWorldMapNode {
   readonly c: readonly [null | string, null | string, null | string, null | string];
   readonly d: number;
   readonly i: number;

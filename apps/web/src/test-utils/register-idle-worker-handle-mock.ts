@@ -4,9 +4,9 @@ import { idleWorkerHandleHolder } from './idle-worker-handle-holder';
 
 /**
  * Stubs the app's idle-worker-handle boundary. `happy-dom` has neither `SharedWorker` nor WebGL
- * (for the `WorldNodeActivity` visual) the real `@vers/idle-client` exports depend on, so reads go
- * through the in-memory holder instead. The message senders post the production message shape, so
- * a test asserting on its fake worker's calls sees the real wiring contract.
+ * (for the `WorldMapEncounterActivity` visual) the real `@vers/idle-client` exports depend on, so
+ * reads go through the in-memory holder instead. The message senders post the production message
+ * shape, so a test asserting on its fake worker's calls sees the real wiring contract.
  */
 export function registerIdleWorkerHandleMock(): void {
   void mock.module('../lib/idle/use-idle-worker-handle', () => ({
@@ -25,7 +25,7 @@ export function registerIdleWorkerHandleMock(): void {
     },
   }));
 
-  void mock.module('../lib/idle/idle-world-node-activity', () => ({
-    IdleWorldNodeActivity: () => 'IDLE_WORLD_NODE',
+  void mock.module('../lib/idle/idle-world-map-encounter-activity', () => ({
+    IdleWorldMapEncounterActivity: () => 'IDLE_WORLD_MAP_ENCOUNTER',
   }));
 }

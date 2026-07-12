@@ -11,7 +11,7 @@ export function SelectedNodeInfo() {
 
   return (
     <div>
-      <Text data-testid="selected-node-id">World Node ({node.id})</Text>
+      <Text data-testid="selected-node-id">World Map Node ({node.id})</Text>
       <Text data-testid="selected-node-difficulty">Difficulty {node.difficulty}</Text>
       <Link to="/explore/current">Click to start</Link>
     </div>

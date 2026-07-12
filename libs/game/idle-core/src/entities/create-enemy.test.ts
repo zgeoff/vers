@@ -2,7 +2,7 @@ import { expect, mock, test } from 'bun:test';
 import invariant from 'tiny-invariant';
 import { createActivity } from '../core/create-activity';
 import { createCombatExecutor } from '../core/create-combat-executor';
-import { createEnemyGroup } from '../core/utils/create-enemy-group';
+import { createWave } from '../core/utils/create-wave';
 import { createMockActivityData } from '../test-utils/create-mock-activity-data';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
@@ -67,7 +67,7 @@ test('it calls all registered handlers when handling a tick', () => {
   const avatar = createAvatar(avatarData, ctx);
   const activityData = createMockActivityData();
   const activity = createActivity(activityData, ctx);
-  const enemyGroup = createEnemyGroup(activityData, ctx, 1);
+  const wave = createWave(activityData, ctx, 1);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
   const handlerSpy = mock<CombatLifecycleHandler<Enemy>>();
 
@@ -82,7 +82,7 @@ test('it calls all registered handlers when handling a tick', () => {
     state: {},
   };
 
-  const [enemy] = enemyGroup.enemies;
+  const [enemy] = wave.enemies;
 
   invariant(enemy, 'enemy is required');
 
@@ -98,7 +98,7 @@ test('it allows removing behaviours', () => {
   const avatar = createAvatar(avatarData, ctx);
   const activityData = createMockActivityData();
   const activity = createActivity(activityData, ctx);
-  const enemyGroup = createEnemyGroup(activityData, ctx, 1);
+  const wave = createWave(activityData, ctx, 1);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
   const handlerSpy = mock<CombatLifecycleHandler<Enemy>>();
 
@@ -113,7 +113,7 @@ test('it allows removing behaviours', () => {
     state: {},
   };
 
-  const [enemy] = enemyGroup.enemies;
+  const [enemy] = wave.enemies;
 
   invariant(enemy, 'enemy is required');
 

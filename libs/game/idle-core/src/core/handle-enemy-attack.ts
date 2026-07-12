@@ -3,9 +3,7 @@ import { createLogLabel } from '../utils/create-log-label';
 import { logger } from '../utils/logger';
 
 export function handleEnemyAttack(event: EnemyAttackEvent, avatar: Avatar, activity: Activity) {
-  const enemy = activity.currentEnemyGroup?.enemies.find(
-    (candidate) => candidate.id === event.source,
-  );
+  const enemy = activity.currentWave?.enemies.find((candidate) => candidate.id === event.source);
 
   if (enemy?.isAlive === true && avatar.isAlive) {
     const label = createLogLabel('enemy', event.source);

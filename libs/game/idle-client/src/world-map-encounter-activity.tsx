@@ -5,9 +5,9 @@ import { AvatarInfo } from './components/avatar-info';
 import { EnemyInfo } from './components/enemy-info';
 import { useActivity } from './state/use-activity';
 import { useAvatar } from './state/use-avatar';
-import * as styles from './world-node-activity.styles';
+import * as styles from './world-map-encounter-activity.styles';
 
-export function WorldNodeActivity() {
+export function WorldMapEncounterActivity() {
   const activity = useActivity();
   const avatar = useAvatar();
 
@@ -15,7 +15,7 @@ export function WorldNodeActivity() {
     return <Spinner />;
   }
 
-  const enemies = activity.currentEnemyGroup?.enemies.toReversed() ?? [];
+  const enemies = activity.currentWave?.enemies.toReversed() ?? [];
 
   return (
     <div className={styles.container}>

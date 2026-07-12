@@ -9,7 +9,7 @@ import { registerGameCanvasMock } from './src/test-utils/register-game-canvas-mo
 import { registerIdleWorkerHandleMock } from './src/test-utils/register-idle-worker-handle-mock';
 import { registerRequestContextMock } from './src/test-utils/register-request-context-mock';
 import { registerRespiteSceneMock } from './src/test-utils/register-respite-scene-mock';
-import { registerWorldNodeCodexSlotMock } from './src/test-utils/register-world-node-codex-slot-mock';
+import { registerWorldMapNodeCodexSlotMock } from './src/test-utils/register-world-map-node-codex-slot-mock';
 import { registerWorldmapSceneMock } from './src/test-utils/register-worldmap-scene-mock';
 
 process.env['SESSION_SECRET'] = 'test-session-secret-test-session-secret';
@@ -41,7 +41,7 @@ registerGameCanvasMock();
 registerAvatarViewerMock();
 registerWorldmapSceneMock();
 registerRespiteSceneMock();
-registerWorldNodeCodexSlotMock();
+registerWorldMapNodeCodexSlotMock();
 
 // Imported dynamically, after `GlobalRegistrator.register()`: `@testing-library/react` reads
 // `document` at import time to decide whether to install its own auto-cleanup, and a static

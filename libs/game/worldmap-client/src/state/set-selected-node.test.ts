@@ -1,12 +1,12 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import type { WorldNode } from '@vers/worldmap-core';
+import type { WorldMapNode } from '@vers/worldmap-core';
 import { Object3D } from 'three';
 import { setSelectedNode } from './set-selected-node';
 import { useSelectedNodeStore } from './use-selected-node-store';
 
 test('it updates the selected node in the store', () => {
-  const node: WorldNode = {
+  const node: WorldMapNode = {
     connections: [null, null, null, null],
     difficulty: 1,
     id: 'node1',

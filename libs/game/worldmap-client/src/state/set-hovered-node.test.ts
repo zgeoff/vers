@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import type { WorldNode } from '@vers/worldmap-core';
+import type { WorldMapNode } from '@vers/worldmap-core';
 import { setHoveredNode } from './set-hovered-node';
 import { useHoveredNodeStore } from './use-hovered-node-store';
 
 test('it updates the hovered node in the store', () => {
-  const node: WorldNode = {
+  const node: WorldMapNode = {
     connections: [null, null, null, null],
     difficulty: 1,
     id: 'node1',

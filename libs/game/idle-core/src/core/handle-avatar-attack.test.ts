@@ -37,12 +37,12 @@ test('it applies damage to the first living enemy', () => {
   const avatar = createAvatar(avatarData, ctx);
 
   const activity = createActivity(activityData, ctx, {
-    groupCount: 1,
-    groupSize: 2,
+    waveCount: 1,
+    waveSize: 2,
   });
 
-  const enemyGroup = activity.currentEnemyGroup;
-  const firstEnemy = enemyGroup?.nextLivingEnemy;
+  const wave = activity.currentWave;
+  const firstEnemy = wave?.nextLivingEnemy;
 
   // kill the first enemy
   firstEnemy?.receiveDamage(100);
@@ -57,5 +57,5 @@ test('it applies damage to the first living enemy', () => {
   handleAvatarAttack(event, avatar, activity);
 
   // verify second enemy's life
-  expect(enemyGroup?.nextLivingEnemy?.life).toBe(90);
+  expect(wave?.nextLivingEnemy?.life).toBe(90);
 });

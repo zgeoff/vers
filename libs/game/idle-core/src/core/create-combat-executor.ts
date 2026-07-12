@@ -60,7 +60,7 @@ export function createCombatExecutor(
 
     avatar.handleTick(executor, ctx);
 
-    activity.currentEnemyGroup?.enemies.forEach((enemy) => {
+    activity.currentWave?.enemies.forEach((enemy) => {
       enemy.handleTick(executor, ctx);
     });
 

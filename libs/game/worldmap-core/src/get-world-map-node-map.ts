@@ -1,14 +1,16 @@
 import { createRNG } from '@vers/game-utils';
 import { getRandomizedPosition } from './get-randomized-position';
-import type { CompressedWorldNode, WorldNode, WorldNodeMap } from './types';
+import type { CompressedWorldMapNode, WorldMapNode, WorldMapNodeMap } from './types';
 
-export function getWorldNodeMap(compressedNodes: ReadonlyArray<CompressedWorldNode>): WorldNodeMap {
-  const nodes: Record<string, WorldNode> = {};
+export function getWorldMapNodeMap(
+  compressedNodes: ReadonlyArray<CompressedWorldMapNode>,
+): WorldMapNodeMap {
+  const nodes: Record<string, WorldMapNode> = {};
 
   for (const node of compressedNodes) {
     const rng = createRNG(node.s);
 
-    const worldNode: WorldNode = {
+    const worldMapNode: WorldMapNode = {
       connections: node.c,
       difficulty: node.d,
       id: node.id,
@@ -17,7 +19,7 @@ export function getWorldNodeMap(compressedNodes: ReadonlyArray<CompressedWorldNo
       seed: node.s,
     };
 
-    nodes[node.id] = worldNode;
+    nodes[node.id] = worldMapNode;
   }
 
   return nodes;

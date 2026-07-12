@@ -3,8 +3,8 @@ import { createMockActivityData, createMockAvatarData } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect } from 'react';
 import { SimulationUnsupportedNotice } from '../../components/simulation-unsupported-notice';
-import { WorldNodeCodexSlot } from '../../components/world-node-codex-slot';
-import { IdleWorldNodeActivity } from '../../lib/idle/idle-world-node-activity';
+import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
+import { IdleWorldMapEncounterActivity } from '../../lib/idle/idle-world-map-encounter-activity';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
 import { sendIdleSetActivity } from '../../lib/idle/send-idle-set-activity';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
@@ -17,8 +17,8 @@ const PLACEHOLDER_ACTIVITY = createMockActivityData();
 const PLACEHOLDER_AVATAR = createMockAvatarData();
 
 /**
- * The world node detail view: shows a spinner until the idle worker reports the activity it was
- * sent, then renders the node and its codex slot.
+ * The world map node detail view: shows a spinner until the idle worker reports the activity it
+ * was sent, then renders the encounter and its codex slot.
  */
 export function ExploreCurrentPanel() {
   const isSharedWorkerSupported = useIsSharedWorkerSupported();
@@ -52,9 +52,9 @@ export function ExploreCurrentPanel() {
 
   return (
     <>
-      <IdleWorldNodeActivity />
-      <Suspense fallback={<p data-testid="world-node-codex-loading">Loading codex…</p>}>
-        <WorldNodeCodexSlot difficulty={selectedNode?.difficulty ?? 1} />
+      <IdleWorldMapEncounterActivity />
+      <Suspense fallback={<p data-testid="world-map-node-codex-loading">Loading codex…</p>}>
+        <WorldMapNodeCodexSlot difficulty={selectedNode?.difficulty ?? 1} />
       </Suspense>
     </>
   );

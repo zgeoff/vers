@@ -29,11 +29,11 @@ test('it applies damage from the enemy to the avatar', () => {
   const avatar = createAvatar(avatarData, ctx);
 
   const activity = createActivity(activityData, ctx, {
-    groupCount: 1,
-    groupSize: 1,
+    waveCount: 1,
+    waveSize: 1,
   });
 
-  const enemy = activity.currentEnemyGroup!.nextLivingEnemy!;
+  const enemy = activity.currentWave!.nextLivingEnemy!;
 
   const event: EnemyAttackEvent = {
     id: 'event-1',
@@ -66,11 +66,11 @@ test('it does nothing if the enemy is dead', () => {
   const avatar = createAvatar(avatarData, ctx);
 
   const activity = createActivity(activityData, ctx, {
-    groupCount: 1,
-    groupSize: 1,
+    waveCount: 1,
+    waveSize: 1,
   });
 
-  const enemy = activity.currentEnemyGroup!.nextLivingEnemy!;
+  const enemy = activity.currentWave!.nextLivingEnemy!;
 
   // kill the enemy
   enemy.receiveDamage(100);
@@ -109,14 +109,14 @@ test('it correctly resolves the correct event source', () => {
   const avatar = createAvatar(avatarData, ctx);
 
   const activity = createActivity(activityData, ctx, {
-    groupCount: 1,
+    waveCount: 1,
 
     // it's important we have more than 1 enemy so we can ensure event source
     // resolution works
-    groupSize: 2,
+    waveSize: 2,
   });
 
-  const firstEnemy = activity.currentEnemyGroup!.nextLivingEnemy!;
+  const firstEnemy = activity.currentWave!.nextLivingEnemy!;
 
   const event: EnemyAttackEvent = {
     id: 'event-1',
