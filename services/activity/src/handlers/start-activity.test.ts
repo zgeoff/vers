@@ -45,6 +45,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     nodeID: 'node_1',
     seed: expect.toBeString(),
     simVersion: '0.0.0-dev',
+    startChainIndex: 0,
     startHash: expect.toBeString(),
     startedAt: expect.toBeValidDate(),
     status: 'active',
@@ -55,6 +56,75 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
   });
 
   expect(activity.lastHash).toBe(activity.startHash);
+});
+
+test('it mints a chain row on a node visited for the first time, with the activity seeded from its genesis', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  const chain = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('nodeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(activity.seed).toBe(chain.genesisSeed);
+  expect(activity.seed).toBe(chain.appendedNextSeed);
+  expect(activity.startChainIndex).toBe(0);
+  expect(chain.appendedChainIndex).toBe(0);
+});
+
+test('it mints independent genesis seeds for different nodes visited by the same avatar', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ status: 'stopped' })
+    .where('id', '=', first.id)
+    .execute();
+
+  const second = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_2' });
+
+  expect(second.seed).not.toBe(first.seed);
+});
+
+// a re-touch of an already-chained node reads the same appended anchor rather than minting a
+// fresh seed.
+test('it reads the existing chain anchor for a second activity on an already-chained node', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ status: 'stopped' })
+    .where('id', '=', first.id)
+    .execute();
+
+  const second = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  expect(second.seed).toBe(first.seed);
+  expect(second.startChainIndex).toBe(first.startChainIndex);
+  expect(second.startChainIndex).toBe(0);
 });
 
 // schema isolation: the handler re-queries for the conflicting activity after catching the

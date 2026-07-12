@@ -1,7 +1,6 @@
-import { randomBytes } from 'node:crypto';
 import { createId } from '@paralleldrive/cuid2';
 import type { ActivityData, BuildSnapshot } from '@vers/contract-activity';
-import { buildStartHash } from '@vers/contract-activity';
+import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type {
@@ -61,7 +60,26 @@ export async function startActivity(
   }
 
   const id = `act_${createId()}`;
-  const seed = randomBytes(16).toString('hex');
+  const genesisSeed = createGenesisSeed();
+
+  const chain = await deps.db
+    .insertInto('activityChains')
+    .values({
+      appendedNextSeed: genesisSeed,
+      avatarId: opts.input.avatarID,
+      genesisSeed,
+      nodeId: opts.input.nodeID,
+      verifiedNextSeed: genesisSeed,
+    })
+    .onConflict((oc) =>
+      oc
+        .columns(['avatarId', 'nodeId'])
+        .doUpdateSet({ genesisSeed: (eb) => eb.ref('activityChains.genesisSeed') }),
+    )
+    .returning(['appendedNextSeed', 'appendedChainIndex'])
+    .executeTakeFirstOrThrow();
+
+  const seed = chain.appendedNextSeed;
   const buildSnapshot: BuildSnapshot = { level: avatar.level, xp: avatar.xp };
 
   const startHash = buildStartHash({
@@ -83,6 +101,7 @@ export async function startActivity(
         nodeId: opts.input.nodeID,
         seed,
         simVersion: deps.simVersion,
+        startChainIndex: chain.appendedChainIndex,
         startHash,
       })
       .returningAll()

@@ -17,6 +17,7 @@ export const ActivityDataSchema = z.object({
   nodeID: z.string(),
   seed: z.string(),
   simVersion: z.string(),
+  startChainIndex: z.int().min(0),
   startHash: z.string(),
   startedAt: z.date(),
   status: ActivityStatusSchema,

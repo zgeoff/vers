@@ -40,6 +40,7 @@ export interface Activities {
   nodeId: string;
   seed: string;
   simVersion: string;
+  startChainIndex: Generated<number>;
   startedAt: Generated<Timestamp>;
   startHash: string;
   status: Generated<ActivityStatus>;
