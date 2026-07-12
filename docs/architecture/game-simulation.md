@@ -3,13 +3,21 @@
 How gameplay is computed on the client, recorded as checkpoint streams, and trusted through server
 replay.
 
+## Activities and encounters
+
+An **activity** is one attempt at a piece of content, recorded as a single append-only checkpoint
+stream and verified as a unit. Every activity has a type. A **world map encounter** is the type where
+an avatar fights through a node's enemies, arranged in **waves** — ordered groups the avatar clears
+one at a time. `@vers/idle-core` runs any activity type; `@vers/game-utils` derives a world map
+encounter's waves, enemies, and timing from `(node, seed, content)` as a pure function.
+
 ## The deterministic core
 
 The simulation is a pure function: a server-authored input snapshot plus a seed stream fully
-determine every tick. The engine (`@vers/idle-core`) and encounter derivation (`@vers/game-utils`)
-are shared libraries, so the client worker and the verification worker — the server process that
-replays submitted checkpoints — import the same code and compute byte-identical results from the
-same inputs.
+determine every tick. The engine (`@vers/idle-core`) and world map encounter derivation
+(`@vers/game-utils`) are shared libraries, so the client worker and the verification worker — the
+server process that replays submitted checkpoints — import the same code and compute byte-identical
+results from the same inputs.
 
 The client does all real-time simulation. One writer per browser profile runs the fixed-timestep
 loop — a SharedWorker, with leader election where SharedWorker is unavailable — and other tabs are
@@ -75,15 +83,15 @@ crashed worker retries idempotently.
 
 - First-clears, achievements, and other one-shot grants insert into a unique-keyed grant table with
   `ON CONFLICT DO NOTHING` inside the same transaction — idempotent across re-farms and replays.
-- Item instances mint at settlement: identity is the restart-stable reward coordinate and content is
-  rolled from the avatar's key under the activity's pinned versions (see
-  [game entropy](./game-entropy.md)), so re-verification never duplicates or re-rolls an item.
+- Item instances mint at settlement: identity is the reward coordinate and content is rolled from the
+  avatar's key under the activity's pinned versions (see [game entropy](./game-entropy.md)), so
+  re-verification never duplicates or re-rolls an item.
 - Rolled content is revealed only for coordinates whose producing checkpoint is durably appended,
   and the reveal is a pure function of the coordinate — append retries and bulk offline resends
   return identical reveals.
-- A rejected claim rolls back by forward compensating events, never by snapshot restore: the node's
-  seed anchor resets to the verified prefix and revealed-but-unsettled rewards past it are cleared
-  from optimistic display.
+- A rejected claim rolls back by forward compensating events, never by snapshot restore: settlement
+  resets to the node's verified prefix and revealed-but-unsettled rewards past it are cleared from
+  optimistic display.
 
 Resume always anchors on the last verified checkpoint. The client rebuilds optimistic state by
 simulating forward from that anchor; it never renders the server's settled progression columns
