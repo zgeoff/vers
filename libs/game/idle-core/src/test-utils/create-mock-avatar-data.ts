@@ -1,12 +1,10 @@
 import { createId } from '@paralleldrive/cuid2';
-import { Class } from '@vers/data';
 import type { AvatarData } from '../types';
 import { EquipmentSlot } from '../types';
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a Partial of the mutable avatar seed, whose nested paperdoll has no readonly form; spread into the returned seed, never mutated
 export function createMockAvatarData(overrides: Partial<AvatarData> = {}): AvatarData {
   const avatar: AvatarData = {
-    class: Class.Brute,
     id: createId(),
     level: 1,
     life: 200,

@@ -201,7 +201,6 @@ test('it returns the expected avatar state for a client app', () => {
         lastAttackTime: expect.toBeNumber(),
       },
     },
-    class: data.class,
     id: avatar.id,
     isAlive: true,
     level: avatar.level,

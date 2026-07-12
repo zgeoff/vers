@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@paralleldrive/cuid2": "catalog:",
-    "@vers/data": "workspace:*",
     "@vers/game-utils": "workspace:*",
     "@vers/utils": "workspace:*",
     "fast-equals": "catalog:",

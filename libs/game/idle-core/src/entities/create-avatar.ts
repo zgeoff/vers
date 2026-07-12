@@ -49,7 +49,6 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     return {
       ...state,
       behaviours: behaviourState,
-      class: data.class,
       id: data.id,
       isAlive: state.status === EntityStatus.Alive,
       level: data.level,
