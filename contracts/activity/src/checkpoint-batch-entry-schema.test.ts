@@ -4,7 +4,14 @@ import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 test('it accepts a well-formed batch entry', () => {
   const result = CheckpointBatchEntrySchema.safeParse({
     hash: 'hash_1',
-    payload: { entropySource: 'chain', nextSeed: 'seed_1', seed: 'seed_0', time: 12, type: 'tick' },
+    payload: {
+      chainIndex: 1,
+      entropySource: 'chain',
+      nextSeed: 'seed_1',
+      seed: 'seed_0',
+      time: 12,
+      type: 'tick',
+    },
     prevHash: 'hash_0',
     version: 1,
   });
@@ -15,7 +22,14 @@ test('it accepts a well-formed batch entry', () => {
 test('it rejects a negative version', () => {
   const result = CheckpointBatchEntrySchema.safeParse({
     hash: 'hash_1',
-    payload: { entropySource: 'chain', nextSeed: 'seed_1', seed: 'seed_0', time: 12, type: 'tick' },
+    payload: {
+      chainIndex: 1,
+      entropySource: 'chain',
+      nextSeed: 'seed_1',
+      seed: 'seed_0',
+      time: 12,
+      type: 'tick',
+    },
     prevHash: 'hash_0',
     version: -1,
   });
