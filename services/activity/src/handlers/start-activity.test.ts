@@ -102,8 +102,8 @@ test('it mints independent genesis seeds for different nodes visited by the same
   expect(second.seed).not.toBe(first.seed);
 });
 
-// forward-advance to the chain's next anchor lands in a later slice; for now a re-touch of an
-// already-chained node reads the same appended anchor rather than minting a fresh seed.
+// a re-touch of an already-chained node reads the same appended anchor rather than minting a
+// fresh seed.
 test('it reads the existing chain anchor for a second activity on an already-chained node', async () => {
   await using ctx = await setupTest();
 
