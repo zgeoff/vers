@@ -1,21 +1,25 @@
 import { z } from 'zod';
 import type { AppMachine, AppState, ScheduledMachineState } from './types';
 
-const stringRecordSchema = z.record(z.string(), z.string());
+const stringRecordSchema = z.record(z.string(), z.string()).readonly();
 
-const machineConfigSchema = z.object({
-  env: stringRecordSchema.optional(),
-  image: z.string().optional(),
-  metadata: stringRecordSchema.optional(),
-  schedule: z.string().optional(),
-});
+const machineConfigSchema = z
+  .object({
+    env: stringRecordSchema.optional(),
+    image: z.string().optional(),
+    metadata: stringRecordSchema.optional(),
+    schedule: z.string().optional(),
+  })
+  .readonly();
 
-const machineSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  state: z.string(),
-  config: machineConfigSchema.optional(),
-});
+const machineSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    state: z.string(),
+    config: machineConfigSchema.optional(),
+  })
+  .readonly();
 
 type MachineRecord = z.infer<typeof machineSchema>;
 
@@ -61,7 +65,6 @@ export function parseAppState(json: unknown): AppState {
  * never a service machine either — its process group is always stamped
  * explicitly, unlike a bare app machine's, so the default only applies there.
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- z.infer of the machine-list row schema, a ZodType-bearing shape with no readonly form
 function isServiceMachine(machine: MachineRecord): boolean {
   return (
     machine.config?.schedule === undefined &&
@@ -93,7 +96,6 @@ function pickDeployedSHA(machines: ReadonlyArray<AppMachine>): string | null {
   return [...shas][0] ?? null;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- z.infer of the machine-list row schema, a ZodType-bearing shape with no readonly form
 function pickServiceImage(serviceRecords: ReadonlyArray<MachineRecord>): string | null {
   const images = new Set(serviceRecords.map((machine) => normalizeImage(machine.config?.image)));
 
