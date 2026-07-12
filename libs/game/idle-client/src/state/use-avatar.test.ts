@@ -1,6 +1,5 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import { Class } from '@vers/data';
 import type { AvatarAppState } from '@vers/idle-core';
 import { EntityStatus } from '@vers/idle-core';
 import { setAvatar } from './set-avatar';
@@ -13,7 +12,6 @@ test('it provides the avatar state', () => {
         lastAttackTime: 0,
       },
     },
-    class: Class.Brute,
     id: '1',
     isAlive: true,
     level: 1,
@@ -38,7 +36,6 @@ test('it provides the avatar state', () => {
         lastAttackTime: 0,
       },
     },
-    class: Class.Brute,
     id: '1',
     isAlive: true,
     level: 1,

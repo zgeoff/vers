@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import { Class } from '@vers/data';
 import type { SimulationAppState } from '@vers/idle-core';
 import { EntityStatus } from '@vers/idle-core';
 import { WorkerMessageType } from '../types';
@@ -9,7 +8,6 @@ test('it creates an initial state message', () => {
   const state: SimulationAppState = {
     avatar: {
       behaviours: {},
-      class: Class.Brute,
       id: '1',
       isAlive: true,
       level: 1,

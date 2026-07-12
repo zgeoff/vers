@@ -1,4 +1,3 @@
-import { classes } from '@vers/data';
 import { Heading } from '@vers/design-system';
 import type { AvatarAppState } from '@vers/idle-core';
 import { AttackTimerBar } from './attack-timer-bar';
@@ -10,7 +9,6 @@ interface AvatarInfoProps {
 }
 
 export function AvatarInfo(props: Readonly<AvatarInfoProps>) {
-  const classData = classes[props.avatar.class];
   const lastAttackTime = props.avatar.behaviours.avatarWeaponAttack?.lastAttackTime ?? 0;
   const attackSpeed = props.avatar.mainHandAttack?.speed ?? 0;
   const nextAttackTime = lastAttackTime + 1000 / attackSpeed;
@@ -25,11 +23,6 @@ export function AvatarInfo(props: Readonly<AvatarInfoProps>) {
         isAlive={props.avatar.isAlive}
         lastAttackTime={lastAttackTime}
         nextAttackTime={nextAttackTime}
-      />
-      <img
-        alt={props.avatar.name}
-        className={styles.avatarImage}
-        src={classData.images.unitFrame}
       />
     </div>
   );
