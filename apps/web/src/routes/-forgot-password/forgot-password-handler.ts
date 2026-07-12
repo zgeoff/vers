@@ -39,11 +39,11 @@ export async function forgotPasswordHandler(
   const user = await userClient.getUser({ email: submission.value.email });
 
   if (user !== null) {
-    const passwordResetToken = await userClient.createPasswordResetToken({ id: user.id });
+    const passwordReset = await userClient.createPasswordResetToken({ id: user.id });
 
     const origin = new URL(getRequest().url).origin;
 
-    const resetURL = `${origin}/reset-password?${new URLSearchParams({ email: submission.value.email, token: passwordResetToken.resetToken }).toString()}`;
+    const resetURL = `${origin}/reset-password?${new URLSearchParams({ email: submission.value.email, token: passwordReset.resetToken }).toString()}`;
 
     await emailClient.sendResetPassword({ resetURL, to: submission.value.email });
   }
