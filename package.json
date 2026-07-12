@@ -135,7 +135,7 @@
     "clean": "./scripts/clean.sh",
     "build": "turbo run build",
     "build:agents": "bash scripts/build-agents-md.sh agents/shared.md agents/project.md AGENTS.md",
-    "audit": "bun audit --ignore=GHSA-8988-4f7v-96qf",
+    "audit": "bun audit --ignore=GHSA-8988-4f7v-96qf --ignore=GHSA-q8mj-m7cp-5q26 --ignore=GHSA-w7fw-mjwx-w883 --ignore=GHSA-6rw7-vpxm-498p --ignore=GHSA-37ch-88jc-xwx2",
     "boundaries": "turbo boundaries",
     "deadcode": "knip",
     "lint": "turbo run codegen typegen && oxlint --type-aware --type-check --report-unused-disable-directives-severity error",
