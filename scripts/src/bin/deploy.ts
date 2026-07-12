@@ -83,8 +83,9 @@ async function runDeploy(app: string): Promise<void> {
 
 /**
  * Reconciles a target's declared scheduled machines against its fleet.
- * Runs after `waitForDeployedSHA` so `state.serviceImage` reflects the
- * rollout that just landed, not a mid-cutover mix.
+ * Runs only after the rollout's SHA is confirmed, so the fleet's single
+ * service image reflects the deploy that just landed rather than a
+ * mid-cutover mix.
  */
 async function runScheduledMachineReconcile(target: DeployTarget, sha: string): Promise<void> {
   const declarations = target.scheduledMachines ?? [];
