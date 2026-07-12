@@ -23,11 +23,11 @@ export async function createSchemaTestDB(): Promise<TestDBHandle> {
   await host.sql`CREATE SCHEMA ${host.sql(cloneSchema)}`;
 
   try {
-    await cloneTables(host.sql, cloneSchema);
-    await cloneForeignKeys(host.sql, cloneSchema);
-    await cloneTriggers(host.sql, cloneSchema);
+    await createCloneTables(host.sql, cloneSchema);
+    await createCloneForeignKeys(host.sql, cloneSchema);
+    await createCloneTriggers(host.sql, cloneSchema);
   } catch (error) {
-    await dropCloneSchema(host.sql, cloneSchema);
+    await removeCloneSchema(host.sql, cloneSchema);
 
     throw error;
   }
@@ -39,7 +39,7 @@ export async function createSchemaTestDB(): Promise<TestDBHandle> {
     [Symbol.asyncDispose]: async () => {
       await db.destroy();
 
-      await dropCloneSchema(host.sql, cloneSchema);
+      await removeCloneSchema(host.sql, cloneSchema);
     },
   };
 }
@@ -67,7 +67,7 @@ async function buildHost(): Promise<Host> {
   return { databaseURL, sql: postgres(databaseURL, { onnotice: () => {} }) };
 }
 
-async function cloneTables(sql: postgres.Sql, cloneSchema: string): Promise<void> {
+async function createCloneTables(sql: postgres.Sql, cloneSchema: string): Promise<void> {
   const tables = await sql<Array<{ tablename: string }>>`
     SELECT tablename FROM pg_tables WHERE schemaname = 'public'
   `;
@@ -104,7 +104,7 @@ const FOREIGN_KEY_ACTIONS: Readonly<Record<string, string>> = {
  * `LIKE ... INCLUDING ALL` never copies foreign keys, so every public→public FK is rediscovered
  * from `pg_constraint` and rebuilt against the clone tables.
  */
-async function cloneForeignKeys(sql: postgres.Sql, cloneSchema: string): Promise<void> {
+async function createCloneForeignKeys(sql: postgres.Sql, cloneSchema: string): Promise<void> {
   const foreignKeys = await sql<Array<ForeignKeyRow>>`
     SELECT
       con.conname,
@@ -153,7 +153,7 @@ interface TriggerRow {
  * repointed at the clone schema; the trigger function they call (`set_updated_at()`) resolves
  * against `public` at creation time and is stateless, so every clone safely shares it.
  */
-async function cloneTriggers(sql: postgres.Sql, cloneSchema: string): Promise<void> {
+async function createCloneTriggers(sql: postgres.Sql, cloneSchema: string): Promise<void> {
   const triggers = await sql<Array<TriggerRow>>`
     SELECT c.relname AS "tableName", pg_get_triggerdef(t.oid) AS def
     FROM pg_trigger t
@@ -172,6 +172,6 @@ async function cloneTriggers(sql: postgres.Sql, cloneSchema: string): Promise<vo
   }
 }
 
-async function dropCloneSchema(sql: postgres.Sql, cloneSchema: string): Promise<void> {
+async function removeCloneSchema(sql: postgres.Sql, cloneSchema: string): Promise<void> {
   await sql`DROP SCHEMA IF EXISTS ${sql(cloneSchema)} CASCADE`;
 }
