@@ -33,10 +33,10 @@ test('it returns a fresh activity with a null anchor at verifiedHead 0', async (
   });
 });
 
-// database isolation: this exercises trackActivityProgress, whose own db.transaction() can't
+// schema isolation: this exercises trackActivityProgress, whose own db.transaction() can't
 // nest under the default rollback-on-dispose isolation.
 test('it returns the activity anchored to its verified checkpoint once verifiedHead advances', async () => {
-  await using ctx = await setupTest({ isolation: 'database' });
+  await using ctx = await setupTest({ isolation: 'schema' });
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
