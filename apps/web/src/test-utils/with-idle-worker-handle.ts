@@ -1,3 +1,4 @@
+import { ActivityFailureAction } from '@vers/idle-core';
 import type { FakeIdleWorkerHandle } from './idle-worker-handle-holder';
 import { idleWorkerHandleHolder } from './idle-worker-handle-holder';
 
@@ -14,6 +15,11 @@ export async function withIdleWorkerHandle<T>(
   try {
     return await run();
   } finally {
-    idleWorkerHandleHolder.current = { activity: undefined, initialized: false, worker: undefined };
+    idleWorkerHandleHolder.current = {
+      activity: undefined,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: false,
+      worker: undefined,
+    };
   }
 }

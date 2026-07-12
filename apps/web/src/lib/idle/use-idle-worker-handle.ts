@@ -1,11 +1,17 @@
-import { useActivity, useSimulationInitialized, useSimulationWorker } from '@vers/idle-client';
-import type { ActivityAppState } from '@vers/idle-core';
+import {
+  useActivity,
+  useFailureAction,
+  useSimulationInitialized,
+  useSimulationWorker,
+} from '@vers/idle-client';
+import type { ActivityAppState, ActivityFailureAction } from '@vers/idle-core';
 
 /**
  * The simulation state every idle-driven consumer reads through this hook.
  */
 interface IdleWorkerHandle {
   readonly activity: ActivityAppState | undefined;
+  readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
   readonly worker: SharedWorker | undefined;
 }
@@ -19,6 +25,12 @@ export function useIdleWorkerHandle(): IdleWorkerHandle {
   const worker = useSimulationWorker();
   const initialized = useSimulationInitialized();
   const activity = useActivity();
+  const failureAction = useFailureAction();
 
-  return { activity: activity ?? undefined, initialized, worker: worker ?? undefined };
+  return {
+    activity: activity ?? undefined,
+    failureAction,
+    initialized,
+    worker: worker ?? undefined,
+  };
 }

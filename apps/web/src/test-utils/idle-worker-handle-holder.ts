@@ -1,4 +1,5 @@
 import type { ActivityAppState } from '@vers/idle-core';
+import { ActivityFailureAction } from '@vers/idle-core';
 
 /**
  * A duck-typed stand-in for `SharedWorker`: only the one channel the app ever writes to.
@@ -12,6 +13,7 @@ export interface FakeSimulationWorker {
  */
 export interface FakeIdleWorkerHandle {
   readonly activity: ActivityAppState | undefined;
+  readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
   readonly worker: FakeSimulationWorker | undefined;
 }
@@ -21,5 +23,10 @@ export interface FakeIdleWorkerHandle {
  * coordinate through. Defaults to no worker, matching a caller that hasn't mounted one yet.
  */
 export const idleWorkerHandleHolder: { current: FakeIdleWorkerHandle } = {
-  current: { activity: undefined, initialized: false, worker: undefined },
+  current: {
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: false,
+    worker: undefined,
+  },
 };
