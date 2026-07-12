@@ -14,11 +14,11 @@ A mechanic qualifies as a class only when it satisfies all three.
   resource has an automatic spend condition, a mode has an automatic switch rule. A mechanic that is
   only coherent with a human at the controls is disqualified.
 - **Generic or transformative, never a build.** A class is either a generic engine any avatar bolts
-  on — a rage resource, an Aether dump, an escalation counter — or a rule that changes how the game
-  resolves for every build that holds it. It is never a build archetype. Damage-over-time, minions,
-  and critical-strike identities are expressed by gear, skills, and the Azimuth; a class made of one
-  steals expression from those systems, the way a class made of a direction would steal it from the
-  Azimuth.
+  on — a resource that accrues and spends, a mode toggle, an escalation counter — or a rule that
+  changes how the game resolves for every build that holds it. It is never a build archetype.
+  Damage-over-time, minions, and critical-strike identities are expressed by gear, skills, and the
+  Azimuth; a class made of one steals expression from those systems, the way a class made of a
+  direction would steal it from the Azimuth.
 - **No flat drawbacks.** A class is upside or transformation. Tradeoffs emerge from the mechanic's
   own rules — a mode the avatar is committed to, a resource that must be spent to pay off — but a
   class never carries a bolted-on penalty unconnected to its mechanic.
@@ -40,52 +40,48 @@ on the tree, seeds no Azimuth position, and points at no direction. Class identi
 identity are separate axes of a build and combine freely: any class is played at any position, in
 any direction, with any damage types.
 
-## Ascendancy
+## Specialization
 
-An ascendancy is the base mechanic routed through one universal system. Every base class has three,
-each coupling the mechanic to a different system — an Aether coupling, a Life coupling, and a
-self-referential or otherwise creative one. An ascendancy never introduces a second mechanic; it
-deepens and steers the one the class already owns, so everything an avatar is traces back to a
-single rule.
+A specialization deepens and steers the one rule a class already owns rather than adding a second,
+so everything an avatar is traces back to a single mechanic. A base class carries a few — three is
+the aim — and each is a distinct expression of its mechanic, often by routing it through some other
+universal system so the two interlock.
 
-The coupling system is always universal — Aether, Life, Barrier, beat cadence — never a build
-archetype. A coupling to a damage type would smuggle a build back into the class layer and break the
-generic-or-transformative law at the specialization level.
+Any system a specialization draws on is universal — a resource pool, a defensive layer, the beat
+cadence — never a build archetype. Drawing on a damage type would smuggle a build back into the
+class layer and break the generic-or-transformative law at the specialization level.
 
-An ascendancy is a small branching structure of three tiers, one exclusive choice per tier. Each
-ascendancy is free, and encouraged, to build its own internal framework rather than fill a fixed
-template. One shape that composes well runs output, then fuel, then fusion: the first tier steers
-what the mechanic drives, the second steers how it accrues and scales, and the third fuses the
-mechanic with the coupling system into a single engine.
+A specialization is a small branching structure of three tiers, one exclusive choice per tier. Each
+is free, and encouraged, to build its own internal framework rather than fill a fixed template. One
+example runs output, then fuel, then fusion: the first tier steers what the mechanic drives, the
+second steers how it accrues and scales, and the third fuses the mechanic with a coupled system into
+one engine.
 
-Choosing an ascendancy is a one-time commitment, re-chooseable with investment. The three tier
-choices within a chosen ascendancy respec freely, like passive allocation. An ascendancy unlocks
-through progression.
+Choosing a specialization is a one-time commitment, re-chooseable with investment. The three tier
+choices within a chosen specialization respec freely, like passive allocation. A specialization
+unlocks through progression.
 
-## Worked Example: Rage
+## Worked Example
 
-The following mechanic and effects are illustrative — they show the model's shape, not final content
-or balance.
+The following is illustrative — it shows the model's shape, not a class the game ships.
 
-The **Rage** base class adds a Rage resource: the avatar gains Rage on hit, and Rage amplifies
-damage dealt. That is the entire base class, and it plays on its own.
+Take a base class whose mechanic is a resource that accrues as the avatar acts and amplifies its
+output. That resource, how it accrues, and what it amplifies are the entire base class, and it plays
+on its own.
 
-Its **Aether Focus** ascendancy couples Rage to the Aether system across three tiers:
+One of its specializations routes that resource through another universal system across three tiers:
 
-- **Tier 1 — output.** Rage additionally drives one of: cooldown rate, cast rate, or Aether
-  regeneration.
-- **Tier 2 — fuel.** Maximum Rage scales with Aether, or Rage gained per hit scales with current
-  Aether.
-- **Tier 3 — fusion.** Aether regeneration also regenerates Rage; or Aether-spending skills also
-  consume Rage for increased effect; or attacks consume Rage for increased damage.
+- **Tier 1 — output.** The resource additionally drives one of a small set of chosen effects.
+- **Tier 2 — fuel.** The resource's ceiling or accrual scales with the coupled system.
+- **Tier 3 — fusion.** The resource and the coupled system feed each other into a single engine.
 
-Its sibling ascendancies couple the same Rage mechanic to other systems — a Life coupling that ties
-Rage to the Life pool, and a neutral coupling that scales Rage through the mechanic itself.
+Its sibling specializations express the same resource differently — routing it through other
+systems, or scaling it through itself — each a distinct read on the one mechanic.
 
 ## Non-Goals
 
 This note does not define any class's exact mechanic, resource values, accrual rates, or balance;
-the full content of any ascendancy's tier choices; ascendancy unlock conditions or respec cost; the
-launch class; or how any class interacts with specific skills, gear, or enemy families. Mechanic and
-balance detail belongs to the combat note; unlock and respec cost to the progression note; the
-per-class content to each class's own downstream ticket.
+the full content of any specialization's tier choices; specialization unlock conditions or respec
+cost; the launch class; or how any class interacts with specific skills, gear, or enemy families.
+Mechanic and balance detail belongs to the combat note; unlock and respec cost to the progression
+note; the per-class content to each class's own downstream ticket.

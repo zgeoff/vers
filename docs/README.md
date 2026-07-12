@@ -54,4 +54,4 @@ The game's design language and systems.
 - [Economy modes and reward integrity](./game-design/economy-modes.md) — economy modes and the
   reward-design rules
 - [Base classes](./game-design/base-classes.md) — a class as a signature mechanic, the class-design
-  laws, and the ascendancy model
+  laws, and the specialization model
