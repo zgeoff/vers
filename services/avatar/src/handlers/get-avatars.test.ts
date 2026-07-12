@@ -19,8 +19,8 @@ test('it lists only the acting user avatars', async () => {
 
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
-  await client.createAvatar({ class: 'brute', name: 'OwnerAvatarOne' });
-  await client.createAvatar({ class: 'scholar', name: 'OwnerAvatarTwo' });
+  await client.createAvatar({ name: 'OwnerAvatarOne' });
+  await client.createAvatar({ name: 'OwnerAvatarTwo' });
 
   const avatars = await client.getAvatars({});
 

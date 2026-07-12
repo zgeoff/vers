@@ -139,7 +139,6 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@vers/contract-base": "workspace:*",
-        "@vers/data": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -421,7 +420,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@vers/client-test-utils": "workspace:*",
-        "@vers/data": "workspace:*",
         "@vers/design-system": "workspace:*",
         "@vers/idle-core": "workspace:*",
         "@vers/styled-system": "workspace:*",
@@ -446,7 +444,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@paralleldrive/cuid2": "catalog:",
-        "@vers/data": "workspace:*",
         "@vers/game-utils": "workspace:*",
         "@vers/utils": "workspace:*",
         "fast-equals": "catalog:",

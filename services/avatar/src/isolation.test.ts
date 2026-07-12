@@ -22,7 +22,7 @@ test('it creates an avatar visible within this test', async () => {
 
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
-  await client.createAvatar({ class: 'brute', name: 'IsolationProof' });
+  await client.createAvatar({ name: 'IsolationProof' });
 
   const rows = await ctx.db.selectFrom('avatars').selectAll().execute();
 

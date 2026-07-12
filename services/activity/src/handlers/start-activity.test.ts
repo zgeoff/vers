@@ -24,7 +24,6 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
 
   const avatar = await createAvatarRow(ctx.db, {
-    class: 'scholar',
     level: 5,
     userId: viewer.user.id,
     xp: 42,
@@ -38,7 +37,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     appendedAt: null,
     appendedHead: 0,
     avatarID: avatar.id,
-    buildSnapshot: { class: 'scholar', level: 5, xp: 42 },
+    buildSnapshot: { level: 5, xp: 42 },
     contentVersion: '0.0.0-dev',
     createdAt: expect.toBeValidDate(),
     id: expect.toBeString(),

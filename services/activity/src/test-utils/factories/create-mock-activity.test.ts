@@ -6,7 +6,7 @@ test('it builds a default activity row', () => {
 
   expect(row).toStrictEqual({
     avatarId: expect.toBeString(),
-    buildSnapshot: { class: 'brute', level: 1, xp: 0 },
+    buildSnapshot: { level: 1, xp: 0 },
     contentVersion: '0.0.0-dev',
     id: expect.toBeString(),
     lastHash: expect.toBeString(),

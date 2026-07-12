@@ -11,7 +11,6 @@ export function createMockAvatar(
   overrides: Partial<Insertable<Avatars>> = {},
 ): Insertable<Avatars> {
   return {
-    class: 'brute',
     id: createId(),
     name: faker.string.alpha({ casing: 'lower', length: { max: 12, min: 6 } }),
     userId: createId(),

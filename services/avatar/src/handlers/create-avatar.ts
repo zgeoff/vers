@@ -14,7 +14,7 @@ interface CreateAvatarOpts {
     readonly CONFLICT: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
-  readonly input: { readonly class: AvatarData['class']; readonly name: string };
+  readonly input: { readonly name: string };
 }
 
 /**
@@ -29,7 +29,6 @@ export async function createAvatar(db: Kysely<DB>, opts: CreateAvatarOpts): Prom
     const row = await db
       .insertInto('avatars')
       .values({
-        class: opts.input.class,
         id: createId(),
         name: opts.input.name,
         userId: opts.context.actingUserId,

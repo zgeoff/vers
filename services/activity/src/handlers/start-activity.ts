@@ -62,7 +62,7 @@ export async function startActivity(
 
   const id = `act_${createId()}`;
   const seed = randomBytes(16).toString('hex');
-  const buildSnapshot: BuildSnapshot = { class: avatar.class, level: avatar.level, xp: avatar.xp };
+  const buildSnapshot: BuildSnapshot = { level: avatar.level, xp: avatar.xp };
 
   const startHash = buildStartHash({
     activityID: id,

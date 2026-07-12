@@ -18,10 +18,9 @@ test('it creates an avatar owned by the acting user', async () => {
 
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
-  const avatar = await client.createAvatar({ class: 'brute', name: 'Brutus' });
+  const avatar = await client.createAvatar({ name: 'Brutus' });
 
   expect(avatar).toStrictEqual({
-    class: 'brute',
     createdAt: expect.toBeValidDate(),
     id: expect.toBeString(),
     level: 1,
@@ -39,9 +38,9 @@ test('it rejects a second avatar with a duplicate name with CONFLICT', async () 
 
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
-  await client.createAvatar({ class: 'brute', name: 'Duplicatus' });
+  await client.createAvatar({ name: 'Duplicatus' });
 
-  expect(client.createAvatar({ class: 'scholar', name: 'Duplicatus' })).rejects.toMatchObject({
+  expect(client.createAvatar({ name: 'Duplicatus' })).rejects.toMatchObject({
     code: 'CONFLICT',
   });
 });
@@ -53,7 +52,7 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
 
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
-  expect(client.createAvatar({ class: 'brute', name: 'Anonymous' })).rejects.toMatchObject({
+  expect(client.createAvatar({ name: 'Anonymous' })).rejects.toMatchObject({
     code: 'UNAUTHORIZED',
     data: { reason: 'missing-session' },
   });

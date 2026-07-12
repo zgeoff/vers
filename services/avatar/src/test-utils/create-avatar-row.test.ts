@@ -23,10 +23,9 @@ test('it applies overrides on top of the faker-generated defaults', async () => 
   const created = await createTestUser(testDB.db);
 
   const avatar = await createAvatarRow(testDB.db, {
-    class: 'scholar',
     name: 'Foreign',
     userId: created.user.id,
   });
 
-  expect(avatar).toMatchObject({ class: 'scholar', name: 'Foreign' });
+  expect(avatar).toMatchObject({ name: 'Foreign' });
 });

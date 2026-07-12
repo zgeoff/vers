@@ -18,7 +18,6 @@ export function createAvatarRow(
   return db
     .insertInto('avatars')
     .values({
-      class: 'brute',
       id: createId(),
       name: faker.string.alpha({ casing: 'lower', length: { max: 12, min: 6 } }),
       ...data,

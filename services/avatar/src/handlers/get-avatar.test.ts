@@ -19,7 +19,7 @@ test('it returns an owned avatar by id', async () => {
 
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
-  const created = await client.createAvatar({ class: 'brute', name: 'Findable' });
+  const created = await client.createAvatar({ name: 'Findable' });
   const found = await client.getAvatar({ id: created.id });
 
   expect(found).toStrictEqual(created);
