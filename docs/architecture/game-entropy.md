@@ -144,6 +144,6 @@ the property; device-custody rolls do not. The delivery channel is irrelevant.
 
 ## Mode enforcement
 
-An avatar's economy mode (the [economy modes note](../game-design/economy-modes.md) owns the
-choice) fixes its key custody at creation, permanently. No path converts one custody into the other,
-and a device-held key is never repatriated into market eligibility.
+An avatar's economy mode (the [economy modes note](../game-design/economy-modes.md) owns the choice)
+fixes its key custody at creation, permanently. No path converts one custody into the other, and a
+device-held key is never repatriated into market eligibility.
