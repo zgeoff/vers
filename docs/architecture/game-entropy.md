@@ -29,11 +29,11 @@ abandoned attempt exactly as a completed one. The attempt after a failure is a f
 never a replay of the one that failed.
 
 The chain seeds the trajectory only — enemies, timing, survival, experience, and which kills commit
-rolled rewards — and rolled content resolves separately, under a key keyed to the committing kill.
-In reward terms one continuation is worth no more than another: steady rewards are published,
-rolled-reward density varies only within bounded margins, and each roll's content carries equal
-expected value regardless of position, so steering the chain for a better reward returns less than
-the attempts it costs.
+rolled rewards — and rolled content resolves separately, at a coordinate fixed by the kill that
+commits it. In reward terms one continuation is worth no more than another: steady rewards are
+published, rolled-reward density varies only within bounded margins, and each roll's content carries
+equal expected value regardless of position, so steering the chain for a better tradeable reward
+returns less than the attempts it costs.
 
 Competition scores the trajectory itself — depth, boss-kill speed — which is client-computable and
 varies across attempts, so reward-flatness does not cover it. Meaningful competition is endgame, and
