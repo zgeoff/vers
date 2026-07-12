@@ -37,6 +37,14 @@ export default defineDeployManifest({
       app: 'vers-service-email',
       configDir: 'services/email',
       dockerfile: 'services/email/Dockerfile',
+      scheduledMachines: [
+        {
+          command: ['/usr/local/bin/sweep'],
+          name: 'email-sweeper',
+          region: 'syd',
+          schedule: 'hourly',
+        },
+      ],
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-email' },
     },
     {
