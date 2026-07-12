@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { SimulationAppState } from '@vers/idle-core';
-import { EntityStatus } from '@vers/idle-core';
+import { ActivityFailureAction, EntityStatus } from '@vers/idle-core';
 import { WorkerMessageType } from '../types';
 import { createInitialStateMessage } from './create-initial-state-message';
 
@@ -18,6 +18,7 @@ test('it creates an initial state message', () => {
       status: EntityStatus.Alive,
     },
     combat: { elapsed: 0 },
+    failureAction: ActivityFailureAction.Abort,
   };
 
   const message = createInitialStateMessage(state);
