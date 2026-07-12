@@ -295,13 +295,17 @@ Everywhere:
   `INSERT ... ON CONFLICT`, or a data-modifying CTE claims a single-row invariant and survives a
   serverless process kill with no orphaned transaction state. Reach for an interactive
   `db.transaction()` only for a genuine multi-row invariant that doesn't reduce to one statement —
-  and give that handler's suite `database` isolation, since the default transaction-isolation handle
+  and give that handler's suite `schema` isolation, since the default transaction-isolation handle
   cannot nest.
 - **Isolation strategy.** Acquire the database through `@vers/service-test-utils/bun`:
-  `createTestDB()` returns an `await using` handle; `transaction` isolation (rollback on dispose) is
-  the default, `database` isolation (a real, committed clone) is the opt-out for code that commits
-  mid-op, takes advisory locks, or asserts something that only fires at COMMIT. Inject the handle's
-  `db` into the code under test — code that opens its own connection bypasses the rollback.
+  `createTestDB()` returns an `await using` handle over one of three isolation levels. `transaction`
+  (rollback on dispose) is the default. `schema` (a real, committed clone of `public` in its own
+  schema on a shared database) is the opt-out for code that commits mid-op or continues after a
+  caught constraint violation, cases where a rolled-back transaction can't nest and an aborted
+  statement poisons the rest of a shared test transaction. `database` (a real, committed clone
+  database) is reserved for database-scoped state (advisory locks, LISTEN/NOTIFY), DDL and migration
+  exercises, and structures `LIKE` can't reproduce (partitioned parents). Inject the handle's `db`
+  into the code under test — code that opens its own connection bypasses the isolation.
 - **Test setup.** A local `setupTest()` per suite — typed config in, named props out, no `if` —
   builds the db and boots the service, with no data. Never centralise it: a shared `setupTest`
   accretes conditionals as services multiply.

@@ -29,3 +29,11 @@ test('it opts into database isolation on request', async () => {
 
   expect(result.rows[0]?.currentDatabase).toStartWith('test_');
 });
+
+test('it opts into schema isolation on request', async () => {
+  await using testDB = await createTestDB({ isolation: 'schema' });
+
+  const result = await sql<{ searchPath: string }>`show search_path`.execute(testDB.db);
+
+  expect(result.rows[0]?.searchPath).toStartWith('tu_');
+});

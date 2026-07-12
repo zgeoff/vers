@@ -1,8 +1,9 @@
 import { createDatabaseTestDB } from './strategies/create-database-test-db';
+import { createSchemaTestDB } from './strategies/create-schema-test-db';
 import { createTransactionTestDB } from './strategies/create-transaction-test-db';
 import type { TestDBHandle } from './test-db-handle';
 
-export type Isolation = 'database' | 'transaction';
+export type Isolation = 'database' | 'schema' | 'transaction';
 
 interface TestDBConfig {
   readonly default: Isolation;
@@ -15,6 +16,7 @@ interface CreateTestDBOptions {
 
 const STRATEGIES: Record<Isolation, () => Promise<TestDBHandle>> = {
   database: createDatabaseTestDB,
+  schema: createSchemaTestDB,
   transaction: createTransactionTestDB,
 };
 

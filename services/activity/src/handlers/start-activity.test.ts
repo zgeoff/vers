@@ -58,11 +58,11 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
   expect(activity.lastHash).toBe(activity.startHash);
 });
 
-// database isolation: the handler re-queries for the conflicting activity after catching the
+// schema isolation: the handler re-queries for the conflicting activity after catching the
 // unique violation, and a prior statement's constraint violation aborts the rest of a shared
 // test transaction under the default isolation.
 test('it rejects a second start with CONFLICT carrying the already-active activity', async () => {
-  await using ctx = await setupTest({ isolation: 'database' });
+  await using ctx = await setupTest({ isolation: 'schema' });
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });

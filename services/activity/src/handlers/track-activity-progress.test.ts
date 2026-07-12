@@ -9,10 +9,10 @@ import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-c
 /**
  * `trackActivityProgress` opens its own `db.transaction()` for the head-row CAS, which can't nest
  * under the default rollback-on-dispose isolation — this suite runs against a real, committed
- * database clone instead.
+ * schema clone instead.
  */
 async function setupTest() {
-  const db = await createTestDB({ isolation: 'database' });
+  const db = await createTestDB({ isolation: 'schema' });
   const service = await createActivityService({ db: db.db });
 
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };

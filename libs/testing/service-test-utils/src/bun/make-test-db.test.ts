@@ -38,3 +38,16 @@ test('it acquires an explicitly requested isolation from those enabled', async (
 
   expect(rows).toBeArray();
 });
+
+test('it acquires schema isolation when declared enabled', async () => {
+  const createTestDB = makeTestDB({
+    default: 'transaction',
+    enabled: ['transaction', 'schema'],
+  });
+
+  await using testDB = await createTestDB({ isolation: 'schema' });
+
+  const rows = await testDB.db.selectFrom('users').selectAll().execute();
+
+  expect(rows).toBeArray();
+});

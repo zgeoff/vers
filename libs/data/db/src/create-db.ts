@@ -5,6 +5,7 @@ import type { DB } from './schema.generated';
 
 interface CreateDBConfig {
   readonly databaseURL: string;
+  readonly searchPath?: string;
 }
 
 /**
@@ -24,6 +25,7 @@ export function createDB(config: CreateDBConfig): Kysely<DB> {
         connection: {
           idle_in_transaction_session_timeout: 30_000,
           statement_timeout: 30_000,
+          ...(config.searchPath === undefined ? {} : { search_path: config.searchPath }),
         },
       }),
     }),
