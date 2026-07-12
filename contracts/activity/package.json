@@ -21,6 +21,7 @@
     "@orpc/zod": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
+    "@vers/game-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "typescript": "catalog:"
   }
