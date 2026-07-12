@@ -7,8 +7,6 @@ import type { ColumnType } from 'kysely';
 
 export type ActivityStatus = 'active' | 'capped' | 'quarantined' | 'rejected' | 'stopped';
 
-export type AvatarClass = 'brute' | 'scholar' | 'scoundrel';
-
 export type Generated<T> =
   T extends ColumnType<infer S, infer I, infer U>
     ? ColumnType<S, I | undefined, U>
@@ -61,7 +59,6 @@ export interface ActivityCheckpoints {
 }
 
 export interface Avatars {
-  class: AvatarClass;
   createdAt: Generated<Timestamp>;
   id: string;
   level: Generated<number>;
