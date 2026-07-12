@@ -82,7 +82,10 @@ export async function trackActivityProgress(
         appendedAt: sql`now()`,
         appendedHead: newHead,
         lastHash: newLastHash,
-        ...(terminalRewardsXP !== undefined && { status: 'stopped' as const }),
+        ...(terminalRewardsXP !== undefined && {
+          status: 'stopped' as const,
+          stoppedAt: sql`now()`,
+        }),
       })
       .where('id', '=', opts.input.activityID)
       .where('appendedHead', '=', opts.input.expectedHead)

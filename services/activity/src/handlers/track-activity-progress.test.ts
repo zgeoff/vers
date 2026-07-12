@@ -292,6 +292,15 @@ test('it settles avatar xp and level from a completed terminal checkpoint', asyn
 
   expect(updated.xp).toBe(rewardsXP);
   expect(updated.level).toBe(levelForXP(rewardsXP));
+
+  const updatedActivity = await ctx.db
+    .selectFrom('activities')
+    .selectAll()
+    .where('id', '=', started.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updatedActivity.status).toBe('stopped');
+  expect(updatedActivity.stoppedAt).not.toBeNil();
 });
 
 test('it settles a clamped xp loss from a failed terminal checkpoint', async () => {
