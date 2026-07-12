@@ -37,7 +37,7 @@ export interface Simulation {
   get ctx(): SimulationContext;
   get elapsed(): number;
   get failureAction(): ActivityFailureAction;
-  get seed(): number;
+  get rngState(): string;
   get state(): SimulationState;
 
   // utils

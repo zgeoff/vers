@@ -19,7 +19,7 @@ export enum ActivityFailureAction {
 
 export interface WorldMapEncounterActivityData extends IActivityData {
   enemies: Array<EnemyData>;
-  seed: number;
+  seed: string;
   type: ActivityType.WorldMapEncounter;
 }
 
@@ -98,22 +98,22 @@ export enum ActivityCheckpointType {
 }
 
 export interface ActivityStartedCheckpoint extends IActivityCheckpoint {
-  readonly seed: number;
+  readonly seed: string;
   readonly type: ActivityCheckpointType.Started;
 }
 
 export interface ActivityFailedCheckpoint extends IActivityCheckpoint {
-  readonly nextSeed: number;
+  readonly nextSeed: string;
   readonly type: ActivityCheckpointType.Failed;
 }
 
 export interface ActivityCompletedCheckpoint extends IActivityCheckpoint {
-  readonly nextSeed: number;
+  readonly nextSeed: string;
   readonly type: ActivityCheckpointType.Completed;
 }
 
 export interface ActivityProgressCheckpoint extends IActivityCheckpoint {
-  readonly nextSeed: number;
+  readonly nextSeed: string;
   readonly type: ActivityCheckpointType.Progress;
 }
 

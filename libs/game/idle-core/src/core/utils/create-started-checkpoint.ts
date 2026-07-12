@@ -6,7 +6,7 @@ export function createStartedCheckpoint(ctx: SimulationContext): ActivityStarted
   // hash chain covers only this frozen subset — rewards ride outside it, verified by server
   // replay-recompute instead
   const hashed: Omit<ActivityStartedCheckpoint, 'hash' | 'rewards'> = {
-    seed: ctx.rng.seed,
+    seed: ctx.rng.getState(),
     time: 0,
     type: ActivityCheckpointType.Started,
   };

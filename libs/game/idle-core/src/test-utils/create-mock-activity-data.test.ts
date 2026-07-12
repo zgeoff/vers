@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { stateFromSeed } from '@vers/game-utils';
 import { ActivityFailureAction, ActivityType } from '../types';
 import { createMockActivityData } from './create-mock-activity-data';
 import { createMockEnemyData } from './create-mock-enemy-data';
@@ -24,7 +25,7 @@ test('it creates activity data with expected properties', () => {
     failureAction: ActivityFailureAction.Retry,
     id: expect.toBeString(),
     name: 'World Map Encounter',
-    seed: expect.toBeNumber(),
+    seed: expect.toBeString(),
     type: ActivityType.WorldMapEncounter,
   });
 });
@@ -37,7 +38,7 @@ test('it creates activity data with custom properties', () => {
     failureAction: ActivityFailureAction.Abort,
     id: 'custom-activity',
     name: 'Custom Activity',
-    seed: 123,
+    seed: stateFromSeed(123),
     type: ActivityType.WorldMapEncounter,
   });
 
@@ -47,7 +48,7 @@ test('it creates activity data with custom properties', () => {
     failureAction: ActivityFailureAction.Abort,
     id: 'custom-activity',
     name: 'Custom Activity',
-    seed: 123,
+    seed: stateFromSeed(123),
     type: ActivityType.WorldMapEncounter,
   });
 });

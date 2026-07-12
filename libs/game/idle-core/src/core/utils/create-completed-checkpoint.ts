@@ -18,7 +18,7 @@ export function createCompletedCheckpoint(
   // hash chain covers only this frozen subset — rewards and levelUp ride outside it, verified by
   // server replay-recompute instead
   const hashed: Omit<ActivityCompletedCheckpoint, 'hash' | 'levelUp' | 'rewards'> = {
-    nextSeed: ctx.rng.generateNewSeed(),
+    nextSeed: ctx.rng.getState(),
     time: activity.elapsed,
     type: ActivityCheckpointType.Completed,
   };
