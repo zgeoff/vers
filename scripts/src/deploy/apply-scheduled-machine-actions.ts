@@ -8,7 +8,7 @@ const UPDATE_RETRY_DELAY_MS = 5000;
 /**
  * Runs the planned create/update-image actions against Fly. An update can
  * collide with a scheduled machine mid-run — it's stopped outside its
- * schedule window — so it retries a few times before the error surfaces.
+ * schedule window — so it retries a few times before the error is raised.
  */
 export async function applyScheduledMachineActions(
   app: string,
