@@ -81,7 +81,7 @@
       "@vitejs/plugin-react": "6.0.3",
       "@vitejs/plugin-rsc": "0.5.27",
       "@zgeoff/bun-test-extended": "0.0.3",
-      "@zgeoff/dbhub": "0.23.1",
+      "@zgeoff/dbhub": "0.23.3",
       "@zgeoff/format-codemod": "0.0.6",
       "@zgeoff/oxlint-config": "0.0.4",
       "autoprefixer": "10.5.2",
