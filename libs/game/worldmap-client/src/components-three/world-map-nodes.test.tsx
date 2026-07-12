@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import type { WorldNode } from '@vers/worldmap-core';
+import type { WorldMapNode } from '@vers/worldmap-core';
 import { useHoveredNodeStore } from '../state/use-hovered-node-store';
 import { useSelectedNodeStore } from '../state/use-selected-node-store';
-import { WorldNodes } from './world-nodes';
+import { WorldMapNodes } from './world-map-nodes';
 
-const nodeA: WorldNode = {
+const nodeA: WorldMapNode = {
   connections: ['nodeB', null, null, null],
   difficulty: 1,
   id: 'nodeA',
@@ -14,7 +14,7 @@ const nodeA: WorldNode = {
   seed: 12_345,
 };
 
-const nodeB: WorldNode = {
+const nodeB: WorldMapNode = {
   connections: [null, null, null, null],
   difficulty: 2,
   id: 'nodeB',
@@ -24,7 +24,7 @@ const nodeB: WorldNode = {
 };
 
 async function setupTest() {
-  const renderer = await ReactThreeTestRenderer.create(<WorldNodes nodes={[nodeA, nodeB]} />);
+  const renderer = await ReactThreeTestRenderer.create(<WorldMapNodes nodes={[nodeA, nodeB]} />);
 
   return renderer;
 }

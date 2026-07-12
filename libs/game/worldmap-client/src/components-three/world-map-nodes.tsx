@@ -1,7 +1,7 @@
 import { extend, useFrame } from '@react-three/fiber';
 import type { ThreeEvent } from '@react-three/fiber';
 import { sceneColors } from '@vers/design-system';
-import type { WorldNode } from '@vers/worldmap-core';
+import type { WorldMapNode } from '@vers/worldmap-core';
 import { useLayoutEffect, useRef } from 'react';
 import type { InstancedMesh } from 'three';
 import { Color, Matrix4 } from 'three';
@@ -11,8 +11,8 @@ import { setSelectedNode } from '../state/set-selected-node';
 import { useSelectedNodeStore } from '../state/use-selected-node-store';
 import { getScenePosition } from '../utils/get-scene-position';
 
-interface WorldNodesProps {
-  readonly nodes: ReadonlyArray<WorldNode>;
+interface WorldMapNodesProps {
+  readonly nodes: ReadonlyArray<WorldMapNode>;
 }
 
 const RADIUS = 0.8;
@@ -21,11 +21,11 @@ const NODE_SEGMENTS = 24;
 const BASE_COLOR = new Color(sceneColors.nodeBase);
 const SELECTED_COLOR = new Color(sceneColors.nodeSelected);
 
-const WorldNodeMaterial = extend(MeshStandardNodeMaterial);
+const WorldMapNodeMaterial = extend(MeshStandardNodeMaterial);
 
 const instanceMatrix = new Matrix4();
 
-export function WorldNodes(props: Readonly<WorldNodesProps>) {
+export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
   const meshRef = useRef<InstancedMesh | null>(null);
   const appliedSelectedNodeIDRef = useRef<null | string>(null);
 
@@ -125,7 +125,7 @@ export function WorldNodes(props: Readonly<WorldNodesProps>) {
       onPointerLeave={handlePointerLeave}
     >
       <circleGeometry args={[RADIUS, NODE_SEGMENTS]} />
-      <WorldNodeMaterial />
+      <WorldMapNodeMaterial />
     </instancedMesh>
   );
 }

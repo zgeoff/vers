@@ -1,9 +1,9 @@
 import { createSeed } from '@vers/game-utils';
 import { createID } from './create-id';
 import { getNodePosition } from './get-node-position';
-import type { WorldNode } from './types';
+import type { WorldMapNode } from './types';
 
-export function createWorldNode(index: number, difficulty: number): WorldNode {
+export function createWorldMapNode(index: number, difficulty: number): WorldMapNode {
   return {
     connections: [null, null, null, null],
     difficulty,

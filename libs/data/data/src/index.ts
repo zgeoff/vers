@@ -1,1 +1,1 @@
-export { default as worldNodes } from './world-nodes.json';
+export { default as worldMapNodes } from './world-map-nodes.json';

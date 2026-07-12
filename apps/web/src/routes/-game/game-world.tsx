@@ -1,12 +1,12 @@
-import { worldNodes } from '@vers/data';
+import { worldMapNodes } from '@vers/data';
 import { GameCanvas } from '@vers/game-rendering';
 import { setSelectedNode, setWorldGraph } from '@vers/worldmap-client';
-import type { CompressedWorldNode } from '@vers/worldmap-core';
-import { decompressWorldNodes } from '@vers/worldmap-core';
+import type { CompressedWorldMapNode } from '@vers/worldmap-core';
+import { decompressWorldMapNodes } from '@vers/worldmap-core';
 import { SceneRoot } from './scene-root';
 
-// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the world graph ships as plain JSON with no way to encode the branded CompressedWorldNode type at that boundary
-const worldGraph = decompressWorldNodes(worldNodes as Array<CompressedWorldNode>);
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the world graph ships as plain JSON with no way to encode the branded CompressedWorldMapNode type at that boundary
+const worldGraph = decompressWorldMapNodes(worldMapNodes as Array<CompressedWorldMapNode>);
 
 // oxlint-disable-next-line typescript/no-non-null-assertion -- the world graph ships with at least one node
 const firstNode = Object.values(worldGraph.nodes)[0]!;

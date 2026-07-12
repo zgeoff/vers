@@ -1,7 +1,7 @@
 import { expect, spyOn, test } from 'bun:test';
-import { decompressWorldNodes } from './decompress-world-nodes';
+import { decompressWorldMapNodes } from './decompress-world-map-nodes';
 import * as getRandomizedPosition from './get-randomized-position';
-import type { CompressedWorldNode } from './types';
+import type { CompressedWorldMapNode } from './types';
 
 test('it decompresses nodes into a complete world graph', () => {
   // mock our randomization so we can assert we're getting the correct positions
@@ -9,7 +9,7 @@ test('it decompresses nodes into a complete world graph', () => {
     ...position,
   ]);
 
-  const compressedNodes: Array<CompressedWorldNode> = [
+  const compressedNodes: Array<CompressedWorldMapNode> = [
     {
       c: [null, null, null, null],
       d: 0,
@@ -52,7 +52,7 @@ test('it decompresses nodes into a complete world graph', () => {
     },
   ];
 
-  const graph = decompressWorldNodes(compressedNodes);
+  const graph = decompressWorldMapNodes(compressedNodes);
 
   expect(graph).toStrictEqual({
     edges: {
@@ -123,7 +123,7 @@ test('it decompresses nodes into a complete world graph', () => {
 });
 
 test('it randomizes the position of the nodes', () => {
-  const compressedNodes: Array<CompressedWorldNode> = [
+  const compressedNodes: Array<CompressedWorldMapNode> = [
     {
       c: [null, null, null, null],
       d: 0,
@@ -134,7 +134,7 @@ test('it randomizes the position of the nodes', () => {
     },
   ];
 
-  const graph = decompressWorldNodes(compressedNodes);
+  const graph = decompressWorldMapNodes(compressedNodes);
 
   expect(graph.nodes['origin']?.position).not.toStrictEqual([1, 1]);
   expect(graph.nodes['origin']?.position[0]).not.toBeGreaterThan(1.2);

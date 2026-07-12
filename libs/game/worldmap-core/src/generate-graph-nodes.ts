@@ -1,28 +1,28 @@
 import invariant from 'tiny-invariant';
-import { createWorldNode } from './create-world-node';
-import type { WorldNode } from './types';
+import { createWorldMapNode } from './create-world-map-node';
+import type { WorldMapNode } from './types';
 
 type MutableConnections = [null | string, null | string, null | string, null | string];
 
 /**
  * a node mid-construction: its connections are filled in across two passes
- * before the graph is frozen into the readonly WorldNode shape callers get.
+ * before the graph is frozen into the readonly WorldMapNode shape callers get.
  */
-type WorldNodeDraft = Omit<WorldNode, 'connections'> & { connections: MutableConnections };
+type WorldMapNodeDraft = Omit<WorldMapNode, 'connections'> & { connections: MutableConnections };
 
-function toDraftNode(node: WorldNode): WorldNodeDraft {
+function toDraftNode(node: WorldMapNode): WorldMapNodeDraft {
   return { ...node, connections: [...node.connections] };
 }
 
 /**
- * Generates a graph of WorldNodes and returns them as an array.
+ * Generates a graph of WorldMapNodes and returns them as an array.
  *
  * @param maxDifficulty - The maximum difficulty of the graph
- * @returns A graph of WorldNodes
+ * @returns A graph of WorldMapNodes
  */
-export function generateGraphNodes(maxDifficulty: number): Array<WorldNode> {
-  const graph: Array<WorldNodeDraft> = [];
-  const centralNode = toDraftNode(createWorldNode(0, 0));
+export function generateGraphNodes(maxDifficulty: number): Array<WorldMapNode> {
+  const graph: Array<WorldMapNodeDraft> = [];
+  const centralNode = toDraftNode(createWorldMapNode(0, 0));
 
   graph.push(centralNode);
 
@@ -32,7 +32,7 @@ export function generateGraphNodes(maxDifficulty: number): Array<WorldNode> {
     const nodesInLevel = 4 * difficulty;
 
     for (let i = 0; i < nodesInLevel; i++) {
-      graph.push(toDraftNode(createWorldNode(i, difficulty)));
+      graph.push(toDraftNode(createWorldMapNode(i, difficulty)));
     }
   }
 

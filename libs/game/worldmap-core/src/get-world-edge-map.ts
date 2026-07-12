@@ -1,17 +1,17 @@
 import invariant from 'tiny-invariant';
-import type { WorldEdge, WorldEdgeMap, WorldNodeMap } from './types';
+import type { WorldEdge, WorldEdgeMap, WorldMapNodeMap } from './types';
 
-export function getWorldEdgeMap(worldNodes: WorldNodeMap): WorldEdgeMap {
+export function getWorldEdgeMap(worldMapNodes: WorldMapNodeMap): WorldEdgeMap {
   const edges: Record<string, WorldEdge> = {};
 
-  for (const node of Object.values(worldNodes)) {
+  for (const node of Object.values(worldMapNodes)) {
     for (const connection of node.connections) {
       if (connection === null) {
         continue;
       }
 
       const edgeKey = [node.id, connection].toSorted().join(':');
-      const connectedNode = worldNodes[connection];
+      const connectedNode = worldMapNodes[connection];
 
       invariant(connectedNode, 'Connected node not found');
 

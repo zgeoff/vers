@@ -1,4 +1,4 @@
-import type { WorldEdge, WorldGraph, WorldNode } from '@vers/worldmap-core';
+import type { WorldEdge, WorldGraph, WorldMapNode } from '@vers/worldmap-core';
 import type { Object3D } from 'three';
 import { Vector3 } from 'three';
 import { getScenePosition } from './get-scene-position';
@@ -15,7 +15,7 @@ export function filterDistanceGraph(
   graphData: WorldGraph,
 ): WorldGraph {
   const position = selectedNode?.position ?? new Vector3();
-  const nodes: Record<string, WorldNode> = {};
+  const nodes: Record<string, WorldMapNode> = {};
 
   for (const [id, node] of Object.entries(graphData.nodes)) {
     const nodePosition = new Vector3(...getScenePosition(node.position));

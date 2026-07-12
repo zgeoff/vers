@@ -1,8 +1,8 @@
-import type { WorldNode } from '@vers/worldmap-core';
+import type { WorldMapNode } from '@vers/worldmap-core';
 import { create } from 'zustand';
 
 interface HoveredNodeStore {
-  node: WorldNode | null;
+  node: WorldMapNode | null;
 }
 
 export const useHoveredNodeStore = create<HoveredNodeStore>(() => ({

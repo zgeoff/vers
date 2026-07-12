@@ -1,14 +1,14 @@
-import type { CompressedWorldNode, WorldNode } from './types';
+import type { CompressedWorldMapNode, WorldMapNode } from './types';
 
 /**
- * converts an array of WorldNodes into an array of CompressedWorldNodes
+ * converts an array of WorldMapNodes into an array of CompressedWorldMapNodes
  *
- * @param nodes - The WorldNodes to serialize.
- * @returns An array of CompressedWorldNodes.
+ * @param nodes - The WorldMapNodes to serialize.
+ * @returns An array of CompressedWorldMapNodes.
  */
 export function getCompressedWorldGraph(
-  nodes: ReadonlyArray<WorldNode>,
-): Array<CompressedWorldNode> {
+  nodes: ReadonlyArray<WorldMapNode>,
+): Array<CompressedWorldMapNode> {
   return nodes.map((node) => ({
     c: node.connections,
     d: node.difficulty,

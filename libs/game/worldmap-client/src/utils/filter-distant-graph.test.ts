@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import type { WorldEdge, WorldGraph, WorldNode } from '@vers/worldmap-core';
+import type { WorldEdge, WorldGraph, WorldMapNode } from '@vers/worldmap-core';
 import { Object3D } from 'three';
 import { filterDistanceGraph } from './filter-distant-graph';
 
@@ -53,7 +53,7 @@ test('it filters nodes beyond the maximum distance', () => {
   });
 });
 
-function createTestNode(id: string, position: readonly [number, number]): WorldNode {
+function createTestNode(id: string, position: readonly [number, number]): WorldMapNode {
   return {
     connections: [null, null, null, null],
     difficulty: 0,

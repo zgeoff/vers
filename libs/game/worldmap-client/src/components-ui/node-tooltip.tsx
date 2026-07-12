@@ -37,7 +37,7 @@ export function NodeTooltip(props: Readonly<NodeTooltipProps>) {
       variant="default"
     >
       <Tooltip.Header>
-        <Text className={styles.name}>Test World Node ({node?.id})</Text>
+        <Text className={styles.name}>Test World Map Node ({node?.id})</Text>
       </Tooltip.Header>
       <Tooltip.Content>
         <Text className={styles.difficulty}>

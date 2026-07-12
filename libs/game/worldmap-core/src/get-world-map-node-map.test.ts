@@ -1,7 +1,7 @@
 import { expect, spyOn, test } from 'bun:test';
 import * as getRandomizedPosition from './get-randomized-position';
-import { getWorldNodeMap } from './get-world-node-map';
-import type { CompressedWorldNode } from './types';
+import { getWorldMapNodeMap } from './get-world-map-node-map';
+import type { CompressedWorldMapNode } from './types';
 
 test('it creates a node map from compressed nodes', () => {
   // mock our randomization so we can assert we're getting the correct positions
@@ -9,7 +9,7 @@ test('it creates a node map from compressed nodes', () => {
     ...position,
   ]);
 
-  const compressedNodes: Array<CompressedWorldNode> = [
+  const compressedNodes: Array<CompressedWorldMapNode> = [
     {
       c: [null, null, null, null],
       d: 0,
@@ -28,7 +28,7 @@ test('it creates a node map from compressed nodes', () => {
     },
   ];
 
-  const nodeMap = getWorldNodeMap(compressedNodes);
+  const nodeMap = getWorldMapNodeMap(compressedNodes);
 
   expect(nodeMap).toStrictEqual({
     node1: {
@@ -51,7 +51,7 @@ test('it creates a node map from compressed nodes', () => {
 });
 
 test('it randomizes the position of the nodes', () => {
-  const compressedNodes: Array<CompressedWorldNode> = [
+  const compressedNodes: Array<CompressedWorldMapNode> = [
     {
       c: [null, null, null, null],
       d: 0,
@@ -62,7 +62,7 @@ test('it randomizes the position of the nodes', () => {
     },
   ];
 
-  const result = getWorldNodeMap(compressedNodes);
+  const result = getWorldMapNodeMap(compressedNodes);
 
   expect(result['node1']?.position).not.toStrictEqual([1, 1]);
   expect(result['node1']?.position[0]).not.toBeGreaterThan(1.2);

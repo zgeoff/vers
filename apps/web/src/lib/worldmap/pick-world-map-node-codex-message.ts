@@ -1,4 +1,4 @@
-export function pickWorldNodeCodexMessage(difficulty: number): string {
+export function pickWorldMapNodeCodexMessage(difficulty: number): string {
   if (difficulty >= 3) {
     return 'The world here churns with old violence — tread carefully.';
   }

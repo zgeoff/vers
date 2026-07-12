@@ -1,9 +1,9 @@
-import type { WorldNode } from '@vers/worldmap-core';
+import type { WorldMapNode } from '@vers/worldmap-core';
 import type { Object3D } from 'three';
 import { create } from 'zustand';
 
 interface SelectedNodeStore {
-  node: WorldNode | null;
+  node: WorldMapNode | null;
   object3D: null | Object3D;
 }
 
