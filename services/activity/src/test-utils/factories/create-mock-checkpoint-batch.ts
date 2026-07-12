@@ -43,6 +43,7 @@ export function createMockCheckpointBatch(
     const isLast = index === count - 1;
 
     const payload = {
+      chainIndex: version,
       entropySource: 'chain',
       nextSeed: faker.string.alphanumeric({ casing: 'lower', length: 16 }),
       seed: faker.string.alphanumeric({ casing: 'lower', length: 16 }),

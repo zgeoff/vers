@@ -3,6 +3,7 @@ import { buildCheckpointHash } from './build-checkpoint-hash';
 
 test('it builds a deterministic hex digest for a given input', () => {
   const input = {
+    chainIndex: 1,
     entropySource: 'chain',
     nextSeed: 'seed_1',
     prevHash: 'hash_0',
@@ -18,6 +19,7 @@ test('it builds a deterministic hex digest for a given input', () => {
 
 test('it produces different hashes for different versions', () => {
   const input = {
+    chainIndex: 1,
     entropySource: 'chain',
     nextSeed: 'seed_1',
     prevHash: 'hash_0',
@@ -31,8 +33,25 @@ test('it produces different hashes for different versions', () => {
   );
 });
 
+test('it produces different hashes for different chain indices', () => {
+  const input = {
+    entropySource: 'chain',
+    nextSeed: 'seed_1',
+    prevHash: 'hash_0',
+    seed: 'seed_0',
+    time: 12,
+    type: 'tick',
+    version: 1,
+  };
+
+  expect(buildCheckpointHash({ ...input, chainIndex: 1 })).not.toBe(
+    buildCheckpointHash({ ...input, chainIndex: 2 }),
+  );
+});
+
 test('it produces different hashes for different entropy sources', () => {
   const input = {
+    chainIndex: 1,
     nextSeed: 'seed_1',
     prevHash: 'hash_0',
     seed: 'seed_0',
@@ -48,6 +67,7 @@ test('it produces different hashes for different entropy sources', () => {
 
 test('it produces a 64-character hex digest', () => {
   const hash = buildCheckpointHash({
+    chainIndex: 1,
     entropySource: 'chain',
     nextSeed: 'seed_1',
     prevHash: 'hash_0',
@@ -62,6 +82,7 @@ test('it produces a 64-character hex digest', () => {
 
 test('it derives the frozen canonical digest for a known input', () => {
   const hash = buildCheckpointHash({
+    chainIndex: 1,
     entropySource: 'chain',
     nextSeed: 'seed_1',
     prevHash: 'hash_0',
@@ -71,5 +92,5 @@ test('it derives the frozen canonical digest for a known input', () => {
     version: 1,
   });
 
-  expect(hash).toBe('6079d244605014de9d91fcd80080ddad169ab684fccbcbd1d5523bcd512e30d6');
+  expect(hash).toBe('a2a741f37fd2cffb06c6b5e1ad737106670c1203d89206040b5260de4b632408');
 });

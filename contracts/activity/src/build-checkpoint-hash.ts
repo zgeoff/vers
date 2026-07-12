@@ -2,6 +2,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 
 interface BuildCheckpointHashInput {
+  readonly chainIndex: number;
   readonly entropySource: string;
   readonly nextSeed: string;
   readonly prevHash: string;
@@ -13,14 +14,15 @@ interface BuildCheckpointHashInput {
 
 /**
  * The checkpoint hash chain's link function: a sha256 hex digest over the canonical field order
- * `[prevHash, version, seed, nextSeed, time, type, entropySource]`. Shared by the contract, the
- * service, and (via this package) the client, so every party derives the same hash from the same
- * fields.
+ * `[prevHash, version, chainIndex, seed, nextSeed, time, type, entropySource]`. Shared by the
+ * contract, the service, and (via this package) the client, so every party derives the same hash
+ * from the same fields.
  */
 export function buildCheckpointHash(input: Readonly<BuildCheckpointHashInput>): string {
   const canonical = JSON.stringify([
     input.prevHash,
     input.version,
+    input.chainIndex,
     input.seed,
     input.nextSeed,
     input.time,
