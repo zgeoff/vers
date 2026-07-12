@@ -159,6 +159,7 @@ jobs:
       fail-fast: false
       matrix:
         app:
+          - vers-service-activity
           - vers-service-avatar
           - vers-service-session
           - vers-service-user
