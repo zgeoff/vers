@@ -54,7 +54,14 @@ export async function trackActivityProgress(
   const head = await db
     .selectFrom('activities')
     .innerJoin('avatars', 'avatars.id', 'activities.avatarId')
-    .select(['activities.appendedHead', 'activities.avatarId', 'activities.lastHash', 'avatars.xp'])
+    .select([
+      'activities.appendedHead',
+      'activities.avatarId',
+      'activities.lastHash',
+      'activities.nodeId',
+      'activities.startChainIndex',
+      'avatars.xp',
+    ])
     .where('activities.id', '=', opts.input.activityID)
     .where('avatars.userId', '=', actingUserID)
     .where('activities.status', '=', 'active')
@@ -123,7 +130,18 @@ export async function trackActivityProgress(
         .execute();
     }
 
-    if (terminalRewardsXP !== undefined) {
+    if (terminalRewardsXP !== undefined && lastCheckpoint !== undefined) {
+      await trx
+        .updateTable('activityChains')
+        .set({
+          appendedChainIndex: lastCheckpoint.payload.chainIndex,
+          appendedNextSeed: lastCheckpoint.payload.nextSeed,
+        })
+        .where('avatarId', '=', head.avatarId)
+        .where('nodeId', '=', head.nodeId)
+        .where('appendedChainIndex', '=', head.startChainIndex)
+        .execute();
+
       const newXP = Math.max(0, Math.round(head.xp + terminalRewardsXP));
 
       const settled = await trx
@@ -150,13 +168,15 @@ interface CheckpointBatchInput {
 interface TrackActivityProgressHead {
   readonly appendedHead: number;
   readonly lastHash: string;
+  readonly startChainIndex: number;
 }
 
 /**
  * Validates a checkpoint batch's internal shape ahead of the transactional head-row CAS: version
- * contiguity from `expectedHead + 1`, each entry's hash against its own payload, each entry's
- * chain link to the previous one, and — only when `expectedHead` still matches the head row, since
- * a stale batch's chain has nothing to link onto — the first entry's link onto the current head.
+ * contiguity from `expectedHead + 1`, each entry's `chainIndex` continuity from
+ * `head.startChainIndex`, each entry's hash against its own payload, each entry's chain link to
+ * the previous one, and — only when `expectedHead` still matches the head row, since a stale
+ * batch's chain has nothing to link onto — the first entry's link onto the current head.
  */
 function findInvalidReason(
   input: Readonly<CheckpointBatchInput>,
@@ -169,6 +189,10 @@ function findInvalidReason(
 
     if (checkpoint.version !== expectedVersion) {
       return 'non-contiguous-versions';
+    }
+
+    if (checkpoint.payload.chainIndex !== head.startChainIndex + checkpoint.version) {
+      return 'non-contiguous-chain-index';
     }
 
     let previousHash: string | undefined;
