@@ -1,6 +1,5 @@
 import { authedRoute, defineErrors } from '@vers/contract-base';
 import * as z from 'zod';
-import { AvatarClassSchema } from './avatar-class-schema';
 import { AvatarDataSchema } from './avatar-data-schema';
 import { AvatarNameSchema } from './avatar-name-schema';
 
@@ -10,7 +9,7 @@ import { AvatarNameSchema } from './avatar-name-schema';
 export const avatarContract = {
   createAvatar: authedRoute
     .route({ method: 'POST', path: '/avatars', summary: 'Create an avatar for the caller' })
-    .input(z.object({ class: AvatarClassSchema, name: AvatarNameSchema }))
+    .input(z.object({ name: AvatarNameSchema }))
     .output(AvatarDataSchema)
     .errors(
       defineErrors({
@@ -43,9 +42,8 @@ export const avatarContract = {
     .output(z.array(AvatarDataSchema)),
 
   /**
-   * `name` is the only user-editable field by design: `class` is immutable identity, and
-   * `level`/`xp` are server-owned progression. The input shape is frozen with #255 — do not widen
-   * it.
+   * `name` is the only user-editable field by design: `level`/`xp` are server-owned progression.
+   * The input shape is frozen with #255 — do not widen it.
    */
   updateAvatar: authedRoute
     .route({
