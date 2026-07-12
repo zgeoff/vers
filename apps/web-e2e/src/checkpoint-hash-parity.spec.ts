@@ -5,10 +5,9 @@ const FROZEN_DIGEST = '6079d244605014de9d91fcd80080ddad169ab684fccbcbd1d5523bcd5
 const CANONICAL_JSON = JSON.stringify(['hash_0', 1, 'seed_0', 'seed_1', 12, 'tick', 'chain']);
 
 /**
- * `buildCheckpointHash` swapped `node:crypto` for a sync, isomorphic sha256 so the contract
- * package stays importable into a browser bundle. This proves both sides of that swap: the
- * Node-context contract call still derives the frozen digest, and a real browser's WebCrypto
- * derives the identical digest over the same canonical bytes.
+ * Every party on the checkpoint hash chain — service, verifier, browser client — must derive
+ * byte-identical digests. This asserts the Node-context contract call and a real browser's
+ * WebCrypto both derive the frozen digest from the same canonical bytes.
  */
 test('it derives the same frozen digest from the contract call and from browser WebCrypto', async ({
   page,
