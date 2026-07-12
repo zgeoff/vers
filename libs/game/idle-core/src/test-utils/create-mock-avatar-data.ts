@@ -9,6 +9,7 @@ export function createMockAvatarData(overrides: Partial<AvatarData> = {}): Avata
     level: 1,
     life: 200,
     name: 'Test Avatar',
+    xp: 0,
     ...overrides,
     paperdoll: {
       [EquipmentSlot.MainHand]: {

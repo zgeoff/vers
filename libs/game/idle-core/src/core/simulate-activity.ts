@@ -32,10 +32,17 @@ export async function* simulateActivity(
     executor.run(timestep);
 
     if (activity.currentEnemyGroup?.remaining === 0) {
-      const rewards = buildGroupClearRewards(activity.currentEnemyGroup);
+      const rewards = buildGroupClearRewards(activity.currentEnemyGroup, activity.difficulty);
 
       activity.updateRewards(rewards);
-      yield createProgressCheckpoint(activity, ctx, rewards);
+
+      const checkpoint = createProgressCheckpoint(activity, avatar, ctx, rewards);
+
+      if (checkpoint.levelUp) {
+        activity.setLevelUp(checkpoint.levelUp);
+      }
+
+      yield checkpoint;
       logger.debug(`${label} moving to next enemy group`);
 
       // move to the next enemy group
@@ -47,8 +54,14 @@ export async function* simulateActivity(
   }
 
   if (!avatar.isAlive) {
-    return createFailedCheckpoint(activity, ctx);
+    return createFailedCheckpoint(activity, avatar, ctx);
   }
 
-  return createCompletedCheckpoint(activity.elapsed, ctx);
+  const completedCheckpoint = createCompletedCheckpoint(activity, avatar, ctx);
+
+  if (completedCheckpoint.levelUp) {
+    activity.setLevelUp(completedCheckpoint.levelUp);
+  }
+
+  return completedCheckpoint;
 }

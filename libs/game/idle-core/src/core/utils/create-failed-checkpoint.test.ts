@@ -1,19 +1,23 @@
 import { expect, test } from 'bun:test';
+import { createAvatar } from '../../entities/create-avatar';
+import { buildFailureXPLoss } from '../../progression';
 import { createMockActivityData } from '../../test-utils/create-mock-activity-data';
+import { createMockAvatarData } from '../../test-utils/create-mock-avatar-data';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
 import { ActivityCheckpointType } from '../../types';
 import { hashObject } from '../../utils/hash-object';
 import { createActivity } from '../create-activity';
 import { createFailedCheckpoint } from './create-failed-checkpoint';
 
-test('it creates a failed checkpoint', () => {
+test('it creates a failed checkpoint with no loss at zero accrued xp', () => {
   const ctx = createMockSimulationContext();
   const activityData = createMockActivityData();
   const activity = createActivity(activityData, ctx);
+  const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
 
   activity.elapseTime(2500);
 
-  const checkpoint = createFailedCheckpoint(activity, ctx);
+  const checkpoint = createFailedCheckpoint(activity, avatar, ctx);
 
   expect(checkpoint).toStrictEqual({
     hash: expect.toBeString(),
@@ -28,8 +32,37 @@ test('it includes a hash based on checkpoint data', () => {
   const ctx = createMockSimulationContext();
   const activityData = createMockActivityData();
   const activity = createActivity(activityData, ctx);
-  const checkpoint = createFailedCheckpoint(activity, ctx);
+  const avatar = createAvatar(createMockAvatarData(), ctx);
+  const checkpoint = createFailedCheckpoint(activity, avatar, ctx);
   const { hash, rewards, ...hashParts } = checkpoint;
 
   expect(hash).toStrictEqual(hashObject(ctx.hasher, hashParts));
+});
+
+test('it subtracts the clamped failure loss from accrued rewards', () => {
+  const ctx = createMockSimulationContext();
+  const activityData = createMockActivityData();
+  const activity = createActivity(activityData, ctx);
+  const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
+
+  activity.updateRewards({ xp: 40 });
+
+  const checkpoint = createFailedCheckpoint(activity, avatar, ctx);
+  const loss = buildFailureXPLoss(40);
+
+  expect(checkpoint.rewards).toStrictEqual({ xp: 40 - loss });
+  expect(loss).toBeGreaterThan(0);
+});
+
+test('it never carries a levelUp', () => {
+  const ctx = createMockSimulationContext();
+  const activityData = createMockActivityData();
+  const activity = createActivity(activityData, ctx);
+  const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
+
+  activity.updateRewards({ xp: 100 });
+
+  const checkpoint = createFailedCheckpoint(activity, avatar, ctx);
+
+  expect(checkpoint.levelUp).toBeUndefined();
 });

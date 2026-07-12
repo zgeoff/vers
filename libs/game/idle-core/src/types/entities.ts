@@ -9,6 +9,7 @@ export interface AvatarData {
   level: number;
   life: number;
   name: string;
+  xp: number;
 
   // TODO: implement this as a map? type? where we use a record to enforce equipment type e.g. 1h/2h weapons = weapons, etc
   paperdoll: {
@@ -82,6 +83,7 @@ export interface AvatarAppState {
 export interface Avatar extends IEntity<AvatarState, AvatarAppState> {
   // meta
   readonly type: EntityType.Avatar;
+  readonly xp: number;
 
   // getters
   get mainHandEquipment(): EquipmentWeapon | null;

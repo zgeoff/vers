@@ -19,6 +19,7 @@ test('it creates avatar data with expected properties', () => {
         speed: 0.8,
       },
     },
+    xp: 0,
   });
 });
 
@@ -53,5 +54,6 @@ test('it creates avatar data with custom properties', () => {
         speed: 1,
       },
     },
+    xp: 0,
   });
 });

@@ -45,6 +45,10 @@ test('runs a simulation with default configuration', async () => {
         },
         {
           "hash": "d0100e711451eca4",
+          "levelUp": {
+            "from": 1,
+            "to": 2,
+          },
           "nextSeed": 2866488649,
           "rewards": {
             "xp": 60,
@@ -74,7 +78,7 @@ test('runs a simulation with default configuration', async () => {
           "hash": "0ad2f691a6d94aa0",
           "nextSeed": 4197947599,
           "rewards": {
-            "xp": 0,
+            "xp": 215,
           },
           "time": 57600,
           "type": "completed",

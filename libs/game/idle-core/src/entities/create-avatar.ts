@@ -98,6 +98,7 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     id: data.id,
     level: data.level,
     type: EntityType.Avatar,
+    xp: data.xp,
 
     // getters
     get isAlive() {
