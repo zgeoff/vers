@@ -1,0 +1,9 @@
+{
+  "name": "@vers/bugsink",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:adapter": "uv run --with boto3==1.43.46 --with moto --with pytest pytest r2_storage_test.py"
+  }
+}

@@ -6,7 +6,7 @@
     "libs/game/worldmap-core/generate-graph.ts",
     ".claude/**"
   ],
-  "ignoreBinaries": ["flyctl", "gh", "ladle", "op", "pulumi"],
+  "ignoreBinaries": ["flyctl", "gh", "ladle", "op", "pulumi", "uv"],
   "rules": {
     "enumMembers": "off"
   },
