@@ -10,8 +10,8 @@ USER root
 RUN pip install --no-cache-dir boto3==1.43.46
 
 RUN cp /app/bugsink_conf.py /app/bugsink_conf_base.py
-COPY r2_storage.py /app/r2_storage.py
-COPY bugsink_conf.py /app/bugsink_conf.py
+COPY apps/bugsink/r2_storage.py /app/r2_storage.py
+COPY apps/bugsink/bugsink_conf.py /app/bugsink_conf.py
 RUN chown bugsink /app/bugsink_conf_base.py /app/r2_storage.py /app/bugsink_conf.py
 
 USER bugsink
