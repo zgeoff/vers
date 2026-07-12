@@ -28,6 +28,10 @@
         "zod": "catalog:",
       },
     },
+    "apps/bugsink": {
+      "name": "@vers/bugsink",
+      "version": "0.0.0",
+    },
     "apps/web": {
       "name": "@vers/web",
       "version": "0.0.0",
@@ -2197,6 +2201,8 @@
     "@ungap/structured-clone": ["@ungap/structured-clone@1.3.2", "", {}, "sha512-5jsZFwgR5rTdKwidH9Qmat75RKwqfpKlWWB1frDkljN127mwqBu8K0PYo7/hFpF03IEJpfVPpCQDY/eDx3iHvA=="],
 
     "@ver0/deep-equal": ["@ver0/deep-equal@1.0.1", "", {}, "sha512-XSvL5wKXBZIv7fflMqhQx936sRpEtzxeV25xAEt0rLLXzbF6RCQaRA1jrVIn8JCubMyn/y0TaidphUtilLzl1A=="],
+
+    "@vers/bugsink": ["@vers/bugsink@workspace:apps/bugsink"],
 
     "@vers/client-test-utils": ["@vers/client-test-utils@workspace:libs/testing/client-test-utils"],
 

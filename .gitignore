@@ -72,3 +72,7 @@ apps/web/src/styled-system/
 libs/design/design-system/src/styled-system/
 libs/design/styled-system/styled-system/
 styled-system-studio
+# python (apps/bugsink adapter)
+__pycache__/
+*.pyc
+.pytest_cache/

@@ -1,0 +1,33 @@
+# Python packages sit outside the Bun test graph; this runs their pytest suites
+# under uv on change. Only apps/bugsink (the Bugsink R2 storage adapter) has one.
+name: Python tests
+
+on:
+  pull_request:
+    paths:
+      - 'apps/bugsink/**'
+      - '.github/workflows/python-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    name: pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Run adapter tests
+        working-directory: apps/bugsink
+        run: bun run test:adapter
