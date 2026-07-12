@@ -217,4 +217,10 @@ test('it applies a confirmed email change for the signed-in caller', async () =>
   const updated = db.userCollection.findFirst((q) => q.where({ id: signedIn.userID }));
 
   expect(updated?.email).toBe('verify-otp-change-email-new@vers.test');
+
+  const notificationEmail = db.sentEmailCollection.findFirst((q) =>
+    q.where({ template: 'send-change-email-notification' }),
+  );
+
+  expect(notificationEmail?.payload).toStrictEqual({ to: 'verify-otp-change-email-old@vers.test' });
 });

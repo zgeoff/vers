@@ -83,6 +83,15 @@ test('it reports a form error for a stale or invalid reset token', async () => {
   expect(outcome.value.error).toStrictEqual({
     '': ['This reset link is invalid or has expired.'],
   });
+
+  expect(
+    db.sentEmailCollection.findFirst((q) =>
+      q.where({
+        payload: { to: 'reset-password-bad-token@vers.test' },
+        template: 'send-password-changed',
+      }),
+    ),
+  ).toBeUndefined();
 });
 
 test('it resets the password, signs the caller out everywhere, and redirects to login', async () => {
@@ -117,4 +126,16 @@ test('it resets the password, signs the caller out everywhere, and redirects to 
   const remainingSessions = db.sessionCollection.findMany((q) => q.where({ userID: user.id }));
 
   expect(remainingSessions).toStrictEqual([]);
+
+  const passwordChangedEmail = db.sentEmailCollection.findFirst((q) =>
+    q.where({
+      payload: { to: 'reset-password-success@vers.test' },
+      template: 'send-password-changed',
+    }),
+  );
+
+  expect(passwordChangedEmail?.payload).toStrictEqual({
+    email: 'reset-password-success@vers.test',
+    to: 'reset-password-success@vers.test',
+  });
 });

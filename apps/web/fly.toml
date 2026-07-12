@@ -28,6 +28,7 @@ grace_period = '10s'
 
 [env]
 AVATAR_SERVICE_URL = 'http://vers-service-avatar.flycast'
+EMAIL_SERVICE_URL = 'http://vers-service-email.flycast'
 SESSION_SERVICE_URL = 'http://vers-service-session.flycast'
 USER_SERVICE_URL = 'http://vers-service-user.flycast'
 VERIFICATION_SERVICE_URL = 'http://vers-service-verification.flycast'

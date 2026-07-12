@@ -5,6 +5,7 @@ import { redirect } from '@tanstack/react-router';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { SpamError } from '../../lib/auth/spam-error';
+import { emailClient } from '../../lib/rpc/clients/email-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { ResetPasswordFormSchema } from './reset-password-form-schema';
 
@@ -12,7 +13,8 @@ const INVALID_LINK_ERROR = 'This reset link is invalid or has expired.';
 
 /**
  * Runs the reset-password form's submission: honeypot then field validation, then applies the new
- * password against the emailed link's token. Signs the caller out everywhere on success.
+ * password against the emailed link's token and emails a password-changed notice. Signs the
+ * caller out everywhere on success.
  */
 export async function resetPasswordHandler(
   formData: FormData,
@@ -52,6 +54,11 @@ export async function resetPasswordHandler(
   if (error) {
     return submission.reply({ formErrors: [INVALID_LINK_ERROR] });
   }
+
+  await emailClient.sendPasswordChanged({
+    email: submission.value.email,
+    to: submission.value.email,
+  });
 
   throw redirect({ href: '/login' });
 }
