@@ -343,6 +343,241 @@ test('it settles a clamped xp loss from a failed terminal checkpoint', async () 
   expect(updated.level).toBe(levelForXP(startingXP + rewardsXP));
 });
 
+test('it advances the chain anchor to the terminal checkpoint on a completed batch', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 100 }, type: 'completed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  const terminal = batch[0]!;
+
+  const chain = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('nodeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(chain.appendedNextSeed).toBe(terminal.payload.nextSeed);
+  expect(chain.appendedChainIndex).toBe(terminal.payload.chainIndex);
+});
+
+test('it advances the chain anchor to the terminal checkpoint on a failed batch', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: -10 }, type: 'failed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  const terminal = batch[0]!;
+
+  const chain = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('nodeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(chain.appendedNextSeed).toBe(terminal.payload.nextSeed);
+  expect(chain.appendedChainIndex).toBe(terminal.payload.chainIndex);
+});
+
+test('it continues the next activity on the same node from the previous terminal checkpoint', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const firstStarted = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  const firstBatch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 100 }, type: 'completed' },
+    startPrevHash: firstStarted.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: firstStarted.id,
+    checkpoints: firstBatch,
+    expectedHead: 0,
+  });
+
+  const terminal = firstBatch[0]!;
+
+  const secondStarted = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  expect(secondStarted.seed).toBe(terminal.payload.nextSeed);
+  expect(secondStarted.startChainIndex).toBe(terminal.payload.chainIndex);
+});
+
+test('it moves nothing when a stale terminal replays the compare-and-swap at an anchor the chain has already passed', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const firstStarted = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  const firstBatch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 100 }, type: 'completed' },
+    startPrevHash: firstStarted.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: firstStarted.id,
+    checkpoints: firstBatch,
+    expectedHead: 0,
+  });
+
+  const secondStarted = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  const secondBatch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 100 }, type: 'completed' },
+    startChainIndex: secondStarted.startChainIndex,
+    startPrevHash: secondStarted.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: secondStarted.id,
+    checkpoints: secondBatch,
+    expectedHead: 0,
+  });
+
+  const anchorAfterSecond = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('nodeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  // replays the first activity's own compare-and-swap, which the chain has already moved past
+  await ctx.db
+    .updateTable('activityChains')
+    .set({ appendedChainIndex: 999, appendedNextSeed: 'replayed-seed' })
+    .where('avatarId', '=', avatar.id)
+    .where('nodeId', '=', 'node_1')
+    .where('appendedChainIndex', '=', firstStarted.startChainIndex)
+    .execute();
+
+  const anchorAfterReplay = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('nodeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(anchorAfterReplay).toStrictEqual(anchorAfterSecond);
+});
+
+test('it rejects a chainIndex that is not startChainIndex plus version with CHECKPOINT_INVALID', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
+  const tampered = [{ ...batch[0]!, payload: { ...batch[0]!.payload, chainIndex: 99 } }];
+
+  expect(
+    client.trackActivityProgress({
+      activityID: started.id,
+      checkpoints: tampered,
+      expectedHead: 0,
+    }),
+  ).rejects.toMatchObject({
+    code: 'CHECKPOINT_INVALID',
+    data: { reason: 'non-contiguous-chain-index' },
+  });
+});
+
+test('it advances the chain anchor exactly once across a duplicate terminal submission', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 100 }, type: 'completed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  const chainAfterFirst = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('nodeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(
+    client.trackActivityProgress({
+      activityID: started.id,
+      checkpoints: batch,
+      expectedHead: 0,
+    }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+  const chainAfterSecond = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('nodeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(chainAfterSecond).toStrictEqual(chainAfterFirst);
+});
+
 test('it does not double-apply xp on a duplicate terminal submission', async () => {
   await using ctx = await setupTest();
 

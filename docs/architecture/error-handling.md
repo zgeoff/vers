@@ -53,18 +53,18 @@ Status assignment follows the failure's nature:
 - **401 Unauthorized** — a failure of authentication state.
 - **409 Conflict** — an operation whose precondition the resource's current state contradicts.
 
-| Domain       | Code                   | Status | Meaning                                                                        | data         |
-| ------------ | ---------------------- | ------ | ------------------------------------------------------------------------------ | ------------ |
-| activity     | `CHECKPOINT_INVALID`   | 422    | Checkpoint batch fails structural validation (contiguity, chain link, or hash) | `{ reason }` |
-| user         | `INVALID_RESET_TOKEN`  | 422    | Reset token doesn't match the one on record                                    | —            |
-| user         | `PASSWORD_NOT_SET`     | 409    | Operation presumes a password; the account has none                            | —            |
-| user         | `RESET_TOKEN_EXPIRED`  | 410    | Reset token was valid but its window has passed                                | —            |
-| session      | `REFRESH_TOKEN_REUSED` | 401    | Refresh token replayed — rotation-theft signal, session revoked                | —            |
-| session      | `SESSION_EXPIRED`      | 401    | Session exists but its lifetime has passed                                     | —            |
-| session      | `TRANSACTION_MISMATCH` | 422    | Step-up consume request doesn't match the pending transaction                  | `{ field }`  |
-| verification | `CODE_ALREADY_USED`    | 410    | One-time code already consumed                                                 | —            |
-| verification | `CODE_EXPIRED`         | 410    | Code was valid but its window has passed                                       | —            |
-| verification | `INVALID_CODE`         | 422    | Code doesn't verify against the secret                                         | —            |
+| Domain       | Code                   | Status | Meaning                                                                                    | data         |
+| ------------ | ---------------------- | ------ | ------------------------------------------------------------------------------------------ | ------------ |
+| activity     | `CHECKPOINT_INVALID`   | 422    | Checkpoint batch fails structural validation (contiguity, chainIndex, chain link, or hash) | `{ reason }` |
+| user         | `INVALID_RESET_TOKEN`  | 422    | Reset token doesn't match the one on record                                                | —            |
+| user         | `PASSWORD_NOT_SET`     | 409    | Operation presumes a password; the account has none                                        | —            |
+| user         | `RESET_TOKEN_EXPIRED`  | 410    | Reset token was valid but its window has passed                                            | —            |
+| session      | `REFRESH_TOKEN_REUSED` | 401    | Refresh token replayed — rotation-theft signal, session revoked                            | —            |
+| session      | `SESSION_EXPIRED`      | 401    | Session exists but its lifetime has passed                                                 | —            |
+| session      | `TRANSACTION_MISMATCH` | 422    | Step-up consume request doesn't match the pending transaction                              | `{ field }`  |
+| verification | `CODE_ALREADY_USED`    | 410    | One-time code already consumed                                                             | —            |
+| verification | `CODE_EXPIRED`         | 410    | Code was valid but its window has passed                                                   | —            |
+| verification | `INVALID_CODE`         | 422    | Code doesn't verify against the secret                                                     | —            |
 
 ## Service layer
 
