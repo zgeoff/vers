@@ -7,6 +7,7 @@ import * as z from 'zod';
  */
 export const CheckpointPayloadSchema = z
   .looseObject({
+    entropySource: z.string(),
     nextSeed: z.string(),
     seed: z.string(),
     time: z.number(),

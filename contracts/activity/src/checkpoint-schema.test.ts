@@ -5,7 +5,7 @@ test('it accepts a well-formed checkpoint', () => {
   const result = CheckpointSchema.safeParse({
     appendedAt: new Date(),
     hash: 'hash_1',
-    payload: { nextSeed: 'seed_1', seed: 'seed_0', time: 12, type: 'tick' },
+    payload: { entropySource: 'chain', nextSeed: 'seed_1', seed: 'seed_0', time: 12, type: 'tick' },
     prevHash: 'hash_0',
     version: 1,
   });
@@ -16,7 +16,7 @@ test('it accepts a well-formed checkpoint', () => {
 test('it rejects a checkpoint missing appendedAt', () => {
   const result = CheckpointSchema.safeParse({
     hash: 'hash_1',
-    payload: { nextSeed: 'seed_1', seed: 'seed_0', time: 12, type: 'tick' },
+    payload: { entropySource: 'chain', nextSeed: 'seed_1', seed: 'seed_0', time: 12, type: 'tick' },
     prevHash: 'hash_0',
     version: 1,
   });
