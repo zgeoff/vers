@@ -27,6 +27,9 @@ test('runs a simulation with default configuration', async () => {
       "checkpoints": [
         {
           "hash": "cbd6cc9427a79b1e",
+          "rewards": {
+            "xp": 0,
+          },
           "seed": 3047525658,
           "time": 0,
           "type": "started",
@@ -34,35 +37,53 @@ test('runs a simulation with default configuration', async () => {
         {
           "hash": "611b08f1de148c51",
           "nextSeed": 685112472,
+          "rewards": {
+            "xp": 60,
+          },
           "time": 16300,
           "type": "progress",
         },
         {
           "hash": "d0100e711451eca4",
           "nextSeed": 2866488649,
+          "rewards": {
+            "xp": 60,
+          },
           "time": 36300,
           "type": "progress",
         },
         {
           "hash": "754e2d41cc9f551d",
           "nextSeed": 2249575321,
+          "rewards": {
+            "xp": 30,
+          },
           "time": 46300,
           "type": "progress",
         },
         {
           "hash": "e9f8306aa299f8cc",
           "nextSeed": 3183217100,
+          "rewards": {
+            "xp": 40,
+          },
           "time": 57600,
           "type": "progress",
         },
         {
           "hash": "0ad2f691a6d94aa0",
           "nextSeed": 4197947599,
+          "rewards": {
+            "xp": 0,
+          },
           "time": 57600,
           "type": "completed",
         },
         {
           "hash": "f1dd0c3fcae677d9",
+          "rewards": {
+            "xp": 0,
+          },
           "seed": 4197947599,
           "time": 0,
           "type": "started",
@@ -70,6 +91,9 @@ test('runs a simulation with default configuration', async () => {
         {
           "hash": "18975faf33fdc719",
           "nextSeed": 2381219441,
+          "rewards": {
+            "xp": 60,
+          },
           "time": 18800,
           "type": "progress",
         },
@@ -130,6 +154,7 @@ test('it stops at the specified seed if provided', async () => {
   expect(finalCheckpoint).toStrictEqual({
     hash: expect.toBeString(),
     nextSeed: config.stopAtSeed,
+    rewards: expect.toBeObject(),
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Completed,
   });
@@ -165,6 +190,7 @@ test('it aborts on failure if failure action is set to abort', async () => {
   expect(lastCheckpoint).toStrictEqual({
     hash: expect.toBeString(),
     nextSeed: expect.toBeNumber(),
+    rewards: { xp: 0 },
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Failed,
   });

@@ -2,6 +2,7 @@ import type {
   Activity,
   ActivityAppState,
   ActivityData,
+  ActivityRewards,
   EnemyGroup,
   SimulationContext,
 } from '../types';
@@ -19,6 +20,7 @@ export function createActivity(
 ): Activity {
   let elapsed = 0;
   let currentEnemyGroupIdx = 0;
+  let rewards: ActivityRewards = { xp: 0 };
   const enemyGroups: Array<EnemyGroup> = getEnemyGroups(data, ctx, config);
   const isEnemyGroupsRemaining = () => enemyGroups.some((group) => group.remaining > 0);
 
@@ -28,6 +30,10 @@ export function createActivity(
 
   const elapseTime = (time: number) => {
     elapsed += time;
+  };
+
+  const accrueRewards = (delta: ActivityRewards) => {
+    rewards = mergeRewards(rewards, delta);
   };
 
   const getAppState = (): ActivityAppState => {
@@ -43,6 +49,7 @@ export function createActivity(
       enemyGroupsRemaining,
       id: data.id,
       name: data.name,
+      rewards,
     };
   };
 
@@ -63,12 +70,23 @@ export function createActivity(
     get isEnemyGroupsRemaining() {
       return isEnemyGroupsRemaining();
     },
+    get rewards() {
+      return rewards;
+    },
 
     // core
     getAppState,
 
     // utils
+    accrueRewards,
     elapseTime,
     moveToNextEnemyGroup,
   };
+}
+
+/**
+ * Adds two reward maps keywise. A key an interface later adds is a mechanical addition here.
+ */
+function mergeRewards(base: ActivityRewards, delta: ActivityRewards): ActivityRewards {
+  return { xp: base.xp + delta.xp };
 }

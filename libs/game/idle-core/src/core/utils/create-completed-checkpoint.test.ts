@@ -11,6 +11,7 @@ test('it creates a completed checkpoint', () => {
   expect(checkpoint).toStrictEqual({
     hash: expect.toBeString(),
     nextSeed: expect.toBeNumber(),
+    rewards: { xp: 0 },
     time: 2500,
     type: ActivityCheckpointType.Completed,
   });
@@ -19,7 +20,7 @@ test('it creates a completed checkpoint', () => {
 test('it includes a hash based on checkpoint data', () => {
   const ctx = createMockSimulationContext();
   const checkpoint = createCompletedCheckpoint(2500, ctx);
-  const { hash, ...hashParts } = checkpoint;
+  const { hash, rewards, ...hashParts } = checkpoint;
 
   expect(hash).toStrictEqual(hashObject(ctx.hasher, hashParts));
 });

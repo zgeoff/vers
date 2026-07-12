@@ -35,6 +35,7 @@ test('it immediately generates a started checkpoint', async () => {
 
   expect(firstCheckpoint).toStrictEqual({
     hash: expect.toBeString(),
+    rewards: { xp: 0 },
     seed: 999_999_999,
     time: 0,
     type: ActivityCheckpointType.Started,
@@ -87,6 +88,7 @@ test('it generates enemy group killed checkpoints', async () => {
   expect(secondCheckpoint).toStrictEqual({
     hash: expect.toBeString(),
     nextSeed: expect.toBeNumber(),
+    rewards: { xp: 50 },
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Progress,
   });
@@ -94,9 +96,54 @@ test('it generates enemy group killed checkpoints', async () => {
   expect(thirdCheckpoint).toStrictEqual({
     hash: expect.toBeString(),
     nextSeed: expect.toBeNumber(),
+    rewards: { xp: 50 },
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Progress,
   });
+});
+
+test('it accrues rewards across multiple cleared groups', async () => {
+  const weapon: EquipmentWeapon = {
+    id: 'test-weapon',
+    maxDamage: 9999,
+    minDamage: 9999,
+    name: 'Test Weapon',
+    speed: 6,
+  };
+
+  const avatarData = createMockAvatarData({
+    paperdoll: {
+      [EquipmentSlot.MainHand]: weapon,
+    },
+  });
+
+  const enemyData = createMockEnemyData({ life: 1, xp: 10 });
+
+  const activityData = createMockActivityData({
+    enemies: [enemyData],
+    failureAction: ActivityFailureAction.Retry,
+    id: 'world_node_1',
+    type: ActivityType.WorldNode,
+  });
+
+  const ctx = createMockSimulationContext();
+  const activity = createActivity(activityData, ctx, { groupCount: 2, groupSize: 5 });
+  const avatar = createAvatar(avatarData, ctx);
+  const executor = createCombatExecutor(activity, avatar, ctx);
+  const generator = simulateActivity(executor, activity, avatar, ctx);
+
+  // skip the started checkpoint
+  await generator.next(1000);
+
+  // clear the first group
+  await generator.next(1000);
+
+  expect(activity.rewards).toStrictEqual({ xp: 50 });
+
+  // clear the second group
+  await generator.next(1000);
+
+  expect(activity.rewards).toStrictEqual({ xp: 100 });
 });
 
 test('it generates a failed checkpoint when the avatar dies', async () => {
@@ -129,6 +176,7 @@ test('it generates a failed checkpoint when the avatar dies', async () => {
   expect(checkpoint).toStrictEqual({
     hash: expect.toBeString(),
     nextSeed: expect.toBeNumber(),
+    rewards: { xp: 0 },
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Failed,
   });
@@ -175,6 +223,7 @@ test('it returns a completed checkpoint when all enemies are defeated', async ()
   expect(checkpoint).toStrictEqual({
     hash: expect.toBeString(),
     nextSeed: expect.toBeNumber(),
+    rewards: { xp: 0 },
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Completed,
   });

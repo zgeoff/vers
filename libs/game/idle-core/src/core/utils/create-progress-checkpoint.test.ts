@@ -13,11 +13,12 @@ test('it creates a progress checkpoint', () => {
 
   activity.elapseTime(2500);
 
-  const checkpoint = createProgressCheckpoint(activity, ctx);
+  const checkpoint = createProgressCheckpoint(activity, ctx, { xp: 15 });
 
   expect(checkpoint).toStrictEqual({
     hash: expect.toBeString(),
     nextSeed: expect.toBeNumber(),
+    rewards: { xp: 15 },
     time: 2500,
     type: ActivityCheckpointType.Progress,
   });
@@ -30,8 +31,29 @@ test('it includes a hash based on checkpoint data', () => {
 
   activity.elapseTime(2500);
 
-  const checkpoint = createProgressCheckpoint(activity, ctx);
-  const { hash, ...hashParts } = checkpoint;
+  const checkpoint = createProgressCheckpoint(activity, ctx, { xp: 15 });
+  const { hash, rewards, ...hashParts } = checkpoint;
 
   expect(hash).toStrictEqual(hashObject(ctx.hasher, hashParts));
+});
+
+test('it produces the same hash for checkpoints that differ only by rewards', () => {
+  const activityData = createMockActivityData();
+  const ctxWithNoRewards = createMockSimulationContext();
+  const activityWithNoRewards = createActivity(activityData, ctxWithNoRewards);
+
+  activityWithNoRewards.elapseTime(2500);
+
+  const withNoRewards = createProgressCheckpoint(activityWithNoRewards, ctxWithNoRewards, {
+    xp: 0,
+  });
+
+  const ctxWithRewards = createMockSimulationContext();
+  const activityWithRewards = createActivity(activityData, ctxWithRewards);
+
+  activityWithRewards.elapseTime(2500);
+
+  const withRewards = createProgressCheckpoint(activityWithRewards, ctxWithRewards, { xp: 15 });
+
+  expect(withRewards.hash).toStrictEqual(withNoRewards.hash);
 });
