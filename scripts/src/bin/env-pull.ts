@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { ENV_FILE_MANIFEST } from '../env/manifest';
+import { ENV_FILE_MANIFEST } from '../env/env-file-manifest';
 import { parseNotesPlain } from '../env/parse-notes-plain';
 import { planEnvWrites } from '../env/plan-env-writes';
 import { readOpItem } from '../env/read-op-item';
