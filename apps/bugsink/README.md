@@ -4,24 +4,35 @@ Self-hosted [Bugsink](https://www.bugsink.com) error tracker, deployed on Fly as
 Browser and server exceptions ingest here over the Sentry protocol: each vers app has its own
 Bugsink project, and that project's DSN is the only wiring an app carries.
 
-This directory holds Fly config only — no workspace package, nothing to build. The app runs the
-pinned stock `bugsink/bugsink` image; a merge to `main` touching this directory redeploys it, so
-upgrading Bugsink is a tag bump in `fly.toml`. A manual roll is
-`fly deploy --config apps/bugsink/fly.toml`.
+This directory holds Fly config plus a thin image (`Dockerfile`) over the pinned stock
+`bugsink/bugsink`, adding boto3 and the R2 storage backend below. A merge to `main` touching this
+directory redeploys it, and upgrading Bugsink is a tag bump on the `Dockerfile` `FROM` line. A
+manual roll is `fly deploy --config apps/bugsink/fly.toml`. `bugsink_conf.py` imports the stock
+image's config and overrides only the file object storage, so the rest of Bugsink's env-driven
+settings stay upstream's.
 
 ## Storage
 
 Event data lives in a dedicated database in the shared Neon project (`DATABASE_URL` secret) — no app
-runs its own database, the machine keeps no volume, and Bugsink's SQLite-on-Docker-volume warning
-never applies.
+runs its own database and the machine keeps no volume. Uploaded files (sourcemap artifact bundles),
+which Bugsink stores in the database by default, go to the Cloudflare R2 bucket `vers-bugsink-files`
+via `r2_storage.py` instead, keeping those blobs and their read traffic off Neon. Existing files
+move across with `bugsink-manage migrate_to_current_objectstorage`.
 
 ## Secrets
 
-| Secret             | Value                                              |
-| ------------------ | -------------------------------------------------- |
-| `SECRET_KEY`       | `openssl rand -base64 50`                          |
-| `DATABASE_URL`     | the Neon `bugsink` database, pooled connection URL |
-| `CREATE_SUPERUSER` | `email:password` — first boot only, unset after    |
+| Secret                 | Value                                                      |
+| ---------------------- | ---------------------------------------------------------- |
+| `SECRET_KEY`           | `openssl rand -base64 50`                                  |
+| `DATABASE_URL`         | the Neon `bugsink` database, pooled connection URL         |
+| `CREATE_SUPERUSER`     | `email:password` — first boot only, unset after            |
+| `R2_ENDPOINT_URL`      | `https://<cloudflare-account-id>.r2.cloudflarestorage.com` |
+| `R2_BUCKET`            | `vers-bugsink-files`                                       |
+| `R2_ACCESS_KEY_ID`     | R2 S3 access key id                                        |
+| `R2_SECRET_ACCESS_KEY` | R2 S3 secret access key                                    |
+
+The R2 credentials also live on the `bugsink-r2` item in the `vers` 1Password vault. Unset the four
+`R2_*` secrets and Bugsink falls back to storing files in the database.
 
 ## API tokens
 
