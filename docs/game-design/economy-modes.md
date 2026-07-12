@@ -51,8 +51,10 @@ a list of today's features:
 
 - No container is shared across the boundary — stashes, banks, prize pools — including between one
   account's own avatars.
-- Self-found ladders rank on server-verifiable play — depth, level, clear speed — never on gear,
-  which only the player's own device rolled.
+- Self-found ladders rank on server-verifiable play — depth, level, clear speed. Those outcomes are
+  gear-influenced and a device-held key rolls that gear locally, so self-found standing leans harder
+  on reroll detection than a trade avatar's; the same appended, verified record defends it, and it is
+  not held to be tamper-proof.
 - Avatars are league-scoped, so league resets contain self-found holdings with no extra rule.
 
 ## Reward Classes
@@ -93,12 +95,13 @@ while players sleep. The economy-loop note owns both.
 Juice is spending to modify an expedition instance. Where its randomness lives follows the tail
 rule, not the mechanic:
 
-- **Tiers and instance modifiers** — choose a tier, roll and reroll the instance's modifiers, lock
-  in. Modifier outcomes are normalized by design: bounded scalars on difficulty and yield, no
-  jackpot combinations, never coupled to a reward tail. A tail-free distribution reveals nothing
-  worth selecting, so instance rolling is client-trustable and works anywhere, offline included,
-  rerolls and all. Keeping modifiers jackpot-free is a standing content constraint, the same
-  obligation as roll density.
+- **Tiers and instance modifiers** — choose a tier, then roll and reroll the instance's flavour
+  modifiers, lock in. Any modifier that scales a market-grade quantity — yield, roll or pack count —
+  is set by the chosen tier at a published scalar, never rolled, so it reveals nothing to select. The
+  modifiers that may be rolled are normalized: bounded scalars, no jackpot combinations, never
+  coupled to a reward tail. A tail-free distribution is client-trustable and works anywhere, offline
+  included, rerolls and all. Keeping rolled modifiers tail-free is a standing content constraint, the
+  same obligation as roll density.
 - **Item crafting** — affix rolls are the tail; shaping items is the point. Crafting rolls draw
   sealed server entropy behind the preview flow, online. Self-found avatars craft against their own
   key — nothing is sealed from them, and nothing they make can leave.

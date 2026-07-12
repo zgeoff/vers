@@ -27,11 +27,13 @@ decide whether to trust what the client submitted.
 
 ## Server-authored inputs
 
-`startActivity` is a server action that owns every simulation input: it mints the seed (see
-[game entropy](./game-entropy.md)), resolves the node's enemy content, snapshots the avatar's build
-(equipment, passives, level) from server truth, and stamps the engine and content versions.
-Client-submitted activity and avatar payloads are display hints — the verifier replays from the
-snapshot, never from round-tripped values.
+`startActivity` is a server action that owns every simulation input: it mints the seed for a node's
+first activity and derives each continuation's seed from the previous activity's committed checkpoint
+(see [game entropy](./game-entropy.md)), resolves the node's enemy content, snapshots the avatar's
+build (equipment, passives, level) from server truth, and stamps the engine and content versions.
+Client-submitted activity and avatar payloads are display hints, and a continuation's seed is a
+client computation the verifier reproduces from the committed chain — never a round-tripped value
+taken on trust.
 
 Build mutations are gated while an activity is active: level-ups render optimistically and apply
 between activities. A snapshot that cannot change mid-activity is what makes replay exact.
@@ -69,6 +71,13 @@ operational state, not judged as a cheat signal. Only reproducible divergence un
 version and snapshot, on repetition, is treated as cheating, and enforcement lands at a session
 boundary — never mid-session. A stream that fails verification repeatedly is quarantined and alerted
 on rather than retried forever.
+
+Replay divergence is not the only cheat signal. Because every attempt at a node is a link in the
+append-only, server-verified chain, reroll-scanning is visible in the record: an avatar whose
+completions land in the favorable tail of a node's distribution after abnormally many failed attempts
+stands out from honest play. It is a behavioural signal, not a divergence, scored under the same
+restraint — a soft consequence before a hard one, at a session boundary — because an honest grinder
+also fails, and a false accusation costs more than the edge it denies.
 
 The primary health gauge is verification lag: the oldest unverified append across all streams.
 Rejection rates are tracked split by cause — an integrity-mismatch spike is almost always a bad
