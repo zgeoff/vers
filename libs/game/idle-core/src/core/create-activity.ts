@@ -2,6 +2,7 @@ import type {
   Activity,
   ActivityAppState,
   ActivityData,
+  ActivityLevelUp,
   ActivityRewards,
   EnemyGroup,
   SimulationContext,
@@ -21,6 +22,7 @@ export function createActivity(
   let elapsed = 0;
   let currentEnemyGroupIdx = 0;
   let rewards: ActivityRewards = { xp: 0 };
+  let levelUp: ActivityLevelUp | null = null;
   const enemyGroups: Array<EnemyGroup> = getEnemyGroups(data, ctx, config);
   const isEnemyGroupsRemaining = () => enemyGroups.some((group) => group.remaining > 0);
 
@@ -36,6 +38,10 @@ export function createActivity(
     rewards = mergeRewards(rewards, delta);
   };
 
+  const setLevelUp = (nextLevelUp: ActivityLevelUp) => {
+    levelUp = nextLevelUp;
+  };
+
   const getAppState = (): ActivityAppState => {
     const currentEnemyGroup = enemyGroups[currentEnemyGroupIdx]?.getAppState() ?? null;
     const enemiesRemaining = enemyGroups.reduce((acc, group) => acc + group.remaining, 0);
@@ -48,6 +54,7 @@ export function createActivity(
       enemyGroups: enemyGroups.map((group) => group.getAppState()),
       enemyGroupsRemaining,
       id: data.id,
+      levelUp,
       name: data.name,
       rewards,
     };
@@ -55,6 +62,7 @@ export function createActivity(
 
   return {
     // meta
+    difficulty: data.difficulty,
     enemyGroups,
     id: data.id,
     name: data.name,
@@ -70,6 +78,9 @@ export function createActivity(
     get isEnemyGroupsRemaining() {
       return isEnemyGroupsRemaining();
     },
+    get levelUp() {
+      return levelUp;
+    },
     get rewards() {
       return rewards;
     },
@@ -81,6 +92,7 @@ export function createActivity(
     updateRewards,
     elapseTime,
     moveToNextEnemyGroup,
+    setLevelUp,
   };
 }
 

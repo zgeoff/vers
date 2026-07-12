@@ -1,4 +1,4 @@
-import { Heading } from '@vers/design-system';
+import { Heading, Text } from '@vers/design-system';
 import type { AvatarAppState } from '@vers/idle-core';
 import { AttackTimerBar } from './attack-timer-bar';
 import * as styles from './avatar-info.styles';
@@ -18,6 +18,7 @@ export function AvatarInfo(props: Readonly<AvatarInfoProps>) {
       <Heading className={styles.avatarName} level={4}>
         {props.avatar.name}
       </Heading>
+      <Text>Level {props.avatar.level}</Text>
       <LifeBar life={props.avatar.life} maxLife={props.avatar.maxLife} />
       <AttackTimerBar
         isAlive={props.avatar.isAlive}

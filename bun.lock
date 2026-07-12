@@ -682,8 +682,10 @@
         "@paralleldrive/cuid2": "catalog:",
         "@vers/contract-activity": "workspace:*",
         "@vers/db": "workspace:*",
+        "@vers/idle-core": "workspace:*",
         "@vers/service-runtime": "workspace:*",
         "kysely": "catalog:",
+        "tiny-invariant": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {

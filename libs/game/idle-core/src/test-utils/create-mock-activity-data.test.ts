@@ -7,6 +7,7 @@ test('it creates activity data with expected properties', () => {
   const activity = createMockActivityData();
 
   expect(activity).toStrictEqual({
+    difficulty: 1,
     enemies: [
       {
         level: 1,
@@ -41,6 +42,7 @@ test('it creates activity data with custom properties', () => {
   });
 
   expect(activity).toStrictEqual({
+    difficulty: 1,
     enemies: [enemy],
     failureAction: ActivityFailureAction.Abort,
     id: 'custom-activity',

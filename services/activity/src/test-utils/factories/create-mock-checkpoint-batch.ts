@@ -9,6 +9,12 @@ interface CreateMockCheckpointBatchConfig {
   readonly count?: number;
 
   /**
+   * Extra fields merged into the last entry's payload — `type`/`rewards` for a batch ending in a
+   * terminal checkpoint. Ignored by `buildCheckpointHash`, so the chain stays valid.
+   */
+  readonly finalPayloadOverrides?: Readonly<Record<string, unknown>>;
+
+  /**
    * The hash the batch's first entry links onto — the activity's current `lastHash` for a batch
    * that will apply cleanly.
    */
@@ -34,6 +40,7 @@ export function createMockCheckpointBatch(
 
   for (let index = 0; index < count; index += 1) {
     const version = config.startVersion + index;
+    const isLast = index === count - 1;
 
     const payload = {
       entropySource: 'chain',
@@ -41,6 +48,7 @@ export function createMockCheckpointBatch(
       seed: faker.string.alphanumeric({ casing: 'lower', length: 16 }),
       time: version * 1000,
       type: 'tick',
+      ...(isLast && config.finalPayloadOverrides),
     };
 
     const hash = buildCheckpointHash({ ...payload, prevHash, version });

@@ -1,6 +1,7 @@
 import type { EnemyData, EnemyGroup, EnemyGroupAppState } from './entities';
 
 interface IActivityData {
+  difficulty: number;
   failureAction: ActivityFailureAction;
   id: string;
   name: string;
@@ -32,6 +33,14 @@ export interface ActivityRewards {
   readonly xp: number;
 }
 
+/**
+ * A level crossing recorded on the checkpoint (or activity attempt) that caused it.
+ */
+export interface ActivityLevelUp {
+  readonly from: number;
+  readonly to: number;
+}
+
 export interface ActivityAppState {
   readonly currentEnemyGroup: EnemyGroupAppState | null;
   readonly elapsed: number;
@@ -39,12 +48,14 @@ export interface ActivityAppState {
   readonly enemyGroups: Array<EnemyGroupAppState>;
   readonly enemyGroupsRemaining: number;
   readonly id: string;
+  readonly levelUp: ActivityLevelUp | null;
   readonly name: string;
   readonly rewards: ActivityRewards;
 }
 
 export interface Activity {
   // meta
+  readonly difficulty: number;
   readonly enemyGroups: Array<EnemyGroup>;
   readonly id: string;
   readonly name: string;
@@ -54,6 +65,7 @@ export interface Activity {
   get currentEnemyGroup(): EnemyGroup | null;
   get elapsed(): number;
   get isEnemyGroupsRemaining(): boolean;
+  get levelUp(): ActivityLevelUp | null;
   get rewards(): ActivityRewards;
 
   // utils
@@ -61,6 +73,7 @@ export interface Activity {
   elapseTime: (time: number) => void;
   getAppState: () => ActivityAppState;
   moveToNextEnemyGroup: () => void;
+  setLevelUp: (levelUp: ActivityLevelUp) => void;
 }
 
 export type ActivityCheckpointGenerator = AsyncGenerator<
@@ -71,6 +84,7 @@ export type ActivityCheckpointGenerator = AsyncGenerator<
 
 interface IActivityCheckpoint {
   readonly hash: string;
+  readonly levelUp?: ActivityLevelUp;
   readonly rewards: ActivityRewards;
   readonly time: number;
   readonly type: ActivityCheckpointType;

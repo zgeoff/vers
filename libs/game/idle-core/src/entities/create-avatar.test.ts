@@ -26,6 +26,17 @@ test('it creates an avatar with correct initial values', () => {
   expect(avatar.isAlive).toBeTrue();
 });
 
+test('it reflects a level update in the entity and its app state', () => {
+  const ctx = createMockSimulationContext();
+  const data = createMockAvatarData({ level: 1 });
+  const avatar = createAvatar(data, ctx);
+
+  avatar.updateLevel(3);
+
+  expect(avatar.level).toBe(3);
+  expect(avatar.getAppState().level).toBe(3);
+});
+
 test('it exposes a method for setting the avatar state', () => {
   const ctx = createMockSimulationContext();
   const data = createMockAvatarData();

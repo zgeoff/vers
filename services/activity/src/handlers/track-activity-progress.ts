@@ -1,8 +1,11 @@
-import type { CheckpointBatchEntry } from '@vers/contract-activity';
+import type { CheckpointBatchEntry, CheckpointPayload } from '@vers/contract-activity';
 import { buildCheckpointHash } from '@vers/contract-activity';
 import type { DB, Json } from '@vers/db';
+import { levelForXP } from '@vers/idle-core';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
+import invariant from 'tiny-invariant';
+import * as z from 'zod';
 import type {
   CheckpointInvalidPayload,
   EmptyErrorPayload,
@@ -33,7 +36,10 @@ interface TrackActivityProgressOpts {
  * contiguity and hash chain are validated up front; the head-row compare-and-swap inside the
  * transaction is the actual serialization point — a losing race re-reads the current head and
  * reports NOT_FOUND (activity gone or no longer active) or CONFLICT (a retryable stale head) as
- * appropriate.
+ * appropriate. When the batch's last checkpoint is terminal (completed or failed), the same
+ * transaction claims the activity's terminal transition and settles the avatar's xp/level from
+ * that checkpoint's final rewards total — the claim guards against a duplicate terminal
+ * resubmission double-applying.
  */
 export async function trackActivityProgress(
   db: Kysely<DB>,
@@ -48,7 +54,7 @@ export async function trackActivityProgress(
   const head = await db
     .selectFrom('activities')
     .innerJoin('avatars', 'avatars.id', 'activities.avatarId')
-    .select(['activities.appendedHead', 'activities.lastHash'])
+    .select(['activities.appendedHead', 'activities.avatarId', 'activities.lastHash', 'avatars.xp'])
     .where('activities.id', '=', opts.input.activityID)
     .where('avatars.userId', '=', actingUserID)
     .where('activities.status', '=', 'active')
@@ -67,11 +73,20 @@ export async function trackActivityProgress(
   const lastCheckpoint = opts.input.checkpoints.at(-1);
   const newHead = lastCheckpoint?.version ?? opts.input.expectedHead;
   const newLastHash = lastCheckpoint?.hash ?? head.lastHash;
+  const terminalRewardsXP = lastCheckpoint && findTerminalRewardsXP(lastCheckpoint.payload);
 
   const appendedHead = await db.transaction().execute(async (trx) => {
     const updated = await trx
       .updateTable('activities')
-      .set({ appendedAt: sql`now()`, appendedHead: newHead, lastHash: newLastHash })
+      .set({
+        appendedAt: sql`now()`,
+        appendedHead: newHead,
+        lastHash: newLastHash,
+        ...(terminalRewardsXP !== undefined && {
+          status: 'stopped' as const,
+          stoppedAt: sql`now()`,
+        }),
+      })
       .where('id', '=', opts.input.activityID)
       .where('appendedHead', '=', opts.input.expectedHead)
       .where('status', '=', 'active')
@@ -106,6 +121,19 @@ export async function trackActivityProgress(
           })),
         )
         .execute();
+    }
+
+    if (terminalRewardsXP !== undefined) {
+      const newXP = Math.max(0, Math.round(head.xp + terminalRewardsXP));
+
+      const settled = await trx
+        .updateTable('avatars')
+        .set({ level: levelForXP(newXP), xp: newXP })
+        .where('id', '=', head.avatarId)
+        .where('xp', '=', head.xp)
+        .executeTakeFirst();
+
+      invariant(settled.numUpdatedRows > 0n, 'avatar settlement must apply exactly once');
     }
 
     return updated.appendedHead;
@@ -171,4 +199,27 @@ function findInvalidReason(
   }
 
   return undefined;
+}
+
+/**
+ * Checkpoint types whose `rewards.xp` is a final running total the avatar row settles against.
+ */
+const TERMINAL_CHECKPOINT_TYPES = new Set(['completed', 'failed']);
+
+const TerminalRewardsSchema = z.object({ xp: z.number() });
+
+/**
+ * The final rewards total a terminal checkpoint's payload carries, or `undefined` when the
+ * checkpoint isn't terminal or its `rewards` shape doesn't parse — the latter settles no xp rather
+ * than throwing, since the hash chain doesn't cover `rewards` and a malformed value isn't
+ * distinguishable here from a stale or non-terminal client payload.
+ */
+function findTerminalRewardsXP(payload: Readonly<CheckpointPayload>): number | undefined {
+  if (!TERMINAL_CHECKPOINT_TYPES.has(payload.type)) {
+    return undefined;
+  }
+
+  const parsed = TerminalRewardsSchema.safeParse(payload['rewards']);
+
+  return parsed.success ? parsed.data.xp : undefined;
 }

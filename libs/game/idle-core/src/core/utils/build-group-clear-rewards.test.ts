@@ -5,13 +5,13 @@ import { createMockSimulationContext } from '../../test-utils/create-mock-simula
 import { buildGroupClearRewards } from './build-group-clear-rewards';
 import { createEnemyGroup } from './create-enemy-group';
 
-test('it sums the xp of every enemy in the group', () => {
+test('it sums the difficulty-scaled xp of every enemy in the group', () => {
   const enemyData = createMockEnemyData({ xp: 10 });
   const activity = createMockActivityData({ enemies: [enemyData] });
   const ctx = createMockSimulationContext();
   const group = createEnemyGroup(activity, ctx, 3);
 
-  expect(buildGroupClearRewards(group)).toStrictEqual({ xp: 30 });
+  expect(buildGroupClearRewards(group, 1)).toStrictEqual({ xp: 30 });
 });
 
 test('it returns zero xp for an empty group', () => {
@@ -19,5 +19,14 @@ test('it returns zero xp for an empty group', () => {
   const ctx = createMockSimulationContext();
   const group = createEnemyGroup(activity, ctx, 0);
 
-  expect(buildGroupClearRewards(group)).toStrictEqual({ xp: 0 });
+  expect(buildGroupClearRewards(group, 1)).toStrictEqual({ xp: 0 });
+});
+
+test('it scales the summed xp by difficulty', () => {
+  const enemyData = createMockEnemyData({ xp: 10 });
+  const activity = createMockActivityData({ enemies: [enemyData] });
+  const ctx = createMockSimulationContext();
+  const group = createEnemyGroup(activity, ctx, 2);
+
+  expect(buildGroupClearRewards(group, 2)).toStrictEqual({ xp: 40 });
 });

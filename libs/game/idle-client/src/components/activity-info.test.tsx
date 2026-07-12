@@ -12,6 +12,7 @@ test('it renders info about the provided activity', () => {
     enemyGroups: [],
     enemyGroupsRemaining: 4,
     id: 'test-activity',
+    levelUp: null,
     name: 'Test Activity',
     rewards: { xp: 150 },
   };

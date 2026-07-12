@@ -42,6 +42,7 @@ test('it returns the expected activity state for a client app', () => {
     enemyGroups: expect.toBeArray(),
     enemyGroupsRemaining: expect.toBeNumber(),
     id: activity.id,
+    levelUp: null,
     name: activity.name,
     rewards: { xp: 0 },
   });
@@ -57,4 +58,25 @@ test('it accrues rewards across multiple calls', () => {
 
   expect(activity.rewards).toStrictEqual({ xp: 15 });
   expect(activity.getAppState().rewards).toStrictEqual({ xp: 15 });
+});
+
+test('it exposes the difficulty carried by its activity data', () => {
+  const ctx = createMockSimulationContext();
+  const activityData = createMockActivityData({ difficulty: 2.5 });
+  const activity = createActivity(activityData, ctx);
+
+  expect(activity.difficulty).toBe(2.5);
+});
+
+test('it records a level-up event and surfaces it on app state', () => {
+  const ctx = createMockSimulationContext();
+  const activityData = createMockActivityData();
+  const activity = createActivity(activityData, ctx);
+
+  expect(activity.levelUp).toBeNull();
+
+  activity.setLevelUp({ from: 1, to: 2 });
+
+  expect(activity.levelUp).toStrictEqual({ from: 1, to: 2 });
+  expect(activity.getAppState().levelUp).toStrictEqual({ from: 1, to: 2 });
 });

@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
+import { buildFailureXPLoss, levelForXP } from '@vers/idle-core';
 import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
@@ -257,4 +258,126 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   expect(
     client.trackActivityProgress({ activityID: 'act_1', checkpoints: [], expectedHead: 0 }),
   ).rejects.toMatchObject({ code: 'UNAUTHORIZED', data: { reason: 'missing-session' } });
+});
+
+test('it settles avatar xp and level from a completed terminal checkpoint', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  const rewardsXP = 150;
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: rewardsXP }, type: 'completed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  const updated = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated.xp).toBe(rewardsXP);
+  expect(updated.level).toBe(levelForXP(rewardsXP));
+
+  const updatedActivity = await ctx.db
+    .selectFrom('activities')
+    .selectAll()
+    .where('id', '=', started.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updatedActivity.status).toBe('stopped');
+  expect(updatedActivity.stoppedAt).not.toBeNil();
+});
+
+test('it settles a clamped xp loss from a failed terminal checkpoint', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  // partway into a level, so the failure loss is nonzero but the ratchet still holds
+  const startingXP = 150;
+
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: startingXP });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  const loss = buildFailureXPLoss(startingXP);
+  const rewardsXP = -loss;
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: rewardsXP }, type: 'failed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  const updated = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  expect(loss).toBeGreaterThan(0);
+  expect(updated.xp).toBe(startingXP + rewardsXP);
+  expect(updated.level).toBe(levelForXP(startingXP + rewardsXP));
+});
+
+test('it does not double-apply xp on a duplicate terminal submission', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  expect(
+    client.trackActivityProgress({
+      activityID: started.id,
+      checkpoints: batch,
+      expectedHead: 0,
+    }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+  const updated = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated.xp).toBe(150);
 });
