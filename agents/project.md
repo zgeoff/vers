@@ -218,11 +218,9 @@ Everywhere:
 - Test files are co-located with the module they test (`parse-source.ts` beside
   `parse-source.test.ts`) — no `test/`, `tests/` or `__tests__` directories. Declaration emit
   excludes `*.test.ts`, so they never ship.
-- Test data is inline per test: state the fields the behaviour and assertions depend on and no more.
-  Scalars and small literals are written directly (`add(1, 2)`); a domain object or DTO comes from
-  its faker-defaulted `create-mock-*` factory in the package's `test-utils/factories/` (each factory
-  has its own test), with overrides for exactly the asserted fields. No module-level fixtures shared
-  between tests.
+- A domain object or DTO comes from its faker-defaulted `create-mock-*` factory in the package's
+  `test-utils/factories/` (each factory has its own test); tests only override the fields required
+  to express the logic under test. No module-level fixtures shared between tests.
 - `toStrictEqual`, not `toEqual`, for object assertions; asymmetric matchers inside it are fine.
 - Global mock reset lives in the preload's `afterEach` (`mock.restore()`), never per-test.
 - A test that mutates global or environment state restores it in an `onTestFinished(...)` callback
