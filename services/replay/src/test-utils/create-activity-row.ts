@@ -9,8 +9,7 @@ import { createMockActivityRow } from './factories/create-mock-activity-row';
  */
 export async function createActivityRow(
   db: Kysely<DB>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Activities' jsonb `buildSnapshot` field types as the generated `Json` union, which nests a mutable `JsonValue[]` branch with no readonly form
-  overrides: Partial<Insertable<Activities>> = {},
+  overrides: Readonly<Partial<Insertable<Activities>>> = {},
 ): Promise<Selectable<Activities>> {
   let avatarId = overrides.avatarId;
 

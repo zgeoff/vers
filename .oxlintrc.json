@@ -314,6 +314,14 @@
   },
   "overrides": [
     {
+      "files": ["**/schema.generated.ts"],
+      // kysely-codegen column overrides emit inline `import()` type annotations; the file is
+      // generated, so the style rule has nothing to teach it
+      "rules": {
+        "typescript/consistent-type-imports": "off"
+      }
+    },
+    {
       "files": ["**/*.test.ts", "**/*.test.tsx"],
       // ergonomics for every co-located suite, whichever runner it targets: one
       // suite per module with inline test data means file length scales with

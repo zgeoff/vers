@@ -12,18 +12,6 @@ export type Generated<T> =
     ? ColumnType<S, I | undefined, U>
     : ColumnType<T, T | undefined, T>;
 
-export type Json = JsonValue;
-
-export type JsonArray = Array<JsonValue>;
-
-export interface JsonObject {
-  [x: string]: JsonValue | undefined;
-}
-
-export type JsonPrimitive = boolean | number | string | null;
-
-export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
-
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export type VerificationType = '2fa' | '2fa-setup' | 'change-email' | 'onboarding';
@@ -32,7 +20,7 @@ export interface Activities {
   appendedAt: Timestamp | null;
   appendedHead: Generated<number>;
   avatarId: string;
-  buildSnapshot: Json;
+  buildSnapshot: import('./types').Json;
   contentVersion: string;
   createdAt: Generated<Timestamp>;
   id: string;
@@ -70,7 +58,7 @@ export interface ActivityCheckpoints {
   activityId: string;
   appendedAt: Generated<Timestamp>;
   hash: string;
-  payload: Json;
+  payload: import('./types').Json;
   prevHash: string;
   version: number;
 }

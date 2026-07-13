@@ -8,7 +8,6 @@ import type { Selectable } from 'kysely';
  * contract input, and the cast cannot smuggle a drifted row past the RPC boundary — oRPC validates
  * handler output against the contract's output schema and fails the request on mismatch.
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the row's jsonb `payload` field types as the generated `Json` union, which nests a mutable `JsonValue[]` branch with no readonly form
 export function toCheckpointData(row: Readonly<Selectable<ActivityCheckpoints>>): Checkpoint {
   return {
     appendedAt: row.appendedAt,

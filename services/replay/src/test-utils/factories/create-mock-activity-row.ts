@@ -9,8 +9,7 @@ import type { Insertable } from 'kysely';
  * the replay primitives read cursors and status, never the hash chain.
  */
 export function createMockActivityRow(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Activities' jsonb `buildSnapshot` field types as the generated `Json` union, which nests a mutable `JsonValue[]` branch with no readonly form
-  overrides: Partial<Insertable<Activities>> = {},
+  overrides: Readonly<Partial<Insertable<Activities>>> = {},
 ): Insertable<Activities> {
   const startHash = faker.string.hexadecimal({ casing: 'lower', length: 64, prefix: '' });
 
