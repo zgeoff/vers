@@ -12,66 +12,41 @@ import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { ActivityServiceClient } from './types';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
-type TrackProgressOutput = Awaited<ReturnType<ActivityServiceClient['trackActivityProgress']>>;
-
-type TrackProgressHandler = Parameters<typeof mockActivityService.trackActivityProgress.handler>[0];
-
-type TrackProgressCall = Extract<TrackProgressHandler, (args: never) => unknown>;
-
-type TrackProgressErrors = Parameters<TrackProgressCall>[0]['errors'];
-
-type TrackResponder = (errors: TrackProgressErrors, callCount: number) => TrackProgressOutput;
-
-function buildActivityClient(): ActivityServiceClient {
+function setupTest(
+  config: Readonly<{ scheduleFlush?: (flush: () => Promise<void>) => void }> = {},
+) {
   const link = new RPCLink({ url: `${ACTIVITY_SERVICE_URL}/rpc` });
 
-  return createORPCClient(link);
+  const client: ActivityServiceClient = createORPCClient(link);
+  const onInvalid = mock<(activityID: string, reason: string) => void>();
+  const submitter = createCheckpointSubmitter({ client, onInvalid, ...config });
+
+  return { onInvalid, submitter };
 }
 
-/**
- * Registers an MSW handler for the one procedure the submitter calls and returns a spy recording
- * each request's input. `respond` computes the reply per call — returning the fresh head, or
- * throwing one of the contract's own typed errors keyed off the call count.
- */
-function registerTrackHandler(respond: TrackResponder) {
+test('it flushes immediately on a terminal checkpoint and confirms the queue on success', async () => {
+  const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
-      return respond(opts.errors, track.mock.calls.length);
+      return { appendedHead: 2 };
     }),
   );
 
-  return track;
-}
-
-function buildOnInvalid() {
-  return mock<(activityID: string, reason: string) => void>();
-}
-
-test('it flushes immediately on a terminal checkpoint and confirms the queue on success', async () => {
-  const track = registerTrackHandler(() => ({ appendedHead: 2 }));
-
-  const submitter = createCheckpointSubmitter({
-    client: buildActivityClient(),
-    onInvalid: buildOnInvalid(),
-  });
-
-  await submitter.attach({
+  await ctx.submitter.attach({
     activityID: 'success-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
     startChainIndex: 0,
   });
 
-  await submitter.submit('success-activity', createMockStartedCheckpoint());
-  await submitter.submit('success-activity', createMockCompletedCheckpoint());
+  await ctx.submitter.submit('success-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('success-activity', createMockCompletedCheckpoint());
 
-  expect(track).toHaveBeenCalledOnce();
-
-  expect(track).toHaveBeenCalledWith({
+  expect(track).toHaveBeenCalledExactlyOnceWith({
     activityID: 'success-activity',
     checkpoints: expect.toBeArrayOfSize(2),
     expectedHead: 0,
@@ -83,29 +58,31 @@ test('it flushes immediately on a terminal checkpoint and confirms the queue on 
 });
 
 test('it trims the queue to the CONFLICT appendedHead and resends the tail', async () => {
-  const track = registerTrackHandler((errors, callCount) => {
-    if (callCount === 1) {
-      throw errors.CONFLICT({ data: { appendedHead: 2 } });
-    }
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
 
-    return { appendedHead: 3 };
-  });
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
 
-  const submitter = createCheckpointSubmitter({
-    client: buildActivityClient(),
-    onInvalid: buildOnInvalid(),
-  });
+      if (track.mock.calls.length === 1) {
+        throw opts.errors.CONFLICT({ data: { appendedHead: 2 } });
+      }
 
-  await submitter.attach({
+      return { appendedHead: 3 };
+    }),
+  );
+
+  await ctx.submitter.attach({
     activityID: 'conflict-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
     startChainIndex: 0,
   });
 
-  await submitter.submit('conflict-activity', createMockStartedCheckpoint());
-  await submitter.submit('conflict-activity', createMockProgressCheckpoint());
-  await submitter.submit('conflict-activity', createMockCompletedCheckpoint());
+  await ctx.submitter.submit('conflict-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('conflict-activity', createMockProgressCheckpoint());
+  await ctx.submitter.submit('conflict-activity', createMockCompletedCheckpoint());
 
   expect(track).toHaveBeenCalledTimes(2);
 
@@ -121,24 +98,27 @@ test('it trims the queue to the CONFLICT appendedHead and resends the tail', asy
 });
 
 test('it stops the stream and keeps queued rows on CHECKPOINT_INVALID', async () => {
-  const track = registerTrackHandler((errors) => {
-    throw errors.CHECKPOINT_INVALID({ data: { reason: 'broken-chain-link' } });
-  });
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
 
-  const onInvalid = buildOnInvalid();
-  const submitter = createCheckpointSubmitter({ client: buildActivityClient(), onInvalid });
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+      throw opts.errors.CHECKPOINT_INVALID({ data: { reason: 'broken-chain-link' } });
+    }),
+  );
 
-  await submitter.attach({
+  await ctx.submitter.attach({
     activityID: 'invalid-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
     startChainIndex: 0,
   });
 
-  await submitter.submit('invalid-activity', createMockStartedCheckpoint());
-  await submitter.submit('invalid-activity', createMockCompletedCheckpoint());
+  await ctx.submitter.submit('invalid-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('invalid-activity', createMockCompletedCheckpoint());
 
-  expect(onInvalid).toHaveBeenCalledExactlyOnceWith('invalid-activity', 'broken-chain-link');
+  expect(ctx.onInvalid).toHaveBeenCalledExactlyOnceWith('invalid-activity', 'broken-chain-link');
   expect(track).toHaveBeenCalledOnce();
 
   const remaining = await readQueuedCheckpoints('invalid-activity');
@@ -146,7 +126,7 @@ test('it stops the stream and keeps queued rows on CHECKPOINT_INVALID', async ()
   expect(remaining).toHaveLength(2);
 
   // a checkpoint produced after the stream stopped is silently dropped, not queued
-  await submitter.submit('invalid-activity', createMockProgressCheckpoint());
+  await ctx.submitter.submit('invalid-activity', createMockProgressCheckpoint());
 
   const stillTwo = await readQueuedCheckpoints('invalid-activity');
 
@@ -154,24 +134,23 @@ test('it stops the stream and keeps queued rows on CHECKPOINT_INVALID', async ()
 });
 
 test('it discards the queue on NOT_FOUND', async () => {
-  registerTrackHandler((errors) => {
-    throw errors.NOT_FOUND({ data: {} });
-  });
+  const ctx = setupTest();
 
-  const submitter = createCheckpointSubmitter({
-    client: buildActivityClient(),
-    onInvalid: buildOnInvalid(),
-  });
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
 
-  await submitter.attach({
+  await ctx.submitter.attach({
     activityID: 'not-found-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
     startChainIndex: 0,
   });
 
-  await submitter.submit('not-found-activity', createMockStartedCheckpoint());
-  await submitter.submit('not-found-activity', createMockCompletedCheckpoint());
+  await ctx.submitter.submit('not-found-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('not-found-activity', createMockCompletedCheckpoint());
 
   const remaining = await readQueuedCheckpoints('not-found-activity');
 
@@ -179,28 +158,30 @@ test('it discards the queue on NOT_FOUND', async () => {
 });
 
 test('it holds the queue on UNAUTHORIZED and resends on the next flush', async () => {
-  const track = registerTrackHandler((errors, callCount) => {
-    if (callCount === 1) {
-      throw errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
-    }
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
 
-    return { appendedHead: 3 };
-  });
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
 
-  const submitter = createCheckpointSubmitter({
-    client: buildActivityClient(),
-    onInvalid: buildOnInvalid(),
-  });
+      if (track.mock.calls.length === 1) {
+        throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+      }
 
-  await submitter.attach({
+      return { appendedHead: 3 };
+    }),
+  );
+
+  await ctx.submitter.attach({
     activityID: 'unauthorized-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
     startChainIndex: 0,
   });
 
-  await submitter.submit('unauthorized-activity', createMockStartedCheckpoint());
-  await submitter.submit('unauthorized-activity', createMockCompletedCheckpoint());
+  await ctx.submitter.submit('unauthorized-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('unauthorized-activity', createMockCompletedCheckpoint());
 
   expect(track).toHaveBeenCalledOnce();
 
@@ -208,7 +189,7 @@ test('it holds the queue on UNAUTHORIZED and resends on the next flush', async (
 
   expect(stillQueued).toHaveLength(2);
 
-  await submitter.submit('unauthorized-activity', createMockCompletedCheckpoint());
+  await ctx.submitter.submit('unauthorized-activity', createMockCompletedCheckpoint());
 
   expect(track).toHaveBeenCalledTimes(2);
 
@@ -224,18 +205,23 @@ test('it holds the queue on UNAUTHORIZED and resends on the next flush', async (
 });
 
 test('it resends rows already queued from a previous worker lifetime on attach', async () => {
-  const resumedEntry = createMockCheckpointBatchEntry({ hash: 'resumed_hash_1', version: 1 });
+  await writeQueuedCheckpoint(
+    'resume-activity',
+    createMockCheckpointBatchEntry({ hash: 'resumed_hash_1', version: 1 }),
+  );
 
-  await writeQueuedCheckpoint('resume-activity', resumedEntry);
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
 
-  const track = registerTrackHandler(() => ({ appendedHead: 1 }));
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
 
-  const submitter = createCheckpointSubmitter({
-    client: buildActivityClient(),
-    onInvalid: buildOnInvalid(),
-  });
+      return { appendedHead: 1 };
+    }),
+  );
 
-  await submitter.attach({
+  await ctx.submitter.attach({
     activityID: 'resume-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -255,24 +241,31 @@ test('it resends rows already queued from a previous worker lifetime on attach',
 
 test('it defers a non-terminal checkpoint to the shared progress window', async () => {
   let capturedFlush: (() => Promise<void>) | undefined;
-  const track = registerTrackHandler(() => ({ appendedHead: 1 }));
 
-  const submitter = createCheckpointSubmitter({
-    client: buildActivityClient(),
-    onInvalid: buildOnInvalid(),
+  const ctx = setupTest({
     scheduleFlush: (flush) => {
       capturedFlush = flush;
     },
   });
 
-  await submitter.attach({
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.attach({
     activityID: 'progress-window-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
     startChainIndex: 0,
   });
 
-  await submitter.submit('progress-window-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('progress-window-activity', createMockStartedCheckpoint());
 
   expect(track).not.toHaveBeenCalled();
   expect(capturedFlush).toBeDefined();

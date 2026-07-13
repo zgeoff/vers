@@ -9,9 +9,6 @@ export interface FakeSimulationWorker {
   readonly port: { readonly postMessage: (message: unknown) => void };
 }
 
-/**
- * The fake shape the mocked worker-handle read hands back in place of the real hook's return.
- */
 export interface FakeIdleWorkerHandle {
   readonly activity: ActivitySnapshot | undefined;
   readonly checkpointStreamError?: CheckpointStreamError;

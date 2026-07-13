@@ -84,9 +84,6 @@ export type WorkerMessage =
   | InitialStateMessage
   | SimulationUpdateMessage;
 
-/**
- * A stopped checkpoint stream, read off a `CheckpointStreamInvalidMessage` into app state.
- */
 export interface CheckpointStreamError {
   readonly activityID: string;
   readonly reason: string;

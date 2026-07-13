@@ -8,9 +8,6 @@ import {
 import type { CheckpointStreamError } from '@vers/idle-client';
 import type { ActivityFailureAction, ActivitySnapshot } from '@vers/idle-core';
 
-/**
- * The simulation state every idle-driven consumer reads through this hook.
- */
 interface IdleWorkerHandle {
   readonly activity: ActivitySnapshot | undefined;
   readonly checkpointStreamError: CheckpointStreamError | undefined;

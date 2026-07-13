@@ -7,11 +7,6 @@ interface CreateMockWorkerContextOptions {
   readonly submitter?: Readonly<CheckpointSubmitter>;
 }
 
-/**
- * A `WorkerContext` double backed by working connection and simulation closures over its own
- * state. The submitter defaults to resolved-promise stubs; a test asserting on submission passes
- * its own spy submitter.
- */
 export function createMockWorkerContext(
   options: Readonly<CreateMockWorkerContextOptions> = {},
 ): WorkerContext {

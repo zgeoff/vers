@@ -8,10 +8,6 @@ interface CreateMockCheckpointBatchEntryOverrides {
   readonly version?: number;
 }
 
-function buildSeed(): string {
-  return faker.string.alphanumeric({ casing: 'lower', length: 16 });
-}
-
 export function createMockCheckpointBatchEntry(
   overrides: CreateMockCheckpointBatchEntryOverrides = {},
 ): CheckpointBatchEntry {
@@ -29,4 +25,8 @@ export function createMockCheckpointBatchEntry(
     prevHash: overrides.prevHash ?? buildSeed(),
     version: overrides.version ?? faker.number.int({ max: 1000, min: 1 }),
   };
+}
+
+function buildSeed(): string {
+  return faker.string.alphanumeric({ casing: 'lower', length: 16 });
 }

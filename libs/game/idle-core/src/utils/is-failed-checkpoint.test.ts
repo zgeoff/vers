@@ -5,11 +5,11 @@ import { createMockProgressCheckpoint } from '../test-utils/create-mock-progress
 import { createMockStartedCheckpoint } from '../test-utils/create-mock-started-checkpoint';
 import { isFailedCheckpoint } from './is-failed-checkpoint';
 
-test('returns true for failed checkpoints', () => {
+test('it identifies a failed checkpoint', () => {
   expect(isFailedCheckpoint(createMockFailedCheckpoint())).toBeTrue();
 });
 
-test('returns false for non-failed checkpoints', () => {
+test('it rejects every other checkpoint type', () => {
   expect(isFailedCheckpoint(createMockStartedCheckpoint())).toBeFalse();
   expect(isFailedCheckpoint(createMockCompletedCheckpoint())).toBeFalse();
   expect(isFailedCheckpoint(createMockProgressCheckpoint())).toBeFalse();
