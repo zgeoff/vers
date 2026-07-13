@@ -358,7 +358,6 @@ package kind:
 - **Pure packages** — libs and CLIs with no service or database edge. Mock-free: pure modules assert
   on return values, file-touching ones use `mkdtemp` trees, and CLI behaviour is asserted end-to-end
   by spawning the real binary — a module hard to test without mocking moves its I/O to the caller.
-  Test data is inline, no fixtures shared between tests, even if that means duplication.
 - **MSW-mocked packages** — clients of mocked services and app-web.
 - **Real-database packages** — services, apps, and DB-backed libraries exercising a real postgres.
 
@@ -369,6 +368,12 @@ Everywhere:
 - Test files are co-located with the module they test (`parse-source.ts` beside
   `parse-source.test.ts`) — no `test/`, `tests/` or `__tests__` directories. Declaration emit
   excludes `*.test.ts`, so they never ship.
+- Test data states exactly the fields the behaviour and assertions depend on. Scalar and small
+  literal arguments are written inline (`add(1, 2)`). A domain object or DTO comes from its
+  faker-defaulted `create-mock-*.ts` factory in the package's `test-utils/factories/` (a plain
+  object, each factory with its own test), called inline with overrides for the asserted fields —
+  an explicit override marks the field as relevant to the unit under test, and factory defaults
+  keep the rest out of the test body. Module-level fixtures shared between tests are a defect.
 - `toStrictEqual`, not `toEqual`, for object assertions; asymmetric matchers inside it are fine.
 - Global mock reset lives in the preload's `afterEach` (`mock.restore()`), never per-test.
 - A test that mutates global or environment state restores it in an `onTestFinished(...)` callback
@@ -406,10 +411,9 @@ Everywhere:
   `onUnhandledRequest: 'error'`. Tests add per-test handlers with `server.use(...)`, including
   override and upstream-failure cases; for oRPC procedures, build them with `buildMockService` /
   `mockService` (`@vers/client-test-utils/orpc`).
-- Test data is inline per test: state the fields the behavior and assertions depend on, lean on the
-  collection schemas' defaults for the rest — no factory builders (`createUser`), no shared mutable
-  module-level fixtures, no restating a default. One-off helpers stay inline; reusable ones live in
-  `test-utils/`.
+- Rows that cross the mocked boundary live in the `@msw/data` store and lean on the collection
+  schemas' defaults — no restating a default. A domain object with no collection schema comes from
+  its `create-mock-*` factory. One-off helpers stay inline; reusable ones live in `test-utils/`.
 - Stateful backends use `@msw/data`: an in-memory store built from a zod schema
   (`new Collection({ schema })`, `.create()`/`.createMany()`, `.findFirst()`/`.findMany()`,
   `.defineRelations()`) read and written directly from the oRPC mock handlers — never `@msw/data`'s
