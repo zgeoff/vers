@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createAvatar } from '../../entities/create-avatar';
-import { createMockActivityData } from '../../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../../test-utils/create-mock-activity-input';
 import { createMockAvatarData } from '../../test-utils/create-mock-avatar-data';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
 import { ActivityCheckpointType } from '../../types';
@@ -10,7 +10,7 @@ import { createProgressCheckpoint } from './create-progress-checkpoint';
 
 test('it creates a progress checkpoint', () => {
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData(), ctx);
 
@@ -30,7 +30,7 @@ test('it creates a progress checkpoint', () => {
 
 test('it includes a hash based on checkpoint data', () => {
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData(), ctx);
 
@@ -44,7 +44,7 @@ test('it includes a hash based on checkpoint data', () => {
 });
 
 test('it produces the same hash for checkpoints that differ only by rewards', () => {
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const avatarData = createMockAvatarData();
   const ctxWithNoRewards = createMockSimulationContext();
   const activityWithNoRewards = createActivity(activityData, ctxWithNoRewards);
@@ -78,7 +78,7 @@ test('it produces the same hash for checkpoints that differ only by rewards', ()
 
 test('it carries a levelUp when the reward delta crosses a level threshold', () => {
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
 
@@ -91,7 +91,7 @@ test('it carries a levelUp when the reward delta crosses a level threshold', () 
 
 test('it omits levelUp when the reward delta stays within the current level', () => {
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
 

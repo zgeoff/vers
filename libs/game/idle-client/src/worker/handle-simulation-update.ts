@@ -8,7 +8,7 @@ export function handleSimulationUpdate(context: WorkerContext) {
   invariant(simulation, 'simulation is required');
 
   for (const connection of context.connections) {
-    const message = createSimulationUpdateMessage(simulation.getAppState());
+    const message = createSimulationUpdateMessage(simulation.getSnapshot());
 
     connection.postMessage(message);
   }

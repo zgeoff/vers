@@ -2,7 +2,7 @@ import { expect, mock, test } from 'bun:test';
 import type { SimulationListener } from '@vers/idle-core';
 import {
   ActivityFailureAction,
-  createMockActivityData,
+  createMockActivityInput,
   createMockAvatarData,
   createMockEnemyData,
   createSimulation,
@@ -28,7 +28,7 @@ test('it restarts the activity if it fails and the failure action is retry', asy
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
   const avatar = createMockAvatarData({ life: 1 });
-  const activity = createMockActivityData({ failureAction: ActivityFailureAction.Retry });
+  const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Retry });
 
   simulation.startActivity(avatar, activity);
   simulation.addEventListener('restarted', restartedSpy);
@@ -46,7 +46,7 @@ test('it does not restart the activity if it fails and the failure action is abo
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
   const avatar = createMockAvatarData({ life: 1 });
-  const activity = createMockActivityData({ failureAction: ActivityFailureAction.Abort });
+  const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Abort });
 
   simulation.startActivity(avatar, activity);
   simulation.addEventListener('restarted', restartedSpy);
@@ -65,7 +65,7 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
     const simulation = createSimulation(hasher);
     const restartedSpy = mock<SimulationListener>();
     const avatar = createMockAvatarData();
-    const activity = createMockActivityData({ enemies: [createMockEnemyData()], failureAction });
+    const activity = createMockActivityInput({ enemies: [createMockEnemyData()], failureAction });
 
     simulation.startActivity(avatar, activity);
 

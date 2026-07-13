@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createAvatar } from '../../entities/create-avatar';
 import { buildCompletionXP } from '../../progression';
-import { createMockActivityData } from '../../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../../test-utils/create-mock-activity-input';
 import { createMockAvatarData } from '../../test-utils/create-mock-avatar-data';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
 import { ActivityCheckpointType } from '../../types';
@@ -11,7 +11,7 @@ import { createCompletedCheckpoint } from './create-completed-checkpoint';
 
 test('it creates a completed checkpoint with the completion bonus', () => {
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData({ difficulty: 1 });
+  const activityData = createMockActivityInput({ difficulty: 1 });
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
 
@@ -30,7 +30,7 @@ test('it creates a completed checkpoint with the completion bonus', () => {
 
 test('it includes a hash based on checkpoint data', () => {
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData(), ctx);
 
@@ -44,7 +44,7 @@ test('it includes a hash based on checkpoint data', () => {
 
 test('it merges the completion bonus with rewards already accrued', () => {
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
 
@@ -57,7 +57,7 @@ test('it merges the completion bonus with rewards already accrued', () => {
 
 test('it carries a levelUp when the completion bonus crosses a level threshold', () => {
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
 

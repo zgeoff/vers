@@ -1,8 +1,8 @@
-import type { CombatExecutorAppState } from '@vers/idle-core';
+import type { CombatExecutorSnapshot } from '@vers/idle-core';
 import { create } from 'zustand';
 
 interface CombatStore {
-  combat: CombatExecutorAppState | null;
+  combat: CombatExecutorSnapshot | null;
 }
 
 export const useCombatStore = create<CombatStore>()(() => ({

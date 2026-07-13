@@ -12,8 +12,8 @@ interface GameNavLink {
   readonly label: string;
   readonly to:
     | '/account'
+    | '/activity'
     | '/avatar'
-    | '/encounter'
     | '/explore'
     | '/market'
     | '/respite'
@@ -25,7 +25,7 @@ const GAME_NAV_LINKS: ReadonlyArray<GameNavLink> = [
   { Icon: Icon.Explore, label: 'Explore', to: '/explore' },
   { Icon: Icon.Stash, label: 'Stash', to: '/stash' },
   { Icon: Icon.Market, flag: 'market', label: 'Market', to: '/market' },
-  { Icon: Icon.Encounter, label: 'Encounter', to: '/encounter' },
+  { Icon: Icon.Encounter, label: 'Activity', to: '/activity' },
   { Icon: Icon.Avatar, label: 'Avatar', to: '/avatar' },
   { Icon: Icon.Account, label: 'Account', to: '/account' },
 ];

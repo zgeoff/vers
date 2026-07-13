@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import { nodeHasText } from '@vers/client-test-utils';
-import type { ActivityAppState } from '@vers/idle-core';
+import type { ActivitySnapshot } from '@vers/idle-core';
 import { ActivityInfo } from './activity-info';
 
 test('it renders info about the provided activity', () => {
-  const activity: ActivityAppState = {
+  const activity: ActivitySnapshot = {
     currentWave: null,
     elapsed: 0,
     enemiesRemaining: 20,

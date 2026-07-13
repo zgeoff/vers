@@ -3,7 +3,7 @@ import invariant from 'tiny-invariant';
 import { createActivity } from '../core/create-activity';
 import { createCombatExecutor } from '../core/create-combat-executor';
 import { createWave } from '../core/utils/create-wave';
-import { createMockActivityData } from '../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
@@ -65,7 +65,7 @@ test('it calls all registered handlers when handling a tick', () => {
   const ctx = createMockSimulationContext();
   const avatarData = createMockAvatarData();
   const avatar = createAvatar(avatarData, ctx);
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const wave = createWave(activityData, ctx, 1);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
@@ -96,7 +96,7 @@ test('it allows removing behaviours', () => {
   const ctx = createMockSimulationContext();
   const avatarData = createMockAvatarData();
   const avatar = createAvatar(avatarData, ctx);
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const wave = createWave(activityData, ctx, 1);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
@@ -128,11 +128,11 @@ test('it returns the expected enemy state for a client app', () => {
   const ctx = createMockSimulationContext();
   const data = createMockEnemyData();
   const enemy = createEnemy(data, ctx);
-  const state = enemy.getAppState();
+  const state = enemy.getSnapshot();
 
   expect(state).toStrictEqual({
     behaviours: {
-      enemyPrimaryAttack: {
+      enemy_primary_attack: {
         lastAttackTime: expect.toBeNumber(),
       },
     },

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import {
   ActivityFailureAction,
-  createMockActivityData,
+  createMockActivityInput,
   createMockAvatarData,
   createSimulation,
 } from '@vers/idle-core';
@@ -61,7 +61,7 @@ test('it handles setting the activity', async () => {
 
   context.setSimulation(simulation);
 
-  const activity = createMockActivityData();
+  const activity = createMockActivityInput();
 
   const message: SetActivityMessage = {
     activity,

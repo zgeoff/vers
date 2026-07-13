@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { getCompressedWorldGraph } from './get-compressed-world-graph';
+import { compressWorldMapNodes } from './compress-world-map-nodes';
 import type { WorldMapNode } from './types';
 
 test('it compresses an array of world map nodes', () => {
@@ -22,7 +22,7 @@ test('it compresses an array of world map nodes', () => {
     },
   ];
 
-  const result = getCompressedWorldGraph(nodes);
+  const result = compressWorldMapNodes(nodes);
 
   // Should return an array with the same length
   expect(result).toStrictEqual([

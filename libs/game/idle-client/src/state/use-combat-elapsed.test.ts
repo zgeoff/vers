@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import type { CombatExecutorAppState } from '@vers/idle-core';
+import type { CombatExecutorSnapshot } from '@vers/idle-core';
 import { setCombat } from './set-combat';
 import { useCombatElapsed } from './use-combat-elapsed';
 
 test('it provides the elapsed combat time', () => {
-  const combat: CombatExecutorAppState = {
+  const combat: CombatExecutorSnapshot = {
     elapsed: 1000,
   };
 

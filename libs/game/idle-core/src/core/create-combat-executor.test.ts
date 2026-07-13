@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createAvatar } from '../entities/create-avatar';
-import { createMockActivityData } from '../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
@@ -34,7 +34,7 @@ test('it processes events', () => {
     },
   });
 
-  const activityData = createMockActivityData({
+  const activityData = createMockActivityInput({
     enemies: [enemyData],
   });
 
@@ -60,10 +60,10 @@ test('it processes events', () => {
 
 test('it returns the expected combat executor state for a client app', () => {
   const ctx = createMockSimulationContext();
-  const activity = createActivity(createMockActivityData(), ctx);
+  const activity = createActivity(createMockActivityInput(), ctx);
   const avatar = createAvatar(createMockAvatarData(), ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-  const state = combatExecutor.getAppState();
+  const state = combatExecutor.getSnapshot();
 
   expect(state).toStrictEqual({
     elapsed: 0,

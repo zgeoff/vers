@@ -32,13 +32,13 @@ const characterFrame = css({
 });
 
 /**
- * Placeholder encounter screen: static loot and character-frame blocks stand in until combat
+ * Placeholder activity screen: static loot and character-frame blocks stand in until combat
  * rewards and party state are wired up.
  */
-export function EncounterPanel() {
+export function ActivityPanel() {
   return (
     <main className={panel}>
-      <Heading level={1}>Encounter</Heading>
+      <Heading level={1}>Activity</Heading>
       <div className={lootPanel} data-testid="loot-panel">
         <Text>Loot drops will appear here once combat rewards are wired up.</Text>
       </div>

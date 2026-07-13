@@ -4,7 +4,7 @@ import type {
   Avatar,
   CombatEvent,
   CombatExecutor,
-  CombatExecutorAppState,
+  CombatExecutorSnapshot,
   SimulationContext,
 } from '../types';
 import { handleEvent } from './handle-event';
@@ -17,7 +17,7 @@ export function createCombatExecutor(
   let elapsed = 0;
   let scheduledEvents: Array<CombatEvent> = [];
 
-  const getAppState = (): CombatExecutorAppState => ({
+  const getSnapshot = (): CombatExecutorSnapshot => ({
     elapsed,
   });
 
@@ -47,7 +47,7 @@ export function createCombatExecutor(
     get elapsed() {
       return elapsed;
     },
-    getAppState,
+    getSnapshot,
     reset,
     run(delta: number) {
       run(delta);

@@ -1,14 +1,14 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import { nodeHasText } from '@vers/client-test-utils';
-import type { AvatarAppState } from '@vers/idle-core';
+import type { AvatarSnapshot } from '@vers/idle-core';
 import { EntityStatus } from '@vers/idle-core';
 import { AvatarInfo } from './avatar-info';
 
 test('it renders avatar information', () => {
-  const avatar: AvatarAppState = {
+  const avatar: AvatarSnapshot = {
     behaviours: {
-      avatarWeaponAttack: {
+      avatar_weapon_attack: {
         lastAttackTime: 0,
       },
     },

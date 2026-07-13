@@ -8,8 +8,9 @@ replay.
 An **activity** is one attempt at a piece of content, recorded as a single append-only checkpoint
 stream and verified as a unit. Every activity has a type. A **world map encounter** is the type
 where an avatar fights through a map node's enemies, arranged in **waves** — ordered groups the
-avatar clears one at a time. **Combat** is how an encounter resolves: each tick, the engine's combat
-executor advances the avatar and the current wave's enemies and dispatches their attack events.
+avatar clears one at a time. Each activity type supplies an `ActivityExecutor` that advances its
+simulation. **Combat** is how an encounter resolves: each tick, the world map encounter's executor
+advances the avatar and the current wave's enemies and dispatches their attack events.
 `@vers/idle-core` runs any activity type; `@vers/game-utils` derives a world map encounter's waves,
 enemies, and timing from `(node, seed, content)` as a pure function.
 
@@ -28,9 +29,11 @@ from the same inputs.
 
 The client does all real-time simulation. One writer per browser profile runs the fixed-timestep
 loop — a SharedWorker, with leader election where SharedWorker is unavailable — and other tabs are
-pure viewers. On returning from offline, the client fast-forwards the simulation from the last
-verified checkpoint. The server never simulates on the request path; it replays asynchronously to
-decide whether to trust what the client submitted.
+pure viewers. Viewer tabs render the writer's **sim snapshot**, the engine's serializable
+`*Snapshot` projection from `getSnapshot()`, separate from the server-authored **build snapshot**
+that pins an avatar's build as a simulation input. On returning from offline, the client
+fast-forwards the simulation from the last verified checkpoint. The server never simulates on the
+request path; it replays asynchronously to decide whether to trust what the client submitted.
 
 ## Server-authored inputs
 

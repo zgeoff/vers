@@ -1,6 +1,6 @@
 import { UnreachableCodeError } from '@vers/utils';
 import xxhash from 'xxhash-wasm';
-import type { ActivityCheckpoint, ActivityData, AvatarData } from '../types';
+import type { ActivityCheckpoint, ActivityInput, AvatarData } from '../types';
 import { ActivityFailureAction } from '../types';
 import { isCompletedCheckpoint } from '../utils/is-completed-checkpoint';
 import { isFailedCheckpoint } from '../utils/is-failed-checkpoint';
@@ -28,7 +28,7 @@ interface SimulationOutput {
 const SERVER_SIMULATION_INTERVAL = 100;
 
 export async function runSimulation(
-  activity: ActivityData,
+  activity: ActivityInput,
   avatar: AvatarData,
   config: SimulationConfig,
 ): Promise<SimulationOutput> {

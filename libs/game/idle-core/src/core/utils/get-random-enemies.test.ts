@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
-import { createMockActivityData } from '../../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../../test-utils/create-mock-activity-input';
 import { createMockEnemyData } from '../../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
 import { getRandomEnemies } from './get-random-enemies';
 
 test('returns the correct number of enemies', () => {
-  const activity = createMockActivityData();
+  const activity = createMockActivityInput();
   const ctx = createMockSimulationContext();
   const enemies = getRandomEnemies(activity, 3, ctx);
 
@@ -17,7 +17,7 @@ test('it gets a random assortment of enemies', () => {
   const enemyData2 = createMockEnemyData({ name: 'Enemy #2' });
   const enemyData3 = createMockEnemyData({ name: 'Enemy #3' });
 
-  const activity = createMockActivityData({
+  const activity = createMockActivityInput({
     enemies: [enemyData1, enemyData2, enemyData3],
   });
 

@@ -2,22 +2,22 @@ import type { RNG } from '@vers/game-utils';
 import type { XXHashAPI } from 'xxhash-wasm';
 import type {
   Activity,
-  ActivityAppState,
   ActivityCheckpoint,
-  ActivityData,
   ActivityFailureAction,
+  ActivityInput,
+  ActivitySnapshot,
 } from './activity';
-import type { CombatExecutor, CombatExecutorAppState } from './combat';
-import type { Avatar, AvatarAppState, AvatarData } from './entities';
+import type { CombatExecutor, CombatExecutorSnapshot } from './combat';
+import type { Avatar, AvatarData, AvatarSnapshot } from './entities';
 
-export interface SimulationAppState {
-  readonly activity?: ActivityAppState;
-  readonly avatar?: AvatarAppState;
-  readonly combat?: CombatExecutorAppState;
+export interface SimulationSnapshot {
+  readonly activity?: ActivitySnapshot;
+  readonly avatar?: AvatarSnapshot;
+  readonly combat?: CombatExecutorSnapshot;
   readonly failureAction: ActivityFailureAction;
 }
 
-export interface SimulationState {
+export interface LiveSimulation {
   readonly activity: Activity | null;
   readonly avatar: Avatar | null;
   readonly combat: CombatExecutor | null;
@@ -38,15 +38,15 @@ export interface Simulation {
   get elapsed(): number;
   get failureAction(): ActivityFailureAction;
   get rngState(): string;
-  get state(): SimulationState;
+  get state(): LiveSimulation;
 
   // utils
   addEventListener: (eventName: SimulationEventName, listener: SimulationListener) => void;
-  getAppState: () => SimulationAppState;
+  getSnapshot: () => SimulationSnapshot;
   restartActivity: () => void;
   run: (time: number) => Promise<ActivityCheckpoint | null>;
   setFailureAction: (action: ActivityFailureAction) => void;
-  startActivity: (avatarData: AvatarData, activityData: ActivityData) => void;
+  startActivity: (avatarData: AvatarData, activityData: ActivityInput) => void;
   stopActivity: () => Promise<void>;
 }
 
@@ -56,4 +56,4 @@ export interface SimulationContext {
   rng: RNG;
 }
 
-export type SimulationListener = (state: SimulationState) => void;
+export type SimulationListener = (state: LiveSimulation) => void;

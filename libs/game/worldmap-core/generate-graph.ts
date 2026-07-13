@@ -1,11 +1,11 @@
 import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { generateGraphNodes } from './src/generate-graph-nodes';
-import { getCompressedWorldGraph } from './src/get-compressed-world-graph';
+import { buildGraphNodes } from './src/build-graph-nodes';
+import { compressWorldMapNodes } from './src/compress-world-map-nodes';
 
 const MAX_DIFFICULTY = 100;
-const graph = generateGraphNodes(MAX_DIFFICULTY);
-const graphData = getCompressedWorldGraph(graph);
+const graph = buildGraphNodes(MAX_DIFFICULTY);
+const graphData = compressWorldMapNodes(graph);
 
 const outFileURL = new URL('src/world-graph.json', import.meta.url);
 

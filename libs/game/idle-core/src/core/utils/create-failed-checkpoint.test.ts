@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createAvatar } from '../../entities/create-avatar';
 import { buildFailureXPLoss } from '../../progression';
-import { createMockActivityData } from '../../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../../test-utils/create-mock-activity-input';
 import { createMockAvatarData } from '../../test-utils/create-mock-avatar-data';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
 import { ActivityCheckpointType } from '../../types';
@@ -11,7 +11,7 @@ import { createFailedCheckpoint } from './create-failed-checkpoint';
 
 test('it creates a failed checkpoint with no loss at zero accrued xp', () => {
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
 
@@ -30,7 +30,7 @@ test('it creates a failed checkpoint with no loss at zero accrued xp', () => {
 
 test('it includes a hash based on checkpoint data', () => {
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData(), ctx);
   const checkpoint = createFailedCheckpoint(activity, avatar, ctx);
@@ -41,7 +41,7 @@ test('it includes a hash based on checkpoint data', () => {
 
 test('it subtracts the clamped failure loss from accrued rewards', () => {
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
 
@@ -56,7 +56,7 @@ test('it subtracts the clamped failure loss from accrued rewards', () => {
 
 test('it never carries a levelUp', () => {
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
 

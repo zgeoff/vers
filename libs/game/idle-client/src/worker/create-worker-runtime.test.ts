@@ -1,5 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { createMockActivityData, createMockAvatarData } from '@vers/idle-core';
+import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core';
 import type {
   DisconnectMessage,
   InitializeMessage,
@@ -74,7 +74,7 @@ test('it processes simulation updates', async () => {
   await initialized;
 
   const setActivityMessage: SetActivityMessage = {
-    activity: createMockActivityData(),
+    activity: createMockActivityInput(),
     avatar: createMockAvatarData(),
     type: ClientMessageType.SetActivity,
   };
@@ -114,7 +114,7 @@ test('it stops broadcasting to a connection after it disconnects', async () => {
   const survivorUpdated = waitForMessage(survivor);
 
   survivor.postMessage({
-    activity: createMockActivityData(),
+    activity: createMockActivityInput(),
     avatar: createMockAvatarData(),
     type: ClientMessageType.SetActivity,
   } satisfies SetActivityMessage);

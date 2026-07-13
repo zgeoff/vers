@@ -1,15 +1,15 @@
 import type {
-  ActivityData,
   ActivityFailureAction,
+  ActivityInput,
   AvatarData,
-  SimulationAppState,
+  SimulationSnapshot,
 } from '@vers/idle-core';
 
 export enum ClientMessageType {
   Disconnect = 'disconnect',
   Initialize = 'initialize',
-  SetActivity = 'set-activity',
-  SetFailureAction = 'set-failure-action',
+  SetActivity = 'set_activity',
+  SetFailureAction = 'set_failure_action',
 }
 
 interface IClientMessage {
@@ -17,7 +17,7 @@ interface IClientMessage {
 }
 
 export interface SetActivityMessage extends IClientMessage {
-  readonly activity: ActivityData;
+  readonly activity: ActivityInput;
   readonly avatar: AvatarData;
   readonly type: ClientMessageType.SetActivity;
 }
@@ -42,8 +42,8 @@ export type ClientMessage =
   | SetFailureActionMessage;
 
 export enum WorkerMessageType {
-  InitialState = 'initial-state',
-  SimulationUpdate = 'simulation-update',
+  InitialState = 'initial_state',
+  SimulationUpdate = 'simulation_update',
 }
 
 interface IWorkerMessage {
@@ -51,12 +51,12 @@ interface IWorkerMessage {
 }
 
 export interface InitialStateMessage extends IWorkerMessage {
-  readonly state: SimulationAppState;
+  readonly state: SimulationSnapshot;
   readonly type: WorkerMessageType.InitialState;
 }
 
 export interface SimulationUpdateMessage extends IWorkerMessage {
-  readonly state: SimulationAppState;
+  readonly state: SimulationSnapshot;
   readonly type: WorkerMessageType.SimulationUpdate;
 }
 

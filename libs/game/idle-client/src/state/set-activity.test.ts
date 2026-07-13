@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import type { ActivityAppState } from '@vers/idle-core';
+import type { ActivitySnapshot } from '@vers/idle-core';
 import { setActivity } from './set-activity';
 import { useActivityStore } from './use-activity-store';
 
 test('it updates the activity state', () => {
-  const activity: ActivityAppState = {
+  const activity: ActivitySnapshot = {
     currentWave: null,
     elapsed: 0,
     enemiesRemaining: 20,

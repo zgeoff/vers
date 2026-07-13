@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
-import type { SimulationAppState } from '@vers/idle-core';
+import type { SimulationSnapshot } from '@vers/idle-core';
 import { ActivityFailureAction, EntityStatus } from '@vers/idle-core';
 import { WorkerMessageType } from '../types';
 import { createSimulationUpdateMessage } from './create-simulation-update-message';
 
 test('it creates a simulation update message', () => {
-  const state: SimulationAppState = {
+  const state: SimulationSnapshot = {
     activity: {
       currentWave: null,
       elapsed: 1000,

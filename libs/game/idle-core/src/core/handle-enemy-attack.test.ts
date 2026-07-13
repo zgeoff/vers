@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createAvatar } from '../entities/create-avatar';
-import { createMockActivityData } from '../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
@@ -21,7 +21,7 @@ test('it applies damage from the enemy to the avatar', () => {
 
   const avatarData = createMockAvatarData({ life: 100 });
 
-  const activityData = createMockActivityData({
+  const activityData = createMockActivityInput({
     enemies: [enemyData],
   });
 
@@ -58,7 +58,7 @@ test('it does nothing if the enemy is dead', () => {
 
   const avatarData = createMockAvatarData({ life: 100 });
 
-  const activityData = createMockActivityData({
+  const activityData = createMockActivityInput({
     enemies: [enemyData],
   });
 
@@ -101,7 +101,7 @@ test('it correctly resolves the correct event source', () => {
 
   const avatarData = createMockAvatarData({ life: 100 });
 
-  const activityData = createMockActivityData({
+  const activityData = createMockActivityInput({
     enemies: [enemyData],
   });
 

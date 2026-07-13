@@ -20,7 +20,7 @@ function toDraftNode(node: WorldMapNode): WorldMapNodeDraft {
  * @param maxDifficulty - The maximum difficulty of the graph
  * @returns A graph of WorldMapNodes
  */
-export function generateGraphNodes(maxDifficulty: number): Array<WorldMapNode> {
+export function buildGraphNodes(maxDifficulty: number): Array<WorldMapNode> {
   const graph: Array<WorldMapNodeDraft> = [];
   const centralNode = toDraftNode(createWorldMapNode(0, 0));
 

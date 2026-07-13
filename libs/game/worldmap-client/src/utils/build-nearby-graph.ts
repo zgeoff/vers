@@ -10,10 +10,7 @@ const MAX_DISTANCE = 160;
  * filter out nodes that are outside our camera's view to minimize
  * our scene size.
  */
-export function filterDistanceGraph(
-  selectedNode: null | Object3D,
-  graphData: WorldGraph,
-): WorldGraph {
+export function buildNearbyGraph(selectedNode: null | Object3D, graphData: WorldGraph): WorldGraph {
   const position = selectedNode?.position ?? new Vector3();
   const nodes: Record<string, WorldMapNode> = {};
 

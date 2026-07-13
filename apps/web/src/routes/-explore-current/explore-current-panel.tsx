@@ -1,7 +1,7 @@
 import { CheckboxField, Spinner } from '@vers/design-system';
 import {
   ActivityFailureAction,
-  createMockActivityData,
+  createMockActivityInput,
   createMockAvatarData,
 } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
@@ -18,7 +18,10 @@ import { useIsSharedWorkerSupported } from '../../lib/platform/use-is-shared-wor
 /**
  * Module-scoped so its identity — and its `id` — stays stable across renders.
  */
-const PLACEHOLDER_ACTIVITY = createMockActivityData({ failureAction: ActivityFailureAction.Abort });
+const PLACEHOLDER_ACTIVITY = createMockActivityInput({
+  failureAction: ActivityFailureAction.Abort,
+});
+
 const PLACEHOLDER_AVATAR = createMockAvatarData();
 
 /**

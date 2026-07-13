@@ -1,15 +1,26 @@
-export interface CombatExecutorAppState {
+export interface ActivityExecutorSnapshot {
   readonly elapsed: number;
 }
 
-export interface CombatExecutor {
+/**
+ * The lifecycle every activity type's executor implements: report elapsed time,
+ * project a serializable snapshot, reset for a fresh run, and advance by a delta.
+ * Each activity type supplies its own executor — combat is the world map encounter's.
+ */
+export interface ActivityExecutor {
   // getters
   get elapsed(): number;
 
   // utils
-  getAppState: () => CombatExecutorAppState;
+  getSnapshot: () => ActivityExecutorSnapshot;
   reset: () => void;
   run: (delta: number) => void;
+}
+
+export type CombatExecutorSnapshot = ActivityExecutorSnapshot;
+
+export interface CombatExecutor extends ActivityExecutor {
+  // utils
   scheduleEvent: (event: CombatEvent) => void;
 }
 

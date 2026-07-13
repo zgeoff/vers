@@ -1,6 +1,6 @@
-import type { ActivityAppState } from '@vers/idle-core';
+import type { ActivitySnapshot } from '@vers/idle-core';
 import { useActivityStore } from './use-activity-store';
 
-export function setActivity(activity?: ActivityAppState) {
+export function setActivity(activity?: ActivitySnapshot) {
   useActivityStore.setState(() => ({ activity: activity ?? null }));
 }
