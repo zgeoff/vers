@@ -99,7 +99,7 @@ reward holds as a pending item on the client until the verifier settles it.
 ## Provenance
 
 Every checkpoint's frozen hashed subset carries an `entropySource` tag naming which source rolled
-its outcomes, present from the first row written and covered by the hash. Verification stamps an
-outcome's provenance from server records and this tag, and tradeability keys on the source's
-security property rather than on the delivery channel — the
-[provenance rules](./game-entropy.md#provenance) own that distinction.
+its outcomes, present from the first row written and covered by the hash. Replay stamps an outcome's
+provenance from server records and this tag, and tradeability keys on the source's security property
+rather than on the delivery channel — the [provenance rules](./game-entropy.md#provenance) own that
+distinction.

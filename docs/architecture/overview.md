@@ -44,7 +44,7 @@ Each service is its own Fly deployment, scale-to-zero, reachable only on the pri
 - `service-activity` — owns the game's event store: activity streams of simulation checkpoint
   batches, and the "current activity" / "latest progress" reads the client resumes from.
 - `service-verifier` (in build) — queue-fed checkpoint-replay worker. Replaying a simulation is
-  CPU-bound, so verification runs off the request path with its own scaling profile.
+  CPU-bound, so replay runs off the request path with its own scaling profile.
 
 ## Data
 
@@ -56,7 +56,7 @@ is playing. Provisioning, connection rules, and where the secrets live: [databas
 - **Activity checkpoints** — an append-only table keyed by `(activity_id, version)`, one row per
   checkpoint batch, alongside a per-activity head row carrying the appended and verified cursors.
   The workload is append-heavy submissions, point reads for "latest progress" off the head row, and
-  full-stream replays during verification — a natural fit for indexed Postgres, with the head row's
+  full-stream replays by the verifier — a natural fit for indexed Postgres, with the head row's
   compare-and-swap backing the checkpoint hash chain. The table carries no inbound foreign keys and
   no global uniqueness constraint, so time-range partitioning with a retention window that
   cold-archives verified streams to object storage is a storage change, not a schema change.

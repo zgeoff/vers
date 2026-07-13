@@ -26,16 +26,17 @@ Per specialization:
 - **Name** — working name.
 - **System drawn on** — the universal system it interlocks with (a resource pool, a defensive layer,
   the beat cadence) or the mechanic itself. Never a damage type or a build archetype.
-- **Tier 1 / Tier 2 / Tier 3** — two or three nodes each; the avatar takes one per tier. For every
-  node, state its effect and the **edge** it holds: the build, region, or encounter shape it is
-  strongest in. Nodes in a tier point in different directions — that divergence is the choice.
+- **Tier 1 / Tier 2 / Tier 3** — two or three passives each; the avatar takes one per tier. For
+  every passive, state its effect and the **edge** it holds: the build, region, or encounter shape
+  it is strongest in. Passives in a tier point in different directions — that divergence is the
+  choice.
 
 Check the specialization as a set of paths, not tier by tier:
 
-- No node erases the value of an earlier one; a node bound to a durable quantity survives a capstone
-  that a node bound to a transient state does not.
-- No node wins in every context — each holds a different edge, or the tier collapses to one pick.
-- A capstone that reshapes the mechanic leaves no earlier node orphaned.
+- No passive erases the value of an earlier one; a passive bound to a durable quantity survives a
+  capstone that a passive bound to a transient state does not.
+- No passive wins in every context — each holds a different edge, or the tier collapses to one pick.
+- A capstone that reshapes the mechanic leaves no earlier passive orphaned.
 
 ## Open Questions
 
