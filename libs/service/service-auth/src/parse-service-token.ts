@@ -3,7 +3,7 @@ import * as jose from 'jose';
 import { TOKEN_ALGORITHM, TOKEN_ISSUER } from './token-claims';
 
 export type ServiceTokenResolution =
-  | { actingUserId: null | string }
+  | { actingSessionId: null | string; actingUserId: null | string }
   | { failure: 'invalid-service-token' };
 
 interface ParseServiceTokenOptions {
@@ -37,6 +37,8 @@ export async function parseServiceToken(
     });
 
     return {
+      actingSessionId:
+        typeof verification.payload['sid'] === 'string' ? verification.payload['sid'] : null,
       actingUserId: typeof verification.payload.sub === 'string' ? verification.payload.sub : null,
     };
   } catch {

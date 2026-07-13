@@ -229,6 +229,7 @@ function mountORPCHandler(
 
         const handled = await handler.handle(context.request, {
           context: {
+            actingSessionId: resolution.actingSessionId,
             actingUserId: resolution.actingUserId,
             logger: deps.logger,
             traceID: trace.traceID,

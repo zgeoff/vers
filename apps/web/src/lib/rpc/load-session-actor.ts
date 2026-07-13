@@ -25,7 +25,16 @@ interface RefreshedTokens {
 const inFlightRefreshes = new Map<string, Promise<RefreshedTokens | undefined>>();
 
 /**
- * Loads the acting user id for a cookie-derived service call, proactively re-validating a
+ * The validated identity pair a cookie-derived service call acts as: the user for the token's
+ * `sub` claim, the session for its `sid` (writer-fence) claim.
+ */
+export interface SessionActor {
+  readonly sessionID: string;
+  readonly userID: string;
+}
+
+/**
+ * Loads the acting user and session ids for a cookie-derived service call, proactively re-validating a
  * near-expired session first: services no longer see the caller's own access token, so nothing
  * else re-checks the underlying session's existence, expiry, or revocation before its identity is
  * trusted to mint an s2s token. Even a fresh access token no longer settles that on its own — this
@@ -37,7 +46,7 @@ const inFlightRefreshes = new Map<string, Promise<RefreshedTokens | undefined>>(
  * reached at all fails the call instead: an unreachable service is never grounds to trust the
  * token or to destroy the cookie.
  */
-export async function loadSessionActor(): Promise<string | null> {
+export async function loadSessionActor(): Promise<SessionActor | null> {
   const session = await getAuthSession();
 
   if (
@@ -58,7 +67,7 @@ export async function loadSessionActor(): Promise<string | null> {
       return null;
     }
 
-    return session.userID;
+    return { sessionID: session.sessionID, userID: session.userID };
   }
 
   const tokens = await resolveRefreshedTokens(session.sessionID, session.refreshToken);
@@ -71,7 +80,7 @@ export async function loadSessionActor(): Promise<string | null> {
 
   await updateAuthSession({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
 
-  return session.userID;
+  return { sessionID: session.sessionID, userID: session.userID };
 }
 
 function isAccessTokenStale(accessToken: string): boolean {

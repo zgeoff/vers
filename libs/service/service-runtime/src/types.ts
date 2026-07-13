@@ -5,6 +5,12 @@ import type pino from 'pino';
  */
 export interface ServiceContext {
   /**
+   * Session named by the verified service token's `sid` claim — the writer identity fenced
+   * procedures compare against; null when the call holds no live session.
+   */
+  actingSessionId: null | string;
+
+  /**
    * Acting user named by the verified service token; null for verified anonymous calls.
    */
   actingUserId: null | string;

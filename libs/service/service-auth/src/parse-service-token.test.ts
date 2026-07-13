@@ -23,7 +23,29 @@ test('it resolves the acting user from a token minted for the matching audience'
     publicKey: keyPair.publicKey,
   });
 
-  expect(resolution).toStrictEqual({ actingUserId: 'user-1' });
+  expect(resolution).toStrictEqual({ actingSessionId: null, actingUserId: 'user-1' });
+});
+
+test('it resolves the acting session from a token minted with an actingSessionId', async () => {
+  const keyPair = await jose.generateKeyPair(TOKEN_ALGORITHM);
+
+  const token = await createServiceToken({
+    actingSessionId: 'session-1',
+    actingUserId: 'user-1',
+    audience: 'avatar',
+    privateKey: keyPair.privateKey,
+  });
+
+  const request = new Request('http://test.local', {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  const resolution = await parseServiceToken(request, {
+    audience: buildServiceAudience('avatar'),
+    publicKey: keyPair.publicKey,
+  });
+
+  expect(resolution).toStrictEqual({ actingSessionId: 'session-1', actingUserId: 'user-1' });
 });
 
 test('it resolves a null acting user from a token minted with no actingUserId', async () => {
@@ -43,7 +65,7 @@ test('it resolves a null acting user from a token minted with no actingUserId', 
     publicKey: keyPair.publicKey,
   });
 
-  expect(resolution).toStrictEqual({ actingUserId: null });
+  expect(resolution).toStrictEqual({ actingSessionId: null, actingUserId: null });
 });
 
 test('it rejects a token minted for a different audience', async () => {

@@ -34,7 +34,7 @@ test('it returns the cookie userID unchanged for a fresh access token whose sess
     () => loadSessionActor(),
   );
 
-  expect(outcome.value).toBe(session.userID);
+  expect(outcome.value).toStrictEqual({ sessionID: session.id, userID: session.userID });
   expect(outcome.cookies['en_session']).toContainEntry(['accessToken', accessToken]);
 });
 
@@ -95,7 +95,9 @@ test('it hits getSession at most once per request for a fresh access token', asy
     () => Promise.all([loadSessionActor(), loadSessionActor()]),
   );
 
-  expect(outcome.value).toStrictEqual([session.userID, session.userID]);
+  const actor = { sessionID: session.id, userID: session.userID };
+
+  expect(outcome.value).toStrictEqual([actor, actor]);
   expect(callCount).toBe(1);
 });
 
@@ -151,7 +153,7 @@ test('it refreshes a stale access token once, updates the cookie, and returns th
     () => loadSessionActor(),
   );
 
-  expect(outcome.value).toBe(session.userID);
+  expect(outcome.value).toStrictEqual({ sessionID: session.id, userID: session.userID });
   expect(outcome.cookies['en_session']).not.toContainEntry(['accessToken', staleAccessToken]);
   expect(outcome.cookies['en_session']).not.toContainEntry(['refreshToken', 'refresh-1']);
 });
@@ -228,7 +230,9 @@ test('it single-flights concurrent refreshes for the same session', async () => 
     Promise.all([loadSessionActor(), loadSessionActor()]),
   );
 
-  expect(outcome.value).toStrictEqual([session.userID, session.userID]);
+  const actor = { sessionID: session.id, userID: session.userID };
+
+  expect(outcome.value).toStrictEqual([actor, actor]);
 
   // if the two calls raced instead of sharing one refresh, the mock service's reuse detection
   // would revoke the session on the second rotation
