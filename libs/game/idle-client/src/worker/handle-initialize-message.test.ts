@@ -1,33 +1,12 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
+import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
 import type { InitializeMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleInitializeMessage } from './handle-initialize-message';
-import type { WorkerContext } from './types';
-
-function createContext(initialConnections: ReadonlyArray<MessagePort> = []): WorkerContext {
-  const connections = new Set(initialConnections);
-
-  let simulation: null | ReturnType<typeof createSimulation> = null;
-
-  return {
-    connections,
-    getSimulation: () => simulation,
-    getSubmitter: () => ({
-      attach: () => Promise.resolve(),
-      submit: () => Promise.resolve(),
-    }),
-    removeConnection: (port) => {
-      connections.delete(port);
-    },
-    setSimulation: (newSimulation) => {
-      simulation = newSimulation;
-    },
-  };
-}
 
 test('it initializes the simulation', () => {
-  const context = createContext();
+  const context = createMockWorkerContext();
 
   const message: InitializeMessage = {
     type: ClientMessageType.Initialize,
@@ -40,7 +19,7 @@ test('it initializes the simulation', () => {
 test('it sends an initial state message to all connections', async () => {
   const channel = new MessageChannel();
 
-  const context = createContext([channel.port2]);
+  const context = createMockWorkerContext({ connections: [channel.port2] });
 
   channel.port1.start();
 
@@ -65,7 +44,7 @@ test('it sends an initial state message to all connections', async () => {
 });
 
 test('it does not create a new simulation if one already exists', () => {
-  const context = createContext();
+  const context = createMockWorkerContext();
   const existingSimulation = createSimulation();
 
   context.setSimulation(existingSimulation);

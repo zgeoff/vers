@@ -1,29 +1,17 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
+import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
 import { WorkerMessageType } from '../types';
 import { handleSimulationUpdate } from './handle-simulation-update';
-import type { WorkerContext } from './types';
 
 test('it sends simulation update messages to all connections', async () => {
   const simulation = createSimulation();
 
   const channel = new MessageChannel();
 
-  const context: WorkerContext = {
-    connections: new Set([channel.port2]),
-    getSimulation: () => simulation,
-    getSubmitter: () => ({
-      attach: () => Promise.resolve(),
-      submit: () => Promise.resolve(),
-    }),
-    removeConnection: () => {
-      //
-    },
-    setSimulation: () => {
-      //
-    },
-  };
+  const context = createMockWorkerContext({ connections: [channel.port2] });
 
+  context.setSimulation(simulation);
   channel.port1.start();
 
   const received = new Promise<MessageEvent>((resolve) => {

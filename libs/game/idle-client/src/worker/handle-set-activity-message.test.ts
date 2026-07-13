@@ -1,38 +1,24 @@
 import { expect, mock, test } from 'bun:test';
 import { createMockActivityInput, createMockAvatarData, createSimulation } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
 import type { SetActivityMessage } from '../types';
 import { ClientMessageType } from '../types';
 import { handleSetActivityMessage } from './handle-set-activity-message';
-import type { WorkerContext } from './types';
 
-function createContext(simulation: null | ReturnType<typeof createSimulation>): {
-  context: WorkerContext;
-  submitter: CheckpointSubmitter;
-} {
-  const submitter: CheckpointSubmitter = {
+function buildSpySubmitter(): CheckpointSubmitter {
+  return {
     attach: mock(() => Promise.resolve()),
     submit: mock(() => Promise.resolve()),
   };
-
-  const context: WorkerContext = {
-    connections: new Set(),
-    getSimulation: () => simulation,
-    getSubmitter: () => submitter,
-    removeConnection: () => {
-      //
-    },
-    setSimulation: () => {
-      //
-    },
-  };
-
-  return { context, submitter };
 }
 
 test('it starts the activity on the simulation', async () => {
+  const context = createMockWorkerContext();
   const simulation = createSimulation();
-  const ctx = createContext(simulation);
+
+  context.setSimulation(simulation);
+
   const activity = createMockActivityInput();
   const avatar = createMockAvatarData();
 
@@ -42,14 +28,16 @@ test('it starts the activity on the simulation', async () => {
     type: ClientMessageType.SetActivity,
   };
 
-  await handleSetActivityMessage(ctx.context, message);
+  await handleSetActivityMessage(context, message);
 
   expect(simulation.activity?.id).toBe(activity.id);
 });
 
 test('it attaches the submission context to the submitter when provided', async () => {
-  const simulation = createSimulation();
-  const ctx = createContext(simulation);
+  const submitter = buildSpySubmitter();
+  const context = createMockWorkerContext({ submitter });
+
+  context.setSimulation(createSimulation());
 
   const message: SetActivityMessage = {
     activity: createMockActivityInput(),
@@ -63,9 +51,9 @@ test('it attaches the submission context to the submitter when provided', async 
     type: ClientMessageType.SetActivity,
   };
 
-  await handleSetActivityMessage(ctx.context, message);
+  await handleSetActivityMessage(context, message);
 
-  expect(ctx.submitter.attach).toHaveBeenCalledExactlyOnceWith({
+  expect(submitter.attach).toHaveBeenCalledExactlyOnceWith({
     activityID: 'activity_1',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -74,8 +62,10 @@ test('it attaches the submission context to the submitter when provided', async 
 });
 
 test('it does not attach when the message carries no submission context', async () => {
-  const simulation = createSimulation();
-  const ctx = createContext(simulation);
+  const submitter = buildSpySubmitter();
+  const context = createMockWorkerContext({ submitter });
+
+  context.setSimulation(createSimulation());
 
   const message: SetActivityMessage = {
     activity: createMockActivityInput(),
@@ -83,13 +73,14 @@ test('it does not attach when the message carries no submission context', async 
     type: ClientMessageType.SetActivity,
   };
 
-  await handleSetActivityMessage(ctx.context, message);
+  await handleSetActivityMessage(context, message);
 
-  expect(ctx.submitter.attach).not.toHaveBeenCalled();
+  expect(submitter.attach).not.toHaveBeenCalled();
 });
 
 test('it does nothing when no simulation is initialized', async () => {
-  const ctx = createContext(null);
+  const submitter = buildSpySubmitter();
+  const context = createMockWorkerContext({ submitter });
 
   const message: SetActivityMessage = {
     activity: createMockActivityInput(),
@@ -103,7 +94,7 @@ test('it does nothing when no simulation is initialized', async () => {
     type: ClientMessageType.SetActivity,
   };
 
-  await handleSetActivityMessage(ctx.context, message);
+  await handleSetActivityMessage(context, message);
 
-  expect(ctx.submitter.attach).not.toHaveBeenCalled();
+  expect(submitter.attach).not.toHaveBeenCalled();
 });

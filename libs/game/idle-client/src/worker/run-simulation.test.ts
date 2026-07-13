@@ -7,25 +7,9 @@ import {
   createMockEnemyData,
   createSimulation,
 } from '@vers/idle-core';
+import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
-
-function buildWorkerContext(): WorkerContext {
-  return {
-    connections: new Set(),
-    getSimulation: () => null,
-    getSubmitter: () => ({
-      attach: () => Promise.resolve(),
-      submit: () => Promise.resolve(),
-    }),
-    removeConnection: () => {
-      //
-    },
-    setSimulation: () => {
-      //
-    },
-  };
-}
 
 async function runSimulationSteps(
   context: WorkerContext,
@@ -39,7 +23,7 @@ async function runSimulationSteps(
 }
 
 test('it restarts the activity if it fails and the failure action is retry', async () => {
-  const context = buildWorkerContext();
+  const context = createMockWorkerContext();
   const simulation = createSimulation();
   const restartedSpy = mock<SimulationListener>();
 
@@ -57,7 +41,7 @@ test('it restarts the activity if it fails and the failure action is retry', asy
 });
 
 test('it does not restart the activity if it fails and the failure action is abort', async () => {
-  const context = buildWorkerContext();
+  const context = createMockWorkerContext();
   const simulation = createSimulation();
   const restartedSpy = mock<SimulationListener>();
   const stoppedSpy = mock<SimulationListener>();
@@ -80,7 +64,7 @@ test('it does not restart the activity if it fails and the failure action is abo
 test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
   'it restarts the activity if it completes, regardless of the failure action (%s)',
   async (failureAction) => {
-    const context = buildWorkerContext();
+    const context = createMockWorkerContext();
     const simulation = createSimulation();
     const restartedSpy = mock<SimulationListener>();
     const avatar = createMockAvatarData();
