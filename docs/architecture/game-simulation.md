@@ -87,9 +87,9 @@ or by completing and discarding them. This is a behavioural signal, not a diverg
 scored with the same restraint: a soft consequence before a hard one, always at a session boundary.
 Honest grinders swing too, and a false accusation costs more than the edge it denies.
 
-The primary health gauge is replay lag: the oldest unverified append across all streams.
-Rejection rates are tracked split by cause — an integrity-mismatch spike is almost always a bad
-deploy, not a cheating wave.
+The primary health gauge is replay lag: the oldest unverified append across all streams. Rejection
+rates are tracked split by cause — an integrity-mismatch spike is almost always a bad deploy, not a
+cheating wave.
 
 ## Applying verified progress
 
