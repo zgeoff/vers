@@ -11,17 +11,23 @@ import type {
   EmptyErrorPayload,
   MissingSessionPayload,
   StaleHeadPayload,
+  TerminalStatusPayload,
 } from '../types';
 
 /**
  * oRPC handler opts for the authed `trackActivityProgress` procedure.
  */
 interface TrackActivityProgressOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: {
+    readonly actingSessionId: null | string;
+    readonly actingUserId: null | string;
+  };
   readonly errors: {
+    readonly ACTIVITY_TERMINAL: (payload: TerminalStatusPayload) => Error;
     readonly CHECKPOINT_INVALID: (payload: CheckpointInvalidPayload) => Error;
     readonly CONFLICT: (payload: StaleHeadPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
+    readonly SESSION_EVICTED: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
   readonly input: {
@@ -35,11 +41,13 @@ interface TrackActivityProgressOpts {
  * Appends a checkpoint batch to an active activity owned by the acting user. The batch's internal
  * contiguity and hash chain are validated up front; the head-row compare-and-swap inside the
  * transaction is the actual serialization point — a losing race re-reads the current head and
- * reports NOT_FOUND (activity gone or no longer active) or CONFLICT (a retryable stale head) as
- * appropriate. When the batch's last checkpoint is terminal (completed or failed), the same
- * transaction claims the activity's terminal transition and settles the avatar's xp/level from
- * that checkpoint's final rewards total — the claim guards against a duplicate terminal
- * resubmission double-applying.
+ * reports NOT_FOUND (activity gone), ACTIVITY_TERMINAL (a terminal status accepts no appends),
+ * SESSION_EVICTED (another session took over as the writer — fatal, the caller discards its
+ * pending queue), or CONFLICT (a retryable stale head). The writer fence admits only the stamped
+ * writer session; an unstamped activity is claimed by the first appending session. When the
+ * batch's last checkpoint is terminal (completed or failed), the same transaction claims the
+ * activity's terminal transition and settles the avatar's xp/level from that checkpoint's final
+ * rewards total — the claim guards against a duplicate terminal resubmission double-applying.
  */
 export async function trackActivityProgress(
   db: Kysely<DB>,
@@ -51,6 +59,8 @@ export async function trackActivityProgress(
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
+  const actingSessionID = opts.context.actingSessionId;
+
   const head = await db
     .selectFrom('activities')
     .innerJoin('avatars', 'avatars.id', 'activities.avatarId')
@@ -61,15 +71,24 @@ export async function trackActivityProgress(
       'activities.scopeId',
       'activities.scopeType',
       'activities.startChainIndex',
+      'activities.status',
+      'activities.writerSessionId',
       'avatars.xp',
     ])
     .where('activities.id', '=', opts.input.activityID)
     .where('avatars.userId', '=', actingUserID)
-    .where('activities.status', '=', 'active')
     .executeTakeFirst();
 
   if (head === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  if (head.status !== 'active') {
+    throw opts.errors.ACTIVITY_TERMINAL({ data: { status: head.status } });
+  }
+
+  if (head.writerSessionId !== null && head.writerSessionId !== actingSessionID) {
+    throw opts.errors.SESSION_EVICTED({ data: {} });
   }
 
   const reason = findInvalidReason(opts.input, head);
@@ -90,6 +109,7 @@ export async function trackActivityProgress(
         appendedAt: sql`now()`,
         appendedHead: newHead,
         lastHash: newLastHash,
+        ...(actingSessionID !== null && { writerSessionId: actingSessionID }),
         ...(terminalRewardsXP !== undefined && {
           status: 'stopped' as const,
           stoppedAt: sql`now()`,
@@ -98,18 +118,29 @@ export async function trackActivityProgress(
       .where('id', '=', opts.input.activityID)
       .where('appendedHead', '=', opts.input.expectedHead)
       .where('status', '=', 'active')
+      .where((eb) =>
+        eb.or([eb('writerSessionId', 'is', null), eb('writerSessionId', '=', actingSessionID)]),
+      )
       .returning('appendedHead')
       .executeTakeFirst();
 
     if (updated === undefined) {
       const current = await trx
         .selectFrom('activities')
-        .select(['appendedHead', 'status'])
+        .select(['appendedHead', 'status', 'writerSessionId'])
         .where('id', '=', opts.input.activityID)
         .executeTakeFirst();
 
-      if (current === undefined || current.status !== 'active') {
+      if (current === undefined) {
         throw opts.errors.NOT_FOUND({ data: {} });
+      }
+
+      if (current.status !== 'active') {
+        throw opts.errors.ACTIVITY_TERMINAL({ data: { status: current.status } });
+      }
+
+      if (current.writerSessionId !== null && current.writerSessionId !== actingSessionID) {
+        throw opts.errors.SESSION_EVICTED({ data: {} });
       }
 
       throw opts.errors.CONFLICT({ data: { appendedHead: current.appendedHead } });

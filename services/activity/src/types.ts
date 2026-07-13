@@ -1,4 +1,4 @@
-import type { ActivityData } from '@vers/contract-activity';
+import type { ActivityData, ActivityStatus } from '@vers/contract-activity';
 
 /**
  * Payload shape for an authed procedure's UNAUTHORIZED error when no acting user is present.
@@ -34,4 +34,12 @@ export interface StaleHeadPayload {
  */
 export interface CheckpointInvalidPayload {
   readonly data: { readonly reason: string };
+}
+
+/**
+ * Payload shape for `trackActivityProgress`'s ACTIVITY_TERMINAL: the terminal status that rejects
+ * the append.
+ */
+export interface TerminalStatusPayload {
+  readonly data: { readonly status: ActivityStatus };
 }

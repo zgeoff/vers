@@ -1,7 +1,13 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
 import { buildFailureXPLoss, levelForXP } from '@vers/idle-core';
-import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import {
+  createAnonymousViewer,
+  createServiceToken,
+  createTestDB,
+  createViewer,
+  getTestServiceKeyPair,
+} from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
@@ -245,7 +251,7 @@ test('it rejects a hash that does not match its payload with CHECKPOINT_INVALID'
   ).rejects.toMatchObject({ code: 'CHECKPOINT_INVALID', data: { reason: 'hash-mismatch' } });
 });
 
-test('it rejects appending to a stopped activity with NOT_FOUND', async () => {
+test('it rejects appending to a stopped activity with ACTIVITY_TERMINAL', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -265,7 +271,7 @@ test('it rejects appending to a stopped activity with NOT_FOUND', async () => {
 
   expect(
     client.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
-  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  ).rejects.toMatchObject({ code: 'ACTIVITY_TERMINAL', data: { status: 'stopped' } });
 });
 
 test('it rejects a foreign or missing activity id with NOT_FOUND', async () => {
@@ -644,7 +650,7 @@ test('it advances the chain anchor exactly once across a duplicate terminal subm
       checkpoints: batch,
       expectedHead: 0,
     }),
-  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  ).rejects.toMatchObject({ code: 'ACTIVITY_TERMINAL', data: { status: 'stopped' } });
 
   const chainAfterSecond = await ctx.db
     .selectFrom('activityChains')
@@ -689,7 +695,7 @@ test('it does not double-apply xp on a duplicate terminal submission', async () 
       checkpoints: batch,
       expectedHead: 0,
     }),
-  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  ).rejects.toMatchObject({ code: 'ACTIVITY_TERMINAL', data: { status: 'stopped' } });
 
   const updated = await ctx.db
     .selectFrom('avatars')
@@ -698,4 +704,109 @@ test('it does not double-apply xp on a duplicate terminal submission', async () 
     .executeTakeFirstOrThrow();
 
   expect(updated.xp).toBe(150);
+});
+
+test('it fences an append from a displaced writer session with SESSION_EVICTED', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({
+    audience: 'service-activity',
+    db: ctx.db,
+    sessionID: 'session-a',
+  });
+
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await clientA.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const keyPair = await getTestServiceKeyPair();
+
+  const tokenB = await createServiceToken({
+    actingSessionId: 'session-b',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientB = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenB });
+
+  await clientB.resumeActivity({ activityID: started.id });
+
+  const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
+
+  expect(
+    clientA.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
+  ).rejects.toMatchObject({ code: 'SESSION_EVICTED' });
+
+  const result = await clientB.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  expect(result).toStrictEqual({ appendedHead: 1 });
+});
+
+test('it lets the first appending session claim an unstamped stream', async () => {
+  await using ctx = await setupTest();
+
+  // a session-less viewer starts the activity, leaving the writer unstamped
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const sessionlessClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await sessionlessClient.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const keyPair = await getTestServiceKeyPair();
+
+  const tokenA = await createServiceToken({
+    actingSessionId: 'session-a',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenA });
+  const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
+
+  const result = await clientA.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  expect(result).toStrictEqual({ appendedHead: 1 });
+
+  const tokenB = await createServiceToken({
+    actingSessionId: 'session-b',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientB = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenB });
+
+  const nextBatch = createMockCheckpointBatch({
+    startPrevHash: batch[0]?.hash ?? '',
+    startVersion: 2,
+  });
+
+  expect(
+    clientB.trackActivityProgress({
+      activityID: started.id,
+      checkpoints: nextBatch,
+      expectedHead: 1,
+    }),
+  ).rejects.toMatchObject({ code: 'SESSION_EVICTED' });
 });

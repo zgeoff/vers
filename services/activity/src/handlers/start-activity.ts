@@ -23,8 +23,12 @@ interface StartActivityDeps {
  * oRPC handler opts for the authed `startActivity` procedure.
  */
 interface StartActivityOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: {
+    readonly actingSessionId: null | string;
+    readonly actingUserId: null | string;
+  };
   readonly errors: {
+    readonly CHAIN_QUARANTINED: (payload: EmptyErrorPayload) => Error;
     readonly CONFLICT: (payload: ActiveActivityConflictPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
@@ -38,9 +42,10 @@ interface StartActivityOpts {
 
 /**
  * Starts an activity for an avatar owned by the acting user, snapshotting the avatar's current
- * progression as the build the stream plays against. Throws CONFLICT with the avatar's existing
- * activity when one is already active — the partial unique index is the serialization point, this
- * handler just reports what it caught.
+ * progression as the build the stream plays against, and stamping the acting session as the
+ * stream's writer. Throws CONFLICT with the avatar's existing activity when one is already active
+ * — the partial unique index is the serialization point, this handler just reports what it caught.
+ * A chain whose replay frontier is quarantined admits no new starts until it is adjudicated.
  */
 export async function startActivity(
   deps: StartActivityDeps,
@@ -61,6 +66,19 @@ export async function startActivity(
 
   if (avatar === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  const quarantined = await deps.db
+    .selectFrom('activities')
+    .select('id')
+    .where('avatarId', '=', opts.input.avatarID)
+    .where('scopeType', '=', opts.input.scopeType)
+    .where('scopeId', '=', opts.input.scopeID)
+    .where('status', '=', 'quarantined')
+    .executeTakeFirst();
+
+  if (quarantined !== undefined) {
+    throw opts.errors.CHAIN_QUARANTINED({ data: {} });
   }
 
   const id = `act_${createId()}`;
@@ -109,6 +127,7 @@ export async function startActivity(
         simVersion: deps.simVersion,
         startChainIndex: chain.appendedChainIndex,
         startHash,
+        writerSessionId: opts.context.actingSessionId,
       })
       .returningAll()
       .executeTakeFirstOrThrow();

@@ -208,3 +208,56 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
     data: { reason: 'missing-session' },
   });
 });
+
+test('it blocks a new start while the chain is quarantined', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ status: 'quarantined' })
+    .where('id', '=', started.id)
+    .execute();
+
+  expect(
+    client.startActivity({ avatarID: avatar.id, scopeID: 'node_1', scopeType: 'world_map_node' }),
+  ).rejects.toMatchObject({ code: 'CHAIN_QUARANTINED' });
+});
+
+test('it stamps the acting session as the new activity writer', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({
+    audience: 'service-activity',
+    db: ctx.db,
+    sessionID: 'session-a',
+  });
+
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const row = await ctx.db
+    .selectFrom('activities')
+    .select('writerSessionId')
+    .where('id', '=', started.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.writerSessionId).toBe('session-a');
+});
