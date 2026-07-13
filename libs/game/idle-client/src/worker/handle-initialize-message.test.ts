@@ -1,12 +1,9 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
-import xxhash from 'xxhash-wasm';
 import type { InitializeMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleInitializeMessage } from './handle-initialize-message';
 import type { WorkerContext } from './types';
-
-const hasher = await xxhash();
 
 function createContext(initialConnections: ReadonlyArray<MessagePort> = []): WorkerContext {
   const connections = new Set(initialConnections);
@@ -66,7 +63,7 @@ test('it sends an initial state message to all connections', async () => {
 
 test('it does not create a new simulation if one already exists', async () => {
   const context = createContext();
-  const existingSimulation = createSimulation(hasher);
+  const existingSimulation = createSimulation();
 
   context.setSimulation(existingSimulation);
 

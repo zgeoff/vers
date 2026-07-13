@@ -7,7 +7,6 @@ test('it creates a simulation context with expected properties', () => {
 
   expect(ctx).toStrictEqual({
     elapsed: 0,
-    hasher: expect.toBeObject(),
     rng: expect.toBeObject(),
   });
 });
@@ -22,7 +21,6 @@ test('it creates a simulation context with custom properties', () => {
 
   expect(ctx).toStrictEqual({
     elapsed: 100,
-    hasher: expect.toBeObject(),
     rng,
   });
 });

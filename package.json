@@ -92,8 +92,10 @@
       "elysia": "1.4.29",
       "execa": "9.6.1",
       "expect-type": "1.4.0",
+      "fake-indexeddb": "6.2.5",
       "fast-equals": "6.0.0",
       "happy-dom": "20.10.6",
+      "idb": "8.0.3",
       "immer": "11.1.11",
       "jose": "6.2.3",
       "knip": "6.24.0",
@@ -127,7 +129,6 @@
       "turbo": "2.10.3",
       "typescript": "7.0.2",
       "vite": "8.1.4",
-      "xxhash-wasm": "1.1.0",
       "zod": "4.4.3",
       "zustand": "5.0.14"
     }

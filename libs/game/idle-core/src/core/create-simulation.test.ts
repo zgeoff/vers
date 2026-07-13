@@ -1,15 +1,12 @@
 import { expect, mock, test } from 'bun:test';
-import xxhash from 'xxhash-wasm';
 import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import type { SimulationListener } from '../types';
 import { ActivityCheckpointType, ActivityFailureAction } from '../types';
 import { createSimulation } from './create-simulation';
 
-const hasher = await xxhash();
-
 test('it initializes with the expected values', () => {
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   expect(simulation.elapsed).toBe(0);
   expect(simulation.activity).toBeNull();
@@ -18,7 +15,7 @@ test('it initializes with the expected values', () => {
 test('it starts an activity', () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityInput();
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   simulation.startActivity(avatarData, activityData);
 
@@ -31,7 +28,7 @@ test('it starts an activity', () => {
 test('it calls an event listener when starting an activity', () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityInput();
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
   const listenerSpy = mock<SimulationListener>();
 
   simulation.addEventListener('started', listenerSpy);
@@ -43,7 +40,7 @@ test('it calls an event listener when starting an activity', () => {
 test('it stops an activity', async () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityInput();
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   simulation.startActivity(avatarData, activityData);
 
@@ -55,7 +52,7 @@ test('it stops an activity', async () => {
 test('it calls an event listener when stopping an activity', async () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityInput();
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
   const listenerSpy = mock<SimulationListener>();
 
   simulation.addEventListener('stopped', listenerSpy);
@@ -69,7 +66,7 @@ test('it calls an event listener when stopping an activity', async () => {
 test('it restarts an activity', () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityInput();
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   simulation.startActivity(avatarData, activityData);
 
@@ -84,7 +81,7 @@ test('it restarts an activity', () => {
 test('it calls an event listener when restarting an activity', () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityInput();
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
   const listenerSpy = mock<SimulationListener>();
 
   simulation.addEventListener('restarted', listenerSpy);
@@ -97,7 +94,7 @@ test('it calls an event listener when restarting an activity', () => {
 test('it resets the avatar when restarting an activity', () => {
   const avatarData = createMockAvatarData({ life: 100 });
   const activityData = createMockActivityInput();
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   simulation.startActivity(avatarData, activityData);
   simulation.state.avatar?.receiveDamage(50);
@@ -110,7 +107,7 @@ test('it resets the avatar when restarting an activity', () => {
 
 test('it runs an activity and returns checkpoints', async () => {
   const avatarData = createMockAvatarData();
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
   const activityData = createMockActivityInput();
 
   simulation.startActivity(avatarData, activityData);
@@ -118,7 +115,7 @@ test('it runs an activity and returns checkpoints', async () => {
   const firstCheckpoint = await simulation.run(100);
 
   expect(firstCheckpoint).toStrictEqual({
-    hash: expect.toBeString(),
+    nextSeed: expect.toBeString(),
     rewards: { xp: 0 },
     seed: expect.toBeString(),
     time: 0,
@@ -128,7 +125,6 @@ test('it runs an activity and returns checkpoints', async () => {
   const secondCheckpoint = await simulation.run(10_000);
 
   expect(secondCheckpoint).toStrictEqual({
-    hash: expect.toBeString(),
     nextSeed: expect.toBeString(),
     rewards: expect.toBeObject(),
     time: expect.toBeNumber(),
@@ -140,7 +136,7 @@ test('it runs an activity and returns checkpoints', async () => {
 
 test('it calls an event listener when the state updates', async () => {
   const avatarData = createMockAvatarData();
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
   const activityData = createMockActivityInput();
   const listenerSpy = mock<SimulationListener>();
 
@@ -157,7 +153,7 @@ test('it calls an event listener when the state updates', async () => {
 });
 
 test('it returns the expected simulation state for a client app', () => {
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
   const state = simulation.getSnapshot();
 
   expect(state).toStrictEqual({ failureAction: ActivityFailureAction.Abort });
@@ -166,7 +162,7 @@ test('it returns the expected simulation state for a client app', () => {
 test('it seeds the failure action from the started activity', () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityInput({ failureAction: ActivityFailureAction.Retry });
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   simulation.startActivity(avatarData, activityData);
 
@@ -174,7 +170,7 @@ test('it seeds the failure action from the started activity', () => {
 });
 
 test('it updates the failure action', () => {
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   simulation.setFailureAction(ActivityFailureAction.Retry);
 
@@ -183,7 +179,7 @@ test('it updates the failure action', () => {
 });
 
 test('it calls an event listener when the failure action updates', () => {
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
   const listenerSpy = mock<SimulationListener>();
 
   simulation.addEventListener('updated', listenerSpy);

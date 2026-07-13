@@ -8,7 +8,6 @@ import type {
   SimulationContext,
 } from '../../types';
 import { ActivityCheckpointType } from '../../types';
-import { hashObject } from '../../utils/hash-object';
 
 /**
  * `activity.updateRewards(rewards)` must already have been applied by the caller — `rewards` is
@@ -21,15 +20,8 @@ export function createProgressCheckpoint(
   ctx: SimulationContext,
   rewards: ActivityRewards,
 ): ActivityProgressCheckpoint {
-  // hash chain covers only this frozen subset — rewards and levelUp ride outside it, verified by
-  // server replay-recompute instead
-  const hashed: Omit<ActivityProgressCheckpoint, 'hash' | 'levelUp' | 'rewards'> = {
-    nextSeed: ctx.rng.getState(),
-    time: activity.elapsed,
-    type: ActivityCheckpointType.Progress,
-  };
-
-  const hash = hashObject(ctx.hasher, hashed);
+  const nextSeed = ctx.rng.getState();
+  const time = activity.elapsed;
   const totalXPAfter = avatar.xp + activity.rewards.xp;
   const totalXPBefore = totalXPAfter - rewards.xp;
   const previousLevel = levelForXP(totalXPBefore);
@@ -38,5 +30,11 @@ export function createProgressCheckpoint(
   const levelUp: ActivityLevelUp | undefined =
     currentLevel > previousLevel ? { from: previousLevel, to: currentLevel } : undefined;
 
-  return { ...hashed, hash, rewards, ...(levelUp && { levelUp }) };
+  return {
+    nextSeed,
+    rewards,
+    time,
+    type: ActivityCheckpointType.Progress,
+    ...(levelUp && { levelUp }),
+  };
 }

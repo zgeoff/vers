@@ -1,7 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
 import { ActivityCheckpointType } from '../../types';
-import { hashObject } from '../../utils/hash-object';
 import { createStartedCheckpoint } from './create-started-checkpoint';
 
 test('it creates a started checkpoint', () => {
@@ -9,7 +8,7 @@ test('it creates a started checkpoint', () => {
   const checkpoint = createStartedCheckpoint(ctx);
 
   expect(checkpoint).toStrictEqual({
-    hash: expect.toBeString(),
+    nextSeed: ctx.rng.getState(),
     rewards: { xp: 0 },
     seed: ctx.rng.getState(),
     time: 0,
@@ -17,10 +16,9 @@ test('it creates a started checkpoint', () => {
   });
 });
 
-test('it includes a hash based on checkpoint data', () => {
+test('it sets nextSeed to the same value as seed, since Started consumes nothing', () => {
   const ctx = createMockSimulationContext();
   const checkpoint = createStartedCheckpoint(ctx);
-  const { hash, rewards, ...hashParts } = checkpoint;
 
-  expect(hash).toStrictEqual(hashObject(ctx.hasher, hashParts));
+  expect(checkpoint.nextSeed).toBe(checkpoint.seed);
 });

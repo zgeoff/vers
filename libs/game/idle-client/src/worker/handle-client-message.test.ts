@@ -5,7 +5,6 @@ import {
   createMockAvatarData,
   createSimulation,
 } from '@vers/idle-core';
-import xxhash from 'xxhash-wasm';
 import type {
   DisconnectMessage,
   InitializeMessage,
@@ -15,8 +14,6 @@ import type {
 import { ClientMessageType } from '../types';
 import { handleClientMessage } from './handle-client-message';
 import type { WorkerContext } from './types';
-
-const hasher = await xxhash();
 
 function createContext(initialConnections: ReadonlyArray<MessagePort> = []): WorkerContext {
   const connections = new Set(initialConnections);
@@ -57,7 +54,7 @@ test('it handles setting the activity', async () => {
   const channel = new MessageChannel();
 
   const avatar = createMockAvatarData();
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   context.setSimulation(simulation);
 
@@ -82,7 +79,7 @@ test('it handles setting the failure action', async () => {
 
   const channel = new MessageChannel();
 
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   context.setSimulation(simulation);
 

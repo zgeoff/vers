@@ -7,10 +7,7 @@ import {
   createMockEnemyData,
   createSimulation,
 } from '@vers/idle-core';
-import xxhash from 'xxhash-wasm';
 import { runSimulation } from './run-simulation';
-
-const hasher = await xxhash();
 
 async function runSimulationSteps(
   simulation: ReturnType<typeof createSimulation>,
@@ -23,7 +20,7 @@ async function runSimulationSteps(
 }
 
 test('it restarts the activity if it fails and the failure action is retry', async () => {
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
   const restartedSpy = mock<SimulationListener>();
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
@@ -40,7 +37,7 @@ test('it restarts the activity if it fails and the failure action is retry', asy
 });
 
 test('it does not restart the activity if it fails and the failure action is abort', async () => {
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
   const restartedSpy = mock<SimulationListener>();
   const stoppedSpy = mock<SimulationListener>();
 
@@ -62,7 +59,7 @@ test('it does not restart the activity if it fails and the failure action is abo
 test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
   'it restarts the activity if it completes, regardless of the failure action (%s)',
   async (failureAction) => {
-    const simulation = createSimulation(hasher);
+    const simulation = createSimulation();
     const restartedSpy = mock<SimulationListener>();
     const avatar = createMockAvatarData();
     const activity = createMockActivityInput({ enemies: [createMockEnemyData()], failureAction });

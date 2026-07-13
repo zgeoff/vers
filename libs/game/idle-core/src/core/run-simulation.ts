@@ -1,5 +1,4 @@
 import { UnreachableCodeError } from '@vers/utils';
-import xxhash from 'xxhash-wasm';
 import type { ActivityCheckpoint, ActivityInput, AvatarData } from '../types';
 import { ActivityFailureAction } from '../types';
 import { isCompletedCheckpoint } from '../utils/is-completed-checkpoint';
@@ -32,13 +31,11 @@ export async function runSimulation(
   avatar: AvatarData,
   config: SimulationConfig,
 ): Promise<SimulationOutput> {
-  const hasher = await xxhash();
-
   const label = `[activity:${activity.type}]`;
 
   logger.debug(`${label} starting simulation`);
 
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   simulation.startActivity(avatar, activity);
 

@@ -16,8 +16,7 @@
     "@vers/utils": "workspace:*",
     "fast-equals": "catalog:",
     "immer": "catalog:",
-    "tiny-invariant": "catalog:",
-    "xxhash-wasm": "catalog:"
+    "tiny-invariant": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "catalog:",

@@ -36,7 +36,7 @@ test('it immediately generates a started checkpoint', async () => {
   const firstCheckpoint = firstResult.value;
 
   expect(firstCheckpoint).toStrictEqual({
-    hash: expect.toBeString(),
+    nextSeed: expect.toBeString(),
     rewards: { xp: 0 },
     seed: expect.toBeString(),
     time: 0,
@@ -90,7 +90,6 @@ test('it generates wave killed checkpoints', async () => {
   await generator.next(1000);
 
   expect(secondCheckpoint).toStrictEqual({
-    hash: expect.toBeString(),
     nextSeed: expect.toBeString(),
     rewards: { xp: 5 },
     time: expect.toBeNumber(),
@@ -98,7 +97,6 @@ test('it generates wave killed checkpoints', async () => {
   });
 
   expect(thirdCheckpoint).toStrictEqual({
-    hash: expect.toBeString(),
     nextSeed: expect.toBeString(),
     rewards: { xp: 5 },
     time: expect.toBeNumber(),
@@ -178,7 +176,6 @@ test('it generates a failed checkpoint when the avatar dies', async () => {
   const checkpoint = result.value;
 
   expect(checkpoint).toStrictEqual({
-    hash: expect.toBeString(),
     nextSeed: expect.toBeString(),
     rewards: { xp: 0 },
     time: expect.toBeNumber(),
@@ -226,7 +223,6 @@ test('it returns a completed checkpoint that folds in the completion bonus', asy
   const checkpoint = result.value;
 
   expect(checkpoint).toStrictEqual({
-    hash: expect.toBeString(),
     nextSeed: expect.toBeString(),
     rewards: { xp: 10 + buildCompletionXP(1) },
     time: expect.toBeNumber(),

@@ -83,7 +83,6 @@ export type ActivityCheckpointGenerator = AsyncGenerator<
 >;
 
 interface IActivityCheckpoint {
-  readonly hash: string;
   readonly levelUp?: ActivityLevelUp;
   readonly rewards: ActivityRewards;
   readonly time: number;
@@ -98,6 +97,7 @@ export enum ActivityCheckpointType {
 }
 
 export interface ActivityStartedCheckpoint extends IActivityCheckpoint {
+  readonly nextSeed: string;
   readonly seed: string;
   readonly type: ActivityCheckpointType.Started;
 }

@@ -5,7 +5,6 @@ import { createMockActivityInput } from '../../test-utils/create-mock-activity-i
 import { createMockAvatarData } from '../../test-utils/create-mock-avatar-data';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
 import { ActivityCheckpointType } from '../../types';
-import { hashObject } from '../../utils/hash-object';
 import { createActivity } from '../create-activity';
 import { createCompletedCheckpoint } from './create-completed-checkpoint';
 
@@ -20,26 +19,11 @@ test('it creates a completed checkpoint with the completion bonus', () => {
   const checkpoint = createCompletedCheckpoint(activity, avatar, ctx);
 
   expect(checkpoint).toStrictEqual({
-    hash: expect.toBeString(),
     nextSeed: expect.toBeString(),
     rewards: { xp: buildCompletionXP(1) },
     time: 2500,
     type: ActivityCheckpointType.Completed,
   });
-});
-
-test('it includes a hash based on checkpoint data', () => {
-  const ctx = createMockSimulationContext();
-  const activityData = createMockActivityInput();
-  const activity = createActivity(activityData, ctx);
-  const avatar = createAvatar(createMockAvatarData(), ctx);
-
-  activity.elapseTime(2500);
-
-  const checkpoint = createCompletedCheckpoint(activity, avatar, ctx);
-  const { hash, rewards, ...hashParts } = checkpoint;
-
-  expect(hash).toStrictEqual(hashObject(ctx.hasher, hashParts));
 });
 
 test('it merges the completion bonus with rewards already accrued', () => {

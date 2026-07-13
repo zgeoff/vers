@@ -10,7 +10,6 @@ import { isCompletedCheckpoint } from './is-completed-checkpoint';
 
 test('returns true for completed checkpoints', () => {
   const completedCheckpoint: ActivityCompletedCheckpoint = {
-    hash: 'abc123',
     nextSeed: '12345',
     rewards: { xp: 0 },
     time: 1000,
@@ -22,7 +21,7 @@ test('returns true for completed checkpoints', () => {
 
 test('returns false for non-completed checkpoints', () => {
   const startedCheckpoint: ActivityStartedCheckpoint = {
-    hash: 'def456',
+    nextSeed: '54321',
     seed: '54321',
     rewards: { xp: 0 },
     time: 0,
@@ -30,7 +29,6 @@ test('returns false for non-completed checkpoints', () => {
   };
 
   const failedCheckpoint: ActivityFailedCheckpoint = {
-    hash: 'ghi789',
     nextSeed: '98765',
     rewards: { xp: 0 },
     time: 500,
@@ -38,7 +36,6 @@ test('returns false for non-completed checkpoints', () => {
   };
 
   const progressCheckpoint: ActivityProgressCheckpoint = {
-    hash: 'jkl012',
     nextSeed: '24680',
     rewards: { xp: 0 },
     time: 300,

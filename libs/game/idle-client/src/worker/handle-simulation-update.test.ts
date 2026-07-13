@@ -1,14 +1,11 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
-import xxhash from 'xxhash-wasm';
 import { WorkerMessageType } from '../types';
 import { handleSimulationUpdate } from './handle-simulation-update';
 import type { WorkerContext } from './types';
 
-const hasher = await xxhash();
-
 test('it sends simulation update messages to all connections', async () => {
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   const channel = new MessageChannel();
 

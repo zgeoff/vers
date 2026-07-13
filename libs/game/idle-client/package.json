@@ -12,12 +12,13 @@
   },
   "dependencies": {
     "@vers/client-test-utils": "workspace:*",
+    "@vers/contract-activity": "workspace:*",
     "@vers/design-system": "workspace:*",
     "@vers/idle-core": "workspace:*",
     "@vers/styled-system": "workspace:*",
+    "idb": "catalog:",
     "react": "catalog:",
     "tiny-invariant": "catalog:",
-    "xxhash-wasm": "catalog:",
     "zustand": "catalog:"
   },
   "devDependencies": {
@@ -27,6 +28,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@zgeoff/bun-test-extended": "catalog:",
+    "fake-indexeddb": "catalog:",
     "happy-dom": "catalog:",
     "typescript": "catalog:"
   }
