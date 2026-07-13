@@ -5,7 +5,6 @@ export { useAvatar } from './state/use-avatar';
 export { useCheckpointStreamError } from './state/use-checkpoint-stream-error';
 export { useFailureAction } from './state/use-failure-action';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
-export { buildCheckpointBatchEntry } from './submission/build-checkpoint-batch-entry';
 export type { ActivitySubmissionContext } from './submission/types';
 export * from './types';
 export { createInitializeMessage } from './worker/create-initialize-message';

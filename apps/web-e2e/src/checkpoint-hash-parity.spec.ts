@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { buildCheckpointHash } from '@vers/contract-activity';
-import { buildCheckpointBatchEntry } from '@vers/idle-client';
+import { buildCheckpointBatchEntry } from '@vers/idle-client/submission';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
 
