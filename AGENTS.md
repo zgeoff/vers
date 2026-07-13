@@ -205,6 +205,11 @@ Overused jargon a plainer word covers; applies to all prose — docs, comments, 
 text.
 
 - `bites` (figurative) — "applies", "takes effect", or name the consequence.
+- `CAS` (the acronym) — "compare-and-swap" spelled out, or name the behaviour: a guarded update that
+  applies only if the cursor still holds its expected value.
+- `fence` / `fencing` (the distributed-systems metaphor) — state the rule it enforces: "each
+  activity has a single writer", "an append from any other session is rejected". A markdown code
+  fence is a different word and stays.
 - `load-bearing` — "required", "essential", or name what breaks without it.
 - `seam` — "boundary", "join", "integration point".
 - `surface` — noun: "area", "API", the concrete thing itself; verb: "show", "raise", "report".

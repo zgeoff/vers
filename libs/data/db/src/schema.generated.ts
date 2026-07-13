@@ -12,18 +12,6 @@ export type Generated<T> =
     ? ColumnType<S, I | undefined, U>
     : ColumnType<T, T | undefined, T>;
 
-export type Json = JsonValue;
-
-export type JsonArray = Array<JsonValue>;
-
-export interface JsonObject {
-  [x: string]: JsonValue | undefined;
-}
-
-export type JsonPrimitive = boolean | number | string | null;
-
-export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
-
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export type VerificationType = '2fa' | '2fa-setup' | 'change-email' | 'onboarding';
@@ -32,11 +20,12 @@ export interface Activities {
   appendedAt: Timestamp | null;
   appendedHead: Generated<number>;
   avatarId: string;
-  buildSnapshot: Json;
+  buildSnapshot: import('./types').Json;
   contentVersion: string;
   createdAt: Generated<Timestamp>;
   id: string;
   lastHash: string;
+  replayAttempts: Generated<number>;
   scopeId: string;
   scopeType: string;
   seed: string;
@@ -49,6 +38,7 @@ export interface Activities {
   updatedAt: Generated<Timestamp>;
   verifiedAt: Timestamp | null;
   verifiedHead: Generated<number>;
+  writerSessionId: string | null;
 }
 
 export interface ActivityChains {
@@ -57,6 +47,7 @@ export interface ActivityChains {
   avatarId: string;
   createdAt: Generated<Timestamp>;
   genesisSeed: string;
+  priority: Generated<number>;
   scopeId: string;
   scopeType: string;
   verifiedChainIndex: Generated<number>;
@@ -67,9 +58,16 @@ export interface ActivityCheckpoints {
   activityId: string;
   appendedAt: Generated<Timestamp>;
   hash: string;
-  payload: Json;
+  payload: import('./types').Json;
   prevHash: string;
   version: number;
+}
+
+export interface AvatarGrants {
+  avatarId: string;
+  createdAt: Generated<Timestamp>;
+  key: string;
+  kind: string;
 }
 
 export interface Avatars {
@@ -144,6 +142,7 @@ export interface DB {
   activities: Activities;
   activityChains: ActivityChains;
   activityCheckpoints: ActivityCheckpoints;
+  avatarGrants: AvatarGrants;
   avatars: Avatars;
   consumedTransactionTokens: ConsumedTransactionTokens;
   pendingTransactions: PendingTransactions;

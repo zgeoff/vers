@@ -32,12 +32,21 @@ export function buildServiceLink(service: ServiceName): RPCLink<ServiceLinkConte
       () =>
         new RPCLink<ServiceLinkContext>({
           headers: async (options) => {
+            // an explicit acting user (login, force-logout) has no cookie session to name, so the
+            // token carries no `sid` claim on that path
+            const actor =
+              options.context.actingUserID === undefined ? await loadSessionActor() : null;
+
             const actingUserID =
               options.context.actingUserID === undefined
-                ? await loadSessionActor()
+                ? (actor?.userID ?? null)
                 : options.context.actingUserID;
 
-            const token = await createEdgeServiceToken({ actingUserID, audience: service });
+            const token = await createEdgeServiceToken({
+              actingSessionID: actor?.sessionID ?? null,
+              actingUserID,
+              audience: service,
+            });
 
             const trace = createTraceContext(findAmbientTrace());
 

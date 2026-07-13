@@ -3,6 +3,7 @@ import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
 
 interface CreateServiceTokenOptions {
+  readonly actingSessionId?: string;
   readonly actingUserId?: string;
   readonly audience: string;
   readonly expiresIn?: string;
@@ -13,7 +14,10 @@ interface CreateServiceTokenOptions {
  * Signs a short-lived s2s token carrying the shared claim vocabulary, for tests to send as `Authorization: Bearer <token>`.
  */
 export function createServiceToken(options: CreateServiceTokenOptions): Promise<string> {
-  const claims = options.actingUserId === undefined ? {} : { sub: options.actingUserId };
+  const claims = {
+    ...(options.actingUserId !== undefined && { sub: options.actingUserId }),
+    ...(options.actingSessionId !== undefined && { sid: options.actingSessionId }),
+  };
 
   const jwt = new jose.SignJWT(claims)
     .setProtectedHeader({ alg: TOKEN_ALGORITHM })

@@ -10,10 +10,11 @@ test('it declares UNAUTHORIZED and FORBIDDEN on every owner-scoped procedure', (
   ]);
 });
 
-test('it declares CONFLICT and NOT_FOUND on startActivity', () => {
+test('it declares CONFLICT, NOT_FOUND, and CHAIN_QUARANTINED on startActivity', () => {
   expect(activityContract.startActivity['~orpc'].errorMap).toContainAllKeys([
     'UNAUTHORIZED',
     'FORBIDDEN',
+    'CHAIN_QUARANTINED',
     'CONFLICT',
     'NOT_FOUND',
   ]);
@@ -24,6 +25,14 @@ test('it declares a bespoke CHECKPOINT_INVALID with an explicit status on trackA
 
   expect(errorMap).toContainKey('CHECKPOINT_INVALID');
   expect(errorMap.CHECKPOINT_INVALID?.status).toBe(422);
+});
+
+test('it declares the single-writer errors with explicit statuses on trackActivityProgress', () => {
+  const errorMap = activityContract.trackActivityProgress['~orpc'].errorMap;
+
+  expect(errorMap).toContainKeys(['ACTIVITY_TERMINAL', 'SESSION_EVICTED']);
+  expect(errorMap.ACTIVITY_TERMINAL?.status).toBe(409);
+  expect(errorMap.SESSION_EVICTED?.status).toBe(403);
 });
 
 test('it generates a valid OpenAPI document from the activity contract', async () => {

@@ -11,8 +11,7 @@ import type { Insertable } from 'kysely';
  * correctly with `createMockCheckpointBatch`.
  */
 export function createMockActivity(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Activities' jsonb `buildSnapshot` field types as the generated `Json` union, which nests a mutable `JsonValue[]` branch with no readonly form
-  overrides: Partial<Insertable<Activities>> = {},
+  overrides: Readonly<Partial<Insertable<Activities>>> = {},
 ): Insertable<Activities> {
   const id = overrides.id ?? `act_${createId()}`;
   const seed = overrides.seed ?? faker.string.alphanumeric({ casing: 'lower', length: 32 });

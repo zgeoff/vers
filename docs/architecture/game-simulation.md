@@ -65,7 +65,9 @@ replayed) — the last chain hash, and the activity status.
   carrying the current head, and the client resends the tail. Resubmission is a free dedupe —
   `UNIQUE(activity_id, version)` plus deterministic checkpoint content — and dedupe runs before
   elapsed-time accounting, so replays never inflate duration.
-- A session-epoch fence rejects appends from evicted sessions as fatal. Terminal statuses (stopped,
+- Each activity has a single writer: the head row stamps the session allowed to append, and resuming
+  on a new session takes the writer over. An append from any other session fails fatally, so a
+  displaced writer's in-flight submissions die rather than interleave. Terminal statuses (stopped,
   rejected, capped, quarantined) reject any later append. Together these resolve every race between
   logout, forced logout, stop, rejection, and cap.
 
@@ -98,8 +100,8 @@ cheating wave.
 
 Verified deltas apply exactly once through a cursor-guarded transaction: advance `verified_head`
 with a compare-and-swap — the update applies only if the cursor still holds its expected value —
-then apply the delta to identity state and append the outcome event, all in one local transaction. A
-crashed worker retries idempotently.
+then apply the delta to identity state and append the settlement's economic-ledger entry, all in one
+local transaction. A crashed worker retries idempotently.
 
 - First-clears, achievements, and other one-shot grants insert into a unique-keyed grant table with
   `ON CONFLICT DO NOTHING` inside the same transaction — idempotent across re-farms and replays.

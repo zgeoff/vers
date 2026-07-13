@@ -759,6 +759,25 @@
         "typescript": "catalog:",
       },
     },
+    "services/replay": {
+      "name": "@vers/service-replay",
+      "version": "0.0.0",
+      "dependencies": {
+        "@vers/db": "workspace:*",
+        "@vers/idle-core": "workspace:*",
+        "kysely": "catalog:",
+      },
+      "devDependencies": {
+        "@faker-js/faker": "catalog:",
+        "@paralleldrive/cuid2": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "services/session": {
       "name": "@vers/service-session",
       "version": "0.0.0",
@@ -2265,6 +2284,8 @@
     "@vers/service-avatar": ["@vers/service-avatar@workspace:services/avatar"],
 
     "@vers/service-email": ["@vers/service-email@workspace:services/email"],
+
+    "@vers/service-replay": ["@vers/service-replay@workspace:services/replay"],
 
     "@vers/service-runtime": ["@vers/service-runtime@workspace:libs/service/service-runtime"],
 

@@ -7,11 +7,14 @@ import { getTestServiceKeyPair } from '../get-test-service-key-pair';
 interface CreateViewerConfig {
   readonly audience: string;
   readonly db: Kysely<DB>;
+  readonly sessionID?: string;
   readonly user?: Partial<Insertable<Users>>;
 }
 
 /**
- * A persisted, s2s-authenticated acting user: a token and the user it was minted for.
+ * A persisted, s2s-authenticated acting user: a token and the user it was minted for. Passing
+ * `sessionID` mints the token's `sid` claim — the writer identity activity appends are checked
+ * against; omitting it mints a session-less token, matching flows that hold no live session.
  */
 export async function createViewer(
   config: Readonly<CreateViewerConfig>,
@@ -23,6 +26,7 @@ export async function createViewer(
     actingUserId: created.user.id,
     audience: config.audience,
     privateKey: keyPair.privateKey,
+    ...(config.sessionID !== undefined && { actingSessionId: config.sessionID }),
   });
 
   return { token, user: created.user };

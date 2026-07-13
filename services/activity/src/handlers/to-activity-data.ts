@@ -9,7 +9,6 @@ import type { Selectable } from 'kysely';
  * boundary — oRPC validates handler output against the contract's output schema and fails the
  * request on mismatch.
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the row's jsonb `buildSnapshot` field types as the generated `Json` union, which nests a mutable `JsonValue[]` branch with no readonly form
 export function toActivityData(row: Readonly<Selectable<Activities>>): ActivityData {
   return {
     appendedAt: row.appendedAt,

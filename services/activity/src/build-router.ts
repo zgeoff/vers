@@ -5,6 +5,7 @@ import type { ServiceContext } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
 import { getCurrentActivity } from './handlers/get-current-activity';
 import { getLatestActivityProgress } from './handlers/get-latest-activity-progress';
+import { resumeActivity } from './handlers/resume-activity';
 import { startActivity } from './handlers/start-activity';
 import { stopActivity } from './handlers/stop-activity';
 import { trackActivityProgress } from './handlers/track-activity-progress';
@@ -27,6 +28,7 @@ export function buildActivityRouter(deps: BuildActivityRouterDeps) {
     getLatestActivityProgress: os.getLatestActivityProgress.handler((opts) =>
       getLatestActivityProgress(deps.db, opts),
     ),
+    resumeActivity: os.resumeActivity.handler((opts) => resumeActivity(deps.db, opts)),
     startActivity: os.startActivity.handler((opts) => startActivity(deps, opts)),
     stopActivity: os.stopActivity.handler((opts) => stopActivity(deps.db, opts)),
     trackActivityProgress: os.trackActivityProgress.handler((opts) =>
