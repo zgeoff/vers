@@ -29,7 +29,7 @@ test('it appends a single-entry batch and advances the head', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -58,7 +58,7 @@ test('it advances cursors and lastHash across multiple sequential batches', asyn
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -102,7 +102,7 @@ test('it rejects a stale expectedHead with CONFLICT carrying the current head', 
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -138,7 +138,7 @@ test('it succeeds on a resend of the tail after a stale-head CONFLICT', async ()
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -174,7 +174,7 @@ test('it rejects a non-contiguous batch with CHECKPOINT_INVALID', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -198,7 +198,7 @@ test('it rejects a broken chain link with CHECKPOINT_INVALID', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -229,7 +229,7 @@ test('it rejects a hash that does not match its payload with CHECKPOINT_INVALID'
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -255,7 +255,7 @@ test('it rejects appending to a stopped activity with NOT_FOUND', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -302,7 +302,7 @@ test('it settles avatar xp and level from a completed terminal checkpoint', asyn
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -353,7 +353,7 @@ test('it settles a clamped xp loss from a failed terminal checkpoint', async () 
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -393,7 +393,7 @@ test('it advances the chain anchor to the terminal checkpoint on a completed bat
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -433,7 +433,7 @@ test('it advances the chain anchor to the terminal checkpoint on a failed batch'
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -473,7 +473,7 @@ test('it continues the next activity on the same node from the previous terminal
 
   const firstStarted = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -493,7 +493,7 @@ test('it continues the next activity on the same node from the previous terminal
 
   const secondStarted = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -511,7 +511,7 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
 
   const firstStarted = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -529,7 +529,7 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
 
   const secondStarted = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -585,7 +585,7 @@ test('it rejects a chainIndex that is not startChainIndex plus version with CHEC
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -614,7 +614,7 @@ test('it advances the chain anchor exactly once across a duplicate terminal subm
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -667,7 +667,7 @@ test('it does not double-apply xp on a duplicate terminal submission', async () 
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 

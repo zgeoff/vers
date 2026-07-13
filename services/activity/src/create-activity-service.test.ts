@@ -16,7 +16,7 @@ test('it wires an injected db into the router instead of building one from env',
 
   await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -42,7 +42,7 @@ test('it defaults the sim and content versions when none are injected', async ()
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -65,7 +65,7 @@ test('it uses injected sim and content versions when given', async () => {
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 

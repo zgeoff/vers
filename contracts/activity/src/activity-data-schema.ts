@@ -14,7 +14,7 @@ export const ActivityDataSchema = z.object({
   createdAt: z.date(),
   id: z.string(),
   lastHash: z.string(),
-  scopeId: z.string(),
+  scopeID: z.string(),
   scopeType: z.string(),
   seed: z.string(),
   simVersion: z.string(),

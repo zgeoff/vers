@@ -48,7 +48,7 @@ export const activityContract = {
       path: '/activities',
       summary: 'Start an activity for an avatar owned by the caller',
     })
-    .input(z.object({ avatarID: z.string(), scopeId: z.string(), scopeType: z.string() }))
+    .input(z.object({ avatarID: z.string(), scopeID: z.string(), scopeType: z.string() }))
     .output(ActivityDataSchema)
     .errors(
       defineErrors({

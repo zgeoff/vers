@@ -27,7 +27,7 @@ test('it returns the active activity for an avatar owned by the acting user', as
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 

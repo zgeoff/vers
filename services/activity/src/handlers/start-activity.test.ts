@@ -33,7 +33,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -46,7 +46,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     createdAt: expect.toBeValidDate(),
     id: expect.toBeString(),
     lastHash: expect.toBeString(),
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
     seed: expect.toBeString(),
     simVersion: '0.0.0-dev',
@@ -73,7 +73,7 @@ test('it mints a chain row on a node visited for the first time, with the activi
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -101,7 +101,7 @@ test('it mints independent genesis seeds for different nodes visited by the same
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -113,7 +113,7 @@ test('it mints independent genesis seeds for different nodes visited by the same
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_2',
+    scopeID: 'node_2',
     scopeType: 'world_map_node',
   });
 
@@ -132,7 +132,7 @@ test('it reads the existing chain anchor for a second activity on an already-cha
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -144,7 +144,7 @@ test('it reads the existing chain anchor for a second activity on an already-cha
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -166,12 +166,12 @@ test('it rejects a second start with CONFLICT carrying the already-active activi
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
   expect(
-    client.startActivity({ avatarID: avatar.id, scopeId: 'node_2', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: avatar.id, scopeID: 'node_2', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({
     code: 'CONFLICT',
     data: { activity: { id: first.id } },
@@ -188,7 +188,7 @@ test('it rejects starting an activity on a foreign avatar with NOT_FOUND', async
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
-    client.startActivity({ avatarID: avatar.id, scopeId: 'node_1', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: avatar.id, scopeID: 'node_1', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({
     code: 'NOT_FOUND',
   });
@@ -202,7 +202,7 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
-    client.startActivity({ avatarID: 'avatar_1', scopeId: 'node_1', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: 'avatar_1', scopeID: 'node_1', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({
     code: 'UNAUTHORIZED',
     data: { reason: 'missing-session' },

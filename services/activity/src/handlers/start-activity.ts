@@ -31,7 +31,7 @@ interface StartActivityOpts {
   };
   readonly input: {
     readonly avatarID: string;
-    readonly scopeId: string;
+    readonly scopeID: string;
     readonly scopeType: string;
   };
 }
@@ -72,7 +72,7 @@ export async function startActivity(
       appendedNextSeed: genesisSeed,
       avatarId: opts.input.avatarID,
       genesisSeed,
-      scopeId: opts.input.scopeId,
+      scopeId: opts.input.scopeID,
       scopeType: opts.input.scopeType,
       verifiedNextSeed: genesisSeed,
     })
@@ -103,7 +103,7 @@ export async function startActivity(
         contentVersion: deps.contentVersion,
         id,
         lastHash: startHash,
-        scopeId: opts.input.scopeId,
+        scopeId: opts.input.scopeID,
         scopeType: opts.input.scopeType,
         seed,
         simVersion: deps.simVersion,

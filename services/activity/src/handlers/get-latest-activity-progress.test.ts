@@ -24,7 +24,7 @@ test('it returns a fresh activity with a null anchor at verifiedHead 0', async (
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -50,7 +50,7 @@ test('it returns the activity anchored to its verified checkpoint once verifiedH
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
@@ -89,7 +89,7 @@ test('it returns the newest activity regardless of status', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 

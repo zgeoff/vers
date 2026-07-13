@@ -21,7 +21,7 @@ export function toActivityData(row: Readonly<Selectable<Activities>>): ActivityD
     createdAt: row.createdAt,
     id: row.id,
     lastHash: row.lastHash,
-    scopeId: row.scopeId,
+    scopeID: row.scopeId,
     scopeType: row.scopeType,
     seed: row.seed,
     simVersion: row.simVersion,

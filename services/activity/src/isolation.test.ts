@@ -26,7 +26,7 @@ test('it creates an activity visible within this test', async () => {
 
   await client.startActivity({
     avatarID: avatar.id,
-    scopeId: 'node_1',
+    scopeID: 'node_1',
     scopeType: 'world_map_node',
   });
 
