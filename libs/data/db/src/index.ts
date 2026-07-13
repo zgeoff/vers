@@ -5,6 +5,8 @@ export type {
   Activities,
   ActivityChains,
   ActivityCheckpoints,
+  ActivityStatus,
+  AvatarGrants,
   Avatars,
   ConsumedTransactionTokens,
   DB,
