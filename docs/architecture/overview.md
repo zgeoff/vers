@@ -60,9 +60,9 @@ is playing. Provisioning, connection rules, and where the secrets live: [databas
   compare-and-swap backing the checkpoint hash chain. The table carries no inbound foreign keys and
   no global uniqueness constraint, so time-range partitioning with a retention window that
   cold-archives verified streams to object storage is a storage change, not a schema change.
-- **Seed chain state** — one `activity_chains` row per `(avatar_id, node_id)`, holding the chain's
-  genesis seed and its appended and verified anchors, from which each activity at the node draws its
-  seed. See [the seed chain](./seed-chain.md).
+- **Seed chain state** — one `activity_chains` row per `(avatar_id, scope_type, scope_id)` chain
+  scope, holding the chain's genesis seed and its appended and verified anchors, from which each
+  activity at the scope draws its seed. See [the seed chain](./seed-chain.md).
 
 ## Game layer
 

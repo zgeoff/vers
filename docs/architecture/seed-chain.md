@@ -1,15 +1,17 @@
 # The seed chain
 
-Every `(avatar, node)` pair owns one forward, append-only seed chain. Each activity at the node
-draws its seed from the chain's current position and advances it, so the next activity continues
-from where the last one left off — a completed, failed, or abandoned attempt all advance it alike. A
-re-attempt is a fresh continuation, never a replay. Why the chain takes this shape, and how its
-flatness prices look-ahead, is the [entropy model](./game-entropy.md#the-seed-chain); this document
-is the data model and lifecycle.
+Every `(avatar, chain scope)` pair owns one forward, append-only seed chain. A chain scope is a
+`(scope_type, scope_id)` pair identifying a stable, returnable target — the world map's node is the
+`world_map_node` scope. Each activity at the scope draws its seed from the chain's current position
+and advances it, so the next activity continues from where the last one left off — a completed,
+failed, or abandoned attempt all advance it alike. A re-attempt is a fresh continuation, never a
+replay. Why the chain takes this shape, and how its flatness prices look-ahead, is the
+[entropy model](./game-entropy.md#the-seed-chain); this document is the data model and lifecycle.
 
 ## The chain row
 
-`activity_chains`, keyed `(avatar_id, node_id)`, holds the chain's state as two cursors:
+`activity_chains`, keyed `(avatar_id, scope_type, scope_id)`, holds the chain's state as two
+cursors:
 
 - The **appended anchor** (`appended_next_seed`, `appended_chain_index`) is the derivation source. A
   new activity seeds from it. It moves the instant an activity's tail is written, ahead of
@@ -21,7 +23,7 @@ is the data model and lifecycle.
 trigger, so a reveal that self-assigns `genesis_seed` to keep the mint idempotent bumps no timestamp
 and writes no logical change.
 
-The chain row spans a node's activities. A
+The chain row spans a scope's activities. A
 [checkpoint stream](./game-simulation.md#checkpoint-streams) and its head-row cursors span a single
 activity.
 
@@ -44,11 +46,11 @@ coordinate and the server validates each checkpoint's `chainIndex` against
 
 ## Genesis
 
-A node's genesis seed is a server CSPRNG mint — sixteen random bytes as hex, re-rolled off the
-degenerate all-zero xoroshiro state — written to the chain row when the row is first created for the
-pair. It needs no re-derivation: the verifier reads the stored value and a restored device fetches
-it. A client cannot compute it and cannot steer it, since the cell coordinate and the avatar are
-both fixed before the mint.
+A chain scope's genesis seed is a server CSPRNG mint — sixteen random bytes as hex, re-rolled off
+the degenerate all-zero xoroshiro state — written to the chain row when the row is first created for
+the pair. It needs no re-derivation: the verifier reads the stored value and a restored device
+fetches it. A client cannot compute it and cannot steer it, since the scope and the avatar are both
+fixed before the mint.
 
 ## Advancing the chain
 
@@ -73,7 +75,7 @@ setting `appended_next_seed = verified_next_seed` and `appended_chain_index = ve
 from the row's own columns. A successor that already rooted past the verified point
 (`start_chain_index > verified_chain_index`) is void: its forward-advance compare-and-swap can no
 longer match, and settlement clears its optimistic rewards. A quarantine blocks new activity starts
-on the pair; every other node proceeds.
+on the pair; every other chain scope proceeds.
 
 Session eviction changes the writer, not the activity. The activity stays `active`, a new session
 resumes it from the verified anchor, and its tail is adjudicated on its own merits — eviction
