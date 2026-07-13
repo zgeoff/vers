@@ -21,7 +21,7 @@ interface ResumeActivityOpts {
 
 /**
  * Takes over as an active activity's writer session: after this call the acting session is the
- * only one whose appends pass the writer fence, and the displaced writer's in-flight submissions
+ * only one whose appends are accepted, and the displaced writer's in-flight submissions
  * fail fatally. Taking the writer is the whole of resuming server-side — the caller rebuilds its
  * simulation from the verified anchor and appends from the current head. The ownership check
  * folds into the same statement, so a foreign or missing activity is the same NOT_FOUND as a

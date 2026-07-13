@@ -26,7 +26,8 @@ const inFlightRefreshes = new Map<string, Promise<RefreshedTokens | undefined>>(
 
 /**
  * The validated identity pair a cookie-derived service call acts as: the user for the token's
- * `sub` claim, the session for its `sid` (writer-fence) claim.
+ * `sub` claim, the session for its `sid` claim (the writer identity activity appends are checked
+ * against).
  */
 export interface SessionActor {
   readonly sessionID: string;

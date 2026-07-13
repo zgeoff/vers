@@ -5,8 +5,8 @@ import type pino from 'pino';
  */
 export interface ServiceContext {
   /**
-   * Session named by the verified service token's `sid` claim — the writer identity fenced
-   * procedures compare against; null when the call holds no live session.
+   * Session named by the verified service token's `sid` claim — compared against an activity's
+   * stamped writer before an append is accepted; null when the call holds no live session.
    */
   actingSessionId: null | string;
 

@@ -27,7 +27,7 @@ test('it declares a bespoke CHECKPOINT_INVALID with an explicit status on trackA
   expect(errorMap.CHECKPOINT_INVALID?.status).toBe(422);
 });
 
-test('it declares the writer-fence errors with explicit statuses on trackActivityProgress', () => {
+test('it declares the single-writer errors with explicit statuses on trackActivityProgress', () => {
   const errorMap = activityContract.trackActivityProgress['~orpc'].errorMap;
 
   expect(errorMap).toContainKeys(['ACTIVITY_TERMINAL', 'SESSION_EVICTED']);

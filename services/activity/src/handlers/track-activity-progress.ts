@@ -43,8 +43,8 @@ interface TrackActivityProgressOpts {
  * transaction is the actual serialization point — a losing race re-reads the current head and
  * reports NOT_FOUND (activity gone), ACTIVITY_TERMINAL (a terminal status accepts no appends),
  * SESSION_EVICTED (another session took over as the writer — fatal, the caller discards its
- * pending queue), or CONFLICT (a retryable stale head). The writer fence admits only the stamped
- * writer session; an unstamped activity is claimed by the first appending session. When the
+ * pending queue), or CONFLICT (a retryable stale head). Only the activity's stamped writer session
+ * may append; an unstamped activity is claimed by the first appending session. When the
  * batch's last checkpoint is terminal (completed or failed), the same transaction claims the
  * activity's terminal transition and settles the avatar's xp/level from that checkpoint's final
  * rewards total — the claim guards against a duplicate terminal resubmission double-applying.

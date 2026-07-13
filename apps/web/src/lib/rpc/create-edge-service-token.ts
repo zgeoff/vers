@@ -14,7 +14,8 @@ interface CreateEdgeServiceTokenOptions {
 /**
  * Mints the s2s token every outbound service call carries, signed with this app's edge key.
  * `actingUserID` becomes the token's `sub` claim; `null` mints a verified-anonymous token instead.
- * `actingSessionID` becomes the `sid` (writer-fence) claim; flows holding no live session omit it.
+ * `actingSessionID` becomes the `sid` (writer-identity) claim; flows holding no live session omit
+ * it.
  */
 export async function createEdgeServiceToken(
   options: Readonly<CreateEdgeServiceTokenOptions>,

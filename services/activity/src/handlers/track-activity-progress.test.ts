@@ -706,7 +706,7 @@ test('it does not double-apply xp on a duplicate terminal submission', async () 
   expect(updated.xp).toBe(150);
 });
 
-test('it fences an append from a displaced writer session with SESSION_EVICTED', async () => {
+test('it rejects an append from a displaced writer session with SESSION_EVICTED', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({

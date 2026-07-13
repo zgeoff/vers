@@ -15,8 +15,8 @@ export interface CreateServiceTokenOptions {
 /**
  * Mints the s2s token every outbound service call carries. `actingUserId` becomes the token's
  * `sub` claim; omitting it mints a verified-anonymous token instead. `actingSessionId` becomes the
- * `sid` claim naming the caller's underlying session — the writer identity fenced procedures
- * compare against; flows holding no live session omit it.
+ * `sid` claim naming the caller's underlying session — the writer identity activity appends are
+ * checked against; flows holding no live session omit it.
  */
 export function createServiceToken(options: Readonly<CreateServiceTokenOptions>): Promise<string> {
   const claims = {
