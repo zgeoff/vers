@@ -1,8 +1,8 @@
 import type {
   Activity,
   ActivityCheckpointGenerator,
+  ActivityExecutor,
   Avatar,
-  CombatExecutor,
   SimulationContext,
 } from '../types';
 import { logger } from '../utils/logger';
@@ -14,7 +14,7 @@ import { createStartedCheckpoint } from './utils/create-started-checkpoint';
 
 // oxlint-disable-next-line typescript/require-await -- callers drive this generator with awaited next()/return() calls, so it must satisfy the AsyncGenerator contract even though its own body has no await
 export async function* simulateActivity(
-  executor: CombatExecutor,
+  executor: ActivityExecutor,
   activity: Activity,
   avatar: Avatar,
   ctx: SimulationContext,

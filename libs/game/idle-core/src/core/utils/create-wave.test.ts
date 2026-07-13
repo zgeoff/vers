@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
-import { createMockActivityData } from '../../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../../test-utils/create-mock-activity-input';
 import { createMockEnemyData } from '../../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
 import { createWave } from './create-wave';
 
 test('it creates a wave with the given number of enemies', () => {
-  const activity = createMockActivityData();
+  const activity = createMockActivityInput();
   const ctx = createMockSimulationContext();
   const wave = createWave(activity, ctx, 2);
 
@@ -19,7 +19,7 @@ test('it returns the correct remaining count as enemies are killed', () => {
     life: 100,
   });
 
-  const activity = createMockActivityData({ enemies: [enemyData] });
+  const activity = createMockActivityInput({ enemies: [enemyData] });
   const ctx = createMockSimulationContext();
   const wave = createWave(activity, ctx, 2);
 
@@ -32,7 +32,7 @@ test('it returns no living enemy when all enemies are dead', () => {
     life: 100,
   });
 
-  const activity = createMockActivityData({ enemies: [enemyData] });
+  const activity = createMockActivityInput({ enemies: [enemyData] });
   const ctx = createMockSimulationContext();
   const wave = createWave(activity, ctx, 2);
 

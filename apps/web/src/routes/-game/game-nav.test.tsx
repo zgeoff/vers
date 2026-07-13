@@ -21,7 +21,7 @@ test('it hides the link list until the menu button is toggled open', async () =>
   expect(screen.getByRole('link', { name: /Explore/ })).toHaveAttribute('href', '/explore');
   expect(screen.getByRole('link', { name: /Stash/ })).toHaveAttribute('href', '/stash');
   expect(screen.getByRole('link', { name: /Market/ })).toHaveAttribute('href', '/market');
-  expect(screen.getByRole('link', { name: /Encounter/ })).toHaveAttribute('href', '/encounter');
+  expect(screen.getByRole('link', { name: /Activity/ })).toHaveAttribute('href', '/activity');
   expect(screen.getByRole('link', { name: /Avatar/ })).toHaveAttribute('href', '/avatar');
   expect(screen.getByRole('link', { name: /Account/ })).toHaveAttribute('href', '/account');
 });

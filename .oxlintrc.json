@@ -199,9 +199,9 @@
           {
             "from": "file",
             "name": [
-              "ActivityData",
-              "ActivityAppState",
-              "WorldMapEncounterActivityData",
+              "ActivityInput",
+              "ActivitySnapshot",
+              "WorldMapEncounterActivityInput",
               "Activity"
             ],
             "path": "../idle-core/src/types/activity.ts"
@@ -211,9 +211,9 @@
           {
             "from": "file",
             "name": [
-              "ActivityData",
-              "ActivityAppState",
-              "WorldMapEncounterActivityData",
+              "ActivityInput",
+              "ActivitySnapshot",
+              "WorldMapEncounterActivityInput",
               "Activity"
             ],
             "path": "../../libs/game/idle-core/src/types/activity.ts"
@@ -235,7 +235,7 @@
           },
           {
             "from": "file",
-            "name": "CombatExecutor",
+            "name": ["ActivityExecutor", "CombatExecutor"],
             "path": "../idle-core/src/types/combat.ts"
           },
           {

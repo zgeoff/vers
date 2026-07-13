@@ -44,13 +44,13 @@ export type CombatLifecycleHandler<T extends Entity> = (
 export enum LifecycleEvent {
   Death = 'death',
   Initialize = 'initialize',
-  OnTick = 'onTick',
+  OnTick = 'on_tick',
   Reset = 'reset',
 }
 
 export enum BehaviourID {
-  AvatarWeaponAttack = 'avatarWeaponAttack',
-  EnemyPrimaryAttack = 'enemyPrimaryAttack',
+  AvatarWeaponAttack = 'avatar_weapon_attack',
+  EnemyPrimaryAttack = 'enemy_primary_attack',
   Test = 'test',
 }
 

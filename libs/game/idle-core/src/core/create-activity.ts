@@ -1,9 +1,9 @@
 import type {
   Activity,
-  ActivityAppState,
-  ActivityData,
+  ActivityInput,
   ActivityLevelUp,
   ActivityRewards,
+  ActivitySnapshot,
   SimulationContext,
   Wave,
 } from '../types';
@@ -15,7 +15,7 @@ interface ActivityConfig {
 }
 
 export function createActivity(
-  data: ActivityData,
+  data: ActivityInput,
   ctx: SimulationContext,
   config: ActivityConfig = {},
 ): Activity {
@@ -42,8 +42,8 @@ export function createActivity(
     levelUp = nextLevelUp;
   };
 
-  const getAppState = (): ActivityAppState => {
-    const currentWave = waves[currentWaveIdx]?.getAppState() ?? null;
+  const getSnapshot = (): ActivitySnapshot => {
+    const currentWave = waves[currentWaveIdx]?.getSnapshot() ?? null;
     const enemiesRemaining = waves.reduce((acc, wave) => acc + wave.remaining, 0);
     const wavesRemaining = waves.filter((wave) => wave.remaining > 0).length;
 
@@ -55,7 +55,7 @@ export function createActivity(
       levelUp,
       name: data.name,
       rewards,
-      waves: waves.map((wave) => wave.getAppState()),
+      waves: waves.map((wave) => wave.getSnapshot()),
       wavesRemaining,
     };
   };
@@ -86,7 +86,7 @@ export function createActivity(
     },
 
     // core
-    getAppState,
+    getSnapshot,
 
     // utils
     updateRewards,

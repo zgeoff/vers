@@ -1,8 +1,8 @@
-import type { ActivityAppState } from '@vers/idle-core';
+import type { ActivitySnapshot } from '@vers/idle-core';
 import { create } from 'zustand';
 
 interface ActivityStore {
-  activity: ActivityAppState | null;
+  activity: ActivitySnapshot | null;
 }
 
 export const useActivityStore = create<ActivityStore>()(() => ({

@@ -34,7 +34,7 @@ test('it sends simulation update messages to all connections', async () => {
   const event = await received;
 
   expect(event.data).toStrictEqual({
-    state: simulation.getAppState(),
+    state: simulation.getSnapshot(),
     type: WorkerMessageType.SimulationUpdate,
   });
 });

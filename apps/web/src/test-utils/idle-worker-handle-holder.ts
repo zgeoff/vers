@@ -1,4 +1,4 @@
-import type { ActivityAppState } from '@vers/idle-core';
+import type { ActivitySnapshot } from '@vers/idle-core';
 import { ActivityFailureAction } from '@vers/idle-core';
 
 /**
@@ -12,7 +12,7 @@ export interface FakeSimulationWorker {
  * The fake shape the mocked worker-handle read hands back in place of the real hook's return.
  */
 export interface FakeIdleWorkerHandle {
-  readonly activity: ActivityAppState | undefined;
+  readonly activity: ActivitySnapshot | undefined;
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
   readonly worker: FakeSimulationWorker | undefined;

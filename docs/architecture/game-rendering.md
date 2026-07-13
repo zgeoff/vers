@@ -43,7 +43,7 @@ in stores and never enters the URL.
 | `/respite`            | `respite`                 | `focus`      |
 | `/explore`            | `worldmap`                | `focus`      |
 | `/explore/node/$id`   | `worldmap` + focus target | `focus`      |
-| `/encounter`          | — (sticky)                | `ambient`    |
+| `/activity`           | — (sticky)                | `ambient`    |
 | `/stash`              | —                         | `ambient`    |
 | `/market`             | —                         | `ambient`    |
 | `/market/listing/$id` | —                         | inherits     |

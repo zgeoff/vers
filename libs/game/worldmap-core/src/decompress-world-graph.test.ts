@@ -1,5 +1,5 @@
 import { expect, spyOn, test } from 'bun:test';
-import { decompressWorldMapNodes } from './decompress-world-map-nodes';
+import { decompressWorldGraph } from './decompress-world-graph';
 import * as getRandomizedPosition from './get-randomized-position';
 import type { CompressedWorldMapNode } from './types';
 
@@ -52,7 +52,7 @@ test('it decompresses nodes into a complete world graph', () => {
     },
   ];
 
-  const graph = decompressWorldMapNodes(compressedNodes);
+  const graph = decompressWorldGraph(compressedNodes);
 
   expect(graph).toStrictEqual({
     edges: {
@@ -134,7 +134,7 @@ test('it randomizes the position of the nodes', () => {
     },
   ];
 
-  const graph = decompressWorldMapNodes(compressedNodes);
+  const graph = decompressWorldGraph(compressedNodes);
 
   expect(graph.nodes['origin']?.position).not.toStrictEqual([1, 1]);
   expect(graph.nodes['origin']?.position[0]).not.toBeGreaterThan(1.2);

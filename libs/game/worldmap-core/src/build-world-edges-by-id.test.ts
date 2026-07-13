@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
-import { getWorldEdgeMap } from './get-world-edge-map';
-import type { WorldMapNodeMap } from './types';
+import { buildWorldEdgesByID } from './build-world-edges-by-id';
+import type { WorldMapNodesByID } from './types';
 
 test('it creates an edge map from a valid node map', () => {
-  const nodeMap: WorldMapNodeMap = {
+  const nodeMap: WorldMapNodesByID = {
     node1: {
       connections: ['node2', null, null, null],
       difficulty: 0,
@@ -30,7 +30,7 @@ test('it creates an edge map from a valid node map', () => {
     },
   };
 
-  const edgeMap = getWorldEdgeMap(nodeMap);
+  const edgeMap = buildWorldEdgesByID(nodeMap);
 
   expect(edgeMap).toStrictEqual({
     'node1:node2': {

@@ -1,8 +1,8 @@
 import { mock } from 'bun:test';
 
 /**
- * Stubs the codex fragment slot so tests can assert the activity-readiness wiring around it
- * rather than the fragment's own content.
+ * Stubs the codex slot — the UI mount — so tests can assert the activity-readiness wiring
+ * around it rather than the fragment payload it renders.
  */
 export function registerWorldMapNodeCodexSlotMock(): void {
   void mock.module('../components/world-map-node-codex-slot', () => ({

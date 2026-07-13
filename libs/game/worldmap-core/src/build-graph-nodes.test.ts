@@ -1,7 +1,7 @@
 import { expect, spyOn, test } from 'bun:test';
 import * as gameUtils from '@vers/game-utils';
+import { buildGraphNodes } from './build-graph-nodes';
 import * as createIdModule from './create-id';
-import { generateGraphNodes } from './generate-graph-nodes';
 
 // rather than testing our implementation, snapshot a valid graph.
 // if this changes we need to go over it with a fine tooth comb.
@@ -21,13 +21,13 @@ test('it generates a valid graph', () => {
 
   spyOn(gameUtils, 'createSeed').mockImplementation(() => seed++);
 
-  const nodes = generateGraphNodes(3);
+  const nodes = buildGraphNodes(3);
 
   expect(nodes).toMatchSnapshot();
 });
 
 test('it generates a central origin node', () => {
-  const nodes = generateGraphNodes(1);
+  const nodes = buildGraphNodes(1);
 
   expect(nodes[0]).toStrictEqual({
     connections: [
@@ -45,7 +45,7 @@ test('it generates a central origin node', () => {
 });
 
 test('it generates the correct number of nodes for each difficulty level', () => {
-  const nodes = generateGraphNodes(3);
+  const nodes = buildGraphNodes(3);
 
   // 1 + 4 + 8 + 12 = 25
   expect(nodes).toHaveLength(25);

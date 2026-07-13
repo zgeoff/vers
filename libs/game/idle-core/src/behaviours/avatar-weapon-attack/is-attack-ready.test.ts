@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createActivity } from '../../core/create-activity';
 import { createCombatExecutor } from '../../core/create-combat-executor';
 import { createAvatar } from '../../entities/create-avatar';
-import { createMockActivityData } from '../../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../../test-utils/create-mock-activity-input';
 import { createMockAvatarData } from '../../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
@@ -23,7 +23,7 @@ test('it returns true when elapsed time is equal or greater than the next attack
   });
 
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
@@ -52,7 +52,7 @@ test('it returns false when elapsed time is less than the next attack time', () 
   });
 
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
@@ -77,7 +77,7 @@ test('it uses the last attacked time to calculate the next attack time', () => {
   });
 
   const ctx = createMockSimulationContext();
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
@@ -105,7 +105,7 @@ test('it returns false when the avatar is dead', () => {
     },
   });
 
-  const activityData = createMockActivityData({ enemies: [enemyData] });
+  const activityData = createMockActivityInput({ enemies: [enemyData] });
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
   const activity = createActivity(activityData, ctx);

@@ -1,5 +1,5 @@
 import { Heading, Text } from '@vers/design-system';
-import type { ActivityAppState } from '@vers/idle-core';
+import type { ActivitySnapshot } from '@vers/idle-core';
 import { css } from '@vers/styled-system/css';
 
 const activityInfo = css({
@@ -8,7 +8,7 @@ const activityInfo = css({
 });
 
 interface ActivityInfoProps {
-  activity: ActivityAppState;
+  activity: ActivitySnapshot;
 }
 
 export function ActivityInfo(props: Readonly<ActivityInfoProps>) {

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useSelectedNode } from '../state/use-selected-node';
 import { useWorldGraph } from '../state/use-world-graph';
-import { filterDistanceGraph } from '../utils/filter-distant-graph';
+import { buildNearbyGraph } from '../utils/build-nearby-graph';
 import { AxesHelper } from './axes-helper';
 import { DevCamera } from './dev-camera';
 import { Floor } from './floor';
@@ -14,7 +14,7 @@ function useFilteredGraph() {
   const graph = useWorldGraph();
   const selectedNode = useSelectedNode();
 
-  return useMemo(() => filterDistanceGraph(selectedNode.object3D, graph), [selectedNode, graph]);
+  return useMemo(() => buildNearbyGraph(selectedNode.object3D, graph), [selectedNode, graph]);
 }
 
 export function Scene() {

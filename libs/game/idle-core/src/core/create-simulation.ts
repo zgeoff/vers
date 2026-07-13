@@ -7,26 +7,26 @@ import type {
   Activity,
   ActivityCheckpoint,
   ActivityCheckpointGenerator,
-  ActivityData,
+  ActivityInput,
   Avatar,
   AvatarData,
   CombatExecutor,
+  LiveSimulation,
   Simulation,
   SimulationContext,
   SimulationEventName,
   SimulationListener,
-  SimulationState,
 } from '../types';
 import { ActivityFailureAction } from '../types';
 import { createActivity } from './create-activity';
 import { createCombatExecutor } from './create-combat-executor';
 import { simulateActivity } from './simulate-activity';
-import { getAppState } from './utils/get-app-state';
+import { getSnapshot } from './utils/get-snapshot';
 
 export function createSimulation(hasher: XXHashAPI): Simulation {
   let _rng = createRNG(buildStateFromSeed(0));
   let _avatar: Avatar | null = null;
-  let _activityData: ActivityData | null = null;
+  let _activityData: ActivityInput | null = null;
   let _activity: Activity | null = null;
   let _combat: CombatExecutor | null = null;
   let _generator: ActivityCheckpointGenerator | null = null;
@@ -44,7 +44,7 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     },
   };
 
-  const state: SimulationState = {
+  const state: LiveSimulation = {
     get activity() {
       return _activity;
     },
@@ -69,7 +69,7 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     updated: [],
   };
 
-  const startActivity = async (avatarData: AvatarData, activityData: ActivityData) => {
+  const startActivity = async (avatarData: AvatarData, activityData: ActivityInput) => {
     const isSameActivity = _activityData?.id === activityData.id;
     const isSameAvatar = _avatar?.id === avatarData.id;
 
@@ -140,7 +140,7 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
       return null;
     }
 
-    const prevState = getAppState(state);
+    const prevState = getSnapshot(state);
 
     const next = await _generator.next(timestep);
 
@@ -150,7 +150,7 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
       _generator = null;
     }
 
-    const currentState = getAppState(state);
+    const currentState = getSnapshot(state);
 
     if (!deepEqual(prevState, currentState)) {
       for (const listener of listeners.updated) {
@@ -196,11 +196,11 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     addEventListener: (eventName: SimulationEventName, listener: SimulationListener) => {
       listeners[eventName].push(listener);
     },
-    getAppState: () => getAppState(state),
+    getSnapshot: () => getSnapshot(state),
     restartActivity,
     run,
     setFailureAction,
-    startActivity: (avatarData: AvatarData, activityData: ActivityData) => {
+    startActivity: (avatarData: AvatarData, activityData: ActivityInput) => {
       void startActivity(avatarData, activityData);
     },
     stopActivity,

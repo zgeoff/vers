@@ -59,7 +59,7 @@ test('it sends an initial state message to all connections', async () => {
   const simulation = context.getSimulation();
 
   expect(event.data).toStrictEqual({
-    state: simulation?.getAppState(),
+    state: simulation?.getSnapshot(),
     type: WorkerMessageType.InitialState,
   });
 });

@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'bun:test';
 import { createActivity } from '../core/create-activity';
 import { createCombatExecutor } from '../core/create-combat-executor';
-import { createMockActivityData } from '../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
 import type {
@@ -34,7 +34,7 @@ test('it reflects a level update in the entity and its app state', () => {
   avatar.updateLevel(3);
 
   expect(avatar.level).toBe(3);
-  expect(avatar.getAppState().level).toBe(3);
+  expect(avatar.getSnapshot().level).toBe(3);
 });
 
 test('it exposes a method for setting the avatar state', () => {
@@ -76,7 +76,7 @@ test('it calls all registered handlers when handling a tick', () => {
   const ctx = createMockSimulationContext();
   const avatarData = createMockAvatarData();
   const avatar = createAvatar(avatarData, ctx);
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
   const handlerSpy = mock<CombatLifecycleHandler<Avatar>>();
@@ -102,7 +102,7 @@ test('it allows removing behaviours', () => {
   const ctx = createMockSimulationContext();
   const avatarData = createMockAvatarData();
   const avatar = createAvatar(avatarData, ctx);
-  const activityData = createMockActivityData();
+  const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
   const handlerSpy = mock<CombatLifecycleHandler<Avatar>>();
@@ -204,11 +204,11 @@ test('it returns the expected avatar state for a client app', () => {
   const ctx = createMockSimulationContext();
   const data = createMockAvatarData();
   const avatar = createAvatar(data, ctx);
-  const state = avatar.getAppState();
+  const state = avatar.getSnapshot();
 
   expect(state).toStrictEqual({
     behaviours: {
-      avatarWeaponAttack: {
+      avatar_weapon_attack: {
         lastAttackTime: expect.toBeNumber(),
       },
     },

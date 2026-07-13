@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { WorldEdge, WorldGraph, WorldMapNode } from '@vers/worldmap-core';
 import { Object3D } from 'three';
-import { filterDistanceGraph } from './filter-distant-graph';
+import { buildNearbyGraph } from './build-nearby-graph';
 
 // this data is carefully prepared in a way so that we have nodes and edges
 // bordering the maximum distance in every direction along our x/y axis with
@@ -35,7 +35,7 @@ test('it filters nodes beyond the maximum distance', () => {
   // set our selected node position to something that's not the origin
   selectedNode.position.set(10, 10, 0);
 
-  const filteredGraph = filterDistanceGraph(selectedNode, mockGraph);
+  const filteredGraph = buildNearbyGraph(selectedNode, mockGraph);
 
   expect(filteredGraph).toStrictEqual({
     edges: {

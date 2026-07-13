@@ -1,14 +1,14 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import { nodeHasText } from '@vers/client-test-utils';
-import type { EnemyAppState } from '@vers/idle-core';
+import type { EnemySnapshot } from '@vers/idle-core';
 import { EntityStatus } from '@vers/idle-core';
 import { EnemyInfo } from './enemy-info';
 
 test('it renders enemy information', () => {
-  const enemy: EnemyAppState = {
+  const enemy: EnemySnapshot = {
     behaviours: {
-      enemyPrimaryAttack: {
+      enemy_primary_attack: {
         lastAttackTime: 0,
       },
     },

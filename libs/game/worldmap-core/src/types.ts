@@ -1,11 +1,11 @@
 export interface WorldGraph {
-  readonly edges: WorldEdgeMap;
-  readonly nodes: WorldMapNodeMap;
+  readonly edges: WorldEdgesByID;
+  readonly nodes: WorldMapNodesByID;
 }
 
-export type WorldEdgeMap = Readonly<Record<string, WorldEdge>>;
+export type WorldEdgesByID = Readonly<Record<string, WorldEdge>>;
 
-export type WorldMapNodeMap = Readonly<Record<string, WorldMapNode>>;
+export type WorldMapNodesByID = Readonly<Record<string, WorldMapNode>>;
 
 export interface WorldMapNode {
   readonly connections: readonly [null | string, null | string, null | string, null | string];

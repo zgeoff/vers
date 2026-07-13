@@ -1,12 +1,12 @@
 import { expect, test } from 'bun:test';
-import { createMockActivityData, createMockAvatarData } from '@vers/idle-core';
+import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core';
 import type { InitializeMessage, SetActivityMessage } from '../types';
 import { ClientMessageType } from '../types';
 import { isSetActivityMessage } from './is-set-activity-message';
 
 test('it returns true if it is a set activity message', () => {
   const avatar = createMockAvatarData();
-  const activity = createMockActivityData();
+  const activity = createMockActivityInput();
 
   const message: SetActivityMessage = {
     activity,

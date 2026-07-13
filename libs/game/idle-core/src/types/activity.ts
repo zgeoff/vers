@@ -1,6 +1,6 @@
-import type { EnemyData, Wave, WaveAppState } from './entities';
+import type { EnemyData, Wave, WaveSnapshot } from './entities';
 
-interface IActivityData {
+interface IActivityInput {
   difficulty: number;
   failureAction: ActivityFailureAction;
   id: string;
@@ -17,13 +17,13 @@ export enum ActivityFailureAction {
   Retry = 'retry',
 }
 
-export interface WorldMapEncounterActivityData extends IActivityData {
+export interface WorldMapEncounterActivityInput extends IActivityInput {
   enemies: Array<EnemyData>;
   seed: string;
   type: ActivityType.WorldMapEncounter;
 }
 
-export type ActivityData = WorldMapEncounterActivityData;
+export type ActivityInput = WorldMapEncounterActivityInput;
 
 /**
  * An open keyed map of signed reward deltas. Future keys are added as optional and never
@@ -41,15 +41,15 @@ export interface ActivityLevelUp {
   readonly to: number;
 }
 
-export interface ActivityAppState {
-  readonly currentWave: WaveAppState | null;
+export interface ActivitySnapshot {
+  readonly currentWave: WaveSnapshot | null;
   readonly elapsed: number;
   readonly enemiesRemaining: number;
   readonly id: string;
   readonly levelUp: ActivityLevelUp | null;
   readonly name: string;
   readonly rewards: ActivityRewards;
-  readonly waves: Array<WaveAppState>;
+  readonly waves: Array<WaveSnapshot>;
   readonly wavesRemaining: number;
 }
 
@@ -71,7 +71,7 @@ export interface Activity {
   // utils
   updateRewards: (delta: ActivityRewards) => void;
   elapseTime: (time: number) => void;
-  getAppState: () => ActivityAppState;
+  getSnapshot: () => ActivitySnapshot;
   moveToNextWave: () => void;
   setLevelUp: (levelUp: ActivityLevelUp) => void;
 }

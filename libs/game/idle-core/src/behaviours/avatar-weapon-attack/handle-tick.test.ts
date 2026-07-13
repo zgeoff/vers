@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createActivity } from '../../core/create-activity';
 import { createCombatExecutor } from '../../core/create-combat-executor';
 import { createAvatar } from '../../entities/create-avatar';
-import { createMockActivityData } from '../../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../../test-utils/create-mock-activity-input';
 import { createMockAvatarData } from '../../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
@@ -24,7 +24,7 @@ test('it schedules attacks on the tick event', () => {
   });
 
   const enemyData = createMockEnemyData({ life: 10 });
-  const activityData = createMockActivityData({ enemies: [enemyData] });
+  const activityData = createMockActivityInput({ enemies: [enemyData] });
   const ctx = createMockSimulationContext();
   const activity = createActivity(activityData, ctx, { waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
@@ -63,7 +63,7 @@ test('it schedules multiple attacks for high APS weapons', () => {
   });
 
   const enemyData = createMockEnemyData({ life: 10 });
-  const activityData = createMockActivityData({ enemies: [enemyData] });
+  const activityData = createMockActivityInput({ enemies: [enemyData] });
   const ctx = createMockSimulationContext();
   const activity = createActivity(activityData, ctx, { waveSize: 5 });
   const avatar = createAvatar(avatarData, ctx);

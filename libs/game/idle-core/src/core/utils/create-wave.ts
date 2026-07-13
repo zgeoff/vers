@@ -1,9 +1,9 @@
 import { createId } from '@paralleldrive/cuid2';
-import type { ActivityData, SimulationContext, Wave, WaveAppState } from '../../types';
+import type { ActivityInput, SimulationContext, Wave, WaveSnapshot } from '../../types';
 import { getRandomEnemies } from './get-random-enemies';
 
 export function createWave(
-  activity: ActivityData,
+  activity: ActivityInput,
   ctx: SimulationContext,
   enemyCount: number,
 ): Wave {
@@ -11,8 +11,8 @@ export function createWave(
   const enemies = getRandomEnemies(activity, enemyCount, ctx);
   const getRemainingEnemies = () => enemies.filter((enemy) => enemy.isAlive);
 
-  const getAppState = (): WaveAppState => ({
-    enemies: enemies.map((enemy) => enemy.getAppState()),
+  const getSnapshot = (): WaveSnapshot => ({
+    enemies: enemies.map((enemy) => enemy.getSnapshot()),
     id,
   });
 
@@ -30,6 +30,6 @@ export function createWave(
     },
 
     // core
-    getAppState,
+    getSnapshot,
   };
 }

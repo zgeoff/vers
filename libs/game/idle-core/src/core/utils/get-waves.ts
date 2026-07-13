@@ -1,4 +1,4 @@
-import type { ActivityData, SimulationContext, Wave } from '../../types';
+import type { ActivityInput, SimulationContext, Wave } from '../../types';
 import { createWave } from './create-wave';
 import { getRandomWaveCount } from './get-random-wave-count';
 
@@ -11,7 +11,7 @@ interface ActivityConfig {
 }
 
 export function getWaves(
-  activity: ActivityData,
+  activity: ActivityInput,
   ctx: SimulationContext,
   config: ActivityConfig,
 ): Array<Wave> {

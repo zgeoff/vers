@@ -1,10 +1,10 @@
 import { buildStateFromSeed, createRNG } from '@vers/game-utils';
 import { getRandomizedPosition } from './get-randomized-position';
-import type { CompressedWorldMapNode, WorldMapNode, WorldMapNodeMap } from './types';
+import type { CompressedWorldMapNode, WorldMapNode, WorldMapNodesByID } from './types';
 
-export function getWorldMapNodeMap(
+export function buildWorldMapNodesByID(
   compressedNodes: ReadonlyArray<CompressedWorldMapNode>,
-): WorldMapNodeMap {
+): WorldMapNodesByID {
   const nodes: Record<string, WorldMapNode> = {};
 
   for (const node of compressedNodes) {

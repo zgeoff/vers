@@ -1,6 +1,6 @@
 import { expect, spyOn, test } from 'bun:test';
+import { buildWorldMapNodesByID } from './build-world-map-nodes-by-id';
 import * as getRandomizedPosition from './get-randomized-position';
-import { getWorldMapNodeMap } from './get-world-map-node-map';
 import type { CompressedWorldMapNode } from './types';
 
 test('it creates a node map from compressed nodes', () => {
@@ -28,7 +28,7 @@ test('it creates a node map from compressed nodes', () => {
     },
   ];
 
-  const nodeMap = getWorldMapNodeMap(compressedNodes);
+  const nodeMap = buildWorldMapNodesByID(compressedNodes);
 
   expect(nodeMap).toStrictEqual({
     node1: {
@@ -62,7 +62,7 @@ test('it randomizes the position of the nodes', () => {
     },
   ];
 
-  const result = getWorldMapNodeMap(compressedNodes);
+  const result = buildWorldMapNodesByID(compressedNodes);
 
   expect(result['node1']?.position).not.toStrictEqual([1, 1]);
   expect(result['node1']?.position[0]).not.toBeGreaterThan(1.2);

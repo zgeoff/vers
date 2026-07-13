@@ -29,7 +29,7 @@ export interface EnemyData {
 
 export type HandleTickFn = (combatExecutor: CombatExecutor) => void;
 
-interface IEntity<State extends object, EntityAppState extends object> {
+interface IEntity<State extends object, EntitySnapshot extends object> {
   // meta
   readonly id: string;
   readonly level: number;
@@ -43,7 +43,7 @@ interface IEntity<State extends object, EntityAppState extends object> {
   // core
   // oxlint-disable-next-line typescript/method-signature-style -- subtypes narrow the behaviour param; method syntax keeps the bivariant check that permits it
   addBehaviour(behaviour: Behaviour): void;
-  getAppState: () => EntityAppState;
+  getSnapshot: () => EntitySnapshot;
   handleTick: (combatExecutor: CombatExecutor, ctx: SimulationContext) => void;
   removeBehaviour: (id: BehaviourID) => void;
   setState: (setStateFn: SetEntityStateFn<State>) => void;
@@ -64,12 +64,12 @@ export interface AvatarState {
   readonly status: EntityStatus;
 }
 
-export type AvatarBehaviourAppState = {
+export type AvatarBehaviourSnapshot = {
   [K in BehaviourID]?: ReturnType<Extract<AvatarBehaviour, { id: K }>['getState']>;
 };
 
-export interface AvatarAppState {
-  readonly behaviours: AvatarBehaviourAppState;
+export interface AvatarSnapshot {
+  readonly behaviours: AvatarBehaviourSnapshot;
   readonly id: string;
   readonly isAlive: boolean;
   readonly level: number;
@@ -80,7 +80,7 @@ export interface AvatarAppState {
   readonly status: EntityStatus;
 }
 
-export interface Avatar extends IEntity<AvatarState, AvatarAppState> {
+export interface Avatar extends IEntity<AvatarState, AvatarSnapshot> {
   // meta
   readonly type: EntityType.Avatar;
   readonly xp: number;
@@ -104,12 +104,12 @@ export interface EnemyState {
   readonly status: EntityStatus;
 }
 
-export type EnemyBehaviourAppState = {
+export type EnemyBehaviourSnapshot = {
   [K in BehaviourID]?: ReturnType<Extract<EnemyBehaviour, { id: K }>['getState']>;
 };
 
-export interface EnemyAppState {
-  readonly behaviours: EnemyBehaviourAppState;
+export interface EnemySnapshot {
+  readonly behaviours: EnemyBehaviourSnapshot;
   readonly id: string;
   readonly isAlive: boolean;
   readonly level: number;
@@ -120,7 +120,7 @@ export interface EnemyAppState {
   readonly status: EntityStatus;
 }
 
-export interface Enemy extends IEntity<EnemyState, EnemyAppState> {
+export interface Enemy extends IEntity<EnemyState, EnemySnapshot> {
   // meta
   readonly name: string;
   readonly type: EntityType.Enemy;
@@ -153,8 +153,8 @@ export interface AttackData {
   readonly speed: number;
 }
 
-export interface WaveAppState {
-  readonly enemies: Array<EnemyAppState>;
+export interface WaveSnapshot {
+  readonly enemies: Array<EnemySnapshot>;
   readonly id: string;
 }
 
@@ -168,5 +168,5 @@ export interface Wave {
   get remaining(): number;
 
   // utils
-  getAppState: () => WaveAppState;
+  getSnapshot: () => WaveSnapshot;
 }

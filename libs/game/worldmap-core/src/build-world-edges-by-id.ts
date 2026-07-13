@@ -1,7 +1,7 @@
 import invariant from 'tiny-invariant';
-import type { WorldEdge, WorldEdgeMap, WorldMapNodeMap } from './types';
+import type { WorldEdge, WorldEdgesByID, WorldMapNodesByID } from './types';
 
-export function getWorldEdgeMap(worldMapNodes: WorldMapNodeMap): WorldEdgeMap {
+export function buildWorldEdgesByID(worldMapNodes: WorldMapNodesByID): WorldEdgesByID {
   const edges: Record<string, WorldEdge> = {};
 
   for (const node of Object.values(worldMapNodes)) {

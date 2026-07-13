@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
-import type { SimulationAppState } from '@vers/idle-core';
+import type { SimulationSnapshot } from '@vers/idle-core';
 import { ActivityFailureAction, EntityStatus } from '@vers/idle-core';
 import { WorkerMessageType } from '../types';
 import { createInitialStateMessage } from './create-initial-state-message';
 
 test('it creates an initial state message', () => {
-  const state: SimulationAppState = {
+  const state: SimulationSnapshot = {
     avatar: {
       behaviours: {},
       id: '1',

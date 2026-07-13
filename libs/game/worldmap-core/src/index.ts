@@ -1,2 +1,2 @@
-export { decompressWorldMapNodes } from './decompress-world-map-nodes';
+export { decompressWorldGraph } from './decompress-world-graph';
 export type * from './types';

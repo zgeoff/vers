@@ -2,10 +2,10 @@ import { produce } from 'immer';
 import { createAvatarWeaponAttackBehaviour } from '../behaviours/avatar-weapon-attack';
 import type {
   Avatar,
-  AvatarAppState,
   AvatarBehaviour,
-  AvatarBehaviourAppState,
+  AvatarBehaviourSnapshot,
   AvatarData,
+  AvatarSnapshot,
   AvatarState,
   BehaviourID,
   CombatExecutor,
@@ -30,8 +30,8 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
   let currentLevel = data.level;
 
   // TODO: pull this out into a util
-  const getAppState = (): AvatarAppState => {
-    const behaviourState: AvatarBehaviourAppState = {};
+  const getSnapshot = (): AvatarSnapshot => {
+    const behaviourState: AvatarBehaviourSnapshot = {};
 
     for (const behaviour of behaviours) {
       addBehaviourState(behaviourState, behaviour.id, behaviour.getState());
@@ -119,7 +119,7 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
 
     // core
     addBehaviour,
-    getAppState,
+    getSnapshot,
     handleTick,
     removeBehaviour,
     setState,
@@ -159,9 +159,9 @@ function getInitialState(data: AvatarData): AvatarState {
 
 // type safe util for adding our behaviour state to our serializable state
 function addBehaviourState<K extends BehaviourID>(
-  state: AvatarBehaviourAppState,
+  state: AvatarBehaviourSnapshot,
   id: K,
-  value: AvatarBehaviourAppState[K],
+  value: AvatarBehaviourSnapshot[K],
 ): void {
   state[id] = value;
 }

@@ -6,7 +6,7 @@ import type { CompressedWorldMapNode, WorldMapNode } from './types';
  * @param nodes - The WorldMapNodes to serialize.
  * @returns An array of CompressedWorldMapNodes.
  */
-export function getCompressedWorldGraph(
+export function compressWorldMapNodes(
   nodes: ReadonlyArray<WorldMapNode>,
 ): Array<CompressedWorldMapNode> {
   return nodes.map((node) => ({

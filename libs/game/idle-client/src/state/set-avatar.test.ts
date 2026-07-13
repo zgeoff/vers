@@ -1,14 +1,14 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import type { AvatarAppState } from '@vers/idle-core';
+import type { AvatarSnapshot } from '@vers/idle-core';
 import { EntityStatus } from '@vers/idle-core';
 import { setAvatar } from './set-avatar';
 import { useAvatarStore } from './use-avatar-store';
 
 test('it updates the avatar state', () => {
-  const avatar: AvatarAppState = {
+  const avatar: AvatarSnapshot = {
     behaviours: {
-      avatarWeaponAttack: {
+      avatar_weapon_attack: {
         lastAttackTime: 0,
       },
     },
@@ -32,7 +32,7 @@ test('it updates the avatar state', () => {
 
   expect(hook.result.current).toStrictEqual({
     behaviours: {
-      avatarWeaponAttack: {
+      avatar_weapon_attack: {
         lastAttackTime: 0,
       },
     },

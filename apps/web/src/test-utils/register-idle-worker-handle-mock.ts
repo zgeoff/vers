@@ -21,13 +21,13 @@ export function registerIdleWorkerHandleMock(): void {
 
   void mock.module('../lib/idle/send-idle-set-activity', () => ({
     sendIdleSetActivity: (worker: FakeSimulationWorker, activity: unknown, avatar: unknown) => {
-      worker.port.postMessage({ activity, avatar, type: 'set-activity' });
+      worker.port.postMessage({ activity, avatar, type: 'set_activity' });
     },
   }));
 
   void mock.module('../lib/idle/send-idle-set-failure-action', () => ({
     sendIdleSetFailureAction: (worker: FakeSimulationWorker, failureAction: unknown) => {
-      worker.port.postMessage({ failureAction, type: 'set-failure-action' });
+      worker.port.postMessage({ failureAction, type: 'set_failure_action' });
     },
   }));
 

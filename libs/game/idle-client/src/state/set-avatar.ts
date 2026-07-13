@@ -1,6 +1,6 @@
-import type { AvatarAppState } from '@vers/idle-core';
+import type { AvatarSnapshot } from '@vers/idle-core';
 import { useAvatarStore } from './use-avatar-store';
 
-export function setAvatar(avatar?: AvatarAppState) {
+export function setAvatar(avatar?: AvatarSnapshot) {
   useAvatarStore.setState(() => ({ avatar: avatar ?? null }));
 }

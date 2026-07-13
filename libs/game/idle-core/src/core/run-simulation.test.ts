@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { buildStateFromSeed } from '@vers/game-utils';
-import { createMockActivityData } from '../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
 import { ActivityCheckpointType, ActivityFailureAction, ActivityType } from '../types';
@@ -9,7 +9,7 @@ import { runSimulation } from './run-simulation';
 test('runs a simulation with default configuration', async () => {
   const avatar = createMockAvatarData();
 
-  const activity = createMockActivityData({
+  const activity = createMockActivityInput({
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
@@ -111,7 +111,7 @@ test('runs a simulation with default configuration', async () => {
 test('it respects duration limit and stops the simulation accordingly', async () => {
   const avatar = createMockAvatarData();
 
-  const activity = createMockActivityData({
+  const activity = createMockActivityInput({
     enemies: [createMockEnemyData()],
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
@@ -135,7 +135,7 @@ test('it stops at the specified rng state if provided', async () => {
   const avatar = createMockAvatarData();
   const enemy = createMockEnemyData();
 
-  const activity = createMockActivityData({
+  const activity = createMockActivityInput({
     enemies: [enemy],
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
@@ -170,7 +170,7 @@ test('it aborts on failure if failure action is set to abort', async () => {
   const avatar = createMockAvatarData({ life: 1 });
   const enemy = createMockEnemyData();
 
-  const activity = createMockActivityData({
+  const activity = createMockActivityInput({
     enemies: [enemy],
     failureAction: ActivityFailureAction.Abort,
     id: 'world_map_encounter_1',
@@ -206,7 +206,7 @@ test('it retries when failure action is set to retry', async () => {
   const avatar = createMockAvatarData({ life: 1 });
   const enemy = createMockEnemyData();
 
-  const activity = createMockActivityData({
+  const activity = createMockActivityInput({
     enemies: [enemy],
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',

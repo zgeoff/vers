@@ -20,7 +20,7 @@ export async function handleInitializeMessage(context: WorkerContext, _message: 
 
   context.setSimulation(simulation);
 
-  const initialStateMessage = createInitialStateMessage(simulation.getAppState());
+  const initialStateMessage = createInitialStateMessage(simulation.getSnapshot());
 
   for (const connection of context.connections) {
     connection.postMessage(initialStateMessage);

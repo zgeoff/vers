@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { ActivityFailureAction, ActivityType } from '../types';
-import { createMockActivityData } from './create-mock-activity-data';
+import { createMockActivityInput } from './create-mock-activity-input';
 import { createMockEnemyData } from './create-mock-enemy-data';
 
 test('it creates activity data with expected properties', () => {
-  const activity = createMockActivityData();
+  const activity = createMockActivityInput();
 
   expect(activity).toStrictEqual({
     difficulty: 1,
@@ -33,7 +33,7 @@ test('it creates activity data with expected properties', () => {
 test('it creates activity data with custom properties', () => {
   const enemy = createMockEnemyData();
 
-  const activity = createMockActivityData({
+  const activity = createMockActivityInput({
     enemies: [enemy],
     failureAction: ActivityFailureAction.Abort,
     id: 'custom-activity',

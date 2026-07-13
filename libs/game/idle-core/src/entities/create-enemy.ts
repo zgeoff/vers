@@ -5,10 +5,10 @@ import type {
   BehaviourID,
   CombatExecutor,
   Enemy,
-  EnemyAppState,
   EnemyBehaviour,
-  EnemyBehaviourAppState,
+  EnemyBehaviourSnapshot,
   EnemyData,
+  EnemySnapshot,
   EnemyState,
   SetEntityStateFn,
   SimulationContext,
@@ -26,8 +26,8 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
   const label = createLogLabel('enemy', id);
   let state = getInitialState(data);
 
-  const getAppState = (): EnemyAppState => {
-    const behaviourState: EnemyBehaviourAppState = {};
+  const getSnapshot = (): EnemySnapshot => {
+    const behaviourState: EnemyBehaviourSnapshot = {};
 
     for (const behaviour of behaviours) {
       addBehaviourState(behaviourState, behaviour.id, behaviour.getState());
@@ -92,7 +92,7 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
 
     // core
     addBehaviour,
-    getAppState,
+    getSnapshot,
     handleTick,
     removeBehaviour,
     setState,
@@ -128,9 +128,9 @@ function getInitialState(data: EnemyData): EnemyState {
 
 // type safe util for adding our behaviour state to our serializable state
 function addBehaviourState<K extends BehaviourID>(
-  state: EnemyBehaviourAppState,
+  state: EnemyBehaviourSnapshot,
   id: K,
-  value: EnemyBehaviourAppState[K],
+  value: EnemyBehaviourSnapshot[K],
 ): void {
   state[id] = value;
 }

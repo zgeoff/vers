@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createAvatar } from '../entities/create-avatar';
-import { createMockActivityData } from '../test-utils/create-mock-activity-data';
+import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
 import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
 import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
@@ -29,7 +29,7 @@ test('it applies damage to the first living enemy', () => {
     life: 100,
   });
 
-  const activityData = createMockActivityData({
+  const activityData = createMockActivityInput({
     enemies: [enemyData],
   });
 
