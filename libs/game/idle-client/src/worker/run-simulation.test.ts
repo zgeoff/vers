@@ -10,22 +10,25 @@ import {
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
 
-const context: WorkerContext = {
-  connections: new Set(),
-  getSimulation: () => null,
-  getSubmitter: () => ({
-    attach: () => Promise.resolve(),
-    submit: () => Promise.resolve(),
-  }),
-  removeConnection: () => {
-    //
-  },
-  setSimulation: () => {
-    //
-  },
-};
+function buildWorkerContext(): WorkerContext {
+  return {
+    connections: new Set(),
+    getSimulation: () => null,
+    getSubmitter: () => ({
+      attach: () => Promise.resolve(),
+      submit: () => Promise.resolve(),
+    }),
+    removeConnection: () => {
+      //
+    },
+    setSimulation: () => {
+      //
+    },
+  };
+}
 
 async function runSimulationSteps(
+  context: WorkerContext,
   simulation: ReturnType<typeof createSimulation>,
   timestep: number,
   steps: number,
@@ -36,6 +39,7 @@ async function runSimulationSteps(
 }
 
 test('it restarts the activity if it fails and the failure action is retry', async () => {
+  const context = buildWorkerContext();
   const simulation = createSimulation();
   const restartedSpy = mock<SimulationListener>();
 
@@ -46,13 +50,14 @@ test('it restarts the activity if it fails and the failure action is retry', asy
   simulation.startActivity(avatar, activity);
   simulation.addEventListener('restarted', restartedSpy);
 
-  await runSimulationSteps(simulation, 100, 50);
+  await runSimulationSteps(context, simulation, 100, 50);
 
   expect(restartedSpy).toHaveBeenCalled();
   expect(simulation.activity).not.toBeNull();
 });
 
 test('it does not restart the activity if it fails and the failure action is abort', async () => {
+  const context = buildWorkerContext();
   const simulation = createSimulation();
   const restartedSpy = mock<SimulationListener>();
   const stoppedSpy = mock<SimulationListener>();
@@ -65,7 +70,7 @@ test('it does not restart the activity if it fails and the failure action is abo
   simulation.addEventListener('restarted', restartedSpy);
   simulation.addEventListener('stopped', stoppedSpy);
 
-  await runSimulationSteps(simulation, 100, 50);
+  await runSimulationSteps(context, simulation, 100, 50);
 
   expect(restartedSpy).not.toHaveBeenCalled();
   expect(stoppedSpy).toHaveBeenCalled();
@@ -75,6 +80,7 @@ test('it does not restart the activity if it fails and the failure action is abo
 test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
   'it restarts the activity if it completes, regardless of the failure action (%s)',
   async (failureAction) => {
+    const context = buildWorkerContext();
     const simulation = createSimulation();
     const restartedSpy = mock<SimulationListener>();
     const avatar = createMockAvatarData();
@@ -86,7 +92,7 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
 
     simulation.addEventListener('restarted', restartedSpy);
 
-    await runSimulationSteps(simulation, 100, 700);
+    await runSimulationSteps(context, simulation, 100, 700);
 
     expect(restartedSpy).toHaveBeenCalled();
     expect(simulation.activity).not.toBe(startingActivity);

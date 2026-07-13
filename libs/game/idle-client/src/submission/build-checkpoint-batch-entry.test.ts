@@ -1,27 +1,13 @@
 import { expect, test } from 'bun:test';
 import { buildCheckpointHash } from '@vers/contract-activity';
-import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
+import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
+import { createMockStartedCheckpoint } from '../test-utils/factories/create-mock-started-checkpoint';
 import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
 
-const startedCheckpoint: ActivityCheckpoint = {
-  nextSeed: 'seed_0',
-  rewards: { xp: 0 },
-  seed: 'seed_0',
-  time: 0,
-  type: ActivityCheckpointType.Started,
-};
-
-const progressCheckpoint: ActivityCheckpoint = {
-  nextSeed: 'seed_1',
-  rewards: { xp: 15 },
-  time: 12,
-  type: ActivityCheckpointType.Progress,
-};
-
-test('it sets chainIndex to startChainIndex + version', () => {
+test('it sets a checkpoint chain position to the activity anchor plus its version', () => {
   const entry = buildCheckpointBatchEntry({
-    checkpoint: progressCheckpoint,
+    checkpoint: createMockProgressCheckpoint(),
     entropySource: 'chain',
     prevHash: 'hash_0',
     previousNextSeed: 'seed_0',
@@ -32,9 +18,9 @@ test('it sets chainIndex to startChainIndex + version', () => {
   expect(entry.payload.chainIndex).toBe(12);
 });
 
-test('it sets a Started checkpoint at startChainIndex + 1', () => {
+test('it places a started checkpoint one position past the activity anchor', () => {
   const entry = buildCheckpointBatchEntry({
-    checkpoint: startedCheckpoint,
+    checkpoint: createMockStartedCheckpoint(),
     entropySource: 'chain',
     prevHash: 'start_hash',
     previousNextSeed: 'seed_0',
@@ -45,9 +31,9 @@ test('it sets a Started checkpoint at startChainIndex + 1', () => {
   expect(entry.payload.chainIndex).toBe(11);
 });
 
-test('it sets a Started checkpoint payload seed to the checkpoint own seed', () => {
+test('it seeds a started checkpoint entry from the checkpoint own seed', () => {
   const entry = buildCheckpointBatchEntry({
-    checkpoint: startedCheckpoint,
+    checkpoint: createMockStartedCheckpoint({ nextSeed: 'seed_0', seed: 'seed_0' }),
     entropySource: 'chain',
     prevHash: 'start_hash',
     previousNextSeed: 'unrelated_seed',
@@ -59,9 +45,9 @@ test('it sets a Started checkpoint payload seed to the checkpoint own seed', () 
   expect(entry.payload.nextSeed).toBe(entry.payload.seed);
 });
 
-test('it sets a non-Started checkpoint payload seed to the previous checkpoint nextSeed', () => {
+test('it seeds a non-started checkpoint entry from the previous checkpoint next seed', () => {
   const entry = buildCheckpointBatchEntry({
-    checkpoint: progressCheckpoint,
+    checkpoint: createMockProgressCheckpoint({ nextSeed: 'seed_1' }),
     entropySource: 'chain',
     prevHash: 'hash_0',
     previousNextSeed: 'seed_0',
@@ -75,7 +61,7 @@ test('it sets a non-Started checkpoint payload seed to the previous checkpoint n
 
 test('it carries the checkpoint open-record fields into the payload', () => {
   const entry = buildCheckpointBatchEntry({
-    checkpoint: progressCheckpoint,
+    checkpoint: createMockProgressCheckpoint({ rewards: { xp: 15 } }),
     entropySource: 'chain',
     prevHash: 'hash_0',
     previousNextSeed: 'seed_0',
@@ -86,9 +72,9 @@ test('it carries the checkpoint open-record fields into the payload', () => {
   expect(entry.payload['rewards']).toStrictEqual({ xp: 15 });
 });
 
-test('it derives a hash identical to a direct buildCheckpointHash call over the same fields', () => {
+test('it computes the entry hash as the canonical hash of its checkpoint fields', () => {
   const entry = buildCheckpointBatchEntry({
-    checkpoint: progressCheckpoint,
+    checkpoint: createMockProgressCheckpoint({ nextSeed: 'seed_1', time: 12 }),
     entropySource: 'chain',
     prevHash: 'hash_0',
     previousNextSeed: 'seed_0',
@@ -110,9 +96,9 @@ test('it derives a hash identical to a direct buildCheckpointHash call over the 
   expect(entry.hash).toBe(expectedHash);
 });
 
-test('it passes version and prevHash through to the entry unchanged', () => {
+test('it echoes the input version and previous hash onto the entry', () => {
   const entry = buildCheckpointBatchEntry({
-    checkpoint: progressCheckpoint,
+    checkpoint: createMockProgressCheckpoint(),
     entropySource: 'chain',
     prevHash: 'hash_0',
     previousNextSeed: 'seed_0',

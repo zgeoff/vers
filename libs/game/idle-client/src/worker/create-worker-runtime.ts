@@ -24,8 +24,8 @@ interface CreateWorkerRuntimeOptions {
 
 /**
  * Owns one worker process's connections, simulation, and fixed-timestep tick loop. Production
- * wiring (`worker.ts`) constructs exactly one runtime per worker, preserving the
- * one-simulation-per-worker invariant that a module-level singleton used to enforce implicitly.
+ * wiring (`worker.ts`) constructs exactly one runtime per worker, holding the
+ * one-simulation-per-worker invariant.
  */
 export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): WorkerRuntime {
   const timestep = options.timestep ?? defaultTimestep;

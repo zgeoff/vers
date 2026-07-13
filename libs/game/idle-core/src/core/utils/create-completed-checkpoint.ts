@@ -14,8 +14,6 @@ export function createCompletedCheckpoint(
   avatar: Avatar,
   ctx: SimulationContext,
 ): ActivityCompletedCheckpoint {
-  const nextSeed = ctx.rng.getState();
-  const time = activity.elapsed;
   const completionXP = buildCompletionXP(activity.difficulty);
   const rewards: ActivityRewards = { xp: activity.rewards.xp + completionXP };
   const previousLevel = levelForXP(avatar.xp + activity.rewards.xp);
@@ -25,9 +23,9 @@ export function createCompletedCheckpoint(
     currentLevel > previousLevel ? { from: previousLevel, to: currentLevel } : undefined;
 
   return {
-    nextSeed,
+    nextSeed: ctx.rng.getState(),
     rewards,
-    time,
+    time: activity.elapsed,
     type: ActivityCheckpointType.Completed,
     ...(levelUp && { levelUp }),
   };

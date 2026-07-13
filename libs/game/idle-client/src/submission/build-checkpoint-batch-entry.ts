@@ -13,20 +13,17 @@ interface BuildCheckpointBatchEntryInput {
 }
 
 /**
- * Maps one engine checkpoint onto the wire `CheckpointBatchEntry` `trackActivityProgress`
- * validates, computing the same `buildCheckpointHash` digest the server recomputes from the
- * batch. `Started` carries its own `seed`; every other checkpoint's `seed` is the chain position
- * it started from, which the caller threads in as `previousNextSeed` — the prior checkpoint's
- * `nextSeed`, or the activity's own seed for the stream's first entry.
+ * Maps one engine checkpoint onto the wire `CheckpointBatchEntry` the activity service validates,
+ * computing the same hash digest the server recomputes from the batch. `Started` carries its own
+ * `seed`; every other checkpoint's `seed` is the chain position it started from, which the caller
+ * threads in as `previousNextSeed` — the prior checkpoint's `nextSeed`, or the activity's own seed
+ * for the stream's first entry.
  */
 export function buildCheckpointBatchEntry(
   input: Readonly<BuildCheckpointBatchEntryInput>,
 ): CheckpointBatchEntry {
   const checkpoint = input.checkpoint;
   const chainIndex = input.startChainIndex + input.version;
-  const nextSeed = checkpoint.nextSeed;
-  const time = checkpoint.time;
-  const type = checkpoint.type;
 
   const seed =
     checkpoint.type === ActivityCheckpointType.Started ? checkpoint.seed : input.previousNextSeed;
@@ -34,11 +31,11 @@ export function buildCheckpointBatchEntry(
   const hash = buildCheckpointHash({
     chainIndex,
     entropySource: input.entropySource,
-    nextSeed,
+    nextSeed: checkpoint.nextSeed,
     prevHash: input.prevHash,
     seed,
-    time,
-    type,
+    time: checkpoint.time,
+    type: checkpoint.type,
     version: input.version,
   });
 
@@ -46,10 +43,7 @@ export function buildCheckpointBatchEntry(
     ...checkpoint,
     chainIndex,
     entropySource: input.entropySource,
-    nextSeed,
     seed,
-    time,
-    type,
   };
 
   return { hash, payload, prevHash: input.prevHash, version: input.version };

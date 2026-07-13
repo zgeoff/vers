@@ -55,10 +55,8 @@ export async function runSimulation(
       continue;
     }
 
-    const isExceededDuration = simulation.elapsed > config.duration;
-
     // bail out if we've exceeded our duration
-    if (isExceededDuration) {
+    if (simulation.elapsed > config.duration) {
       await simulation.stopActivity();
 
       logger.debug(`${label} activity exceeded duration, aborting`);

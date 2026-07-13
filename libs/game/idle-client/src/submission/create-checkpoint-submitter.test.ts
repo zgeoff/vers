@@ -1,34 +1,13 @@
 import { expect, mock, onTestFinished, test } from 'bun:test';
 import { ORPCError } from '@orpc/client';
-import type { ActivityCheckpoint } from '@vers/idle-core';
-import { ActivityCheckpointType } from '@vers/idle-core';
+import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
+import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
+import { createMockStartedCheckpoint } from '../test-utils/factories/create-mock-started-checkpoint';
 import { PROGRESS_FLUSH_INTERVAL_MS } from './constants';
 import { createCheckpointSubmitter } from './create-checkpoint-submitter';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { ActivityServiceClient } from './types';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
-
-const startedCheckpoint: ActivityCheckpoint = {
-  nextSeed: 'seed_0',
-  rewards: { xp: 0 },
-  seed: 'seed_0',
-  time: 0,
-  type: ActivityCheckpointType.Started,
-};
-
-const progressCheckpoint: ActivityCheckpoint = {
-  nextSeed: 'seed_1',
-  rewards: { xp: 5 },
-  time: 12,
-  type: ActivityCheckpointType.Progress,
-};
-
-const completedCheckpoint: ActivityCheckpoint = {
-  nextSeed: 'seed_2',
-  rewards: { xp: 20 },
-  time: 24,
-  type: ActivityCheckpointType.Completed,
-};
 
 function buildClient(
   trackActivityProgress: ActivityServiceClient['trackActivityProgress'],
@@ -52,8 +31,8 @@ test('it flushes immediately on a terminal checkpoint and confirms the queue on 
     startChainIndex: 0,
   });
 
-  await submitter.submit('success-activity', startedCheckpoint);
-  await submitter.submit('success-activity', completedCheckpoint);
+  await submitter.submit('success-activity', createMockStartedCheckpoint());
+  await submitter.submit('success-activity', createMockCompletedCheckpoint());
 
   expect(trackActivityProgress).toHaveBeenCalledOnce();
 
@@ -84,9 +63,9 @@ test('it trims the queue to the CONFLICT appendedHead and resends the tail', asy
     Promise.reject(new ORPCError('CONFLICT', { data: { appendedHead: 2 }, defined: true })),
   );
 
-  await submitter.submit('conflict-activity', startedCheckpoint);
-  await submitter.submit('conflict-activity', progressCheckpoint);
-  await submitter.submit('conflict-activity', completedCheckpoint);
+  await submitter.submit('conflict-activity', createMockStartedCheckpoint());
+  await submitter.submit('conflict-activity', createMockProgressCheckpoint());
+  await submitter.submit('conflict-activity', createMockCompletedCheckpoint());
 
   expect(trackActivityProgress).toHaveBeenCalledTimes(2);
 
@@ -119,8 +98,8 @@ test('it stops the stream and keeps queued rows on CHECKPOINT_INVALID', async ()
     startChainIndex: 0,
   });
 
-  await submitter.submit('invalid-activity', startedCheckpoint);
-  await submitter.submit('invalid-activity', completedCheckpoint);
+  await submitter.submit('invalid-activity', createMockStartedCheckpoint());
+  await submitter.submit('invalid-activity', createMockCompletedCheckpoint());
 
   expect(onInvalid).toHaveBeenCalledExactlyOnceWith('invalid-activity', 'broken-chain-link');
   expect(trackActivityProgress).toHaveBeenCalledOnce();
@@ -130,7 +109,7 @@ test('it stops the stream and keeps queued rows on CHECKPOINT_INVALID', async ()
   expect(remaining).toHaveLength(2);
 
   // a checkpoint produced after the stream stopped is silently dropped, not queued
-  await submitter.submit('invalid-activity', progressCheckpoint);
+  await submitter.submit('invalid-activity', createMockProgressCheckpoint());
 
   const stillTwo = await readQueuedCheckpoints('invalid-activity');
 
@@ -152,8 +131,8 @@ test('it discards the queue on NOT_FOUND', async () => {
     startChainIndex: 0,
   });
 
-  await submitter.submit('not-found-activity', startedCheckpoint);
-  await submitter.submit('not-found-activity', completedCheckpoint);
+  await submitter.submit('not-found-activity', createMockStartedCheckpoint());
+  await submitter.submit('not-found-activity', createMockCompletedCheckpoint());
 
   const remaining = await readQueuedCheckpoints('not-found-activity');
 
@@ -178,8 +157,8 @@ test('it holds the queue on UNAUTHORIZED and resends on the next flush', async (
     ),
   );
 
-  await submitter.submit('unauthorized-activity', startedCheckpoint);
-  await submitter.submit('unauthorized-activity', completedCheckpoint);
+  await submitter.submit('unauthorized-activity', createMockStartedCheckpoint());
+  await submitter.submit('unauthorized-activity', createMockCompletedCheckpoint());
 
   expect(trackActivityProgress).toHaveBeenCalledOnce();
 
@@ -187,7 +166,7 @@ test('it holds the queue on UNAUTHORIZED and resends on the next flush', async (
 
   expect(stillQueued).toHaveLength(2);
 
-  await submitter.submit('unauthorized-activity', completedCheckpoint);
+  await submitter.submit('unauthorized-activity', createMockCompletedCheckpoint());
 
   expect(trackActivityProgress).toHaveBeenCalledTimes(2);
 
@@ -273,7 +252,7 @@ test('it defers a non-terminal checkpoint to the shared progress window', async 
     startChainIndex: 0,
   });
 
-  await submitter.submit('progress-window-activity', startedCheckpoint);
+  await submitter.submit('progress-window-activity', createMockStartedCheckpoint());
 
   expect(trackActivityProgress).not.toHaveBeenCalled();
   expect(capturedDelay).toBe(PROGRESS_FLUSH_INTERVAL_MS);

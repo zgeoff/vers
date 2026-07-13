@@ -70,8 +70,8 @@ export interface SimulationUpdateMessage extends IWorkerMessage {
 }
 
 /**
- * Reports that `trackActivityProgress` rejected an activity's stream with `CHECKPOINT_INVALID`:
- * the worker has stopped submitting checkpoints for it, keeping the queued rows for debugging.
+ * Reports that the activity service rejected an activity's stream with `CHECKPOINT_INVALID`: the
+ * worker has stopped submitting checkpoints for it, keeping the queued rows for debugging.
  */
 export interface CheckpointStreamInvalidMessage extends IWorkerMessage {
   readonly activityID: string;

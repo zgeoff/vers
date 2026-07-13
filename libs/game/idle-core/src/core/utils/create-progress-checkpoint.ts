@@ -20,8 +20,6 @@ export function createProgressCheckpoint(
   ctx: SimulationContext,
   rewards: ActivityRewards,
 ): ActivityProgressCheckpoint {
-  const nextSeed = ctx.rng.getState();
-  const time = activity.elapsed;
   const totalXPAfter = avatar.xp + activity.rewards.xp;
   const totalXPBefore = totalXPAfter - rewards.xp;
   const previousLevel = levelForXP(totalXPBefore);
@@ -31,9 +29,9 @@ export function createProgressCheckpoint(
     currentLevel > previousLevel ? { from: previousLevel, to: currentLevel } : undefined;
 
   return {
-    nextSeed,
+    nextSeed: ctx.rng.getState(),
     rewards,
-    time,
+    time: activity.elapsed,
     type: ActivityCheckpointType.Progress,
     ...(levelUp && { levelUp }),
   };

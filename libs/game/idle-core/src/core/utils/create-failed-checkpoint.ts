@@ -13,11 +13,14 @@ export function createFailedCheckpoint(
   avatar: Avatar,
   ctx: SimulationContext,
 ): ActivityFailedCheckpoint {
-  const nextSeed = ctx.rng.getState();
-  const time = activity.elapsed;
   const runningXP = avatar.xp + activity.rewards.xp;
   const loss = buildFailureXPLoss(runningXP);
   const rewards: ActivityRewards = { xp: activity.rewards.xp - loss };
 
-  return { nextSeed, rewards, time, type: ActivityCheckpointType.Failed };
+  return {
+    nextSeed: ctx.rng.getState(),
+    rewards,
+    time: activity.elapsed,
+    type: ActivityCheckpointType.Failed,
+  };
 }

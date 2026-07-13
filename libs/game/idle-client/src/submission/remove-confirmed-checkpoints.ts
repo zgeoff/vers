@@ -11,7 +11,8 @@ export async function removeConfirmedCheckpoints(
 ): Promise<void> {
   const db = await resolveCheckpointQueueDB();
 
-  const range = IDBKeyRange.bound([activityID, 0], [activityID, appendedHead]);
-
-  await db.delete(CHECKPOINT_QUEUE_STORE_NAME, range);
+  await db.delete(
+    CHECKPOINT_QUEUE_STORE_NAME,
+    IDBKeyRange.bound([activityID, 0], [activityID, appendedHead]),
+  );
 }

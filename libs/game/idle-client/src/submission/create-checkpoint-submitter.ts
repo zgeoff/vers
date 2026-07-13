@@ -53,11 +53,11 @@ interface CreateCheckpointSubmitterOptions {
 
 /**
  * Owns a worker's outbound checkpoint submissions: mapping, the durable queue, and one serialized
- * in-flight batch per activity. Response handling follows `trackActivityProgress`'s contract: a
- * fresh head on success or `CONFLICT` advances the cursor and confirms the queue up to it;
- * `CHECKPOINT_INVALID` and `NOT_FOUND` stop the stream (keeping and discarding its queue rows,
- * respectively); anything else — `UNAUTHORIZED` or a transport failure — holds the queue
- * untouched for the next flush tick.
+ * in-flight batch per activity. Response handling follows the activity service's response
+ * contract: a fresh head on success or `CONFLICT` advances the cursor and confirms the queue up to
+ * it; `CHECKPOINT_INVALID` and `NOT_FOUND` stop the stream (keeping and discarding its queue rows,
+ * respectively); anything else — `UNAUTHORIZED` or a transport failure — holds the queue untouched
+ * for the next flush tick.
  */
 export function createCheckpointSubmitter(
   options: Readonly<CreateCheckpointSubmitterOptions>,
