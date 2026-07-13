@@ -20,7 +20,8 @@
     "@vers/service-auth": "workspace:*",
     "jose": "catalog:",
     "kysely": "catalog:",
-    "postgres": "catalog:"
+    "postgres": "catalog:",
+    "testcontainers": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "catalog:",

@@ -1,5 +1,6 @@
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { Wait } from 'testcontainers';
 
 /**
  * Creates a postgres container for testing.
@@ -12,6 +13,13 @@ export function createPostgresContainer(): Promise<StartedPostgreSqlContainer> {
       .withDatabase('test_template')
       .withUsername('test')
       .withPassword('test')
+
+      // the default wait strategy pairs the health check with a
+      // listening-ports probe that polls via docker exec; under bun the exec
+      // response stream never emits `end`, so start() hangs forever. the
+      // health check alone (pg_isready) gives the same readiness guarantee
+      // without crossing the exec path.
+      .withWaitStrategy(Wait.forHealthCheck())
 
       // use a memory disk for perf
       .withTmpFs({ '/var/lib/pg/data': 'rw' })
