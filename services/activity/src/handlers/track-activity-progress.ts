@@ -207,7 +207,7 @@ interface TrackActivityProgressHead {
 }
 
 /**
- * Validates a checkpoint batch's internal shape ahead of the transactional head-row CAS: version
+ * Validates a checkpoint batch's internal shape ahead of the transactional head-row compare-and-swap: version
  * contiguity from `expectedHead + 1`, each entry's `chainIndex` continuity from
  * `head.startChainIndex`, each entry's hash against its own payload, each entry's chain link to
  * the previous one, and — only when `expectedHead` still matches the head row, since a stale

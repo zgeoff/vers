@@ -14,7 +14,7 @@ import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 /**
- * `trackActivityProgress` opens its own `db.transaction()` for the head-row CAS, which can't nest
+ * `trackActivityProgress` opens its own `db.transaction()` for the head-row compare-and-swap, which can't nest
  * under the default rollback-on-dispose isolation — this suite runs against a real, committed
  * schema clone instead.
  */

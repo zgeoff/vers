@@ -55,7 +55,10 @@ Status assignment follows the failure's nature:
 
 | Domain       | Code                   | Status | Meaning                                                                                    | data         |
 | ------------ | ---------------------- | ------ | ------------------------------------------------------------------------------------------ | ------------ |
+| activity     | `ACTIVITY_TERMINAL`    | 409    | Append against a terminal activity status — fatal for the stream, the client discards      | `{ status }` |
+| activity     | `CHAIN_QUARANTINED`    | 409    | New start refused while the chain's replay frontier is quarantined                         | —            |
 | activity     | `CHECKPOINT_INVALID`   | 422    | Checkpoint batch fails structural validation (contiguity, chainIndex, chain link, or hash) | `{ reason }` |
+| activity     | `SESSION_EVICTED`      | 403    | Append from a session that is no longer the activity's writer — fatal, the client discards | —            |
 | user         | `INVALID_RESET_TOKEN`  | 422    | Reset token doesn't match the one on record                                                | —            |
 | user         | `PASSWORD_NOT_SET`     | 409    | Operation presumes a password; the account has none                                        | —            |
 | user         | `RESET_TOKEN_EXPIRED`  | 410    | Reset token was valid but its window has passed                                            | —            |
