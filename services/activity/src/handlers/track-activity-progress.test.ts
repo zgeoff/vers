@@ -27,7 +27,11 @@ test('it appends a single-entry batch and advances the head', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
 
@@ -52,7 +56,11 @@ test('it advances cursors and lastHash across multiple sequential batches', asyn
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const firstBatch = createMockCheckpointBatch({
     count: 2,
@@ -92,7 +100,11 @@ test('it rejects a stale expectedHead with CONFLICT carrying the current head', 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
 
@@ -124,7 +136,11 @@ test('it succeeds on a resend of the tail after a stale-head CONFLICT', async ()
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
 
@@ -156,7 +172,11 @@ test('it rejects a non-contiguous batch with CHECKPOINT_INVALID', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 2 });
 
@@ -176,7 +196,11 @@ test('it rejects a broken chain link with CHECKPOINT_INVALID', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const batch = createMockCheckpointBatch({
     count: 2,
@@ -203,7 +227,11 @@ test('it rejects a hash that does not match its payload with CHECKPOINT_INVALID'
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
   const tampered = [{ ...batch[0]!, hash: 'not-the-real-hash' }];
@@ -225,7 +253,11 @@ test('it rejects appending to a stopped activity with NOT_FOUND', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   await client.stopActivity({ avatarID: avatar.id });
 
@@ -268,7 +300,11 @@ test('it settles avatar xp and level from a completed terminal checkpoint', asyn
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const rewardsXP = 150;
 
@@ -315,7 +351,11 @@ test('it settles a clamped xp loss from a failed terminal checkpoint', async () 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const loss = buildFailureXPLoss(startingXP);
   const rewardsXP = -loss;
@@ -351,7 +391,11 @@ test('it advances the chain anchor to the terminal checkpoint on a completed bat
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const batch = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 100 }, type: 'completed' },
@@ -371,7 +415,8 @@ test('it advances the chain anchor to the terminal checkpoint on a completed bat
     .selectFrom('activityChains')
     .selectAll()
     .where('avatarId', '=', avatar.id)
-    .where('nodeId', '=', 'node_1')
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
     .executeTakeFirstOrThrow();
 
   expect(chain.appendedNextSeed).toBe(terminal.payload.nextSeed);
@@ -386,7 +431,11 @@ test('it advances the chain anchor to the terminal checkpoint on a failed batch'
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const batch = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: -10 }, type: 'failed' },
@@ -406,7 +455,8 @@ test('it advances the chain anchor to the terminal checkpoint on a failed batch'
     .selectFrom('activityChains')
     .selectAll()
     .where('avatarId', '=', avatar.id)
-    .where('nodeId', '=', 'node_1')
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
     .executeTakeFirstOrThrow();
 
   expect(chain.appendedNextSeed).toBe(terminal.payload.nextSeed);
@@ -421,7 +471,11 @@ test('it continues the next activity on the same node from the previous terminal
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const firstStarted = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const firstStarted = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const firstBatch = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 100 }, type: 'completed' },
@@ -437,7 +491,11 @@ test('it continues the next activity on the same node from the previous terminal
 
   const terminal = firstBatch[0]!;
 
-  const secondStarted = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const secondStarted = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   expect(secondStarted.seed).toBe(terminal.payload.nextSeed);
   expect(secondStarted.startChainIndex).toBe(terminal.payload.chainIndex);
@@ -451,7 +509,11 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const firstStarted = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const firstStarted = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const firstBatch = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 100 }, type: 'completed' },
@@ -465,7 +527,11 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
     expectedHead: 0,
   });
 
-  const secondStarted = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const secondStarted = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const secondBatch = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 100 }, type: 'completed' },
@@ -484,7 +550,8 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
     .selectFrom('activityChains')
     .selectAll()
     .where('avatarId', '=', avatar.id)
-    .where('nodeId', '=', 'node_1')
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
     .executeTakeFirstOrThrow();
 
   // replays the first activity's own compare-and-swap, which the chain has already moved past
@@ -492,7 +559,8 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
     .updateTable('activityChains')
     .set({ appendedChainIndex: 999, appendedNextSeed: 'replayed-seed' })
     .where('avatarId', '=', avatar.id)
-    .where('nodeId', '=', 'node_1')
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
     .where('appendedChainIndex', '=', firstStarted.startChainIndex)
     .execute();
 
@@ -500,7 +568,8 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
     .selectFrom('activityChains')
     .selectAll()
     .where('avatarId', '=', avatar.id)
-    .where('nodeId', '=', 'node_1')
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
     .executeTakeFirstOrThrow();
 
   expect(anchorAfterReplay).toStrictEqual(anchorAfterSecond);
@@ -514,7 +583,11 @@ test('it rejects a chainIndex that is not startChainIndex plus version with CHEC
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
   const tampered = [{ ...batch[0]!, payload: { ...batch[0]!.payload, chainIndex: 99 } }];
@@ -539,7 +612,11 @@ test('it advances the chain anchor exactly once across a duplicate terminal subm
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const batch = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 100 }, type: 'completed' },
@@ -557,7 +634,8 @@ test('it advances the chain anchor exactly once across a duplicate terminal subm
     .selectFrom('activityChains')
     .selectAll()
     .where('avatarId', '=', avatar.id)
-    .where('nodeId', '=', 'node_1')
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
     .executeTakeFirstOrThrow();
 
   expect(
@@ -572,7 +650,8 @@ test('it advances the chain anchor exactly once across a duplicate terminal subm
     .selectFrom('activityChains')
     .selectAll()
     .where('avatarId', '=', avatar.id)
-    .where('nodeId', '=', 'node_1')
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
     .executeTakeFirstOrThrow();
 
   expect(chainAfterSecond).toStrictEqual(chainAfterFirst);
@@ -586,7 +665,11 @@ test('it does not double-apply xp on a duplicate terminal submission', async () 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeId: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const batch = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
