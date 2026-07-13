@@ -51,31 +51,32 @@ Any system a specialization draws on is universal — a resource pool, a defensi
 cadence — never a build archetype. Drawing on a damage type would smuggle a build back into the
 class layer and break the generic-or-transformative law at the specialization level.
 
-A specialization is three tiers. Each tier offers two or three nodes, and the avatar takes one. The
-nodes in a tier diverge — they pull the mechanic in different directions, and choosing among them is
-the decision the tier exists to pose. A tier is a fork, not a themed step dressed with
+A specialization is three tiers. Each tier offers two or three passives, and the avatar takes one.
+The passives in a tier diverge — they pull the mechanic in different directions, and choosing among
+them is the decision the tier exists to pose. A tier is a fork, not a themed step dressed with
 interchangeable options.
 
-Choosing a specialization is a one-time commitment, re-chooseable with investment. The node taken in
-each tier respecs freely, like passive allocation. A specialization unlocks through progression.
+Choosing a specialization is a one-time commitment, re-chooseable with investment. The passive taken
+in each tier respecs freely, like tree allocation. A specialization unlocks through progression.
 
 ## Authoring a Specialization
 
-Nodes are chosen in combination across the three tiers, so a specialization is designed as the set
-of paths through it, not tier by tier.
+Passives are chosen in combination across the three tiers, so a specialization is designed as the
+set of paths through it, not tier by tier.
 
-- **Nodes compose without self-nullifying.** No node erases the value of one an avatar already took.
-  A node keyed to a durable quantity survives a later node that a node keyed to a transient state
-  does not — anchor a node's scaling to something no later node can remove.
-- **No node wins unconditionally.** Each node in a tier is strongest in a different build, region,
-  or encounter shape; nodes separated only by magnitude collapse into one obvious pick. The design
-  states the edge each node is meant to hold, and a balance pass confirms no path dominates.
-- **Off-path nodes stay tempting.** Along any path, the node that extends it is usually right but
-  never automatic — a node from another direction is defensible in some builds, or the tier choices
-  reduce to autopilot and only the first fork was real.
-- **A capstone that reshapes the mechanic cannot orphan its earlier nodes.** When a later tier can
-  replace or transform the mechanic, earlier nodes bound to the old form die with it. Bind early
-  nodes to the class's own resource, not to a structure a capstone might remove.
+- **Passives compose without self-nullifying.** No passive erases the value of one an avatar already
+  took. A passive keyed to a durable quantity survives a later passive that a passive keyed to a
+  transient state does not — anchor a passive's scaling to something no later passive can remove.
+- **No passive wins unconditionally.** Each passive in a tier is strongest in a different build,
+  region, or encounter shape; passives separated only by magnitude collapse into one obvious pick.
+  The design states the edge each passive is meant to hold, and a balance pass confirms no path
+  dominates.
+- **Off-path passives stay tempting.** Along any path, the passive that extends it is usually right
+  but never automatic — a passive from another direction is defensible in some builds, or the tier
+  choices reduce to autopilot and only the first fork was real.
+- **A capstone that reshapes the mechanic cannot orphan its earlier passives.** When a later tier
+  can replace or transform the mechanic, earlier passives bound to the old form die with it. Bind
+  early passives to the class's own resource, not to a structure a capstone might remove.
 
 ## Worked Example
 
@@ -86,10 +87,10 @@ output. That resource, how it accrues, and what it amplifies are the entire base
 on its own.
 
 One of its specializations routes that resource through another universal system. Each of its three
-tiers is a fork: at one tier the avatar takes either a node that scales the resource's ceiling with
-the coupled system or a node that converts the coupled system's recovery into resource gain — nodes
-that pull toward different builds, so the pick commits a direction rather than stacking a number.
-Later tiers deepen that direction without deleting the earlier node.
+tiers is a fork: at one tier the avatar takes either a passive that scales the resource's ceiling
+with the coupled system or a passive that converts the coupled system's recovery into resource gain
+— passives that pull toward different builds, so the pick commits a direction rather than stacking a
+number. Later tiers deepen that direction without deleting the earlier passive.
 
 Its sibling specializations express the same resource differently — routing it through other
 systems, or scaling it through itself — each a distinct read on the one mechanic.

@@ -7,17 +7,24 @@ replay.
 
 An **activity** is one attempt at a piece of content, recorded as a single append-only checkpoint
 stream and verified as a unit. Every activity has a type. A **world map encounter** is the type
-where an avatar fights through a node's enemies, arranged in **waves** — ordered groups the avatar
-clears one at a time. `@vers/idle-core` runs any activity type; `@vers/game-utils` derives a world
-map encounter's waves, enemies, and timing from `(node, seed, content)` as a pure function.
+where an avatar fights through a map node's enemies, arranged in **waves** — ordered groups the
+avatar clears one at a time. **Combat** is how an encounter resolves: each tick, the engine's combat
+executor advances the avatar and the current wave's enemies and dispatches their attack events.
+`@vers/idle-core` runs any activity type; `@vers/game-utils` derives a world map encounter's waves,
+enemies, and timing from `(node, seed, content)` as a pure function.
+
+Activities at the same target chain together: each `(avatar, chain scope)` pair owns one append-only
+[seed chain](./seed-chain.md), where a **chain scope** is a `(scope_type, scope_id)` pair naming a
+stable, returnable target. A world map encounter's chain scope is its map node (`world_map_node`) —
+the activity type says what the avatar does, the scope type says where it returns to.
 
 ## The deterministic core
 
 The simulation is a pure function: a server-authored input snapshot plus a seed stream fully
 determine every tick. The engine (`@vers/idle-core`) and world map encounter derivation
-(`@vers/game-utils`) are shared libraries, so the client worker and the verification worker — the
-server process that replays submitted checkpoints — import the same code and compute byte-identical
-results from the same inputs.
+(`@vers/game-utils`) are shared libraries, so the client worker and the verifier — the server
+process that replays submitted checkpoints — import the same code and compute byte-identical results
+from the same inputs.
 
 The client does all real-time simulation. One writer per browser profile runs the fixed-timestep
 loop — a SharedWorker, with leader election where SharedWorker is unavailable — and other tabs are
@@ -59,18 +66,18 @@ replayed) — the last chain hash, and the activity status.
   rejected, capped, quarantined) reject any later append. Together these resolve every race between
   logout, forced logout, stop, rejection, and cap.
 
-## Verification
+## Replay
 
-A queue-fed worker replays submitted checkpoint batches and compares results. Verification is
-per-stream FIFO — version N+1 never verifies before N, because the seed chain would break — and the
-worker replays from the `Started` snapshot under the engine version stamped into it, dispatched
-through a provider registry so old segments replay under the code and content that produced them.
+A queue-fed verifier replays submitted checkpoint batches and compares results. Replay is per-stream
+FIFO — version N+1 never verifies before N, because the seed chain would break — and the verifier
+replays from the `Started` snapshot under the engine version stamped into it, dispatched through a
+provider registry so old segments replay under the code and content that produced them.
 
 Ambiguity parks, it never rejects: a version mismatch, an unknown engine, or a timeout is held as an
 operational state, not judged as a cheat signal. Only reproducible divergence under a matched
 version and snapshot, on repetition, is treated as cheating, and enforcement lands at a session
-boundary — never mid-session. A stream that fails verification repeatedly is quarantined and alerted
-on rather than retried forever.
+boundary — never mid-session. A stream that fails replay repeatedly is quarantined and alerted on
+rather than retried forever.
 
 Replay divergence is not the only cheat signal. Because every attempt at a node is a link in the
 append-only, server-verified chain, reroll-scanning leaves a record: an avatar whose results ride
@@ -80,7 +87,7 @@ or by completing and discarding them. This is a behavioural signal, not a diverg
 scored with the same restraint: a soft consequence before a hard one, always at a session boundary.
 Honest grinders swing too, and a false accusation costs more than the edge it denies.
 
-The primary health gauge is verification lag: the oldest unverified append across all streams.
+The primary health gauge is replay lag: the oldest unverified append across all streams.
 Rejection rates are tracked split by cause — an integrity-mismatch spike is almost always a bad
 deploy, not a cheating wave.
 

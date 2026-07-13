@@ -160,7 +160,7 @@ Every checkpoint's hashed subset carries an entropy-source tag identifying which
 outcomes, present from the first row ever written. The subset is frozen, so the tag cannot be added
 later. The two sources it distinguishes today are server-custody and device-custody rolls, and the
 tag is what lets further sources — a verifiable-randomness beacon, a rotated key generation — join
-without a migration. Verification validates the tag against the avatar's server-recorded mode; a
+without a migration. Replay validates the tag against the avatar's server-recorded mode; a
 mismatch is divergence. Settlement stamps an outcome's provenance from server records and the tag —
 never from a client claim.
 
