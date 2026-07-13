@@ -29,7 +29,11 @@ interface StartActivityOpts {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
-  readonly input: { readonly avatarID: string; readonly nodeID: string };
+  readonly input: {
+    readonly avatarID: string;
+    readonly scopeID: string;
+    readonly scopeType: string;
+  };
 }
 
 /**
@@ -68,12 +72,13 @@ export async function startActivity(
       appendedNextSeed: genesisSeed,
       avatarId: opts.input.avatarID,
       genesisSeed,
-      nodeId: opts.input.nodeID,
+      scopeId: opts.input.scopeID,
+      scopeType: opts.input.scopeType,
       verifiedNextSeed: genesisSeed,
     })
     .onConflict((oc) =>
       oc
-        .columns(['avatarId', 'nodeId'])
+        .columns(['avatarId', 'scopeType', 'scopeId'])
         .doUpdateSet({ genesisSeed: (eb) => eb.ref('activityChains.genesisSeed') }),
     )
     .returning(['appendedNextSeed', 'appendedChainIndex'])
@@ -98,7 +103,8 @@ export async function startActivity(
         contentVersion: deps.contentVersion,
         id,
         lastHash: startHash,
-        nodeId: opts.input.nodeID,
+        scopeId: opts.input.scopeID,
+        scopeType: opts.input.scopeType,
         seed,
         simVersion: deps.simVersion,
         startChainIndex: chain.appendedChainIndex,

@@ -37,7 +37,8 @@ export interface Activities {
   createdAt: Generated<Timestamp>;
   id: string;
   lastHash: string;
-  nodeId: string;
+  scopeId: string;
+  scopeType: string;
   seed: string;
   simVersion: string;
   startChainIndex: Generated<number>;
@@ -56,7 +57,8 @@ export interface ActivityChains {
   avatarId: string;
   createdAt: Generated<Timestamp>;
   genesisSeed: string;
-  nodeId: string;
+  scopeId: string;
+  scopeType: string;
   verifiedChainIndex: Generated<number>;
   verifiedNextSeed: string;
 }

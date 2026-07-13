@@ -24,7 +24,11 @@ test('it creates an activity visible within this test', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const rows = await ctx.db.selectFrom('activities').selectAll().execute();
 

@@ -21,7 +21,7 @@ test('it passes every conformance case collected from its contract', async () =>
     authedSamples: {
       getCurrentActivity: { avatarID: 'x' },
       getLatestActivityProgress: { avatarID: 'x' },
-      startActivity: { avatarID: 'x', nodeID: 'x' },
+      startActivity: { avatarID: 'x', scopeID: 'x', scopeType: 'world_map_node' },
       stopActivity: { avatarID: 'x' },
       trackActivityProgress: { activityID: 'x', checkpoints: [], expectedHead: 0 },
     },

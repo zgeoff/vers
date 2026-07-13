@@ -58,7 +58,8 @@ export async function trackActivityProgress(
       'activities.appendedHead',
       'activities.avatarId',
       'activities.lastHash',
-      'activities.nodeId',
+      'activities.scopeId',
+      'activities.scopeType',
       'activities.startChainIndex',
       'avatars.xp',
     ])
@@ -138,7 +139,8 @@ export async function trackActivityProgress(
           appendedNextSeed: lastCheckpoint.payload.nextSeed,
         })
         .where('avatarId', '=', head.avatarId)
-        .where('nodeId', '=', head.nodeId)
+        .where('scopeType', '=', head.scopeType)
+        .where('scopeId', '=', head.scopeId)
         .where('appendedChainIndex', '=', head.startChainIndex)
         .execute();
 
@@ -168,6 +170,8 @@ interface CheckpointBatchInput {
 interface TrackActivityProgressHead {
   readonly appendedHead: number;
   readonly lastHash: string;
+  readonly scopeId: string;
+  readonly scopeType: string;
   readonly startChainIndex: number;
 }
 

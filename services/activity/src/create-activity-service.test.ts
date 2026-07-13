@@ -14,7 +14,11 @@ test('it wires an injected db into the router instead of building one from env',
 
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
 
-  await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const rows = await db.db.selectFrom('activities').selectAll().execute();
 
@@ -36,7 +40,11 @@ test('it defaults the sim and content versions when none are injected', async ()
 
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
 
-  const activity = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   expect(activity).toMatchObject({ contentVersion: '0.0.0-dev', simVersion: '0.0.0-dev' });
 });
@@ -55,7 +63,11 @@ test('it uses injected sim and content versions when given', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
 
-  const activity = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   expect(activity).toMatchObject({ contentVersion: 'content_9', simVersion: 'sim_9' });
 });

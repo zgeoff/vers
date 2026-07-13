@@ -20,7 +20,12 @@ test('it stops the active activity for an avatar owned by the acting user', asyn
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
   const stopped = await client.stopActivity({ avatarID: avatar.id });
 
   expect(stopped).toStrictEqual({

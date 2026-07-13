@@ -10,7 +10,8 @@ test('it builds a default activity row', () => {
     contentVersion: '0.0.0-dev',
     id: expect.toBeString(),
     lastHash: expect.toBeString(),
-    nodeId: expect.toBeString(),
+    scopeId: expect.toBeString(),
+    scopeType: 'world_map_node',
     seed: expect.toBeString(),
     simVersion: '0.0.0-dev',
     startHash: expect.toBeString(),
@@ -30,7 +31,7 @@ test('it defaults lastHash and startHash to the real start hash of its own field
 });
 
 test('it applies overrides on top of the faker-generated defaults', () => {
-  const row = createMockActivity({ avatarId: 'avatar_1', nodeId: 'node_1', status: 'stopped' });
+  const row = createMockActivity({ avatarId: 'avatar_1', scopeId: 'node_1', status: 'stopped' });
 
-  expect(row).toMatchObject({ avatarId: 'avatar_1', nodeId: 'node_1', status: 'stopped' });
+  expect(row).toMatchObject({ avatarId: 'avatar_1', scopeId: 'node_1', status: 'stopped' });
 });

@@ -25,7 +25,12 @@ test('it returns the active activity for an avatar owned by the acting user', as
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
   const current = await client.getCurrentActivity({ avatarID: avatar.id });
 
   expect(current).toStrictEqual(started);

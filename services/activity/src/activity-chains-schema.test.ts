@@ -19,7 +19,8 @@ test('it round-trips an activity_chains row', async () => {
       appendedNextSeed,
       avatarId: avatar.id,
       genesisSeed,
-      nodeId: 'node_1',
+      scopeId: 'node_1',
+      scopeType: 'world_map_node',
       verifiedNextSeed,
     })
     .returningAll()
@@ -29,7 +30,8 @@ test('it round-trips an activity_chains row', async () => {
     .selectFrom('activityChains')
     .selectAll()
     .where('avatarId', '=', avatar.id)
-    .where('nodeId', '=', 'node_1')
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
     .executeTakeFirstOrThrow();
 
   expect(selected).toStrictEqual(inserted);

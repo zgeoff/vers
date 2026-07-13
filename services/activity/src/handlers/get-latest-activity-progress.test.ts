@@ -22,7 +22,12 @@ test('it returns a fresh activity with a null anchor at verifiedHead 0', async (
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
   const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
 
   expect(progress).toStrictEqual({
@@ -43,7 +48,11 @@ test('it returns the activity anchored to its verified checkpoint once verifiedH
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
 
@@ -78,7 +87,11 @@ test('it returns the newest activity regardless of status', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({ avatarID: avatar.id, nodeID: 'node_1' });
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
 
   await client.stopActivity({ avatarID: avatar.id });
 
