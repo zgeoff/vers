@@ -1,3 +1,4 @@
+import 'fake-indexeddb/auto';
 import { afterEach, expect, mock } from 'bun:test';
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';

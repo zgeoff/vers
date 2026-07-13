@@ -52,7 +52,12 @@
     "import/no-unassigned-import": [
       "error",
       {
-        "allow": ["@zgeoff/bun-test-extended", "**/augment-bun-test.ts", "**/*.css"]
+        "allow": [
+          "@zgeoff/bun-test-extended",
+          "fake-indexeddb/auto",
+          "**/augment-bun-test.ts",
+          "**/*.css"
+        ]
       }
     ],
 
