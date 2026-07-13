@@ -1,16 +1,16 @@
 import {
   useActivity,
+  useCheckpointStreamError,
   useFailureAction,
   useSimulationInitialized,
   useSimulationWorker,
 } from '@vers/idle-client';
+import type { CheckpointStreamError } from '@vers/idle-client';
 import type { ActivityFailureAction, ActivitySnapshot } from '@vers/idle-core';
 
-/**
- * The simulation state every idle-driven consumer reads through this hook.
- */
 interface IdleWorkerHandle {
   readonly activity: ActivitySnapshot | undefined;
+  readonly checkpointStreamError: CheckpointStreamError | undefined;
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
   readonly worker: SharedWorker | undefined;
@@ -26,9 +26,11 @@ export function useIdleWorkerHandle(): IdleWorkerHandle {
   const initialized = useSimulationInitialized();
   const activity = useActivity();
   const failureAction = useFailureAction();
+  const checkpointStreamError = useCheckpointStreamError();
 
   return {
     activity: activity ?? undefined,
+    checkpointStreamError: checkpointStreamError ?? undefined,
     failureAction,
     initialized,
     worker: worker ?? undefined,

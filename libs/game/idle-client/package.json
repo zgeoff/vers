@@ -11,23 +11,30 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@orpc/client": "catalog:",
+    "@orpc/contract": "catalog:",
     "@vers/client-test-utils": "workspace:*",
+    "@vers/contract-activity": "workspace:*",
     "@vers/design-system": "workspace:*",
     "@vers/idle-core": "workspace:*",
     "@vers/styled-system": "workspace:*",
+    "idb": "catalog:",
     "react": "catalog:",
     "tiny-invariant": "catalog:",
-    "xxhash-wasm": "catalog:",
     "zustand": "catalog:"
   },
   "devDependencies": {
+    "@faker-js/faker": "catalog:",
     "@happy-dom/global-registrator": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
+    "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "fake-indexeddb": "catalog:",
     "happy-dom": "catalog:",
+    "msw": "catalog:",
     "typescript": "catalog:"
   }
 }

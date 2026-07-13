@@ -1,26 +1,11 @@
 import { expect, test } from 'bun:test';
+import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
 import { handleDisconnectMessage } from './handle-disconnect-message';
-import type { WorkerContext } from './types';
-
-function createContext(port: MessagePort): WorkerContext {
-  const connections = new Set<MessagePort>([port]);
-
-  return {
-    connections,
-    getSimulation: () => null,
-    removeConnection: (removedPort) => {
-      connections.delete(removedPort);
-    },
-    setSimulation: () => {
-      //
-    },
-  };
-}
 
 test('it removes the port from the connections set', () => {
   const channel = new MessageChannel();
 
-  const context = createContext(channel.port2);
+  const context = createMockWorkerContext({ connections: [channel.port2] });
 
   handleDisconnectMessage(context, channel.port2);
   expect(context.connections.has(channel.port2)).toBeFalse();
@@ -29,7 +14,7 @@ test('it removes the port from the connections set', () => {
 test('it closes the port so it no longer delivers messages', async () => {
   const channel = new MessageChannel();
 
-  const context = createContext(channel.port2);
+  const context = createMockWorkerContext({ connections: [channel.port2] });
 
   handleDisconnectMessage(context, channel.port2);
 

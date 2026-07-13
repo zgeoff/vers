@@ -4,6 +4,7 @@ import type {
   AvatarData,
   SimulationSnapshot,
 } from '@vers/idle-core';
+import type { ActivitySubmissionContext } from './submission/types';
 
 export enum ClientMessageType {
   Disconnect = 'disconnect',
@@ -19,6 +20,13 @@ interface IClientMessage {
 export interface SetActivityMessage extends IClientMessage {
   readonly activity: ActivityInput;
   readonly avatar: AvatarData;
+
+  /**
+   * The stream's chain-link starting point, present only when the caller has the server-authored
+   * `ActivityData` to submit checkpoints against — absent, no checkpoint for this activity is
+   * submitted.
+   */
+  readonly submission?: ActivitySubmissionContext;
   readonly type: ClientMessageType.SetActivity;
 }
 
@@ -42,6 +50,7 @@ export type ClientMessage =
   | SetFailureActionMessage;
 
 export enum WorkerMessageType {
+  CheckpointStreamInvalid = 'checkpoint_stream_invalid',
   InitialState = 'initial_state',
   SimulationUpdate = 'simulation_update',
 }
@@ -60,4 +69,22 @@ export interface SimulationUpdateMessage extends IWorkerMessage {
   readonly type: WorkerMessageType.SimulationUpdate;
 }
 
-export type WorkerMessage = InitialStateMessage | SimulationUpdateMessage;
+/**
+ * Reports that the activity service rejected an activity's stream with `CHECKPOINT_INVALID`: the
+ * worker has stopped submitting checkpoints for it, keeping the queued rows for debugging.
+ */
+export interface CheckpointStreamInvalidMessage extends IWorkerMessage {
+  readonly activityID: string;
+  readonly reason: string;
+  readonly type: WorkerMessageType.CheckpointStreamInvalid;
+}
+
+export type WorkerMessage =
+  | CheckpointStreamInvalidMessage
+  | InitialStateMessage
+  | SimulationUpdateMessage;
+
+export interface CheckpointStreamError {
+  readonly activityID: string;
+  readonly reason: string;
+}

@@ -1,5 +1,4 @@
 import { createSimulation } from '@vers/idle-core';
-import xxhash from 'xxhash-wasm';
 import type { InitializeMessage } from '../types';
 import { createInitialStateMessage } from './create-initial-state-message';
 import { handleSimulationRestarted } from './handle-simulation-restarted';
@@ -8,15 +7,13 @@ import { handleSimulationStopped } from './handle-simulation-stopped';
 import { handleSimulationUpdate } from './handle-simulation-update';
 import type { WorkerContext } from './types';
 
-export async function handleInitializeMessage(context: WorkerContext, _message: InitializeMessage) {
-  const hasher = await xxhash();
-
+export function handleInitializeMessage(context: WorkerContext, _message: InitializeMessage) {
   // bail out if we already have a simulation initialized
   if (context.getSimulation()) {
     return;
   }
 
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   context.setSimulation(simulation);
 

@@ -1,3 +1,4 @@
+import type { CheckpointStreamError } from '@vers/idle-client';
 import type { ActivitySnapshot } from '@vers/idle-core';
 import { ActivityFailureAction } from '@vers/idle-core';
 
@@ -8,11 +9,9 @@ export interface FakeSimulationWorker {
   readonly port: { readonly postMessage: (message: unknown) => void };
 }
 
-/**
- * The fake shape the mocked worker-handle read hands back in place of the real hook's return.
- */
 export interface FakeIdleWorkerHandle {
   readonly activity: ActivitySnapshot | undefined;
+  readonly checkpointStreamError?: CheckpointStreamError;
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
   readonly worker: FakeSimulationWorker | undefined;

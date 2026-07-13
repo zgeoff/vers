@@ -52,7 +52,12 @@
     "import/no-unassigned-import": [
       "error",
       {
-        "allow": ["@zgeoff/bun-test-extended", "**/augment-bun-test.ts", "**/*.css"]
+        "allow": [
+          "@zgeoff/bun-test-extended",
+          "fake-indexeddb/auto",
+          "**/augment-bun-test.ts",
+          "**/*.css"
+        ]
       }
     ],
 
@@ -174,7 +179,6 @@
           { "from": "package", "name": "ZodType", "package": "zod" },
           { "from": "package", "name": "JWTPayload", "package": "jose" },
           { "from": "package", "name": "SubmissionResult", "package": "@conform-to/dom" },
-          { "from": "package", "name": "XXHashAPI", "package": "xxhash-wasm" },
           { "from": "package", "name": "Context", "package": "hono" },
           { "from": "package", "name": "PostgresError", "package": "postgres" },
           // stateful factory-return handle: getInt/getSeries/generateNewSeed

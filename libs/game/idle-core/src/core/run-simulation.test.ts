@@ -27,7 +27,7 @@ test('runs a simulation with default configuration', async () => {
     {
       "checkpoints": [
         {
-          "hash": "407d7906bdd4db82",
+          "nextSeed": "63298078c2177576c07e0321584c2a05",
           "rewards": {
             "xp": 0,
           },
@@ -36,7 +36,6 @@ test('runs a simulation with default configuration', async () => {
           "type": "started",
         },
         {
-          "hash": "d1ace45dda64f2ef",
           "nextSeed": "20c0dac3c8da96ee1a82332c38c2e8ae",
           "rewards": {
             "xp": 60,
@@ -45,7 +44,6 @@ test('runs a simulation with default configuration', async () => {
           "type": "progress",
         },
         {
-          "hash": "17c6aebfd6dfea7c",
           "levelUp": {
             "from": 1,
             "to": 2,
@@ -58,7 +56,6 @@ test('runs a simulation with default configuration', async () => {
           "type": "progress",
         },
         {
-          "hash": "6967c8efdd0347d2",
           "nextSeed": "183a8b662f0c22f40b637a9f83c410ca",
           "rewards": {
             "xp": 30,
@@ -67,7 +64,6 @@ test('runs a simulation with default configuration', async () => {
           "type": "progress",
         },
         {
-          "hash": "05509deb38464e85",
           "nextSeed": "0d1c5f2ed8a45260129c426ab502cbb3",
           "rewards": {
             "xp": 40,
@@ -76,7 +72,6 @@ test('runs a simulation with default configuration', async () => {
           "type": "progress",
         },
         {
-          "hash": "6a6629b7772afe49",
           "nextSeed": "0d1c5f2ed8a45260129c426ab502cbb3",
           "rewards": {
             "xp": 215,
@@ -85,7 +80,7 @@ test('runs a simulation with default configuration', async () => {
           "type": "completed",
         },
         {
-          "hash": "d1e97ebd0eb2c79b",
+          "nextSeed": "664be6d955fc249bfe89a1dbcdfd99cc",
           "rewards": {
             "xp": 0,
           },
@@ -94,7 +89,6 @@ test('runs a simulation with default configuration', async () => {
           "type": "started",
         },
         {
-          "hash": "580d0847a0d4356d",
           "nextSeed": "dd5a3353a7f6c0c6afcb296684176982",
           "rewards": {
             "xp": 40,
@@ -157,7 +151,6 @@ test('it stops at the specified rng state if provided', async () => {
   const [finalCheckpoint] = result.checkpoints.slice(-1);
 
   expect(finalCheckpoint).toStrictEqual({
-    hash: expect.toBeString(),
     nextSeed: config.stopAtState,
     rewards: expect.toBeObject(),
     time: expect.toBeNumber(),
@@ -193,7 +186,6 @@ test('it aborts on failure if failure action is set to abort', async () => {
   const lastCheckpoint = result.checkpoints.at(-1);
 
   expect(lastCheckpoint).toStrictEqual({
-    hash: expect.toBeString(),
     nextSeed: expect.toBeString(),
     rewards: { xp: 0 },
     time: expect.toBeNumber(),

@@ -425,23 +425,30 @@
       "name": "@vers/idle-client",
       "version": "0.0.0",
       "dependencies": {
+        "@orpc/client": "catalog:",
+        "@orpc/contract": "catalog:",
         "@vers/client-test-utils": "workspace:*",
+        "@vers/contract-activity": "workspace:*",
         "@vers/design-system": "workspace:*",
         "@vers/idle-core": "workspace:*",
         "@vers/styled-system": "workspace:*",
+        "idb": "catalog:",
         "react": "catalog:",
         "tiny-invariant": "catalog:",
-        "xxhash-wasm": "catalog:",
         "zustand": "catalog:",
       },
       "devDependencies": {
+        "@faker-js/faker": "catalog:",
         "@happy-dom/global-registrator": "catalog:",
         "@testing-library/jest-dom": "catalog:",
         "@testing-library/react": "catalog:",
         "@types/node": "catalog:",
         "@types/react": "catalog:",
+        "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
+        "fake-indexeddb": "catalog:",
         "happy-dom": "catalog:",
+        "msw": "catalog:",
         "typescript": "catalog:",
       },
     },
@@ -455,9 +462,9 @@
         "fast-equals": "catalog:",
         "immer": "catalog:",
         "tiny-invariant": "catalog:",
-        "xxhash-wasm": "catalog:",
       },
       "devDependencies": {
+        "@faker-js/faker": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@zgeoff/bun-test-extended": "catalog:",
@@ -912,8 +919,10 @@
     "elysia": "1.4.29",
     "execa": "9.6.1",
     "expect-type": "1.4.0",
+    "fake-indexeddb": "6.2.5",
     "fast-equals": "6.0.0",
     "happy-dom": "20.10.6",
+    "idb": "8.0.3",
     "immer": "11.1.11",
     "jose": "6.2.3",
     "knip": "6.24.0",
@@ -947,7 +956,6 @@
     "turbo": "2.10.3",
     "typescript": "7.0.2",
     "vite": "8.1.4",
-    "xxhash-wasm": "1.1.0",
     "zod": "4.4.3",
     "zustand": "5.0.14",
   },
@@ -2886,6 +2894,8 @@
 
     "extend": ["extend@3.0.2", "", {}, "sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g=="],
 
+    "fake-indexeddb": ["fake-indexeddb@6.2.5", "", {}, "sha512-CGnyrvbhPlWYMngksqrSSUT1BAVP49dZocrHuK0SvtR0D5TMs5wP0o3j7jexDJW01KSadjBp1M/71o/KR3nD1w=="],
+
     "fast-copy": ["fast-copy@4.0.3", "", {}, "sha512-58apWr0GUiDFM8+3afrO6eYwJBn9ZAhDOzG3L+/9llab/haCARS2UIfffmOurYLwbgDRs8n0rfr6qAAPEAuAQw=="],
 
     "fast-decode-uri-component": ["fast-decode-uri-component@1.0.1", "", {}, "sha512-WKgKWg5eUxvRZGwW8FvfbaH7AXSh2cL+3j5fMGzUMCxWBJ3dV3a7Wz8y2f/uQ0e3B6WmodD3oS54jTQ9HVTIIg=="],
@@ -3067,6 +3077,8 @@
     "human-signals": ["human-signals@8.0.1", "", {}, "sha512-eKCa6bwnJhvxj14kZk5NCPc6Hb6BdsU9DZcOnmQKSnO1VKrfV0zCvtttPZUsBvjmNDn8rpcJfpwSYnHBjc95MQ=="],
 
     "iconv-lite": ["iconv-lite@0.7.2", "", { "dependencies": { "safer-buffer": ">= 2.1.2 < 3.0.0" } }, "sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw=="],
+
+    "idb": ["idb@8.0.3", "", {}, "sha512-LtwtVyVYO5BqRvcsKuB2iUMnHwPVByPCXFXOpuU96IZPPoPN6xjOGxZQ74pgSVVLQWtUOYgyeL4GE98BY5D3wg=="],
 
     "ieee754": ["ieee754@1.2.1", "", {}, "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA=="],
 
@@ -4211,8 +4223,6 @@
     "xmlbuilder2": ["xmlbuilder2@4.0.3", "", { "dependencies": { "@oozcitak/dom": "^2.0.2", "@oozcitak/infra": "^2.0.2", "@oozcitak/util": "^10.0.0", "js-yaml": "^4.1.1" } }, "sha512-bx8Q1STctnNaaDymWnkfQLKofs0mGNN7rLLapJlGuV3VlvegD7Ls4ggMjE3aUSWItCCzU0PEv45lI87iSigiCA=="],
 
     "xtend": ["xtend@4.0.2", "", {}, "sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ=="],
-
-    "xxhash-wasm": ["xxhash-wasm@1.1.0", "", {}, "sha512-147y/6YNh+tlp6nd/2pWq38i9h6mz/EuQ6njIrmW8D1BS5nCqs0P6DG+m6zTGnNz5I+uhZ0SHxBs9BsPrwcKDA=="],
 
     "y18n": ["y18n@5.0.8", "", {}, "sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA=="],
 

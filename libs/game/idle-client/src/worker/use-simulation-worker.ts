@@ -1,12 +1,18 @@
 import { useEffect } from 'react';
 import { setActivity } from '../state/set-activity';
 import { setAvatar } from '../state/set-avatar';
+import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setCombat } from '../state/set-combat';
 import { setFailureAction } from '../state/set-failure-action';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationWorker } from '../state/set-simulation-worker';
 import { useSimulationStore } from '../state/use-simulation-store';
-import type { InitialStateMessage, SimulationUpdateMessage, WorkerMessage } from '../types';
+import type {
+  CheckpointStreamInvalidMessage,
+  InitialStateMessage,
+  SimulationUpdateMessage,
+  WorkerMessage,
+} from '../types';
 import { WorkerMessageType } from '../types';
 import { createDisconnectMessage } from './create-disconnect-message';
 
@@ -63,6 +69,13 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
     setCombat(event.data.state.combat);
     setFailureAction(event.data.state.failureAction);
   }
+
+  if (isCheckpointStreamInvalidMessage(event.data)) {
+    setCheckpointStreamError({
+      activityID: event.data.activityID,
+      reason: event.data.reason,
+    });
+  }
 }
 
 function isInitialStateMessage(message: WorkerMessage): message is InitialStateMessage {
@@ -71,4 +84,10 @@ function isInitialStateMessage(message: WorkerMessage): message is InitialStateM
 
 function isUpdateMessage(message: WorkerMessage): message is SimulationUpdateMessage {
   return message.type === WorkerMessageType.SimulationUpdate;
+}
+
+function isCheckpointStreamInvalidMessage(
+  message: WorkerMessage,
+): message is CheckpointStreamInvalidMessage {
+  return message.type === WorkerMessageType.CheckpointStreamInvalid;
 }

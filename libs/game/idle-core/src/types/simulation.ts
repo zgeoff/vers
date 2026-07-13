@@ -1,5 +1,4 @@
 import type { RNG } from '@vers/game-utils';
-import type { XXHashAPI } from 'xxhash-wasm';
 import type {
   Activity,
   ActivityCheckpoint,
@@ -52,7 +51,6 @@ export interface Simulation {
 
 export interface SimulationContext {
   get elapsed(): number;
-  hasher: XXHashAPI;
   rng: RNG;
 }
 

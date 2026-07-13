@@ -3,10 +3,11 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { ActivityFailureAction } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { setSimulationWorker } from '../state/set-simulation-worker';
+import { useCheckpointStreamErrorStore } from '../state/use-checkpoint-stream-error-store';
 import { useCombatStore } from '../state/use-combat-store';
 import { useFailureActionStore } from '../state/use-failure-action-store';
 import { useSimulationStore } from '../state/use-simulation-store';
-import type { ClientMessage, InitialStateMessage } from '../types';
+import type { CheckpointStreamInvalidMessage, ClientMessage, InitialStateMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { useSimulationWorker } from './use-simulation-worker';
 
@@ -102,6 +103,36 @@ test('it updates simulation state from worker messages', async () => {
 
   expect(useCombatStore.getState().combat).toStrictEqual({ elapsed: 1000 });
   expect(useFailureActionStore.getState().failureAction).toBe(ActivityFailureAction.Retry);
+});
+
+test('it reports a checkpoint stream error from worker messages', async () => {
+  registerSharedWorkerStub();
+
+  const hook = renderHook(() => useSimulationWorker());
+
+  hook.rerender();
+
+  invariant(hook.result.current, 'Worker not initialized');
+
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a FakeSharedWorker, so its return value has that shape at runtime
+  const worker = hook.result.current as unknown as FakeSharedWorker;
+
+  worker.channel.port2.start();
+
+  const message: CheckpointStreamInvalidMessage = {
+    activityID: 'activity_1',
+    reason: 'broken-chain-link',
+    type: WorkerMessageType.CheckpointStreamInvalid,
+  };
+
+  worker.channel.port2.postMessage(message);
+
+  await waitFor(() => {
+    expect(useCheckpointStreamErrorStore.getState().checkpointStreamError).toStrictEqual({
+      activityID: 'activity_1',
+      reason: 'broken-chain-link',
+    });
+  });
 });
 
 test('it sends a disconnect message on pagehide', async () => {

@@ -5,7 +5,7 @@ import {
   createMockAvatarData,
   createSimulation,
 } from '@vers/idle-core';
-import xxhash from 'xxhash-wasm';
+import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
 import type {
   DisconnectMessage,
   InitializeMessage,
@@ -14,29 +14,9 @@ import type {
 } from '../types';
 import { ClientMessageType } from '../types';
 import { handleClientMessage } from './handle-client-message';
-import type { WorkerContext } from './types';
-
-const hasher = await xxhash();
-
-function createContext(initialConnections: ReadonlyArray<MessagePort> = []): WorkerContext {
-  const connections = new Set(initialConnections);
-
-  let simulation: null | ReturnType<typeof createSimulation> = null;
-
-  return {
-    connections,
-    getSimulation: () => simulation,
-    removeConnection: (port) => {
-      connections.delete(port);
-    },
-    setSimulation: (newSimulation) => {
-      simulation = newSimulation;
-    },
-  };
-}
 
 test('it handles initialization messages', async () => {
-  const context = createContext();
+  const context = createMockWorkerContext();
 
   const channel = new MessageChannel();
 
@@ -52,12 +32,12 @@ test('it handles initialization messages', async () => {
 });
 
 test('it handles setting the activity', async () => {
-  const context = createContext();
+  const context = createMockWorkerContext();
 
   const channel = new MessageChannel();
 
   const avatar = createMockAvatarData();
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   context.setSimulation(simulation);
 
@@ -78,11 +58,11 @@ test('it handles setting the activity', async () => {
 });
 
 test('it handles setting the failure action', async () => {
-  const context = createContext();
+  const context = createMockWorkerContext();
 
   const channel = new MessageChannel();
 
-  const simulation = createSimulation(hasher);
+  const simulation = createSimulation();
 
   context.setSimulation(simulation);
 
@@ -101,7 +81,7 @@ test('it handles setting the failure action', async () => {
 test('it handles disconnect messages', async () => {
   const channel = new MessageChannel();
 
-  const context = createContext([channel.port2]);
+  const context = createMockWorkerContext({ connections: [channel.port2] });
 
   const message: DisconnectMessage = {
     type: ClientMessageType.Disconnect,

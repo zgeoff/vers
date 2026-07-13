@@ -7,23 +7,24 @@ import {
   createMockEnemyData,
   createSimulation,
 } from '@vers/idle-core';
-import xxhash from 'xxhash-wasm';
+import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
 import { runSimulation } from './run-simulation';
-
-const hasher = await xxhash();
+import type { WorkerContext } from './types';
 
 async function runSimulationSteps(
+  context: WorkerContext,
   simulation: ReturnType<typeof createSimulation>,
   timestep: number,
   steps: number,
 ) {
   for (let step = 0; step < steps; step += 1) {
-    await runSimulation(simulation, timestep);
+    await runSimulation(context, simulation, timestep);
   }
 }
 
 test('it restarts the activity if it fails and the failure action is retry', async () => {
-  const simulation = createSimulation(hasher);
+  const context = createMockWorkerContext();
+  const simulation = createSimulation();
   const restartedSpy = mock<SimulationListener>();
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
@@ -33,14 +34,15 @@ test('it restarts the activity if it fails and the failure action is retry', asy
   simulation.startActivity(avatar, activity);
   simulation.addEventListener('restarted', restartedSpy);
 
-  await runSimulationSteps(simulation, 100, 50);
+  await runSimulationSteps(context, simulation, 100, 50);
 
   expect(restartedSpy).toHaveBeenCalled();
   expect(simulation.activity).not.toBeNull();
 });
 
 test('it does not restart the activity if it fails and the failure action is abort', async () => {
-  const simulation = createSimulation(hasher);
+  const context = createMockWorkerContext();
+  const simulation = createSimulation();
   const restartedSpy = mock<SimulationListener>();
   const stoppedSpy = mock<SimulationListener>();
 
@@ -52,7 +54,7 @@ test('it does not restart the activity if it fails and the failure action is abo
   simulation.addEventListener('restarted', restartedSpy);
   simulation.addEventListener('stopped', stoppedSpy);
 
-  await runSimulationSteps(simulation, 100, 50);
+  await runSimulationSteps(context, simulation, 100, 50);
 
   expect(restartedSpy).not.toHaveBeenCalled();
   expect(stoppedSpy).toHaveBeenCalled();
@@ -62,7 +64,8 @@ test('it does not restart the activity if it fails and the failure action is abo
 test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
   'it restarts the activity if it completes, regardless of the failure action (%s)',
   async (failureAction) => {
-    const simulation = createSimulation(hasher);
+    const context = createMockWorkerContext();
+    const simulation = createSimulation();
     const restartedSpy = mock<SimulationListener>();
     const avatar = createMockAvatarData();
     const activity = createMockActivityInput({ enemies: [createMockEnemyData()], failureAction });
@@ -73,7 +76,7 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
 
     simulation.addEventListener('restarted', restartedSpy);
 
-    await runSimulationSteps(simulation, 100, 700);
+    await runSimulationSteps(context, simulation, 100, 700);
 
     expect(restartedSpy).toHaveBeenCalled();
     expect(simulation.activity).not.toBe(startingActivity);

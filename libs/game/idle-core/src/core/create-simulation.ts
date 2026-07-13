@@ -1,7 +1,6 @@
 import { buildStateFromSeed, createRNG } from '@vers/game-utils';
 import { deepEqual } from 'fast-equals';
 import invariant from 'tiny-invariant';
-import type { XXHashAPI } from 'xxhash-wasm';
 import { createAvatar } from '../entities/create-avatar';
 import type {
   Activity,
@@ -23,7 +22,7 @@ import { createCombatExecutor } from './create-combat-executor';
 import { simulateActivity } from './simulate-activity';
 import { getSnapshot } from './utils/get-snapshot';
 
-export function createSimulation(hasher: XXHashAPI): Simulation {
+export function createSimulation(): Simulation {
   let _rng = createRNG(buildStateFromSeed(0));
   let _avatar: Avatar | null = null;
   let _activityData: ActivityInput | null = null;
@@ -38,7 +37,6 @@ export function createSimulation(hasher: XXHashAPI): Simulation {
     get elapsed() {
       return _elapsed;
     },
-    hasher,
     get rng() {
       return _rng;
     },

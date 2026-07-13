@@ -1,10 +1,12 @@
 import { createSetActivityMessage } from '@vers/idle-client';
+import type { ActivitySubmissionContext } from '@vers/idle-client';
 import type { ActivityInput, AvatarData } from '@vers/idle-core';
 
 export function sendIdleSetActivity(
   worker: SharedWorker,
   activity: ActivityInput,
   avatar: AvatarData,
+  submission?: ActivitySubmissionContext,
 ): void {
-  worker.port.postMessage(createSetActivityMessage(activity, avatar));
+  worker.port.postMessage(createSetActivityMessage(activity, avatar, submission));
 }
