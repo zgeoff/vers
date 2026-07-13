@@ -8,6 +8,22 @@ import {
   createSimulation,
 } from '@vers/idle-core';
 import { runSimulation } from './run-simulation';
+import type { WorkerContext } from './types';
+
+const context: WorkerContext = {
+  connections: new Set(),
+  getSimulation: () => null,
+  getSubmitter: () => ({
+    attach: () => Promise.resolve(),
+    submit: () => Promise.resolve(),
+  }),
+  removeConnection: () => {
+    //
+  },
+  setSimulation: () => {
+    //
+  },
+};
 
 async function runSimulationSteps(
   simulation: ReturnType<typeof createSimulation>,
@@ -15,7 +31,7 @@ async function runSimulationSteps(
   steps: number,
 ) {
   for (let step = 0; step < steps; step += 1) {
-    await runSimulation(simulation, timestep);
+    await runSimulation(context, simulation, timestep);
   }
 }
 

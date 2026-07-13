@@ -48,3 +48,20 @@ test('it sends nothing before a worker has connected', async () => {
     },
   );
 });
+
+test('it renders without error when the worker reports a stopped checkpoint stream', async () => {
+  await withIdleWorkerHandle(
+    {
+      activity: undefined,
+      checkpointStreamError: { activityID: 'activity_1', reason: 'broken-chain-link' },
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      worker: undefined,
+    },
+    () => {
+      const rendered = render(<GameSimulationMount />);
+
+      expect(rendered.container).toBeEmptyDOMElement();
+    },
+  );
+});

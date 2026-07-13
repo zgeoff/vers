@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react';
 import { useEffect } from 'react';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
@@ -14,6 +15,18 @@ export function GameSimulationMount() {
       sendIdleInitialize(idleWorkerHandle.worker);
     }
   }, [idleWorkerHandle.worker, idleWorkerHandle.initialized]);
+
+  useEffect(() => {
+    if (idleWorkerHandle.checkpointStreamError === undefined) {
+      return;
+    }
+
+    Sentry.captureException(
+      new Error(
+        `checkpoint stream rejected for activity ${idleWorkerHandle.checkpointStreamError.activityID}: ${idleWorkerHandle.checkpointStreamError.reason}`,
+      ),
+    );
+  }, [idleWorkerHandle.checkpointStreamError]);
 
   return null;
 }

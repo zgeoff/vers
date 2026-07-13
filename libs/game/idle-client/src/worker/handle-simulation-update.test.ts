@@ -12,6 +12,10 @@ test('it sends simulation update messages to all connections', async () => {
   const context: WorkerContext = {
     connections: new Set([channel.port2]),
     getSimulation: () => simulation,
+    getSubmitter: () => ({
+      attach: () => Promise.resolve(),
+      submit: () => Promise.resolve(),
+    }),
     removeConnection: () => {
       //
     },

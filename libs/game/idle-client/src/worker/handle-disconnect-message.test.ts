@@ -8,6 +8,10 @@ function createContext(port: MessagePort): WorkerContext {
   return {
     connections,
     getSimulation: () => null,
+    getSubmitter: () => ({
+      attach: () => Promise.resolve(),
+      submit: () => Promise.resolve(),
+    }),
     removeConnection: (removedPort) => {
       connections.delete(removedPort);
     },

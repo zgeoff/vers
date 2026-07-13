@@ -13,6 +13,10 @@ function createContext(initialConnections: ReadonlyArray<MessagePort> = []): Wor
   return {
     connections,
     getSimulation: () => simulation,
+    getSubmitter: () => ({
+      attach: () => Promise.resolve(),
+      submit: () => Promise.resolve(),
+    }),
     removeConnection: (port) => {
       connections.delete(port);
     },
@@ -22,15 +26,14 @@ function createContext(initialConnections: ReadonlyArray<MessagePort> = []): Wor
   };
 }
 
-test('it initializes the simulation', async () => {
+test('it initializes the simulation', () => {
   const context = createContext();
 
   const message: InitializeMessage = {
     type: ClientMessageType.Initialize,
   };
 
-  await handleInitializeMessage(context, message);
-
+  handleInitializeMessage(context, message);
   expect(context.getSimulation()).not.toBeNull();
 });
 
@@ -49,7 +52,7 @@ test('it sends an initial state message to all connections', async () => {
     type: ClientMessageType.Initialize,
   };
 
-  await handleInitializeMessage(context, message);
+  handleInitializeMessage(context, message);
 
   const event = await received;
 
@@ -61,7 +64,7 @@ test('it sends an initial state message to all connections', async () => {
   });
 });
 
-test('it does not create a new simulation if one already exists', async () => {
+test('it does not create a new simulation if one already exists', () => {
   const context = createContext();
   const existingSimulation = createSimulation();
 
@@ -71,7 +74,6 @@ test('it does not create a new simulation if one already exists', async () => {
     type: ClientMessageType.Initialize,
   };
 
-  await handleInitializeMessage(context, message);
-
+  handleInitializeMessage(context, message);
   expect(context.getSimulation()).toBe(existingSimulation);
 });

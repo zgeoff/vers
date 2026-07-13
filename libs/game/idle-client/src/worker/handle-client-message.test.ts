@@ -23,6 +23,10 @@ function createContext(initialConnections: ReadonlyArray<MessagePort> = []): Wor
   return {
     connections,
     getSimulation: () => simulation,
+    getSubmitter: () => ({
+      attach: () => Promise.resolve(),
+      submit: () => Promise.resolve(),
+    }),
     removeConnection: (port) => {
       connections.delete(port);
     },

@@ -15,11 +15,11 @@ export async function handleClientMessage(
   event: MessageEvent<ClientMessage>,
 ): Promise<void> {
   if (isInitializeMessage(event.data)) {
-    await handleInitializeMessage(context, event.data);
+    handleInitializeMessage(context, event.data);
   }
 
   if (isSetActivityMessage(event.data)) {
-    handleSetActivityMessage(context, event.data);
+    await handleSetActivityMessage(context, event.data);
   }
 
   if (isSetFailureActionMessage(event.data)) {

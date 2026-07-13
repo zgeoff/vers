@@ -1,6 +1,9 @@
 import type { Simulation } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
+import { createActivityServiceClient } from '../submission/create-activity-service-client';
+import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ClientMessage } from '../types';
+import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
 import { handleClientMessage } from './handle-client-message';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
@@ -35,9 +38,21 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let lastFrameTime = performance.now();
   let accumulator = 0;
 
+  const submitter = createCheckpointSubmitter({
+    client: createActivityServiceClient(),
+    onInvalid: (activityID, reason) => {
+      const message = createCheckpointStreamInvalidMessage(activityID, reason);
+
+      for (const connection of connections) {
+        connection.postMessage(message);
+      }
+    },
+  });
+
   const context: WorkerContext = {
     connections,
     getSimulation: () => simulation,
+    getSubmitter: () => submitter,
     removeConnection: (port) => {
       connections.delete(port);
     },
@@ -91,7 +106,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       const currentSimulation = context.getSimulation();
 
       if (currentSimulation) {
-        await runSimulation(currentSimulation, timestep);
+        await runSimulation(context, currentSimulation, timestep);
       }
     }
 
