@@ -408,15 +408,12 @@ Everywhere:
   `onUnhandledRequest: 'error'`. Tests add per-test handlers with `server.use(...)`, including
   override and upstream-failure cases; for oRPC procedures, build them with `buildMockService` /
   `mockService` (`@vers/client-test-utils/orpc`).
-- Collection rows lean on the schemas' defaults — no restating a default; a domain object with no
-  collection schema comes from its `create-mock-*` factory. One-off helpers stay inline; reusable
-  ones live in `test-utils/`.
 - Stateful backends use `@msw/data`: an in-memory store built from a zod schema
   (`new Collection({ schema })`, `.create()`/`.createMany()`, `.findFirst()`/`.findMany()`,
   `.defineRelations()`) read and written directly from the oRPC mock handlers — never `@msw/data`'s
   `factory()` model dictionary. Every row-schema field carries a `.default()` — faker-driven where
   the value is arbitrary — except a discriminator whose value gives a row its meaning; the preload
-  seeds faker once so runs are reproducible.
+  seeds faker once so runs are reproducible, and a `.create()` call never restates a default.
 - React: React Testing Library on happy-dom (registered in the preload). Prefer the project `render`
   util over bare RTL and the utils it returns over the imported `screen`; load data through the MSW
   handlers and `@msw/data` store rather than stubbing hooks or poking Zustand; `waitFor` the fetch
