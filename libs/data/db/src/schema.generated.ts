@@ -37,6 +37,7 @@ export interface Activities {
   createdAt: Generated<Timestamp>;
   id: string;
   lastHash: string;
+  replayAttempts: Generated<number>;
   scopeId: string;
   scopeType: string;
   seed: string;
@@ -49,6 +50,7 @@ export interface Activities {
   updatedAt: Generated<Timestamp>;
   verifiedAt: Timestamp | null;
   verifiedHead: Generated<number>;
+  writerSessionId: string | null;
 }
 
 export interface ActivityChains {
@@ -57,6 +59,7 @@ export interface ActivityChains {
   avatarId: string;
   createdAt: Generated<Timestamp>;
   genesisSeed: string;
+  priority: Generated<number>;
   scopeId: string;
   scopeType: string;
   verifiedChainIndex: Generated<number>;
@@ -70,6 +73,13 @@ export interface ActivityCheckpoints {
   payload: Json;
   prevHash: string;
   version: number;
+}
+
+export interface AvatarGrants {
+  avatarId: string;
+  createdAt: Generated<Timestamp>;
+  key: string;
+  kind: string;
 }
 
 export interface Avatars {
@@ -144,6 +154,7 @@ export interface DB {
   activities: Activities;
   activityChains: ActivityChains;
   activityCheckpoints: ActivityCheckpoints;
+  avatarGrants: AvatarGrants;
   avatars: Avatars;
   consumedTransactionTokens: ConsumedTransactionTokens;
   pendingTransactions: PendingTransactions;
