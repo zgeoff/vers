@@ -99,6 +99,7 @@ the function's shape without opening it.
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
 | `apply`    | perform previously planned changes                                                                                                      | `applyEdits`      |
 | `create`   | bring a resource into existence (file, directory, process)                                                                              | `createWorkDir`   |
+| `claim`    | atomically take exclusive ownership of a work item or resource; ownership ends at commit or an explicit release                         | `claimNextChain`  |
 | `read`     | pull raw content from filesystem or network into memory                                                                                 | `readSource`      |
 | `load`     | read **and** parse into a ready structure                                                                                               | `loadConfig`      |
 | `write`    | persist to the filesystem                                                                                                               | `writeOutput`     |
