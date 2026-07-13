@@ -368,12 +368,11 @@ Everywhere:
 - Test files are co-located with the module they test (`parse-source.ts` beside
   `parse-source.test.ts`) — no `test/`, `tests/` or `__tests__` directories. Declaration emit
   excludes `*.test.ts`, so they never ship.
-- Test data states exactly the fields the behaviour and assertions depend on. Scalar and small
-  literal arguments are written inline (`add(1, 2)`). A domain object or DTO comes from its
-  faker-defaulted `create-mock-*.ts` factory in the package's `test-utils/factories/` (a plain
-  object, each factory with its own test), called inline with overrides for the asserted fields —
-  an explicit override marks the field as relevant to the unit under test, and factory defaults
-  keep the rest out of the test body. Module-level fixtures shared between tests are a defect.
+- Test data is inline per test: state the fields the behaviour and assertions depend on and no
+  more. Scalars and small literals are written directly (`add(1, 2)`); a domain object or DTO comes
+  from its faker-defaulted `create-mock-*` factory in the package's `test-utils/factories/` (each
+  factory has its own test), with overrides for exactly the asserted fields. No module-level
+  fixtures shared between tests.
 - `toStrictEqual`, not `toEqual`, for object assertions; asymmetric matchers inside it are fine.
 - Global mock reset lives in the preload's `afterEach` (`mock.restore()`), never per-test.
 - A test that mutates global or environment state restores it in an `onTestFinished(...)` callback
@@ -411,9 +410,9 @@ Everywhere:
   `onUnhandledRequest: 'error'`. Tests add per-test handlers with `server.use(...)`, including
   override and upstream-failure cases; for oRPC procedures, build them with `buildMockService` /
   `mockService` (`@vers/client-test-utils/orpc`).
-- Rows that cross the mocked boundary live in the `@msw/data` store and lean on the collection
-  schemas' defaults — no restating a default. A domain object with no collection schema comes from
-  its `create-mock-*` factory. One-off helpers stay inline; reusable ones live in `test-utils/`.
+- Collection rows lean on the schemas' defaults — no restating a default; a domain object with no
+  collection schema comes from its `create-mock-*` factory. One-off helpers stay inline; reusable
+  ones live in `test-utils/`.
 - Stateful backends use `@msw/data`: an in-memory store built from a zod schema
   (`new Collection({ schema })`, `.create()`/`.createMany()`, `.findFirst()`/`.findMany()`,
   `.defineRelations()`) read and written directly from the oRPC mock handlers — never `@msw/data`'s
