@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./submission": "./src/submission/index.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "test": "bun test",

@@ -116,8 +116,6 @@
         "@playwright/test": "catalog:",
         "@types/node": "catalog:",
         "@vers/contract-activity": "workspace:*",
-        "@vers/idle-client": "workspace:*",
-        "@vers/idle-core": "workspace:*",
         "typescript": "catalog:",
       },
     },
