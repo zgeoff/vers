@@ -1,12 +1,12 @@
-import { expect, mock, onTestFinished, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { ACTIVITY_SERVICE_URL, mockActivityService } from '../mocks/mock-activity-service';
 import { server } from '../mocks/node';
+import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
 import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
 import { createMockStartedCheckpoint } from '../test-utils/factories/create-mock-started-checkpoint';
-import { PROGRESS_FLUSH_INTERVAL_MS } from './constants';
 import { createCheckpointSubmitter } from './create-checkpoint-submitter';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { ActivityServiceClient } from './types';
@@ -224,19 +224,9 @@ test('it holds the queue on UNAUTHORIZED and resends on the next flush', async (
 });
 
 test('it resends rows already queued from a previous worker lifetime on attach', async () => {
-  await writeQueuedCheckpoint('resume-activity', {
-    hash: 'resumed_hash_1',
-    payload: {
-      chainIndex: 1,
-      entropySource: 'chain',
-      nextSeed: 'resumed_seed_1',
-      seed: 'resumed_seed_0',
-      time: 0,
-      type: 'started',
-    },
-    prevHash: 'start_hash',
-    version: 1,
-  });
+  const resumedEntry = createMockCheckpointBatchEntry({ hash: 'resumed_hash_1', version: 1 });
+
+  await writeQueuedCheckpoint('resume-activity', resumedEntry);
 
   const track = registerTrackHandler(() => ({ appendedHead: 1 }));
 
@@ -264,33 +254,15 @@ test('it resends rows already queued from a previous worker lifetime on attach',
 });
 
 test('it defers a non-terminal checkpoint to the shared progress window', async () => {
-  const originalSetTimeout = globalThis.setTimeout;
-  let capturedCallback: (() => void) | undefined;
-  let capturedDelay: number | undefined;
-
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a deliberately narrowed test double standing in for the global's own overloaded signature
-  globalThis.setTimeout = ((callback: () => void, delay?: number) => {
-    if (delay === PROGRESS_FLUSH_INTERVAL_MS) {
-      capturedCallback = callback;
-      capturedDelay = delay;
-
-      return originalSetTimeout(() => {
-        //
-      }, 0);
-    }
-
-    return originalSetTimeout(callback, delay);
-  }) as typeof setTimeout;
-
-  onTestFinished(() => {
-    globalThis.setTimeout = originalSetTimeout;
-  });
-
+  let capturedFlush: (() => void) | undefined;
   const track = registerTrackHandler(() => ({ appendedHead: 1 }));
 
   const submitter = createCheckpointSubmitter({
     client: buildActivityClient(),
     onInvalid: buildOnInvalid(),
+    scheduleFlush: (flush) => {
+      capturedFlush = flush;
+    },
   });
 
   await submitter.attach({
@@ -303,14 +275,13 @@ test('it defers a non-terminal checkpoint to the shared progress window', async 
   await submitter.submit('progress-window-activity', createMockStartedCheckpoint());
 
   expect(track).not.toHaveBeenCalled();
-  expect(capturedDelay).toBe(PROGRESS_FLUSH_INTERVAL_MS);
-  capturedCallback?.();
+  expect(capturedFlush).toBeDefined();
+  capturedFlush?.();
 
-  // the captured window flush runs a real round trip through MSW, so wait for it to land rather
-  // than a single tick
+  // the captured window flush runs a real round trip through MSW, so wait for it to land
   for (let tick = 0; tick < 50 && track.mock.calls.length === 0; tick += 1) {
     await new Promise((resolve) => {
-      originalSetTimeout(resolve, 1);
+      setTimeout(resolve, 1);
     });
   }
 

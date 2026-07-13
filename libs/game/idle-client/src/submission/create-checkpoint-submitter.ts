@@ -12,7 +12,7 @@ import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 interface ActivityState {
   expectedHead: number;
   flushPending: boolean;
-  flushTimer: null | ReturnType<typeof setTimeout>;
+  flushScheduled: boolean;
   inFlight: boolean;
   invalid: boolean;
   nextVersion: number;
@@ -49,6 +49,13 @@ interface CreateCheckpointSubmitterOptions {
    * notify connected tabs and report the rejection.
    */
   readonly onInvalid: (activityID: string, reason: string) => void;
+
+  /**
+   * Schedules a non-terminal checkpoint's deferred progress-window flush. Defaults to a
+   * `PROGRESS_FLUSH_INTERVAL_MS` timer; a test injects a capturing stub to drive the window
+   * without waiting on real time.
+   */
+  readonly scheduleFlush?: (flush: () => void) => void;
 }
 
 /**
@@ -63,6 +70,9 @@ export function createCheckpointSubmitter(
   options: Readonly<CreateCheckpointSubmitterOptions>,
 ): CheckpointSubmitter {
   const activityStates = new Map<string, ActivityState>();
+
+  const scheduleFlush: (flush: () => void) => void =
+    options.scheduleFlush ?? ((flush) => setTimeout(flush, PROGRESS_FLUSH_INTERVAL_MS));
 
   const flush = async (activityID: string): Promise<void> => {
     const state = activityStates.get(activityID);
@@ -165,7 +175,7 @@ export function createCheckpointSubmitter(
     const state: ActivityState = {
       expectedHead: context.appendedHead,
       flushPending: false,
-      flushTimer: null,
+      flushScheduled: false,
       inFlight: false,
       invalid: false,
       nextVersion: context.appendedHead + 1,
@@ -209,21 +219,25 @@ export function createCheckpointSubmitter(
       checkpoint.type === ActivityCheckpointType.Failed;
 
     if (isTerminal) {
-      if (state.flushTimer !== null) {
-        clearTimeout(state.flushTimer);
-
-        state.flushTimer = null;
-      }
+      state.flushScheduled = false;
 
       await flush(activityID);
 
       return;
     }
 
-    state.flushTimer ??= setTimeout(() => {
-      state.flushTimer = null;
-      void flush(activityID);
-    }, PROGRESS_FLUSH_INTERVAL_MS);
+    if (!state.flushScheduled) {
+      state.flushScheduled = true;
+
+      scheduleFlush(() => {
+        if (!state.flushScheduled) {
+          return;
+        }
+
+        state.flushScheduled = false;
+        void flush(activityID);
+      });
+    }
   };
 
   return { attach, submit };
