@@ -254,7 +254,7 @@ test('it resends rows already queued from a previous worker lifetime on attach',
 });
 
 test('it defers a non-terminal checkpoint to the shared progress window', async () => {
-  let capturedFlush: (() => void) | undefined;
+  let capturedFlush: (() => Promise<void>) | undefined;
   const track = registerTrackHandler(() => ({ appendedHead: 1 }));
 
   const submitter = createCheckpointSubmitter({
@@ -276,14 +276,8 @@ test('it defers a non-terminal checkpoint to the shared progress window', async 
 
   expect(track).not.toHaveBeenCalled();
   expect(capturedFlush).toBeDefined();
-  capturedFlush?.();
 
-  // the captured window flush runs a real round trip through MSW, so wait for it to land
-  for (let tick = 0; tick < 50 && track.mock.calls.length === 0; tick += 1) {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 1);
-    });
-  }
+  await capturedFlush?.();
 
   expect(track).toHaveBeenCalledOnce();
 });

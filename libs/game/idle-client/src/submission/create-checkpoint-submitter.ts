@@ -53,9 +53,9 @@ interface CreateCheckpointSubmitterOptions {
   /**
    * Schedules a non-terminal checkpoint's deferred progress-window flush. Defaults to a
    * `PROGRESS_FLUSH_INTERVAL_MS` timer; a test injects a capturing stub to drive the window
-   * without waiting on real time.
+   * without waiting on real time, awaiting the returned flush to drain it deterministically.
    */
-  readonly scheduleFlush?: (flush: () => void) => void;
+  readonly scheduleFlush?: (flush: () => Promise<void>) => void;
 }
 
 /**
@@ -71,8 +71,13 @@ export function createCheckpointSubmitter(
 ): CheckpointSubmitter {
   const activityStates = new Map<string, ActivityState>();
 
-  const scheduleFlush: (flush: () => void) => void =
-    options.scheduleFlush ?? ((flush) => setTimeout(flush, PROGRESS_FLUSH_INTERVAL_MS));
+  const scheduleFlush: (flush: () => Promise<void>) => void =
+    options.scheduleFlush ??
+    ((flush) => {
+      setTimeout(() => {
+        void flush();
+      }, PROGRESS_FLUSH_INTERVAL_MS);
+    });
 
   const flush = async (activityID: string): Promise<void> => {
     const state = activityStates.get(activityID);
@@ -229,13 +234,14 @@ export function createCheckpointSubmitter(
     if (!state.flushScheduled) {
       state.flushScheduled = true;
 
-      scheduleFlush(() => {
+      scheduleFlush(async () => {
         if (!state.flushScheduled) {
           return;
         }
 
         state.flushScheduled = false;
-        void flush(activityID);
+
+        await flush(activityID);
       });
     }
   };
