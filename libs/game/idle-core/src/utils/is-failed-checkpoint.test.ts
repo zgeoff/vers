@@ -1,48 +1,16 @@
 import { expect, test } from 'bun:test';
-import type {
-  ActivityCompletedCheckpoint,
-  ActivityFailedCheckpoint,
-  ActivityProgressCheckpoint,
-  ActivityStartedCheckpoint,
-} from '../types';
-import { ActivityCheckpointType } from '../types';
+import { createMockCompletedCheckpoint } from '../test-utils/create-mock-completed-checkpoint';
+import { createMockFailedCheckpoint } from '../test-utils/create-mock-failed-checkpoint';
+import { createMockProgressCheckpoint } from '../test-utils/create-mock-progress-checkpoint';
+import { createMockStartedCheckpoint } from '../test-utils/create-mock-started-checkpoint';
 import { isFailedCheckpoint } from './is-failed-checkpoint';
 
 test('returns true for failed checkpoints', () => {
-  const failedCheckpoint: ActivityFailedCheckpoint = {
-    nextSeed: '12345',
-    rewards: { xp: 0 },
-    time: 500,
-    type: ActivityCheckpointType.Failed,
-  };
-
-  expect(isFailedCheckpoint(failedCheckpoint)).toBeTrue();
+  expect(isFailedCheckpoint(createMockFailedCheckpoint())).toBeTrue();
 });
 
 test('returns false for non-failed checkpoints', () => {
-  const startedCheckpoint: ActivityStartedCheckpoint = {
-    nextSeed: '54321',
-    seed: '54321',
-    rewards: { xp: 0 },
-    time: 0,
-    type: ActivityCheckpointType.Started,
-  };
-
-  const completedCheckpoint: ActivityCompletedCheckpoint = {
-    nextSeed: '98765',
-    rewards: { xp: 0 },
-    time: 1000,
-    type: ActivityCheckpointType.Completed,
-  };
-
-  const progressCheckpoint: ActivityProgressCheckpoint = {
-    nextSeed: '24680',
-    rewards: { xp: 0 },
-    time: 300,
-    type: ActivityCheckpointType.Progress,
-  };
-
-  expect(isFailedCheckpoint(startedCheckpoint)).toBeFalse();
-  expect(isFailedCheckpoint(completedCheckpoint)).toBeFalse();
-  expect(isFailedCheckpoint(progressCheckpoint)).toBeFalse();
+  expect(isFailedCheckpoint(createMockStartedCheckpoint())).toBeFalse();
+  expect(isFailedCheckpoint(createMockCompletedCheckpoint())).toBeFalse();
+  expect(isFailedCheckpoint(createMockProgressCheckpoint())).toBeFalse();
 });
