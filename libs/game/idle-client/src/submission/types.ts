@@ -1,4 +1,5 @@
-import type { CheckpointBatchEntry } from '@vers/contract-activity';
+import type { ContractRouterClient } from '@orpc/contract';
+import type { CheckpointBatchEntry, activityContract } from '@vers/contract-activity';
 import type { DBSchema } from 'idb';
 
 /**
@@ -14,4 +15,18 @@ export interface CheckpointQueueSchema extends DBSchema {
     key: [string, number];
     value: QueuedCheckpoint;
   };
+}
+
+export type ActivityServiceClient = ContractRouterClient<typeof activityContract>;
+
+/**
+ * The chain-link state an activity's stream starts submission from: `appendedHead` seeds the
+ * first submission's compare-and-swap, `lastHash` seeds the first entry's `prevHash`, and
+ * `startChainIndex` anchors every entry's `chainIndex`.
+ */
+export interface ActivitySubmissionContext {
+  readonly activityID: string;
+  readonly appendedHead: number;
+  readonly lastHash: string;
+  readonly startChainIndex: number;
 }
