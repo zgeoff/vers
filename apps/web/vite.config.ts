@@ -57,6 +57,18 @@ export default defineConfig({
       },
     },
   },
+
+  // the dev server's initial dependency scan never reaches `use-simulation-worker`'s
+  // `new SharedWorker(new URL('./worker.ts', import.meta.url))` target, so the worker's own deps
+  // (`idb`, `@noble/hashes`, reached only via `@vers/idle-client`) go undiscovered until a browser
+  // actually spins up the shared worker, at which point the optimizer re-bundles mid-session and
+  // forces a full reload. Adding the worker as an extra scan entry — Vite concatenates a plugin's
+  // own `optimizeDeps.entries` with this one rather than replacing it — resolves its deps from its
+  // own `node_modules` (the isolated linker gives every workspace package its own), which a
+  // bare-specifier `optimizeDeps.include` can't do from this app's root.
+  optimizeDeps: {
+    entries: ['../../libs/game/idle-client/src/worker/worker.ts'],
+  },
   resolve: {
     // `lib-design-system`/`lib-styled-system` pin `react` through the workspace catalog, one
     // minor behind this app's own RSC-required pin — dedupe forces every environment onto this
