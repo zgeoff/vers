@@ -1,23 +1,7 @@
 import { expect, test } from 'bun:test';
-import type { CheckpointBatchEntry } from '@vers/contract-activity';
+import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
-
-function buildEntry(version: number): CheckpointBatchEntry {
-  return {
-    hash: `hash_${version}`,
-    payload: {
-      chainIndex: version,
-      entropySource: 'chain',
-      nextSeed: `seed_${version}`,
-      seed: `seed_${version - 1}`,
-      time: version * 1000,
-      type: version === 1 ? 'started' : 'progress',
-    },
-    prevHash: `hash_${version - 1}`,
-    version,
-  };
-}
 
 test('it returns an empty array for an activity with nothing queued', async () => {
   const stored = await readQueuedCheckpoints('read-queued-checkpoints-empty');
@@ -28,9 +12,9 @@ test('it returns an empty array for an activity with nothing queued', async () =
 test('it returns queued checkpoints in ascending version order', async () => {
   const activityID = 'read-queued-checkpoints-order';
 
-  await writeQueuedCheckpoint(activityID, buildEntry(3));
-  await writeQueuedCheckpoint(activityID, buildEntry(1));
-  await writeQueuedCheckpoint(activityID, buildEntry(2));
+  await writeQueuedCheckpoint(activityID, createMockCheckpointBatchEntry({ version: 3 }));
+  await writeQueuedCheckpoint(activityID, createMockCheckpointBatchEntry({ version: 1 }));
+  await writeQueuedCheckpoint(activityID, createMockCheckpointBatchEntry({ version: 2 }));
 
   const stored = await readQueuedCheckpoints(activityID);
 
@@ -38,11 +22,14 @@ test('it returns queued checkpoints in ascending version order', async () => {
 });
 
 test('it only returns checkpoints queued for the named activity', async () => {
-  await writeQueuedCheckpoint('read-queued-checkpoints-other', buildEntry(1));
+  await writeQueuedCheckpoint(
+    'read-queued-checkpoints-other',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
 
   const activityID = 'read-queued-checkpoints-scoped';
 
-  await writeQueuedCheckpoint(activityID, buildEntry(1));
+  await writeQueuedCheckpoint(activityID, createMockCheckpointBatchEntry({ version: 1 }));
 
   const stored = await readQueuedCheckpoints(activityID);
 
