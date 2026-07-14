@@ -19,5 +19,9 @@ export function initSentryNode(): void {
 
     // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes
     tracesSampleRate: 0,
+
+    // the error backend discards client reports, and their 60s flush keeps otherwise idle
+    // infrastructure awake
+    sendClientReports: false,
   });
 }
