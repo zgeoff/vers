@@ -96,5 +96,5 @@ export default defineConfig({
 
   // CI runners have 4 cores shared with both webServers; more workers than this starves the
   // canvas specs' software-GL rendering
-  ...(process.env['CI'] !== undefined && { workers: 3 }),
+  ...(process.env['CI'] !== undefined && { workers: 2 }),
 });
