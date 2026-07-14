@@ -34,14 +34,6 @@
       "inputs": ["$TURBO_DEFAULT$", "esbuild.config.cjs"],
       "outputs": ["dist/**", "build/**", ".react-router/**"]
     },
-    "@vers/web#build:e2e": {
-      "dependsOn": ["^build", "codegen", "typegen"],
-      "inputs": ["$TURBO_DEFAULT$", "esbuild.config.cjs"],
-      // writes the same build/ dir as `build` but with mocks baked in — left
-      // uncached so its artifact can never be restored over (or restore from)
-      // the production build's cache entry
-      "cache": false
-    },
     "codegen": {
       "dependsOn": ["^codegen"],
       "inputs": ["$TURBO_DEFAULT$", "panda.config.ts"],
@@ -59,7 +51,9 @@
       "outputs": []
     },
     "e2e": {
-      "dependsOn": ["@vers/web#codegen", "@vers/web#typegen"],
+      // the build dependency keeps the production-artifact webServer from rebuilding: the e2e
+      // run serves whatever this task graph just built (or restored from cache)
+      "dependsOn": ["@vers/web#build", "@vers/web#codegen", "@vers/web#typegen"],
       "cache": false
     },
     "dev": {

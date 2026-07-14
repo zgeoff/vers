@@ -11,7 +11,7 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     # a hung step (a script that never exits, a wedged container) must fail the
-    # run, not burn runner hours — the suite's worst observed run is ~4 minutes
+    # run, not burn runner hours
     timeout-minutes: 10
     env:
       TURBO_SCM_BASE: main
@@ -22,14 +22,6 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
-
-      - name: Setup Dotenv
-        env:
-          DOTENV_APP_WEB_DEV: ${{ secrets.DOTENV_APP_WEB_DEV }}
-          DOTENV_APP_WEB_E2E: ${{ secrets.DOTENV_APP_WEB_E2E }}
-        run: |
-          printf '%s\n' "$DOTENV_APP_WEB_DEV" > apps/web/.env.development.local
-          printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
@@ -90,6 +82,56 @@ jobs:
 
       - name: Build
         run: node_modules/.bin/turbo run build --affected
+
+  e2e:
+    runs-on: ubuntu-latest
+    # a hung step (a wedged webServer, a stuck browser) must fail the run, not
+    # burn runner hours
+    timeout-minutes: 10
+    env:
+      TURBO_SCM_BASE: main
+      # CI never commits, but skip hook install/execution regardless
+      LEFTHOOK: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Setup Dotenv
+        env:
+          DOTENV_APP_WEB_DEV: ${{ secrets.DOTENV_APP_WEB_DEV }}
+          DOTENV_APP_WEB_E2E: ${{ secrets.DOTENV_APP_WEB_E2E }}
+        run: |
+          printf '%s\n' "$DOTENV_APP_WEB_DEV" > apps/web/.env.development.local
+          printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24.18.0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Track main branch
+        run: git branch --track main origin/main
+
+      # scoped key so this job's saved cache never collides with the checks job's;
+      # the prefix restore matches either job's most recent save
+      - name: Setup Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-e2e-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-e2e-${{ runner.os }}-
+            turbo-${{ runner.os }}-
 
       - name: Install E2E browsers
         run: bun run playwright install --with-deps --only-shell chromium
