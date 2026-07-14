@@ -4,13 +4,15 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./test-utils": "./src/test-utils/index.ts"
   },
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@faker-js/faker": "catalog:",
     "@react-hookz/web": "catalog:",
     "@react-spring/three": "catalog:",
     "@react-three/fiber": "catalog:",
@@ -25,7 +27,6 @@
     "zustand": "catalog:"
   },
   "devDependencies": {
-    "@faker-js/faker": "catalog:",
     "@happy-dom/global-registrator": "catalog:",
     "@react-three/test-renderer": "catalog:",
     "@testing-library/jest-dom": "catalog:",

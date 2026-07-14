@@ -19,14 +19,7 @@ test('it updates the selected node in the store', () => {
 });
 
 test('it clears the object reference when a node is selected without one', () => {
-  const node: WorldMapNode = {
-    connections: [null, null, null, null],
-    difficulty: 1,
-    id: 'node2',
-    index: 1,
-    position: [0, 0] as [number, number],
-    seed: 12_345,
-  };
+  const node = createMockWorldMapNode({ id: 'node2', position: [0, 0] });
 
   setSelectedNode(node);
   expect(useWorldmapStore.getState().selectedObject3D).toBeNull();

@@ -2,9 +2,9 @@ import { expect, onTestFinished, test } from 'bun:test';
 import type { ActivityCheckpoint } from '@vers/contract-replay';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { updateEnv } from '@vers/test-utils/bun';
 import { createReplayService } from '../create-replay-service';
-import { createSimVersionRow } from '../test-utils/create-sim-version-row';
 import { createMockReplaySegmentInput } from '../test-utils/factories/create-mock-replay-segment-input';
 import { runReplaySegment } from './run-replay-segment';
 

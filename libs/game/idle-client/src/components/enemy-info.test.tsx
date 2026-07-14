@@ -1,30 +1,18 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import { nodeHasText } from '@vers/client-test-utils';
-import type { EnemySnapshot } from '@vers/idle-core';
-import { EntityStatus } from '@vers/idle-core';
+import { createMockEnemySnapshot } from '@vers/idle-core';
 import { EnemyInfo } from './enemy-info';
 
 test('it renders enemy information', () => {
-  const enemy: EnemySnapshot = {
+  const enemy = createMockEnemySnapshot({
     behaviours: {
       enemy_primary_attack: {
         lastAttackTime: 0,
       },
     },
     id: '1',
-    isAlive: true,
-    level: 1,
-    life: 30,
-    maxLife: 30,
-    name: 'Test Enemy',
-    primaryAttack: {
-      maxDamage: 3,
-      minDamage: 1,
-      speed: 0.5,
-    },
-    status: EntityStatus.Alive,
-  };
+  });
 
   render(<EnemyInfo enemy={enemy} />);
 

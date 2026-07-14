@@ -1,24 +1,14 @@
 import { expect, test } from 'bun:test';
 import { render, renderHook } from '@testing-library/react';
 import { setSelectedNode, setWorldGraph, useSelectedNode } from '@vers/worldmap-client';
-import type { WorldGraph, WorldMapNode } from '@vers/worldmap-core';
+import { createMockWorldMapNode } from '@vers/worldmap-client/test-utils';
+import type { WorldGraph } from '@vers/worldmap-core';
 import { ExploreNodeFocus } from './explore-node-focus';
 
-const node1: WorldMapNode = {
-  connections: [null, null, null, null],
-  difficulty: 1,
-  id: 'node1',
-  index: 0,
-  position: [0, 0],
-  seed: 0,
-};
-
-const graph: WorldGraph = {
-  edges: {},
-  nodes: { node1 },
-};
-
 test('it selects the graph node matching the route param', () => {
+  const node1 = createMockWorldMapNode({ id: 'node1' });
+  const graph: WorldGraph = { edges: {}, nodes: { node1 } };
+
   setWorldGraph(graph);
   setSelectedNode(null);
   render(<ExploreNodeFocus nodeID="node1" />);
@@ -29,6 +19,9 @@ test('it selects the graph node matching the route param', () => {
 });
 
 test('it renders nothing and leaves selection untouched for an unknown node id', () => {
+  const node1 = createMockWorldMapNode({ id: 'node1' });
+  const graph: WorldGraph = { edges: {}, nodes: { node1 } };
+
   setWorldGraph(graph);
   setSelectedNode(null);
 

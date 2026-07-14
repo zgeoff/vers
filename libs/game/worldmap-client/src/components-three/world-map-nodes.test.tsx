@@ -2,34 +2,20 @@ import { expect, test } from 'bun:test';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { WorldMapNode } from '@vers/worldmap-core';
 import { useWorldmapStore } from '../state/use-worldmap-store';
+import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
 import { WorldMapNodes } from './world-map-nodes';
 
-const nodeA: WorldMapNode = {
-  connections: ['nodeB', null, null, null],
-  difficulty: 1,
-  id: 'nodeA',
-  index: 0,
-  position: [1, 2],
-  seed: 12_345,
-};
-
-const nodeB: WorldMapNode = {
-  connections: [null, null, null, null],
-  difficulty: 2,
-  id: 'nodeB',
-  index: 1,
-  position: [3, 4],
-  seed: 67_890,
-};
-
-async function setupTest() {
-  const renderer = await ReactThreeTestRenderer.create(<WorldMapNodes nodes={[nodeA, nodeB]} />);
+async function setupTest(nodes: ReadonlyArray<WorldMapNode>) {
+  const renderer = await ReactThreeTestRenderer.create(<WorldMapNodes nodes={[...nodes]} />);
 
   return renderer;
 }
 
 test('it sets the hovered node when the pointer enters a node instance', async () => {
-  const renderer = await setupTest();
+  const nodeA = createMockWorldMapNode({ id: 'nodeA', index: 0 });
+  const nodeB = createMockWorldMapNode({ id: 'nodeB', index: 1 });
+
+  const renderer = await setupTest([nodeA, nodeB]);
 
   const mesh = renderer.scene.children[0]!;
 
@@ -39,7 +25,10 @@ test('it sets the hovered node when the pointer enters a node instance', async (
 });
 
 test('it unsets the hovered node when the pointer leaves the instanced mesh', async () => {
-  const renderer = await setupTest();
+  const nodeA = createMockWorldMapNode({ id: 'nodeA', index: 0 });
+  const nodeB = createMockWorldMapNode({ id: 'nodeB', index: 1 });
+
+  const renderer = await setupTest([nodeA, nodeB]);
 
   const mesh = renderer.scene.children[0]!;
 
@@ -50,7 +39,10 @@ test('it unsets the hovered node when the pointer leaves the instanced mesh', as
 });
 
 test('it sets the selected node when a node instance is clicked', async () => {
-  const renderer = await setupTest();
+  const nodeA = createMockWorldMapNode({ id: 'nodeA', index: 0 });
+  const nodeB = createMockWorldMapNode({ id: 'nodeB', index: 1 });
+
+  const renderer = await setupTest([nodeA, nodeB]);
 
   const mesh = renderer.scene.children[0]!;
 

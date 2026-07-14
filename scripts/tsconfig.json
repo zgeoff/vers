@@ -4,6 +4,6 @@
     "types": ["node", "bun", "@zgeoff/bun-test-extended"]
   },
   "files": [],
-  "include": ["src/**/*.ts"],
+  "include": ["test-setup.ts", "src/**/*.ts"],
   "exclude": []
 }

@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { ActivitySnapshot } from '@vers/idle-core';
+import type { ActivitySnapshot } from '../../types';
 
 export function createMockActivitySnapshot(
   overrides: Readonly<Partial<ActivitySnapshot>> = {},

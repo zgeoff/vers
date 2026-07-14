@@ -361,11 +361,11 @@
       "name": "@vers/sim-registry",
       "version": "0.0.0",
       "dependencies": {
+        "@faker-js/faker": "catalog:",
         "@vers/db": "workspace:*",
         "kysely": "catalog:",
       },
       "devDependencies": {
-        "@faker-js/faker": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@vers/service-test-utils": "workspace:*",
@@ -537,6 +537,7 @@
       "name": "@vers/worldmap-client",
       "version": "0.0.0",
       "dependencies": {
+        "@faker-js/faker": "catalog:",
         "@react-hookz/web": "catalog:",
         "@react-spring/three": "catalog:",
         "@react-three/fiber": "catalog:",
@@ -551,7 +552,6 @@
         "zustand": "catalog:",
       },
       "devDependencies": {
-        "@faker-js/faker": "catalog:",
         "@happy-dom/global-registrator": "catalog:",
         "@react-three/test-renderer": "catalog:",
         "@testing-library/jest-dom": "catalog:",
@@ -783,6 +783,7 @@
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "typescript": "catalog:",
       },

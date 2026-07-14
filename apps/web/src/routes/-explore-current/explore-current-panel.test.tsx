@@ -1,9 +1,8 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ActivityFailureAction } from '@vers/idle-core';
+import { ActivityFailureAction, createMockActivitySnapshot } from '@vers/idle-core';
 import { setSelectedNode } from '@vers/worldmap-client';
-import { createMockActivitySnapshot } from '../../test-utils/factories/create-mock-activity-snapshot';
 import { removeSharedWorker } from '../../test-utils/remove-shared-worker';
 import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
 import { ExploreCurrentPanel } from './explore-current-panel';

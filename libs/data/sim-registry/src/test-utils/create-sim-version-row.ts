@@ -1,6 +1,7 @@
-import type { DB, SimVersions } from '@vers/db';
-import type { Insertable, Kysely, Selectable } from 'kysely';
-import { createMockSimVersion } from './factories/create-mock-sim-version';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import type { SimVersionRow } from '../types';
+import { createMockSimVersionRow } from './factories/create-mock-sim-version-row';
 
 /**
  * Inserts a `sim_versions` row via kysely — needed to seed rows with a specific status,
@@ -9,9 +10,11 @@ import { createMockSimVersion } from './factories/create-mock-sim-version';
  */
 export function createSimVersionRow(
   db: Kysely<DB>,
-  overrides: Partial<Insertable<SimVersions>> = {},
-): Promise<Selectable<SimVersions>> {
-  const row = createMockSimVersion(overrides);
-
-  return db.insertInto('simVersions').values(row).returningAll().executeTakeFirstOrThrow();
+  overrides: Readonly<Partial<SimVersionRow>> = {},
+): Promise<SimVersionRow> {
+  return db
+    .insertInto('simVersions')
+    .values(createMockSimVersionRow(overrides))
+    .returningAll()
+    .executeTakeFirstOrThrow();
 }

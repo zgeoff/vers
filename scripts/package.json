@@ -26,6 +26,7 @@
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/service-test-utils": "workspace:*",
+    "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "typescript": "catalog:"
   }

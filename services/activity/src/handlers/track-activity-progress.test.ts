@@ -8,10 +8,10 @@ import {
   createViewer,
   getTestServiceKeyPair,
 } from '@vers/service-test-utils/bun';
+import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
-import { createSimVersionRow } from '../test-utils/create-sim-version-row';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 /**
