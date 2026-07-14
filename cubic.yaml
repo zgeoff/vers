@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=https://cubic.dev/schema/cubic-repository-config.schema.json
+version: 1
+
+reviews:
+  enabled: true
+  sensitivity: high
+  incremental_commits: true
+  check_drafts: false
+  resolve_threads_when_addressed: true
+  auto_approve_behavior: disabled
+  ultrareview: manual
+  custom_instructions: |
+    Focus exclusively on correctness: logic bugs, race conditions, data
+    integrity, broken invariants, security flaws, and error-handling gaps.
+    Do not comment on style, naming, formatting, or repo conventions —
+    oxlint and a separate conventions reviewer own that lane. Prefer a few
+    high-confidence findings over broad coverage.
+  ignore:
+    files:
+      - bun.lock
+      - libs/data/db/src/schema.generated.ts
+  custom_rules:
+    - name: Service error contract
+      description: >-
+        Procedure handlers throw only their typed opts.errors.* constructors or invariant(); the
+        central onError interceptor owns logging and reporting. Clients narrow errors on the code
+        field via isDefinedError/safe and act on data fields — flag any client branching on message
+        strings.
+      include:
+        - 'services/**'
+        - 'apps/**'
+        - 'libs/**'
+      exclude:
+        - '**/*.test.*'
+    - name: Single-statement atomicity
+      description: >-
+        A single-row invariant belongs in one conditional statement (UPDATE/DELETE ... RETURNING,
+        INSERT ... ON CONFLICT, or a data-modifying CTE) so a killed serverless process leaves no
+        orphaned transaction state. Flag interactive db.transaction() blocks that reduce to one
+        statement, and multi-statement sequences that leave a window between check and write.
+      include:
+        - 'services/**'
+        - 'libs/data/**'
+    - name: Test isolation integrity
+      description: >-
+        Database tests inject the createTestDB() handle's db into the code under test — code that
+        opens its own connection bypasses transaction or schema isolation and leaks state across
+        tests. Flag suites using transaction isolation around code that commits mid-operation or
+        continues after a caught constraint violation; those need schema isolation.
+      include:
+        - '**/*.test.ts'
+    - name: Client-state write discipline
+      description: >-
+        Zustand stores hold state only; every mutation goes through an external setter module
+        calling setState, one setState per logical event. Flag multi-field events fanned out across
+        several setState calls (torn intermediate renders) and any subscription-based read inside
+        the R3F frame loop where an imperative getState() is required.
+      include:
+        - 'apps/web/**'
+        - 'libs/game/**'
+      exclude:
+        - '**/*.test.*'
+    - name: Server-function boundary
+      description: >-
+        An uncompiled createServerFn dispatch relays only a Response or a thrown redirect/error; a
+        plain result object resolves as undefined at the caller. Flag server-fn branches returning
+        plain objects that a component consumes, and ambient request-context reads
+        (getRequestHeaders, cookies) buried below the thin shell layer.
+      include:
+        - 'apps/web/**'
+      exclude:
+        - '**/*.test.*'
+
+pr_descriptions:
+  generate: false
+
+issues:
+  fix_with_cubic_buttons: false
+  pr_comment_fixes: false
