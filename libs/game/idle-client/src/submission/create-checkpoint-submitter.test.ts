@@ -18,10 +18,12 @@ function setupTest(
   const link = new RPCLink({ url: `${ACTIVITY_SERVICE_URL}/rpc` });
 
   const client: ActivityServiceClient = createORPCClient(link);
+  const onAcked = mock<(activityID: string, appendedHead: number) => void>();
+  const onCapped = mock<(activityID: string, appendedHead: number) => void>();
   const onInvalid = mock<(activityID: string, reason: string) => void>();
-  const submitter = createCheckpointSubmitter({ client, onInvalid, ...config });
+  const submitter = createCheckpointSubmitter({ client, onAcked, onCapped, onInvalid, ...config });
 
-  return { onInvalid, submitter };
+  return { onAcked, onCapped, onInvalid, submitter };
 }
 
 test('it flushes immediately on a terminal checkpoint and confirms the queue on success', async () => {
@@ -273,4 +275,143 @@ test('it defers a non-terminal checkpoint to the shared progress window', async 
   await capturedFlush?.();
 
   expect(track).toHaveBeenCalledOnce();
+});
+
+test('it reports each acknowledged head after a successful flush', async () => {
+  const ctx = setupTest();
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
+
+  await ctx.submitter.attach({
+    activityID: 'acked-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('acked-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('acked-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onAcked).toHaveBeenCalledExactlyOnceWith('acked-activity', 2);
+});
+
+test('it stops the stream, discards the queue, and reports the stop index when the server caps the batch', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+      throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: 0 } });
+    }),
+  );
+
+  await ctx.submitter.attach({
+    activityID: 'capped-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('capped-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('capped-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onCapped).toHaveBeenCalledExactlyOnceWith('capped-activity', 0);
+  expect(track).toHaveBeenCalledOnce();
+
+  const remaining = await readQueuedCheckpoints('capped-activity');
+
+  expect(remaining).toStrictEqual([]);
+
+  // a checkpoint produced after the stream stopped is silently dropped, not queued
+  await ctx.submitter.submit('capped-activity', createMockProgressCheckpoint());
+
+  const stillEmpty = await readQueuedCheckpoints('capped-activity');
+
+  expect(stillEmpty).toStrictEqual([]);
+});
+
+test('it discards the queue and stops the stream on a stopped terminal status', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+      throw opts.errors.ACTIVITY_TERMINAL({ data: { appendedHead: 3, status: 'stopped' } });
+    }),
+  );
+
+  await ctx.submitter.attach({
+    activityID: 'terminal-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('terminal-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('terminal-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onCapped).not.toHaveBeenCalled();
+  expect(track).toHaveBeenCalledOnce();
+
+  const remaining = await readQueuedCheckpoints('terminal-activity');
+
+  expect(remaining).toStrictEqual([]);
+});
+
+test('it reports the stop index when a resend answers with the already-capped status', async () => {
+  const ctx = setupTest();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.ACTIVITY_TERMINAL({ data: { appendedHead: 4, status: 'capped' } });
+    }),
+  );
+
+  await ctx.submitter.attach({
+    activityID: 'already-capped-activity',
+    appendedHead: 4,
+    lastHash: 'head_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('already-capped-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onCapped).toHaveBeenCalledExactlyOnceWith('already-capped-activity', 4);
+});
+
+test('it discards the queue and stops the stream on SESSION_EVICTED', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+      throw opts.errors.SESSION_EVICTED({ data: {} });
+    }),
+  );
+
+  await ctx.submitter.attach({
+    activityID: 'evicted-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('evicted-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('evicted-activity', createMockCompletedCheckpoint());
+
+  expect(track).toHaveBeenCalledOnce();
+
+  const remaining = await readQueuedCheckpoints('evicted-activity');
+
+  expect(remaining).toStrictEqual([]);
+
+  // a checkpoint produced after the stream stopped is silently dropped, not queued
+  await ctx.submitter.submit('evicted-activity', createMockProgressCheckpoint());
+
+  const stillEmpty = await readQueuedCheckpoints('evicted-activity');
+
+  expect(stillEmpty).toStrictEqual([]);
 });

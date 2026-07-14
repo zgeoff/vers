@@ -1,4 +1,5 @@
 import type { Simulation } from '@vers/idle-core';
+import { SIMULATION_TIMESTEP_MS } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
@@ -7,10 +8,6 @@ import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream
 import { handleClientMessage } from './handle-client-message';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
-
-// 20 updates per second = 50ms batches
-const targetUpdatesPerSecond = 20;
-const defaultTimestep = 1000 / targetUpdatesPerSecond;
 
 export interface WorkerRuntime {
   readonly connections: ReadonlySet<MessagePort>;
@@ -28,7 +25,7 @@ interface CreateWorkerRuntimeOptions {
  * one-simulation-per-worker invariant.
  */
 export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): WorkerRuntime {
-  const timestep = options.timestep ?? defaultTimestep;
+  const timestep = options.timestep ?? SIMULATION_TIMESTEP_MS;
 
   const connections = new Set<MessagePort>();
 
