@@ -96,6 +96,11 @@ The primary health gauge is replay lag: the oldest unverified append across all 
 rates are tracked split by cause — an integrity-mismatch spike is almost always a bad deploy, not a
 cheating wave.
 
+An old sim version stays a valid replay target for a retention window (~30 days,
+[deployment](./deployment.md#retention-sweep)) before the sweep tombstones it; a sealed-salt
+forced-resolution deadline (#183) must fall inside that window, or the version needed to replay its
+resolution can already be gone.
+
 ## Applying verified progress
 
 Verified deltas apply exactly once through a cursor-guarded transaction: advance `verified_head`

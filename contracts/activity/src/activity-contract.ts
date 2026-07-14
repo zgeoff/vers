@@ -7,6 +7,7 @@ import { CheckpointSchema } from './checkpoint-schema';
 
 const CappedDataSchema = z.object({ appendedHead: z.int() });
 const CheckpointInvalidDataSchema = z.object({ reason: z.string() });
+const SimVersionProblemDataSchema = z.object({ currentSimVersion: z.string().nullable() });
 const StaleHeadDataSchema = z.object({ appendedHead: z.int() });
 const TerminalStatusDataSchema = z.object({ appendedHead: z.int(), status: ActivityStatusSchema });
 
@@ -66,7 +67,14 @@ export const activityContract = {
       path: '/activities',
       summary: 'Start an activity for an avatar owned by the caller',
     })
-    .input(z.object({ avatarID: z.string(), scopeID: z.string(), scopeType: z.string() }))
+    .input(
+      z.object({
+        avatarID: z.string(),
+        scopeID: z.string(),
+        scopeType: z.string(),
+        simVersion: z.string().optional(),
+      }),
+    )
     .output(ActivityDataSchema)
     .errors(
       defineErrors({
@@ -80,6 +88,16 @@ export const activityContract = {
           message: 'An activity is already active for this avatar',
         },
         NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
+        SIM_VERSION_EXPIRED: {
+          data: SimVersionProblemDataSchema,
+          message: 'The stamped or current sim version is past retention',
+          status: 410,
+        },
+        SIM_VERSION_UNKNOWN: {
+          data: SimVersionProblemDataSchema,
+          message: 'The stamped or current sim version is not registered',
+          status: 409,
+        },
       }),
     ),
 

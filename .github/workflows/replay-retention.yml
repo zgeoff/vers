@@ -1,0 +1,27 @@
+name: Replay retention sweep
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    name: Sweep expired sim versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Sweep
+        uses: ./.github/actions/fly-deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        with:
+          args: sweep-replay
+          fly-api-token: ${{ secrets.FLY_API_TOKEN }}

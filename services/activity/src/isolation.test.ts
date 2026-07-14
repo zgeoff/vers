@@ -4,9 +4,13 @@ import { createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from './create-activity-service';
 import { createAvatarRow } from './test-utils/create-avatar-row';
+import { createSimVersionRow } from './test-utils/create-sim-version-row';
 
 async function setupTest() {
   const db = await createTestDB();
+
+  await createSimVersionRow(db.db);
+
   const service = await createActivityService({ db: db.db });
 
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };

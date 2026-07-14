@@ -1,6 +1,9 @@
+import { createDB } from '@vers/db';
+import { updateExpiredSimVersions } from '@vers/sim-registry';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import { applyDeploy } from '../deploy/apply-deploy';
+import { applyRetentionActions } from '../deploy/apply-retention-actions';
 import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-actions';
 import { applySimVersionActions } from '../deploy/apply-sim-version-actions';
 import { buildProviderAppName } from '../deploy/build-provider-app-name';
@@ -9,6 +12,7 @@ import { checkTarget } from '../deploy/check-target';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
 import { PINNED_BUN_VERSION, loadEngineHash } from '../deploy/load-engine-hash';
+import { planRetentionActions } from '../deploy/plan-retention-actions';
 import { planScheduledMachineActions } from '../deploy/plan-scheduled-machine-actions';
 import { planSimVersionActions } from '../deploy/plan-sim-version-actions';
 import { readAppState } from '../deploy/read-app-state';
@@ -18,7 +22,9 @@ import { readProviderAppState } from '../deploy/read-provider-app-state';
 import { readSimVersionRow } from '../deploy/read-sim-version-row';
 import { runProbes } from '../deploy/run-probes';
 import type { DeployManifest, DeployTarget } from '../deploy/types';
+import { updateParkedActivities } from '../deploy/update-parked-activities';
 import { waitForDeployedSHA } from '../deploy/wait-for-deployed-sha';
+import { requireEnvVar } from '../utils/require-env-var';
 
 interface DeployCommandOptions {
   readonly app: string;
@@ -59,6 +65,15 @@ program
     const hash = await loadEngineHash();
 
     console.log(hash);
+  });
+
+program
+  .command('sweep-replay')
+  .description(
+    'tombstone expired sim versions, destroy their provider apps, and unpark newly-registered activities',
+  )
+  .action(async () => {
+    await runSweepReplay();
   });
 
 async function runDeploy(app: string): Promise<void> {
@@ -232,6 +247,36 @@ async function runVerify(): Promise<void> {
   if (failed) {
     process.exitCode = 1;
   }
+}
+
+/**
+ * Runs the replay retention sweep: tombstones every `sim_versions` row past its retention
+ * deadline (the current version is always excluded), destroys the tombstoned rows' provider apps,
+ * then unparks any activity whose stamped hash the registry now carries as active. Idempotent — a
+ * repeat run tombstones nothing already pruned, destroys nothing already gone, and unparks nothing
+ * already active.
+ */
+async function runSweepReplay(): Promise<void> {
+  const databaseURL = requireEnvVar(
+    'DATABASE_URL',
+    'the replay retention sweep reads and writes the shared database',
+  );
+
+  const db = createDB({ databaseURL });
+
+  const tombstoned = await updateExpiredSimVersions(db);
+
+  const actions = planRetentionActions(tombstoned);
+
+  await applyRetentionActions(actions);
+
+  const unparked = await updateParkedActivities(db);
+
+  await db.destroy();
+
+  console.log(
+    `sweep-replay: tombstoned ${tombstoned.length} sim version(s), destroyed ${actions.length} provider app(s), unparked ${unparked.length} activity(ies)`,
+  );
 }
 
 function requireTarget(manifest: DeployManifest, app: string): DeployTarget {
