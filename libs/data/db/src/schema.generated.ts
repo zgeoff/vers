@@ -5,7 +5,13 @@
 
 import type { ColumnType } from 'kysely';
 
-export type ActivityStatus = 'active' | 'capped' | 'quarantined' | 'rejected' | 'stopped';
+export type ActivityStatus =
+  | 'active'
+  | 'capped'
+  | 'parked'
+  | 'quarantined'
+  | 'rejected'
+  | 'stopped';
 
 export type Generated<T> =
   T extends ColumnType<infer S, infer I, infer U>

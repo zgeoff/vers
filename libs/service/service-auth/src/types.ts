@@ -3,6 +3,7 @@ export type ServiceName =
   | 'avatar'
   | 'email'
   | 'keys'
+  | 'replay'
   | 'session'
   | 'user'
   | 'verification';

@@ -10,6 +10,7 @@ export const SERVICE_URLS: Readonly<Record<ServiceName, string>> = {
   avatar: process.env['AVATAR_SERVICE_URL'] ?? 'http://localhost:3005',
   email: process.env['EMAIL_SERVICE_URL'] ?? 'http://localhost:3007',
   keys: process.env['KEYS_SERVICE_URL'] ?? 'http://localhost:3008',
+  replay: process.env['REPLAY_SERVICE_URL'] ?? 'http://localhost:3009',
   session: process.env['SESSION_SERVICE_URL'] ?? 'http://localhost:3002',
   user: process.env['USER_SERVICE_URL'] ?? 'http://localhost:3003',
   verification: process.env['VERIFICATION_SERVICE_URL'] ?? 'http://localhost:3004',
