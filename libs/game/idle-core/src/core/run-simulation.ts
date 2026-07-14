@@ -7,6 +7,7 @@ import { isProgressCheckpoint } from '../utils/is-progress-checkpoint';
 import { isStartedCheckpoint } from '../utils/is-started-checkpoint';
 import { logger } from '../utils/logger';
 import { createSimulation } from './create-simulation';
+import { SIMULATION_TIMESTEP_MS } from './simulation-timestep-ms';
 
 /**
  * @property duration - how long to run the simulation for. derive from the checkpoint data submitted by the
@@ -23,8 +24,6 @@ interface SimulationOutput {
   checkpoints: Array<ActivityCheckpoint>;
   elapsed: number;
 }
-
-const SERVER_SIMULATION_INTERVAL = 100;
 
 export async function runSimulation(
   activity: ActivityInput,
@@ -49,7 +48,7 @@ export async function runSimulation(
     }
 
     // run out simulation for our interval
-    const checkpoint = await simulation.run(SERVER_SIMULATION_INTERVAL);
+    const checkpoint = await simulation.run(SIMULATION_TIMESTEP_MS);
 
     if (!checkpoint) {
       continue;

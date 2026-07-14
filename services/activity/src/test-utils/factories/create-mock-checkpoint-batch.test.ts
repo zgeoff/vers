@@ -64,6 +64,17 @@ test('it defaults entropySource to server-key', () => {
   expect(entry?.payload.entropySource).toBe('server-key');
 });
 
+test('it scales each entry cumulative time by timeStepMs', () => {
+  const batch = createMockCheckpointBatch({
+    count: 2,
+    startPrevHash: 'hash_0',
+    startVersion: 1,
+    timeStepMs: 500,
+  });
+
+  expect(batch.map((entry) => entry.payload.time)).toStrictEqual([500, 1000]);
+});
+
 test('it merges finalPayloadOverrides into only the last entry', () => {
   const batch = createMockCheckpointBatch({
     count: 2,

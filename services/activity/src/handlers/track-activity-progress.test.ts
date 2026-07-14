@@ -18,9 +18,13 @@ import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-c
  * under the default rollback-on-dispose isolation — this suite runs against a real, committed
  * schema clone instead.
  */
-async function setupTest() {
+async function setupTest(config: { readonly simTimeCapMs?: number } = {}) {
   const db = await createTestDB({ isolation: 'schema' });
-  const service = await createActivityService({ db: db.db });
+
+  const service = await createActivityService({
+    db: db.db,
+    ...(config.simTimeCapMs !== undefined && { simTimeCapMs: config.simTimeCapMs }),
+  });
 
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
@@ -809,4 +813,542 @@ test('it lets the first appending session claim an unstamped stream', async () =
       expectedHead: 1,
     }),
   ).rejects.toMatchObject({ code: 'SESSION_EVICTED' });
+});
+
+test('it caps an append whose simulated time exceeds the accrued budget', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    simBudgetMs: 0,
+    simMeteredAt: new Date(),
+    userId: viewer.user.id,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 3_600_000,
+  });
+
+  expect(
+    client.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
+  ).rejects.toMatchObject({ code: 'ACTIVITY_CAPPED', data: { appendedHead: 0 } });
+
+  const updated = await ctx.db
+    .selectFrom('activities')
+    .selectAll()
+    .where('id', '=', started.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated.status).toBe('capped');
+  expect(updated.stoppedAt).not.toBeNil();
+  expect(updated.appendedHead).toBe(0);
+
+  const checkpoints = await ctx.db
+    .selectFrom('activityCheckpoints')
+    .selectAll()
+    .where('activityId', '=', started.id)
+    .execute();
+
+  expect(checkpoints).toBeEmpty();
+});
+
+test('it accepts a batch whose simulated time fits the wall-clock accrued budget', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    simBudgetMs: 0,
+    simMeteredAt: new Date(Date.now() - 3_600_000),
+    userId: viewer.user.id,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 1_800_000,
+  });
+
+  const result = await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  expect(result).toStrictEqual({ appendedHead: 1 });
+
+  const updated = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  // the hour of absence accrued, the half hour of simulated time was debited
+  expect(Number(updated.simBudgetMs)).toBeWithin(1_700_000, 1_900_000);
+});
+
+test('it never accrues budget past the configured cap', async () => {
+  await using ctx = await setupTest({ simTimeCapMs: 60_000 });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    simBudgetMs: 0,
+    simMeteredAt: new Date(Date.now() - 3_600_000),
+    userId: viewer.user.id,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const overCap = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 100_000,
+  });
+
+  expect(
+    client.trackActivityProgress({ activityID: started.id, checkpoints: overCap, expectedHead: 0 }),
+  ).rejects.toMatchObject({ code: 'ACTIVITY_CAPPED', data: { appendedHead: 0 } });
+});
+
+test('it accepts a batch at the cap after an hour of absence under a shrunken cap', async () => {
+  await using ctx = await setupTest({ simTimeCapMs: 60_000 });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    simBudgetMs: 0,
+    simMeteredAt: new Date(Date.now() - 3_600_000),
+    userId: viewer.user.id,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const atCap = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 50_000,
+  });
+
+  const result = await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: atCap,
+    expectedHead: 0,
+  });
+
+  expect(result).toStrictEqual({ appendedHead: 1 });
+});
+
+test('it meters simulated time across consecutive activities on one avatar', async () => {
+  await using ctx = await setupTest({ simTimeCapMs: 60_000 });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    simBudgetMs: 50_000,
+    simMeteredAt: new Date(),
+    userId: viewer.user.id,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const firstStarted = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const firstBatch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 10 }, type: 'completed' },
+    startPrevHash: firstStarted.startHash,
+    startVersion: 1,
+    timeStepMs: 40_000,
+  });
+
+  await client.trackActivityProgress({
+    activityID: firstStarted.id,
+    checkpoints: firstBatch,
+    expectedHead: 0,
+  });
+
+  const secondStarted = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const withinRemainder = createMockCheckpointBatch({
+    startChainIndex: secondStarted.startChainIndex,
+    startPrevHash: secondStarted.startHash,
+    startVersion: 1,
+    timeStepMs: 5000,
+  });
+
+  const accepted = await client.trackActivityProgress({
+    activityID: secondStarted.id,
+    checkpoints: withinRemainder,
+    expectedHead: 0,
+  });
+
+  expect(accepted).toStrictEqual({ appendedHead: 1 });
+
+  // the first activity's 40s and this stream's 5s came out of the same budget, so the remaining
+  // ~5s cannot cover another 35s of simulated time
+  const overRemainder = createMockCheckpointBatch({
+    startChainIndex: secondStarted.startChainIndex,
+    startPrevHash: withinRemainder[0]?.hash ?? '',
+    startVersion: 2,
+    timeStepMs: 20_000,
+  });
+
+  expect(
+    client.trackActivityProgress({
+      activityID: secondStarted.id,
+      checkpoints: overRemainder,
+      expectedHead: 1,
+    }),
+  ).rejects.toMatchObject({ code: 'ACTIVITY_CAPPED', data: { appendedHead: 1 } });
+});
+
+test('it sustains a live flush cadence on the default budget grant', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  let prevHash = started.startHash;
+
+  for (let head = 0; head < 4; head += 1) {
+    const batch = createMockCheckpointBatch({
+      startPrevHash: prevHash,
+      startVersion: head + 1,
+    });
+
+    const result = await client.trackActivityProgress({
+      activityID: started.id,
+      checkpoints: batch,
+      expectedHead: head,
+    });
+
+    expect(result).toStrictEqual({ appendedHead: head + 1 });
+
+    prevHash = batch[0]?.hash ?? '';
+  }
+
+  const updated = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  // the grant absorbs the 4s of simulated time that outran the test's near-zero wall clock
+  expect(Number(updated.simBudgetMs)).toBeWithin(295_000, 300_001);
+});
+
+test('it answers a resubmission after a cap with the terminal status and stop index', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    simBudgetMs: 0,
+    simMeteredAt: new Date(),
+    userId: viewer.user.id,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 3_600_000,
+  });
+
+  expect(
+    client.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
+  ).rejects.toMatchObject({ code: 'ACTIVITY_CAPPED' });
+
+  expect(
+    client.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
+  ).rejects.toMatchObject({
+    code: 'ACTIVITY_TERMINAL',
+    data: { appendedHead: 0, status: 'capped' },
+  });
+});
+
+test('it consumes no budget and leaves the meter anchor untouched on a cap trip', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    simBudgetMs: 0,
+    simMeteredAt: new Date(),
+    userId: viewer.user.id,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 3_600_000,
+  });
+
+  expect(
+    client.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
+  ).rejects.toMatchObject({ code: 'ACTIVITY_CAPPED' });
+
+  const updated = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  expect(Number(updated.simBudgetMs)).toBe(0);
+  expect(updated.simMeteredAt).toStrictEqual(avatar.simMeteredAt);
+});
+
+test('it leaves the chain anchor untouched on a cap trip', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    simBudgetMs: 0,
+    simMeteredAt: new Date(),
+    userId: viewer.user.id,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const chainBefore = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  const batch = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 3_600_000,
+  });
+
+  expect(
+    client.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
+  ).rejects.toMatchObject({ code: 'ACTIVITY_CAPPED' });
+
+  const chainAfter = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(chainAfter).toStrictEqual(chainBefore);
+});
+
+test('it rejects a batch whose time regresses within the batch with CHECKPOINT_INVALID', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    count: 2,
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  const tampered = [batch[0]!, { ...batch[1]!, payload: { ...batch[1]!.payload, time: 1 } }];
+
+  expect(
+    client.trackActivityProgress({
+      activityID: started.id,
+      checkpoints: tampered,
+      expectedHead: 0,
+    }),
+  ).rejects.toMatchObject({ code: 'CHECKPOINT_INVALID', data: { reason: 'time-regression' } });
+});
+
+test('it rejects a batch whose time regresses below the already accounted time with CHECKPOINT_INVALID', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const firstBatch = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: firstBatch,
+    expectedHead: 0,
+  });
+
+  // chain-valid continuation whose cumulative time lands below the head's accounted 1000ms
+  const regressing = createMockCheckpointBatch({
+    startPrevHash: firstBatch[0]?.hash ?? '',
+    startVersion: 2,
+    timeStepMs: 400,
+  });
+
+  expect(
+    client.trackActivityProgress({
+      activityID: started.id,
+      checkpoints: regressing,
+      expectedHead: 1,
+    }),
+  ).rejects.toMatchObject({ code: 'CHECKPOINT_INVALID', data: { reason: 'time-regression' } });
+});
+
+test('it debits the meter alongside the xp settlement on a terminal batch', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 10_000,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  const updated = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated.xp).toBe(150);
+  expect(Number(updated.simBudgetMs)).toBeWithin(289_000, 291_000);
+});
+
+test('it leaves the meter untouched on an empty batch', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    simMeteredAt: new Date(Date.now() - 3_600_000),
+    userId: viewer.user.id,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const result = await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: [],
+    expectedHead: 0,
+  });
+
+  expect(result).toStrictEqual({ appendedHead: 0 });
+
+  const updated = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  expect(Number(updated.simBudgetMs)).toBe(300_000);
+  expect(updated.simMeteredAt).toStrictEqual(avatar.simMeteredAt);
 });

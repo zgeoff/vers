@@ -5,9 +5,10 @@ import { ActivityStatusSchema } from './activity-status-schema';
 import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
 
+const CappedDataSchema = z.object({ appendedHead: z.int() });
 const CheckpointInvalidDataSchema = z.object({ reason: z.string() });
 const StaleHeadDataSchema = z.object({ appendedHead: z.int() });
-const TerminalStatusDataSchema = z.object({ status: ActivityStatusSchema });
+const TerminalStatusDataSchema = z.object({ appendedHead: z.int(), status: ActivityStatusSchema });
 
 /**
  * The activities service's API: every procedure is authed and owner-scoped through the caller's
@@ -35,6 +36,7 @@ export const activityContract = {
         activity: ActivityDataSchema,
         anchor: CheckpointSchema.nullable(),
         appendedHead: z.int(),
+        serverTime: z.date(),
         verifiedHead: z.int(),
       }),
     )
@@ -111,6 +113,11 @@ export const activityContract = {
     .output(z.object({ appendedHead: z.int() }))
     .errors(
       defineErrors({
+        ACTIVITY_CAPPED: {
+          data: CappedDataSchema,
+          message: "Checkpoint batch exceeds the avatar's accrued offline-progress budget",
+          status: 409,
+        },
         ACTIVITY_TERMINAL: {
           data: TerminalStatusDataSchema,
           message: 'The activity has reached a terminal status and accepts no further appends',

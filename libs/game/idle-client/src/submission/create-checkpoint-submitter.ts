@@ -45,6 +45,19 @@ interface CreateCheckpointSubmitterOptions {
   readonly client: Pick<ActivityServiceClient, 'trackActivityProgress'>;
 
   /**
+   * Called after every successful flush with the server's fresh appended head — the caller's
+   * authoritative last-contact signal, anchoring its view of the offline-progress budget.
+   */
+  readonly onAcked?: (activityID: string, appendedHead: number) => void;
+
+  /**
+   * Called once the server caps an activity, with the exact head the stream stopped at — the
+   * index the caller rebases from after a resync. Fires whether this submitter's own batch
+   * tripped the cap or a resend answered with the already-capped status.
+   */
+  readonly onCapped?: (activityID: string, appendedHead: number) => void;
+
+  /**
    * Called once a `CHECKPOINT_INVALID` response stops an activity's stream, so the caller can
    * notify connected tabs and report the rejection.
    */
@@ -63,8 +76,9 @@ interface CreateCheckpointSubmitterOptions {
  * in-flight batch per activity. Response handling follows the activity service's response
  * contract: a fresh head on success or `CONFLICT` advances the cursor and confirms the queue up to
  * it; `CHECKPOINT_INVALID` and `NOT_FOUND` stop the stream (keeping and discarding its queue rows,
- * respectively); anything else — `UNAUTHORIZED` or a transport failure — holds the queue untouched
- * for the next flush tick.
+ * respectively); `ACTIVITY_CAPPED`, `ACTIVITY_TERMINAL`, and `SESSION_EVICTED` stop the stream and
+ * discard its rows — the server accepts nothing further for it; anything else — `UNAUTHORIZED` or
+ * a transport failure — holds the queue untouched for the next flush tick.
  */
 export function createCheckpointSubmitter(
   options: Readonly<CreateCheckpointSubmitterOptions>,
@@ -113,11 +127,42 @@ export function createCheckpointSubmitter(
         await removeConfirmedCheckpoints(activityID, result.appendedHead);
 
         state.expectedHead = result.appendedHead;
+        options.onAcked?.(activityID, result.appendedHead);
 
         return;
       }
 
       if (!isDefinedError(error)) {
+        return;
+      }
+
+      if (error.code === 'ACTIVITY_CAPPED') {
+        state.invalid = true;
+
+        await removeQueuedCheckpoints(activityID);
+
+        options.onCapped?.(activityID, error.data.appendedHead);
+
+        return;
+      }
+
+      if (error.code === 'ACTIVITY_TERMINAL') {
+        state.invalid = true;
+
+        await removeQueuedCheckpoints(activityID);
+
+        if (error.data.status === 'capped') {
+          options.onCapped?.(activityID, error.data.appendedHead);
+        }
+
+        return;
+      }
+
+      if (error.code === 'SESSION_EVICTED') {
+        state.invalid = true;
+
+        await removeQueuedCheckpoints(activityID);
+
         return;
       }
 

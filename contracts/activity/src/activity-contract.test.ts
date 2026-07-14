@@ -35,6 +35,13 @@ test('it declares the single-writer errors with explicit statuses on trackActivi
   expect(errorMap.SESSION_EVICTED?.status).toBe(403);
 });
 
+test('it declares a bespoke ACTIVITY_CAPPED with an explicit status on trackActivityProgress', () => {
+  const errorMap = activityContract.trackActivityProgress['~orpc'].errorMap;
+
+  expect(errorMap).toContainKey('ACTIVITY_CAPPED');
+  expect(errorMap.ACTIVITY_CAPPED?.status).toBe(409);
+});
+
 test('it generates a valid OpenAPI document from the activity contract', async () => {
   const generator = new OpenAPIGenerator({
     schemaConverters: [new ZodToJsonSchemaConverter()],

@@ -1,5 +1,6 @@
 import type { ActivityData, Checkpoint } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
+import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 import { toActivityData } from './to-activity-data';
@@ -21,13 +22,15 @@ interface GetLatestActivityProgressResult {
   readonly activity: ActivityData;
   readonly anchor: Checkpoint | null;
   readonly appendedHead: number;
+  readonly serverTime: Date;
   readonly verifiedHead: number;
 }
 
 /**
- * Returns an avatar's most recent activity (regardless of status) with its resume cursors, and
- * the checkpoint the client resumes from — null while `verifiedHead` is still 0, since the client
- * then resumes from the start record instead.
+ * Returns an avatar's most recent activity (regardless of status) with its resume cursors, the
+ * checkpoint the client resumes from — null while `verifiedHead` is still 0, since the client
+ * then resumes from the start record instead — and the database's current time, read in the same
+ * query as the row so the client computes its offline gap against the clock that meters it.
  */
 export async function getLatestActivityProgress(
   db: Kysely<DB>,
@@ -41,6 +44,10 @@ export async function getLatestActivityProgress(
     .selectFrom('activities')
     .innerJoin('avatars', 'avatars.id', 'activities.avatarId')
     .selectAll('activities')
+
+    // Cast to the row's timestamp column type so the driver parses the clock and the activity's
+    // timestamps identically regardless of session timezone — clients subtract the two.
+    .select(sql<Date>`now()::timestamp`.as('serverTime'))
     .where('activities.avatarId', '=', opts.input.avatarID)
     .where('avatars.userId', '=', opts.context.actingUserId)
     .orderBy('activities.startedAt', 'desc')
@@ -64,6 +71,7 @@ export async function getLatestActivityProgress(
     activity: toActivityData(row),
     anchor: anchor === undefined ? null : toCheckpointData(anchor),
     appendedHead: row.appendedHead,
+    serverTime: row.serverTime,
     verifiedHead: row.verifiedHead,
   };
 }
