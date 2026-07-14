@@ -739,6 +739,7 @@
         "@zgeoff/dbhub": "catalog:",
         "commander": "catalog:",
         "execa": "catalog:",
+        "kysely": "catalog:",
         "ora": "catalog:",
         "postgres": "catalog:",
         "tiny-invariant": "catalog:",
