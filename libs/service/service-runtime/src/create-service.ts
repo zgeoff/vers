@@ -165,8 +165,15 @@ async function createLogShipper(serviceName: string): Promise<OTLPLogStream> {
 async function createErrorReporter(dsn: string): Promise<(error: unknown) => void> {
   const sentry = await import('@sentry/bun');
 
-  // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes
-  sentry.init({ dsn, dataCollection: { userInfo: true }, tracesSampleRate: 0 });
+  // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes.
+  // Client reports are off: the error backend discards them, and their 60s flush keeps
+  // otherwise idle infrastructure awake.
+  sentry.init({
+    dsn,
+    dataCollection: { userInfo: true },
+    tracesSampleRate: 0,
+    sendClientReports: false,
+  });
 
   return (error) => {
     sentry.withScope((scope) => {
