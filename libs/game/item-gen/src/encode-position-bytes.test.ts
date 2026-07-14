@@ -63,6 +63,12 @@ test('it rejects a negative chain index', () => {
   ).toThrowWithMessage(Error, /chainIndex must be a non-negative integer/);
 });
 
+test('it rejects an identifier with malformed unicode', () => {
+  expect(() =>
+    encodePositionBytes({ kind: 'craft', avatarID: 'a\uD800b', position: 1 }),
+  ).toThrowWithMessage(Error, /avatarID must be well-formed unicode/);
+});
+
 test('it rejects a fractional ordinal', () => {
   expect(() =>
     encodePositionBytes({

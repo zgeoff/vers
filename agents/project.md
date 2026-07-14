@@ -2,7 +2,7 @@
 
 Project-level additions to the shared function-naming taxonomy, under the same rules.
 
-**Pure producers:**
+**Effectful** — consuming draws advances the supplied stream's cursor:
 
 | Prefix | Contract                                                     | Example              |
 | ------ | ------------------------------------------------------------ | -------------------- |

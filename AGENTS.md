@@ -157,7 +157,7 @@ implementing that algorithm — forcing list verbs onto textbook terms hides the
 
 Project-level additions to the shared function-naming taxonomy, under the same rules.
 
-**Pure producers:**
+**Effectful** — consuming draws advances the supplied stream's cursor:
 
 | Prefix | Contract                                                     | Example              |
 | ------ | ------------------------------------------------------------ | -------------------- |

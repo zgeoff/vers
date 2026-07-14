@@ -9,3 +9,10 @@ test('it resolves the registered tables for a shipped content version', () => {
 test('it rejects an unknown content version and names it', () => {
   expect(() => getTables('nope')).toThrowWithMessage(Error, /unknown content version: nope/);
 });
+
+test('it rejects a version matching an inherited object key', () => {
+  expect(() => getTables('constructor')).toThrowWithMessage(
+    Error,
+    /unknown content version: constructor/,
+  );
+});

@@ -1,5 +1,6 @@
 import { hexToBytes } from '@noble/hashes/utils.js';
 import { buildRollDigest } from '@vers/roll-crypto';
+import invariant from 'tiny-invariant';
 import { buildRollStream } from './build-roll-stream';
 import { encodePositionBytes } from './encode-position-bytes';
 import type { RollPosition, RollStream } from './types';
@@ -12,6 +13,8 @@ const POSITION_STREAM_DOMAIN = 'vers/roll-stream/position/v1';
  * rebuilding from equal inputs reproduces the identical draw sequence.
  */
 export function buildPositionStream(avatarKey: Uint8Array, position: RollPosition): RollStream {
+  invariant(avatarKey.length > 0, 'avatar key must not be empty');
+
   const digest = buildRollDigest(avatarKey, encodePositionBytes(position));
 
   return buildRollStream(hexToBytes(digest), POSITION_STREAM_DOMAIN);

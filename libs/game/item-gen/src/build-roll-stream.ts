@@ -18,6 +18,9 @@ const BLOCK_SIZE = 32;
  * entries in given order — callers own deterministic entry ordering.
  */
 export function buildRollStream(seed: Uint8Array, domain: string): RollStream {
+  // Snapshot the seed so a caller mutating its array cannot fork draws already promised.
+  const ikm = Uint8Array.from(seed);
+
   let block = new Uint8Array(0);
 
   let blockIndex = 0;
@@ -25,7 +28,7 @@ export function buildRollStream(seed: Uint8Array, domain: string): RollStream {
 
   const readByte = (): number => {
     if (cursor === block.length) {
-      block = hkdf(sha256, seed, undefined, utf8ToBytes(`${domain}|${blockIndex}`), BLOCK_SIZE);
+      block = hkdf(sha256, ikm, undefined, utf8ToBytes(`${domain}|${blockIndex}`), BLOCK_SIZE);
       blockIndex += 1;
       cursor = 0;
     }

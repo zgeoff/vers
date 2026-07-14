@@ -11,7 +11,9 @@ const TABLES_BY_VERSION: Readonly<Record<string, LootTables>> = {
  * stays loadable, so an unknown version here is a bug, not input.
  */
 export function getTables(contentVersion: string): LootTables {
-  const tables = TABLES_BY_VERSION[contentVersion];
+  const tables = Object.hasOwn(TABLES_BY_VERSION, contentVersion)
+    ? TABLES_BY_VERSION[contentVersion]
+    : undefined;
 
   invariant(tables, `unknown content version: ${contentVersion}`);
 

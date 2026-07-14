@@ -23,7 +23,7 @@ export function buildAffixPool(
     )
     .filter((affix) => !protectedGroupIDs.has(affix.groupID))
     .map((affix) => {
-      const factor = reweights[affix.id];
+      const factor = Object.hasOwn(reweights, affix.id) ? reweights[affix.id] : undefined;
 
       if (factor === undefined) {
         return affix;

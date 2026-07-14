@@ -50,6 +50,17 @@ test('it yields identical draws for equal seed and domain', () => {
   );
 });
 
+test('it keeps drawing from the seed as constructed when the caller mutates it', () => {
+  const seed = Uint8Array.from({ length: 32 }, (_, i) => i);
+  const stream = buildRollStream(seed, 'test/domain');
+
+  seed.fill(0);
+
+  const draws = Array.from({ length: 8 }, () => stream.rollRange(0, 255));
+
+  expect(draws).toStrictEqual([195, 28, 221, 36, 227, 214, 183, 60]);
+});
+
 test('it diverges across domains for the same seed', () => {
   const stream = buildRollStream(
     Uint8Array.from({ length: 32 }, (_, i) => i),
