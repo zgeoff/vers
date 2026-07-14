@@ -5,6 +5,7 @@ import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-
 import { checkTarget } from '../deploy/check-target';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
+import { loadEngineHash } from '../deploy/load-engine-hash';
 import { planScheduledMachineActions } from '../deploy/plan-scheduled-machine-actions';
 import { readAppState } from '../deploy/read-app-state';
 import { readChangesSince } from '../deploy/read-changes-since';
@@ -42,6 +43,15 @@ program
     const manifest = await loadDeployManifest();
 
     console.log(JSON.stringify(manifest.apps.map((target) => target.app)));
+  });
+
+program
+  .command('engine-hash')
+  .description('print the canonical sim engine bundle hash')
+  .action(async () => {
+    const hash = await loadEngineHash();
+
+    console.log(hash);
   });
 
 await program.parseAsync();
