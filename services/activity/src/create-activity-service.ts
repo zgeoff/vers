@@ -9,10 +9,11 @@ import { buildActivityRouter } from './build-router';
 
 /**
  * Placeholder version stamps every new activity is minted against; real version dispatch is a
- * later change. Factory-injectable so tests can exercise a specific version pair.
+ * later change. Factory-injectable so tests can exercise specific versions.
  */
 const SIM_VERSION = '0.0.0-dev';
 const CONTENT_VERSION = '0.0.0-dev';
+const KEY_VERSION = 1;
 
 interface CreateActivityServiceConfig {
   readonly contentVersion?: string;
@@ -21,6 +22,7 @@ interface CreateActivityServiceConfig {
    * Injected only in tests, to run the service inside the test's own transaction.
    */
   readonly db?: Kysely<DB>;
+  readonly keyVersion?: number;
 
   /**
    * Injected only in tests, to trip the offline-progress cap without simulating a day.
@@ -40,6 +42,7 @@ export function createActivityService(
       buildActivityRouter({
         contentVersion: config.contentVersion ?? CONTENT_VERSION,
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
+        keyVersion: config.keyVersion ?? KEY_VERSION,
         simTimeCapMs: config.simTimeCapMs ?? OFFLINE_PROGRESS_CAP_MS,
         simVersion: config.simVersion ?? SIM_VERSION,
       }),

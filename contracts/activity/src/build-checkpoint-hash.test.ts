@@ -4,7 +4,7 @@ import { buildCheckpointHash } from './build-checkpoint-hash';
 test('it builds a deterministic hex digest for a given input', () => {
   const input = {
     chainIndex: 1,
-    entropySource: 'chain',
+    entropySource: 'server-key',
     nextSeed: 'seed_1',
     prevHash: 'hash_0',
     seed: 'seed_0',
@@ -20,7 +20,7 @@ test('it builds a deterministic hex digest for a given input', () => {
 test('it produces different hashes for different versions', () => {
   const input = {
     chainIndex: 1,
-    entropySource: 'chain',
+    entropySource: 'server-key',
     nextSeed: 'seed_1',
     prevHash: 'hash_0',
     seed: 'seed_0',
@@ -35,7 +35,7 @@ test('it produces different hashes for different versions', () => {
 
 test('it produces different hashes for different chain indices', () => {
   const input = {
-    entropySource: 'chain',
+    entropySource: 'server-key',
     nextSeed: 'seed_1',
     prevHash: 'hash_0',
     seed: 'seed_0',
@@ -60,15 +60,15 @@ test('it produces different hashes for different entropy sources', () => {
     version: 1,
   };
 
-  expect(buildCheckpointHash({ ...input, entropySource: 'chain' })).not.toBe(
-    buildCheckpointHash({ ...input, entropySource: 'beacon' }),
+  expect(buildCheckpointHash({ ...input, entropySource: 'server-key' })).not.toBe(
+    buildCheckpointHash({ ...input, entropySource: 'device-key' }),
   );
 });
 
 test('it produces a 64-character hex digest', () => {
   const hash = buildCheckpointHash({
     chainIndex: 1,
-    entropySource: 'chain',
+    entropySource: 'server-key',
     nextSeed: 'seed_1',
     prevHash: 'hash_0',
     seed: 'seed_0',
@@ -83,7 +83,7 @@ test('it produces a 64-character hex digest', () => {
 test('it derives the frozen canonical digest for a known input', () => {
   const hash = buildCheckpointHash({
     chainIndex: 1,
-    entropySource: 'chain',
+    entropySource: 'server-key',
     nextSeed: 'seed_1',
     prevHash: 'hash_0',
     seed: 'seed_0',
@@ -92,5 +92,5 @@ test('it derives the frozen canonical digest for a known input', () => {
     version: 1,
   });
 
-  expect(hash).toBe('a2a741f37fd2cffb06c6b5e1ad737106670c1203d89206040b5260de4b632408');
+  expect(hash).toBe('c51bad8035095b3d570dd972bd05c7a686b403b2f7db11dbe0fc83e6e9e4150e');
 });

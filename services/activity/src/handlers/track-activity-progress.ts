@@ -49,24 +49,24 @@ interface TrackActivityProgressOpts {
 }
 
 /**
- * Appends a checkpoint batch to an active activity owned by the acting user. The batch's internal
- * contiguity, hash chain, and time monotonicity are validated up front; the head-row
- * compare-and-swap inside the transaction is the actual serialization point — a losing race
- * re-reads the current head and reports NOT_FOUND (activity gone), ACTIVITY_TERMINAL (a terminal
- * status accepts no appends), SESSION_EVICTED (another session took over as the writer — fatal,
- * the caller discards its pending queue), or CONFLICT (a retryable stale head). Only the
- * activity's stamped writer session may append; an unstamped activity is claimed by the first
- * appending session. When the batch's last checkpoint is terminal (completed or failed), the same
- * transaction claims the activity's terminal transition and settles the avatar's xp/level from
- * that checkpoint's final rewards total — the claim guards against a duplicate terminal
- * resubmission double-applying.
+ * Appends a checkpoint batch to an active activity owned by the acting user.
  *
- * Every accepted batch also debits the avatar's simulated-time meter: the budget refills at
- * wall-clock rate since it was last banked (never past the configured cap) and the batch's
- * simulated-time delta — the last checkpoint's cumulative `time` minus the head row's already
- * accounted time — is consumed from it. A batch whose delta exceeds the accrued budget is rejected
- * whole and the activity claims the terminal `capped` transition at its current head, which the
- * ACTIVITY_CAPPED error carries as the exact index the caller rebases from after a resync.
+ * The head-row compare-and-swap inside the transaction is the serialization point: a losing race
+ * re-reads the head and resolves to NOT_FOUND, ACTIVITY_TERMINAL, SESSION_EVICTED (fatal — the
+ * caller discards its pending queue), or CONFLICT (a retryable stale head).
+ *
+ * Only the stamped writer session may append; an unstamped activity is claimed by the first
+ * appending session.
+ *
+ * A terminal last checkpoint (completed or failed) claims the activity's terminal transition in
+ * the same transaction and settles the avatar's xp/level from its final rewards total — the claim
+ * guards a duplicate resubmission against double-applying.
+ *
+ * Every accepted batch debits the avatar's simulated-time meter: the budget refills at wall-clock
+ * rate up to the cap, and the batch's delta — the last checkpoint's cumulative `time` minus the
+ * head row's accounted time — is consumed. A batch whose delta exceeds the accrued budget is
+ * rejected whole; the activity claims the terminal `capped` transition at its current head, and
+ * ACTIVITY_CAPPED carries that head as the index the caller rebases from after a resync.
  */
 export async function trackActivityProgress(
   deps: TrackActivityProgressDeps,

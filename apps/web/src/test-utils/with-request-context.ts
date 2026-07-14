@@ -76,7 +76,6 @@ export async function withRequestContext<T>(
 }
 
 function snapshotCookies(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- FakeSession's data object is the fake session store's own deliberately mutable state
   sessions: ReadonlyMap<string, FakeSession>,
 ): Record<string, Record<string, unknown> | undefined> {
   const cookies: Record<string, Record<string, unknown> | undefined> = {};

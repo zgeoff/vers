@@ -72,6 +72,7 @@ the function's shape without opening it.
 | `parse`                       | unstructured input → structure, invalid input reported                    | `parseSource`       |
 | `encode`                      | structure → its defined compact or wire form, reversed by `decode`        | `encodeState`       |
 | `decode`                      | `encode`'s output → the original structure, malformed input reported      | `decodeState`       |
+| `derive`                      | one-way cryptographic derivation from secret material                     | `deriveAvatarKey`   |
 | `plan`                        | compute an action without performing it                                   | `planGapEdit`       |
 | `pick`                        | select among known alternatives                                           | `pickMode`          |
 | `find`                        | search that can miss — null/undefined on miss                             | `findPrevious`      |
@@ -103,6 +104,7 @@ the function's shape without opening it.
 | `write`    | persist to the filesystem                                                                                                               | `writeOutput`     |
 | `remove`   | delete a resource                                                                                                                       | `removeStaleDist` |
 | `update`   | mutate existing state or resource in place                                                                                              | `updateIndex`     |
+| `upsert`   | single-statement insert-or-update keyed by a natural or composite key, refreshing the conflicting row's columns in place                | `upsertUser`      |
 | `set`      | assign a store's named state slice wholesale — the store-setter idiom; partial mutation is `update`                                     | `setSelectedNode` |
 | `print`    | write to stdout/stderr                                                                                                                  | `printHelp`       |
 | `run`      | execute a subprocess, task, or whole pipeline                                                                                           | `runCLI`          |

@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { EntropySourceSchema } from './entropy-source-schema';
 
 /**
  * A checkpoint's payload: an open record so the simulation can carry whatever state it needs,
@@ -8,7 +9,7 @@ import * as z from 'zod';
 export const CheckpointPayloadSchema = z
   .looseObject({
     chainIndex: z.int().min(0),
-    entropySource: z.string(),
+    entropySource: EntropySourceSchema,
     nextSeed: z.string(),
     seed: z.string(),
     time: z.number(),

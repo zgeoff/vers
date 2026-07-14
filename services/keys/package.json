@@ -1,0 +1,31 @@
+{
+  "name": "@vers/service-keys",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "bun --watch src/serve.ts",
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@noble/hashes": "catalog:",
+    "@orpc/server": "catalog:",
+    "@vers/contract-keys": "workspace:*",
+    "@vers/roll-crypto": "workspace:*",
+    "@vers/service-runtime": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@orpc/contract": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@vers/service-test-utils": "workspace:*",
+    "@vers/test-utils": "workspace:*",
+    "@zgeoff/bun-test-extended": "catalog:",
+    "typescript": "catalog:"
+  }
+}

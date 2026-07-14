@@ -16,6 +16,7 @@ import { toActivityData } from './to-activity-data';
 interface StartActivityDeps {
   readonly contentVersion: string;
   readonly db: Kysely<DB>;
+  readonly keyVersion: number;
   readonly simVersion: string;
 }
 
@@ -108,6 +109,7 @@ export async function startActivity(
   const startHash = buildStartHash({
     activityID: id,
     contentVersion: deps.contentVersion,
+    keyVersion: deps.keyVersion,
     seed,
     simVersion: deps.simVersion,
   });
@@ -120,6 +122,7 @@ export async function startActivity(
         buildSnapshot,
         contentVersion: deps.contentVersion,
         id,
+        keyVersion: deps.keyVersion,
         lastHash: startHash,
         scopeId: opts.input.scopeID,
         scopeType: opts.input.scopeType,
