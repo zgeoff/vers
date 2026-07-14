@@ -116,6 +116,17 @@ export interface Sessions {
   verified: Generated<boolean>;
 }
 
+export interface SimVersions {
+  bunVersion: string;
+  createdAt: Generated<Timestamp>;
+  deployedAt: Generated<Timestamp>;
+  engineHash: string;
+  imageRef: string;
+  providerUrl: string;
+  retainedUntil: Timestamp;
+  status: Generated<string>;
+}
+
 export interface Users {
   createdAt: Generated<Timestamp>;
   email: string;
@@ -153,6 +164,7 @@ export interface DB {
   consumedTransactionTokens: ConsumedTransactionTokens;
   pendingTransactions: PendingTransactions;
   sessions: Sessions;
+  simVersions: SimVersions;
   users: Users;
   verifications: Verifications;
 }

@@ -39,3 +39,11 @@ export interface GrantOnce {
   readonly key: string;
   readonly kind: string;
 }
+
+/**
+ * Payload shape for `replaySegment`'s SIM_VERSION_MISMATCH: the provider's own baked engine hash,
+ * so the caller can tell which version actually answered.
+ */
+export interface SimVersionMismatchPayload {
+  readonly data: { readonly providerSimVersion: string };
+}

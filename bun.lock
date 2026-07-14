@@ -206,6 +206,23 @@
         "typescript": "catalog:",
       },
     },
+    "contracts/replay": {
+      "name": "@vers/contract-replay",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@vers/contract-base": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@orpc/openapi": "catalog:",
+        "@orpc/zod": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "contracts/session": {
       "name": "@vers/contract-session",
       "version": "0.0.0",
@@ -340,6 +357,23 @@
         "kysely-codegen": "catalog:",
         "kysely-ctl": "catalog:",
         "pg": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "libs/data/sim-registry": {
+      "name": "@vers/sim-registry",
+      "version": "0.0.0",
+      "dependencies": {
+        "@vers/db": "workspace:*",
+        "kysely": "catalog:",
+      },
+      "devDependencies": {
+        "@faker-js/faker": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
         "typescript": "catalog:",
       },
     },
@@ -814,15 +848,22 @@
       "name": "@vers/service-replay",
       "version": "0.0.0",
       "dependencies": {
+        "@orpc/server": "catalog:",
+        "@vers/contract-replay": "workspace:*",
         "@vers/db": "workspace:*",
         "@vers/idle-core": "workspace:*",
+        "@vers/service-runtime": "workspace:*",
+        "@vers/utils": "workspace:*",
         "kysely": "catalog:",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@faker-js/faker": "catalog:",
+        "@orpc/contract": "catalog:",
         "@paralleldrive/cuid2": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
+        "@vers/game-utils": "workspace:*",
         "@vers/service-test-utils": "workspace:*",
         "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
@@ -2298,6 +2339,8 @@
 
     "@vers/contract-keys": ["@vers/contract-keys@workspace:contracts/keys"],
 
+    "@vers/contract-replay": ["@vers/contract-replay@workspace:contracts/replay"],
+
     "@vers/contract-session": ["@vers/contract-session@workspace:contracts/session"],
 
     "@vers/contract-user": ["@vers/contract-user@workspace:contracts/user"],
@@ -2355,6 +2398,8 @@
     "@vers/service-utils": ["@vers/service-utils@workspace:libs/service/service-utils"],
 
     "@vers/service-verification": ["@vers/service-verification@workspace:services/verification"],
+
+    "@vers/sim-registry": ["@vers/sim-registry@workspace:libs/data/sim-registry"],
 
     "@vers/styled-system": ["@vers/styled-system@workspace:libs/design/styled-system"],
 
