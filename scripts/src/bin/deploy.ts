@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { execa } from 'execa';
 import { applyDeploy } from '../deploy/apply-deploy';
 import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-actions';
+import { checkParkedApp } from '../deploy/check-parked-app';
 import { checkTarget } from '../deploy/check-target';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
@@ -138,6 +139,7 @@ async function runVerify(): Promise<void> {
     const findings = [
       ...checkTarget(target, state, changes),
       ...(await runProbes(target.probes ?? [])),
+      ...(await checkParkedApp(target.app, state)),
     ];
 
     if (findings.length === 0) {
