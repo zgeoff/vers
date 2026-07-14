@@ -1,8 +1,7 @@
 import { authedRoute, defineErrors } from '@vers/contract-base';
 import * as z from 'zod';
-import { ActivityCheckpointSchema } from './activity-checkpoint-schema';
-import { ActivityInputSchema } from './activity-input-schema';
-import { AvatarDataSchema } from './avatar-data-schema';
+import { ReplaySegmentInputSchema } from './replay-segment-input-schema';
+import { ReplaySegmentOutputSchema } from './replay-segment-output-schema';
 
 const SimVersionMismatchDataSchema = z.object({ providerSimVersion: z.string() });
 
@@ -17,27 +16,8 @@ export const replayContract = {
       path: '/replay-segment',
       summary: "Replay a simulation segment against this provider's baked engine",
     })
-    .input(
-      z.object({
-        activity: ActivityInputSchema,
-        avatar: AvatarDataSchema,
-        duration: z.number(),
-
-        /**
-         * Called cross-version — today's dispatcher can call a provider frozen weeks ago — so this
-         * field only ever evolves additively.
-         */
-        protocol: z.literal(1),
-        simVersion: z.string(),
-        stopAtState: z.string().optional(),
-      }),
-    )
-    .output(
-      z.object({
-        checkpoints: z.array(ActivityCheckpointSchema),
-        elapsed: z.number(),
-      }),
-    )
+    .input(ReplaySegmentInputSchema)
+    .output(ReplaySegmentOutputSchema)
     .errors(
       defineErrors({
         SIM_VERSION_MISMATCH: {

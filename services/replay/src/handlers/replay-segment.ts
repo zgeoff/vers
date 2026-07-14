@@ -1,4 +1,8 @@
-import type { ActivityCheckpoint } from '@vers/contract-replay';
+import type {
+  ActivityCheckpoint,
+  ReplaySegmentInput,
+  ReplaySegmentOutput,
+} from '@vers/contract-replay';
 import { ActivityCheckpointType, ActivityFailureAction, ActivityType } from '@vers/idle-core';
 import type {
   ActivityCheckpoint as EngineActivityCheckpoint,
@@ -6,7 +10,7 @@ import type {
 } from '@vers/idle-core';
 import { runSimulation } from '@vers/idle-core/replay';
 import { UnreachableCodeError } from '@vers/utils';
-import type { ReplaySegmentInput, ReplaySegmentOutput, SimVersionMismatchPayload } from '../types';
+import type { SimVersionMismatchPayload } from '../types';
 
 interface ReplaySegmentDeps {
   readonly simVersion: string;

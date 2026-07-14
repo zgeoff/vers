@@ -1,4 +1,3 @@
-import type { ActivityCheckpoint, ActivityInput, AvatarData } from '@vers/contract-replay';
 import type { ActivityStatus } from '@vers/db';
 
 /**
@@ -39,27 +38,6 @@ export interface ReplayFrontier {
 export interface GrantOnce {
   readonly key: string;
   readonly kind: string;
-}
-
-/**
- * Wire input to the `replaySegment` provider endpoint: everything `runSimulation` needs to replay
- * a segment from a `Started` snapshot.
- */
-export interface ReplaySegmentInput {
-  readonly activity: ActivityInput;
-  readonly avatar: AvatarData;
-  readonly duration: number;
-  readonly protocol: 1;
-  readonly simVersion: string;
-  readonly stopAtState?: string | undefined;
-}
-
-/**
- * Wire output of the `replaySegment` provider endpoint.
- */
-export interface ReplaySegmentOutput {
-  readonly checkpoints: Array<ActivityCheckpoint>;
-  readonly elapsed: number;
 }
 
 /**

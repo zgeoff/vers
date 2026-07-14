@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
+import type { ReplaySegmentInput } from '@vers/contract-replay';
 import { buildStateFromSeed } from '@vers/game-utils';
-import type { ReplaySegmentInput } from '../../types';
 
 /**
  * A plain, unpersisted `replaySegment` request with faker-generated defaults, shaped like the

@@ -12,3 +12,7 @@ export type { EquipmentWeapon } from './equipment-weapon-schema';
 export { EquipmentWeaponSchema } from './equipment-weapon-schema';
 export type { ReplayContract } from './replay-contract';
 export { replayContract } from './replay-contract';
+export type { ReplaySegmentInput } from './replay-segment-input-schema';
+export { ReplaySegmentInputSchema } from './replay-segment-input-schema';
+export type { ReplaySegmentOutput } from './replay-segment-output-schema';
+export { ReplaySegmentOutputSchema } from './replay-segment-output-schema';
