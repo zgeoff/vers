@@ -15,12 +15,11 @@ interface BuildActivityRouterDeps {
   readonly db: Kysely<DB>;
   readonly keyVersion: number;
   readonly simTimeCapMs: number;
-  readonly simVersion: string;
 }
 
 /**
  * Assembles the activities service's oRPC router, closing each handler over the shared db client
- * (and, for `startActivity`, the version stamps new activities are minted against; for
+ * (and, for `startActivity`, the content and key versions new activities are minted against; for
  * `trackActivityProgress`, the offline-progress budget ceiling).
  */
 export function buildActivityRouter(deps: BuildActivityRouterDeps) {

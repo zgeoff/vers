@@ -2,22 +2,24 @@ import { createId } from '@paralleldrive/cuid2';
 import type { ActivityData, BuildSnapshot } from '@vers/contract-activity';
 import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
+import { findCurrentSimVersion, findSimVersion } from '@vers/sim-registry';
 import type { Kysely } from 'kysely';
 import type {
   ActiveActivityConflictPayload,
   EmptyErrorPayload,
   MissingSessionPayload,
+  SimVersionProblemPayload,
 } from '../types';
 import { toActivityData } from './to-activity-data';
 
 /**
- * Db handle plus the version stamps every new activity is minted against.
+ * Db handle plus the content and key versions every new activity is minted against — the sim
+ * version is resolved per request from the registry, never a fixed dep.
  */
 interface StartActivityDeps {
   readonly contentVersion: string;
   readonly db: Kysely<DB>;
   readonly keyVersion: number;
-  readonly simVersion: string;
 }
 
 /**
@@ -32,12 +34,15 @@ interface StartActivityOpts {
     readonly CHAIN_QUARANTINED: (payload: EmptyErrorPayload) => Error;
     readonly CONFLICT: (payload: ActiveActivityConflictPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
+    readonly SIM_VERSION_EXPIRED: (payload: SimVersionProblemPayload) => Error;
+    readonly SIM_VERSION_UNKNOWN: (payload: SimVersionProblemPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
   readonly input: {
     readonly avatarID: string;
     readonly scopeID: string;
     readonly scopeType: string;
+    readonly simVersion?: string | undefined;
   };
 }
 
@@ -82,6 +87,8 @@ export async function startActivity(
     throw opts.errors.CHAIN_QUARANTINED({ data: {} });
   }
 
+  const simVersion = await resolveSimVersionStamp(deps.db, opts.input.simVersion, opts.errors);
+
   const id = `act_${createId()}`;
   const genesisSeed = createGenesisSeed();
 
@@ -111,7 +118,7 @@ export async function startActivity(
     contentVersion: deps.contentVersion,
     keyVersion: deps.keyVersion,
     seed,
-    simVersion: deps.simVersion,
+    simVersion,
   });
 
   try {
@@ -127,7 +134,7 @@ export async function startActivity(
         scopeId: opts.input.scopeID,
         scopeType: opts.input.scopeType,
         seed,
-        simVersion: deps.simVersion,
+        simVersion,
         startChainIndex: chain.appendedChainIndex,
         startHash,
         writerSessionId: opts.context.actingSessionId,
@@ -150,6 +157,54 @@ export async function startActivity(
 
     throw opts.errors.CONFLICT({ data: { activity: toActivityData(existing) } });
   }
+}
+
+/**
+ * Errors `resolveSimVersionStamp` can throw — a subset of the handler's full error map.
+ */
+interface SimVersionStampErrors {
+  readonly SIM_VERSION_EXPIRED: (payload: SimVersionProblemPayload) => Error;
+  readonly SIM_VERSION_UNKNOWN: (payload: SimVersionProblemPayload) => Error;
+}
+
+/**
+ * Resolves the engine hash a new activity stamps. An absent `requested` (the transitional path,
+ * before clients send a hash) stamps the registry's current version, throwing SIM_VERSION_UNKNOWN
+ * on an empty registry. A `requested` hash stamps as-is when its row is `active` and retained;
+ * SIM_VERSION_UNKNOWN when no row matches it, SIM_VERSION_EXPIRED when its row is `pruned` or past
+ * `retainedUntil`. Both errors carry the registry's current hash (or null) so the client knows what
+ * to resync onto.
+ */
+async function resolveSimVersionStamp(
+  db: Kysely<DB>,
+  requested: string | undefined,
+  errors: SimVersionStampErrors,
+): Promise<string> {
+  if (requested === undefined) {
+    const current = await findCurrentSimVersion(db);
+
+    if (current === undefined) {
+      throw errors.SIM_VERSION_UNKNOWN({ data: { currentSimVersion: null } });
+    }
+
+    return current.engineHash;
+  }
+
+  const version = await findSimVersion(db, requested);
+
+  if (version !== undefined && version.status === 'active' && version.retainedUntil > new Date()) {
+    return requested;
+  }
+
+  const current = await findCurrentSimVersion(db);
+
+  const currentSimVersion = current?.engineHash ?? null;
+
+  if (version === undefined) {
+    throw errors.SIM_VERSION_UNKNOWN({ data: { currentSimVersion } });
+  }
+
+  throw errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion } });
 }
 
 /**

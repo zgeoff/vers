@@ -17,7 +17,16 @@ test('it declares CONFLICT, NOT_FOUND, and CHAIN_QUARANTINED on startActivity', 
     'CHAIN_QUARANTINED',
     'CONFLICT',
     'NOT_FOUND',
+    'SIM_VERSION_EXPIRED',
+    'SIM_VERSION_UNKNOWN',
   ]);
+});
+
+test('it declares SIM_VERSION_EXPIRED and SIM_VERSION_UNKNOWN with explicit statuses on startActivity', () => {
+  const errorMap = activityContract.startActivity['~orpc'].errorMap;
+
+  expect(errorMap.SIM_VERSION_EXPIRED?.status).toBe(410);
+  expect(errorMap.SIM_VERSION_UNKNOWN?.status).toBe(409);
 });
 
 test('it declares a bespoke CHECKPOINT_INVALID with an explicit status on trackActivityProgress', () => {

@@ -762,6 +762,7 @@
         "@vers/db": "workspace:*",
         "@vers/idle-core": "workspace:*",
         "@vers/service-runtime": "workspace:*",
+        "@vers/sim-registry": "workspace:*",
         "kysely": "catalog:",
         "tiny-invariant": "catalog:",
         "zod": "catalog:",

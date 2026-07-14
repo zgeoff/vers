@@ -22,6 +22,15 @@ export interface ActiveActivityConflictPayload {
 }
 
 /**
+ * Payload shape for `startActivity`'s SIM_VERSION_UNKNOWN and SIM_VERSION_EXPIRED: the registry's
+ * current engine hash, null when the registry carries no active version, so the client knows what
+ * to resync onto.
+ */
+export interface SimVersionProblemPayload {
+  readonly data: { readonly currentSimVersion: string | null };
+}
+
+/**
  * Payload shape for `trackActivityProgress`'s CONFLICT: the activity's current appended head, so
  * the caller can resend its tail from there.
  */

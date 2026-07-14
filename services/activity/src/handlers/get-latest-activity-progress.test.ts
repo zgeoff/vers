@@ -5,10 +5,14 @@ import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
+import { createSimVersionRow } from '../test-utils/create-sim-version-row';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 async function setupTest(options: { readonly isolation?: Isolation } = {}) {
   const db = await createTestDB(options);
+
+  await createSimVersionRow(db.db);
+
   const service = await createActivityService({ db: db.db });
 
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
