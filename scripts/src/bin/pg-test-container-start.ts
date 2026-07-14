@@ -1,6 +1,6 @@
 import {
   buildTestTemplateDBName,
-  provisionTestTemplate,
+  createTestTemplate,
   readCurrentBranch,
 } from '@vers/db/test-support';
 import { createPostgresContainer, getContainerConnectionURI } from '@vers/service-test-utils';
@@ -9,7 +9,7 @@ const container = await createPostgresContainer();
 
 const templateDB = process.env['TEST_TEMPLATE_DB'] ?? buildTestTemplateDBName(readCurrentBranch());
 
-await provisionTestTemplate({ baseURI: getContainerConnectionURI(container), templateDB });
+await createTestTemplate({ baseURI: getContainerConnectionURI(container), templateDB });
 
 console.log(`⚡ postgres test container started (template: ${templateDB})`);
 

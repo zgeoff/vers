@@ -1,4 +1,4 @@
-import { normalizeDBPart } from './normalize-db-part';
+import { normalizeDBPart } from '@vers/db/test-support';
 
 const MAX_MACHINE_LENGTH = 16;
 

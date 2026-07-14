@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import postgres from 'postgres';
+import { createClonedDatabase } from '@vers/db/test-support';
 import { resolveTestDBTarget } from './resolve-test-db-target';
 
 /**
@@ -7,14 +7,9 @@ import { resolveTestDBTarget } from './resolve-test-db-target';
  */
 export async function createDatabaseFromTemplate(): Promise<string> {
   const target = resolveTestDBTarget();
-  const admin = postgres(`${target.baseURI}/postgres`);
   const dbName = `test_${createId()}`;
 
-  try {
-    await admin.unsafe(/* SQL */ `CREATE DATABASE ${dbName} TEMPLATE ${target.templateDB}`);
-  } finally {
-    await admin.end();
-  }
+  await createClonedDatabase({ baseURI: target.baseURI, dbName, templateDB: target.templateDB });
 
   return `${target.baseURI}/${dbName}`;
 }

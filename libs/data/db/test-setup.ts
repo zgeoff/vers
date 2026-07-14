@@ -2,8 +2,8 @@ import '@zgeoff/bun-test-extended';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { buildTestTemplateDBName } from './src/test-support/build-test-template-db-name';
+import { createTestTemplate } from './src/test-support/create-test-template';
 import { isTestContainerReachable } from './src/test-support/is-test-container-reachable';
-import { provisionTestTemplate } from './src/test-support/provision-test-template';
 import { readCurrentBranch } from './src/test-support/read-current-branch';
 
 const TEST_CONTAINER_PORT = 32_999;
@@ -22,7 +22,7 @@ if (process.env['TEST_DB_URI'] === undefined) {
   const templateDB =
     process.env['TEST_TEMPLATE_DB'] ?? buildTestTemplateDBName(readCurrentBranch());
 
-  await provisionTestTemplate({ baseURI, templateDB });
+  await createTestTemplate({ baseURI, templateDB });
 
   process.env['TEST_DB_URI'] = baseURI;
   process.env['TEST_TEMPLATE_DB'] = templateDB;

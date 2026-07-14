@@ -1,6 +1,9 @@
+export { buildAdvisoryLockKey } from './build-advisory-lock-key';
 export { buildTestTemplateDBName } from './build-test-template-db-name';
+export { createClonedDatabase } from './create-cloned-database';
+export { createTestTemplate } from './create-test-template';
 export { isTestContainerReachable } from './is-test-container-reachable';
 export { isTestTemplateDBName } from './is-test-template-db-name';
-export { provisionTestTemplate } from './provision-test-template';
+export { normalizeDBPart } from './normalize-db-part';
 export { readCurrentBranch } from './read-current-branch';
 export { resolveTestDBTarget } from './resolve-test-db-target';

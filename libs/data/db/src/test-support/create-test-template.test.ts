@@ -2,14 +2,14 @@ import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import postgres from 'postgres';
 import { createDB } from '../create-db';
-import { provisionTestTemplate } from './provision-test-template';
+import { createTestTemplate } from './create-test-template';
 import { resolveTestDBTarget } from './resolve-test-db-target';
 
 test('it creates and migrates a template database that does not exist yet', async () => {
   const baseURI = resolveTestDBTarget().baseURI;
   const templateDB = `test_template_provision_${createId()}`;
 
-  await provisionTestTemplate({ baseURI, templateDB });
+  await createTestTemplate({ baseURI, templateDB });
 
   const db = createDB({ databaseURL: `${baseURI}/${templateDB}` });
 
@@ -33,8 +33,8 @@ test('it is a no-op the second time against an already-current template', async 
   const baseURI = resolveTestDBTarget().baseURI;
   const templateDB = `test_template_provision_${createId()}`;
 
-  await provisionTestTemplate({ baseURI, templateDB });
-  await expect(provisionTestTemplate({ baseURI, templateDB })).toResolve();
+  await createTestTemplate({ baseURI, templateDB });
+  await expect(createTestTemplate({ baseURI, templateDB })).toResolve();
 });
 
 test('it serializes concurrent provisioning of the same template name', async () => {
@@ -42,9 +42,9 @@ test('it serializes concurrent provisioning of the same template name', async ()
   const templateDB = `test_template_provision_${createId()}`;
 
   await Promise.all([
-    provisionTestTemplate({ baseURI, templateDB }),
-    provisionTestTemplate({ baseURI, templateDB }),
-    provisionTestTemplate({ baseURI, templateDB }),
+    createTestTemplate({ baseURI, templateDB }),
+    createTestTemplate({ baseURI, templateDB }),
+    createTestTemplate({ baseURI, templateDB }),
   ]);
 
   const admin = postgres(`${baseURI}/postgres`);
@@ -57,10 +57,10 @@ test('it serializes concurrent provisioning of the same template name', async ()
 });
 
 test('it rejects a template name that is not a safe identifier', () => {
-  const promise = provisionTestTemplate({
+  const promise = createTestTemplate({
     baseURI: resolveTestDBTarget().baseURI,
     templateDB: 'test_template; DROP DATABASE postgres;',
   });
 
-  expect(promise).rejects.toThrow('invalid test-template database name');
+  expect(promise).rejects.toThrow('invalid database identifier');
 });

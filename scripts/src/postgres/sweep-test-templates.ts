@@ -34,7 +34,7 @@ export async function sweepTestTemplates(
     });
 
     for (const name of orphans) {
-      await pg.unsafe(`DROP DATABASE ${name} WITH (FORCE)`);
+      await pg.unsafe(`DROP DATABASE "${name}" WITH (FORCE)`);
     }
 
     return orphans;

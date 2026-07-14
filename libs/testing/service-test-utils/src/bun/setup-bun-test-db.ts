@@ -1,7 +1,7 @@
 import {
   buildTestTemplateDBName,
+  createTestTemplate,
   isTestContainerReachable,
-  provisionTestTemplate,
   readCurrentBranch,
 } from '@vers/db/test-support';
 import { createPostgresContainer } from '../create-postgres-container';
@@ -39,7 +39,7 @@ export async function setupBunTestDB(): Promise<void> {
   const templateDB =
     process.env['TEST_TEMPLATE_DB'] ?? buildTestTemplateDBName(readCurrentBranch());
 
-  await provisionTestTemplate({ baseURI, templateDB });
+  await createTestTemplate({ baseURI, templateDB });
 
   process.env['TEST_DB_URI'] = baseURI;
   process.env['TEST_TEMPLATE_DB'] = templateDB;

@@ -28,7 +28,7 @@ test('it never touches the container bootstrap database or unrelated databases',
   expect(orphans).toStrictEqual(['test_template_feat_gone']);
 });
 
-test('it matches after branch-name sanitization', () => {
+test('it orphans every template when there are no local branches', () => {
   const orphans = pickOrphanedTestTemplates({
     branches: [],
     dbNames: ['test_template_feat_476_pg_mcp'],

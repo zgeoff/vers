@@ -1,4 +1,6 @@
 import { expect, onTestFinished, test } from 'bun:test';
+import { buildTestTemplateDBName } from './build-test-template-db-name';
+import { readCurrentBranch } from './read-current-branch';
 import { resolveTestDBTarget } from './resolve-test-db-target';
 
 test('it resolves the base URI and template db name published by the test-setup preload', () => {
@@ -8,7 +10,7 @@ test('it resolves the base URI and template db name published by the test-setup 
   expect(target.templateDB).not.toBeEmpty();
 });
 
-test('it falls back to the fixed test-container defaults when the env vars are unset', () => {
+test('it falls back to the fixed container URI and the branch-scoped template name when the env vars are unset', () => {
   const originalURI = process.env['TEST_DB_URI'];
   const originalTemplate = process.env['TEST_TEMPLATE_DB'];
 
@@ -31,6 +33,6 @@ test('it falls back to the fixed test-container defaults when the env vars are u
 
   expect(resolveTestDBTarget()).toStrictEqual({
     baseURI: 'postgres://test:test@localhost:32999',
-    templateDB: 'test_template',
+    templateDB: buildTestTemplateDBName(readCurrentBranch()),
   });
 });
