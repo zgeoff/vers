@@ -12,6 +12,7 @@ export type {
   DB,
   PendingTransactions,
   Sessions,
+  SimVersions,
   Users,
   Verifications,
 } from './schema.generated';
