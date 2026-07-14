@@ -146,6 +146,11 @@ test('it rejects non-integer bounds', () => {
     Error,
     /range min must be a safe integer/,
   );
+
+  expect(() => stream.rollRange(0, 1.5)).toThrowWithMessage(
+    Error,
+    /range max must be a safe integer/,
+  );
 });
 
 test('it rejects an empty weighted pick', () => {

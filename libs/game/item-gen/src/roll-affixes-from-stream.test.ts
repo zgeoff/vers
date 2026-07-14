@@ -144,6 +144,45 @@ test('it reproduces identical rolls from identical streams', () => {
   expect(rolledFirst).toStrictEqual(rolledSecond);
 });
 
+test('it rejects a forced list larger than the affix count', () => {
+  const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
+
+  expect(() =>
+    rollAffixesFromStream(
+      tablesV1,
+      { baseID: 'placeholder-blade', rarityID: 'rare', affixes: [] },
+      { count: 1, forceAffixIDs: ['flat-power', 'flat-guard'] },
+      stream,
+    ),
+  ).toThrowWithMessage(Error, /forced affixes must fit inside the affix count/);
+});
+
+test('it rejects forced affixes sharing a group', () => {
+  const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
+
+  expect(() =>
+    rollAffixesFromStream(
+      tablesV1,
+      { baseID: 'placeholder-blade', rarityID: 'rare', affixes: [] },
+      { count: 2, forceAffixIDs: ['flat-power', 'pct-power'] },
+      stream,
+    ),
+  ).toThrowWithMessage(Error, /forced affixes must occupy distinct groups/);
+});
+
+test('it rejects a values-only roll combined with an identity-changing constraint', () => {
+  const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
+
+  expect(() =>
+    rollAffixesFromStream(
+      tablesV1,
+      { baseID: 'placeholder-blade', rarityID: 'rare', affixes: [] },
+      { valuesOnly: true, count: 1 },
+      stream,
+    ),
+  ).toThrowWithMessage(Error, /a values-only roll combines only with protected groups/);
+});
+
 test('it rejects a base rarity missing from the tables', () => {
   const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
 

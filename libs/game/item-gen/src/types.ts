@@ -116,7 +116,7 @@ export interface AffixConstraints {
 
   /**
    * Forced affixes bypass every pool filter, consume one value draw each, and reduce the
-   * remaining picks.
+   * remaining picks; they must occupy distinct groups and fit inside the count.
    */
   readonly forceAffixIDs?: ReadonlyArray<string>;
   readonly protectGroupIDs?: ReadonlyArray<string>;
@@ -129,7 +129,8 @@ export interface AffixConstraints {
 
   /**
    * Redraw only the values of the existing affixes, keeping their identities; affixes in
-   * protected groups keep their original values and consume no draw.
+   * protected groups keep their original values and consume no draw. Combines only with
+   * `protectGroupIDs` — any other field set alongside it is rejected.
    */
   readonly valuesOnly?: boolean;
 }
