@@ -1163,7 +1163,7 @@ test('it consumes no budget and leaves the meter anchor untouched on a cap trip'
   expect(updated.simMeteredAt).toStrictEqual(avatar.simMeteredAt);
 });
 
-test('it leaves the chain anchor untouched on a cap trip', async () => {
+test('it leaves the anchor unchanged when a cap trips before anything appended', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -1209,6 +1209,65 @@ test('it leaves the chain anchor untouched on a cap trip', async () => {
     .executeTakeFirstOrThrow();
 
   expect(chainAfter).toStrictEqual(chainBefore);
+});
+
+test('it advances the chain anchor to the pre-batch tail on a cap trip', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    simBudgetMs: 10_000,
+    simMeteredAt: new Date(),
+    userId: viewer.user.id,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const firstBatch = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 5000,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: firstBatch,
+    expectedHead: 0,
+  });
+
+  const overCap = createMockCheckpointBatch({
+    startPrevHash: firstBatch[0]?.hash ?? '',
+    startVersion: 2,
+    timeStepMs: 3_600_000,
+  });
+
+  expect(
+    client.trackActivityProgress({
+      activityID: started.id,
+      checkpoints: overCap,
+      expectedHead: 1,
+    }),
+  ).rejects.toMatchObject({ code: 'ACTIVITY_CAPPED' });
+
+  const tail = firstBatch[0]!;
+
+  const chainAfter = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(chainAfter.appendedNextSeed).toBe(tail.payload.nextSeed);
+  expect(chainAfter.appendedChainIndex).toBe(tail.payload.chainIndex);
 });
 
 test('it rejects a batch whose time regresses within the batch with CHECKPOINT_INVALID', async () => {

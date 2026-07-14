@@ -14,6 +14,7 @@ import type {
   StaleHeadPayload,
   TerminalStatusPayload,
 } from '../types';
+import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail';
 
 interface TrackActivityProgressDeps {
   readonly db: Kysely<DB>;
@@ -144,32 +145,46 @@ export async function trackActivityProgress(
   const availableMs = Math.min(deps.simTimeCapMs, accruedMs);
 
   if (headMatches && timeDelta > availableMs) {
-    // A single-statement claim, deliberately outside the append transaction: the append is
-    // rejected whole (nothing was accepted, so no head, hash, or meter movement) while the capped
-    // transition itself must commit before the error below reports it.
-    const capped = await db
-      .updateTable('activities')
-      .set({ status: 'capped', stoppedAt: sql`now()` })
-      .where('id', '=', opts.input.activityID)
-      .where('appendedHead', '=', opts.input.expectedHead)
-      .where('status', '=', 'active')
-      .where((eb) =>
-        eb.or([eb('writerSessionId', 'is', null), eb('writerSessionId', '=', actingSessionID)]),
-      )
-      .returning('appendedHead')
-      .executeTakeFirst();
-
-    if (capped === undefined) {
-      const current = await db
-        .selectFrom('activities')
-        .select(['appendedHead', 'status', 'writerSessionId'])
+    // Its own transaction, not the append transaction: the append is rejected whole (nothing was
+    // accepted, so no head, hash, or meter movement) while the capped transition and the chain's
+    // consequent anchor advance commit together.
+    const capOutcome = await db.transaction().execute(async (trx) => {
+      const capped = await trx
+        .updateTable('activities')
+        .set({ status: 'capped', stoppedAt: sql`now()` })
         .where('id', '=', opts.input.activityID)
+        .where('appendedHead', '=', opts.input.expectedHead)
+        .where('status', '=', 'active')
+        .where((eb) =>
+          eb.or([eb('writerSessionId', 'is', null), eb('writerSessionId', '=', actingSessionID)]),
+        )
+        .returning(['appendedHead', 'lastHash'])
         .executeTakeFirst();
 
-      throw pickAppendRaceError(opts.errors, actingSessionID, current);
-    }
+      if (capped === undefined) {
+        const current = await trx
+          .selectFrom('activities')
+          .select(['appendedHead', 'status', 'writerSessionId'])
+          .where('id', '=', opts.input.activityID)
+          .executeTakeFirst();
 
-    throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: capped.appendedHead } });
+        throw pickAppendRaceError(opts.errors, actingSessionID, current);
+      }
+
+      await updateAppendedAnchorFromTail(trx, {
+        activityId: opts.input.activityID,
+        appendedHead: capped.appendedHead,
+        avatarId: head.avatarId,
+        lastHash: capped.lastHash,
+        scopeId: head.scopeId,
+        scopeType: head.scopeType,
+        startChainIndex: head.startChainIndex,
+      });
+
+      return capped.appendedHead;
+    });
+
+    throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: capOutcome } });
   }
 
   const appendedHead = await db.transaction().execute(async (trx) => {
@@ -222,17 +237,15 @@ export async function trackActivityProgress(
     }
 
     if (terminalRewardsXP !== undefined && lastCheckpoint !== undefined) {
-      await trx
-        .updateTable('activityChains')
-        .set({
-          appendedChainIndex: lastCheckpoint.payload.chainIndex,
-          appendedNextSeed: lastCheckpoint.payload.nextSeed,
-        })
-        .where('avatarId', '=', head.avatarId)
-        .where('scopeType', '=', head.scopeType)
-        .where('scopeId', '=', head.scopeId)
-        .where('appendedChainIndex', '=', head.startChainIndex)
-        .execute();
+      await updateAppendedAnchorFromTail(trx, {
+        activityId: opts.input.activityID,
+        appendedHead: newHead,
+        avatarId: head.avatarId,
+        lastHash: newLastHash,
+        scopeId: head.scopeId,
+        scopeType: head.scopeType,
+        startChainIndex: head.startChainIndex,
+      });
 
       const newXP = Math.max(0, Math.round(head.xp + terminalRewardsXP));
 
