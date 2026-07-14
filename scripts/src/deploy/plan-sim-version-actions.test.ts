@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { SimVersionRow } from '@vers/sim-registry';
-import { buildProviderAppName, planSimVersionActions } from './plan-sim-version-actions';
+import { buildProviderAppName } from './build-provider-app-name';
+import { planSimVersionActions } from './plan-sim-version-actions';
 import type { FleetImage } from './types';
 
 const ENGINE_HASH = 'a1b2c3d4e5f6'.padEnd(64, '0');
@@ -32,6 +33,7 @@ test('it provisions everything for a fresh engine hash', () => {
     engineHash: ENGINE_HASH,
     fleetImage,
     providerAppExists: false,
+    providerMachineExists: false,
     registryRow: undefined,
   });
 
@@ -61,6 +63,7 @@ test('it takes no action when the registry row is current and the app already ex
     engineHash: ENGINE_HASH,
     fleetImage,
     providerAppExists: true,
+    providerMachineExists: true,
     registryRow: buildRegistryRow(),
   });
 
@@ -73,6 +76,7 @@ test('it recreates the provider app and refreshes the row when the app is missin
     engineHash: ENGINE_HASH,
     fleetImage,
     providerAppExists: false,
+    providerMachineExists: false,
     registryRow: buildRegistryRow(),
   });
 
@@ -102,7 +106,59 @@ test('it only refreshes the registry row when the fleet digest has drifted from 
     engineHash: ENGINE_HASH,
     fleetImage,
     providerAppExists: true,
+    providerMachineExists: true,
     registryRow: buildRegistryRow({ imageRef: `${fleetImage.repository}@sha256:stale` }),
+  });
+
+  expect(actions).toStrictEqual([
+    {
+      input: {
+        bunVersion: '1.3.10',
+        engineHash: ENGINE_HASH,
+        imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
+        providerURL: `http://${PROVIDER_APP}.flycast`,
+      },
+      kind: 'upsert-registry-row',
+    },
+  ]);
+});
+
+test('it relaunches only the machine when the app survives but its machine is gone', () => {
+  const actions = planSimVersionActions({
+    bunVersion: '1.3.10',
+    engineHash: ENGINE_HASH,
+    fleetImage,
+    providerAppExists: true,
+    providerMachineExists: false,
+    registryRow: buildRegistryRow(),
+  });
+
+  expect(actions).toStrictEqual([
+    {
+      app: PROVIDER_APP,
+      image: `${fleetImage.repository}:${fleetImage.tag}`,
+      kind: 'run-provider-machine',
+    },
+    {
+      input: {
+        bunVersion: '1.3.10',
+        engineHash: ENGINE_HASH,
+        imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
+        providerURL: `http://${PROVIDER_APP}.flycast`,
+      },
+      kind: 'upsert-registry-row',
+    },
+  ]);
+});
+
+test('it refreshes only the row when the app and machine exist but the row is missing', () => {
+  const actions = planSimVersionActions({
+    bunVersion: '1.3.10',
+    engineHash: ENGINE_HASH,
+    fleetImage,
+    providerAppExists: true,
+    providerMachineExists: true,
+    registryRow: undefined,
   });
 
   expect(actions).toStrictEqual([
@@ -124,6 +180,7 @@ test('it launches the provider machine by tag, never by digest', () => {
     engineHash: ENGINE_HASH,
     fleetImage,
     providerAppExists: false,
+    providerMachineExists: false,
     registryRow: undefined,
   });
 
@@ -139,6 +196,7 @@ test('it derives the provider app name and flycast URL from the first 12 hex cha
     engineHash: ENGINE_HASH,
     fleetImage,
     providerAppExists: false,
+    providerMachineExists: false,
     registryRow: undefined,
   });
 
@@ -159,6 +217,7 @@ test('it takes no action when the fleet has no single resolved image', () => {
     engineHash: ENGINE_HASH,
     fleetImage: null,
     providerAppExists: false,
+    providerMachineExists: false,
     registryRow: undefined,
   });
 

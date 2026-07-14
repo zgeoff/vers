@@ -107,7 +107,19 @@ export interface SimVersionActionInput {
   readonly engineHash: string;
   readonly fleetImage: FleetImage | null;
   readonly providerAppExists: boolean;
+  readonly providerMachineExists: boolean;
   readonly registryRow: SimVersionRow | undefined;
+}
+
+/**
+ * What already exists of a per-version provider app. `hasMachine` is false
+ * whenever `exists` is — an app can outlive its machine (a partial provision
+ * or a manual destroy), and a registry row must never point at one that has
+ * nothing to wake.
+ */
+export interface ProviderAppState {
+  readonly exists: boolean;
+  readonly hasMachine: boolean;
 }
 
 export type SimVersionAction =

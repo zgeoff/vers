@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isServiceMachine } from './is-service-machine';
 import type { AppMachine, AppState, ScheduledMachineState } from './types';
 
 const stringRecordSchema = z.record(z.string(), z.string()).readonly();
@@ -67,18 +68,6 @@ export function parseAppState(json: unknown): AppState {
     scheduledMachines,
     serviceImage: pickServiceImage(serviceRecords),
   };
-}
-
-/**
- * A machine outside the `app` process group (release commands, builders) is
- * never a service machine either — its process group is always stamped
- * explicitly, unlike a bare app machine's, so the default only applies there.
- */
-function isServiceMachine(machine: MachineRecord): boolean {
-  return (
-    machine.config?.schedule === undefined &&
-    (machine.config?.metadata?.['fly_process_group'] ?? 'app') === 'app'
-  );
 }
 
 /**

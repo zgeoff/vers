@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { runFlyctl } from '../utils/run-flyctl';
+import { isServiceMachine } from './is-service-machine';
 import type { FleetImage } from './types';
 
 const imageRefSchema = z
@@ -19,8 +20,6 @@ const machineSchema = z
   .readonly();
 
 const machinesSchema = z.array(machineSchema);
-
-type MachineRecord = z.infer<typeof machineSchema>;
 
 /**
  * Reads the single, fully-resolved image — repository, tag, and the digest
@@ -50,13 +49,6 @@ export async function readFleetImage(app: string): Promise<FleetImage | null> {
     repository: `${first.registry}/${first.repository}`,
     tag: first.tag,
   };
-}
-
-function isServiceMachine(machine: MachineRecord): boolean {
-  return (
-    machine.config?.schedule === undefined &&
-    (machine.config?.metadata?.['fly_process_group'] ?? 'app') === 'app'
-  );
 }
 
 function isSameImage(a: Readonly<ImageRef>, b: Readonly<ImageRef>): boolean {

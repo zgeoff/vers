@@ -3,17 +3,18 @@ import { execa } from 'execa';
 import { applyDeploy } from '../deploy/apply-deploy';
 import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-actions';
 import { applySimVersionActions } from '../deploy/apply-sim-version-actions';
+import { buildProviderAppName } from '../deploy/build-provider-app-name';
 import { checkParkedApp } from '../deploy/check-parked-app';
 import { checkTarget } from '../deploy/check-target';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
 import { PINNED_BUN_VERSION, loadEngineHash } from '../deploy/load-engine-hash';
 import { planScheduledMachineActions } from '../deploy/plan-scheduled-machine-actions';
-import { buildProviderAppName, planSimVersionActions } from '../deploy/plan-sim-version-actions';
+import { planSimVersionActions } from '../deploy/plan-sim-version-actions';
 import { readAppState } from '../deploy/read-app-state';
 import { readChangesSince } from '../deploy/read-changes-since';
 import { readFleetImage } from '../deploy/read-fleet-image';
-import { readProviderAppExists } from '../deploy/read-provider-app-exists';
+import { readProviderAppState } from '../deploy/read-provider-app-state';
 import { readSimVersionRow } from '../deploy/read-sim-version-row';
 import { runProbes } from '../deploy/run-probes';
 import type { DeployManifest, DeployTarget } from '../deploy/types';
@@ -84,7 +85,7 @@ async function runDeploy(app: string): Promise<void> {
 
   console.log(`deploying ${target.app} at ${sha} — ${staleReason}`);
 
-  await seedEngineHashEnv(target);
+  await setEngineHashEnv(target);
   await applyDeploy(target, sha);
   await waitForDeployedSHA(target.app, sha);
   await runScheduledMachineReconcile(target);
@@ -109,14 +110,14 @@ const SIM_ENGINE_HASH_BUILD_ARG_NAMES = ['SIM_ENGINE_HASH', 'VITE_SIM_ENGINE_HAS
  * `applyDeploy`'s existing env-forwarding picks it up without knowing which
  * name its own Dockerfile expects.
  */
-async function seedEngineHashEnv(target: DeployTarget): Promise<void> {
+async function setEngineHashEnv(target: DeployTarget): Promise<void> {
   const buildArgs = target.buildArgsFromEnv ?? [];
 
   if (!SIM_ENGINE_HASH_BUILD_ARG_NAMES.some((name) => buildArgs.includes(name))) {
     return;
   }
 
-  const hash = await getEngineHash();
+  const hash = await loadEngineHashOnce();
 
   for (const name of SIM_ENGINE_HASH_BUILD_ARG_NAMES) {
     process.env[name] = hash;
@@ -168,20 +169,21 @@ async function runSimVersionReconcile(target: DeployTarget): Promise<void> {
   }
 
   const fleetImage = await readFleetImage(target.app);
-  const engineHash = await getEngineHash();
+  const engineHash = await loadEngineHashOnce();
 
   const providerApp = buildProviderAppName(engineHash);
 
-  const [registryRow, providerAppExists] = await Promise.all([
+  const [registryRow, providerAppState] = await Promise.all([
     readSimVersionRow(engineHash),
-    readProviderAppExists(providerApp),
+    readProviderAppState(providerApp),
   ]);
 
   const actions = planSimVersionActions({
     bunVersion: PINNED_BUN_VERSION,
     engineHash,
     fleetImage,
-    providerAppExists,
+    providerAppExists: providerAppState.exists,
+    providerMachineExists: providerAppState.hasMachine,
     registryRow,
   });
 
@@ -192,9 +194,10 @@ let engineHashPromise: Promise<string> | null = null;
 
 /**
  * Builds the engine bundle hash at most once per CLI run — every caller in a
- * single invocation shares the result.
+ * single invocation shares the result. The first call pays a full engine
+ * bundle build and throws on a non-pinned Bun version.
  */
-function getEngineHash(): Promise<string> {
+function loadEngineHashOnce(): Promise<string> {
   engineHashPromise ??= loadEngineHash();
 
   return engineHashPromise;
