@@ -9,6 +9,31 @@ reviews:
   path_filters:
     - '!bun.lock'
     - '!libs/data/db/src/schema.generated.ts'
+  path_instructions:
+    - path: '**/*.ts'
+      instructions: |
+        tiny-invariant guards conditions only a bug can break. Values originating
+        inside the system — pinned snapshots, replay-verified trajectory facts,
+        server-minted secrets, table content the repo ships — are that territory,
+        and invariant() is correct for them. Suggest ordinary control flow only
+        for genuinely external input: request payloads, user-entered data.
+    - path: '**/*.test.ts'
+      instructions: |
+        Pure packages (libs, CLIs — no service or database edge) are mock-free:
+        plain arguments, options bags, and config literals are written inline at
+        the call site, even when repeated across tests. Do not suggest create-mock-*
+        factories or shared fixtures there; factories are for faker-defaulted
+        domain entities in service and app suites.
+        Golden and frozen-contract tests hardcode literals deliberately (domain
+        labels, canonical encodings, expected draw values). Never suggest replacing
+        such a literal with an import of the constant it verifies — if the constant
+        changes, the test must fail.
+    - path: 'AGENTS.md'
+      instructions: |
+        AGENTS.md is generated from agents/shared.md and agents/project.md and
+        committed alongside them; a PR editing a partial plus the regenerated
+        AGENTS.md is correct. Flag only an AGENTS.md change with no corresponding
+        partial change — and CI's drift check already catches stale regeneration.
   auto_review:
     enabled: true
     auto_incremental_review: false
