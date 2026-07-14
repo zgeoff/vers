@@ -7,19 +7,27 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "dev": "bun --watch src/serve.ts",
     "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@orpc/server": "catalog:",
+    "@vers/contract-replay": "workspace:*",
     "@vers/db": "workspace:*",
     "@vers/idle-core": "workspace:*",
-    "kysely": "catalog:"
+    "@vers/service-runtime": "workspace:*",
+    "@vers/utils": "workspace:*",
+    "kysely": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@faker-js/faker": "catalog:",
+    "@orpc/contract": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
+    "@vers/game-utils": "workspace:*",
     "@vers/service-test-utils": "workspace:*",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
