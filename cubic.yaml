@@ -20,14 +20,12 @@ reviews:
       - bun.lock
       - libs/data/db/src/schema.generated.ts
   custom_rules:
-    - name: Service error contract
+    - name: Error-code narrowing
       description: >-
-        Procedure handlers throw only their typed opts.errors.* constructors or invariant(); the
-        central onError interceptor owns logging and reporting. Clients narrow errors on the code
-        field via isDefinedError/safe and act on data fields — flag any client branching on message
-        strings.
+        Clients narrow service errors on the code field via isDefinedError/safe and act on data
+        fields — flag any client branching on error message strings, which silently breaks on a copy
+        change.
       include:
-        - 'services/**'
         - 'apps/**'
         - 'libs/**'
       exclude:
@@ -41,6 +39,8 @@ reviews:
       include:
         - 'services/**'
         - 'libs/data/**'
+      exclude:
+        - '**/*.test.*'
     - name: Test isolation integrity
       description: >-
         Database tests inject the createTestDB() handle's db into the code under test — code that
@@ -51,10 +51,9 @@ reviews:
         - '**/*.test.ts'
     - name: Client-state write discipline
       description: >-
-        Zustand stores hold state only; every mutation goes through an external setter module
-        calling setState, one setState per logical event. Flag multi-field events fanned out across
-        several setState calls (torn intermediate renders) and any subscription-based read inside
-        the R3F frame loop where an imperative getState() is required.
+        A logical event gets one setState. Flag multi-field events fanned out across several
+        setState calls (torn intermediate renders) and any subscription-based read inside the R3F
+        frame loop where an imperative getState() is required.
       include:
         - 'apps/web/**'
         - 'libs/game/**'
@@ -64,8 +63,7 @@ reviews:
       description: >-
         An uncompiled createServerFn dispatch relays only a Response or a thrown redirect/error; a
         plain result object resolves as undefined at the caller. Flag server-fn branches returning
-        plain objects that a component consumes, and ambient request-context reads
-        (getRequestHeaders, cookies) buried below the thin shell layer.
+        plain objects that a component consumes.
       include:
         - 'apps/web/**'
       exclude:
