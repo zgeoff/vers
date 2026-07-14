@@ -14,6 +14,7 @@ import { sendIdleSetActivity } from '../../lib/idle/send-idle-set-activity';
 import { sendIdleSetFailureAction } from '../../lib/idle/send-idle-set-failure-action';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { useIsSharedWorkerSupported } from '../../lib/platform/use-is-shared-worker-supported';
+import { ApproachingCapWarning } from './approaching-cap-warning';
 
 /**
  * Module-scoped so its identity — and its `id` — stays stable across renders.
@@ -80,6 +81,7 @@ export function ExploreCurrentPanel() {
         errors={[]}
         labelProps={{ children: 'Auto-retry on failure', htmlFor: 'auto-retry-on-failure' }}
       />
+      <ApproachingCapWarning />
       <IdleWorldMapEncounterActivity />
       <Suspense fallback={<p data-testid="world-map-node-codex-loading">Loading codex…</p>}>
         <WorldMapNodeCodexSlot difficulty={selectedNode?.difficulty ?? 1} />

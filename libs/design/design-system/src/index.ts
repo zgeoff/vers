@@ -1,6 +1,7 @@
 export { Brand } from './components/brand/brand';
 export { Button } from './components/button/button';
 export { CheckboxField } from './components/checkbox-field/checkbox-field';
+export { Dialog } from './components/dialog/dialog';
 export { Field } from './components/field/field';
 export { Heading } from './components/heading/heading';
 export { Icon } from './components/icon/icon';
