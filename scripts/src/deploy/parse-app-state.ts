@@ -12,11 +12,19 @@ const machineConfigSchema = z
   })
   .readonly();
 
+const machineCheckSchema = z
+  .object({
+    name: z.string(),
+    status: z.string(),
+  })
+  .readonly();
+
 const machineSchema = z
   .object({
     id: z.string(),
     name: z.string(),
     state: z.string(),
+    checks: z.array(machineCheckSchema).readonly().optional(),
     config: machineConfigSchema.optional(),
   })
   .readonly();
@@ -42,6 +50,7 @@ export function parseAppState(json: unknown): AppState {
     id: machine.id,
     state: machine.state,
     gitSHA: machine.config?.env?.['GIT_SHA'] ?? null,
+    checks: machine.checks ?? [],
   }));
 
   const scheduledMachines: ReadonlyArray<ScheduledMachineState> = records
