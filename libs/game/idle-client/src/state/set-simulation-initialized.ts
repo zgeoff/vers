@@ -1,5 +1,5 @@
-import { useSimulationStore } from './use-simulation-store';
+import { useIdleStore } from './use-idle-store';
 
 export function setSimulationInitialized(initialized: boolean) {
-  useSimulationStore.setState(() => ({ initialized }));
+  useIdleStore.setState(() => ({ initialized }));
 }

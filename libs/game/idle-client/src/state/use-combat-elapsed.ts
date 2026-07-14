@@ -1,5 +1,5 @@
-import { useCombatStore } from './use-combat-store';
+import { useIdleStore } from './use-idle-store';
 
 export function useCombatElapsed(): number {
-  return useCombatStore((state) => state.combat?.elapsed ?? 0);
+  return useIdleStore((state) => state.combat?.elapsed ?? 0);
 }

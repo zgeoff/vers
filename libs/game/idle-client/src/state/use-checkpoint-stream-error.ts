@@ -1,10 +1,5 @@
-import { useShallow } from 'zustand/react/shallow';
-import { useCheckpointStreamErrorStore } from './use-checkpoint-stream-error-store';
+import { useIdleStore } from './use-idle-store';
 
 export function useCheckpointStreamError() {
-  const checkpointStreamError = useCheckpointStreamErrorStore(
-    useShallow((state) => state.checkpointStreamError),
-  );
-
-  return checkpointStreamError;
+  return useIdleStore((state) => state.checkpointStreamError);
 }
