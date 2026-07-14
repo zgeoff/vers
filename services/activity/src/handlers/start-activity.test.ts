@@ -45,6 +45,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     contentVersion: '0.0.0-dev',
     createdAt: expect.toBeValidDate(),
     id: expect.toBeString(),
+    keyVersion: 1,
     lastHash: expect.toBeString(),
     scopeID: 'node_1',
     scopeType: 'world_map_node',

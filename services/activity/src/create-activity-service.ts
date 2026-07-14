@@ -12,6 +12,7 @@ import { buildActivityRouter } from './build-router';
  */
 const SIM_VERSION = '0.0.0-dev';
 const CONTENT_VERSION = '0.0.0-dev';
+const KEY_VERSION = 1;
 
 interface CreateActivityServiceConfig {
   readonly contentVersion?: string;
@@ -20,6 +21,7 @@ interface CreateActivityServiceConfig {
    * Injected only in tests, to run the service inside the test's own transaction.
    */
   readonly db?: Kysely<DB>;
+  readonly keyVersion?: number;
   readonly simVersion?: string;
 }
 
@@ -34,6 +36,7 @@ export function createActivityService(
       buildActivityRouter({
         contentVersion: config.contentVersion ?? CONTENT_VERSION,
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
+        keyVersion: config.keyVersion ?? KEY_VERSION,
         simVersion: config.simVersion ?? SIM_VERSION,
       }),
     envShape: { DATABASE_URL: z.string() },

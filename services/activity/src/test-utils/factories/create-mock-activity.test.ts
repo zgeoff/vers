@@ -9,6 +9,7 @@ test('it builds a default activity row', () => {
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: '0.0.0-dev',
     id: expect.toBeString(),
+    keyVersion: 1,
     lastHash: expect.toBeString(),
     scopeId: expect.toBeString(),
     scopeType: 'world_map_node',
@@ -22,6 +23,7 @@ test('it defaults lastHash and startHash to the real start hash of its own field
   const row = createMockActivity({
     contentVersion: 'content_1',
     id: 'act_fixed',
+    keyVersion: 7,
     seed: 'seed_fixed',
     simVersion: 'sim_1',
   });
