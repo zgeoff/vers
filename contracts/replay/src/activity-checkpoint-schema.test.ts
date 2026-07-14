@@ -35,6 +35,7 @@ test('it rejects a non-started checkpoint carrying a seed', () => {
   });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
 });
 
 test('it rejects a type outside the union', () => {
@@ -46,4 +47,5 @@ test('it rejects a type outside the union', () => {
   });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['type'] }));
 });

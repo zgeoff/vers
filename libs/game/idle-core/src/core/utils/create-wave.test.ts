@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
-import { createMockActivityInput } from '../../test-utils/create-mock-activity-input';
-import { createMockEnemyData } from '../../test-utils/create-mock-enemy-data';
-import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
+import { createMockActivityInput } from '../../test-utils/factories/create-mock-activity-input';
+import { createMockEnemyData } from '../../test-utils/factories/create-mock-enemy-data';
+import { createMockSimulationContext } from '../../test-utils/factories/create-mock-simulation-context';
 import { createWave } from './create-wave';
 
 test('it creates a wave with the given number of enemies', () => {

@@ -6,5 +6,8 @@ test('it accepts every declared verification type', () => {
 });
 
 test('it rejects a type outside the enum', () => {
-  expect(VerificationTypeSchema.safeParse('sms').success).toBeFalse();
+  const result = VerificationTypeSchema.safeParse('sms');
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
 });

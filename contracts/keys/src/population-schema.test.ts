@@ -8,5 +8,8 @@ test('it accepts every declared population value', () => {
 });
 
 test('it rejects a population outside the enum', () => {
-  expect(PopulationSchema.safeParse('rogue').success).toBeFalse();
+  const result = PopulationSchema.safeParse('rogue');
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
 });

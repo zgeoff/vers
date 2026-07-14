@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
 import { createAvatar } from '../../entities/create-avatar';
 import { buildCompletionXP } from '../../progression';
-import { createMockActivityInput } from '../../test-utils/create-mock-activity-input';
-import { createMockAvatarData } from '../../test-utils/create-mock-avatar-data';
-import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
+import { createMockActivityInput } from '../../test-utils/factories/create-mock-activity-input';
+import { createMockAvatarData } from '../../test-utils/factories/create-mock-avatar-data';
+import { createMockSimulationContext } from '../../test-utils/factories/create-mock-simulation-context';
 import { ActivityCheckpointType } from '../../types';
 import { createActivity } from '../create-activity';
 import { createCompletedCheckpoint } from './create-completed-checkpoint';

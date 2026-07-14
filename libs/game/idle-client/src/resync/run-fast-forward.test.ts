@@ -2,18 +2,18 @@ import { expect, mock, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ActivityData, CheckpointBatchEntry } from '@vers/contract-activity';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import { ActivityFailureAction } from '@vers/idle-core';
 import {
-  ActivityFailureAction,
   createMockActivityInput,
   createMockAvatarData,
   createMockEnemyData,
-} from '@vers/idle-core';
+} from '@vers/idle-core/test-utils';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
-import { createMockActivityData } from '../test-utils/factories/create-mock-activity-data';
 import { runFastForward } from './run-fast-forward';
 import type { FastForwardProgress, LatestActivityProgress } from './types';
 
@@ -22,7 +22,7 @@ interface TrackedBatch {
   readonly expectedHead: number;
 }
 
-function setupTest(config: { readonly failureAction?: ActivityFailureAction } = {}) {
+function setupTest() {
   const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
 
   const client: ActivityServiceClient = createORPCClient(link);
@@ -52,15 +52,7 @@ function setupTest(config: { readonly failureAction?: ActivityFailureAction } = 
   const onInvalid = mock<(activityID: string, reason: string) => void>();
   const submitter = createCheckpointSubmitter({ client, onInvalid });
 
-  const buildActivityInput = (activity: ActivityData) =>
-    createMockActivityInput({
-      enemies: [createMockEnemyData()],
-      failureAction: config.failureAction ?? ActivityFailureAction.Retry,
-      id: activity.id,
-      seed: activity.seed,
-    });
-
-  return { batches, buildActivityInput, client, startedActivities, submitter };
+  return { batches, client, startedActivities, submitter };
 }
 
 test('it discards a partial attempt and submits nothing when the budget is too small', async () => {
@@ -77,7 +69,13 @@ test('it discards a partial attempt and submits nothing when the budget is too s
   const report = await runFastForward({
     avatar: createMockAvatarData(),
     budgetMs: 3000,
-    buildActivityInput: ctx.buildActivityInput,
+    buildActivityInput: (activity) =>
+      createMockActivityInput({
+        enemies: [createMockEnemyData()],
+        failureAction: ActivityFailureAction.Retry,
+        id: activity.id,
+        seed: activity.seed,
+      }),
     client: ctx.client,
     progress,
     submitter: ctx.submitter,
@@ -88,7 +86,7 @@ test('it discards a partial attempt and submits nothing when the budget is too s
 });
 
 test('it stops after the first failed attempt under the abort policy', async () => {
-  const ctx = setupTest({ failureAction: ActivityFailureAction.Abort });
+  const ctx = setupTest();
   const onProgress = mock<(progress: FastForwardProgress) => void>();
 
   const progress: LatestActivityProgress = {
@@ -103,7 +101,13 @@ test('it stops after the first failed attempt under the abort policy', async () 
     // life 1 dies on the first hit taken, so the attempt fails quickly
     avatar: createMockAvatarData({ life: 1 }),
     budgetMs: 60_000,
-    buildActivityInput: ctx.buildActivityInput,
+    buildActivityInput: (activity) =>
+      createMockActivityInput({
+        enemies: [createMockEnemyData()],
+        failureAction: ActivityFailureAction.Abort,
+        id: activity.id,
+        seed: activity.seed,
+      }),
     client: ctx.client,
     onProgress,
     progress,
@@ -131,7 +135,13 @@ test('it chains fresh server-started attempts through failures under the retry p
   const report = await runFastForward({
     avatar: createMockAvatarData({ life: 1 }),
     budgetMs: 30_000,
-    buildActivityInput: ctx.buildActivityInput,
+    buildActivityInput: (activity) =>
+      createMockActivityInput({
+        enemies: [createMockEnemyData()],
+        failureAction: ActivityFailureAction.Retry,
+        id: activity.id,
+        seed: activity.seed,
+      }),
     client: ctx.client,
     progress,
     submitter: ctx.submitter,
@@ -148,7 +158,7 @@ test('it chains fresh server-started attempts through failures under the retry p
 });
 
 test('it resumes a mid-stream activity submitting only the tail past the appended head', async () => {
-  const ctx = setupTest({ failureAction: ActivityFailureAction.Abort });
+  const ctx = setupTest();
 
   const progress: LatestActivityProgress = {
     activity: createMockActivityData({ appendedHead: 1 }),
@@ -161,7 +171,13 @@ test('it resumes a mid-stream activity submitting only the tail past the appende
   const report = await runFastForward({
     avatar: createMockAvatarData({ life: 1 }),
     budgetMs: 60_000,
-    buildActivityInput: ctx.buildActivityInput,
+    buildActivityInput: (activity) =>
+      createMockActivityInput({
+        enemies: [createMockEnemyData()],
+        failureAction: ActivityFailureAction.Abort,
+        id: activity.id,
+        seed: activity.seed,
+      }),
     client: ctx.client,
     progress,
     submitter: ctx.submitter,

@@ -11,4 +11,5 @@ test('it rejects an output missing the elapsed duration', () => {
   const result = ReplaySegmentOutputSchema.safeParse({ checkpoints: [] });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['elapsed'] }));
 });

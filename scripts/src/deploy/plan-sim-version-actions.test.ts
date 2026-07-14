@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import type { SimVersionRow } from '@vers/sim-registry';
+import { createMockSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildProviderAppName } from './build-provider-app-name';
 import { planSimVersionActions } from './plan-sim-version-actions';
 import type { FleetImage } from './types';
@@ -12,20 +12,6 @@ const fleetImage: FleetImage = {
   repository: 'registry.fly.io/vers-service-replay',
   tag: 'deployment-current',
 };
-
-function buildRegistryRow(overrides: Partial<SimVersionRow> = {}): SimVersionRow {
-  return {
-    bunVersion: '1.3.10',
-    createdAt: new Date('2026-01-01'),
-    deployedAt: new Date('2026-01-01'),
-    engineHash: ENGINE_HASH,
-    imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-    providerUrl: `http://${PROVIDER_APP}.flycast`,
-    retainedUntil: new Date('2026-02-01'),
-    status: 'active',
-    ...overrides,
-  };
-}
 
 test('it provisions everything for a fresh engine hash', () => {
   const actions = planSimVersionActions({
@@ -64,7 +50,9 @@ test('it takes no action when the registry row is current and the app already ex
     fleetImage,
     providerAppExists: true,
     providerMachineExists: true,
-    registryRow: buildRegistryRow(),
+    registryRow: createMockSimVersionRow({
+      imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
+    }),
   });
 
   expect(actions).toBeEmpty();
@@ -77,7 +65,9 @@ test('it recreates the provider app and refreshes the row when the app is missin
     fleetImage,
     providerAppExists: false,
     providerMachineExists: false,
-    registryRow: buildRegistryRow(),
+    registryRow: createMockSimVersionRow({
+      imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
+    }),
   });
 
   expect(actions).toStrictEqual([
@@ -107,7 +97,9 @@ test('it only refreshes the registry row when the fleet digest has drifted from 
     fleetImage,
     providerAppExists: true,
     providerMachineExists: true,
-    registryRow: buildRegistryRow({ imageRef: `${fleetImage.repository}@sha256:stale` }),
+    registryRow: createMockSimVersionRow({
+      imageRef: `${fleetImage.repository}@sha256:stale`,
+    }),
   });
 
   expect(actions).toStrictEqual([
@@ -130,7 +122,9 @@ test('it relaunches only the machine when the app survives but its machine is go
     fleetImage,
     providerAppExists: true,
     providerMachineExists: false,
-    registryRow: buildRegistryRow(),
+    registryRow: createMockSimVersionRow({
+      imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
+    }),
   });
 
   expect(actions).toStrictEqual([

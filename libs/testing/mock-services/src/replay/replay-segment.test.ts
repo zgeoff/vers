@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { call } from '@orpc/server';
-import { createMockReplaySegmentInput } from '../test-utils/factories/create-mock-replay-segment-input';
+import { createMockReplaySegmentInput } from '@vers/contract-replay/test-utils';
 import { replaySegment } from './replay-segment';
 
 test('it replays any segment as a canned empty success', async () => {

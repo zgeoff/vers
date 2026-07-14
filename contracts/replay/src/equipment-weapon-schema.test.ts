@@ -21,4 +21,5 @@ test('it rejects a weapon missing a required field', () => {
   });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['minDamage'] }));
 });

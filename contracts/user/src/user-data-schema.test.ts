@@ -16,7 +16,10 @@ test('it accepts a well-formed user', () => {
 });
 
 test('it rejects a user missing required fields', () => {
-  expect(UserDataSchema.safeParse({ id: 'user_1' }).success).toBeFalse();
+  const result = UserDataSchema.safeParse({ id: 'user_1' });
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['createdAt'] }));
 });
 
 test('it strips password fields instead of passing them through', () => {

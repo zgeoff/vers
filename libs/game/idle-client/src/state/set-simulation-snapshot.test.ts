@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { ActivityFailureAction } from '@vers/idle-core';
+import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import { setSimulationSnapshot } from './set-simulation-snapshot';
 import { useIdleStore } from './use-idle-store';
 
@@ -25,17 +26,7 @@ test('it clears fields the snapshot omits', () => {
   useIdleStore.setState({ activity: null, avatar: null });
 
   setSimulationSnapshot({
-    activity: {
-      currentWave: null,
-      elapsed: 0,
-      enemiesRemaining: 20,
-      id: 'activity_1',
-      levelUp: null,
-      name: 'Test Activity',
-      rewards: { xp: 0 },
-      waves: [],
-      wavesRemaining: 4,
-    },
+    activity: createMockActivitySnapshot({ id: 'activity_1' }),
     failureAction: ActivityFailureAction.Abort,
   });
 

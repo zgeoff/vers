@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
+import { createMockSimulationContext } from '../../test-utils/factories/create-mock-simulation-context';
 import { ActivityCheckpointType } from '../../types';
 import { createStartedCheckpoint } from './create-started-checkpoint';
 

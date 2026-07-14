@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createAvatar } from '../../entities/create-avatar';
-import { createMockAvatarData } from '../../test-utils/create-mock-avatar-data';
-import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
+import { createMockAvatarData } from '../../test-utils/factories/create-mock-avatar-data';
+import { createMockSimulationContext } from '../../test-utils/factories/create-mock-simulation-context';
 import type { AvatarAttackEvent, EnemyAttackEvent } from '../../types';
 import { CombatEventType } from '../../types';
 import { createEventSorter } from './create-event-sorter';

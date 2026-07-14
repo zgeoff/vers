@@ -2,10 +2,10 @@ import { expect, test } from 'bun:test';
 import invariant from 'tiny-invariant';
 import { createAvatar } from '../entities/create-avatar';
 import { buildCompletionXP, levelForXP } from '../progression';
-import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
-import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
-import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
-import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
+import { createMockActivityInput } from '../test-utils/factories/create-mock-activity-input';
+import { createMockAvatarData } from '../test-utils/factories/create-mock-avatar-data';
+import { createMockEnemyData } from '../test-utils/factories/create-mock-enemy-data';
+import { createMockSimulationContext } from '../test-utils/factories/create-mock-simulation-context';
 import {
   ActivityCheckpointType,
   ActivityFailureAction,

@@ -17,4 +17,5 @@ test('it rejects a resetURL that is not a valid url', () => {
   });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['resetURL'] }));
 });

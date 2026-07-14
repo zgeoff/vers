@@ -1,4 +1,4 @@
-import { createMockAccessToken } from '@vers/mock-services';
+import { createTestAccessToken } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import type { UserRowSchema } from '@vers/mock-services/db';
 import type * as z from 'zod';
@@ -20,7 +20,7 @@ export async function createSignedInUser(
 ): Promise<SignedInUser> {
   const createdUser = await db.userCollection.create(user);
   const session = await db.sessionCollection.create({ userID: createdUser.id });
-  const accessToken = await createMockAccessToken(createdUser.id);
+  const accessToken = await createTestAccessToken(createdUser.id);
 
   return {
     cookies: {

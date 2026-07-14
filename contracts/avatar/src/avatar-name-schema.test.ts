@@ -6,5 +6,8 @@ test('it accepts an alphabetic name within the length bounds', () => {
 });
 
 test('it rejects a name with non-alphabetic characters', () => {
-  expect(AvatarNameSchema.safeParse('Aria1').success).toBeFalse();
+  const result = AvatarNameSchema.safeParse('Aria1');
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
 });

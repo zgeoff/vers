@@ -27,6 +27,7 @@
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/contract-base": "workspace:*",
+    "@vers/service-test-utils": "workspace:*",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "expect-type": "catalog:",

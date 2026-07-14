@@ -39,4 +39,5 @@ test('it rejects an avatar missing its paperdoll', () => {
   });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['paperdoll'] }));
 });

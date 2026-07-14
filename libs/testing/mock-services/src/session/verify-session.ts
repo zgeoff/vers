@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { createMockAccessToken } from '../create-mock-access-token';
+import { createTestAccessToken } from '../create-test-access-token';
 import * as db from '../db';
 import { os } from './os';
 
@@ -33,5 +33,5 @@ export const verifySession = os.verifySession.handler(async (opts) => {
     db.sessionCollection.delete(otherSession);
   }
 
-  return { accessToken: await createMockAccessToken(session.userID), refreshToken };
+  return { accessToken: await createTestAccessToken(session.userID), refreshToken };
 });

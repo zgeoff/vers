@@ -10,22 +10,30 @@ import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { onboardingHandler } from './onboarding-handler';
 
-const validFields = {
-  agreeToTerms: 'on',
-  confirmPassword: 'password123',
-  name: 'John Smith',
-  password: 'password123',
-  username: 'john_smith13',
-};
-
 test('it redirects to signup when there is no pending onboarding session', () => {
-  const promise = withRequestContext({}, () => onboardingHandler(buildFormData(validFields)));
+  const promise = withRequestContext({}, () =>
+    onboardingHandler(
+      buildFormData({
+        agreeToTerms: 'on',
+        confirmPassword: 'password123',
+        name: 'John Smith',
+        password: 'password123',
+        username: 'john_smith13',
+      }),
+    ),
+  );
 
   expect(promise).rejects.toMatchObject({ options: { href: '/signup' } });
 });
 
 test('it rejects a submission with a filled-in honeypot field', async () => {
-  const formData = buildFormData(validFields);
+  const formData = buildFormData({
+    agreeToTerms: 'on',
+    confirmPassword: 'password123',
+    name: 'John Smith',
+    password: 'password123',
+    username: 'john_smith13',
+  });
 
   formData.set(HONEYPOT_FIELD_NAME, 'filled in by a bot');
 
@@ -46,7 +54,13 @@ test('it reports field errors for a mismatched password confirmation', async () 
     { cookies: { en_verification: { 'onboarding#email': 'onboard-mismatch@vers.test' } } },
     () =>
       onboardingHandler(
-        buildFormData({ ...validFields, confirmPassword: 'not-the-same-password' }),
+        buildFormData({
+          agreeToTerms: 'on',
+          confirmPassword: 'not-the-same-password',
+          name: 'John Smith',
+          password: 'password123',
+          username: 'john_smith13',
+        }),
       ),
   );
 
@@ -62,7 +76,16 @@ test('it reports a field error for a username already in use', async () => {
 
   const outcome = await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboard-username-taken@vers.test' } } },
-    () => onboardingHandler(buildFormData(validFields)),
+    () =>
+      onboardingHandler(
+        buildFormData({
+          agreeToTerms: 'on',
+          confirmPassword: 'password123',
+          name: 'John Smith',
+          password: 'password123',
+          username: 'john_smith13',
+        }),
+      ),
   );
 
   if (outcome.value instanceof Response) {
@@ -89,7 +112,16 @@ test('it reports a generic form-level error when account creation fails', async 
 
   const outcome = await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboard-failure@vers.test' } } },
-    () => onboardingHandler(buildFormData({ ...validFields, username: 'onboard_failure_user' })),
+    () =>
+      onboardingHandler(
+        buildFormData({
+          agreeToTerms: 'on',
+          confirmPassword: 'password123',
+          name: 'John Smith',
+          password: 'password123',
+          username: 'onboard_failure_user',
+        }),
+      ),
   );
 
   if (outcome.value instanceof Response) {
@@ -104,7 +136,13 @@ test('it creates the account, signs the caller in, and clears the onboarding ses
     { cookies: { en_verification: { 'onboarding#email': 'onboard-success@vers.test' } } },
     async () => {
       const redirectHref = await onboardingHandler(
-        buildFormData({ ...validFields, username: 'onboard_success_user' }),
+        buildFormData({
+          agreeToTerms: 'on',
+          confirmPassword: 'password123',
+          name: 'John Smith',
+          password: 'password123',
+          username: 'onboard_success_user',
+        }),
       )
         .then(() => null)
         .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));

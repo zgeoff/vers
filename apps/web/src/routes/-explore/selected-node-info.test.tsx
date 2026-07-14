@@ -1,18 +1,9 @@
 import { expect, test } from 'bun:test';
 import { screen } from '@testing-library/react';
 import { setSelectedNode } from '@vers/worldmap-client';
-import type { WorldMapNode } from '@vers/worldmap-core';
+import { createMockWorldMapNode } from '@vers/worldmap-client/test-utils';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { SelectedNodeInfo } from './selected-node-info';
-
-const node: WorldMapNode = {
-  connections: ['conn1', null, 'conn2', null],
-  difficulty: 2,
-  id: 'node123',
-  index: 3,
-  position: [1.2345, 6.789],
-  seed: 12_345,
-};
 
 test('it renders nothing with no node selected', () => {
   setSelectedNode(null);
@@ -21,6 +12,8 @@ test('it renders nothing with no node selected', () => {
 });
 
 test('it shows the selected node and links into its activity', async () => {
+  const node = createMockWorldMapNode({ difficulty: 2, id: 'node123' });
+
   setSelectedNode(node, null);
   renderWithRouter(<SelectedNodeInfo />);
 

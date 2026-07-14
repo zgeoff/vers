@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { sessionContract } from '@vers/contract-session';
-import { createMockAccessToken, resolveSessionContext } from '@vers/mock-services';
+import { createTestAccessToken, resolveSessionContext } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import { server } from '../../mocks/node';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -17,7 +17,7 @@ test('it returns null with no network call when there is no cookie session', asy
 
 test('it returns the cookie userID unchanged for a fresh access token whose session still exists', async () => {
   const session = await db.sessionCollection.create({});
-  const accessToken = await createMockAccessToken(session.userID);
+  const accessToken = await createTestAccessToken(session.userID);
 
   const outcome = await withRequestContext(
     {
@@ -40,7 +40,7 @@ test('it returns the cookie userID unchanged for a fresh access token whose sess
 test('it clears the cookie and returns null for a fresh access token whose session no longer exists', async () => {
   const userID = createId();
 
-  const accessToken = await createMockAccessToken(userID);
+  const accessToken = await createTestAccessToken(userID);
 
   const outcome = await withRequestContext(
     {
@@ -62,7 +62,7 @@ test('it clears the cookie and returns null for a fresh access token whose sessi
 
 test('it hits getSession at most once per request for a fresh access token', async () => {
   const session = await db.sessionCollection.create({});
-  const accessToken = await createMockAccessToken(session.userID);
+  const accessToken = await createTestAccessToken(session.userID);
 
   const mockSession = buildContractMock({
     baseUrl: SERVICE_URLS.session,
@@ -102,7 +102,7 @@ test('it hits getSession at most once per request for a fresh access token', asy
 
 test('it fails the call and keeps the cookie when the session cannot be confirmed', async () => {
   const session = await db.sessionCollection.create({});
-  const accessToken = await createMockAccessToken(session.userID);
+  const accessToken = await createTestAccessToken(session.userID);
 
   const mockSession = buildContractMock({
     baseUrl: SERVICE_URLS.session,
@@ -136,7 +136,7 @@ test('it fails the call and keeps the cookie when the session cannot be confirme
 
 test('it refreshes a stale access token once, updates the cookie, and returns the acting user', async () => {
   const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
-  const staleAccessToken = await createMockAccessToken(session.userID, '-1s');
+  const staleAccessToken = await createTestAccessToken(session.userID, '-1s');
 
   const outcome = await withRequestContext(
     {
@@ -158,7 +158,7 @@ test('it refreshes a stale access token once, updates the cookie, and returns th
 });
 
 test('it clears the cookie and returns null when the refresh itself fails', async () => {
-  const staleAccessToken = await createMockAccessToken('some-user', '-1s');
+  const staleAccessToken = await createTestAccessToken('some-user', '-1s');
 
   const outcome = await withRequestContext(
     {
@@ -180,7 +180,7 @@ test('it clears the cookie and returns null when the refresh itself fails', asyn
 
 test('it fails the call and keeps the cookie when the refresh errors without a verdict on the session', async () => {
   const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
-  const staleAccessToken = await createMockAccessToken(session.userID, '-1s');
+  const staleAccessToken = await createTestAccessToken(session.userID, '-1s');
 
   const mockSession = buildContractMock({
     baseUrl: SERVICE_URLS.session,
@@ -214,7 +214,7 @@ test('it fails the call and keeps the cookie when the refresh errors without a v
 
 test('it single-flights concurrent refreshes for the same session', async () => {
   const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
-  const staleAccessToken = await createMockAccessToken(session.userID, '-1s');
+  const staleAccessToken = await createTestAccessToken(session.userID, '-1s');
 
   const cookies = {
     en_session: {

@@ -27,4 +27,5 @@ test('it rejects an action outside the secure-action enum', () => {
   });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['action'] }));
 });

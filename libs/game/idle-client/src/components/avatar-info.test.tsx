@@ -1,30 +1,24 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import { nodeHasText } from '@vers/client-test-utils';
-import type { AvatarSnapshot } from '@vers/idle-core';
-import { EntityStatus } from '@vers/idle-core';
+import { createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
 import { AvatarInfo } from './avatar-info';
 
 test('it renders avatar information', () => {
-  const avatar: AvatarSnapshot = {
+  const avatar = createMockAvatarSnapshot({
     behaviours: {
       avatar_weapon_attack: {
         lastAttackTime: 0,
       },
     },
     id: '1',
-    isAlive: true,
-    level: 1,
     life: 75,
     mainHandAttack: {
       maxDamage: 10,
       minDamage: 5,
       speed: 1,
     },
-    maxLife: 100,
-    name: 'Test Avatar',
-    status: EntityStatus.Alive,
-  };
+  });
 
   render(<AvatarInfo avatar={avatar} />);
 

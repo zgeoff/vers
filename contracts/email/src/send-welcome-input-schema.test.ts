@@ -19,6 +19,7 @@ test('it rejects a to address that is not a valid email', () => {
   });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['to'] }));
 });
 
 test('it rejects a verificationURL that is not a valid url', () => {
@@ -29,4 +30,8 @@ test('it rejects a verificationURL that is not a valid url', () => {
   });
 
   expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['verificationURL'] }),
+  );
 });

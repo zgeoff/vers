@@ -8,5 +8,8 @@ test('it accepts every declared status value', () => {
 });
 
 test('it rejects a status outside the enum', () => {
-  expect(ActivityStatusSchema.safeParse('paused').success).toBeFalse();
+  const result = ActivityStatusSchema.safeParse('paused');
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
 });

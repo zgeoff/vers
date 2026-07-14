@@ -16,5 +16,8 @@ test('it accepts a well-formed session', () => {
 });
 
 test('it rejects a session missing required fields', () => {
-  expect(SessionDataSchema.safeParse({ id: 'session_1' }).success).toBeFalse();
+  const result = SessionDataSchema.safeParse({ id: 'session_1' });
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['createdAt'] }));
 });

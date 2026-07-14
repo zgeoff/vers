@@ -1,9 +1,9 @@
 import { expect, mock, test } from 'bun:test';
 import { createActivity } from '../core/create-activity';
 import { createCombatExecutor } from '../core/create-combat-executor';
-import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
-import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
-import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
+import { createMockActivityInput } from '../test-utils/factories/create-mock-activity-input';
+import { createMockAvatarData } from '../test-utils/factories/create-mock-avatar-data';
+import { createMockSimulationContext } from '../test-utils/factories/create-mock-simulation-context';
 import type {
   Avatar,
   AvatarTestBehaviour,

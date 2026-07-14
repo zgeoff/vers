@@ -1,5 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core';
+import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import type {
   DisconnectMessage,
   InitializeMessage,

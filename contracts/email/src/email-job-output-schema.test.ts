@@ -6,5 +6,8 @@ test('it accepts a well-formed job output', () => {
 });
 
 test('it rejects an output missing the jobID', () => {
-  expect(EmailJobOutputSchema.safeParse({}).success).toBeFalse();
+  const result = EmailJobOutputSchema.safeParse({});
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['jobID'] }));
 });

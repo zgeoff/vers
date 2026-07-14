@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { createMockAvatarData } from '../../test-utils/create-mock-avatar-data';
-import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
+import { createMockAvatarData } from '../../test-utils/factories/create-mock-avatar-data';
+import { createMockSimulationContext } from '../../test-utils/factories/create-mock-simulation-context';
 import { EquipmentSlot } from '../../types';
 import { createAvatar } from '../create-avatar';
 import { calcAvatarAttackDamage } from './calc-avatar-attack-damage';

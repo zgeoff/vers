@@ -6,5 +6,8 @@ test('it lowercases a well-formed username', () => {
 });
 
 test('it rejects a username with disallowed characters', () => {
-  expect(UsernameSchema.safeParse('bobby!').success).toBeFalse();
+  const result = UsernameSchema.safeParse('bobby!');
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
 });

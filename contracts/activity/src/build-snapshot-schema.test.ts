@@ -11,4 +11,5 @@ test('it rejects a snapshot missing a required field', () => {
   const result = BuildSnapshotSchema.safeParse({ level: 3 });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['xp'] }));
 });

@@ -23,4 +23,8 @@ test('it rejects an enemy with a malformed attack', () => {
   });
 
   expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['primaryAttack', 'maxDamage'] }),
+  );
 });

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
-import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
+import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
 import { WorkerMessageType } from '../types';
 import { handleSimulationUpdate } from './handle-simulation-update';
 

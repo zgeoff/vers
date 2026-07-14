@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ActivitySnapshot } from '@vers/idle-core';
 import { ActivityFailureAction } from '@vers/idle-core';
+import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import { setSelectedNode } from '@vers/worldmap-client';
 import { removeSharedWorker } from '../../test-utils/remove-shared-worker';
 import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
@@ -17,20 +17,6 @@ function isSetActivityMessage(value: unknown): value is SetActivityMessage {
   return (
     typeof value === 'object' && value !== null && 'type' in value && value.type === 'set_activity'
   );
-}
-
-function buildFakeActivitySnapshot(id: string): ActivitySnapshot {
-  return {
-    currentWave: null,
-    elapsed: 0,
-    enemiesRemaining: 0,
-    id,
-    levelUp: null,
-    name: 'World Map Encounter',
-    rewards: { xp: 0 },
-    waves: [],
-    wavesRemaining: 0,
-  };
 }
 
 test('it shows a spinner and sends initialize before the worker reports its state', async () => {
@@ -122,7 +108,7 @@ test('it renders the node and its codex fragment once the worker reports the sen
 
   await withIdleWorkerHandle(
     {
-      activity: buildFakeActivitySnapshot(sentMessage.activity.id),
+      activity: createMockActivitySnapshot({ id: sentMessage.activity.id }),
       failureAction: ActivityFailureAction.Abort,
       initialized: true,
       worker,
@@ -161,7 +147,7 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
 
   await withIdleWorkerHandle(
     {
-      activity: buildFakeActivitySnapshot(sentMessage.activity.id),
+      activity: createMockActivitySnapshot({ id: sentMessage.activity.id }),
       failureAction: ActivityFailureAction.Abort,
       initialized: true,
       worker,

@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
-import { createMockAccessToken } from '@vers/mock-services';
+import { createTestAccessToken } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import * as jose from 'jose';
 import type { HttpResponseResolver } from 'msw';
@@ -80,7 +80,7 @@ test("it mints an s2s token carrying the caller's cookie userID as its subject, 
 
   await db.sessionCollection.create({ id: sessionID, userID });
 
-  const accessToken = await createMockAccessToken(userID);
+  const accessToken = await createTestAccessToken(userID);
 
   server.use(http.get('http://localhost:3005/rpc/getAvatars', resolver));
 

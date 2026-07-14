@@ -7,8 +7,6 @@ import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { changePasswordHandler } from './change-password-handler';
 
-const validNewPassword = { confirmPassword: 'new-password123', password: 'new-password123' };
-
 test('it reports a field error when the new passwords do not match', async () => {
   const signedIn = await createSignedInUser({ password: 'original-password' });
 
@@ -33,7 +31,11 @@ test('it reports invalid credentials for the wrong current password', async () =
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     changePasswordHandler(
-      buildFormData({ currentPassword: 'not-the-real-password', ...validNewPassword }),
+      buildFormData({
+        confirmPassword: 'new-password123',
+        currentPassword: 'not-the-real-password',
+        password: 'new-password123',
+      }),
     ),
   );
 
@@ -50,7 +52,11 @@ test('it reports invalid credentials for the wrong current password before gatin
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     changePasswordHandler(
-      buildFormData({ currentPassword: 'not-the-real-password', ...validNewPassword }),
+      buildFormData({
+        confirmPassword: 'new-password123',
+        currentPassword: 'not-the-real-password',
+        password: 'new-password123',
+      }),
     ),
   );
 
@@ -69,7 +75,11 @@ test('it changes the password and redirects to account for a caller with no 2FA'
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const redirectHref = await changePasswordHandler(
-      buildFormData({ currentPassword: 'original-password', ...validNewPassword }),
+      buildFormData({
+        confirmPassword: 'new-password123',
+        currentPassword: 'original-password',
+        password: 'new-password123',
+      }),
     )
       .then(() => null)
       .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
@@ -91,7 +101,11 @@ test('it reports step-up-required for a 2FA-enabled caller with no transaction t
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     changePasswordHandler(
-      buildFormData({ currentPassword: 'original-password', ...validNewPassword }),
+      buildFormData({
+        confirmPassword: 'new-password123',
+        currentPassword: 'original-password',
+        password: 'new-password123',
+      }),
     ),
   );
 
@@ -112,9 +126,10 @@ test('it changes the password once a valid step-up token is attached', async () 
 
     const redirectHref = await changePasswordHandler(
       buildFormData({
+        confirmPassword: 'new-password123',
         currentPassword: 'original-password',
+        password: 'new-password123',
         stepUpToken: minted.token,
-        ...validNewPassword,
       }),
     )
       .then(() => null)

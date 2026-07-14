@@ -3,10 +3,10 @@ import invariant from 'tiny-invariant';
 import { createActivity } from '../../core/create-activity';
 import { createCombatExecutor } from '../../core/create-combat-executor';
 import { createAvatar } from '../../entities/create-avatar';
-import { createMockActivityInput } from '../../test-utils/create-mock-activity-input';
-import { createMockAvatarData } from '../../test-utils/create-mock-avatar-data';
-import { createMockEnemyData } from '../../test-utils/create-mock-enemy-data';
-import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
+import { createMockActivityInput } from '../../test-utils/factories/create-mock-activity-input';
+import { createMockAvatarData } from '../../test-utils/factories/create-mock-avatar-data';
+import { createMockEnemyData } from '../../test-utils/factories/create-mock-enemy-data';
+import { createMockSimulationContext } from '../../test-utils/factories/create-mock-simulation-context';
 import { isAttackReady } from './is-attack-ready';
 
 test('it returns true when elapsed time is equal or greater than the next attack time', () => {

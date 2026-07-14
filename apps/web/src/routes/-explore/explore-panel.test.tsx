@@ -1,18 +1,9 @@
 import { expect, test } from 'bun:test';
 import { screen } from '@testing-library/react';
 import { setSelectedNode } from '@vers/worldmap-client';
-import type { WorldMapNode } from '@vers/worldmap-core';
+import { createMockWorldMapNode } from '@vers/worldmap-client/test-utils';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { ExplorePanel } from './explore-panel';
-
-const node: WorldMapNode = {
-  connections: ['conn1', null, 'conn2', null],
-  difficulty: 2,
-  id: 'node123',
-  index: 3,
-  position: [1.2345, 6.789],
-  seed: 12_345,
-};
 
 test('it renders no canvas of its own', () => {
   setSelectedNode(null);
@@ -23,6 +14,8 @@ test('it renders no canvas of its own', () => {
 });
 
 test('it shows the selected node once the graph reports one', async () => {
+  const node = createMockWorldMapNode({ id: 'node123' });
+
   setSelectedNode(node, null);
   renderWithRouter(<ExplorePanel />);
 

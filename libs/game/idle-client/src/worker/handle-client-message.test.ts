@@ -1,11 +1,7 @@
 import { expect, test } from 'bun:test';
-import {
-  ActivityFailureAction,
-  createMockActivityInput,
-  createMockAvatarData,
-  createSimulation,
-} from '@vers/idle-core';
-import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
+import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
+import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
+import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
 import type {
   DisconnectMessage,
   InitializeMessage,

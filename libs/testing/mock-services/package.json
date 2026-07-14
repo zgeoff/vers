@@ -43,7 +43,6 @@
   "devDependencies": {
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
-    "@vers/game-utils": "workspace:*",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "typescript": "catalog:"

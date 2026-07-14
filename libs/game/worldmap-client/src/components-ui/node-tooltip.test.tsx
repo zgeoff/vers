@@ -1,19 +1,17 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import { nodeHasText } from '@vers/client-test-utils';
-import type { WorldMapNode } from '@vers/worldmap-core';
 import { setHoveredNode } from '../state/set-hovered-node';
+import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
 import { NodeTooltip } from './node-tooltip';
 
 test('it displays information about the hovered node', () => {
-  const node: WorldMapNode = {
+  const node = createMockWorldMapNode({
     connections: ['conn1', null, 'conn2', null],
     difficulty: 2,
     id: 'node123',
-    index: 3,
     position: [1.2345, 6.789],
-    seed: 12_345,
-  };
+  });
 
   setHoveredNode(node);
   render(<NodeTooltip />);

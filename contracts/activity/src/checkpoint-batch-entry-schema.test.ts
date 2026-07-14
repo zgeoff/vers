@@ -35,4 +35,5 @@ test('it rejects a negative version', () => {
   });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['version'] }));
 });
