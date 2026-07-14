@@ -1,18 +1,23 @@
-import { randomBytes } from 'node:crypto';
-
 const ALL_ZERO_SEED = '0'.repeat(32);
 
 /**
  * Mints a server CSPRNG genesis seed for a node's first activity: a 128-bit state as a 32-char
  * lowercase hex string. Deterministic re-derivation is not needed because the value is stored on
- * the chain row.
+ * the chain row. Sourced from the Web Crypto global so the contract package stays loadable in
+ * every runtime it ships to — server, browser, and worker bundles alike.
  */
 export function createGenesisSeed(): string {
-  let seed = randomBytes(16).toString('hex');
+  let seed = buildRandomHex();
 
   while (seed === ALL_ZERO_SEED) {
-    seed = randomBytes(16).toString('hex');
+    seed = buildRandomHex();
   }
 
   return seed;
+}
+
+function buildRandomHex(): string {
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
