@@ -4,16 +4,31 @@ import { createMockActivitySnapshot } from './create-mock-activity-snapshot';
 test('it builds a snapshot with no waves remaining and no rewards yet', () => {
   const snapshot = createMockActivitySnapshot();
 
-  expect(snapshot.currentWave).toBeNull();
-  expect(snapshot.waves).toStrictEqual([]);
-  expect(snapshot.wavesRemaining).toBe(0);
-  expect(snapshot.rewards).toStrictEqual({ xp: 0 });
-  expect(snapshot.id).toBeString();
+  expect(snapshot).toStrictEqual({
+    currentWave: null,
+    elapsed: 0,
+    enemiesRemaining: 0,
+    id: expect.toBeString(),
+    levelUp: null,
+    name: 'World Map Encounter',
+    rewards: { xp: 0 },
+    waves: [],
+    wavesRemaining: 0,
+  });
 });
 
 test('it applies overrides over the defaults', () => {
   const snapshot = createMockActivitySnapshot({ elapsed: 42, id: 'activity-1' });
 
-  expect(snapshot.elapsed).toBe(42);
-  expect(snapshot.id).toBe('activity-1');
+  expect(snapshot).toStrictEqual({
+    currentWave: null,
+    elapsed: 42,
+    enemiesRemaining: 0,
+    id: 'activity-1',
+    levelUp: null,
+    name: 'World Map Encounter',
+    rewards: { xp: 0 },
+    waves: [],
+    wavesRemaining: 0,
+  });
 });
