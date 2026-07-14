@@ -471,6 +471,19 @@
         "typescript": "catalog:",
       },
     },
+    "libs/game/roll-crypto": {
+      "name": "@vers/roll-crypto",
+      "version": "0.0.0",
+      "dependencies": {
+        "@noble/hashes": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "libs/game/worldmap-client": {
       "name": "@vers/worldmap-client",
       "version": "0.0.0",
@@ -2274,6 +2287,8 @@
     "@vers/jobs": ["@vers/jobs@workspace:libs/service/jobs"],
 
     "@vers/panda-preset": ["@vers/panda-preset@workspace:libs/design/panda-preset"],
+
+    "@vers/roll-crypto": ["@vers/roll-crypto@workspace:libs/game/roll-crypto"],
 
     "@vers/scripts": ["@vers/scripts@workspace:scripts"],
 
