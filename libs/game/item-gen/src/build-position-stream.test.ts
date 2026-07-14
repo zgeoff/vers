@@ -1,0 +1,58 @@
+import { expect, test } from 'bun:test';
+import { hexToBytes } from '@noble/hashes/utils.js';
+import { buildPositionStream } from './build-position-stream';
+
+test('it reproduces the frozen golden draws for a reward coordinate', () => {
+  const stream = buildPositionStream(hexToBytes('11'.repeat(32)), {
+    kind: 'reward',
+    avatarID: 'avatar-1',
+    nodeID: 'node-1',
+    chainIndex: 3,
+    ordinal: 0,
+  });
+
+  const draws = Array.from({ length: 4 }, () => stream.rollRange(0, 9999));
+
+  expect(draws).toStrictEqual([6019, 203, 7365, 253]);
+});
+
+test('it reproduces the frozen golden draws for a craft position', () => {
+  const stream = buildPositionStream(hexToBytes('11'.repeat(32)), {
+    kind: 'craft',
+    avatarID: 'avatar-1',
+    position: 3,
+  });
+
+  const draws = Array.from({ length: 4 }, () => stream.rollRange(0, 9999));
+
+  expect(draws).toStrictEqual([4500, 4851, 6330, 8490]);
+});
+
+test('it reproduces identical draws when rebuilt from equal inputs', () => {
+  const position = {
+    kind: 'reward',
+    avatarID: 'avatar-1',
+    nodeID: 'node-1',
+    chainIndex: 3,
+    ordinal: 7,
+  } as const;
+
+  const first = buildPositionStream(hexToBytes('11'.repeat(32)), position);
+  const second = buildPositionStream(hexToBytes('11'.repeat(32)), position);
+
+  expect(Array.from({ length: 16 }, () => first.rollRange(0, 9999))).toStrictEqual(
+    Array.from({ length: 16 }, () => second.rollRange(0, 9999)),
+  );
+});
+
+test('it diverges under a different key', () => {
+  const stream = buildPositionStream(hexToBytes('22'.repeat(32)), {
+    kind: 'reward',
+    avatarID: 'avatar-1',
+    nodeID: 'node-1',
+    chainIndex: 3,
+    ordinal: 0,
+  });
+
+  expect(stream.rollRange(0, 9999)).toBe(3820);
+});
