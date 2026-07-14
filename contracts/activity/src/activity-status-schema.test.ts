@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { ActivityStatusSchema } from './activity-status-schema';
 
 test('it accepts every declared status value', () => {
-  for (const status of ['active', 'stopped', 'rejected', 'capped', 'quarantined']) {
+  for (const status of ['active', 'stopped', 'rejected', 'capped', 'quarantined', 'parked']) {
     expect(ActivityStatusSchema.safeParse(status).success).toBeTrue();
   }
 });
