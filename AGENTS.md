@@ -159,8 +159,8 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 
 **Pure producers:**
 
-| Prefix | Contract                                                    | Example              |
-| ------ | ----------------------------------------------------------- | -------------------- |
+| Prefix | Contract                                                     | Example              |
+| ------ | ------------------------------------------------------------ | -------------------- |
 | `roll` | consume typed draws from a roll stream to produce an outcome | `rollItemFromStream` |
 
 ## Review bots
