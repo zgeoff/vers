@@ -1,11 +1,9 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { implement } from '@orpc/server';
 import { authedRoute, publicRoute } from '@vers/contract-base';
-import { TOKEN_ALGORITHM, TOKEN_ISSUER } from '@vers/service-auth';
+import { createServiceToken, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient, collectConformanceCases } from '@vers/test-utils';
 import { expectTypeOf } from 'expect-type';
-import type { CryptoKey } from 'jose';
-import * as jose from 'jose';
 import * as z from 'zod';
 import { createService } from './create-service';
 import type { ServiceContext } from './types';
@@ -40,44 +38,6 @@ function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
   };
 }
 
-interface TestServiceKeyPair {
-  readonly privateKey: CryptoKey;
-  readonly publicKeyPEM: string;
-}
-
-/**
- * A fresh Ed25519 keypair for signing s2s tokens under test. Inlined rather than pulled from a
- * shared test-utils package, since this package's own tests can't depend on one that in turn
- * depends on this package.
- */
-async function createTestServiceKeyPair(): Promise<TestServiceKeyPair> {
-  const keyPair = await jose.generateKeyPair(TOKEN_ALGORITHM, { extractable: true });
-  const publicKeyPEM = await jose.exportSPKI(keyPair.publicKey);
-
-  return { privateKey: keyPair.privateKey, publicKeyPEM };
-}
-
-interface CreateTestServiceTokenOptions {
-  readonly actingUserId?: string;
-  readonly audience: string;
-  readonly expiresIn?: string;
-  readonly privateKey: CryptoKey;
-}
-
-/**
- * Signs a short-lived s2s token carrying the same claim vocabulary a real service token does.
- */
-function createTestServiceToken(options: Readonly<CreateTestServiceTokenOptions>): Promise<string> {
-  const claims = options.actingUserId === undefined ? {} : { sub: options.actingUserId };
-
-  return new jose.SignJWT(claims)
-    .setProtectedHeader({ alg: TOKEN_ALGORITHM })
-    .setIssuer(TOKEN_ISSUER)
-    .setAudience(options.audience)
-    .setExpirationTime(options.expiresIn ?? '60s')
-    .sign(options.privateKey);
-}
-
 test('it throws at boot when SERVICE_AUTH_PUBLIC_KEY is missing', () => {
   delete process.env['SERVICE_AUTH_PUBLIC_KEY'];
   const contract = buildTestContract();
@@ -92,7 +52,7 @@ test('it throws at boot when SERVICE_AUTH_PUBLIC_KEY is missing', () => {
 });
 
 test('it applies default PORT and LOG_LEVEL when unset', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   delete process.env['LOG_LEVEL'];
   delete process.env['PORT'];
@@ -111,7 +71,7 @@ test('it applies default PORT and LOG_LEVEL when unset', async () => {
 });
 
 test('it parses a service-specific envShape variable onto env', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['CUSTOM_GREETING'] = 'hi there';
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
@@ -130,7 +90,7 @@ test('it parses a service-specific envShape variable onto env', async () => {
 });
 
 test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugin and log shipping at boot', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['OTEL_EXPORTER_OTLP_ENDPOINT'] = 'http://127.0.0.1:1/';
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
@@ -151,7 +111,7 @@ test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugi
 });
 
 test('it serves a router built by an async buildRouter', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -167,7 +127,7 @@ test('it serves a router built by an async buildRouter', async () => {
     name: 'test-service',
   });
 
-  const token = await createTestServiceToken({
+  const token = await createServiceToken({
     actingUserId: 'user-1',
     audience: 'test-service',
     privateKey: keyPair.privateKey,
@@ -183,7 +143,7 @@ test('it serves a router built by an async buildRouter', async () => {
 });
 
 test('it rejects an /rpc call with no Authorization header with a plain 401', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -211,7 +171,7 @@ test('it rejects an /rpc call with no Authorization header with a plain 401', as
 });
 
 test('it rejects an /rpc call with a garbage token with a plain 401', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -238,7 +198,7 @@ test('it rejects an /rpc call with a garbage token with a plain 401', async () =
 });
 
 test('it rejects an /rpc call with an expired token with a plain 401', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -250,7 +210,7 @@ test('it rejects an /rpc call with an expired token with a plain 401', async () 
     name: 'test-service',
   });
 
-  const token = await createTestServiceToken({
+  const token = await createServiceToken({
     audience: 'test-service',
     expiresIn: '-1s',
     privateKey: keyPair.privateKey,
@@ -271,7 +231,7 @@ test('it rejects an /rpc call with an expired token with a plain 401', async () 
 });
 
 test('it rejects an /rpc call with a wrong-audience token with a plain 401', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -283,7 +243,7 @@ test('it rejects an /rpc call with a wrong-audience token with a plain 401', asy
     name: 'test-service',
   });
 
-  const token = await createTestServiceToken({
+  const token = await createServiceToken({
     audience: 'some-other-service',
     privateKey: keyPair.privateKey,
   });
@@ -303,7 +263,7 @@ test('it rejects an /rpc call with a wrong-audience token with a plain 401', asy
 });
 
 test('it returns data from an authed procedure given a valid token naming an acting user', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -315,7 +275,7 @@ test('it returns data from an authed procedure given a valid token naming an act
     name: 'test-service',
   });
 
-  const token = await createTestServiceToken({
+  const token = await createServiceToken({
     actingUserId: 'user-1',
     audience: 'test-service',
     privateKey: keyPair.privateKey,
@@ -331,7 +291,7 @@ test('it returns data from an authed procedure given a valid token naming an act
 });
 
 test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a valid anonymous token', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -343,7 +303,7 @@ test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a v
     name: 'test-service',
   });
 
-  const token = await createTestServiceToken({
+  const token = await createServiceToken({
     audience: 'test-service',
     privateKey: keyPair.privateKey,
   });
@@ -359,7 +319,7 @@ test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a v
 });
 
 test('it serves /health without any token', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -382,7 +342,7 @@ test('it serves /health without any token', async () => {
 });
 
 test('it mints a fresh trace id when no traceparent is supplied', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -400,7 +360,7 @@ test('it mints a fresh trace id when no traceparent is supplied', async () => {
 });
 
 test('it continues the trace named by an inbound traceparent header', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -422,7 +382,7 @@ test('it continues the trace named by an inbound traceparent header', async () =
 });
 
 test('it mints a fresh trace id for a malformed traceparent header', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -444,7 +404,7 @@ test('it mints a fresh trace id for a malformed traceparent header', async () =>
 });
 
 test('it masks an unexpected handler error as a bare INTERNAL_SERVER_ERROR', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -456,7 +416,7 @@ test('it masks an unexpected handler error as a bare INTERNAL_SERVER_ERROR', asy
     name: 'test-service',
   });
 
-  const token = await createTestServiceToken({
+  const token = await createServiceToken({
     audience: 'test-service',
     privateKey: keyPair.privateKey,
   });
@@ -473,7 +433,7 @@ test('it masks an unexpected handler error as a bare INTERNAL_SERVER_ERROR', asy
 });
 
 test('it does not serve the dropped /api and /spec.json paths', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -496,7 +456,7 @@ test('it does not serve the dropped /api and /spec.json paths', async () => {
 });
 
 test('it passes every conformance case collected from its own contract', async () => {
-  const keyPair = await createTestServiceKeyPair();
+  const keyPair = await getTestServiceKeyPair();
 
   process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
 
@@ -508,7 +468,7 @@ test('it passes every conformance case collected from its own contract', async (
     name: 'test-service',
   });
 
-  const anonymousToken = await createTestServiceToken({
+  const anonymousToken = await createServiceToken({
     audience: 'test-service',
     privateKey: keyPair.privateKey,
   });

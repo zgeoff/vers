@@ -5,7 +5,7 @@ import {
   createMockAvatarData,
   createSimulation,
 } from '@vers/idle-core';
-import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
+import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
 import type {
   DisconnectMessage,
   InitializeMessage,

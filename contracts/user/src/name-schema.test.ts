@@ -6,5 +6,8 @@ test('it accepts a name within the length bounds', () => {
 });
 
 test('it rejects a name shorter than 3 characters', () => {
-  expect(NameSchema.safeParse('Bo').success).toBeFalse();
+  const result = NameSchema.safeParse('Bo');
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
 });

@@ -3,12 +3,12 @@ import * as jose from 'jose';
 const ALGORITHM = 'EdDSA';
 
 /**
- * Signs a mock access token standing in for the session service's real one: the edge only decodes
+ * Signs a test access token standing in for the session service's real one: the edge only decodes
  * its `exp` claim to decide whether the underlying session needs re-validating, so signature
- * validity doesn't matter here — reusing the app's own dev key keeps every mocked token minted the
+ * validity doesn't matter here — reusing the app's own dev key keeps every minted token signed the
  * same way.
  */
-export async function createMockAccessToken(userID: string, expiresIn = '15m'): Promise<string> {
+export async function createTestAccessToken(userID: string, expiresIn = '15m'): Promise<string> {
   const privateKey = await getPrivateKey();
 
   return new jose.SignJWT({})

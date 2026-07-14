@@ -551,6 +551,7 @@
         "zustand": "catalog:",
       },
       "devDependencies": {
+        "@faker-js/faker": "catalog:",
         "@happy-dom/global-registrator": "catalog:",
         "@react-three/test-renderer": "catalog:",
         "@testing-library/jest-dom": "catalog:",
@@ -635,6 +636,7 @@
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@vers/contract-base": "workspace:*",
+        "@vers/service-test-utils": "workspace:*",
         "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "expect-type": "catalog:",

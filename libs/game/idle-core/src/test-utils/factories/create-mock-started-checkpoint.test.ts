@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { ActivityCheckpointType } from '../types';
+import { ActivityCheckpointType } from '../../types';
 import { createMockStartedCheckpoint } from './create-mock-started-checkpoint';
 
 test('it creates a started checkpoint with expected properties', () => {

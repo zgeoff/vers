@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
-import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
+import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
 import type { InitializeMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleInitializeMessage } from './handle-initialize-message';

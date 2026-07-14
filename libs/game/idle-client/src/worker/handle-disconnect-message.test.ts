@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
+import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
 import { handleDisconnectMessage } from './handle-disconnect-message';
 
 test('it removes the port from the connections set', () => {

@@ -11,4 +11,5 @@ test('it rejects a to address that is not a valid email', () => {
   const result = SendChangeEmailNotificationInputSchema.safeParse({ to: 'not-an-email' });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['to'] }));
 });

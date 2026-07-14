@@ -49,7 +49,7 @@ export interface ActivitySnapshot {
   readonly levelUp: ActivityLevelUp | null;
   readonly name: string;
   readonly rewards: ActivityRewards;
-  readonly waves: Array<WaveSnapshot>;
+  readonly waves: ReadonlyArray<WaveSnapshot>;
   readonly wavesRemaining: number;
 }
 

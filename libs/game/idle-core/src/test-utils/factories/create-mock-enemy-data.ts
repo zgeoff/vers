@@ -1,4 +1,4 @@
-import type { EnemyData } from '../types';
+import type { EnemyData } from '../../types';
 
 export function createMockEnemyData(overrides: Partial<EnemyData> = {}): EnemyData {
   const enemy: EnemyData = {

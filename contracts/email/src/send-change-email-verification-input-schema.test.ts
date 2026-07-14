@@ -21,4 +21,5 @@ test('it rejects a newEmail that is not a valid address', () => {
   });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['newEmail'] }));
 });

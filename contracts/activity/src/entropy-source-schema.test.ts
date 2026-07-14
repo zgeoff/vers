@@ -8,5 +8,8 @@ test('it accepts every declared entropy-source value', () => {
 });
 
 test('it rejects a tag outside the enum', () => {
-  expect(EntropySourceSchema.safeParse('chain').success).toBeFalse();
+  const result = EntropySourceSchema.safeParse('chain');
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
 });

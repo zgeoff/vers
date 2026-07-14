@@ -1,12 +1,12 @@
 import { expect, test } from 'bun:test';
 import { buildStateFromSeed } from '@vers/game-utils';
-import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
-import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
-import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
+import { createMockActivityInput } from '../test-utils/factories/create-mock-activity-input';
+import { createMockAvatarData } from '../test-utils/factories/create-mock-avatar-data';
+import { createMockEnemyData } from '../test-utils/factories/create-mock-enemy-data';
 import { ActivityCheckpointType, ActivityFailureAction, ActivityType } from '../types';
 import { runSimulation } from './run-simulation';
 
-test('runs a simulation with default configuration', async () => {
+test('it runs a simulation to completion with the default configuration', async () => {
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({

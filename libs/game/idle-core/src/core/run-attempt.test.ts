@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { buildStateFromSeed } from '@vers/game-utils';
-import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
-import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
-import { createMockEnemyData } from '../test-utils/create-mock-enemy-data';
+import { createMockActivityInput } from '../test-utils/factories/create-mock-activity-input';
+import { createMockAvatarData } from '../test-utils/factories/create-mock-avatar-data';
+import { createMockEnemyData } from '../test-utils/factories/create-mock-enemy-data';
 import { ActivityCheckpointType, ActivityFailureAction, ActivityType } from '../types';
 import { runAttempt } from './run-attempt';
 

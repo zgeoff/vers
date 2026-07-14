@@ -1,29 +1,15 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import type { WorldMapNode } from '@vers/worldmap-core';
+import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
 import { setHoveredNode } from './set-hovered-node';
 import { useHoveredNode } from './use-hovered-node';
 
 test('it returns the currently hovered node', () => {
-  const node: WorldMapNode = {
-    connections: [null, null, null, null],
-    difficulty: 1,
-    id: 'node1',
-    index: 0,
-    position: [0, 0],
-    seed: 0,
-  };
+  const node = createMockWorldMapNode({ id: 'node1', position: [0, 0] });
 
   setHoveredNode(node);
 
   const hook = renderHook(() => useHoveredNode());
 
-  expect(hook.result.current).toStrictEqual({
-    connections: [null, null, null, null],
-    difficulty: 1,
-    id: 'node1',
-    index: 0,
-    position: [0, 0],
-    seed: 0,
-  });
+  expect(hook.result.current).toStrictEqual(node);
 });

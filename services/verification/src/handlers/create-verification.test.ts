@@ -140,5 +140,5 @@ test('it creates a verification with an explicit expiry time', async () => {
     .where('id', '=', created.id)
     .executeTakeFirstOrThrow();
 
-  expect(row.expiresAt).toEqual(expiresAt);
+  expect(row.expiresAt).toStrictEqual(expiresAt);
 });

@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
-import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import type { CheckpointSubmitter } from '../../submission/create-checkpoint-submitter';
 import { createMockWorkerContext } from './create-mock-worker-context';
 
 test('it creates a context with no connections and no simulation by default', () => {

@@ -3,18 +3,18 @@ import { createId } from '@paralleldrive/cuid2';
 import type { Sessions } from '@vers/db';
 import type { Insertable } from 'kysely';
 
-interface CreateMockSessionData extends Partial<Insertable<Sessions>> {
-  readonly userId: string;
-}
-
 /**
- * A plain, unpersisted session row with faker-generated defaults; requires an owning user.
+ * A plain, unpersisted session row with faker-generated defaults. Never requires a parent —
+ * `userId` defaults to a random id, not a real user's.
  */
-export function createMockSession(data: Readonly<CreateMockSessionData>): Insertable<Sessions> {
+export function createMockSession(
+  overrides: Partial<Insertable<Sessions>> = {},
+): Insertable<Sessions> {
   return {
     expiresAt: faker.date.future(),
     id: createId(),
     ipAddress: faker.internet.ip(),
-    ...data,
+    userId: createId(),
+    ...overrides,
   };
 }

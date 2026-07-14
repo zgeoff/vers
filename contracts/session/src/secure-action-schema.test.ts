@@ -6,5 +6,8 @@ test('it accepts every declared secure action', () => {
 });
 
 test('it rejects an action outside the enum', () => {
-  expect(SecureActionSchema.safeParse('DeleteAccount').success).toBeFalse();
+  const result = SecureActionSchema.safeParse('DeleteAccount');
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
 });

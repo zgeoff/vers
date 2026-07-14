@@ -11,4 +11,5 @@ test('it rejects a non-numeric field', () => {
   const result = AttackDataSchema.safeParse({ maxDamage: '20', minDamage: 10, speed: 0.8 });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['maxDamage'] }));
 });

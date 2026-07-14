@@ -55,4 +55,5 @@ test('it rejects an activity with an invalid status', () => {
   });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['status'] }));
 });

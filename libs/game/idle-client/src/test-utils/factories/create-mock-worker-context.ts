@@ -1,6 +1,6 @@
 import type { Simulation } from '@vers/idle-core';
-import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
-import type { WorkerContext } from '../worker/types';
+import type { CheckpointSubmitter } from '../../submission/create-checkpoint-submitter';
+import type { WorkerContext } from '../../worker/types';
 
 interface CreateMockWorkerContextOptions {
   readonly connections?: ReadonlyArray<MessagePort>;

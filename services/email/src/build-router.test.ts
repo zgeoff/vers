@@ -162,7 +162,7 @@ test('#sendPasswordChanged it enqueues and delivers', async () => {
   expect(delivery).toMatchObject({ idempotencyKey: result.jobID, to: 'player@example.com' });
 });
 
-test('a job left failed by a downstream error survives for a later sweep instead of vanishing', async () => {
+test('it keeps a job left failed by a downstream error for a later sweep', async () => {
   await using ctx = await setupTest();
 
   server.use(

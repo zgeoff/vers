@@ -25,6 +25,7 @@
     "zustand": "catalog:"
   },
   "devDependencies": {
+    "@faker-js/faker": "catalog:",
     "@happy-dom/global-registrator": "catalog:",
     "@react-three/test-renderer": "catalog:",
     "@testing-library/jest-dom": "catalog:",

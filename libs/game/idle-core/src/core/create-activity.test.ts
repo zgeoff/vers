@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
-import { createMockSimulationContext } from '../test-utils/create-mock-simulation-context';
+import { createMockActivityInput } from '../test-utils/factories/create-mock-activity-input';
+import { createMockSimulationContext } from '../test-utils/factories/create-mock-simulation-context';
 import type { Wave } from '../types';
 import { createActivity } from './create-activity';
 

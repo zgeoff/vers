@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { createMockEnemyData } from '../../test-utils/create-mock-enemy-data';
-import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
+import { createMockEnemyData } from '../../test-utils/factories/create-mock-enemy-data';
+import { createMockSimulationContext } from '../../test-utils/factories/create-mock-simulation-context';
 import { createEnemy } from '../create-enemy';
 import { calcEnemyAttackDamage } from './calc-enemy-attack-damage';
 

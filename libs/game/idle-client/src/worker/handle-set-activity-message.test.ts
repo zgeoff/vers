@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'bun:test';
 import { createMockActivityInput, createMockAvatarData, createSimulation } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
-import { createMockWorkerContext } from '../test-utils/create-mock-worker-context';
+import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
 import type { SetActivityMessage } from '../types';
 import { ClientMessageType } from '../types';
 import { handleSetActivityMessage } from './handle-set-activity-message';

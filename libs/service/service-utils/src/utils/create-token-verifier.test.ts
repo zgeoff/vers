@@ -3,11 +3,6 @@ import { createTestJWT } from '@vers/test-utils';
 import * as jose from 'jose';
 import { createTokenVerifier } from './create-token-verifier';
 
-const TEST_TOKEN_PAYLOAD = {
-  iss: `https://test.com/`,
-  sub: 'test_id',
-};
-
 const TEST_PKCS8_PRIVKEY = `-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC+ItgiAjP9V8TH
 7hnovReRDXi5F7jE5jKBHnjKuqESoFqqubNVkDfkeTnuEFffyQI6x8rMR6Fng7ta
@@ -62,18 +57,18 @@ test('it authorizes a valid token and extracts the payload', async () => {
     audience: 'test.com',
     issuer: 'https://test.com/',
     pkcs8Key: signingKey,
-    sub: TEST_TOKEN_PAYLOAD.sub,
+    sub: 'test_id',
   });
 
   const payload = await verifyToken(token);
 
-  expect(payload).toStrictEqual(TEST_TOKEN_PAYLOAD);
+  expect(payload).toStrictEqual({ iss: 'https://test.com/', sub: 'test_id' });
 });
 
-test('should throws an error if no token is provided', () => {
+test('it rejects a missing token', () => {
   expect(verifyToken('')).rejects.toThrow('Invalid Compact JWS');
 });
 
-test('should throws an error if an invalid token is provided', () => {
+test('it rejects an invalid token', () => {
   expect(verifyToken('abc123')).rejects.toThrow('Invalid Compact JWS');
 });

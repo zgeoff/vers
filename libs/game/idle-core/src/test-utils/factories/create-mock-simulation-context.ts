@@ -1,5 +1,5 @@
 import { buildStateFromSeed, createRNG } from '@vers/game-utils';
-import type { SimulationContext } from '../types';
+import type { SimulationContext } from '../../types';
 
 export function createMockSimulationContext(
   overrides: Partial<SimulationContext> = {},

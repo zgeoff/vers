@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { createMockAccessToken } from '../../create-mock-access-token';
+import { createTestAccessToken } from '../../../test-utils/create-test-access-token';
 import * as db from '../../db';
 import { os } from './os';
 
@@ -41,7 +41,7 @@ export const refreshTokens = os.refreshTokens.handler(async (opts) => {
   });
 
   return {
-    accessToken: await createMockAccessToken(session.userID),
+    accessToken: await createTestAccessToken(session.userID),
     refreshToken: rotatedRefreshToken,
   };
 });

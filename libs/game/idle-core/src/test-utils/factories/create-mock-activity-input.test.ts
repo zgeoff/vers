@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { buildStateFromSeed } from '@vers/game-utils';
-import { ActivityFailureAction, ActivityType } from '../types';
+import { ActivityFailureAction, ActivityType } from '../../types';
 import { createMockActivityInput } from './create-mock-activity-input';
 import { createMockEnemyData } from './create-mock-enemy-data';
 

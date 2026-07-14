@@ -1,14 +1,14 @@
 import { expect, test } from 'bun:test';
 import { createMockSession } from './create-mock-session';
 
-test('it builds a default session row for a given owner', () => {
-  const row = createMockSession({ userId: 'user_1' });
+test('it builds a default session row', () => {
+  const row = createMockSession();
 
   expect(row).toStrictEqual({
     expiresAt: expect.toBeValidDate(),
     id: expect.toBeString(),
     ipAddress: expect.toBeString(),
-    userId: 'user_1',
+    userId: expect.toBeString(),
   });
 });
 

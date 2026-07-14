@@ -6,23 +6,28 @@ import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { resetPasswordHandler } from './reset-password-handler';
 
-const validFields = {
-  confirmPassword: 'new-password123',
-  email: 'reset-password@vers.test',
-  password: 'new-password123',
-  resetToken: 'a-reset-token',
-};
-
 test('it redirects home for an already signed-in caller', () => {
   const promise = withRequestContext({ cookies: { en_session: { sessionID: 'session-1' } } }, () =>
-    resetPasswordHandler(buildFormData(validFields)),
+    resetPasswordHandler(
+      buildFormData({
+        confirmPassword: 'new-password123',
+        email: 'reset-password@vers.test',
+        password: 'new-password123',
+        resetToken: 'a-reset-token',
+      }),
+    ),
   );
 
   expect(promise).rejects.toMatchObject({ options: { href: '/' } });
 });
 
 test('it rejects a submission with a filled-in honeypot field', async () => {
-  const formData = buildFormData(validFields);
+  const formData = buildFormData({
+    confirmPassword: 'new-password123',
+    email: 'reset-password@vers.test',
+    password: 'new-password123',
+    resetToken: 'a-reset-token',
+  });
 
   formData.set(HONEYPOT_FIELD_NAME, 'filled in by a bot');
 
@@ -38,7 +43,12 @@ test('it rejects a submission with a filled-in honeypot field', async () => {
 test('it reports a field error for a mismatched password confirmation', async () => {
   const outcome = await withRequestContext({}, () =>
     resetPasswordHandler(
-      buildFormData({ ...validFields, confirmPassword: 'not-the-same-password' }),
+      buildFormData({
+        confirmPassword: 'not-the-same-password',
+        email: 'reset-password@vers.test',
+        password: 'new-password123',
+        resetToken: 'a-reset-token',
+      }),
     ),
   );
 
@@ -51,7 +61,14 @@ test('it reports a field error for a mismatched password confirmation', async ()
 
 test('it reports a form error for an email with no matching account', async () => {
   const outcome = await withRequestContext({}, () =>
-    resetPasswordHandler(buildFormData(validFields)),
+    resetPasswordHandler(
+      buildFormData({
+        confirmPassword: 'new-password123',
+        email: 'reset-password@vers.test',
+        password: 'new-password123',
+        resetToken: 'a-reset-token',
+      }),
+    ),
   );
 
   if (outcome.value instanceof Response) {
@@ -69,8 +86,9 @@ test('it reports a form error for a stale or invalid reset token', async () => {
   const outcome = await withRequestContext({}, () =>
     resetPasswordHandler(
       buildFormData({
-        ...validFields,
+        confirmPassword: 'new-password123',
         email: 'reset-password-bad-token@vers.test',
+        password: 'new-password123',
         resetToken: 'the-wrong-token',
       }),
     ),
@@ -105,8 +123,9 @@ test('it resets the password, signs the caller out everywhere, and redirects to 
   const outcome = await withRequestContext({}, async () => {
     const redirectHref = await resetPasswordHandler(
       buildFormData({
-        ...validFields,
+        confirmPassword: 'new-password123',
         email: 'reset-password-success@vers.test',
+        password: 'new-password123',
         resetToken: 'the-right-token',
       }),
     )

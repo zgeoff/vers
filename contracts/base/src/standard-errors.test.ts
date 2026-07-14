@@ -7,7 +7,10 @@ test('it accepts both unauthorized reason variants', () => {
 });
 
 test('it rejects an unauthorized reason outside the enum', () => {
-  expect(UnauthorizedReasonSchema.safeParse('some-other-reason').success).toBeFalse();
+  const result = UnauthorizedReasonSchema.safeParse('some-other-reason');
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
 });
 
 test('it accepts an empty FORBIDDEN data payload', () => {

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { EquipmentSlot } from '../types';
+import { EquipmentSlot } from '../../types';
 import { createMockAvatarData } from './create-mock-avatar-data';
 
 test('it creates avatar data with expected properties', () => {

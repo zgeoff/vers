@@ -36,4 +36,8 @@ test('it rejects a checkpoint missing appendedAt', () => {
   });
 
   expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['appendedAt'] }),
+  );
 });

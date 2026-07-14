@@ -154,7 +154,7 @@ export interface AttackData {
 }
 
 export interface WaveSnapshot {
-  readonly enemies: Array<EnemySnapshot>;
+  readonly enemies: ReadonlyArray<EnemySnapshot>;
   readonly id: string;
 }
 

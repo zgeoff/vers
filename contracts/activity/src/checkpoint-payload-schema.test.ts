@@ -38,6 +38,7 @@ test('it rejects a payload missing a hashed field', () => {
   });
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['seed'] }));
 });
 
 test('it rejects a payload missing the entropy-source tag', () => {
@@ -50,6 +51,10 @@ test('it rejects a payload missing the entropy-source tag', () => {
   });
 
   expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['entropySource'] }),
+  );
 });
 
 test('it rejects a payload missing chainIndex', () => {
@@ -62,6 +67,10 @@ test('it rejects a payload missing chainIndex', () => {
   });
 
   expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['chainIndex'] }),
+  );
 });
 
 test('it rejects a negative chainIndex', () => {
@@ -75,6 +84,10 @@ test('it rejects a negative chainIndex', () => {
   });
 
   expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['chainIndex'] }),
+  );
 });
 
 test('it rejects an entropy-source tag outside the enum', () => {
@@ -88,4 +101,8 @@ test('it rejects an entropy-source tag outside the enum', () => {
   });
 
   expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['entropySource'] }),
+  );
 });

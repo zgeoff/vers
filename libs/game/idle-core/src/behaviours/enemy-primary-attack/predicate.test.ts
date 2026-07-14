@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createEnemy } from '../../entities/create-enemy';
-import { createMockEnemyData } from '../../test-utils/create-mock-enemy-data';
-import { createMockSimulationContext } from '../../test-utils/create-mock-simulation-context';
+import { createMockEnemyData } from '../../test-utils/factories/create-mock-enemy-data';
+import { createMockSimulationContext } from '../../test-utils/factories/create-mock-simulation-context';
 import { predicate } from './predicate';
 
 test('it returns true when enemy has a primary attack', () => {

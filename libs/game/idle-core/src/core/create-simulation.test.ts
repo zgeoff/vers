@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'bun:test';
-import { createMockActivityInput } from '../test-utils/create-mock-activity-input';
-import { createMockAvatarData } from '../test-utils/create-mock-avatar-data';
+import { createMockActivityInput } from '../test-utils/factories/create-mock-activity-input';
+import { createMockAvatarData } from '../test-utils/factories/create-mock-avatar-data';
 import type { SimulationListener } from '../types';
 import { ActivityCheckpointType, ActivityFailureAction } from '../types';
 import { createSimulation } from './create-simulation';

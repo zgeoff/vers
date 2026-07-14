@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
-import type { ActivityCompletedCheckpoint } from '../types';
-import { ActivityCheckpointType } from '../types';
+import type { ActivityCompletedCheckpoint } from '../../types';
+import { ActivityCheckpointType } from '../../types';
 
 export function createMockCompletedCheckpoint(
   overrides: Partial<ActivityCompletedCheckpoint> = {},
