@@ -151,6 +151,14 @@ implementing that algorithm — forcing list verbs onto textbook terms hides the
 - Pin exact versions — no `^`/`~` ranges. (`bun add` saves exact automatically via `exact = true` in
   bunfig.toml — the rule applies to hand-written edits.)
 
+## Function naming
+
+The shared partial's effectful-prefix table omits one prefix this repo uses:
+
+| Prefix | Contract                                                                                                                                 | Example        |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `park` | single-statement, guarded transition of a resource to an operational-hold status; a non-matching current state leaves the row untouched | `parkActivity` |
+
 ## Issue hygiene
 
 Triage a GitHub issue the moment it's opened, not in a later pass:
