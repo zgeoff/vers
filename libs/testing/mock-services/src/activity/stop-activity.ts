@@ -8,6 +8,14 @@ export const stopActivity = os.stopActivity.handler(async (opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
+  const avatar = db.avatarCollection.findFirst((q) =>
+    q.where({ id: opts.input.avatarID, userID: actingUserId }),
+  );
+
+  if (avatar === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
   const active = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: opts.input.avatarID, status: 'active' }),
   );

@@ -119,34 +119,51 @@ test('#getCurrentActivity it returns the active activity', async () => {
   expect(result).toMatchObject({ id: activity.id });
 });
 
-test('#getLatestActivityProgress it rejects when no activity exists for the avatar', () => {
+test("#getLatestActivityProgress it rejects an avatar the caller doesn't own", async () => {
+  const avatar = await db.avatarCollection.create({});
+
   expect(
     call(
       activityRouter.getLatestActivityProgress,
-      { avatarID: createId() },
+      { avatarID: avatar.id },
       { context: { actingUserId: createId() } },
+    ),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+});
+
+test('#getLatestActivityProgress it rejects when no activity exists for the avatar', async () => {
+  const userID = createId();
+
+  const avatar = await db.avatarCollection.create({ userID });
+
+  expect(
+    call(
+      activityRouter.getLatestActivityProgress,
+      { avatarID: avatar.id },
+      { context: { actingUserId: userID } },
     ),
   ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 });
 
 test('#getLatestActivityProgress it returns the latest activity with a null anchor before verification', async () => {
   const userID = createId();
-  const avatarID = createId();
+
+  const avatar = await db.avatarCollection.create({ userID });
 
   await db.activityCollection.create({
-    avatarID,
+    avatarID: avatar.id,
     startedAt: new Date('2026-01-01'),
     status: 'stopped',
   });
 
   const latest = await db.activityCollection.create({
-    avatarID,
+    avatarID: avatar.id,
     startedAt: new Date('2026-02-01'),
   });
 
   const result = await call(
     activityRouter.getLatestActivityProgress,
-    { avatarID },
+    { avatarID: avatar.id },
     { context: { actingUserId: userID } },
   );
 
@@ -161,10 +178,12 @@ test('#getLatestActivityProgress it returns the latest activity with a null anch
 });
 
 test('#getLatestActivityProgress it anchors on the verified-head checkpoint', async () => {
-  const avatarID = createId();
+  const userID = createId();
+
+  const avatar = await db.avatarCollection.create({ userID });
 
   const activity = await db.activityCollection.create({
-    avatarID,
+    avatarID: avatar.id,
     appendedHead: 3,
     verifiedHead: 2,
   });
@@ -173,22 +192,25 @@ test('#getLatestActivityProgress it anchors on the verified-head checkpoint', as
 
   const result = await call(
     activityRouter.getLatestActivityProgress,
-    { avatarID },
-    { context: { actingUserId: createId() } },
+    { avatarID: avatar.id },
+    { context: { actingUserId: userID } },
   );
 
   expect(result.anchor).toMatchObject({ hash: anchor.hash, version: 2 });
 });
 
 test('#trackActivityProgress it appends a batch and advances the head', async () => {
-  const activity = await db.activityCollection.create({ appendedHead: 2 });
+  const userID = createId();
+
+  const avatar = await db.avatarCollection.create({ userID });
+  const activity = await db.activityCollection.create({ appendedHead: 2, avatarID: avatar.id });
 
   const checkpoint = createMockCheckpointBatchEntry({ version: 3 });
 
   const result = await call(
     activityRouter.trackActivityProgress,
     { activityID: activity.id, checkpoints: [checkpoint], expectedHead: 2 },
-    { context: { actingUserId: createId() } },
+    { context: { actingUserId: userID } },
   );
 
   expect(result).toStrictEqual({ appendedHead: 3 });
@@ -205,7 +227,10 @@ test('#trackActivityProgress it appends a batch and advances the head', async ()
 });
 
 test('#trackActivityProgress it rejects a stale head as a retryable conflict', async () => {
-  const activity = await db.activityCollection.create({ appendedHead: 5 });
+  const userID = createId();
+
+  const avatar = await db.avatarCollection.create({ userID });
+  const activity = await db.activityCollection.create({ appendedHead: 5, avatarID: avatar.id });
 
   expect(
     call(
@@ -215,13 +240,37 @@ test('#trackActivityProgress it rejects a stale head as a retryable conflict', a
         checkpoints: [createMockCheckpointBatchEntry({ version: 3 })],
         expectedHead: 2,
       },
-      { context: { actingUserId: createId() } },
+      { context: { actingUserId: userID } },
     ),
   ).rejects.toMatchObject({ code: 'CONFLICT', data: { appendedHead: 5 } });
 });
 
+test("#trackActivityProgress it rejects an activity whose avatar the caller doesn't own", async () => {
+  const activity = await db.activityCollection.create({});
+
+  expect(
+    call(
+      activityRouter.trackActivityProgress,
+      {
+        activityID: activity.id,
+        checkpoints: [createMockCheckpointBatchEntry()],
+        expectedHead: 0,
+      },
+      { context: { actingUserId: createId() } },
+    ),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+});
+
 test('#trackActivityProgress it refuses appends once the activity is terminal', async () => {
-  const activity = await db.activityCollection.create({ appendedHead: 4, status: 'stopped' });
+  const userID = createId();
+
+  const avatar = await db.avatarCollection.create({ userID });
+
+  const activity = await db.activityCollection.create({
+    appendedHead: 4,
+    avatarID: avatar.id,
+    status: 'stopped',
+  });
 
   expect(
     call(
@@ -231,7 +280,7 @@ test('#trackActivityProgress it refuses appends once the activity is terminal', 
         checkpoints: [createMockCheckpointBatchEntry({ version: 5 })],
         expectedHead: 4,
       },
-      { context: { actingUserId: createId() } },
+      { context: { actingUserId: userID } },
     ),
   ).rejects.toMatchObject({
     code: 'ACTIVITY_TERMINAL',
@@ -266,26 +315,59 @@ test('#stopActivity it stops the active activity', async () => {
   expect(stopped.stoppedAt).toBeValidDate();
 });
 
-test('#stopActivity it rejects when nothing is active', () => {
+test("#stopActivity it rejects an avatar the caller doesn't own", async () => {
+  const avatar = await db.avatarCollection.create({});
+
+  await db.activityCollection.create({ avatarID: avatar.id });
+
   expect(
     call(
       activityRouter.stopActivity,
-      { avatarID: createId() },
+      { avatarID: avatar.id },
       { context: { actingUserId: createId() } },
     ),
   ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 });
 
+test('#stopActivity it rejects when nothing is active', async () => {
+  const userID = createId();
+
+  const avatar = await db.avatarCollection.create({ userID });
+
+  expect(
+    call(
+      activityRouter.stopActivity,
+      { avatarID: avatar.id },
+      { context: { actingUserId: userID } },
+    ),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+});
+
 test('#resumeActivity it returns the active activity', async () => {
-  const activity = await db.activityCollection.create({});
+  const userID = createId();
+
+  const avatar = await db.avatarCollection.create({ userID });
+  const activity = await db.activityCollection.create({ avatarID: avatar.id });
 
   const resumed = await call(
     activityRouter.resumeActivity,
     { activityID: activity.id },
-    { context: { actingUserId: createId() } },
+    { context: { actingUserId: userID } },
   );
 
   expect(resumed).toMatchObject({ id: activity.id });
+});
+
+test("#resumeActivity it rejects an activity whose avatar the caller doesn't own", async () => {
+  const activity = await db.activityCollection.create({});
+
+  expect(
+    call(
+      activityRouter.resumeActivity,
+      { activityID: activity.id },
+      { context: { actingUserId: createId() } },
+    ),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 });
 
 test('#resumeActivity it rejects a stopped activity', async () => {

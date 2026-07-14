@@ -13,6 +13,14 @@ export const getLatestActivityProgress = os.getLatestActivityProgress.handler((o
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
+  const avatar = db.avatarCollection.findFirst((q) =>
+    q.where({ id: opts.input.avatarID, userID: actingUserId }),
+  );
+
+  if (avatar === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
   const activities = db.activityCollection.findMany((q) =>
     q.where({ avatarID: opts.input.avatarID }),
   );

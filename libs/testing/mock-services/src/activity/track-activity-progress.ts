@@ -20,6 +20,14 @@ export const trackActivityProgress = os.trackActivityProgress.handler(async (opt
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
+  const avatar = db.avatarCollection.findFirst((q) =>
+    q.where({ id: activity.avatarID, userID: actingUserId }),
+  );
+
+  if (avatar === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
   if (activity.status !== 'active') {
     throw opts.errors.ACTIVITY_TERMINAL({
       data: { appendedHead: activity.appendedHead, status: activity.status },

@@ -20,5 +20,13 @@ export const resumeActivity = os.resumeActivity.handler((opts) => {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
+  const avatar = db.avatarCollection.findFirst((q) =>
+    q.where({ id: activity.avatarID, userID: actingUserId }),
+  );
+
+  if (avatar === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
   return activity;
 });
