@@ -2,9 +2,11 @@ import { Command } from 'commander';
 import { execa } from 'execa';
 import { applyDeploy } from '../deploy/apply-deploy';
 import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-actions';
+import { checkParkedApp } from '../deploy/check-parked-app';
 import { checkTarget } from '../deploy/check-target';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
+import { loadEngineHash } from '../deploy/load-engine-hash';
 import { planScheduledMachineActions } from '../deploy/plan-scheduled-machine-actions';
 import { readAppState } from '../deploy/read-app-state';
 import { readChangesSince } from '../deploy/read-changes-since';
@@ -42,6 +44,15 @@ program
     const manifest = await loadDeployManifest();
 
     console.log(JSON.stringify(manifest.apps.map((target) => target.app)));
+  });
+
+program
+  .command('engine-hash')
+  .description('print the canonical sim engine bundle hash')
+  .action(async () => {
+    const hash = await loadEngineHash();
+
+    console.log(hash);
   });
 
 await program.parseAsync();
@@ -128,6 +139,7 @@ async function runVerify(): Promise<void> {
     const findings = [
       ...checkTarget(target, state, changes),
       ...(await runProbes(target.probes ?? [])),
+      ...(await checkParkedApp(target.app, state)),
     ];
 
     if (findings.length === 0) {

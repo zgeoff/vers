@@ -1,11 +1,15 @@
-import type { CheckpointBatchEntry, CheckpointPayload } from '@vers/contract-activity';
+import type {
+  CheckpointBatchEntry,
+  CheckpointPayload,
+  EntropySource,
+} from '@vers/contract-activity';
 import { buildCheckpointHash } from '@vers/contract-activity';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
 
 interface BuildCheckpointBatchEntryInput {
   readonly checkpoint: ActivityCheckpoint;
-  readonly entropySource: string;
+  readonly entropySource: EntropySource;
   readonly prevHash: string;
   readonly previousNextSeed: string;
   readonly startChainIndex: number;

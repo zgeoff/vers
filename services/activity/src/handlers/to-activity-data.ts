@@ -19,6 +19,7 @@ export function toActivityData(row: Readonly<Selectable<Activities>>): ActivityD
     contentVersion: row.contentVersion,
     createdAt: row.createdAt,
     id: row.id,
+    keyVersion: row.keyVersion,
     lastHash: row.lastHash,
     scopeID: row.scopeId,
     scopeType: row.scopeType,

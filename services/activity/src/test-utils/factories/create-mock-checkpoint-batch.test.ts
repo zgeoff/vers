@@ -58,10 +58,10 @@ test('it computes each hash via buildCheckpointHash', () => {
   );
 });
 
-test('it defaults entropySource to chain', () => {
+test('it defaults entropySource to server-key', () => {
   const [entry] = createMockCheckpointBatch({ startPrevHash: 'hash_0', startVersion: 1 });
 
-  expect(entry?.payload.entropySource).toBe('chain');
+  expect(entry?.payload.entropySource).toBe('server-key');
 });
 
 test('it scales each entry cumulative time by timeStepMs', () => {

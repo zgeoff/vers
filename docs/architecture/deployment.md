@@ -6,10 +6,11 @@ Where the stack runs, how a merge reaches production, and how to re-provision it
 
 The stack runs on Fly.io in the `syd` region. `app-web` and `vers-bugsink` (the error tracker,
 `apps/bugsink` — public because browsers post error envelopes directly to it) hold the public
-addresses. The domain services — `service-activity`, `service-avatar`, `service-session`,
-`service-user`, `service-verification` — are private, reachable only across the organization's 6PN
-WireGuard mesh. Postgres is a Neon project (see [database](./database.md)); no app runs its own
-database, Bugsink included.
+addresses. The domain services — `service-activity`, `service-avatar`, `service-keys`,
+`service-session`, `service-user`, `service-verification` — are private, reachable only across the
+organization's 6PN WireGuard mesh. Postgres is a Neon project (see [database](./database.md)); no
+app runs its own database, Bugsink included. `service-keys` holds no database connection — its state
+is the `ROLL_KEY_ROOTS` secret alone.
 
 Every app scales to zero. `auto_stop_machines = 'suspend'` parks an idle machine with its memory
 snapshot for sub-second wake. `app-web` keeps one machine warm (`min_machines_running = 1`) so a
@@ -31,6 +32,7 @@ Secrets are set with `fly secrets set` and never committed.
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | `service-activity`, `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`                     |
 | `service-session`                                                            | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY`           |
+| `service-keys`                                                               | `ROLL_KEY_ROOTS`, `SERVICE_AUTH_PUBLIC_KEY`                   |
 | `app-web`                                                                    | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY` |
 | `vers-bugsink`                                                               | `SECRET_KEY`, `DATABASE_URL`, `CREATE_SUPERUSER` (first boot) |
 
@@ -40,6 +42,9 @@ Secrets are set with `fly secrets set` and never committed.
 - `JWT_SIGNING_PRIVKEY` — RS256 PKCS8 private key `service-session` signs user tokens with, under
   issuer and audience `API_IDENTIFIER`.
 - `SESSION_SECRET` — seals `app-web`'s cookies.
+- `ROLL_KEY_ROOTS` — JSON payload of avatar roll-key root secrets, one entry per population, each
+  holding its current key version and every hex-encoded root version `service-keys` still derives
+  against.
 - `SENTRY_DSN` — a per-app Bugsink project DSN, optional on any app.
 
 Telemetry export rides the standard OTel env vars, optional on any app and set fleet-wide in
@@ -107,8 +112,8 @@ install stages read that. Each `bun install` layer mounts a BuildKit cache
 
 ### Services
 
-`service-activity`, `service-avatar`, `service-session`, `service-user`, and `service-verification`
-share one Dockerfile, compiling to a single executable:
+`service-activity`, `service-avatar`, `service-keys`, `service-session`, `service-user`, and
+`service-verification` share one Dockerfile, compiling to a single executable:
 
 1. **pruner** — as above.
 2. **builder** — installs the service's graph from `/manifests`, copies the pruned source, and runs
@@ -143,7 +148,7 @@ Requires `flyctl` authenticated to the `vers` org, the Neon pooled `DATABASE_URL
 Create the apps:
 
 ```sh
-for app in app-web service-activity service-avatar service-session service-user service-verification; do
+for app in app-web service-activity service-avatar service-keys service-session service-user service-verification; do
   fly apps create "vers-$app" --org vers
 done
 ```
@@ -153,7 +158,7 @@ Give `app-web` public addresses; give each service a private Flycast address and
 ```sh
 fly ips allocate-v4 --shared -a vers-app-web
 fly ips allocate-v6 -a vers-app-web
-for svc in activity avatar session user verification; do
+for svc in activity avatar keys session user verification; do
   fly ips allocate-v6 --private -a "vers-service-$svc"
 done
 ```
@@ -182,6 +187,13 @@ for svc in activity avatar user verification; do
     DATABASE_URL="$DATABASE_URL" \
     SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)"
 done
+
+fly secrets set -a vers-service-keys \
+  SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)" \
+  ROLL_KEY_ROOTS="$(jq -nc \
+    --arg trade "$(openssl rand -hex 32)" \
+    --arg selfFound "$(openssl rand -hex 32)" \
+    '{trade: {current: 1, roots: {"1": $trade}}, "self-found": {current: 1, roots: {"1": $selfFound}}}')"
 
 fly secrets set -a vers-service-session \
   DATABASE_URL="$DATABASE_URL" \
@@ -245,7 +257,7 @@ for ds in vers-traces vers-logs; do
 done
 
 INGEST="$(op read 'op://vers/axiom/ingest-token')"
-for app in vers-app-web vers-service-activity vers-service-avatar vers-service-session vers-service-user vers-service-verification; do
+for app in vers-app-web vers-service-activity vers-service-avatar vers-service-keys vers-service-session vers-service-user vers-service-verification; do
   fly secrets set -a "$app" --stage \
     OTEL_EXPORTER_OTLP_ENDPOINT="https://api.axiom.co" \
     OTEL_EXPORTER_OTLP_TRACES_HEADERS="Authorization=Bearer ${INGEST},X-Axiom-Dataset=vers-traces" \
@@ -263,7 +275,7 @@ The next push to `main` fills the machines.
 ## Teardown
 
 ```sh
-for app in app-web bugsink service-avatar service-session service-user service-verification; do
+for app in app-web bugsink service-avatar service-keys service-session service-user service-verification; do
   fly apps destroy "vers-$app" --yes
 done
 ```
