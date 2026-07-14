@@ -17,15 +17,18 @@ export function createMockActivity(
   const seed = overrides.seed ?? faker.string.alphanumeric({ casing: 'lower', length: 32 });
   const simVersion = overrides.simVersion ?? '0.0.0-dev';
   const contentVersion = overrides.contentVersion ?? '0.0.0-dev';
+  const keyVersion = overrides.keyVersion ?? 1;
 
   const startHash =
-    overrides.startHash ?? buildStartHash({ activityID: id, contentVersion, seed, simVersion });
+    overrides.startHash ??
+    buildStartHash({ activityID: id, contentVersion, keyVersion, seed, simVersion });
 
   return {
     avatarId: createId(),
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion,
     id,
+    keyVersion,
     lastHash: startHash,
     scopeId: faker.string.alphanumeric({ casing: 'lower', length: 8 }),
     scopeType: 'world_map_node',

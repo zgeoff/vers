@@ -2,7 +2,7 @@ import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
-import { ENTROPY_SOURCE_CHAIN, PROGRESS_FLUSH_INTERVAL_MS } from './constants';
+import { ENTROPY_SOURCE_SERVER_KEY, PROGRESS_FLUSH_INTERVAL_MS } from './constants';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import { removeConfirmedCheckpoints } from './remove-confirmed-checkpoints';
 import { removeQueuedCheckpoints } from './remove-queued-checkpoints';
@@ -206,7 +206,7 @@ export function createCheckpointSubmitter(
 
     const entry = buildCheckpointBatchEntry({
       checkpoint,
-      entropySource: ENTROPY_SOURCE_CHAIN,
+      entropySource: ENTROPY_SOURCE_SERVER_KEY,
       prevHash: state.prevHash,
       previousNextSeed: state.previousNextSeed,
       startChainIndex: state.startChainIndex,

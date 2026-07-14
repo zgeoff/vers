@@ -8,7 +8,7 @@ import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
 test('it sets a checkpoint chain position to the activity anchor plus its version', () => {
   const entry = buildCheckpointBatchEntry({
     checkpoint: createMockProgressCheckpoint(),
-    entropySource: 'chain',
+    entropySource: 'server-key',
     prevHash: 'hash_0',
     previousNextSeed: 'seed_0',
     startChainIndex: 10,
@@ -21,7 +21,7 @@ test('it sets a checkpoint chain position to the activity anchor plus its versio
 test('it places a started checkpoint one position past the activity anchor', () => {
   const entry = buildCheckpointBatchEntry({
     checkpoint: createMockStartedCheckpoint(),
-    entropySource: 'chain',
+    entropySource: 'server-key',
     prevHash: 'start_hash',
     previousNextSeed: 'seed_0',
     startChainIndex: 10,
@@ -34,7 +34,7 @@ test('it places a started checkpoint one position past the activity anchor', () 
 test('it seeds a started checkpoint entry from the checkpoint own seed', () => {
   const entry = buildCheckpointBatchEntry({
     checkpoint: createMockStartedCheckpoint({ nextSeed: 'seed_0', seed: 'seed_0' }),
-    entropySource: 'chain',
+    entropySource: 'server-key',
     prevHash: 'start_hash',
     previousNextSeed: 'unrelated_seed',
     startChainIndex: 0,
@@ -48,7 +48,7 @@ test('it seeds a started checkpoint entry from the checkpoint own seed', () => {
 test('it seeds a non-started checkpoint entry from the previous checkpoint next seed', () => {
   const entry = buildCheckpointBatchEntry({
     checkpoint: createMockProgressCheckpoint({ nextSeed: 'seed_1' }),
-    entropySource: 'chain',
+    entropySource: 'server-key',
     prevHash: 'hash_0',
     previousNextSeed: 'seed_0',
     startChainIndex: 0,
@@ -62,7 +62,7 @@ test('it seeds a non-started checkpoint entry from the previous checkpoint next 
 test('it carries the checkpoint open-record fields into the payload', () => {
   const entry = buildCheckpointBatchEntry({
     checkpoint: createMockProgressCheckpoint({ rewards: { xp: 15 } }),
-    entropySource: 'chain',
+    entropySource: 'server-key',
     prevHash: 'hash_0',
     previousNextSeed: 'seed_0',
     startChainIndex: 0,
@@ -75,7 +75,7 @@ test('it carries the checkpoint open-record fields into the payload', () => {
 test('it computes the entry hash as the canonical hash of its checkpoint fields', () => {
   const entry = buildCheckpointBatchEntry({
     checkpoint: createMockProgressCheckpoint({ nextSeed: 'seed_1', time: 12 }),
-    entropySource: 'chain',
+    entropySource: 'server-key',
     prevHash: 'hash_0',
     previousNextSeed: 'seed_0',
     startChainIndex: 0,
@@ -84,7 +84,7 @@ test('it computes the entry hash as the canonical hash of its checkpoint fields'
 
   const expectedHash = buildCheckpointHash({
     chainIndex: 2,
-    entropySource: 'chain',
+    entropySource: 'server-key',
     nextSeed: 'seed_1',
     prevHash: 'hash_0',
     seed: 'seed_0',
@@ -99,7 +99,7 @@ test('it computes the entry hash as the canonical hash of its checkpoint fields'
 test('it echoes the input version and previous hash onto the entry', () => {
   const entry = buildCheckpointBatchEntry({
     checkpoint: createMockProgressCheckpoint(),
-    entropySource: 'chain',
+    entropySource: 'server-key',
     prevHash: 'hash_0',
     previousNextSeed: 'seed_0',
     startChainIndex: 0,

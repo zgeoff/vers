@@ -13,6 +13,7 @@ import { trackActivityProgress } from './handlers/track-activity-progress';
 interface BuildActivityRouterDeps {
   readonly contentVersion: string;
   readonly db: Kysely<DB>;
+  readonly keyVersion: number;
   readonly simVersion: string;
 }
 

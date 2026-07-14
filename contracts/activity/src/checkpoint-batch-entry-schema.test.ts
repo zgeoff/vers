@@ -6,7 +6,7 @@ test('it accepts a well-formed batch entry', () => {
     hash: 'hash_1',
     payload: {
       chainIndex: 1,
-      entropySource: 'chain',
+      entropySource: 'server-key',
       nextSeed: 'seed_1',
       seed: 'seed_0',
       time: 12,
@@ -24,7 +24,7 @@ test('it rejects a negative version', () => {
     hash: 'hash_1',
     payload: {
       chainIndex: 1,
-      entropySource: 'chain',
+      entropySource: 'server-key',
       nextSeed: 'seed_1',
       seed: 'seed_0',
       time: 12,

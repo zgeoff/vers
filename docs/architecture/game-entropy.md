@@ -97,8 +97,10 @@ Key derivation obeys three rules:
   any trade key.
 - A self-found key is a pure function of `(master, avatarID, keyVersion)` — re-derivable
   bit-for-bit, never re-randomized.
-- The master secret lives in managed-key custody with rotation and audit, never in an application
-  environment variable.
+- The two master roots live as Fly secrets on the standalone keys service, the only process that
+  touches root material; canonical copies and a manual rotation log live in 1Password, and every
+  derivation is audit-logged. Managed-key custody (a dedicated KMS with automated rotation) is a
+  deferred upgrade over this posture.
 
 A leaked trade root makes every future trade drop computable. That is the one unrecoverable failure
 this design has.
@@ -158,11 +160,11 @@ consistent with their earnings never reaching the market.
 
 Every checkpoint's hashed subset carries an entropy-source tag identifying which source rolled its
 outcomes, present from the first row ever written. The subset is frozen, so the tag cannot be added
-later. The two sources it distinguishes today are server-custody and device-custody rolls, and the
-tag is what lets further sources — a verifiable-randomness beacon, a rotated key generation — join
-without a migration. Replay validates the tag against the avatar's server-recorded mode; a mismatch
-is divergence. Settlement stamps an outcome's provenance from server records and the tag — never
-from a client claim.
+later. The two values it distinguishes today are `server-key` for a server-custody roll and
+`device-key` for a device-custody roll, and the tag is what lets further sources — a
+verifiable-randomness beacon, a rotated key generation — join without a migration. Replay validates
+the tag against the avatar's server-recorded mode; a mismatch is divergence. Settlement stamps an
+outcome's provenance from server records and the tag — never from a client claim.
 
 Tradeability keys on the security property: entropy unpredictable at the moment the outcome was
 committed, and provably tied to the party that minted it. Server-custody rolls and sealed salt have

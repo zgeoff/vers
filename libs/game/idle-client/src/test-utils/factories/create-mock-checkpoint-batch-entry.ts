@@ -15,7 +15,7 @@ export function createMockCheckpointBatchEntry(
     hash: overrides.hash ?? buildSeed(),
     payload: {
       chainIndex: faker.number.int({ max: 1000, min: 0 }),
-      entropySource: 'chain',
+      entropySource: 'server-key',
       nextSeed: buildSeed(),
       seed: buildSeed(),
       time: faker.number.int({ max: 60_000, min: 0 }),
