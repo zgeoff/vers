@@ -2,6 +2,7 @@ import type { CheckpointBatchEntry, CheckpointPayload } from '@vers/contract-act
 import { buildCheckpointHash } from '@vers/contract-activity';
 import type { ActivityStatus, DB, Json } from '@vers/db';
 import { levelForXP } from '@vers/idle-core';
+import type { ServiceContext } from '@vers/service-runtime';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
@@ -32,6 +33,7 @@ interface TrackActivityProgressOpts {
   readonly context: {
     readonly actingSessionId: null | string;
     readonly actingUserId: null | string;
+    readonly logger: ServiceContext['logger'];
   };
   readonly errors: {
     readonly ACTIVITY_CAPPED: (payload: CappedPayload) => Error;
@@ -112,9 +114,18 @@ export async function trackActivityProgress(
   }
 
   if (head.status !== 'active') {
-    throw opts.errors.ACTIVITY_TERMINAL({
-      data: { appendedHead: head.appendedHead, status: head.status },
-    });
+    const outcome = pickTerminalOutcome(opts.input.checkpoints, head, opts.errors);
+
+    if (outcome instanceof Error) {
+      throw outcome;
+    }
+
+    opts.context.logger.info(
+      { activityID: opts.input.activityID },
+      'settled batch re-acknowledged after a dropped ack',
+    );
+
+    return outcome;
   }
 
   if (head.writerSessionId !== null && head.writerSessionId !== actingSessionID) {
@@ -164,11 +175,27 @@ export async function trackActivityProgress(
       if (capped === undefined) {
         const current = await trx
           .selectFrom('activities')
-          .select(['appendedHead', 'status', 'writerSessionId'])
+          .select(['appendedHead', 'lastHash', 'status', 'writerSessionId'])
           .where('id', '=', opts.input.activityID)
           .executeTakeFirst();
 
-        throw pickAppendRaceError(opts.errors, actingSessionID, current);
+        const outcome = pickAppendRaceOutcome(
+          opts.errors,
+          actingSessionID,
+          current,
+          opts.input.checkpoints,
+        );
+
+        if (outcome instanceof Error) {
+          throw outcome;
+        }
+
+        opts.context.logger.info(
+          { activityID: opts.input.activityID },
+          'settled batch re-acknowledged after a dropped ack',
+        );
+
+        return { appendedHead: outcome.appendedHead, kind: 'resolved' } as const;
       }
 
       await updateAppendedAnchorFromTail(trx, {
@@ -181,10 +208,14 @@ export async function trackActivityProgress(
         startChainIndex: head.startChainIndex,
       });
 
-      return capped.appendedHead;
+      return { appendedHead: capped.appendedHead, kind: 'capped' } as const;
     });
 
-    throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: capOutcome } });
+    if (capOutcome.kind === 'resolved') {
+      return { appendedHead: capOutcome.appendedHead };
+    }
+
+    throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: capOutcome.appendedHead } });
   }
 
   const appendedHead = await db.transaction().execute(async (trx) => {
@@ -213,11 +244,27 @@ export async function trackActivityProgress(
     if (updated === undefined) {
       const current = await trx
         .selectFrom('activities')
-        .select(['appendedHead', 'status', 'writerSessionId'])
+        .select(['appendedHead', 'lastHash', 'status', 'writerSessionId'])
         .where('id', '=', opts.input.activityID)
         .executeTakeFirst();
 
-      throw pickAppendRaceError(opts.errors, actingSessionID, current);
+      const outcome = pickAppendRaceOutcome(
+        opts.errors,
+        actingSessionID,
+        current,
+        opts.input.checkpoints,
+      );
+
+      if (outcome instanceof Error) {
+        throw outcome;
+      }
+
+      opts.context.logger.info(
+        { activityID: opts.input.activityID },
+        'settled batch re-acknowledged after a dropped ack',
+      );
+
+      return outcome.appendedHead;
     }
 
     if (opts.input.checkpoints.length > 0) {
@@ -284,6 +331,73 @@ export async function trackActivityProgress(
   });
 
   return { appendedHead };
+}
+
+interface SettledTailRow {
+  readonly appendedHead: number;
+  readonly lastHash: string;
+}
+
+/**
+ * Reports whether a checkpoint batch, replayed from scratch, recomputes onto a settled activity's
+ * recorded tail: the last entry's version lands on `settled.appendedHead`, and every entry's hash —
+ * rebuilt via `buildCheckpointHash`, never trusted from the submitted `hash` field — chains onto
+ * the previous entry's rebuilt hash and the final one reproduces `settled.lastHash`. A match proves
+ * the recorded tail is this exact batch: the original submit landed and only the ack was lost.
+ */
+function isSettledResubmit(
+  checkpoints: ReadonlyArray<CheckpointBatchEntry>,
+  settled: Readonly<SettledTailRow>,
+): boolean {
+  const lastCheckpoint = checkpoints.at(-1);
+
+  if (lastCheckpoint === undefined || lastCheckpoint.version !== settled.appendedHead) {
+    return false;
+  }
+
+  let previousHash: string | undefined;
+
+  for (const checkpoint of checkpoints) {
+    if (previousHash !== undefined && checkpoint.prevHash !== previousHash) {
+      return false;
+    }
+
+    previousHash = buildCheckpointHash({
+      chainIndex: checkpoint.payload.chainIndex,
+      entropySource: checkpoint.payload.entropySource,
+      nextSeed: checkpoint.payload.nextSeed,
+      prevHash: checkpoint.prevHash,
+      seed: checkpoint.payload.seed,
+      time: checkpoint.payload.time,
+      type: checkpoint.payload.type,
+      version: checkpoint.version,
+    });
+  }
+
+  return previousHash === settled.lastHash;
+}
+
+interface TerminalRow extends SettledTailRow {
+  readonly status: ActivityStatus;
+}
+
+/**
+ * Resolves a non-active head: a resubmit that recomputes onto the recorded tail settles as the
+ * already-settled head, a normal success; any other batch against a terminal status resolves
+ * ACTIVITY_TERMINAL.
+ */
+function pickTerminalOutcome(
+  checkpoints: ReadonlyArray<CheckpointBatchEntry>,
+  current: Readonly<TerminalRow>,
+  errors: TrackActivityProgressOpts['errors'],
+): { readonly appendedHead: number } | Error {
+  if (isSettledResubmit(checkpoints, current)) {
+    return { appendedHead: current.appendedHead };
+  }
+
+  return errors.ACTIVITY_TERMINAL({
+    data: { appendedHead: current.appendedHead, status: current.status },
+  });
 }
 
 interface CheckpointBatchInput {
@@ -365,29 +479,27 @@ function findInvalidReason(
   return undefined;
 }
 
-interface AppendRaceRow {
-  readonly appendedHead: number;
-  readonly status: ActivityStatus;
+interface AppendRaceRow extends TerminalRow {
   readonly writerSessionId: null | string;
 }
 
 /**
- * Picks the error a lost head-row race resolves to, from a fresh read of the activity row: gone,
- * terminal, writer taken over, or a retryable stale head.
+ * Resolves a lost head-row race from a fresh read of the activity row: gone (NOT_FOUND), terminal
+ * (a matching resubmit settles, otherwise ACTIVITY_TERMINAL), writer taken over (SESSION_EVICTED),
+ * or a retryable stale head (CONFLICT).
  */
-function pickAppendRaceError(
+function pickAppendRaceOutcome(
   errors: TrackActivityProgressOpts['errors'],
   actingSessionID: null | string,
   current: AppendRaceRow | undefined,
-): Error {
+  checkpoints: ReadonlyArray<CheckpointBatchEntry>,
+): { readonly appendedHead: number } | Error {
   if (current === undefined) {
     return errors.NOT_FOUND({ data: {} });
   }
 
   if (current.status !== 'active') {
-    return errors.ACTIVITY_TERMINAL({
-      data: { appendedHead: current.appendedHead, status: current.status },
-    });
+    return pickTerminalOutcome(checkpoints, current, errors);
   }
 
   if (current.writerSessionId !== null && current.writerSessionId !== actingSessionID) {

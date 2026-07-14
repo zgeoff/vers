@@ -617,7 +617,78 @@ test('it rejects a chainIndex that is not startChainIndex plus version with CHEC
   });
 });
 
-test('it advances the chain anchor exactly once across a duplicate terminal submission', async () => {
+test('it returns the settled head when a terminal batch is resubmitted unchanged', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  const firstResult = await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  expect(firstResult).toStrictEqual({ appendedHead: 1 });
+
+  const chainAfterFirst = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  const resubmitResult = await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  expect(resubmitResult).toStrictEqual({ appendedHead: 1 });
+
+  const chainAfterSecond = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(chainAfterSecond).toStrictEqual(chainAfterFirst);
+
+  const updatedAvatar = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updatedAvatar.xp).toBe(150);
+
+  const checkpoints = await ctx.db
+    .selectFrom('activityCheckpoints')
+    .selectAll()
+    .where('activityId', '=', started.id)
+    .execute();
+
+  expect(checkpoints).toHaveLength(1);
+});
+
+test('it rejects a non-matching batch against a settled activity as terminal', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -643,38 +714,24 @@ test('it advances the chain anchor exactly once across a duplicate terminal subm
     expectedHead: 0,
   });
 
-  const chainAfterFirst = await ctx.db
-    .selectFrom('activityChains')
-    .selectAll()
-    .where('avatarId', '=', avatar.id)
-    .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
-    .executeTakeFirstOrThrow();
+  const tampered = [
+    { ...batch[0]!, payload: { ...batch[0]!.payload, time: batch[0]!.payload.time + 1 } },
+  ];
 
   expect(
     client.trackActivityProgress({
       activityID: started.id,
-      checkpoints: batch,
+      checkpoints: tampered,
       expectedHead: 0,
     }),
   ).rejects.toMatchObject({ code: 'ACTIVITY_TERMINAL', data: { status: 'stopped' } });
-
-  const chainAfterSecond = await ctx.db
-    .selectFrom('activityChains')
-    .selectAll()
-    .where('avatarId', '=', avatar.id)
-    .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
-    .executeTakeFirstOrThrow();
-
-  expect(chainAfterSecond).toStrictEqual(chainAfterFirst);
 });
 
-test('it does not double-apply xp on a duplicate terminal submission', async () => {
+test('it returns the settled head when a landed batch is resubmitted after a user stop', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
-  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -684,11 +741,7 @@ test('it does not double-apply xp on a duplicate terminal submission', async () 
     scopeType: 'world_map_node',
   });
 
-  const batch = createMockCheckpointBatch({
-    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
-    startPrevHash: started.startHash,
-    startVersion: 1,
-  });
+  const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
 
   await client.trackActivityProgress({
     activityID: started.id,
@@ -696,21 +749,15 @@ test('it does not double-apply xp on a duplicate terminal submission', async () 
     expectedHead: 0,
   });
 
-  expect(
-    client.trackActivityProgress({
-      activityID: started.id,
-      checkpoints: batch,
-      expectedHead: 0,
-    }),
-  ).rejects.toMatchObject({ code: 'ACTIVITY_TERMINAL', data: { status: 'stopped' } });
+  await client.stopActivity({ avatarID: avatar.id });
 
-  const updated = await ctx.db
-    .selectFrom('avatars')
-    .selectAll()
-    .where('id', '=', avatar.id)
-    .executeTakeFirstOrThrow();
+  const resubmitResult = await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
 
-  expect(updated.xp).toBe(150);
+  expect(resubmitResult).toStrictEqual({ appendedHead: 1 });
 });
 
 test('it rejects an append from a displaced writer session with SESSION_EVICTED', async () => {
