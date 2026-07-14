@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import { EntityStatus, createMockAvatarSnapshot } from '@vers/idle-core';
+import { EntityStatus } from '@vers/idle-core';
+import { createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
 import { useAvatar } from './use-avatar';
 import { useIdleStore } from './use-idle-store';
 

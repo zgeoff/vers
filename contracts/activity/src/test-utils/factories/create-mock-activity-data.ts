@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { ActivityData } from '@vers/contract-activity';
+import type { ActivityData } from '../../activity-data-schema';
 
 export function createMockActivityData(overrides: Partial<ActivityData> = {}): ActivityData {
   const startedAt = faker.date.recent();

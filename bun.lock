@@ -122,6 +122,7 @@
       "name": "@vers/contract-activity",
       "version": "0.0.0",
       "dependencies": {
+        "@faker-js/faker": "catalog:",
         "@noble/hashes": "catalog:",
         "@orpc/contract": "catalog:",
         "@vers/contract-base": "workspace:*",
@@ -141,7 +142,9 @@
       "name": "@vers/contract-avatar",
       "version": "0.0.0",
       "dependencies": {
+        "@faker-js/faker": "catalog:",
         "@orpc/contract": "catalog:",
+        "@paralleldrive/cuid2": "catalog:",
         "@vers/contract-base": "workspace:*",
         "zod": "catalog:",
       },
@@ -208,7 +211,10 @@
       "name": "@vers/contract-replay",
       "version": "0.0.0",
       "dependencies": {
+        "@faker-js/faker": "catalog:",
+        "@paralleldrive/cuid2": "catalog:",
         "@vers/contract-base": "workspace:*",
+        "@vers/game-utils": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -505,6 +511,7 @@
       "name": "@vers/idle-core",
       "version": "0.0.0",
       "dependencies": {
+        "@faker-js/faker": "catalog:",
         "@paralleldrive/cuid2": "catalog:",
         "@vers/game-utils": "workspace:*",
         "@vers/utils": "workspace:*",
@@ -513,7 +520,6 @@
         "tiny-invariant": "catalog:",
       },
       "devDependencies": {
-        "@faker-js/faker": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@zgeoff/bun-test-extended": "catalog:",
@@ -713,7 +719,6 @@
       "devDependencies": {
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
-        "@vers/game-utils": "workspace:*",
         "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "typescript": "catalog:",

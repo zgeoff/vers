@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { LatestActivityProgress } from '../../resync/types';
-import { createMockActivityData } from './create-mock-activity-data';
 
 export function createMockLatestActivityProgress(
   overrides: Partial<LatestActivityProgress> = {},

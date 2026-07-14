@@ -1,10 +1,10 @@
 import { expect, test } from 'bun:test';
 import type { SimulationSnapshot } from '@vers/idle-core';
+import { ActivityFailureAction } from '@vers/idle-core';
 import {
-  ActivityFailureAction,
   createMockAvatarSnapshot,
   createMockCombatExecutorSnapshot,
-} from '@vers/idle-core';
+} from '@vers/idle-core/test-utils';
 import { WorkerMessageType } from '../types';
 import { createInitialStateMessage } from './create-initial-state-message';
 

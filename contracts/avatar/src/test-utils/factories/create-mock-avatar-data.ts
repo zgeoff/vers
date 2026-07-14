@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
-import type { AvatarData } from '@vers/contract-avatar';
+import type { AvatarData } from '../../avatar-data-schema';
 
 export function createMockAvatarData(overrides: Partial<AvatarData> = {}): AvatarData {
   const createdAt = faker.date.recent();

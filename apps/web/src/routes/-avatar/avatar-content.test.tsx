@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
-import { createMockAvatarData } from '../../test-utils/factories/create-mock-avatar-data';
+import { createMockAvatarData } from '@vers/contract-avatar/test-utils';
 import { AvatarContent } from './avatar-content';
 
 test('it shows the avatar name, level, and xp', () => {

@@ -1,14 +1,15 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { ActivityCheckpoint } from '@vers/contract-replay';
+import { createMockReplaySegmentInput } from '@vers/contract-replay/test-utils';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { updateEnv } from '@vers/test-utils/bun';
 import { createReplayService } from '../create-replay-service';
-import { createMockReplaySegmentInput } from '../test-utils/factories/create-mock-replay-segment-input';
 import { runReplaySegment } from './run-replay-segment';
 
 const DETERMINISTIC_INPUT = createMockReplaySegmentInput({
+  simVersion: 'test-engine-hash',
   activity: {
     difficulty: 1,
     enemies: [

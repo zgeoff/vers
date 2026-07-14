@@ -389,9 +389,10 @@ test('it rejects a pruned stamped version with SIM_VERSION_EXPIRED', async () =>
 test('it rejects an active stamped version past its retention deadline with SIM_VERSION_EXPIRED', async () => {
   await using ctx = await setupTest();
 
-  const current = await createSimVersionRow(ctx.db);
+  const current = await createSimVersionRow(ctx.db, { deployedAt: new Date('2026-02-01') });
 
   const stale = await createSimVersionRow(ctx.db, {
+    deployedAt: new Date('2026-01-01'),
     retainedUntil: new Date('2020-01-01'),
     status: 'active',
   });

@@ -1,9 +1,6 @@
 import { CheckboxField, Spinner } from '@vers/design-system';
-import {
-  ActivityFailureAction,
-  createMockActivityInput,
-  createMockAvatarData,
-} from '@vers/idle-core';
+import { ActivityFailureAction } from '@vers/idle-core';
+import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect } from 'react';
 import { SimulationUnsupportedNotice } from '../../components/simulation-unsupported-notice';

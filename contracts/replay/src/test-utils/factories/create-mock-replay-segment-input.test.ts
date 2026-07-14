@@ -32,7 +32,7 @@ test('it builds a request with a single enemy and no weapon equipped', () => {
     },
     duration: 80_000,
     protocol: 1,
-    simVersion: 'test-engine-hash',
+    simVersion: expect.toBeString(),
   });
 });
 

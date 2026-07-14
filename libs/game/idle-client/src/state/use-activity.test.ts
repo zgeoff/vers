@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import { createMockActivitySnapshot } from '@vers/idle-core';
+import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import { useActivity } from './use-activity';
 import { useIdleStore } from './use-idle-store';
 

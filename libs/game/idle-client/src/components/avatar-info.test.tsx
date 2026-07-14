@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import { nodeHasText } from '@vers/client-test-utils';
-import { createMockAvatarSnapshot } from '@vers/idle-core';
+import { createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
 import { AvatarInfo } from './avatar-info';
 
 test('it renders avatar information', () => {

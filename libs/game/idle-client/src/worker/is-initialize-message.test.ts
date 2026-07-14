@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core';
+import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import type { InitializeMessage, SetActivityMessage } from '../types';
 import { ClientMessageType } from '../types';
 import { isInitializeMessage } from './is-initialize-message';

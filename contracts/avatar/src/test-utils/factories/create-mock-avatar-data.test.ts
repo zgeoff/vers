@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { AvatarDataSchema } from '@vers/contract-avatar';
+import { AvatarDataSchema } from '../../avatar-data-schema';
 import { createMockAvatarData } from './create-mock-avatar-data';
 
 test('it builds a contract-valid avatar', () => {

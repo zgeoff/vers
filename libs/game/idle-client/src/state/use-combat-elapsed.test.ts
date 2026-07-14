@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import { createMockCombatExecutorSnapshot } from '@vers/idle-core';
+import { createMockCombatExecutorSnapshot } from '@vers/idle-core/test-utils';
 import { useCombatElapsed } from './use-combat-elapsed';
 import { useIdleStore } from './use-idle-store';
 

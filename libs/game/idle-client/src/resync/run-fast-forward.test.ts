@@ -2,18 +2,18 @@ import { expect, mock, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ActivityData, CheckpointBatchEntry } from '@vers/contract-activity';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import { ActivityFailureAction } from '@vers/idle-core';
 import {
-  ActivityFailureAction,
   createMockActivityInput,
   createMockAvatarData,
   createMockEnemyData,
-} from '@vers/idle-core';
+} from '@vers/idle-core/test-utils';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
-import { createMockActivityData } from '../test-utils/factories/create-mock-activity-data';
 import { runFastForward } from './run-fast-forward';
 import type { FastForwardProgress, LatestActivityProgress } from './types';
 

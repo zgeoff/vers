@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { ActivityDataSchema } from '@vers/contract-activity';
+import { ActivityDataSchema } from '../../activity-data-schema';
 import { createMockActivityData } from './create-mock-activity-data';
 
 test('it builds a contract-valid active activity by default', () => {

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
-import { createMockActivityData } from '../test-utils/factories/create-mock-activity-data';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createMockLatestActivityProgress } from '../test-utils/factories/create-mock-latest-activity-progress';
 import { planResync } from './plan-resync';
 

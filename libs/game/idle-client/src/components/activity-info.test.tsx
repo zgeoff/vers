@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import { nodeHasText } from '@vers/client-test-utils';
-import { createMockActivitySnapshot } from '@vers/idle-core';
+import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import { ActivityInfo } from './activity-info';
 
 test('it renders info about the provided activity', () => {

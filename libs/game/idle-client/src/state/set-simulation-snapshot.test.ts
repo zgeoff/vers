@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { ActivityFailureAction, createMockActivitySnapshot } from '@vers/idle-core';
+import { ActivityFailureAction } from '@vers/idle-core';
+import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import { setSimulationSnapshot } from './set-simulation-snapshot';
 import { useIdleStore } from './use-idle-store';
 
