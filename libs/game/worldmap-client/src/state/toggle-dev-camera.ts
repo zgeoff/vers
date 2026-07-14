@@ -1,7 +1,7 @@
-import { useDevStore } from './use-dev-store';
+import { useWorldmapStore } from './use-worldmap-store';
 
 export function toggleDevCamera() {
-  useDevStore.setState((state) => ({
+  useWorldmapStore.setState((state) => ({
     isDevCameraActive: !state.isDevCameraActive,
   }));
 }

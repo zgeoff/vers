@@ -1,8 +1,7 @@
 import { expect, test } from 'bun:test';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { WorldMapNode } from '@vers/worldmap-core';
-import { useHoveredNodeStore } from '../state/use-hovered-node-store';
-import { useSelectedNodeStore } from '../state/use-selected-node-store';
+import { useWorldmapStore } from '../state/use-worldmap-store';
 import { WorldMapNodes } from './world-map-nodes';
 
 const nodeA: WorldMapNode = {
@@ -36,7 +35,7 @@ test('it sets the hovered node when the pointer enters a node instance', async (
 
   await renderer.fireEvent(mesh, 'pointerEnter', { instanceId: 1 });
 
-  expect(useHoveredNodeStore.getState().node).toBe(nodeB);
+  expect(useWorldmapStore.getState().hoveredNode).toBe(nodeB);
 });
 
 test('it unsets the hovered node when the pointer leaves the instanced mesh', async () => {
@@ -47,7 +46,7 @@ test('it unsets the hovered node when the pointer leaves the instanced mesh', as
   await renderer.fireEvent(mesh, 'pointerEnter', { instanceId: 0 });
   await renderer.fireEvent(mesh, 'pointerLeave');
 
-  expect(useHoveredNodeStore.getState().node).toBeNull();
+  expect(useWorldmapStore.getState().hoveredNode).toBeNull();
 });
 
 test('it sets the selected node when a node instance is clicked', async () => {
@@ -57,5 +56,5 @@ test('it sets the selected node when a node instance is clicked', async () => {
 
   await renderer.fireEvent(mesh, 'pointerDown', { instanceId: 0 });
 
-  expect(useSelectedNodeStore.getState().node).toBe(nodeA);
+  expect(useWorldmapStore.getState().selectedNode).toBe(nodeA);
 });

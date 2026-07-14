@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { Object3D } from 'three';
-import { useShallow } from 'zustand/react/shallow';
 import { getScenePosition } from '../utils/get-scene-position';
-import { useSelectedNodeStore } from './use-selected-node-store';
+import { useWorldmapStore } from './use-worldmap-store';
 
 /**
  * Reads the selected node alongside its scene `Object3D`. A node selected without one — the
@@ -12,22 +11,18 @@ import { useSelectedNodeStore } from './use-selected-node-store';
  * origin.
  */
 export function useSelectedNode() {
-  const selectedNode = useSelectedNodeStore(
-    useShallow((state) => ({
-      node: state.node,
-      object3D: state.object3D,
-    })),
-  );
+  const node = useWorldmapStore((state) => state.selectedNode);
+  const storedObject3D = useWorldmapStore((state) => state.selectedObject3D);
 
   return useMemo(() => {
-    if (selectedNode.object3D || !selectedNode.node) {
-      return selectedNode;
+    if (storedObject3D || !node) {
+      return { node, object3D: storedObject3D };
     }
 
     const object3D = new Object3D();
 
-    object3D.position.set(...getScenePosition(selectedNode.node.position));
+    object3D.position.set(...getScenePosition(node.position));
 
-    return { node: selectedNode.node, object3D };
-  }, [selectedNode]);
+    return { node, object3D };
+  }, [node, storedObject3D]);
 }

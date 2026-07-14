@@ -7,7 +7,7 @@ GlobalRegistrator.register();
 expect.extend(jestDOMMatchers);
 
 // installs the zustand `create` wrapper before any store module below imports it; bun runs every
-// test file in one process with no isolation, so the five world-client stores would otherwise
+// test file in one process with no isolation, so the worldmap store would otherwise
 // leak state across files
 registerZustandReset();
 

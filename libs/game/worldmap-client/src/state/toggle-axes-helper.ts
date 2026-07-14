@@ -1,7 +1,7 @@
-import { useDevStore } from './use-dev-store';
+import { useWorldmapStore } from './use-worldmap-store';
 
 export function toggleAxesHelper() {
-  useDevStore.setState((state) => ({
+  useWorldmapStore.setState((state) => ({
     isAxesHelperVisible: !state.isAxesHelperVisible,
   }));
 }

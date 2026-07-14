@@ -1,7 +1,5 @@
-import { useDevStore } from './use-dev-store';
+import { useWorldmapStore } from './use-worldmap-store';
 
 export function useIsDevCameraActive() {
-  const isDevCameraActive = useDevStore((state) => state.isDevCameraActive);
-
-  return isDevCameraActive;
+  return useWorldmapStore((state) => state.isDevCameraActive);
 }

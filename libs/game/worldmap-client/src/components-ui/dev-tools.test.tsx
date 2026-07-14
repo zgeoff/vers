@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useDevStore } from '../state/use-dev-store';
+import { useWorldmapStore } from '../state/use-worldmap-store';
 import { DevTools } from './dev-tools';
 
 function setupTest() {
@@ -32,7 +32,7 @@ test('it toggles the axes helper visibility', async () => {
 
   expect(axesHelperCheckbox).toBeChecked();
 
-  expect(useDevStore.getState()).toMatchObject({
+  expect(useWorldmapStore.getState()).toMatchObject({
     isAxesHelperVisible: true,
   });
 });
@@ -47,7 +47,7 @@ test('it toggles the dev camera', async () => {
 
   expect(devCameraCheckbox).toBeChecked();
 
-  expect(useDevStore.getState()).toMatchObject({
+  expect(useWorldmapStore.getState()).toMatchObject({
     isDevCameraActive: true,
   });
 });

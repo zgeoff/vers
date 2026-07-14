@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
 import type { WorldMapNode } from '@vers/worldmap-core';
 import { setHoveredNode } from './set-hovered-node';
-import { useHoveredNodeStore } from './use-hovered-node-store';
+import { useWorldmapStore } from './use-worldmap-store';
 
 test('it updates the hovered node in the store', () => {
   const node: WorldMapNode = {
@@ -16,9 +16,7 @@ test('it updates the hovered node in the store', () => {
 
   setHoveredNode(node);
 
-  const hook = renderHook(() => useHoveredNodeStore((state) => state));
+  const hook = renderHook(() => useWorldmapStore((state) => state.hoveredNode));
 
-  expect(hook.result.current).toStrictEqual({
-    node,
-  });
+  expect(hook.result.current).toStrictEqual(node);
 });
