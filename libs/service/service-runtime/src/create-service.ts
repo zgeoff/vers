@@ -37,7 +37,7 @@ export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
 export interface Service<TEnvShape extends z.ZodRawShape> {
   app: Elysia;
   env: ServiceEnv<TEnvShape>;
-  listen: () => void;
+  listen: (port?: number) => void;
   logger: pino.Logger;
 }
 
@@ -118,9 +118,9 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
   return {
     app,
     env,
-    listen: () => {
-      app.listen(env.PORT);
-      logger.info(`${config.name} listening on port ${env.PORT}`);
+    listen: (port?: number) => {
+      app.listen(port ?? env.PORT);
+      logger.info(`${config.name} listening on port ${app.server?.port ?? port ?? env.PORT}`);
     },
     logger,
   };

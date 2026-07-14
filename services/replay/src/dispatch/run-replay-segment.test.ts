@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import type { ActivityCheckpoint } from '@vers/contract-replay';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
@@ -120,11 +120,12 @@ async function setupTest() {
  */
 async function setupRemoteProvider(engineHash: string) {
   updateEnv('SIM_ENGINE_HASH', engineHash);
-  updateEnv('PORT', '0');
 
   const provider = await createReplayService();
 
-  provider.listen();
+  provider.listen(0);
+
+  onTestFinished(() => provider.app.stop());
 
   const port = provider.app.server?.port;
 
