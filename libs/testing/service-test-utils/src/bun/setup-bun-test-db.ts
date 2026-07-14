@@ -1,10 +1,13 @@
-import { connect } from 'node:net';
+import {
+  buildTestTemplateDBName,
+  isTestContainerReachable,
+  provisionTestTemplate,
+  readCurrentBranch,
+} from '@vers/db/test-support';
 import { createPostgresContainer } from '../create-postgres-container';
 import { getContainerConnectionURI } from '../get-container-connection-uri';
-import { setupTestDB } from '../setup-test-db';
 
 const TEST_CONTAINER_PORT = 32_999;
-const TEST_TEMPLATE_DB = 'test_template';
 
 /**
  * Publishes the shared postgres test container's connection details as
@@ -13,7 +16,8 @@ const TEST_TEMPLATE_DB = 'test_template';
  * handoff isn't available). Starts (or attaches to) the reused container —
  * short-circuiting whenever the container is already reachable, since CI
  * always starts it with `pg:test-container:start` first and testcontainers
- * under bun is otherwise unproven.
+ * under bun is otherwise unproven — then provisions this worktree's
+ * branch-scoped template.
  */
 export async function setupBunTestDB(): Promise<void> {
   if (process.env['TEST_DB_URI'] !== undefined) {
@@ -22,41 +26,21 @@ export async function setupBunTestDB(): Promise<void> {
 
   const containerReachable = await isTestContainerReachable();
 
-  if (containerReachable) {
-    process.env['TEST_DB_URI'] = `postgres://test:test@localhost:${TEST_CONTAINER_PORT}`;
-    process.env['TEST_TEMPLATE_DB'] = TEST_TEMPLATE_DB;
+  let baseURI: string;
 
-    return;
+  if (containerReachable) {
+    baseURI = `postgres://test:test@localhost:${TEST_CONTAINER_PORT}`;
+  } else {
+    const container = await createPostgresContainer();
+
+    baseURI = getContainerConnectionURI(container);
   }
 
-  const container = await createPostgresContainer();
+  const templateDB =
+    process.env['TEST_TEMPLATE_DB'] ?? buildTestTemplateDBName(readCurrentBranch());
 
-  await setupTestDB(container);
+  await provisionTestTemplate({ baseURI, templateDB });
 
-  process.env['TEST_DB_URI'] = getContainerConnectionURI(container);
-  process.env['TEST_TEMPLATE_DB'] = container.getDatabase();
-}
-
-function isTestContainerReachable(): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = connect({ host: 'localhost', port: TEST_CONTAINER_PORT, timeout: 1000 });
-
-    socket.once('connect', () => {
-      socket.destroy();
-
-      resolve(true);
-    });
-
-    socket.once('timeout', () => {
-      socket.destroy();
-
-      resolve(false);
-    });
-
-    socket.once('error', () => {
-      socket.destroy();
-
-      resolve(false);
-    });
-  });
+  process.env['TEST_DB_URI'] = baseURI;
+  process.env['TEST_TEMPLATE_DB'] = templateDB;
 }
