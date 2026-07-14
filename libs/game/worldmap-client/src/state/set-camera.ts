@@ -1,6 +1,6 @@
 import type { PerspectiveCamera } from 'three';
-import { useCameraStore } from './use-camera-store';
+import { useWorldmapStore } from './use-worldmap-store';
 
 export function setCamera(camera: null | PerspectiveCamera) {
-  useCameraStore.setState({ camera });
+  useWorldmapStore.setState({ camera });
 }

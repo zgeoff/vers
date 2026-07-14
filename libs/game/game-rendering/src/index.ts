@@ -1,5 +1,6 @@
 export { createTunnel } from './create-tunnel';
 export { GameCanvas } from './game-canvas';
+export { getSceneState } from './get-scene-state';
 export { isSceneSwap } from './is-scene-swap';
 export { presentationToFrameloop } from './presentation-to-frameloop';
 export { registerGameLoopCallback } from './register-game-loop-callback';
@@ -12,5 +13,4 @@ export { setSceneState } from './set-scene-state';
 export { useRenderer } from './use-renderer';
 export { useSatellite } from './use-satellite';
 export { useSceneState } from './use-scene-state';
-export { useSceneStateStore } from './use-scene-state-store';
 export type * from './types';

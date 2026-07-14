@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
 import type { ActivitySnapshot } from '@vers/idle-core';
-import { setActivity } from './set-activity';
 import { useActivity } from './use-activity';
+import { useIdleStore } from './use-idle-store';
 
 test('it provides activity state', () => {
   const activity: ActivitySnapshot = {
@@ -17,7 +17,7 @@ test('it provides activity state', () => {
     wavesRemaining: 4,
   };
 
-  setActivity(activity);
+  useIdleStore.setState({ activity });
 
   const hook = renderHook(() => useActivity());
 

@@ -1,6 +1,6 @@
 import type { ResyncStatus } from '../types';
-import { useResyncStatusStore } from './use-resync-status-store';
+import { useIdleStore } from './use-idle-store';
 
 export function setResyncStatus(resyncStatus: null | ResyncStatus) {
-  useResyncStatusStore.setState(() => ({ resyncStatus }));
+  useIdleStore.setState(() => ({ resyncStatus }));
 }

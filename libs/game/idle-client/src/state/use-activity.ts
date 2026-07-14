@@ -1,8 +1,5 @@
-import { useShallow } from 'zustand/react/shallow';
-import { useActivityStore } from './use-activity-store';
+import { useIdleStore } from './use-idle-store';
 
 export function useActivity() {
-  const activity = useActivityStore(useShallow((state) => state.activity));
-
-  return activity;
+  return useIdleStore((state) => state.activity);
 }

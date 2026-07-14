@@ -161,6 +161,26 @@ Screens and routes are built workable-only:
 - A screen needing a component that doesn't exist yet builds the minimal version in its own PR and
   promotes it into `@vers/design-system` when a second consumer appears.
 
+## Client state (Zustand)
+
+Zustand holds client state; server cache lives in TanStack Query.
+
+- Each package composes its client state into one bound store, built by spreading state-only slice
+  factories (`create-<concern>-slice.ts`, each returning its fields' initial values) inside a single
+  `create<Store>()(() => ({ … }))`. A package with a second genuinely disjoint domain (game-
+  rendering's satellite registry beside its scene state) may hold a second store.
+- Stores hold state only — no colocated actions. Mutation goes through external setter modules
+  (`set-*.ts`, `toggle-*.ts`) calling `setState`, so writers work outside React (workers, engine
+  callbacks). One `setState` per logical event: an event that changes several fields gets one
+  consolidated writer, never a per-field fan-out.
+- `index.ts` exports selector hooks and setters, never raw store handles. A package-external
+  imperative read goes through an exported `get*` reader.
+- `useShallow` wraps only selectors that build a fresh object or array; a selector returning a
+  primitive or a single stored reference goes bare.
+- Middleware wraps only the combined store, never an individual slice.
+- Inside the R3F frame loop, reads are imperative `getState()` calls
+  (`docs/architecture/game-rendering.md`); DOM components subscribe through selector hooks.
+
 ## Running things
 
 - `bun install` — whole workspace (`--frozen-lockfile` in CI; `bun.lock` is committed).

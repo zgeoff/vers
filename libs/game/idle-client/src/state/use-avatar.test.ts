@@ -2,8 +2,8 @@ import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
 import type { AvatarSnapshot } from '@vers/idle-core';
 import { EntityStatus } from '@vers/idle-core';
-import { setAvatar } from './set-avatar';
 import { useAvatar } from './use-avatar';
+import { useIdleStore } from './use-idle-store';
 
 test('it provides the avatar state', () => {
   const avatar: AvatarSnapshot = {
@@ -26,7 +26,7 @@ test('it provides the avatar state', () => {
     status: EntityStatus.Alive,
   };
 
-  setAvatar(avatar);
+  useIdleStore.setState({ avatar });
 
   const hook = renderHook(() => useAvatar());
 

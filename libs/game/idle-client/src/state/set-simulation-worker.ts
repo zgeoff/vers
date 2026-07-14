@@ -1,5 +1,5 @@
-import { useSimulationStore } from './use-simulation-store';
+import { useIdleStore } from './use-idle-store';
 
 export function setSimulationWorker(worker: SharedWorker) {
-  useSimulationStore.setState(() => ({ worker }));
+  useIdleStore.setState(() => ({ worker }));
 }
