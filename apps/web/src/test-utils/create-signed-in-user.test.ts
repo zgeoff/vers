@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
+import * as db from '@vers/mock-services/db';
 import * as jose from 'jose';
-import * as db from '../mocks/db';
 import { createSignedInUser } from './create-signed-in-user';
 
 test('it creates a user with a verified session and a matching cookie map', async () => {

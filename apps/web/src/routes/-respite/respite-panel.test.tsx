@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { screen } from '@testing-library/react';
+import * as db from '@vers/mock-services/db';
 import { orpc } from '../../lib/rpc/orpc';
-import * as db from '../../mocks/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';

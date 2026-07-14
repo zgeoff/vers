@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { isRedirect } from '@tanstack/react-router';
-import * as db from '../../mocks/db';
+import * as db from '@vers/mock-services/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { forceLogoutHandler } from './force-logout-handler';
