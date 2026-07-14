@@ -4,7 +4,7 @@ version: 1
 reviews:
   enabled: true
   sensitivity: high
-  incremental_commits: true
+  incremental_commits: false
   check_drafts: false
   resolve_threads_when_addressed: true
   auto_approve_behavior: disabled
