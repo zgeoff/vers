@@ -189,6 +189,23 @@
         "typescript": "catalog:",
       },
     },
+    "contracts/keys": {
+      "name": "@vers/contract-keys",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@vers/contract-base": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@orpc/openapi": "catalog:",
+        "@orpc/zod": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "contracts/replay": {
       "name": "@vers/contract-replay",
       "version": "0.0.0",
@@ -505,6 +522,19 @@
         "typescript": "catalog:",
       },
     },
+    "libs/game/roll-crypto": {
+      "name": "@vers/roll-crypto",
+      "version": "0.0.0",
+      "dependencies": {
+        "@noble/hashes": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "libs/game/worldmap-client": {
       "name": "@vers/worldmap-client",
       "version": "0.0.0",
@@ -790,6 +820,27 @@
         "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "msw": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "services/keys": {
+      "name": "@vers/service-keys",
+      "version": "0.0.0",
+      "dependencies": {
+        "@noble/hashes": "catalog:",
+        "@orpc/server": "catalog:",
+        "@vers/contract-keys": "workspace:*",
+        "@vers/roll-crypto": "workspace:*",
+        "@vers/service-runtime": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@orpc/contract": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
         "typescript": "catalog:",
       },
     },
@@ -2286,6 +2337,8 @@
 
     "@vers/contract-email": ["@vers/contract-email@workspace:contracts/email"],
 
+    "@vers/contract-keys": ["@vers/contract-keys@workspace:contracts/keys"],
+
     "@vers/contract-replay": ["@vers/contract-replay@workspace:contracts/replay"],
 
     "@vers/contract-session": ["@vers/contract-session@workspace:contracts/session"],
@@ -2318,6 +2371,8 @@
 
     "@vers/panda-preset": ["@vers/panda-preset@workspace:libs/design/panda-preset"],
 
+    "@vers/roll-crypto": ["@vers/roll-crypto@workspace:libs/game/roll-crypto"],
+
     "@vers/scripts": ["@vers/scripts@workspace:scripts"],
 
     "@vers/service-activity": ["@vers/service-activity@workspace:services/activity"],
@@ -2327,6 +2382,8 @@
     "@vers/service-avatar": ["@vers/service-avatar@workspace:services/avatar"],
 
     "@vers/service-email": ["@vers/service-email@workspace:services/email"],
+
+    "@vers/service-keys": ["@vers/service-keys@workspace:services/keys"],
 
     "@vers/service-replay": ["@vers/service-replay@workspace:services/replay"],
 
