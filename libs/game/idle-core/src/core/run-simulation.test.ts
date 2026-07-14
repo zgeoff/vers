@@ -40,7 +40,7 @@ test('runs a simulation with default configuration', async () => {
           "rewards": {
             "xp": 60,
           },
-          "time": 16300,
+          "time": 16250,
           "type": "progress",
         },
         {
@@ -52,7 +52,7 @@ test('runs a simulation with default configuration', async () => {
           "rewards": {
             "xp": 60,
           },
-          "time": 33800,
+          "time": 33750,
           "type": "progress",
         },
         {
@@ -60,7 +60,7 @@ test('runs a simulation with default configuration', async () => {
           "rewards": {
             "xp": 30,
           },
-          "time": 43800,
+          "time": 43750,
           "type": "progress",
         },
         {
@@ -68,7 +68,7 @@ test('runs a simulation with default configuration', async () => {
           "rewards": {
             "xp": 40,
           },
-          "time": 56300,
+          "time": 56250,
           "type": "progress",
         },
         {
@@ -76,7 +76,7 @@ test('runs a simulation with default configuration', async () => {
           "rewards": {
             "xp": 215,
           },
-          "time": 56300,
+          "time": 56250,
           "type": "completed",
         },
         {
@@ -93,7 +93,7 @@ test('runs a simulation with default configuration', async () => {
           "rewards": {
             "xp": 40,
           },
-          "time": 13800,
+          "time": 13750,
           "type": "progress",
         },
       ],
