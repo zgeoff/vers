@@ -155,8 +155,8 @@ implementing that algorithm — forcing list verbs onto textbook terms hides the
 
 The shared partial's effectful-prefix table omits one prefix this repo uses:
 
-| Prefix | Contract                                                                                                                                 | Example        |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| Prefix | Contract                                                                                                                                | Example        |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
 | `park` | single-statement, guarded transition of a resource to an operational-hold status; a non-matching current state leaves the row untouched | `parkActivity` |
 
 ## Issue hygiene
