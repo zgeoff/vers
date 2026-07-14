@@ -3,12 +3,4 @@ export type { ReplayRouter } from './build-router';
 export { claimNextChain } from './queue/claim-next-chain';
 export { findReplayFrontier } from './queue/find-replay-frontier';
 export { MAX_REPLAY_ATTEMPTS, updateReplayAttempts } from './queue/update-replay-attempts';
-
-export type {
-  ChainKey,
-  ClaimedChain,
-  GrantOnce,
-  ReplayFrontier,
-  ReplaySegmentInput,
-  ReplaySegmentOutput,
-} from './types';
+export type { ChainKey, ClaimedChain, GrantOnce, ReplayFrontier } from './types';
