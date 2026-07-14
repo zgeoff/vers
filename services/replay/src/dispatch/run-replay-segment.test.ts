@@ -136,7 +136,7 @@ async function setupRemoteProvider(engineHash: string) {
 }
 
 test('it replays in-process when the job matches this deploy’s baked hash', async () => {
-  const ctx = await setupTest();
+  await using ctx = await setupTest();
 
   const outcome = await runReplaySegment(
     { db: ctx.db, privateKey: ctx.privateKey, simVersion: DETERMINISTIC_INPUT.simVersion },
@@ -150,7 +150,7 @@ test('it replays in-process when the job matches this deploy’s baked hash', as
 });
 
 test('it reports unknownVersion when the registry has no row for the stamped hash', async () => {
-  const ctx = await setupTest();
+  await using ctx = await setupTest();
 
   const job = createMockReplaySegmentInput({ simVersion: 'never-registered-hash' });
 
@@ -163,7 +163,7 @@ test('it reports unknownVersion when the registry has no row for the stamped has
 });
 
 test('it reports expired for a pruned registry row', async () => {
-  const ctx = await setupTest();
+  await using ctx = await setupTest();
 
   const job = createMockReplaySegmentInput({ simVersion: 'pruned-hash' });
 
@@ -178,7 +178,7 @@ test('it reports expired for a pruned registry row', async () => {
 });
 
 test('it reports expired for a registry row past its retention deadline', async () => {
-  const ctx = await setupTest();
+  await using ctx = await setupTest();
 
   const job = createMockReplaySegmentInput({ simVersion: 'past-retention-hash' });
 
@@ -197,7 +197,8 @@ test('it reports expired for a registry row past its retention deadline', async 
 });
 
 test('it round-trips a remote dispatch over real HTTP with real s2s auth', async () => {
-  const ctx = await setupTest();
+  await using ctx = await setupTest();
+
   const providerURL = await setupRemoteProvider(DETERMINISTIC_INPUT.simVersion);
 
   await createSimVersionRow(ctx.db, {
@@ -218,7 +219,8 @@ test('it round-trips a remote dispatch over real HTTP with real s2s auth', async
 });
 
 test('it lets a SIM_VERSION_MISMATCH from a resolved provider throw as a misroute', async () => {
-  const ctx = await setupTest();
+  await using ctx = await setupTest();
+
   const providerURL = await setupRemoteProvider('providers-actual-hash');
 
   const job = createMockReplaySegmentInput({ simVersion: 'stamped-hash-the-provider-disowns' });

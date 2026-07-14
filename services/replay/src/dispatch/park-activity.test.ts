@@ -10,7 +10,8 @@ async function setupTest() {
 }
 
 test('it parks an active activity', async () => {
-  const ctx = await setupTest();
+  await using ctx = await setupTest();
+
   const activity = await createActivityRow(ctx.db, { status: 'active' });
   const parked = await parkActivity(ctx.db, activity.id);
 
@@ -18,7 +19,8 @@ test('it parks an active activity', async () => {
 });
 
 test('it leaves a quarantined activity untouched', async () => {
-  const ctx = await setupTest();
+  await using ctx = await setupTest();
+
   const activity = await createActivityRow(ctx.db, { status: 'quarantined' });
   const parked = await parkActivity(ctx.db, activity.id);
 
@@ -34,7 +36,8 @@ test('it leaves a quarantined activity untouched', async () => {
 });
 
 test('it leaves a stopped activity untouched', async () => {
-  const ctx = await setupTest();
+  await using ctx = await setupTest();
+
   const activity = await createActivityRow(ctx.db, { status: 'stopped' });
   const parked = await parkActivity(ctx.db, activity.id);
 
