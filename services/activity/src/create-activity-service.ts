@@ -1,3 +1,4 @@
+import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
@@ -20,6 +21,11 @@ interface CreateActivityServiceConfig {
    * Injected only in tests, to run the service inside the test's own transaction.
    */
   readonly db?: Kysely<DB>;
+
+  /**
+   * Injected only in tests, to trip the offline-progress cap without simulating a day.
+   */
+  readonly simTimeCapMs?: number;
   readonly simVersion?: string;
 }
 
@@ -34,6 +40,7 @@ export function createActivityService(
       buildActivityRouter({
         contentVersion: config.contentVersion ?? CONTENT_VERSION,
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
+        simTimeCapMs: config.simTimeCapMs ?? OFFLINE_PROGRESS_CAP_MS,
         simVersion: config.simVersion ?? SIM_VERSION,
       }),
     envShape: { DATABASE_URL: z.string() },

@@ -34,8 +34,31 @@ test('it returns a fresh activity with a null anchor at verifiedHead 0', async (
     activity: started,
     anchor: null,
     appendedHead: 0,
+    serverTime: expect.toBeValidDate(),
     verifiedHead: 0,
   });
+});
+
+test('it returns the server clock beside the resume cursors', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
+
+  // The clock and the activity's own timestamps come from the same database session, so an
+  // offline gap computed as their difference can't be skewed by the caller's clock.
+  expect(progress.serverTime).toBeValidDate();
+  expect(progress.serverTime.getTime()).toBeGreaterThanOrEqual(started.startedAt.getTime());
 });
 
 // schema isolation: this exercises trackActivityProgress, whose own db.transaction() can't

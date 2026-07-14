@@ -12,6 +12,8 @@ export type Generated<T> =
     ? ColumnType<S, I | undefined, U>
     : ColumnType<T, T | undefined, T>;
 
+export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export type VerificationType = '2fa' | '2fa-setup' | 'change-email' | 'onboarding';
@@ -19,6 +21,7 @@ export type VerificationType = '2fa' | '2fa-setup' | 'change-email' | 'onboardin
 export interface Activities {
   appendedAt: Timestamp | null;
   appendedHead: Generated<number>;
+  appendedTimeMs: Generated<Int8>;
   avatarId: string;
   buildSnapshot: import('./types').Json;
   contentVersion: string;
@@ -75,6 +78,8 @@ export interface Avatars {
   id: string;
   level: Generated<number>;
   name: string;
+  simBudgetMs: Generated<Int8>;
+  simMeteredAt: Generated<Timestamp>;
   updatedAt: Generated<Timestamp>;
   userId: string;
   xp: Generated<number>;

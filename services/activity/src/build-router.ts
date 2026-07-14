@@ -13,12 +13,14 @@ import { trackActivityProgress } from './handlers/track-activity-progress';
 interface BuildActivityRouterDeps {
   readonly contentVersion: string;
   readonly db: Kysely<DB>;
+  readonly simTimeCapMs: number;
   readonly simVersion: string;
 }
 
 /**
  * Assembles the activities service's oRPC router, closing each handler over the shared db client
- * (and, for `startActivity`, the version stamps new activities are minted against).
+ * (and, for `startActivity`, the version stamps new activities are minted against; for
+ * `trackActivityProgress`, the offline-progress budget ceiling).
  */
 export function buildActivityRouter(deps: BuildActivityRouterDeps) {
   const os = implement(activityContract).$context<ServiceContext>();
@@ -32,7 +34,7 @@ export function buildActivityRouter(deps: BuildActivityRouterDeps) {
     startActivity: os.startActivity.handler((opts) => startActivity(deps, opts)),
     stopActivity: os.stopActivity.handler((opts) => stopActivity(deps.db, opts)),
     trackActivityProgress: os.trackActivityProgress.handler((opts) =>
-      trackActivityProgress(deps.db, opts),
+      trackActivityProgress({ db: deps.db, simTimeCapMs: deps.simTimeCapMs }, opts),
     ),
   };
 }

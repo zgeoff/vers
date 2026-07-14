@@ -30,6 +30,12 @@ interface CreateMockCheckpointBatchConfig {
    * will apply cleanly.
    */
   readonly startVersion: number;
+
+  /**
+   * Milliseconds of cumulative simulated time per version — each entry's `time` is its version
+   * multiplied by this, so batches stay monotonic across resends and continuations. Default 1000.
+   */
+  readonly timeStepMs?: number;
 }
 
 /**
@@ -41,6 +47,7 @@ export function createMockCheckpointBatch(
 ): Array<CheckpointBatchEntry> {
   const count = config.count ?? 1;
   const startChainIndex = config.startChainIndex ?? 0;
+  const timeStepMs = config.timeStepMs ?? 1000;
   const entries: Array<CheckpointBatchEntry> = [];
   let prevHash = config.startPrevHash;
 
@@ -53,7 +60,7 @@ export function createMockCheckpointBatch(
       entropySource: 'chain',
       nextSeed: faker.string.alphanumeric({ casing: 'lower', length: 16 }),
       seed: faker.string.alphanumeric({ casing: 'lower', length: 16 }),
-      time: version * 1000,
+      time: version * timeStepMs,
       type: 'tick',
       ...(isLast && config.finalPayloadOverrides),
     };

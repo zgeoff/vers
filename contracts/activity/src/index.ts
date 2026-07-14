@@ -15,3 +15,4 @@ export { CheckpointPayloadSchema } from './checkpoint-payload-schema';
 export type { Checkpoint } from './checkpoint-schema';
 export { CheckpointSchema } from './checkpoint-schema';
 export { createGenesisSeed } from './create-genesis-seed';
+export { OFFLINE_PROGRESS_CAP_MS } from './offline-progress-cap-ms';

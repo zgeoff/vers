@@ -121,9 +121,23 @@ directly, because they lag verification by design.
 
 ## Offline progress
 
-Offline progress is bounded per return. Past the cap the activity stops server-side and resuming
-requires a resync. The fast-forward simulates from the last verified anchor; re-simulating a few
-already-submitted minutes is harmless — the results are deterministic and resubmission dedupes.
+Offline progress is bounded by a per-avatar simulated-time meter, enforced on the append path — the
+server never simulates. The avatar's budget refills at wall-clock rate since it was last banked,
+never past the cap (`OFFLINE_PROGRESS_CAP_MS`, 24h), and every accepted checkpoint batch debits its
+simulated-time delta — the last checkpoint's cumulative `time` minus the head row's accounted time,
+never a sum of the batch's per-checkpoint times. Because the only credit source is elapsed wall
+clock, no path — activity cycling, stop/start, avatar rotation — earns simulated time faster than
+real time, and live play self-funds: each flush banks roughly the wall clock it consumes. A small
+initial grant on the meter absorbs tick-boundary and network jitter.
+
+A batch whose delta exceeds the accrued budget is rejected whole and the activity claims the
+terminal `capped` transition at its current head; the `ACTIVITY_CAPPED` error carries that head as
+the exact stop index the client rebases its chain cursor from, and resuming requires a resync. An
+honest client never trips the cap: it plans its catch-up simulation to stop at the last encounter
+boundary at or under the same bound. `getLatestActivityProgress` returns the database's current time
+beside the resume cursors, so the client computes its offline gap against the clock that meters it.
+The fast-forward simulates from the last verified anchor; re-simulating a few already-submitted
+minutes is harmless — the results are deterministic and resubmission dedupes.
 
 Which rewards offline simulation may produce is an economy rule, not a protocol one: the
 [economy modes note](../game-design/economy-modes.md) owns it.

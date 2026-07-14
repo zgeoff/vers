@@ -38,8 +38,16 @@ export interface CheckpointInvalidPayload {
 
 /**
  * Payload shape for `trackActivityProgress`'s ACTIVITY_TERMINAL: the terminal status that rejects
- * the append.
+ * the append, plus the stream's final head so the caller can rebase without a refetch.
  */
 export interface TerminalStatusPayload {
-  readonly data: { readonly status: ActivityStatus };
+  readonly data: { readonly appendedHead: number; readonly status: ActivityStatus };
+}
+
+/**
+ * Payload shape for `trackActivityProgress`'s ACTIVITY_CAPPED: the head the stream stopped at —
+ * the exact index the caller rebases its chain cursor from after a resync.
+ */
+export interface CappedPayload {
+  readonly data: { readonly appendedHead: number };
 }
