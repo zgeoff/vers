@@ -9,6 +9,11 @@ reviews:
   resolve_threads_when_addressed: true
   auto_approve_behavior: disabled
   ultrareview: manual
+  custom_instructions: |
+    bun test loads jest-extended matchers process-wide through each package's
+    bunfig.toml preload (@zgeoff/bun-test-extended), so tests use matchers
+    beyond Bun's built-in expect API — an unknown matcher name is caught by
+    typecheck, not a runtime bug.
   ignore:
     files:
       - bun.lock
