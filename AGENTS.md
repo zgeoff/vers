@@ -376,9 +376,17 @@ Everywhere:
 - Test files are co-located with the module they test (`parse-source.ts` beside
   `parse-source.test.ts`) — no `test/`, `tests/` or `__tests__` directories. Declaration emit
   excludes `*.test.ts`, so they never ship.
-- A domain object or DTO comes from its faker-defaulted `create-mock-*` factory in the package's
-  `test-utils/factories/` (each factory has its own test); tests only override the fields required
-  to express the logic under test. No module-level fixtures shared between tests.
+- A test whose unit consumes a domain object or DTO takes it from the package's faker-defaulted
+  `create-mock-*` factory in `test-utils/factories/` (each factory has its own test), overriding
+  only the fields the unit reads.
+- A unit that parses or validates raw input — a zod schema, a decoder — is tested with inline
+  literal payloads, valid and invalid, never factory output: a factory built to satisfy a schema
+  cannot falsify it. A rejection test asserts the reported issue path, never bare
+  `success: false` — a payload invalid for any reason passes the bare boolean.
+- An input that is neither a domain object nor a DTO — a plain argument, an options bag, a config —
+  is written inline at the call site, even when tests repeat the literal; repeated data reads, an
+  opaque baseline doesn't. Test files declare no baseline-builder helpers and no module-level
+  fixtures shared between tests.
 - `toStrictEqual`, not `toEqual`, for object assertions; asymmetric matchers inside it are fine.
 - Global mock reset lives in the preload's `afterEach` (`mock.restore()`), never per-test.
 - A test that mutates global or environment state restores it in an `onTestFinished(...)` callback
@@ -488,7 +496,7 @@ Everywhere:
 - **Test setup.** A local `setupTest()` per suite — typed config in, named props out, no `if` —
   builds the db and boots the service, with no data. Never centralise it: a shared `setupTest`
   accretes conditionals as services multiply.
-- **Test data — factories + composites, always.** Every domain entity/DTO gets a faker-defaulted
+- **Test data — factories + composites.** Every domain entity/DTO gets a faker-defaulted
   `create-mock-*.ts` factory in `test-utils/factories/` (a plain object, never persisted, never
   requiring a parent), each with its own test. Persisted or wired data goes through a
   composite/entity-util (`create-*.ts`, no `-mock-`) that sources its defaults from the factory.
