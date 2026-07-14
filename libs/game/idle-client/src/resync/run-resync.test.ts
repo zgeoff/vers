@@ -1,7 +1,6 @@
 import { expect, mock, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
-import type { ActivityData } from '@vers/contract-activity';
 import {
   ActivityFailureAction,
   createMockActivityInput,
@@ -15,15 +14,6 @@ import type { ActivityServiceClient } from '../submission/types';
 import { createMockActivityData } from '../test-utils/factories/create-mock-activity-data';
 import { runResync } from './run-resync';
 
-function buildActivityInput(activity: ActivityData) {
-  return createMockActivityInput({
-    enemies: [createMockEnemyData()],
-    failureAction: ActivityFailureAction.Abort,
-    id: activity.id,
-    seed: activity.seed,
-  });
-}
-
 function setupTest() {
   const link = new RPCLink({ url: `${ACTIVITY_SERVICE_URL}/rpc` });
 
@@ -31,7 +21,7 @@ function setupTest() {
   const onInvalid = mock<(activityID: string, reason: string) => void>();
   const submitter = createCheckpointSubmitter({ client, onInvalid });
 
-  return { buildActivityInput, client, submitter };
+  return { client, submitter };
 }
 
 test('it resolves to none for an avatar with no activity history', async () => {
@@ -46,7 +36,13 @@ test('it resolves to none for an avatar with no activity history', async () => {
   const result = await runResync({
     avatar: createMockAvatarData(),
     avatarID: 'avatar_1',
-    buildActivityInput: ctx.buildActivityInput,
+    buildActivityInput: (started) =>
+      createMockActivityInput({
+        enemies: [createMockEnemyData()],
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
     client: ctx.client,
     submitter: ctx.submitter,
   });
@@ -71,7 +67,13 @@ test('it rebases from the stop index without simulating when the activity is cap
   const result = await runResync({
     avatar: createMockAvatarData(),
     avatarID: activity.avatarID,
-    buildActivityInput: ctx.buildActivityInput,
+    buildActivityInput: (started) =>
+      createMockActivityInput({
+        enemies: [createMockEnemyData()],
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
     client: ctx.client,
     submitter: ctx.submitter,
   });
@@ -109,7 +111,13 @@ test('it attaches live when the gap is negligible', async () => {
   const result = await runResync({
     avatar: createMockAvatarData(),
     avatarID: activity.avatarID,
-    buildActivityInput: ctx.buildActivityInput,
+    buildActivityInput: (started) =>
+      createMockActivityInput({
+        enemies: [createMockEnemyData()],
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
     client: ctx.client,
     submitter: ctx.submitter,
   });
@@ -144,7 +152,13 @@ test('it fast-forwards a real offline gap and reports the outcome', async () => 
     // life 1 fails the first attempt fast, and the abort policy ends the fast-forward there
     avatar: createMockAvatarData({ life: 1 }),
     avatarID: activity.avatarID,
-    buildActivityInput: ctx.buildActivityInput,
+    buildActivityInput: (started) =>
+      createMockActivityInput({
+        enemies: [createMockEnemyData()],
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
     client: ctx.client,
     submitter: ctx.submitter,
   });
