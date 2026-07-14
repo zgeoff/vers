@@ -71,10 +71,11 @@ is server-computed, so there is nothing to replay.
 
 ## Call sites
 
-| Call site                            | Entry point             | Stream         | Key custody     |
-| ------------------------------------ | ----------------------- | -------------- | --------------- |
-| Mint at settlement (replay apply)    | `rollItemFromStream`    | keyed position | server          |
-| Reveal read path (activity contract) | `rollItemFromStream`    | keyed position | server          |
-| Self-found local roll (client)       | `rollItemFromStream`    | keyed position | device          |
-| Trade craft resolution               | `rollAffixesFromStream` | salt           | server (sealed) |
-| Self-found craft (client)            | `rollAffixesFromStream` | keyed position | device          |
+| Call site                               | Entry point             | Stream         | Key custody                   |
+| --------------------------------------- | ----------------------- | -------------- | ----------------------------- |
+| Mint at settlement (replay apply)       | `rollItemFromStream`    | keyed position | server                        |
+| Reveal read path (activity contract)    | `rollItemFromStream`    | keyed position | server                        |
+| Self-found local roll (client)          | `rollItemFromStream`    | keyed position | device                        |
+| Self-found replay verification (replay) | both entry points       | keyed position | server, re-derived device key |
+| Trade craft resolution                  | `rollAffixesFromStream` | salt           | server (sealed)               |
+| Self-found craft (client)               | `rollAffixesFromStream` | keyed position | device                        |
