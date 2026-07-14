@@ -6,14 +6,16 @@ source into a concrete item — one interpreter shared by every consumer, under 
 
 ## The roll stream
 
-A roll stream is a deterministic tape of typed draws — a bounded range, a weighted pick — expanded
-(HKDF) from a single digest. Equal inputs produce an equal tape, and the stream is the only
+A roll stream is a deterministic sequence of typed draws — a bounded range, a weighted pick —
+stretched from a single digest by standard key expansion (HKDF), so one digest yields as many draws
+as an interpreter asks for. Equal inputs produce identical draws, and the stream is the only
 randomness an interpreter ever sees. Each entropy source has its own stream builder:
 
-- A **keyed position stream** expands the keyed PRF digest (`buildRollDigest` in
-  `@vers/roll-crypto`) over a position's canonical byte encoding under the avatar's roll key. Reward
-  coordinates and self-found craft positions both ride this builder, domain-separated by position
-  type so a craft position and a reward coordinate can never share a digest.
+- A **keyed position stream** starts from `buildRollDigest` (`@vers/roll-crypto`) — a keyed hash
+  over a position's canonical byte encoding under the avatar's roll key, so only a key holder can
+  compute it. Reward coordinates and self-found craft positions both ride this builder, with the
+  position type folded into the hashed bytes so a craft position and a reward coordinate can never
+  share a digest.
 - A **salt stream** expands a sealed pre-commit salt, for trade-avatar craft resolutions.
 
 An interpreter cannot tell which builder fed it. A new entropy source (a verifiable-randomness
@@ -29,7 +31,7 @@ performs no I/O.
 - `rollItemFromStream(tables, context, stream)` rolls a complete item in canonical draw order:
   rarity, base, affix count, then each affix. `context` is the producing slot's trajectory facts —
   deterministic, replay-verified selectors (node tier, encounter class, chosen juice tier) that pick
-  which tables the tape is read against. Context selects tables; the stream decides outcomes.
+  which tables the stream is read against. Context selects tables; the stream decides outcomes.
 - `rollAffixesFromStream(tables, base, constraints, stream)` rolls affixes onto an existing base
   under a constraint set — the crafting entry point.
 
@@ -40,18 +42,18 @@ market-grade quantity is a published scalar chosen by the player, never a rolled
 ## Draw order is contract
 
 A content version pins table data and interpreter behaviour together. Inserting, removing, or
-reordering one draw changes every outcome after it on the same tape, so any change to the draw
-sequence is a new content version. Every shipped version stays loadable: mint, reveal, replay, and
-device rolls all resolve under the version pinned in the activity's `Started` snapshot and must
-agree byte-for-byte across deploys and key rotations.
+reordering one draw shifts every draw after it in the sequence, so any change to the draw sequence
+is a new content version. Every shipped version stays loadable: mint, reveal, replay, and device
+rolls all resolve under the version pinned in the activity's `Started` snapshot and must agree
+byte-for-byte across deploys and key rotations.
 
 ## Craft constraints
 
 A constraint set narrows an affix roll through a closed vocabulary: protect a group, force an affix,
 reweight a pool, reroll values only, exclude occupied groups. Constraint application and pool
-ordering are canonical — a pool sorts deterministically before any weighted draw — because both sit
-on the tape's draw path. The vocabulary is machinery; which craft actions exist, what they cost, and
-what the affix tables contain is itemisation design.
+ordering are canonical — a pool sorts deterministically before any weighted draw — because both
+consume draws from the stream. The vocabulary is machinery; which craft actions exist, what they
+cost, and what the affix tables contain is itemisation design.
 
 ## Craft positions and item lineage
 
