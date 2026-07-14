@@ -1,3 +1,11 @@
+## Function naming
+
+**Pure producers** — additional project verb:
+
+| Prefix   | Contract                                              | Example           |
+| -------- | ----------------------------------------------------- | ----------------- |
+| `derive` | one-way cryptographic derivation from secret material | `deriveAvatarKey` |
+
 ## Issue hygiene
 
 Triage a GitHub issue the moment it's opened, not in a later pass:

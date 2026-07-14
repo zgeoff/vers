@@ -149,6 +149,14 @@ implementing that algorithm — forcing list verbs onto textbook terms hides the
 - Pin exact versions — no `^`/`~` ranges. (`bun add` saves exact automatically via `exact = true` in
   bunfig.toml — the rule applies to hand-written edits.)
 
+## Function naming
+
+**Pure producers** — additional project verb:
+
+| Prefix   | Contract                                              | Example           |
+| -------- | ----------------------------------------------------- | ----------------- |
+| `derive` | one-way cryptographic derivation from secret material | `deriveAvatarKey` |
+
 ## Issue hygiene
 
 Triage a GitHub issue the moment it's opened, not in a later pass:
