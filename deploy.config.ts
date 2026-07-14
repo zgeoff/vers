@@ -72,8 +72,16 @@ export default defineDeployManifest({
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-verification' },
     },
     {
+      app: 'vers-service-replay',
+      buildArgsFromEnv: ['SIM_ENGINE_HASH', 'BUN_VERSION'],
+      configDir: 'services/replay',
+      dockerfile: 'services/replay/Dockerfile',
+      simVersionProvider: true,
+      trigger: { kind: 'turbo-affected', pkg: '@vers/service-replay' },
+    },
+    {
       app: 'vers-app-web',
-      buildArgsFromEnv: ['SENTRY_AUTH_TOKEN', 'VITE_SENTRY_DSN'],
+      buildArgsFromEnv: ['SENTRY_AUTH_TOKEN', 'VITE_SENTRY_DSN', 'VITE_SIM_ENGINE_HASH'],
       configDir: 'apps/web',
       dockerfile: 'apps/web/Dockerfile',
       minStartedMachines: 1,
