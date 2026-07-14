@@ -164,7 +164,8 @@ root: CodeRabbit enforces the conventions in this file, cubic reports correctnes
   `gh pr view <n> --comments` and `gh api repos/zgeoff/vers/pulls/<n>/comments`.
 - Never teach a bot through chat (`@coderabbitai` learnings and the like) — a correction to bot
   behaviour is an edit to `.coderabbit.yaml` or `cubic.yaml`, reviewed in a PR.
-- Bots review a PR once, at open; re-reviews are invoked by a human, never by an agent.
+- Bots review a PR once, at open; an agent invokes a re-review only when asked, never on its own
+  initiative.
 
 ## Issue hygiene
 
