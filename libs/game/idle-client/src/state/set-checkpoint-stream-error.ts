@@ -1,6 +1,6 @@
 import type { CheckpointStreamError } from '../types';
-import { useCheckpointStreamErrorStore } from './use-checkpoint-stream-error-store';
+import { useIdleStore } from './use-idle-store';
 
 export function setCheckpointStreamError(checkpointStreamError: CheckpointStreamError) {
-  useCheckpointStreamErrorStore.setState(() => ({ checkpointStreamError }));
+  useIdleStore.setState(() => ({ checkpointStreamError }));
 }

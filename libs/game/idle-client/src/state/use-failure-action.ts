@@ -1,8 +1,5 @@
-import { useShallow } from 'zustand/react/shallow';
-import { useFailureActionStore } from './use-failure-action-store';
+import { useIdleStore } from './use-idle-store';
 
 export function useFailureAction() {
-  const failureAction = useFailureActionStore(useShallow((state) => state.failureAction));
-
-  return failureAction;
+  return useIdleStore((state) => state.failureAction);
 }

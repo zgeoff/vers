@@ -11,6 +11,7 @@ import {
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
+import { createSimVersionRow } from '../test-utils/create-sim-version-row';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 /**
@@ -20,6 +21,8 @@ import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-c
  */
 async function setupTest(config: { readonly simTimeCapMs?: number } = {}) {
   const db = await createTestDB({ isolation: 'schema' });
+
+  await createSimVersionRow(db.db);
 
   const service = await createActivityService({
     db: db.db,

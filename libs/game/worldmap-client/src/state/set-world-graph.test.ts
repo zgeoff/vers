@@ -4,7 +4,7 @@ import type { WorldGraph } from '@vers/worldmap-core';
 import { createMockWorldMapEdge } from '../test-utils/factories/create-mock-world-map-edge';
 import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
 import { setWorldGraph } from './set-world-graph';
-import { useWorldGraphStore } from './use-world-graph-store';
+import { useWorldmapStore } from './use-worldmap-store';
 
 test('it updates the world graph in the store', () => {
   const graph: WorldGraph = {
@@ -14,7 +14,7 @@ test('it updates the world graph in the store', () => {
 
   setWorldGraph(graph);
 
-  const hook = renderHook(() => useWorldGraphStore((state) => state));
+  const hook = renderHook(() => useWorldmapStore((state) => state.worldGraph));
 
   expect(hook.result.current).toStrictEqual(graph);
 });

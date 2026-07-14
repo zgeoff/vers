@@ -1,7 +1,5 @@
-import { useCameraStore } from './use-camera-store';
+import { useWorldmapStore } from './use-worldmap-store';
 
 export function useCamera() {
-  const camera = useCameraStore((state) => state.camera);
-
-  return camera;
+  return useWorldmapStore((state) => state.camera);
 }

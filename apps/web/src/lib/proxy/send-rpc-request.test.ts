@@ -1,11 +1,11 @@
 import { expect, mock, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
+import { createTestAccessToken } from '@vers/mock-services';
+import * as db from '@vers/mock-services/db';
 import * as jose from 'jose';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, http } from 'msw';
-import * as db from '../../mocks/db';
 import { server } from '../../mocks/node';
-import { createTestAccessToken } from '../../test-utils/create-test-access-token';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { sendRPCRequest } from './send-rpc-request';
 

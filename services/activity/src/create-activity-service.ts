@@ -8,10 +8,9 @@ import * as z from 'zod';
 import { buildActivityRouter } from './build-router';
 
 /**
- * Placeholder version stamps every new activity is minted against; real version dispatch is a
- * later change. Factory-injectable so tests can exercise specific versions.
+ * Placeholder content version every new activity is minted against; real content dispatch is out
+ * of scope. Factory-injectable so tests can exercise specific versions.
  */
-const SIM_VERSION = '0.0.0-dev';
 const CONTENT_VERSION = '0.0.0-dev';
 const KEY_VERSION = 1;
 
@@ -28,7 +27,6 @@ interface CreateActivityServiceConfig {
    * Injected only in tests, to trip the offline-progress cap without simulating a day.
    */
   readonly simTimeCapMs?: number;
-  readonly simVersion?: string;
 }
 
 /**
@@ -44,7 +42,6 @@ export function createActivityService(
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
         keyVersion: config.keyVersion ?? KEY_VERSION,
         simTimeCapMs: config.simTimeCapMs ?? OFFLINE_PROGRESS_CAP_MS,
-        simVersion: config.simVersion ?? SIM_VERSION,
       }),
     envShape: { DATABASE_URL: z.string() },
     name: 'service-activity',

@@ -48,12 +48,16 @@ export default defineConfig({
     {
       // the dev server's own vite plugin starts the mock backend, giving journey specs the mock
       // services a signed-in flow needs. Only `vite dev` fires that plugin's `configureServer`
-      // hook, so the production build below can't host it.
-      command: 'bun run dev',
+      // hook, so the production build below can't host it. The explicit port keeps a BASE_URL
+      // override honest — vite's config pins a default port that would win otherwise.
+      command: `bun run dev --port ${new URL(baseURL).port}`,
       cwd: appWebRoot,
       env: {
         // canvas-persistence.spec.ts clicks through to the Market nav link
         FEATURE_MARKET: 'true',
+
+        // specs submit forms instantly; the bot-pacing floor would reject every one of them
+        VITE_HONEYPOT_MIN_FILL_TIME_MS: '0',
 
         PLAYWRIGHT_TEST_BASE_URL: baseURL,
 
@@ -67,10 +71,12 @@ export default defineConfig({
       url: baseURL,
     },
     {
-      // the real production artifact (`vite build` + `server.mjs`) on its own port, so a smoke
-      // spec can prove the deployable build serves traffic. It hosts no mock backend, so only
-      // routes that call no downstream service (the health check, the anonymous home page) work.
-      command: 'bun run build && node ./server.mjs',
+      // the real production artifact on its own port, so a smoke spec can prove the deployable
+      // build serves traffic. The e2e turbo task depends on the app's build task, so the artifact
+      // is already on disk (cached or fresh) — serving it here must not rebuild it. It hosts no
+      // mock backend, so only routes that call no downstream service (the health check, the
+      // anonymous home page) work.
+      command: 'node ./server.mjs',
       cwd: appWebRoot,
       env: {
         LOGGING: 'warn',
@@ -87,5 +93,8 @@ export default defineConfig({
       url: `${productionBaseURL}/health`,
     },
   ],
-  ...(process.env['CI'] !== undefined && { workers: 1 }),
+
+  // CI runners have 4 cores shared with both webServers; more workers than this starves the
+  // canvas specs' software-GL rendering
+  ...(process.env['CI'] !== undefined && { workers: 2 }),
 });

@@ -1,50 +1,24 @@
-import { buildMockService } from '@vers/client-test-utils/orpc';
-import { avatarContract } from '@vers/contract-avatar';
-import { emailContract } from '@vers/contract-email';
-import { sessionContract } from '@vers/contract-session';
-import { userContract } from '@vers/contract-user';
-import { verificationContract } from '@vers/contract-verification';
+import { createDemoSeed } from '@vers/mock-services';
+import { buildActivityMockHandlers } from '@vers/mock-services/activity';
+import { buildAvatarMockHandlers } from '@vers/mock-services/avatar';
+import { buildEmailMockHandlers } from '@vers/mock-services/email';
+import { buildKeysMockHandlers } from '@vers/mock-services/keys';
+import { buildReplayMockHandlers } from '@vers/mock-services/replay';
+import { buildSessionMockHandlers } from '@vers/mock-services/session';
+import { buildUserMockHandlers } from '@vers/mock-services/user';
+import { buildVerificationMockHandlers } from '@vers/mock-services/verification';
 import type { HttpHandler } from 'msw';
 import { SERVICE_URLS } from '../lib/rpc/service-urls';
-import { createDemoSeed } from './db/create-demo-seed';
-import { resolveSessionContext } from './resolve-session-context';
-import { avatarRouter } from './routers/avatar/avatar-router';
-import { emailRouter } from './routers/email/email-router';
-import { sessionRouter } from './routers/session/session-router';
-import { userRouter } from './routers/user/user-router';
-import { verificationRouter } from './routers/verification/verification-router';
 
 await createDemoSeed();
 
 export const handlers: Array<HttpHandler> = [
-  ...buildMockService({
-    baseUrl: SERVICE_URLS.user,
-    contract: userContract,
-    resolveContext: resolveSessionContext,
-    router: userRouter,
-  }),
-  ...buildMockService({
-    baseUrl: SERVICE_URLS.session,
-    contract: sessionContract,
-    resolveContext: resolveSessionContext,
-    router: sessionRouter,
-  }),
-  ...buildMockService({
-    baseUrl: SERVICE_URLS.verification,
-    contract: verificationContract,
-    resolveContext: resolveSessionContext,
-    router: verificationRouter,
-  }),
-  ...buildMockService({
-    baseUrl: SERVICE_URLS.avatar,
-    contract: avatarContract,
-    resolveContext: resolveSessionContext,
-    router: avatarRouter,
-  }),
-  ...buildMockService({
-    baseUrl: SERVICE_URLS.email,
-    contract: emailContract,
-    resolveContext: resolveSessionContext,
-    router: emailRouter,
-  }),
+  ...buildUserMockHandlers(SERVICE_URLS.user),
+  ...buildSessionMockHandlers(SERVICE_URLS.session),
+  ...buildVerificationMockHandlers(SERVICE_URLS.verification),
+  ...buildAvatarMockHandlers(SERVICE_URLS.avatar),
+  ...buildEmailMockHandlers(SERVICE_URLS.email),
+  ...buildActivityMockHandlers(SERVICE_URLS.activity),
+  ...buildKeysMockHandlers(SERVICE_URLS.keys),
+  ...buildReplayMockHandlers(SERVICE_URLS.replay),
 ];

@@ -2,7 +2,7 @@ import { createRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
 import { createIsomorphicFn } from '@tanstack/react-start';
 import { getRequestHeader } from '@tanstack/react-start/server';
-import { useSceneStateStore } from '@vers/game-rendering';
+import { getSceneState } from '@vers/game-rendering';
 import { buildQueryClient } from './lib/query/build-query-client';
 import { orpc } from './lib/rpc/orpc';
 import { classifySceneTransition } from './lib/scene/classify-scene-transition';
@@ -32,7 +32,7 @@ export function getRouter() {
     context: { orpc, queryClient },
     defaultViewTransition: {
       types: (locationChangeInfo) => {
-        const current = useSceneStateStore.getState();
+        const current = getSceneState();
         const next = resolveSceneStateForLocation(router, locationChangeInfo.toLocation, current);
 
         return classifySceneTransition(current, next);

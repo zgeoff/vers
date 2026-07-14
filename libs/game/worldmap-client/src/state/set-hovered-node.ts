@@ -1,6 +1,6 @@
 import type { WorldMapNode } from '@vers/worldmap-core';
-import { useHoveredNodeStore } from './use-hovered-node-store';
+import { useWorldmapStore } from './use-worldmap-store';
 
 export function setHoveredNode(node: WorldMapNode | null) {
-  useHoveredNodeStore.setState({ node });
+  useWorldmapStore.setState({ hoveredNode: node });
 }

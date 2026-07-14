@@ -1,13 +1,10 @@
 import { useEffect } from 'react';
-import { setActivity } from '../state/set-activity';
-import { setAvatar } from '../state/set-avatar';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
-import { setCombat } from '../state/set-combat';
-import { setFailureAction } from '../state/set-failure-action';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
+import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
 import { setSimulationWorker } from '../state/set-simulation-worker';
-import { useSimulationStore } from '../state/use-simulation-store';
+import { useIdleStore } from '../state/use-idle-store';
 import type {
   CheckpointStreamInvalidMessage,
   InitialStateMessage,
@@ -21,7 +18,7 @@ import { createDisconnectMessage } from './create-disconnect-message';
 let hasRegisteredDisconnectListener = false;
 
 export function useSimulationWorker() {
-  const existingWorker = useSimulationStore((state) => state.worker);
+  const existingWorker = useIdleStore((state) => state.worker);
 
   useEffect(() => {
     // Browsers without SharedWorker (Android Chrome, older Safari) would throw on construction;
@@ -55,7 +52,7 @@ export function useSimulationWorker() {
 }
 
 function handlePageHide() {
-  const worker = useSimulationStore.getState().worker;
+  const worker = useIdleStore.getState().worker;
 
   worker?.port.postMessage(createDisconnectMessage());
 }
@@ -66,10 +63,7 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
   }
 
   if (isInitialStateMessage(event.data) || isUpdateMessage(event.data)) {
-    setAvatar(event.data.state.avatar);
-    setActivity(event.data.state.activity);
-    setCombat(event.data.state.combat);
-    setFailureAction(event.data.state.failureAction);
+    setSimulationSnapshot(event.data.state);
   }
 
   if (isCheckpointStreamInvalidMessage(event.data)) {

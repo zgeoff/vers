@@ -8,7 +8,7 @@ import { Color, Matrix4 } from 'three';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
 import { setHoveredNode } from '../state/set-hovered-node';
 import { setSelectedNode } from '../state/set-selected-node';
-import { useSelectedNodeStore } from '../state/use-selected-node-store';
+import { useWorldmapStore } from '../state/use-worldmap-store';
 import { getScenePosition } from '../utils/get-scene-position';
 
 interface WorldMapNodesProps {
@@ -38,7 +38,7 @@ export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
       return;
     }
 
-    const selectedNodeID = useSelectedNodeStore.getState().node?.id ?? null;
+    const selectedNodeID = useWorldmapStore.getState().selectedNode?.id ?? null;
 
     for (const [index, node] of props.nodes.entries()) {
       const [x, y, z] = getScenePosition(node.position);
@@ -66,7 +66,7 @@ export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
       return;
     }
 
-    const selectedNodeID = useSelectedNodeStore.getState().node?.id ?? null;
+    const selectedNodeID = useWorldmapStore.getState().selectedNode?.id ?? null;
 
     if (selectedNodeID === appliedSelectedNodeIDRef.current) {
       return;

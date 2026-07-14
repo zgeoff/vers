@@ -10,6 +10,7 @@ import {
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
+import { createSimVersionRow } from '../test-utils/create-sim-version-row';
 
 async function setupTest(options: { readonly isolation?: Isolation } = {}) {
   const db = await createTestDB(options);
@@ -21,6 +22,7 @@ async function setupTest(options: { readonly isolation?: Isolation } = {}) {
 test('it starts an activity for an avatar owned by the acting user', async () => {
   await using ctx = await setupTest();
 
+  const current = await createSimVersionRow(ctx.db);
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
 
   const avatar = await createAvatarRow(ctx.db, {
@@ -50,7 +52,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     scopeID: 'node_1',
     scopeType: 'world_map_node',
     seed: expect.toBeString(),
-    simVersion: '0.0.0-dev',
+    simVersion: current.engineHash,
     startChainIndex: 0,
     startHash: expect.toBeString(),
     startedAt: expect.toBeValidDate(),
@@ -66,6 +68,8 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
 
 test('it mints a chain row on a node visited for the first time, with the activity seeded from its genesis', async () => {
   await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
@@ -94,6 +98,8 @@ test('it mints a chain row on a node visited for the first time, with the activi
 
 test('it mints independent genesis seeds for different nodes visited by the same avatar', async () => {
   await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
@@ -125,6 +131,8 @@ test('it mints independent genesis seeds for different nodes visited by the same
 // fresh seed.
 test('it reads the existing chain anchor for a second activity on an already-chained node', async () => {
   await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
@@ -159,6 +167,8 @@ test('it reads the existing chain anchor for a second activity on an already-cha
 // test transaction under the default isolation.
 test('it rejects a second start with CONFLICT carrying the already-active activity', async () => {
   await using ctx = await setupTest({ isolation: 'schema' });
+
+  await createSimVersionRow(ctx.db);
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
@@ -213,6 +223,8 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
 test('it blocks a new start while the chain is quarantined', async () => {
   await using ctx = await setupTest();
 
+  await createSimVersionRow(ctx.db);
+
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
@@ -238,6 +250,8 @@ test('it blocks a new start while the chain is quarantined', async () => {
 test('it stamps the acting session as the new activity writer', async () => {
   await using ctx = await setupTest();
 
+  await createSimVersionRow(ctx.db);
+
   const viewer = await createViewer({
     audience: 'service-activity',
     db: ctx.db,
@@ -261,4 +275,141 @@ test('it stamps the acting session as the new activity writer', async () => {
     .executeTakeFirstOrThrow();
 
   expect(row.writerSessionId).toBe('session-a');
+});
+
+test('it stamps a new activity with the registry current version when the client sends no hash', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db, { retainedUntil: new Date('2020-01-01'), status: 'pruned' });
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  expect(activity.simVersion).toBe(current.engineHash);
+});
+
+test('it rejects a start with SIM_VERSION_UNKNOWN carrying a null current version when the registry is empty', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.startActivity({ avatarID: avatar.id, scopeID: 'node_1', scopeType: 'world_map_node' }),
+  ).rejects.toMatchObject({
+    code: 'SIM_VERSION_UNKNOWN',
+    data: { currentSimVersion: null },
+  });
+});
+
+test('it echoes the client-stamped sim version when its row is active and retained', async () => {
+  await using ctx = await setupTest();
+
+  const stamped = await createSimVersionRow(ctx.db, {
+    retainedUntil: new Date('2099-01-01'),
+    status: 'active',
+  });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+    simVersion: stamped.engineHash,
+  });
+
+  expect(activity.simVersion).toBe(stamped.engineHash);
+});
+
+test('it rejects an unrecognized stamped version with SIM_VERSION_UNKNOWN carrying the current hash', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.startActivity({
+      avatarID: avatar.id,
+      scopeID: 'node_1',
+      scopeType: 'world_map_node',
+      simVersion: 'hash_never_registered',
+    }),
+  ).rejects.toMatchObject({
+    code: 'SIM_VERSION_UNKNOWN',
+    data: { currentSimVersion: current.engineHash },
+  });
+});
+
+test('it rejects a pruned stamped version with SIM_VERSION_EXPIRED', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+
+  const pruned = await createSimVersionRow(ctx.db, {
+    retainedUntil: new Date('2099-01-01'),
+    status: 'pruned',
+  });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.startActivity({
+      avatarID: avatar.id,
+      scopeID: 'node_1',
+      scopeType: 'world_map_node',
+      simVersion: pruned.engineHash,
+    }),
+  ).rejects.toMatchObject({
+    code: 'SIM_VERSION_EXPIRED',
+    data: { currentSimVersion: current.engineHash },
+  });
+});
+
+test('it rejects an active stamped version past its retention deadline with SIM_VERSION_EXPIRED', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+
+  const stale = await createSimVersionRow(ctx.db, {
+    retainedUntil: new Date('2020-01-01'),
+    status: 'active',
+  });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.startActivity({
+      avatarID: avatar.id,
+      scopeID: 'node_1',
+      scopeType: 'world_map_node',
+      simVersion: stale.engineHash,
+    }),
+  ).rejects.toMatchObject({
+    code: 'SIM_VERSION_EXPIRED',
+    data: { currentSimVersion: current.engineHash },
+  });
 });

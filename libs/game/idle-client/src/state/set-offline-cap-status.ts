@@ -1,6 +1,6 @@
 import type { OfflineCapStatus } from '../types';
-import { useOfflineCapStatusStore } from './use-offline-cap-status-store';
+import { useIdleStore } from './use-idle-store';
 
 export function setOfflineCapStatus(offlineCapStatus: null | OfflineCapStatus) {
-  useOfflineCapStatusStore.setState(() => ({ offlineCapStatus }));
+  useIdleStore.setState(() => ({ offlineCapStatus }));
 }

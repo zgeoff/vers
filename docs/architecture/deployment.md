@@ -117,6 +117,29 @@ resolved digest differs from what's stored, even when the provider app itself ne
 Pruning stale provider apps and expired registry rows is a separate sweep's job — the deploy CLI
 only ever creates and refreshes.
 
+### Retention sweep
+
+A registry row's `retained_until` (30 days past its deploy by default) is when its version stops
+being a valid replay target, not when it disappears: `.github/workflows/replay-retention.yml` runs
+`bun scripts/src/bin/deploy.ts sweep-replay` daily, and it never deletes a `sim_versions` row.
+Deleting would collapse a distinction dispatch depends on — a version whose row is `pruned` is
+`expired` (the client must resync onto the current version), while a hash with no row at all is
+`unknownVersion` (the activity parks until an operator or a later deploy registers it). The sweep
+instead tombstones: it flips every `active` row past `retained_until` to `pruned` in one statement,
+excluding the current version (the newest `active` row by `deployed_at`) regardless of its own
+`retained_until` — a live version is never a valid tombstone target no matter how old its deploy.
+
+Only after a row is tombstoned does the sweep destroy its provider app
+(`flyctl apps destroy <app> --yes`). That order is deliberate: a pruned row with a still-running app
+is harmless — dispatch already reports it `expired` — while an app destroyed before its row flips
+would leave an `active` row pointing at nothing. The sweep finishes by unparking every activity
+whose stamped hash the registry now carries as `active` — an activity parked while its version was
+unregistered can become replayable again once a later deploy provisions it, without waiting on the
+client to resync.
+
+The sweep is idempotent: a repeat run tombstones nothing already `pruned`, destroys nothing already
+gone, and unparks nothing already `active`.
+
 ## Container builds
 
 Fly's remote builder builds every server image from the app's Dockerfile. A shared `pruner` stage

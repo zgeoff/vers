@@ -1,6 +1,6 @@
 import type { WorldGraph } from '@vers/worldmap-core';
-import { useWorldGraphStore } from './use-world-graph-store';
+import { useWorldmapStore } from './use-worldmap-store';
 
 export function setWorldGraph(graph: WorldGraph) {
-  useWorldGraphStore.setState(graph);
+  useWorldmapStore.setState({ worldGraph: graph });
 }

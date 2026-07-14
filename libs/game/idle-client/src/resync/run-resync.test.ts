@@ -7,7 +7,8 @@ import {
   createMockAvatarData,
   createMockEnemyData,
 } from '@vers/idle-core';
-import { ACTIVITY_SERVICE_URL, mockActivityService } from '../mocks/mock-activity-service';
+import { resolveServiceURL } from '@vers/mock-services';
+import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
@@ -15,7 +16,7 @@ import { createMockActivityData } from '../test-utils/factories/create-mock-acti
 import { runResync } from './run-resync';
 
 function setupTest() {
-  const link = new RPCLink({ url: `${ACTIVITY_SERVICE_URL}/rpc` });
+  const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
 
   const client: ActivityServiceClient = createORPCClient(link);
   const onInvalid = mock<(activityID: string, reason: string) => void>();

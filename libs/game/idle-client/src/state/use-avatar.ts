@@ -1,8 +1,5 @@
-import { useShallow } from 'zustand/react/shallow';
-import { useAvatarStore } from './use-avatar-store';
+import { useIdleStore } from './use-idle-store';
 
 export function useAvatar() {
-  const avatar = useAvatarStore(useShallow((state) => state.avatar));
-
-  return avatar;
+  return useIdleStore((state) => state.avatar);
 }

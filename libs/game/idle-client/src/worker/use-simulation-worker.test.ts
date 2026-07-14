@@ -3,10 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { ActivityFailureAction } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { setSimulationWorker } from '../state/set-simulation-worker';
-import { useCheckpointStreamErrorStore } from '../state/use-checkpoint-stream-error-store';
-import { useCombatStore } from '../state/use-combat-store';
-import { useFailureActionStore } from '../state/use-failure-action-store';
-import { useSimulationStore } from '../state/use-simulation-store';
+import { useIdleStore } from '../state/use-idle-store';
 import type { CheckpointStreamInvalidMessage, ClientMessage, InitialStateMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { useSimulationWorker } from './use-simulation-worker';
@@ -57,7 +54,7 @@ test('it returns an existing worker instead of creating a new one', () => {
 });
 
 test('it creates no worker when SharedWorker is unsupported', () => {
-  useSimulationStore.setState({ worker: null });
+  useIdleStore.setState({ worker: null });
 
   const originalSharedWorker = globalThis.SharedWorker;
 
@@ -98,11 +95,11 @@ test('it updates simulation state from worker messages', async () => {
   worker.channel.port2.postMessage(message);
 
   await waitFor(() => {
-    expect(useSimulationStore.getState().initialized).toBeTrue();
+    expect(useIdleStore.getState().initialized).toBeTrue();
   });
 
-  expect(useCombatStore.getState().combat).toStrictEqual({ elapsed: 1000 });
-  expect(useFailureActionStore.getState().failureAction).toBe(ActivityFailureAction.Retry);
+  expect(useIdleStore.getState().combat).toStrictEqual({ elapsed: 1000 });
+  expect(useIdleStore.getState().failureAction).toBe(ActivityFailureAction.Retry);
 });
 
 test('it reports a checkpoint stream error from worker messages', async () => {
@@ -128,7 +125,7 @@ test('it reports a checkpoint stream error from worker messages', async () => {
   worker.channel.port2.postMessage(message);
 
   await waitFor(() => {
-    expect(useCheckpointStreamErrorStore.getState().checkpointStreamError).toStrictEqual({
+    expect(useIdleStore.getState().checkpointStreamError).toStrictEqual({
       activityID: 'activity_1',
       reason: 'broken-chain-link',
     });

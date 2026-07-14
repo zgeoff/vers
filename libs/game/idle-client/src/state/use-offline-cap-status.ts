@@ -1,8 +1,5 @@
-import { useShallow } from 'zustand/react/shallow';
-import { useOfflineCapStatusStore } from './use-offline-cap-status-store';
+import { useIdleStore } from './use-idle-store';
 
 export function useOfflineCapStatus() {
-  const offlineCapStatus = useOfflineCapStatusStore(useShallow((state) => state.offlineCapStatus));
-
-  return offlineCapStatus;
+  return useIdleStore((state) => state.offlineCapStatus);
 }

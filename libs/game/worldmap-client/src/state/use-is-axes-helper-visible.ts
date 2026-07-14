@@ -1,7 +1,5 @@
-import { useDevStore } from './use-dev-store';
+import { useWorldmapStore } from './use-worldmap-store';
 
 export function useIsAxesHelperVisible() {
-  const isAxesHelperVisible = useDevStore((state) => state.isAxesHelperVisible);
-
-  return isAxesHelperVisible;
+  return useWorldmapStore((state) => state.isAxesHelperVisible);
 }
