@@ -106,8 +106,10 @@ test('it returns the activity anchored to its verified checkpoint once verifiedH
   expect(progress.verifiedHead).toBe(1);
 });
 
+// schema isolation: this exercises stopActivity, whose own db.transaction() can't nest under the
+// default rollback-on-dispose isolation.
 test('it returns the newest activity regardless of status', async () => {
-  await using ctx = await setupTest();
+  await using ctx = await setupTest({ isolation: 'schema' });
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
