@@ -3,7 +3,7 @@ import { OpenAPIGenerator } from '@orpc/openapi';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
 import { keysContract } from './keys-contract';
 
-test('it declares UNAUTHORIZED and FORBIDDEN on deriveAvatarKey', () => {
+test('it declares UNAUTHORIZED, FORBIDDEN, and NOT_FOUND on deriveAvatarKey', () => {
   expect(keysContract.deriveAvatarKey['~orpc'].errorMap).toContainAllKeys([
     'UNAUTHORIZED',
     'FORBIDDEN',
