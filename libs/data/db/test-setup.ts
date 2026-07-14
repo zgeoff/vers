@@ -1,8 +1,10 @@
 import '@zgeoff/bun-test-extended';
-import { connect } from 'node:net';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
-import { migrateToLatest } from './src/migrate-to-latest';
+import { buildTestTemplateDBName } from './src/test-support/build-test-template-db-name';
+import { createTestTemplate } from './src/test-support/create-test-template';
+import { isTestContainerReachable } from './src/test-support/is-test-container-reachable';
+import { readCurrentBranch } from './src/test-support/read-current-branch';
 
 const TEST_CONTAINER_PORT = 32_999;
 const TEST_TEMPLATE_DB = 'test_template';
@@ -13,58 +15,31 @@ const TEST_TEMPLATE_DB = 'test_template';
 if (process.env['TEST_DB_URI'] === undefined) {
   const containerReachable = await isTestContainerReachable();
 
-  if (containerReachable) {
-    process.env['TEST_DB_URI'] = `postgres://test:test@localhost:${TEST_CONTAINER_PORT}`;
-    process.env['TEST_TEMPLATE_DB'] = TEST_TEMPLATE_DB;
-  } else {
-    const container = await createPostgresContainer();
-    const migrationResult = await migrateToLatest({ databaseURL: container.getConnectionUri() });
+  const baseURI = containerReachable
+    ? `postgres://test:test@localhost:${TEST_CONTAINER_PORT}`
+    : await startPostgresContainer();
 
-    if (migrationResult.error !== undefined) {
-      throw migrationResult.error instanceof Error
-        ? migrationResult.error
-        : new Error('kysely migration failed', { cause: migrationResult.error });
-    }
+  const templateDB =
+    process.env['TEST_TEMPLATE_DB'] ?? buildTestTemplateDBName(readCurrentBranch());
 
-    process.env['TEST_DB_URI'] =
-      `postgres://${container.getUsername()}:${container.getPassword()}@${container.getHost()}:${container.getFirstMappedPort()}`;
+  await createTestTemplate({ baseURI, templateDB });
 
-    process.env['TEST_TEMPLATE_DB'] = container.getDatabase();
-  }
+  process.env['TEST_DB_URI'] = baseURI;
+  process.env['TEST_TEMPLATE_DB'] = templateDB;
 }
 
 /**
- * Checks whether the shared postgres test container (started by
- * `pg:test-container:start`, or a previous run's leftover `withReuse`
- * container) is already listening — short-circuiting the container
- * startup below whenever it is.
+ * Starts a fresh postgres test container for a bare `bun test` run against a
+ * machine with no container listening yet — CI and local development both
+ * start one ahead of time with `pg:test-container:start`, so this path is
+ * otherwise unexercised. The container's own bootstrap database is never
+ * migrated or cloned from — every worktree provisions its own branch-scoped
+ * template inside the container instead.
  */
-function isTestContainerReachable(): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = connect({ host: 'localhost', port: TEST_CONTAINER_PORT, timeout: 1000 });
-
-    socket.once('connect', () => {
-      socket.destroy();
-
-      resolve(true);
-    });
-
-    socket.once('timeout', () => {
-      socket.destroy();
-
-      resolve(false);
-    });
-
-    socket.once('error', () => {
-      socket.destroy();
-
-      resolve(false);
-    });
-  });
-}
-
-function createPostgresContainer(): Promise<StartedPostgreSqlContainer> {
-  return new PostgreSqlContainer('postgres:16.2-alpine3.19')
+async function startPostgresContainer(): Promise<string> {
+  const container: StartedPostgreSqlContainer = await new PostgreSqlContainer(
+    'postgres:16.2-alpine3.19',
+  )
     .withDatabase(TEST_TEMPLATE_DB)
     .withUsername('test')
     .withPassword('test')
@@ -73,4 +48,6 @@ function createPostgresContainer(): Promise<StartedPostgreSqlContainer> {
     .withExposedPorts({ container: 5432, host: TEST_CONTAINER_PORT })
     .withReuse()
     .start();
+
+  return `postgres://${container.getUsername()}:${container.getPassword()}@${container.getHost()}:${container.getFirstMappedPort()}`;
 }

@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./test-support": "./src/test-support/index.ts"
   },
   "scripts": {
     "db:codegen": "kysely-codegen --camel-case --out-file src/schema.generated.ts && oxfmt src/schema.generated.ts",

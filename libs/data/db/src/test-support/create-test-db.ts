@@ -1,6 +1,6 @@
 import { createId } from '@paralleldrive/cuid2';
-import postgres from 'postgres';
 import { createDB } from '../create-db';
+import { createClonedDatabase } from './create-cloned-database';
 import { resolveTestDBTarget } from './resolve-test-db-target';
 
 /**
@@ -13,11 +13,9 @@ import { resolveTestDBTarget } from './resolve-test-db-target';
  */
 export async function createTestDB() {
   const target = resolveTestDBTarget();
-  const setupClient = postgres(`${target.baseURI}/postgres`);
   const dbName = `test_${createId()}`;
 
-  await setupClient.unsafe(/* SQL */ `CREATE DATABASE ${dbName} TEMPLATE ${target.templateDB}`);
-  await setupClient.end();
+  await createClonedDatabase({ baseURI: target.baseURI, dbName, templateDB: target.templateDB });
 
   const db = createDB({ databaseURL: `${target.baseURI}/${dbName}` });
 

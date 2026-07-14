@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
+import { normalizeDBPart } from '@vers/db/test-support';
 import { buildDevDBPrefix } from './build-dev-db-prefix';
-import { normalizeDBPart } from './normalize-db-part';
 
 const MAX_IDENTIFIER_LENGTH = 63;
 
