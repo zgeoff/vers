@@ -8,7 +8,7 @@ test('it creates a checkpoint batch entry with expected properties', () => {
     hash: expect.toBeString(),
     payload: {
       chainIndex: expect.toBeNumber(),
-      entropySource: 'chain',
+      entropySource: 'server-key',
       nextSeed: expect.toBeString(),
       seed: expect.toBeString(),
       time: expect.toBeNumber(),
@@ -29,7 +29,7 @@ test('it creates a checkpoint batch entry with custom properties', () => {
 
   expect(entry).toMatchObject({
     hash: 'hash_5',
-    payload: { chainIndex: 5, entropySource: 'chain', type: 'completed' },
+    payload: { chainIndex: 5, entropySource: 'server-key', type: 'completed' },
     prevHash: 'hash_4',
     version: 5,
   });

@@ -13,6 +13,7 @@ export const ActivityDataSchema = z.object({
   contentVersion: z.string(),
   createdAt: z.date(),
   id: z.string(),
+  keyVersion: z.int().min(1),
   lastHash: z.string(),
   scopeID: z.string(),
   scopeType: z.string(),

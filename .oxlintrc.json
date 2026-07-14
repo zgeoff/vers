@@ -159,7 +159,8 @@
               "MouseEvent",
               // genuinely immutable, but its members are method signatures, which the
               // rule's default settings treat as mutable (typescript-eslint#8013)
-              "ReadonlySet"
+              "ReadonlySet",
+              "ReadonlyMap"
             ]
           },
           // zustand's own generic callback type; it has no readonly form

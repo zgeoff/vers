@@ -27,6 +27,7 @@ export interface Activities {
   contentVersion: string;
   createdAt: Generated<Timestamp>;
   id: string;
+  keyVersion: Generated<number>;
   lastHash: string;
   replayAttempts: Generated<number>;
   scopeId: string;

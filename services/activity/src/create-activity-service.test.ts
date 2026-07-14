@@ -31,7 +31,7 @@ test('it boots from env.DATABASE_URL when no db is injected', async () => {
   expect(service.env.DATABASE_URL).toStartWith('postgres://');
 });
 
-test('it defaults the sim and content versions when none are injected', async () => {
+test('it defaults the sim, content, and key versions when none are injected', async () => {
   await using db = await createTestDB();
 
   const service = await createActivityService({ db: db.db });
@@ -46,7 +46,11 @@ test('it defaults the sim and content versions when none are injected', async ()
     scopeType: 'world_map_node',
   });
 
-  expect(activity).toMatchObject({ contentVersion: '0.0.0-dev', simVersion: '0.0.0-dev' });
+  expect(activity).toMatchObject({
+    contentVersion: '0.0.0-dev',
+    keyVersion: 1,
+    simVersion: '0.0.0-dev',
+  });
 });
 
 test('it uses injected sim and content versions when given', async () => {
@@ -70,4 +74,22 @@ test('it uses injected sim and content versions when given', async () => {
   });
 
   expect(activity).toMatchObject({ contentVersion: 'content_9', simVersion: 'sim_9' });
+});
+
+test('it uses an injected key version when given', async () => {
+  await using db = await createTestDB();
+
+  const service = await createActivityService({ db: db.db, keyVersion: 7 });
+  const viewer = await createViewer({ audience: 'service-activity', db: db.db });
+  const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  expect(activity).toMatchObject({ keyVersion: 7 });
 });

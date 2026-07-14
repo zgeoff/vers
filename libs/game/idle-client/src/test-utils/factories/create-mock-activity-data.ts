@@ -12,6 +12,7 @@ export function createMockActivityData(overrides: Partial<ActivityData> = {}): A
     contentVersion: '0.0.0-dev',
     createdAt: startedAt,
     id: faker.string.alphanumeric({ casing: 'lower', length: 24 }),
+    keyVersion: 1,
     lastHash: faker.string.hexadecimal({ casing: 'lower', length: 64, prefix: '' }),
     scopeID: 'node_1',
     scopeType: 'world_map_node',

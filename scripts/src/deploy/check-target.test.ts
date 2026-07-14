@@ -44,6 +44,68 @@ test('it flags an app below its warm-machine floor', () => {
   ]);
 });
 
+test('it flags a started machine with a non-passing health check', () => {
+  const state = {
+    deployedSHA: 'abc123',
+    machines: [
+      {
+        checks: [{ name: 'servicecheck-00-http-3000', status: 'critical' }],
+        gitSHA: 'abc123',
+        id: 'm1',
+        state: 'started',
+      },
+    ],
+    scheduledMachines: [],
+    serviceImage: 'registry.fly.io/x:tag1',
+  };
+
+  const changes = { affectedPkgs: [], changedPaths: [] };
+
+  expect(checkTarget(target, state, changes)).toStrictEqual([
+    'machine m1 health check servicecheck-00-http-3000 is critical',
+  ]);
+});
+
+test('it passes a started machine whose health checks pass', () => {
+  const state = {
+    deployedSHA: 'abc123',
+    machines: [
+      {
+        checks: [{ name: 'servicecheck-00-http-3000', status: 'passing' }],
+        gitSHA: 'abc123',
+        id: 'm1',
+        state: 'started',
+      },
+    ],
+    scheduledMachines: [],
+    serviceImage: 'registry.fly.io/x:tag1',
+  };
+
+  const changes = { affectedPkgs: [], changedPaths: [] };
+
+  expect(checkTarget(target, state, changes)).toBeEmpty();
+});
+
+test('it ignores the checks of a machine parked in its idle state', () => {
+  const state = {
+    deployedSHA: 'abc123',
+    machines: [
+      {
+        checks: [{ name: 'servicecheck-00-http-3000', status: 'warning' }],
+        gitSHA: 'abc123',
+        id: 'm1',
+        state: 'suspended',
+      },
+    ],
+    scheduledMachines: [],
+    serviceImage: 'registry.fly.io/x:tag1',
+  };
+
+  const changes = { affectedPkgs: [], changedPaths: [] };
+
+  expect(checkTarget(target, state, changes)).toBeEmpty();
+});
+
 test('it flags a stale app whose package changed since the deployed SHA', () => {
   const state = {
     deployedSHA: 'abc123',

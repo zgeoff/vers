@@ -48,6 +48,12 @@ export default defineDeployManifest({
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-email' },
     },
     {
+      app: 'vers-service-keys',
+      configDir: 'services/keys',
+      dockerfile: 'services/keys/Dockerfile',
+      trigger: { kind: 'turbo-affected', pkg: '@vers/service-keys' },
+    },
+    {
       app: 'vers-service-session',
       configDir: 'services/session',
       dockerfile: 'services/session/Dockerfile',
