@@ -1,3 +1,11 @@
+## Function naming
+
+The shared partial's effectful-prefix table omits one prefix this repo uses:
+
+| Prefix   | Contract                                                                                                                 | Example            |
+| -------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| `upsert` | single-statement insert-or-update keyed by a natural or composite key, refreshing the conflicting row's columns in place | `upsertSimVersion` |
+
 ## Issue hygiene
 
 Triage a GitHub issue the moment it's opened, not in a later pass:
