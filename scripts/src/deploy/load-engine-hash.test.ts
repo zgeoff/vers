@@ -45,7 +45,7 @@ test('it excludes test utilities and faker from the bundle', async () => {
  * already-resolved node_modules, so a build from the copy resolves the same
  * package specifiers as the real entrypoint without a workspace install.
  */
-async function copyEngineSourceToTempDir(): Promise<string> {
+async function createEngineSourceTempDir(): Promise<string> {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'idle-core-hash-'));
 
   onTestFinished(async () => {
@@ -64,7 +64,7 @@ async function copyEngineSourceToTempDir(): Promise<string> {
 }
 
 test('it changes the hash when the engine source changes', async () => {
-  const copiedEntrypoint = await copyEngineSourceToTempDir();
+  const copiedEntrypoint = await createEngineSourceTempDir();
   const before = await loadEngineHash(copiedEntrypoint);
 
   const constantsPath = path.join(path.dirname(copiedEntrypoint), 'progression/constants.ts');
