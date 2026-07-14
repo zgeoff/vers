@@ -1,10 +1,6 @@
 # yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
 language: en-US
 
-tone_instructions: >-
-  Terse and direct. No praise, no restating the diff. Flag only issues a maintainer would act on.
-  When a finding enforces a repo convention, name the AGENTS.md rule it comes from.
-
 reviews:
   profile: assertive
   high_level_summary: true

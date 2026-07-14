@@ -9,12 +9,6 @@ reviews:
   resolve_threads_when_addressed: true
   auto_approve_behavior: disabled
   ultrareview: manual
-  custom_instructions: |
-    Focus exclusively on correctness: logic bugs, race conditions, data
-    integrity, broken invariants, security flaws, and error-handling gaps.
-    Do not comment on style, naming, formatting, or repo conventions —
-    oxlint and a separate conventions reviewer own that lane. Prefer a few
-    high-confidence findings over broad coverage.
   ignore:
     files:
       - bun.lock
