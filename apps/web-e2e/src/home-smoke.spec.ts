@@ -36,10 +36,6 @@ test('it serves the signed-in home page server-rendered, lands at respite, and l
   await page.waitForLoadState('networkidle');
   await page.getByLabel('Email').fill('demo@vers.test');
   await page.getByLabel('Password').fill('password123');
-
-  // the honeypot rejects any submission under 1.5s old as bot-paced — real typing naturally
-  // clears it, a scripted fill+click doesn't
-  await page.waitForTimeout(1600);
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
   await page.waitForURL(/\/respite$/);
 

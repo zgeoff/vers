@@ -19,10 +19,6 @@ test('it renders respite, avatar, and explore for a signed-in caller without con
   await page.waitForLoadState('networkidle');
   await page.getByLabel('Email').fill('e2e-game@vers.test');
   await page.getByLabel('Password').fill('password123');
-
-  // the honeypot rejects any submission under 1.5s old as bot-paced — real typing naturally
-  // clears it, a scripted fill+click doesn't
-  await page.waitForTimeout(1600);
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
   await expect(page).toHaveURL(/\/respite$/);

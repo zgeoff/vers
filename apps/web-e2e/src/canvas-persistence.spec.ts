@@ -26,10 +26,6 @@ test('it keeps the same canvas element across client-side game navigation', asyn
   await page.waitForLoadState('networkidle');
   await page.getByLabel('Email').fill('e2e-canvas@vers.test');
   await page.getByLabel('Password').fill('password123');
-
-  // the honeypot rejects any submission under 1.5s old as bot-paced — real typing naturally
-  // clears it, a scripted fill+click doesn't
-  await page.waitForTimeout(1600);
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
   await expect(page).toHaveURL(/\/explore$/);
