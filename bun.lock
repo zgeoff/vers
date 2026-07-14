@@ -343,6 +343,23 @@
         "typescript": "catalog:",
       },
     },
+    "libs/data/sim-registry": {
+      "name": "@vers/sim-registry",
+      "version": "0.0.0",
+      "dependencies": {
+        "@vers/db": "workspace:*",
+        "kysely": "catalog:",
+      },
+      "devDependencies": {
+        "@faker-js/faker": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "libs/design/design-system": {
       "name": "@vers/design-system",
       "version": "0.0.0",
@@ -2324,6 +2341,8 @@
     "@vers/service-utils": ["@vers/service-utils@workspace:libs/service/service-utils"],
 
     "@vers/service-verification": ["@vers/service-verification@workspace:services/verification"],
+
+    "@vers/sim-registry": ["@vers/sim-registry@workspace:libs/data/sim-registry"],
 
     "@vers/styled-system": ["@vers/styled-system@workspace:libs/design/styled-system"],
 
