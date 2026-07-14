@@ -193,7 +193,6 @@
       "name": "@vers/contract-keys",
       "version": "0.0.0",
       "dependencies": {
-        "@orpc/contract": "catalog:",
         "@vers/contract-base": "workspace:*",
         "zod": "catalog:",
       },
@@ -210,7 +209,6 @@
       "name": "@vers/contract-replay",
       "version": "0.0.0",
       "dependencies": {
-        "@orpc/contract": "catalog:",
         "@vers/contract-base": "workspace:*",
         "zod": "catalog:",
       },
