@@ -1,7 +1,8 @@
 ## Review bots
 
 CodeRabbit and cubic review every PR, configured by `.coderabbit.yaml` and `cubic.yaml` at the repo
-root: CodeRabbit enforces the conventions in this file, cubic reports correctness bugs only.
+root: CodeRabbit reviews broadly and reads this file as its guidelines, cubic reports correctness
+bugs only.
 
 - A PR is ready only after both bot reviews are read and every finding dispositioned: fix it, or
   reply on its thread saying why not — when a finding contradicts this file, this file wins and the

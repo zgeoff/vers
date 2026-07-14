@@ -13,35 +13,6 @@ reviews:
   path_filters:
     - '!bun.lock'
     - '!libs/data/db/src/schema.generated.ts'
-  path_instructions:
-    - path: 'services/**'
-      instructions: >-
-        Procedure handlers may throw only their typed opts.errors.* constructors or invariant() —
-        flag any try/catch used for logging or reporting, and any bespoke error code without an
-        explicit status.
-    - path: '**/*.test.{ts,tsx}'
-      instructions: >-
-        No describe blocks — flat test() with titles starting "it" describing observable behaviour.
-        No beforeAll/beforeEach/afterEach/afterAll in test files. Object assertions use
-        toStrictEqual, never toEqual. Domain objects and DTOs come from create-mock-* factories with
-        only the fields the unit reads overridden; schema/decoder tests use inline literals, never
-        factory output, and rejection tests assert the issue path. Tests mutating global or env
-        state restore it via onTestFinished. Prefer jest-extended matchers over hand-rolled
-        assertions.
-    - path: 'apps/web/**'
-      instructions: >-
-        Form validation returns submission.reply(); navigation and access control throw
-        redirect()/Response; faults throw to a route errorComponent. Flag per-query retry overrides
-        without a behavioural reason. Server functions are thin shells: ambient reads
-        (getRequestHeaders, cookies) stay in the shell, logic takes explicit args. Zustand: stores
-        hold state only, mutation goes through external set-*/toggle-* modules, and index.ts never
-        exports raw store handles.
-    - path: '**/*.md'
-      instructions: >-
-        Flag the banned words: "bites" (figurative), "CAS", "fence"/"fencing" (distributed-systems
-        sense), "load-bearing", "seam", and "surface" — each has a required plainer replacement per
-        AGENTS.md. Comments and docs describe the code as it is now: no history, no issue numbers,
-        no phase labels.
   auto_review:
     enabled: true
     auto_incremental_review: false
