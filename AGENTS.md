@@ -389,8 +389,8 @@ Everywhere:
   fixtures shared between tests.
 - A factory is called in the test that uses its value, never through a helper that pre-configures
   overrides — a second layer of defaults is a shadow factory the test site can't see.
-- `setupTest` wires runtime — servers, handlers, clients, recorders — and returns no domain data
-  and no data-builders.
+- `setupTest` wires runtime — servers, handlers, clients, recorders — and returns no domain data and
+  no data-builders.
 - `toStrictEqual`, not `toEqual`, for object assertions; asymmetric matchers inside it are fine.
 - Global mock reset lives in the preload's `afterEach` (`mock.restore()`), never per-test.
 - A test that mutates global or environment state restores it in an `onTestFinished(...)` callback
