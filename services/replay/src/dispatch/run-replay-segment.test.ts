@@ -60,32 +60,32 @@ const EXPECTED_CHECKPOINTS: Array<ActivityCheckpoint> = [
   {
     nextSeed: '20c0dac3c8da96ee1a82332c38c2e8ae',
     rewards: { xp: 60 },
-    time: 16_300,
+    time: 16_250,
     type: 'progress',
   },
   {
     levelUp: { from: 1, to: 2 },
     nextSeed: '651b7bac24e8282ac2345557ee733dc5',
     rewards: { xp: 60 },
-    time: 33_800,
+    time: 33_750,
     type: 'progress',
   },
   {
     nextSeed: '183a8b662f0c22f40b637a9f83c410ca',
     rewards: { xp: 30 },
-    time: 43_800,
+    time: 43_750,
     type: 'progress',
   },
   {
     nextSeed: '0d1c5f2ed8a45260129c426ab502cbb3',
     rewards: { xp: 40 },
-    time: 56_300,
+    time: 56_250,
     type: 'progress',
   },
   {
     nextSeed: '0d1c5f2ed8a45260129c426ab502cbb3',
     rewards: { xp: 215 },
-    time: 56_300,
+    time: 56_250,
     type: 'completed',
   },
   {
@@ -98,7 +98,7 @@ const EXPECTED_CHECKPOINTS: Array<ActivityCheckpoint> = [
   {
     nextSeed: 'dd5a3353a7f6c0c6afcb296684176982',
     rewards: { xp: 40 },
-    time: 13_800,
+    time: 13_750,
     type: 'progress',
   },
 ];
