@@ -1,0 +1,60 @@
+import * as db from '../db';
+import { os } from './os';
+
+/**
+ * Appends a checkpoint batch, mirroring the real service's state-derived rejections: a terminal
+ * status refuses further appends, and a stale `expectedHead` is a retryable CONFLICT. Hash-chain
+ * validation, the offline-progress cap, and writer eviction need state the mock doesn't track —
+ * those rejections are per-test overrides.
+ */
+export const trackActivityProgress = os.trackActivityProgress.handler(async (opts) => {
+  const actingUserId = opts.context.actingUserId;
+
+  if (actingUserId === null) {
+    throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+  }
+
+  const activity = db.activityCollection.findFirst((q) => q.where({ id: opts.input.activityID }));
+
+  if (activity === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  if (activity.status !== 'active') {
+    throw opts.errors.ACTIVITY_TERMINAL({
+      data: { appendedHead: activity.appendedHead, status: activity.status },
+    });
+  }
+
+  if (opts.input.expectedHead !== activity.appendedHead) {
+    throw opts.errors.CONFLICT({ data: { appendedHead: activity.appendedHead } });
+  }
+
+  const now = new Date();
+
+  for (const checkpoint of opts.input.checkpoints) {
+    await db.checkpointCollection.create({
+      activityID: activity.id,
+      appendedAt: now,
+      hash: checkpoint.hash,
+      payload: checkpoint.payload,
+      prevHash: checkpoint.prevHash,
+      version: checkpoint.version,
+    });
+  }
+
+  const appendedHead = activity.appendedHead + opts.input.checkpoints.length;
+  const lastCheckpoint = opts.input.checkpoints.at(-1);
+
+  await db.activityCollection.update(activity, {
+    data(record) {
+      record.appendedAt = now;
+      record.appendedHead = appendedHead;
+      record.lastHash = lastCheckpoint === undefined ? record.lastHash : lastCheckpoint.hash;
+      record.updatedAt = now;
+    },
+    strict: true,
+  });
+
+  return { appendedHead };
+});

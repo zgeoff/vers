@@ -8,7 +8,8 @@ import {
   createMockAvatarData,
   createMockEnemyData,
 } from '@vers/idle-core';
-import { ACTIVITY_SERVICE_URL, mockActivityService } from '../mocks/mock-activity-service';
+import { resolveServiceURL } from '@vers/mock-services';
+import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
@@ -22,7 +23,7 @@ interface TrackedBatch {
 }
 
 function setupTest(config: { readonly failureAction?: ActivityFailureAction } = {}) {
-  const link = new RPCLink({ url: `${ACTIVITY_SERVICE_URL}/rpc` });
+  const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
 
   const client: ActivityServiceClient = createORPCClient(link);
   const batches: Array<TrackedBatch> = [];

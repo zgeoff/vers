@@ -1,0 +1,51 @@
+{
+  "name": "@vers/mock-services",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./db": "./src/db/index.ts",
+    "./user": "./src/user/index.ts",
+    "./session": "./src/session/index.ts",
+    "./verification": "./src/verification/index.ts",
+    "./avatar": "./src/avatar/index.ts",
+    "./email": "./src/email/index.ts",
+    "./activity": "./src/activity/index.ts",
+    "./keys": "./src/keys/index.ts",
+    "./replay": "./src/replay/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@faker-js/faker": "catalog:",
+    "@msw/data": "catalog:",
+    "@noble/hashes": "catalog:",
+    "@orpc/server": "catalog:",
+    "@paralleldrive/cuid2": "catalog:",
+    "@vers/client-test-utils": "workspace:*",
+    "@vers/contract-activity": "workspace:*",
+    "@vers/contract-avatar": "workspace:*",
+    "@vers/contract-email": "workspace:*",
+    "@vers/contract-keys": "workspace:*",
+    "@vers/contract-replay": "workspace:*",
+    "@vers/contract-session": "workspace:*",
+    "@vers/contract-user": "workspace:*",
+    "@vers/contract-verification": "workspace:*",
+    "@vers/roll-crypto": "workspace:*",
+    "@vers/service-auth": "workspace:*",
+    "jose": "catalog:",
+    "msw": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@vers/game-utils": "workspace:*",
+    "@vers/test-utils": "workspace:*",
+    "@zgeoff/bun-test-extended": "catalog:",
+    "typescript": "catalog:"
+  }
+}

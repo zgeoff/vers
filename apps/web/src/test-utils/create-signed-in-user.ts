@@ -1,7 +1,7 @@
+import { createMockAccessToken } from '@vers/mock-services';
+import * as db from '@vers/mock-services/db';
+import type { UserRowSchema } from '@vers/mock-services/db';
 import type * as z from 'zod';
-import { createMockAccessToken } from '../mocks/create-mock-access-token';
-import * as db from '../mocks/db';
-import type { UserRowSchema } from '../mocks/db/user-collection';
 
 interface SignedInUser {
   readonly cookies: Readonly<Record<string, Readonly<Record<string, unknown>>>>;

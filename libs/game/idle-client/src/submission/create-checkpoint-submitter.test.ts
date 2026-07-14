@@ -1,7 +1,8 @@
 import { expect, mock, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
-import { ACTIVITY_SERVICE_URL, mockActivityService } from '../mocks/mock-activity-service';
+import { resolveServiceURL } from '@vers/mock-services';
+import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
@@ -15,7 +16,7 @@ import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 function setupTest(
   config: Readonly<{ scheduleFlush?: (flush: () => Promise<void>) => void }> = {},
 ) {
-  const link = new RPCLink({ url: `${ACTIVITY_SERVICE_URL}/rpc` });
+  const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
 
   const client: ActivityServiceClient = createORPCClient(link);
   const onAcked = mock<(activityID: string, appendedHead: number) => void>();

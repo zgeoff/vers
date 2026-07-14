@@ -188,6 +188,8 @@ Libraries (`libs/`, grouped by domain):
 - `libs/service/service-utils` - shared Elysia middleware (auth, logging, remote address) and
   service env schemas
 - `libs/testing/client-test-utils` - react & web worker testing utilities
+- `libs/testing/mock-services` - MSW mock backends for the service contracts: @msw/data-backed
+  routers, per-test override proxies, and the demo seed
 - `libs/testing/service-test-utils` - postgres test container & mock data utils
 - `libs/testing/test-utils` - generic test helpers: env override/cleanup, MSW lifecycle wiring, JWT
   and in-process RPC-client fixtures, and oRPC conformance-case collection

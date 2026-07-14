@@ -17,10 +17,8 @@
   "dependencies": {
     "@conform-to/react": "catalog:",
     "@conform-to/zod": "catalog:",
-    "@msw/data": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
-    "@orpc/server": "catalog:",
     "@orpc/tanstack-query": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
     "@react-three/fiber": "catalog:",
@@ -42,6 +40,7 @@
     "@vers/game-rendering": "workspace:*",
     "@vers/idle-client": "workspace:*",
     "@vers/idle-core": "workspace:*",
+    "@vers/mock-services": "workspace:*",
     "@vers/panda-preset": "workspace:*",
     "@vers/service-auth": "workspace:*",
     "@vers/service-utils": "workspace:*",
