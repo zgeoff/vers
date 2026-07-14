@@ -2,14 +2,19 @@ import { Command } from 'commander';
 import { execa } from 'execa';
 import { applyDeploy } from '../deploy/apply-deploy';
 import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-actions';
+import { applySimVersionActions } from '../deploy/apply-sim-version-actions';
 import { checkParkedApp } from '../deploy/check-parked-app';
 import { checkTarget } from '../deploy/check-target';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
-import { loadEngineHash } from '../deploy/load-engine-hash';
+import { PINNED_BUN_VERSION, loadEngineHash } from '../deploy/load-engine-hash';
 import { planScheduledMachineActions } from '../deploy/plan-scheduled-machine-actions';
+import { buildProviderAppName, planSimVersionActions } from '../deploy/plan-sim-version-actions';
 import { readAppState } from '../deploy/read-app-state';
 import { readChangesSince } from '../deploy/read-changes-since';
+import { readFleetImage } from '../deploy/read-fleet-image';
+import { readProviderAppExists } from '../deploy/read-provider-app-exists';
+import { readSimVersionRow } from '../deploy/read-sim-version-row';
 import { runProbes } from '../deploy/run-probes';
 import type { DeployManifest, DeployTarget } from '../deploy/types';
 import { waitForDeployedSHA } from '../deploy/wait-for-deployed-sha';
@@ -72,15 +77,18 @@ async function runDeploy(app: string): Promise<void> {
     console.log(`${target.app} is current at ${state.deployedSHA ?? 'unknown'} — skipping`);
 
     await runScheduledMachineReconcile(target);
+    await runSimVersionReconcile(target);
 
     return;
   }
 
   console.log(`deploying ${target.app} at ${sha} — ${staleReason}`);
 
+  await seedEngineHashEnv(target);
   await applyDeploy(target, sha);
   await waitForDeployedSHA(target.app, sha);
   await runScheduledMachineReconcile(target);
+  await runSimVersionReconcile(target);
 
   const findings = await runProbes(target.probes ?? []);
 
@@ -90,6 +98,28 @@ async function runDeploy(app: string): Promise<void> {
     }
 
     process.exitCode = 1;
+  }
+}
+
+const SIM_ENGINE_HASH_BUILD_ARG_NAMES = ['SIM_ENGINE_HASH', 'VITE_SIM_ENGINE_HASH'];
+
+/**
+ * Computes the engine hash once and stamps it into both build-arg env names
+ * a target might forward, when its manifest entry asks for either — so
+ * `applyDeploy`'s existing env-forwarding picks it up without knowing which
+ * name its own Dockerfile expects.
+ */
+async function seedEngineHashEnv(target: DeployTarget): Promise<void> {
+  const buildArgs = target.buildArgsFromEnv ?? [];
+
+  if (!SIM_ENGINE_HASH_BUILD_ARG_NAMES.some((name) => buildArgs.includes(name))) {
+    return;
+  }
+
+  const hash = await getEngineHash();
+
+  for (const name of SIM_ENGINE_HASH_BUILD_ARG_NAMES) {
+    process.env[name] = hash;
   }
 }
 
@@ -124,6 +154,50 @@ async function runScheduledMachineReconcile(target: DeployTarget): Promise<void>
   );
 
   await applyScheduledMachineActions(target.app, state.deployedSHA, actions);
+}
+
+/**
+ * Runs after the replay target's deploy (and on its skipped-deploy path
+ * alike, mirroring the scheduled-machine reconcile) to provision or update
+ * the per-version provider app for its just-deployed engine hash and keep
+ * the `sim_versions` registry row current. A no-op for every other target.
+ */
+async function runSimVersionReconcile(target: DeployTarget): Promise<void> {
+  if (target.simVersionProvider !== true) {
+    return;
+  }
+
+  const fleetImage = await readFleetImage(target.app);
+  const engineHash = await getEngineHash();
+
+  const providerApp = buildProviderAppName(engineHash);
+
+  const [registryRow, providerAppExists] = await Promise.all([
+    readSimVersionRow(engineHash),
+    readProviderAppExists(providerApp),
+  ]);
+
+  const actions = planSimVersionActions({
+    bunVersion: PINNED_BUN_VERSION,
+    engineHash,
+    fleetImage,
+    providerAppExists,
+    registryRow,
+  });
+
+  await applySimVersionActions(actions);
+}
+
+let engineHashPromise: Promise<string> | null = null;
+
+/**
+ * Builds the engine bundle hash at most once per CLI run — every caller in a
+ * single invocation shares the result.
+ */
+function getEngineHash(): Promise<string> {
+  engineHashPromise ??= loadEngineHash();
+
+  return engineHashPromise;
 }
 
 async function runVerify(): Promise<void> {
