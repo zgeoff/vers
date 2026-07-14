@@ -7,7 +7,7 @@ import type { Selectable } from 'kysely';
 export type SimVersionRow = Selectable<SimVersions>;
 
 /**
- * Input for `upsertSimVersion`. `retentionDays` defaults to `DEFAULT_RETENTION_DAYS` when omitted.
+ * `retentionDays` defaults to 30 days when omitted.
  */
 export interface UpsertSimVersionInput {
   readonly bunVersion: string;
