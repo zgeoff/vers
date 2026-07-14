@@ -61,8 +61,6 @@ program
     console.log(hash);
   });
 
-await program.parseAsync();
-
 async function runDeploy(app: string): Promise<void> {
   const manifest = await loadDeployManifest();
 
@@ -253,3 +251,5 @@ async function readHeadSHA(): Promise<string> {
 
   return result.stdout.trim();
 }
+
+await program.parseAsync();
