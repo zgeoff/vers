@@ -63,6 +63,13 @@ network retry never applies a spend twice. A roll-bearing action's entropy keys 
 roll-free action — a deterministic state transition at a published cost — occupies a position all
 the same. The sequence is a transaction log first and an entropy source second.
 
+Who assigns a position follows key custody. A self-found sequence is client-authored — the device
+numbers its own actions and the server verifies the sequence by replay, so no allocation race
+exists. A trade action carries a client-minted action identifier, and the server's durable mapping
+from identifier to position and result makes reservation and application one atomic step: a
+retransmitted action lands on its recorded position and returns its recorded result, never a fresh
+position or a second spend.
+
 Each position pins the item state it acts on and rejects a retry against stale state rather than
 re-rolling. An item's identity is its lineage — the reward coordinate that dropped it plus the craft
 positions applied since — a complete, replayable provenance chain. A self-found craft sequence
