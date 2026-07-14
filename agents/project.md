@@ -1,3 +1,17 @@
+## Review bots
+
+CodeRabbit and cubic review every PR, configured by `.coderabbit.yaml` and `cubic.yaml` at the repo
+root; CodeRabbit reads this file as its guidelines.
+
+- A PR is ready only after both bot reviews are read and every finding dispositioned: fix it, or
+  reply on its thread saying why not — when a finding contradicts this file, this file wins and the
+  reply names the rule. Reviews land within a few minutes of opening; read them with
+  `gh pr view <n> --comments` and `gh api repos/zgeoff/vers/pulls/<n>/comments`.
+- Never teach a bot through chat (`@coderabbitai` learnings and the like) — a correction to bot
+  behaviour is an edit to `.coderabbit.yaml` or `cubic.yaml`, reviewed in a PR.
+- Bots review a PR once, at open; an agent invokes a re-review only when asked, never on its own
+  initiative.
+
 ## Issue hygiene
 
 Triage a GitHub issue the moment it's opened, not in a later pass:

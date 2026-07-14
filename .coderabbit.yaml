@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+language: en-US
+
+reviews:
+  profile: assertive
+  high_level_summary: true
+  collapse_walkthrough: true
+  sequence_diagrams: false
+  path_filters:
+    - '!bun.lock'
+    - '!libs/data/db/src/schema.generated.ts'
+  auto_review:
+    enabled: true
+    auto_incremental_review: false
+    drafts: false
+  tools:
+    eslint:
+      enabled: false
+    biome:
+      enabled: false
+
+knowledge_base:
+  learnings:
+    scope: local
+
+chat:
+  art: false

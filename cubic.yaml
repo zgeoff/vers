@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://cubic.dev/schema/cubic-repository-config.schema.json
+version: 1
+
+reviews:
+  enabled: true
+  sensitivity: high
+  incremental_commits: false
+  check_drafts: false
+  resolve_threads_when_addressed: true
+  auto_approve_behavior: disabled
+  ultrareview: manual
+  custom_instructions: |
+    bun test loads jest-extended matchers process-wide through each package's
+    bunfig.toml preload (@zgeoff/bun-test-extended), so tests use matchers
+    beyond Bun's built-in expect API — an unknown matcher name is caught by
+    typecheck, not a runtime bug.
+  ignore:
+    files:
+      - bun.lock
+      - libs/data/db/src/schema.generated.ts
+
+pr_descriptions:
+  generate: false
+
+issues:
+  fix_with_cubic_buttons: false
+  pr_comment_fixes: false
