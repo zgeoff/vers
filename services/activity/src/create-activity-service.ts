@@ -8,7 +8,7 @@ import { buildActivityRouter } from './build-router';
 
 /**
  * Placeholder version stamps every new activity is minted against; real version dispatch is a
- * later change. Factory-injectable so tests can exercise a specific version pair.
+ * later change. Factory-injectable so tests can exercise specific versions.
  */
 const SIM_VERSION = '0.0.0-dev';
 const CONTENT_VERSION = '0.0.0-dev';
