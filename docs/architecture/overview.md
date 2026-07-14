@@ -173,6 +173,7 @@ Libraries (`libs/`, grouped by domain):
 - `libs/game/game-rendering` - client rendering shell: scene/presentation state for the persistent
   three.js canvas
 - `libs/game/game-utils` - shared game logic (encounter derivation, rewards)
+- `libs/game/roll-crypto` - avatar roll-key derivation and the rolled-reward digest PRF
 - `libs/game/idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
 - `libs/game/idle-core` - deterministic seeded simulation engine
 - `libs/service/jobs` - typed pg-boss job queue wrapper: send, drain, and retry/dead-letter policy
