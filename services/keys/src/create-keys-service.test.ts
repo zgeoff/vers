@@ -10,15 +10,15 @@ const TRADE_ROOT_HEX = '11'.repeat(32);
 
 async function setupTest() {
   const service = await createKeysService();
-  const viewer = await createAnonymousViewer({ audience: 'service-keys' });
 
-  return { app: service.app, token: viewer.token };
+  return { app: service.app };
 }
 
 test('it derives the same key twice for identical input', async () => {
   const ctx = await setupTest();
+  const viewer = await createAnonymousViewer({ audience: 'service-keys' });
 
-  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: ctx.token });
+  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: viewer.token });
   const input = { avatarID: 'avatar-1', keyVersion: 1, population: 'trade' as const };
 
   const first = await client.deriveAvatarKey(input);
@@ -29,8 +29,9 @@ test('it derives the same key twice for identical input', async () => {
 
 test('it derives a key matching a direct call against the configured root', async () => {
   const ctx = await setupTest();
+  const viewer = await createAnonymousViewer({ audience: 'service-keys' });
 
-  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: ctx.token });
+  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: viewer.token });
 
   const result = await client.deriveAvatarKey({
     avatarID: 'avatar-1',
@@ -50,8 +51,9 @@ test('it derives a key matching a direct call against the configured root', asyn
 
 test('it derives diverging keys across populations', async () => {
   const ctx = await setupTest();
+  const viewer = await createAnonymousViewer({ audience: 'service-keys' });
 
-  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: ctx.token });
+  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: viewer.token });
 
   const trade = await client.deriveAvatarKey({
     avatarID: 'avatar-1',
@@ -70,8 +72,9 @@ test('it derives diverging keys across populations', async () => {
 
 test('it derives diverging keys across key versions', async () => {
   const ctx = await setupTest();
+  const viewer = await createAnonymousViewer({ audience: 'service-keys' });
 
-  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: ctx.token });
+  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: viewer.token });
 
   const versionOne = await client.deriveAvatarKey({
     avatarID: 'avatar-1',
@@ -90,8 +93,9 @@ test('it derives diverging keys across key versions', async () => {
 
 test('it rejects an unknown key version with NOT_FOUND naming the version and population', async () => {
   const ctx = await setupTest();
+  const viewer = await createAnonymousViewer({ audience: 'service-keys' });
 
-  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: ctx.token });
+  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: viewer.token });
 
   expect(
     client.deriveAvatarKey({ avatarID: 'avatar-1', keyVersion: 99, population: 'trade' }),
@@ -102,9 +106,9 @@ test('it rejects an unknown key version with NOT_FOUND naming the version and po
 });
 
 test('it rejects an /rpc call with no Authorization header with a plain 401', async () => {
-  const service = await createKeysService();
+  const ctx = await setupTest();
 
-  const response = await service.app.handle(
+  const response = await ctx.app.handle(
     new Request('http://test.local/rpc/deriveAvatarKey', { method: 'POST' }),
   );
 

@@ -5,15 +5,13 @@ import { parseRollKeyRoots } from './parse-roll-key-roots';
 const TRADE_ROOT = '11'.repeat(32);
 const SELF_FOUND_ROOT = '22'.repeat(32);
 
-function buildValidPayload(): string {
-  return JSON.stringify({
+test('it parses a valid two-population payload into decoded roots', () => {
+  const payload = JSON.stringify({
     'self-found': { current: 1, roots: { 1: SELF_FOUND_ROOT } },
     trade: { current: 1, roots: { 1: TRADE_ROOT } },
   });
-}
 
-test('it parses a valid two-population payload into decoded roots', () => {
-  const roots = parseRollKeyRoots(buildValidPayload());
+  const roots = parseRollKeyRoots(payload);
 
   expect(roots.trade.current).toBe(1);
   expect(roots.trade.roots.get(1)).toStrictEqual(Uint8Array.from(Buffer.from(TRADE_ROOT, 'hex')));
