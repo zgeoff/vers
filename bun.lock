@@ -735,6 +735,7 @@
       "dependencies": {
         "@vers/db": "workspace:*",
         "@vers/service-test-utils": "workspace:*",
+        "@vers/sim-registry": "workspace:*",
         "@zgeoff/dbhub": "catalog:",
         "commander": "catalog:",
         "execa": "catalog:",

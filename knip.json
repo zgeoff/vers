@@ -36,7 +36,8 @@
         "src/client-sentry.ts",
         "src/router.tsx",
         "src/mocks/browser.ts",
-        "src/lib/scene/types.ts"
+        "src/lib/scene/types.ts",
+        "src/lib/engine-hash.ts"
       ],
       "ignoreDependencies": ["pino", "pino-pretty"]
     },

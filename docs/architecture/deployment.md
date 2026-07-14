@@ -96,6 +96,27 @@ rolls back cleanly, so re-run the failed job.
 so its staleness trigger in `deploy.config.ts` is a path glob (`apps/bugsink/**`) rather than turbo
 affectedness. Upgrading Bugsink is a tag bump in its `fly.toml`.
 
+## Sim-version registry
+
+`vers-service-replay` serves deterministic replay for one sim engine build per request; multiple
+engine builds can be live in production at once, each answered by its own per-version provider app.
+The deploy CLI computes the engine hash host-side — a sha256 digest over the pure replay
+entrypoint's bundled output plus the pinned Bun version (`bun run deploy -- engine-hash`) — and
+passes it as the `SIM_ENGINE_HASH` and `VITE_SIM_ENGINE_HASH` build args to `vers-service-replay`
+and `vers-app-web` respectively, so both bake the same value into their compiled output.
+
+After `vers-service-replay` deploys, and on its skipped-deploy path alike, the CLI reconciles the
+`sim_versions` table against the fleet's just-deployed image. A hash with no existing provider app
+gets one: `vers-replay-<hash12>` (the engine hash's first 12 hex characters), a private flycast IPv6
+address, and a machine launched from `vers-service-replay`'s current deployment tag —
+`flyctl machine run` mangles a `@sha256:` digest reference, so provisioning always launches by tag
+and records the digest `machines list --json` resolves it to separately. The registry row stores
+that digest-pinned image ref and the provider app's flycast URL, and refreshes whenever the fleet's
+resolved digest differs from what's stored, even when the provider app itself needs no change.
+
+Pruning stale provider apps and expired registry rows is a separate sweep's job — the deploy CLI
+only ever creates and refreshes.
+
 ## Container builds
 
 Fly's remote builder builds every server image from the app's Dockerfile. A shared `pruner` stage

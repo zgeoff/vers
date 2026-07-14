@@ -214,6 +214,8 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SERVICE_AUTH_PUBLIC_KEY: ${{ vars.SERVICE_AUTH_PUBLIC_KEY }}
         with:
           args: deploy --app ${{ matrix.app }}
           fly-api-token: ${{ secrets.FLY_API_TOKEN }}
