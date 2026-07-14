@@ -144,6 +144,7 @@ Services (`services/`):
 - `services/activity` - activities domain service
 - `services/avatar` - avatar domain service
 - `services/email` - transactional email delivery service, queued on pg-boss
+- `services/keys` - avatar roll-key custody and derivation service
 - `services/session` - session domain service
 - `services/user` - user domain service
 - `services/verification` - OTP/TOTP verification domain service
@@ -154,6 +155,7 @@ Contracts (`contracts/`):
 - `contracts/avatar` - oRPC API declaration for the avatar service
 - `contracts/base` - shared contract error taxonomy and base builders
 - `contracts/email` - oRPC API declaration for the email service
+- `contracts/keys` - oRPC API declaration for the keys service
 - `contracts/session` - oRPC API declaration for the session service
 - `contracts/user` - oRPC API declaration for the user service
 - `contracts/verification` - oRPC API declaration for the verification service
