@@ -230,7 +230,7 @@ export function createCheckpointSubmitter(
       invalid: false,
       nextVersion: context.appendedHead + 1,
       prevHash: context.lastHash,
-      previousNextSeed: '',
+      previousNextSeed: context.previousNextSeed ?? '',
       startChainIndex: context.startChainIndex,
     };
 
