@@ -1,5 +1,18 @@
 export { WorldMapEncounterActivity } from './world-map-encounter-activity';
+export { planResync } from './resync/plan-resync';
+export { runFastForward } from './resync/run-fast-forward';
+export { runResync } from './resync/run-resync';
+
+export type {
+  FastForwardProgress,
+  FastForwardReport,
+  LatestActivityProgress,
+  ResyncPlan,
+  ResyncResult,
+} from './resync/types';
+
 export { setSimulationWorker } from './state/set-simulation-worker';
+export { useOfflineCapStatus } from './state/use-offline-cap-status';
 export { useActivity } from './state/use-activity';
 export { useAvatar } from './state/use-avatar';
 export { useCheckpointStreamError } from './state/use-checkpoint-stream-error';
@@ -8,6 +21,7 @@ export { useSimulationInitialized } from './state/use-simulation-initialized';
 export type { ActivitySubmissionContext } from './submission/types';
 export * from './types';
 export { createInitializeMessage } from './worker/create-initialize-message';
+export { OFFLINE_CAP_WARNING_MS } from './worker/offline-cap-warning-ms';
 export { createSetActivityMessage } from './worker/create-set-activity-message';
 export { createSetFailureActionMessage } from './worker/create-set-failure-action-message';
 export { useSimulationWorker } from './worker/use-simulation-worker';

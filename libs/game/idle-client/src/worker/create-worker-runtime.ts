@@ -1,3 +1,4 @@
+import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { SIMULATION_TIMESTEP_MS } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
@@ -5,6 +6,7 @@ import { createActivityServiceClient } from '../submission/create-activity-servi
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ClientMessage } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
+import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { handleClientMessage } from './handle-client-message';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
@@ -35,8 +37,22 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let lastFrameTime = performance.now();
   let accumulator = 0;
 
+  // A fresh worker starts fully funded and drains toward the cap until its first acknowledged
+  // submission; every ack re-anchors the budget at the cap.
+  let lastAckAt = Date.now();
+
   const submitter = createCheckpointSubmitter({
     client: createActivityServiceClient(),
+    onAcked: () => {
+      lastAckAt = Date.now();
+    },
+    onCapped: () => {
+      const message = createOfflineCapStatusMessage(0, true);
+
+      for (const connection of connections) {
+        connection.postMessage(message);
+      }
+    },
     onInvalid: (activityID, reason) => {
       const message = createCheckpointStreamInvalidMessage(activityID, reason);
 
@@ -48,6 +64,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
   const context: WorkerContext = {
     connections,
+    getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
     getSimulation: () => simulation,
     getSubmitter: () => submitter,
     removeConnection: (port) => {

@@ -4,6 +4,7 @@ import type { WorkerContext } from '../worker/types';
 
 interface CreateMockWorkerContextOptions {
   readonly connections?: ReadonlyArray<MessagePort>;
+  readonly remainingBudgetMs?: number;
   readonly submitter?: Readonly<CheckpointSubmitter>;
 }
 
@@ -21,6 +22,7 @@ export function createMockWorkerContext(
 
   return {
     connections,
+    getRemainingBudgetMs: () => options.remainingBudgetMs ?? Number.MAX_SAFE_INTEGER,
     getSimulation: () => simulation,
     getSubmitter: () => submitter,
     removeConnection: (port) => {

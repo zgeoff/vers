@@ -4,12 +4,14 @@ import { setAvatar } from '../state/set-avatar';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setCombat } from '../state/set-combat';
 import { setFailureAction } from '../state/set-failure-action';
+import { setOfflineCapStatus } from '../state/set-offline-cap-status';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationWorker } from '../state/set-simulation-worker';
 import { useSimulationStore } from '../state/use-simulation-store';
 import type {
   CheckpointStreamInvalidMessage,
   InitialStateMessage,
+  OfflineCapStatusMessage,
   SimulationUpdateMessage,
   WorkerMessage,
 } from '../types';
@@ -76,6 +78,13 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
       reason: event.data.reason,
     });
   }
+
+  if (isOfflineCapStatusMessage(event.data)) {
+    setOfflineCapStatus({
+      halted: event.data.halted,
+      remainingMs: event.data.remainingMs,
+    });
+  }
 }
 
 function isInitialStateMessage(message: WorkerMessage): message is InitialStateMessage {
@@ -90,4 +99,8 @@ function isCheckpointStreamInvalidMessage(
   message: WorkerMessage,
 ): message is CheckpointStreamInvalidMessage {
   return message.type === WorkerMessageType.CheckpointStreamInvalid;
+}
+
+function isOfflineCapStatusMessage(message: WorkerMessage): message is OfflineCapStatusMessage {
+  return message.type === WorkerMessageType.OfflineCapStatus;
 }

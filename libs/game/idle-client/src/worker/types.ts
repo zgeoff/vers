@@ -9,6 +9,13 @@ import type { CheckpointSubmitter } from '../submission/create-checkpoint-submit
  */
 export interface WorkerContext {
   readonly connections: ReadonlySet<MessagePort>;
+
+  /**
+   * The worker's conservative view of the avatar's offline-progress budget: the cap minus the
+   * wall clock elapsed since the last acknowledged submission. It can only under-estimate the
+   * server's meter, never over-run it.
+   */
+  readonly getRemainingBudgetMs: () => number;
   readonly getSimulation: () => null | Simulation;
   readonly getSubmitter: () => CheckpointSubmitter;
   readonly removeConnection: (port: MessagePort) => void;

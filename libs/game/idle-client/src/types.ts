@@ -52,6 +52,7 @@ export type ClientMessage =
 export enum WorkerMessageType {
   CheckpointStreamInvalid = 'checkpoint_stream_invalid',
   InitialState = 'initial_state',
+  OfflineCapStatus = 'offline_cap_status',
   SimulationUpdate = 'simulation_update',
 }
 
@@ -79,12 +80,29 @@ export interface CheckpointStreamInvalidMessage extends IWorkerMessage {
   readonly type: WorkerMessageType.CheckpointStreamInvalid;
 }
 
+/**
+ * Reports the avatar's offline-progress budget as it approaches or hits the cap: `remainingMs` is
+ * the worker's conservative view of the budget left, and `halted` means the simulation stopped at
+ * an encounter boundary and idles until a resync replaces it.
+ */
+export interface OfflineCapStatusMessage extends IWorkerMessage {
+  readonly halted: boolean;
+  readonly remainingMs: number;
+  readonly type: WorkerMessageType.OfflineCapStatus;
+}
+
 export type WorkerMessage =
   | CheckpointStreamInvalidMessage
   | InitialStateMessage
+  | OfflineCapStatusMessage
   | SimulationUpdateMessage;
 
 export interface CheckpointStreamError {
   readonly activityID: string;
   readonly reason: string;
+}
+
+export interface OfflineCapStatus {
+  readonly halted: boolean;
+  readonly remainingMs: number;
 }
