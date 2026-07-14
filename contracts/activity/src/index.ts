@@ -15,3 +15,5 @@ export { CheckpointPayloadSchema } from './checkpoint-payload-schema';
 export type { Checkpoint } from './checkpoint-schema';
 export { CheckpointSchema } from './checkpoint-schema';
 export { createGenesisSeed } from './create-genesis-seed';
+export type { EntropySource } from './entropy-source-schema';
+export { EntropySourceSchema } from './entropy-source-schema';
