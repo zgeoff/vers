@@ -52,6 +52,9 @@
       "entry": ["src/serve.ts", "src/sweep.ts"],
       "ignoreDependencies": ["@orpc/contract"]
     },
+    "services/replay": {
+      "entry": ["src/serve.ts"]
+    },
     "libs/service/service-utils": {
       "ignoreDependencies": ["pino-pretty"]
     },
