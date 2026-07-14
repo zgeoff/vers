@@ -11,8 +11,11 @@ export type {
   ResyncResult,
 } from './resync/types';
 
+export { setOfflineCapStatus } from './state/set-offline-cap-status';
+export { setResyncStatus } from './state/set-resync-status';
 export { setSimulationWorker } from './state/set-simulation-worker';
 export { useOfflineCapStatus } from './state/use-offline-cap-status';
+export { useResyncStatus } from './state/use-resync-status';
 export { useActivity } from './state/use-activity';
 export { useAvatar } from './state/use-avatar';
 export { useCheckpointStreamError } from './state/use-checkpoint-stream-error';

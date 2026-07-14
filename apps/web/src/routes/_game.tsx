@@ -7,6 +7,7 @@ import { GameNav } from './-game/game-nav';
 import { GameSimulationMount } from './-game/game-simulation-mount';
 import { SatelliteStack } from './-game/satellite-stack';
 import { SceneStateSync } from './-game/scene-state-sync';
+import { WelcomeBackModal } from './-game/welcome-back-modal';
 
 const requireAuthFn = createServerFn({ method: 'GET' }).handler(() => requireAuth());
 const resolveFlagsFn = createServerFn({ method: 'GET' }).handler(() => resolveFlags());
@@ -24,6 +25,7 @@ function GameLayout() {
       <SatelliteStack />
       <SceneStateSync />
       <GameSimulationMount />
+      <WelcomeBackModal />
       <GameNav />
       <Outlet />
     </>
