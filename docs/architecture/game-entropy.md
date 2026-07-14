@@ -74,7 +74,9 @@ the same appended, verifiable record.
 Rolled content is `f(key, coordinate)`, where `f` is a keyed PRF — a pseudorandom function whose
 revealed outputs carry no predictive power over unrevealed coordinates. The property matters because
 every reveal hands the client a known input/output pair. The reward's identity is its coordinate, so
-minting is idempotent and re-verification can neither duplicate nor re-roll a reward.
+minting is idempotent and re-verification can neither duplicate nor re-roll a reward. The machinery
+that turns a digest into item content — the shared interpreter, draw-order versioning, craft
+positions — is [item generation](./item-generation.md).
 
 Key custody is the economy boundary:
 
