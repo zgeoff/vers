@@ -381,12 +381,16 @@ Everywhere:
   only the fields the unit reads.
 - A unit that parses or validates raw input — a zod schema, a decoder — is tested with inline
   literal payloads, valid and invalid, never factory output: a factory built to satisfy a schema
-  cannot falsify it. A rejection test asserts the reported issue path, never bare
-  `success: false` — a payload invalid for any reason passes the bare boolean.
+  cannot falsify it. A rejection test asserts the reported issue path, never bare `success: false` —
+  a payload invalid for any reason passes the bare boolean.
 - An input that is neither a domain object nor a DTO — a plain argument, an options bag, a config —
   is written inline at the call site, even when tests repeat the literal; repeated data reads, an
   opaque baseline doesn't. Test files declare no baseline-builder helpers and no module-level
   fixtures shared between tests.
+- A factory is called in the test that uses its value, never through a helper that pre-configures
+  overrides — a second layer of defaults is a shadow factory the test site can't see.
+- `setupTest` wires runtime — servers, handlers, clients, recorders — and returns no domain data
+  and no data-builders.
 - `toStrictEqual`, not `toEqual`, for object assertions; asymmetric matchers inside it are fine.
 - Global mock reset lives in the preload's `afterEach` (`mock.restore()`), never per-test.
 - A test that mutates global or environment state restores it in an `onTestFinished(...)` callback
