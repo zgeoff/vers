@@ -189,6 +189,23 @@
         "typescript": "catalog:",
       },
     },
+    "contracts/keys": {
+      "name": "@vers/contract-keys",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@vers/contract-base": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@orpc/openapi": "catalog:",
+        "@orpc/zod": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "contracts/session": {
       "name": "@vers/contract-session",
       "version": "0.0.0",
@@ -769,6 +786,27 @@
         "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "msw": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "services/keys": {
+      "name": "@vers/service-keys",
+      "version": "0.0.0",
+      "dependencies": {
+        "@noble/hashes": "catalog:",
+        "@orpc/server": "catalog:",
+        "@vers/contract-keys": "workspace:*",
+        "@vers/roll-crypto": "workspace:*",
+        "@vers/service-runtime": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@orpc/contract": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
         "typescript": "catalog:",
       },
     },
@@ -2258,6 +2296,8 @@
 
     "@vers/contract-email": ["@vers/contract-email@workspace:contracts/email"],
 
+    "@vers/contract-keys": ["@vers/contract-keys@workspace:contracts/keys"],
+
     "@vers/contract-session": ["@vers/contract-session@workspace:contracts/session"],
 
     "@vers/contract-user": ["@vers/contract-user@workspace:contracts/user"],
@@ -2299,6 +2339,8 @@
     "@vers/service-avatar": ["@vers/service-avatar@workspace:services/avatar"],
 
     "@vers/service-email": ["@vers/service-email@workspace:services/email"],
+
+    "@vers/service-keys": ["@vers/service-keys@workspace:services/keys"],
 
     "@vers/service-replay": ["@vers/service-replay@workspace:services/replay"],
 
