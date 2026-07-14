@@ -22,13 +22,13 @@ interface RunFastForwardOptions {
 }
 
 /**
- * Re-simulates an offline gap attempt by attempt: the snapshot's active activity first, then
- * fresh continuations started server-side, submitting each committed attempt's stream as it
- * lands. Budget accounting mirrors the server's meter — each attempt consumes its last
- * checkpoint's cumulative time beyond what the head row already accounted, so a re-simulated
- * prefix costs nothing — and an attempt whose unaccounted time overruns the remaining budget is
- * discarded, never submitted, keeping every submitted stream inside the cap and
- * boundary-terminated. Failure policy is the activity's own, identical to live play: a failed
+ * Simulates an offline gap attempt by attempt: reconstruction of the snapshot's active activity
+ * from its seed first, then fresh continuations started server-side, submitting each committed
+ * attempt's stream as it lands. Budget accounting mirrors the server's meter — each attempt
+ * consumes its last checkpoint's cumulative time beyond what the head row already accounted, so a
+ * reconstructed prefix costs nothing — and an attempt whose unaccounted time overruns the
+ * remaining budget is discarded, never submitted, keeping every submitted stream inside the cap
+ * and boundary-terminated. Failure policy is the activity's own, identical to live play: a failed
  * attempt under `Retry` continues to the next continuation, under `Abort` it ends the
  * fast-forward.
  */
@@ -45,7 +45,7 @@ export async function runFastForward(
   while (remainingMs > 0) {
     const input = options.buildActivityInput(activity);
 
-    // A resumed stream must reach its terminal to reconcile, whatever the budget — its prefix is
+    // A reconstruction must reach its terminal to reconcile, whatever the budget — its prefix is
     // already accounted server-side, so only the tail is priced against the budget below.
     const ceilingMs = appendedHead > 0 ? Number.MAX_SAFE_INTEGER : remainingMs;
 

@@ -121,6 +121,15 @@ directly, because they lag verification by design.
 
 ## Offline progress
 
+Four processes move simulation results around, each with one name. **Replay** is the verifier's
+asynchronous re-execution of submitted checkpoints — the trust decision, and nothing else. A
+**resync** is the client's confirmed-state fetch (verified anchor, appended head, server time) and
+the decision it drives. A **fast-forward** is the client's catch-up simulation of an offline gap,
+run on return. **Reconstruction** is the first step inside a fast-forward: re-running the
+interrupted activity from its seed to rebuild simulation state the client no longer holds —
+determinism makes the result identical to the lost original, and the already-accepted prefix costs
+nothing against the budget.
+
 Offline progress is bounded by a per-avatar simulated-time meter, enforced on the append path — the
 server never simulates. The avatar's budget refills at wall-clock rate since it was last banked,
 never past the cap (`OFFLINE_PROGRESS_CAP_MS`, 24h), and every accepted checkpoint batch debits its
