@@ -1,3 +1,5 @@
+import type { SimVersionRow, UpsertSimVersionInput } from '@vers/sim-registry';
+
 export interface DeployManifest {
   readonly apps: ReadonlyArray<DeployTarget>;
 }
@@ -11,6 +13,13 @@ export interface DeployTarget {
   readonly buildArgsFromEnv?: ReadonlyArray<string>;
   readonly probes?: ReadonlyArray<Probe>;
   readonly scheduledMachines?: ReadonlyArray<ScheduledMachine>;
+
+  /**
+   * Marks the target whose deploy the sim-version reconcile runs after —
+   * provisioning a per-version provider app and upserting the `sim_versions`
+   * registry row for the engine hash baked into its image.
+   */
+  readonly simVersionProvider?: boolean;
 }
 
 /**
@@ -82,3 +91,27 @@ export interface ChangeSet {
   readonly affectedPkgs: ReadonlyArray<string>;
   readonly changedPaths: ReadonlyArray<string>;
 }
+
+/**
+ * The fully-resolved image every service machine in a fleet currently agrees
+ * on — `repository` carries the registry host (`registry.fly.io/<repo>`).
+ */
+export interface FleetImage {
+  readonly repository: string;
+  readonly tag: string;
+  readonly digest: string;
+}
+
+export interface SimVersionActionInput {
+  readonly bunVersion: string;
+  readonly engineHash: string;
+  readonly fleetImage: FleetImage | null;
+  readonly providerAppExists: boolean;
+  readonly registryRow: SimVersionRow | undefined;
+}
+
+export type SimVersionAction =
+  | { readonly kind: 'create-provider-app'; readonly app: string }
+  | { readonly kind: 'allocate-flycast-ip'; readonly app: string }
+  | { readonly kind: 'run-provider-machine'; readonly app: string; readonly image: string }
+  | { readonly kind: 'upsert-registry-row'; readonly input: UpsertSimVersionInput };
