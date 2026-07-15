@@ -45,6 +45,7 @@ export async function runFastForward(
   let levelUps = 0;
   let activity = options.progress.activity;
   let appendedHead = options.progress.appendedHead;
+  let finalRowTerminal = false;
 
   while (remainingMs > 0) {
     const input = options.buildSimulationInput(activity);
@@ -56,7 +57,14 @@ export async function runFastForward(
     const attempt = await runAttempt(input.activity, input.avatar, { maxDurationMs: ceilingMs });
 
     if (attempt.outcome === 'exceeded-budget') {
-      return { activity, appendedHead, attempts, levelUps, reason: 'budget-exhausted' };
+      return {
+        activity,
+        appendedHead,
+        attempts,
+        finalRowTerminal,
+        levelUps,
+        reason: 'budget-exhausted',
+      };
     }
 
     const lastCheckpoint = attempt.checkpoints.at(-1);
@@ -64,7 +72,14 @@ export async function runFastForward(
     const tailTimeMs = (lastCheckpoint?.time ?? 0) - (lastAppended?.time ?? 0);
 
     if (tailTimeMs > remainingMs) {
-      return { activity, appendedHead, attempts, levelUps, reason: 'budget-exhausted' };
+      return {
+        activity,
+        appendedHead,
+        attempts,
+        finalRowTerminal,
+        levelUps,
+        reason: 'budget-exhausted',
+      };
     }
 
     const tail = attempt.checkpoints.slice(appendedHead);
@@ -84,13 +99,23 @@ export async function runFastForward(
     attempts += 1;
     levelUps += countLevelUps(tail);
     remainingMs -= tailTimeMs;
+
+    // Every submitted tail ends on the attempt's terminal checkpoint, closing this row's stream.
+    finalRowTerminal = true;
     options.onProgress?.({ attempts, levelUps });
 
     if (
       attempt.outcome === 'failed' &&
       input.activity.failureAction === ActivityFailureAction.Abort
     ) {
-      return { activity, appendedHead, attempts, levelUps, reason: 'aborted-on-failure' };
+      return {
+        activity,
+        appendedHead,
+        attempts,
+        finalRowTerminal,
+        levelUps,
+        reason: 'aborted-on-failure',
+      };
     }
 
     if (remainingMs <= 0) {
@@ -109,6 +134,7 @@ export async function runFastForward(
       if (isDefinedError(error) && error.code === 'CONFLICT') {
         activity = error.data.activity;
         appendedHead = error.data.activity.appendedHead;
+        finalRowTerminal = false;
         continue;
       }
 
@@ -117,9 +143,17 @@ export async function runFastForward(
 
     activity = started;
     appendedHead = 0;
+    finalRowTerminal = false;
   }
 
-  return { activity, appendedHead, attempts, levelUps, reason: 'budget-exhausted' };
+  return {
+    activity,
+    appendedHead,
+    attempts,
+    finalRowTerminal,
+    levelUps,
+    reason: 'budget-exhausted',
+  };
 }
 
 function countLevelUps(checkpoints: ReadonlyArray<ActivityCheckpoint>): number {

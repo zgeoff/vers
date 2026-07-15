@@ -136,7 +136,7 @@ async function applyFastForward(
     return;
   }
 
-  if (report.activity.status === 'active' && report.reason !== 'aborted-on-failure') {
+  if (report.activity.status === 'active' && !report.finalRowTerminal) {
     await applyFastForwardAttach(context, report);
   }
 
@@ -151,10 +151,11 @@ async function applyFastForward(
  * Attaches the fast-forward's final row live, chaining onto its confirmed head exactly like a
  * plain attach-live resync would: a fresh, checkpoint-0 simulation only when nothing is confirmed
  * yet, otherwise a simulation reconstructed to the confirmed head so the registered cursor's
- * `previousNextSeed` matches what the engine will actually emit next. `report.activity.status` is
- * the row as fetched before this resync's own attempts ran, so it cannot show that the confirmed
- * head itself already reached a terminal checkpoint — that's read off the reconstruction instead,
- * and skips the attach entirely rather than installing a simulation with nothing left to submit.
+ * `previousNextSeed` matches what the engine will actually emit next. The caller keeps
+ * fast-forward-closed streams out via the report's terminal flag; the reconstruction's own
+ * terminal check below covers the remaining path — a row adopted mid-stream whose confirmed head
+ * already sits on a terminal checkpoint — skipping the attach rather than installing a simulation
+ * with nothing left to submit.
  */
 async function applyFastForwardAttach(
   context: WorkerContext,

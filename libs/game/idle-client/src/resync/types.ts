@@ -29,11 +29,14 @@ export interface FastForwardProgress {
 /**
  * `activity`/`appendedHead` are the final row and confirmed head the fast-forward left off at —
  * whichever continuation was live when the budget ran out or a failure aborted it — so a caller
- * can attach to it directly without a further round trip.
+ * can attach to it directly without a further round trip. `finalRowTerminal` is true when the
+ * fast-forward itself submitted that row's terminal checkpoint: the stream is closed even though
+ * the row's fetched `status` still reads active, so no live attach may follow.
  */
 export interface FastForwardReport extends FastForwardProgress {
   readonly activity: ActivityData;
   readonly appendedHead: number;
+  readonly finalRowTerminal: boolean;
   readonly reason: 'aborted-on-failure' | 'budget-exhausted';
 }
 
