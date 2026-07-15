@@ -13,6 +13,7 @@ export async function avatarCreateHandler(formData: FormData): Promise<AvatarCre
   await requireAuth();
 
   const submission = AvatarCreateFormSchema.safeParse({
+    mode: formData.get('mode') ?? undefined,
     name: formData.get('name'),
   });
 
@@ -20,7 +21,9 @@ export async function avatarCreateHandler(formData: FormData): Promise<AvatarCre
     return { fieldErrors: toFieldErrors(submission.error), status: 'invalid-fields' };
   }
 
-  const [error] = await safe(avatarClient.createAvatar({ name: submission.data.name }));
+  const [error] = await safe(
+    avatarClient.createAvatar({ mode: submission.data.mode, name: submission.data.name }),
+  );
 
   if (error) {
     return {

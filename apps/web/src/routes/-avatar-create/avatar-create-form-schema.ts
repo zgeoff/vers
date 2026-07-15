@@ -1,7 +1,8 @@
-import { AvatarNameSchema } from '@vers/contract-avatar';
+import { AvatarModeSchema, AvatarNameSchema } from '@vers/contract-avatar';
 import * as z from 'zod';
 
 export const AvatarCreateFormSchema = z.object({
+  mode: AvatarModeSchema.default('trade'),
   name: AvatarNameSchema,
 });
 
