@@ -37,18 +37,23 @@ interface CreateHonestActivityFixtureInput {
   readonly buildSnapshot?: { readonly level: number; readonly xp: number };
   readonly chain?: Readonly<Partial<Insertable<ActivityChains>>>;
   readonly duration?: number;
+  readonly rootChain?: Readonly<Selectable<ActivityChains>>;
   readonly seed?: string;
+  readonly startChainIndex?: number;
 }
 
 /**
- * Builds and persists a chain's first activity by running the real engine — never a hand-crafted
- * stream — and hashing its output the same way the append path does, so the stored rows are
+ * Builds and persists an honest activity by running the real engine — never a hand-crafted stream
+ * — and hashing its output the same way the append path does, so the stored rows are
  * byte-identical to what an honest client would have submitted. The engine output is truncated at
  * its first terminal checkpoint: the append path ends an activity's append-ability on the first
  * `completed`/`failed` checkpoint it accepts, so a stored stream past that point is a shape the
  * server can never actually hold, however long a duration the engine ran for. `checkpoints` are
  * the stored rows a tamper test mutates; `engineCheckpoints` is the untouched (truncated) engine
- * output.
+ * output. `rootChain` roots this activity on an already-persisted chain instead of creating a
+ * fresh one — a successor fixture's own way of sharing its predecessor's chain — and defaults
+ * `startChainIndex` to that chain's own `appendedChainIndex`; pass both explicitly for a successor
+ * seeded from a predecessor's tail rather than the chain's current appended anchor.
  */
 export async function createHonestActivityFixture(
   db: Kysely<DB>,
@@ -57,14 +62,17 @@ export async function createHonestActivityFixture(
   const seed = input.seed ?? buildStateFromSeed(faker.number.int());
   const buildSnapshot = input.buildSnapshot ?? { level: 1, xp: 0 };
   const activityID = input.activity?.id ?? `act_${createId()}`;
+  let chain = input.rootChain;
 
-  const chain = await createChainRow(db, {
+  chain ??= await createChainRow(db, {
     appendedNextSeed: seed,
     genesisSeed: seed,
     verifiedNextSeed: seed,
     ...(input.avatarID !== undefined && { avatarId: input.avatarID }),
     ...input.chain,
   });
+
+  const startChainIndex = input.startChainIndex ?? chain.appendedChainIndex;
 
   const simulationInput = buildReplaySimulationInput({
     avatarID: chain.avatarId,
@@ -92,7 +100,7 @@ export async function createHonestActivityFixture(
 
   const checkpoints = buildHonestCheckpointRows(engineCheckpoints, {
     seed,
-    startChainIndex: chain.appendedChainIndex,
+    startChainIndex,
     startHash,
   });
 
@@ -110,7 +118,7 @@ export async function createHonestActivityFixture(
     scopeType: chain.scopeType,
     seed,
     simVersion,
-    startChainIndex: chain.appendedChainIndex,
+    startChainIndex,
     startHash,
   });
 
@@ -149,9 +157,9 @@ function truncateAtFirstTerminal(
 
 /**
  * Reproduces the append path's own hash chain over a fresh engine run: `chainIndex` counts from
- * the activity's own `startChainIndex` (always zero for a fixture's first activity), the
- * entropy-source tag is always `server-key`, and each checkpoint's implicit `seed` is the prior
- * checkpoint's `nextSeed` — every field the real append path would have recomputed identically.
+ * the activity's own `startChainIndex`, the entropy-source tag is always `server-key`, and each
+ * checkpoint's implicit `seed` is the prior checkpoint's `nextSeed` — every field the real append
+ * path would have recomputed identically.
  */
 function buildHonestCheckpointRows(
   engineCheckpoints: ReadonlyArray<ActivityCheckpoint>,

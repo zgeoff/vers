@@ -706,6 +706,295 @@ test('it does not reject a divergence that fails to reproduce on the fresh confi
   expect(cache.get(fixture.activity.id)).toBeUndefined();
 });
 
+test('a user-stopped activity advances the chain verified anchor from its tail, and an honest successor verifies', async () => {
+  await using ctx = await setupTest();
+
+  const predecessor = await createHonestActivityFixture(ctx.db, {
+    activity: { status: 'stopped' },
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const tailCount = predecessor.checkpoints.length - 1;
+  const tail = predecessor.checkpoints[tailCount - 1];
+
+  expect(tail).toBeDefined();
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ appendedHead: tailCount, lastHash: tail?.hash })
+    .where('id', '=', predecessor.activity.id)
+    .execute();
+
+  const deps = {
+    db: ctx.db,
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const cache = createReplayCache();
+
+  const predecessorOutcome = await runReplayIteration(deps, cache);
+
+  expect(predecessorOutcome).toStrictEqual({ kind: 'matched' });
+
+  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
+  const expectedAnchor = {
+    verifiedChainIndex: tail?.payload['chainIndex'] as number,
+    verifiedNextSeed: tail?.payload['nextSeed'] as string,
+  };
+
+  // oxlint-enable typescript/no-unsafe-type-assertion
+
+  const chainAfterPredecessor = await ctx.db
+    .selectFrom('activityChains')
+    .select(['verifiedChainIndex', 'verifiedNextSeed'])
+    .where('avatarId', '=', predecessor.activity.avatarId)
+    .where('scopeId', '=', predecessor.activity.scopeId)
+    .executeTakeFirstOrThrow();
+
+  expect(chainAfterPredecessor).toStrictEqual(expectedAnchor);
+
+  const successor = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    rootChain: predecessor.chain,
+    seed: expectedAnchor.verifiedNextSeed,
+    startChainIndex: expectedAnchor.verifiedChainIndex,
+  });
+
+  const successorOutcome = await runReplayIteration(deps, cache);
+
+  expect(successorOutcome).toStrictEqual({ kind: 'matched' });
+
+  const successorRow = await ctx.db
+    .selectFrom('activities')
+    .select('verifiedHead')
+    .where('id', '=', successor.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(successorRow.verifiedHead).toBe(successor.activity.appendedHead);
+});
+
+test('a capped activity advances the chain verified anchor from its tail, and an honest successor verifies', async () => {
+  await using ctx = await setupTest();
+
+  const predecessor = await createHonestActivityFixture(ctx.db, {
+    activity: { status: 'capped' },
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const tailCount = predecessor.checkpoints.length - 1;
+  const tail = predecessor.checkpoints[tailCount - 1];
+
+  expect(tail).toBeDefined();
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ appendedHead: tailCount, lastHash: tail?.hash })
+    .where('id', '=', predecessor.activity.id)
+    .execute();
+
+  const deps = {
+    db: ctx.db,
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const cache = createReplayCache();
+
+  const predecessorOutcome = await runReplayIteration(deps, cache);
+
+  expect(predecessorOutcome).toStrictEqual({ kind: 'matched' });
+
+  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
+  const expectedAnchor = {
+    verifiedChainIndex: tail?.payload['chainIndex'] as number,
+    verifiedNextSeed: tail?.payload['nextSeed'] as string,
+  };
+
+  // oxlint-enable typescript/no-unsafe-type-assertion
+
+  const chainAfterPredecessor = await ctx.db
+    .selectFrom('activityChains')
+    .select(['verifiedChainIndex', 'verifiedNextSeed'])
+    .where('avatarId', '=', predecessor.activity.avatarId)
+    .where('scopeId', '=', predecessor.activity.scopeId)
+    .executeTakeFirstOrThrow();
+
+  expect(chainAfterPredecessor).toStrictEqual(expectedAnchor);
+
+  const successor = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    rootChain: predecessor.chain,
+    seed: expectedAnchor.verifiedNextSeed,
+    startChainIndex: expectedAnchor.verifiedChainIndex,
+  });
+
+  const successorOutcome = await runReplayIteration(deps, cache);
+
+  expect(successorOutcome).toStrictEqual({ kind: 'matched' });
+
+  const successorRow = await ctx.db
+    .selectFrom('activities')
+    .select('verifiedHead')
+    .where('id', '=', successor.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(successorRow.verifiedHead).toBe(successor.activity.appendedHead);
+});
+
+test('a stream fully verified while still active reconciles the anchor once a successor claims a forward-exited predecessor position', async () => {
+  await using ctx = await setupTest();
+
+  const predecessor = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const tailCount = predecessor.checkpoints.length - 1;
+  const tail = predecessor.checkpoints[tailCount - 1];
+
+  expect(tail).toBeDefined();
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ appendedHead: tailCount, lastHash: tail?.hash })
+    .where('id', '=', predecessor.activity.id)
+    .execute();
+
+  const deps = {
+    db: ctx.db,
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const cache = createReplayCache();
+
+  const verifyOutcome = await runReplayIteration(deps, cache);
+
+  expect(verifyOutcome).toStrictEqual({ kind: 'matched' });
+
+  const chainWhileActive = await ctx.db
+    .selectFrom('activityChains')
+    .select(['verifiedChainIndex', 'verifiedNextSeed'])
+    .where('avatarId', '=', predecessor.activity.avatarId)
+    .where('scopeId', '=', predecessor.activity.scopeId)
+    .executeTakeFirstOrThrow();
+
+  expect(chainWhileActive).toStrictEqual({
+    verifiedChainIndex: predecessor.chain.verifiedChainIndex,
+    verifiedNextSeed: predecessor.chain.verifiedNextSeed,
+  });
+
+  // Fully verified and still active, the stream is no longer a frontier — nothing revisits it.
+  const idleOutcome = await runReplayIteration(deps, cache);
+
+  expect(idleOutcome).toStrictEqual({ kind: 'idle' });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ status: 'stopped' })
+    .where('id', '=', predecessor.activity.id)
+    .execute();
+
+  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
+  const expectedAnchor = {
+    verifiedChainIndex: tail?.payload['chainIndex'] as number,
+    verifiedNextSeed: tail?.payload['nextSeed'] as string,
+  };
+
+  // oxlint-enable typescript/no-unsafe-type-assertion
+
+  const successor = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    rootChain: predecessor.chain,
+    seed: expectedAnchor.verifiedNextSeed,
+    startChainIndex: expectedAnchor.verifiedChainIndex,
+  });
+
+  const successorOutcome = await runReplayIteration(deps, cache);
+
+  expect(successorOutcome).toStrictEqual({ kind: 'matched' });
+
+  const chainAfterReconcile = await ctx.db
+    .selectFrom('activityChains')
+    .select(['verifiedChainIndex', 'verifiedNextSeed'])
+    .where('avatarId', '=', predecessor.activity.avatarId)
+    .where('scopeId', '=', predecessor.activity.scopeId)
+    .executeTakeFirstOrThrow();
+
+  expect(chainAfterReconcile).toStrictEqual(expectedAnchor);
+
+  const successorRow = await ctx.db
+    .selectFrom('activities')
+    .select('verifiedHead')
+    .where('id', '=', successor.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(successorRow.verifiedHead).toBe(successor.activity.appendedHead);
+});
+
+test('a stopped activity whose only checkpoint is Started leaves the anchor untouched, and an honest successor verifies from it', async () => {
+  await using ctx = await setupTest();
+
+  const predecessor = await createHonestActivityFixture(ctx.db, {
+    activity: { status: 'stopped' },
+    duration: 1,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  expect(predecessor.checkpoints).toHaveLength(1);
+  expect(predecessor.checkpoints[0]?.payload['type']).toBe('started');
+
+  const deps = {
+    db: ctx.db,
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const cache = createReplayCache();
+
+  const predecessorOutcome = await runReplayIteration(deps, cache);
+
+  expect(predecessorOutcome).toStrictEqual({ kind: 'matched' });
+
+  const chainAfterPredecessor = await ctx.db
+    .selectFrom('activityChains')
+    .select(['verifiedChainIndex', 'verifiedNextSeed'])
+    .where('avatarId', '=', predecessor.activity.avatarId)
+    .where('scopeId', '=', predecessor.activity.scopeId)
+    .executeTakeFirstOrThrow();
+
+  expect(chainAfterPredecessor).toStrictEqual({
+    verifiedChainIndex: predecessor.chain.verifiedChainIndex,
+    verifiedNextSeed: predecessor.chain.verifiedNextSeed,
+  });
+
+  const successor = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    rootChain: predecessor.chain,
+    seed: predecessor.chain.verifiedNextSeed,
+    startChainIndex: predecessor.chain.verifiedChainIndex,
+  });
+
+  const successorOutcome = await runReplayIteration(deps, cache);
+
+  expect(successorOutcome).toStrictEqual({ kind: 'matched' });
+
+  const successorRow = await ctx.db
+    .selectFrom('activities')
+    .select('verifiedHead')
+    .where('id', '=', successor.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(successorRow.verifiedHead).toBe(successor.activity.appendedHead);
+});
+
 function buildSilentLogger() {
   return pino({ enabled: false });
 }

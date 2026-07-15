@@ -44,3 +44,38 @@ test('it persists a stream whose stored hashes byte-match a fresh recompute', as
 
   expect(storedRows).toHaveLength(fixture.checkpoints.length);
 });
+
+test('it roots a successor on an already-persisted chain instead of creating a new one', async () => {
+  await using ctx = await createTestDB();
+
+  const predecessor = await createHonestActivityFixture(ctx.db, {
+    activity: { status: 'stopped' },
+    duration: 80_000,
+  });
+
+  const tail = predecessor.checkpoints.at(-1);
+
+  expect(tail).toBeDefined();
+
+  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
+  const successor = await createHonestActivityFixture(ctx.db, {
+    rootChain: predecessor.chain,
+    seed: tail?.payload['nextSeed'] as string,
+    startChainIndex: tail?.payload['chainIndex'] as number,
+  });
+
+  expect(successor.activity.startChainIndex).toBe(tail?.payload['chainIndex'] as number);
+  expect(successor.activity.seed).toBe(tail?.payload['nextSeed'] as string);
+
+  // oxlint-enable typescript/no-unsafe-type-assertion
+
+  expect(successor.activity.avatarId).toBe(predecessor.activity.avatarId);
+
+  const chains = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', predecessor.activity.avatarId)
+    .execute();
+
+  expect(chains).toHaveLength(1);
+});
