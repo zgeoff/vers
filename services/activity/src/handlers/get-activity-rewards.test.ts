@@ -140,6 +140,64 @@ test('it orders multiple slots within a chain position by ordinal', async () => 
   expect(result.items.map((item) => item.item.baseID)).toStrictEqual(['base_first', 'base_second']);
 });
 
+test('it returns only rows above the afterChainIndex cursor', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  await ctx.db
+    .insertInto('avatarItems')
+    .values([
+      {
+        affixes: [],
+        avatarId: avatar.id,
+        baseId: 'base_first',
+        chainIndex: started.startChainIndex + 1,
+        contentVersion: 'v1',
+        keyVersion: 1,
+        ordinal: 0,
+        rarityId: 'common',
+        scopeId: 'node_1',
+        scopeType: 'world_map_node',
+      },
+      {
+        affixes: [],
+        avatarId: avatar.id,
+        baseId: 'base_second',
+        chainIndex: started.startChainIndex + 2,
+        contentVersion: 'v1',
+        keyVersion: 1,
+        ordinal: 0,
+        rarityId: 'common',
+        scopeId: 'node_1',
+        scopeType: 'world_map_node',
+      },
+    ])
+    .execute();
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ verifiedAt: new Date(), verifiedHead: 2 })
+    .where('id', '=', started.id)
+    .execute();
+
+  const result = await client.getActivityRewards({
+    activityID: started.id,
+    afterChainIndex: started.startChainIndex + 1,
+  });
+
+  expect(result.items.map((item) => item.chainIndex)).toStrictEqual([started.startChainIndex + 2]);
+});
+
 test('it returns the identical response on a repeated call', async () => {
   await using ctx = await setupTest();
 

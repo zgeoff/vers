@@ -4,6 +4,7 @@ import { ActivityDataSchema } from './activity-data-schema';
 import { ActivityStatusSchema } from './activity-status-schema';
 import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
+import { ScopeIdentifierSchema } from './scope-identifier-schema';
 
 const CappedDataSchema = z.object({ appendedHead: z.int() });
 const CheckpointInvalidDataSchema = z.object({ reason: z.string() });
@@ -25,9 +26,9 @@ const RewardItemSchema = z.object({
 });
 
 const RevealedRewardSchema = z.object({
-  chainIndex: z.int(),
+  chainIndex: z.int().min(0),
   item: RewardItemSchema,
-  ordinal: z.int(),
+  ordinal: z.int().min(0),
 });
 
 /**
@@ -41,7 +42,7 @@ export const activityContract = {
       path: '/activities/{activityID}/rewards',
       summary: "Get an activity's revealed reward-slot contents",
     })
-    .input(z.object({ activityID: z.string() }))
+    .input(z.object({ activityID: z.string(), afterChainIndex: z.int().min(0).optional() }))
     .output(z.object({ items: z.array(RevealedRewardSchema), verifiedHead: z.int() }))
     .errors(
       defineErrors({
@@ -103,8 +104,8 @@ export const activityContract = {
     .input(
       z.object({
         avatarID: z.string(),
-        scopeID: z.string(),
-        scopeType: z.string(),
+        scopeID: ScopeIdentifierSchema,
+        scopeType: ScopeIdentifierSchema,
         simVersion: z.string().optional(),
       }),
     )

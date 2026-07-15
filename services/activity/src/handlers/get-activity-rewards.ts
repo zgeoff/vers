@@ -11,7 +11,7 @@ interface GetActivityRewardsOpts {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
-  readonly input: { readonly activityID: string };
+  readonly input: { readonly activityID: string; readonly afterChainIndex?: number };
 }
 
 interface RewardItem {
@@ -39,6 +39,8 @@ interface GetActivityRewardsResult {
  * coordinates at or below the activity's verified anchor, ordered by chain position then slot
  * ordinal. Mint and anchor-advance commit in the same transaction, so every coordinate this range
  * covers is already minted — an unverified tail simply isn't in range yet, never a partial read.
+ * `afterChainIndex` is a keyset cursor: a client that already holds rows through some chain index
+ * passes it to read only what advanced since, never refetching the full history.
  */
 export async function getActivityRewards(
   db: Kysely<DB>,
@@ -66,13 +68,15 @@ export async function getActivityRewards(
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
+  const minChainIndex = Math.max(activity.startChainIndex, opts.input.afterChainIndex ?? -1);
+
   const rows = await db
     .selectFrom('avatarItems')
     .select(['affixes', 'baseId', 'chainIndex', 'contentVersion', 'ordinal', 'rarityId'])
     .where('avatarId', '=', activity.avatarId)
     .where('scopeType', '=', activity.scopeType)
     .where('scopeId', '=', activity.scopeId)
-    .where('chainIndex', '>', activity.startChainIndex)
+    .where('chainIndex', '>', minChainIndex)
     .where('chainIndex', '<=', activity.startChainIndex + activity.verifiedHead)
     .orderBy('chainIndex', 'asc')
     .orderBy('ordinal', 'asc')
