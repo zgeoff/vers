@@ -1,5 +1,6 @@
 import type { DB } from '@vers/db';
 import type { SimulationDriver } from '@vers/idle-core';
+import { buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
 import type { Transaction } from 'kysely';
 import invariant from 'tiny-invariant';
@@ -8,7 +9,6 @@ import { parkActivity } from '../dispatch/park-activity';
 import { runReplaySegment } from '../dispatch/run-replay-segment';
 import { rollRewardItems } from '../mint/roll-reward-items';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
-import { buildReplaySimulationInput } from '../replay/build-replay-simulation-input';
 import { buildSegmentDuration } from '../replay/build-segment-duration';
 import { compareReplaySegment } from '../replay/compare-replay-segment';
 import type { ReplayCache } from '../replay/create-replay-cache';
@@ -375,13 +375,13 @@ function pickParkMessage(reason: 'durationCapExceeded' | 'expired' | 'unknownVer
 }
 
 function buildFreshDriver(segment: Readonly<ReplaySegment>): SimulationDriver {
-  const input = buildReplaySimulationInput(segment.activity);
+  const input = buildSimulationInput(segment.activity);
 
   return createSimulationDriver(input.activity, input.avatar);
 }
 
 function buildCrossVersionJob(segment: Readonly<ReplaySegment>) {
-  const input = buildReplaySimulationInput(segment.activity);
+  const input = buildSimulationInput(segment.activity);
   const stopAtState = findStopAtState(segment.checkpoints);
 
   const duration = buildSegmentDuration(

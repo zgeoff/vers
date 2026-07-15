@@ -4,9 +4,9 @@ import { buildCheckpointHash, buildStartHash } from '@vers/contract-activity';
 import type { Activities, ActivityChains, DB, Json } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
+import { buildSimulationInput } from '@vers/idle-core';
 import { runSimulation } from '@vers/idle-core/replay';
 import type { Insertable, Kysely, Selectable } from 'kysely';
-import { buildReplaySimulationInput } from '../replay/build-replay-simulation-input';
 import { TERMINAL_CHECKPOINT_TYPES } from '../replay/types';
 import { createActivityRow } from './create-activity-row';
 import { createChainRow } from './create-chain-row';
@@ -74,7 +74,7 @@ export async function createHonestActivityFixture(
 
   const startChainIndex = input.startChainIndex ?? chain.appendedChainIndex;
 
-  const simulationInput = buildReplaySimulationInput({
+  const simulationInput = buildSimulationInput({
     avatarID: chain.avatarId,
     buildSnapshot,
     id: activityID,

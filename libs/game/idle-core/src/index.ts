@@ -1,3 +1,9 @@
+export type {
+  BuildSimulationInputOptions,
+  SimulationInputSource,
+} from './core/build-simulation-input';
+
+export { buildSimulationInput } from './core/build-simulation-input';
 export { createSimulation } from './core/create-simulation';
 export { runAttempt } from './core/run-attempt';
 export { runSimulation } from './core/run-simulation';
