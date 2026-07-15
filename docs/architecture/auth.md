@@ -49,12 +49,13 @@ expires after 5 minutes; `consumePendingTransaction` rejects a request whose act
 target does not match the stored row.
 
 The transaction token is an RS256 JWT minted and verified only inside the edge process
-(`step-up-transaction-token.ts`) — proof a code check passed, redeemable once by the mutation it
-names. It carries `action`, `target`, `sessionID`, and a `jti`, lives 5 minutes, and signs against a
-per-process in-memory keypair, since it never leaves the process that issued it. Single use is
-enforced by the `consumed_transaction_tokens` ledger: `consumeTransactionToken` records the `jti`,
-and a token whose `jti` is already recorded is rejected. `checkStepUp` also matches the token's
-`sessionID` before consuming it, so a token minted under one session cannot redeem under another.
+(`create-step-up-transaction-token.ts`) — proof a code check passed, redeemable once by the mutation
+it names. It carries `action`, `target`, `sessionID`, and a `jti`, lives 5 minutes, and signs
+against a per-process in-memory keypair, since it never leaves the process that issued it. Single
+use is enforced by the `consumed_transaction_tokens` ledger: `consumeTransactionToken` records the
+`jti`, and a token whose `jti` is already recorded is rejected. `checkStepUp` also matches the
+token's `sessionID` before consuming it, so a token minted under one session cannot redeem under
+another.
 
 ## TOTP verification
 
