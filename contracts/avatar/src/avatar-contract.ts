@@ -1,6 +1,7 @@
 import { authedRoute, defineErrors } from '@vers/contract-base';
 import * as z from 'zod';
 import { AvatarDataSchema } from './avatar-data-schema';
+import { AvatarModeSchema } from './avatar-mode-schema';
 import { AvatarNameSchema } from './avatar-name-schema';
 
 /**
@@ -9,7 +10,7 @@ import { AvatarNameSchema } from './avatar-name-schema';
 export const avatarContract = {
   createAvatar: authedRoute
     .route({ method: 'POST', path: '/avatars', summary: 'Create an avatar for the caller' })
-    .input(z.object({ name: AvatarNameSchema }))
+    .input(z.object({ mode: AvatarModeSchema.default('trade'), name: AvatarNameSchema }))
     .output(AvatarDataSchema)
     .errors(
       defineErrors({
