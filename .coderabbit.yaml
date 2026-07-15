@@ -28,6 +28,10 @@ reviews:
         labels, canonical encodings, expected draw values). Never suggest replacing
         such a literal with an import of the constant it verifies — if the constant
         changes, the test must fail.
+        expect(...).rejects/.resolves assertion chains are deliberately not
+        awaited: Bun's matcher types declare them synchronous, per the AGENTS.md
+        testing rules. Only toResolve()/toReject() return promises and are
+        awaited. Never flag an unawaited .rejects/.resolves chain.
     - path: 'AGENTS.md'
       instructions: |
         AGENTS.md is generated from agents/shared.md and agents/project.md and

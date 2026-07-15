@@ -91,56 +91,63 @@ export async function startActivity(
 
   const id = `act_${createId()}`;
   const genesisSeed = createGenesisSeed();
-
-  const chain = await deps.db
-    .insertInto('activityChains')
-    .values({
-      appendedNextSeed: genesisSeed,
-      avatarId: opts.input.avatarID,
-      genesisSeed,
-      scopeId: opts.input.scopeID,
-      scopeType: opts.input.scopeType,
-      verifiedNextSeed: genesisSeed,
-    })
-    .onConflict((oc) =>
-      oc
-        .columns(['avatarId', 'scopeType', 'scopeId'])
-        .doUpdateSet({ genesisSeed: (eb) => eb.ref('activityChains.genesisSeed') }),
-    )
-    .returning(['appendedNextSeed', 'appendedChainIndex'])
-    .executeTakeFirstOrThrow();
-
-  const seed = chain.appendedNextSeed;
   const buildSnapshot: BuildSnapshot = { level: avatar.level, xp: avatar.xp };
 
-  const startHash = buildStartHash({
-    activityID: id,
-    contentVersion: deps.contentVersion,
-    keyVersion: deps.keyVersion,
-    seed,
-    simVersion,
-  });
-
   try {
-    const row = await deps.db
-      .insertInto('activities')
-      .values({
-        avatarId: opts.input.avatarID,
-        buildSnapshot,
+    // One transaction, chain row first: the upsert's write lock is held until commit, so a
+    // forward exit advancing this chain's anchor either commits before the anchor is read here or
+    // waits behind it — a new activity always roots at the anchor current at insert time. Every
+    // writer that touches both rows acquires the chain row before the activity row, so no
+    // interleaving admits a lock cycle.
+    const row = await deps.db.transaction().execute(async (trx) => {
+      const chain = await trx
+        .insertInto('activityChains')
+        .values({
+          appendedNextSeed: genesisSeed,
+          avatarId: opts.input.avatarID,
+          genesisSeed,
+          scopeId: opts.input.scopeID,
+          scopeType: opts.input.scopeType,
+          verifiedNextSeed: genesisSeed,
+        })
+        .onConflict((oc) =>
+          oc
+            .columns(['avatarId', 'scopeType', 'scopeId'])
+            .doUpdateSet({ genesisSeed: (eb) => eb.ref('activityChains.genesisSeed') }),
+        )
+        .returning(['appendedNextSeed', 'appendedChainIndex'])
+        .executeTakeFirstOrThrow();
+
+      const seed = chain.appendedNextSeed;
+
+      const startHash = buildStartHash({
+        activityID: id,
         contentVersion: deps.contentVersion,
-        id,
         keyVersion: deps.keyVersion,
-        lastHash: startHash,
-        scopeId: opts.input.scopeID,
-        scopeType: opts.input.scopeType,
         seed,
         simVersion,
-        startChainIndex: chain.appendedChainIndex,
-        startHash,
-        writerSessionId: opts.context.actingSessionId,
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
+      });
+
+      return trx
+        .insertInto('activities')
+        .values({
+          avatarId: opts.input.avatarID,
+          buildSnapshot,
+          contentVersion: deps.contentVersion,
+          id,
+          keyVersion: deps.keyVersion,
+          lastHash: startHash,
+          scopeId: opts.input.scopeID,
+          scopeType: opts.input.scopeType,
+          seed,
+          simVersion,
+          startChainIndex: chain.appendedChainIndex,
+          startHash,
+          writerSessionId: opts.context.actingSessionId,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+    });
 
     return toActivityData(row);
   } catch (error: unknown) {

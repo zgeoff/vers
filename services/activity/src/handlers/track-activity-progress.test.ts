@@ -476,6 +476,56 @@ test('it advances the chain anchor to the terminal checkpoint on a failed batch'
   expect(chain.appendedChainIndex).toBe(terminal.payload.chainIndex);
 });
 
+test('it advances the chain anchor when the terminal segment consumed no entropy', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  // A checkpoint's seed is its own segment's origin, so a terminal whose segment rolled nothing
+  // carries nextSeed equal to seed while earlier checkpoints in the stream consumed entropy.
+  const restingSeed = 'aaaabbbbccccdddd';
+
+  const batch = createMockCheckpointBatch({
+    count: 2,
+    finalPayloadOverrides: {
+      nextSeed: restingSeed,
+      rewards: { xp: 100 },
+      seed: restingSeed,
+      type: 'completed',
+    },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  const terminal = batch[1]!;
+
+  const chain = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(chain.appendedNextSeed).toBe(restingSeed);
+  expect(chain.appendedChainIndex).toBe(terminal.payload.chainIndex);
+});
+
 test('it continues the next activity on the same node from the previous terminal checkpoint', async () => {
   await using ctx = await setupTest();
 
@@ -617,7 +667,78 @@ test('it rejects a chainIndex that is not startChainIndex plus version with CHEC
   });
 });
 
-test('it advances the chain anchor exactly once across a duplicate terminal submission', async () => {
+test('it returns the settled head when a terminal batch is resubmitted unchanged', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  const firstResult = await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  expect(firstResult).toStrictEqual({ appendedHead: 1 });
+
+  const chainAfterFirst = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  const resubmitResult = await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  expect(resubmitResult).toStrictEqual({ appendedHead: 1 });
+
+  const chainAfterSecond = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(chainAfterSecond).toStrictEqual(chainAfterFirst);
+
+  const updatedAvatar = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updatedAvatar.xp).toBe(150);
+
+  const checkpoints = await ctx.db
+    .selectFrom('activityCheckpoints')
+    .selectAll()
+    .where('activityId', '=', started.id)
+    .execute();
+
+  expect(checkpoints).toHaveLength(1);
+});
+
+test('it rejects a non-matching batch against a settled activity as terminal', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -643,38 +764,24 @@ test('it advances the chain anchor exactly once across a duplicate terminal subm
     expectedHead: 0,
   });
 
-  const chainAfterFirst = await ctx.db
-    .selectFrom('activityChains')
-    .selectAll()
-    .where('avatarId', '=', avatar.id)
-    .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
-    .executeTakeFirstOrThrow();
+  const tampered = [
+    { ...batch[0]!, payload: { ...batch[0]!.payload, time: batch[0]!.payload.time + 1 } },
+  ];
 
   expect(
     client.trackActivityProgress({
       activityID: started.id,
-      checkpoints: batch,
+      checkpoints: tampered,
       expectedHead: 0,
     }),
   ).rejects.toMatchObject({ code: 'ACTIVITY_TERMINAL', data: { status: 'stopped' } });
-
-  const chainAfterSecond = await ctx.db
-    .selectFrom('activityChains')
-    .selectAll()
-    .where('avatarId', '=', avatar.id)
-    .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
-    .executeTakeFirstOrThrow();
-
-  expect(chainAfterSecond).toStrictEqual(chainAfterFirst);
 });
 
-test('it does not double-apply xp on a duplicate terminal submission', async () => {
+test('it returns the settled head when a landed batch is resubmitted after a user stop', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
-  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -684,11 +791,7 @@ test('it does not double-apply xp on a duplicate terminal submission', async () 
     scopeType: 'world_map_node',
   });
 
-  const batch = createMockCheckpointBatch({
-    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
-    startPrevHash: started.startHash,
-    startVersion: 1,
-  });
+  const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
 
   await client.trackActivityProgress({
     activityID: started.id,
@@ -696,21 +799,15 @@ test('it does not double-apply xp on a duplicate terminal submission', async () 
     expectedHead: 0,
   });
 
-  expect(
-    client.trackActivityProgress({
-      activityID: started.id,
-      checkpoints: batch,
-      expectedHead: 0,
-    }),
-  ).rejects.toMatchObject({ code: 'ACTIVITY_TERMINAL', data: { status: 'stopped' } });
+  await client.stopActivity({ avatarID: avatar.id });
 
-  const updated = await ctx.db
-    .selectFrom('avatars')
-    .selectAll()
-    .where('id', '=', avatar.id)
-    .executeTakeFirstOrThrow();
+  const resubmitResult = await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
 
-  expect(updated.xp).toBe(150);
+  expect(resubmitResult).toStrictEqual({ appendedHead: 1 });
 });
 
 test('it rejects an append from a displaced writer session with SESSION_EVICTED', async () => {
@@ -1163,7 +1260,7 @@ test('it consumes no budget and leaves the meter anchor untouched on a cap trip'
   expect(updated.simMeteredAt).toStrictEqual(avatar.simMeteredAt);
 });
 
-test('it leaves the chain anchor untouched on a cap trip', async () => {
+test('it leaves the anchor unchanged when a cap trips before anything appended', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -1209,6 +1306,65 @@ test('it leaves the chain anchor untouched on a cap trip', async () => {
     .executeTakeFirstOrThrow();
 
   expect(chainAfter).toStrictEqual(chainBefore);
+});
+
+test('it advances the chain anchor to the pre-batch tail on a cap trip', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    simBudgetMs: 10_000,
+    simMeteredAt: new Date(),
+    userId: viewer.user.id,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const firstBatch = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 5000,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: firstBatch,
+    expectedHead: 0,
+  });
+
+  const overCap = createMockCheckpointBatch({
+    startPrevHash: firstBatch[0]?.hash ?? '',
+    startVersion: 2,
+    timeStepMs: 3_600_000,
+  });
+
+  expect(
+    client.trackActivityProgress({
+      activityID: started.id,
+      checkpoints: overCap,
+      expectedHead: 1,
+    }),
+  ).rejects.toMatchObject({ code: 'ACTIVITY_CAPPED' });
+
+  const tail = firstBatch[0]!;
+
+  const chainAfter = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(chainAfter.appendedNextSeed).toBe(tail.payload.nextSeed);
+  expect(chainAfter.appendedChainIndex).toBe(tail.payload.chainIndex);
 });
 
 test('it rejects a batch whose time regresses within the batch with CHECKPOINT_INVALID', async () => {

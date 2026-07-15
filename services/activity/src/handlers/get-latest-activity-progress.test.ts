@@ -1,6 +1,5 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
-import type { Isolation } from '@vers/service-test-utils/bun';
 import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
@@ -8,8 +7,13 @@ import { createActivityService } from '../create-activity-service';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
-async function setupTest(options: { readonly isolation?: Isolation } = {}) {
-  const db = await createTestDB(options);
+/**
+ * Several tests here drive startActivity, stopActivity, or trackActivityProgress, whose own
+ * `db.transaction()` can't nest under the default rollback-on-dispose isolation — this suite runs
+ * against a real, committed schema clone instead.
+ */
+async function setupTest() {
+  const db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
 
@@ -65,10 +69,8 @@ test('it returns the server clock beside the resume cursors', async () => {
   expect(progress.serverTime.getTime()).toBeGreaterThanOrEqual(started.startedAt.getTime());
 });
 
-// schema isolation: this exercises trackActivityProgress, whose own db.transaction() can't
-// nest under the default rollback-on-dispose isolation.
 test('it returns the activity anchored to its verified checkpoint once verifiedHead advances', async () => {
-  await using ctx = await setupTest({ isolation: 'schema' });
+  await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });

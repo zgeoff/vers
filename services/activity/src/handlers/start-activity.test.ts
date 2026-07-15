@@ -1,6 +1,5 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
-import type { Isolation } from '@vers/service-test-utils/bun';
 import {
   createAnonymousViewer,
   createTestDB,
@@ -8,12 +7,18 @@ import {
   createViewer,
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
-import { buildRPCTestClient } from '@vers/test-utils';
+import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import { sql } from 'kysely';
 import { createActivityService } from '../create-activity-service';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 
-async function setupTest(options: { readonly isolation?: Isolation } = {}) {
-  const db = await createTestDB(options);
+/**
+ * `startActivity` opens its own `db.transaction()` to root the new activity under the chain-row
+ * lock, which can't nest under the default rollback-on-dispose isolation — this suite runs
+ * against a real, committed schema clone instead.
+ */
+async function setupTest() {
+  const db = await createTestDB({ isolation: 'schema' });
   const service = await createActivityService({ db: db.db });
 
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
@@ -162,11 +167,8 @@ test('it reads the existing chain anchor for a second activity on an already-cha
   expect(second.startChainIndex).toBe(0);
 });
 
-// schema isolation: the handler re-queries for the conflicting activity after catching the
-// unique violation, and a prior statement's constraint violation aborts the rest of a shared
-// test transaction under the default isolation.
 test('it rejects a second start with CONFLICT carrying the already-active activity', async () => {
-  await using ctx = await setupTest({ isolation: 'schema' });
+  await using ctx = await setupTest();
 
   await createSimVersionRow(ctx.db);
 
@@ -413,4 +415,74 @@ test('it rejects an active stamped version past its retention deadline with SIM_
     code: 'SIM_VERSION_EXPIRED',
     data: { currentSimVersion: current.engineHash },
   });
+});
+
+test('it roots a new activity at the anchor a concurrent forward exit commits', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  await client.stopActivity({ avatarID: avatar.id });
+
+  expect(first.status).toBeDefined();
+
+  const anchorSeed = '0f'.repeat(16);
+
+  // A transaction holding the chain-row lock with an uncommitted anchor advance stands in for a
+  // forward exit still in flight. The advance commits only once the concurrent start is observed
+  // queued behind the lock, so the blocking interleaving is what actually runs — and a start that
+  // roots without ever taking the lock times the wait out and fails the test.
+  const held = await ctx.db.transaction().execute(async (trx) => {
+    await trx
+      .updateTable('activityChains')
+      .set({ appendedChainIndex: 7, appendedNextSeed: anchorSeed })
+      .where('avatarId', '=', avatar.id)
+      .where('scopeType', '=', 'world_map_node')
+      .where('scopeId', '=', 'node_1')
+      .execute();
+
+    const start = client.startActivity({
+      avatarID: avatar.id,
+      scopeID: 'node_1',
+      scopeType: 'world_map_node',
+    });
+
+    // pg_stat_activity is snapshot-cached for the duration of the polling transaction, so the
+    // wait reads pg_locks, which reports the lock manager live.
+    await waitFor(
+      async () => {
+        const blocked = await sql<{ waiting: number }>`
+          select count(*)::int as waiting from pg_locks where not granted
+        `.execute(trx);
+
+        expect(blocked.rows[0]?.waiting).toBeGreaterThan(0);
+      },
+      { intervalMs: 10, timeoutMs: 3000 },
+    );
+
+    return { pending: start };
+  });
+
+  const started = await held.pending;
+
+  expect(started.seed).toBe(anchorSeed);
+
+  const row = await ctx.db
+    .selectFrom('activities')
+    .select('startChainIndex')
+    .where('id', '=', started.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.startChainIndex).toBe(7);
 });

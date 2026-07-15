@@ -11,8 +11,12 @@ import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 
+/**
+ * These tests drive startActivity, whose own `db.transaction()` can't nest under the default
+ * rollback-on-dispose isolation — this suite runs against a real, committed schema clone instead.
+ */
 async function setupTest() {
-  const db = await createTestDB();
+  const db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
 
