@@ -10,6 +10,7 @@ export function createMockStartedCheckpoint(
   return {
     nextSeed: seed,
     rewards: { xp: 0 },
+    rewardSlots: [],
     seed,
     time: 0,
     type: ActivityCheckpointType.Started,

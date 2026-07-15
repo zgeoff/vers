@@ -41,6 +41,15 @@ export interface ActivityLevelUp {
   readonly to: number;
 }
 
+/**
+ * A rolled-reward coordinate slot earned within a checkpoint. `ordinal` is 0-based within this
+ * checkpoint's own slot list, in canonical kill order — not a running total across the activity.
+ */
+export interface RewardSlot {
+  readonly context: { readonly nodeTier: number };
+  readonly ordinal: number;
+}
+
 export interface ActivitySnapshot {
   readonly currentWave: WaveSnapshot | null;
   readonly elapsed: number;
@@ -85,6 +94,7 @@ export type ActivityCheckpointGenerator = AsyncGenerator<
 interface IActivityCheckpoint {
   readonly levelUp?: ActivityLevelUp;
   readonly rewards: ActivityRewards;
+  readonly rewardSlots: ReadonlyArray<RewardSlot>;
   readonly time: number;
   readonly type: ActivityCheckpointType;
 }

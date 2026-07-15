@@ -28,6 +28,7 @@ test('it runs a simulation to completion with the default configuration', async 
       "checkpoints": [
         {
           "nextSeed": "63298078c2177576c07e0321584c2a05",
+          "rewardSlots": [],
           "rewards": {
             "xp": 0,
           },
@@ -37,6 +38,44 @@ test('it runs a simulation to completion with the default configuration', async 
         },
         {
           "nextSeed": "20c0dac3c8da96ee1a82332c38c2e8ae",
+          "rewardSlots": [
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 0,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 1,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 2,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 3,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 4,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 5,
+            },
+          ],
           "rewards": {
             "xp": 60,
           },
@@ -49,6 +88,44 @@ test('it runs a simulation to completion with the default configuration', async 
             "to": 2,
           },
           "nextSeed": "651b7bac24e8282ac2345557ee733dc5",
+          "rewardSlots": [
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 0,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 1,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 2,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 3,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 4,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 5,
+            },
+          ],
           "rewards": {
             "xp": 60,
           },
@@ -57,6 +134,26 @@ test('it runs a simulation to completion with the default configuration', async 
         },
         {
           "nextSeed": "183a8b662f0c22f40b637a9f83c410ca",
+          "rewardSlots": [
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 0,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 1,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 2,
+            },
+          ],
           "rewards": {
             "xp": 30,
           },
@@ -65,6 +162,32 @@ test('it runs a simulation to completion with the default configuration', async 
         },
         {
           "nextSeed": "0d1c5f2ed8a45260129c426ab502cbb3",
+          "rewardSlots": [
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 0,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 1,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 2,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 3,
+            },
+          ],
           "rewards": {
             "xp": 40,
           },
@@ -73,6 +196,7 @@ test('it runs a simulation to completion with the default configuration', async 
         },
         {
           "nextSeed": "0d1c5f2ed8a45260129c426ab502cbb3",
+          "rewardSlots": [],
           "rewards": {
             "xp": 215,
           },
@@ -81,6 +205,7 @@ test('it runs a simulation to completion with the default configuration', async 
         },
         {
           "nextSeed": "664be6d955fc249bfe89a1dbcdfd99cc",
+          "rewardSlots": [],
           "rewards": {
             "xp": 0,
           },
@@ -90,6 +215,32 @@ test('it runs a simulation to completion with the default configuration', async 
         },
         {
           "nextSeed": "dd5a3353a7f6c0c6afcb296684176982",
+          "rewardSlots": [
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 0,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 1,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 2,
+            },
+            {
+              "context": {
+                "nodeTier": 1,
+              },
+              "ordinal": 3,
+            },
+          ],
           "rewards": {
             "xp": 40,
           },
@@ -153,6 +304,7 @@ test('it stops at the specified rng state if provided', async () => {
   expect(finalCheckpoint).toStrictEqual({
     nextSeed: config.stopAtState,
     rewards: expect.toBeObject(),
+    rewardSlots: expect.toBeArray(),
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Progress,
   });
@@ -188,6 +340,7 @@ test('it aborts on failure if failure action is set to abort', async () => {
   expect(lastCheckpoint).toStrictEqual({
     nextSeed: expect.toBeString(),
     rewards: { xp: 0 },
+    rewardSlots: [],
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Failed,
   });

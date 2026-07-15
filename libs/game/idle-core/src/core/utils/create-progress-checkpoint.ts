@@ -5,6 +5,7 @@ import type {
   ActivityProgressCheckpoint,
   ActivityRewards,
   Avatar,
+  RewardSlot,
   SimulationContext,
 } from '../../types';
 import { ActivityCheckpointType } from '../../types';
@@ -19,6 +20,7 @@ export function createProgressCheckpoint(
   avatar: Avatar,
   ctx: SimulationContext,
   rewards: ActivityRewards,
+  rewardSlots: ReadonlyArray<RewardSlot>,
 ): ActivityProgressCheckpoint {
   const totalXPAfter = avatar.xp + activity.rewards.xp;
   const totalXPBefore = totalXPAfter - rewards.xp;
@@ -31,6 +33,7 @@ export function createProgressCheckpoint(
   return {
     nextSeed: ctx.rng.getState(),
     rewards,
+    rewardSlots,
     time: activity.elapsed,
     type: ActivityCheckpointType.Progress,
     ...(levelUp && { levelUp }),

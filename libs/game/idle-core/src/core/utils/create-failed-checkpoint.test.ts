@@ -21,6 +21,7 @@ test('it creates a failed checkpoint with no loss at zero accrued xp', () => {
   expect(checkpoint).toStrictEqual({
     nextSeed: expect.toBeString(),
     rewards: { xp: 0 },
+    rewardSlots: [],
     time: 2500,
     type: ActivityCheckpointType.Failed,
   });

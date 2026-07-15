@@ -8,6 +8,7 @@ test('it creates a started checkpoint with expected properties', () => {
   expect(checkpoint).toStrictEqual({
     nextSeed: expect.toBeString(),
     rewards: { xp: 0 },
+    rewardSlots: [],
     seed: expect.toBeString(),
     time: 0,
     type: ActivityCheckpointType.Started,
@@ -22,6 +23,7 @@ test('it creates a started checkpoint with custom properties', () => {
   expect(checkpoint).toStrictEqual({
     nextSeed: 'seed_9',
     rewards: { xp: 0 },
+    rewardSlots: [],
     seed: 'seed_0',
     time: 5,
     type: ActivityCheckpointType.Started,

@@ -117,6 +117,7 @@ test('it runs an activity and returns checkpoints', async () => {
   expect(firstCheckpoint).toStrictEqual({
     nextSeed: expect.toBeString(),
     rewards: { xp: 0 },
+    rewardSlots: [],
     seed: expect.toBeString(),
     time: 0,
     type: ActivityCheckpointType.Started,
@@ -127,6 +128,7 @@ test('it runs an activity and returns checkpoints', async () => {
   expect(secondCheckpoint).toStrictEqual({
     nextSeed: expect.toBeString(),
     rewards: expect.toBeObject(),
+    rewardSlots: expect.toBeArray(),
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Progress,
   });

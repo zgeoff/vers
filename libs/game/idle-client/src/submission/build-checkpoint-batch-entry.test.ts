@@ -72,6 +72,21 @@ test('it carries the checkpoint open-record fields into the payload', () => {
   expect(entry.payload['rewards']).toStrictEqual({ xp: 15 });
 });
 
+test('it carries the checkpoint reward slots into the payload', () => {
+  const rewardSlots = [{ context: { nodeTier: 2 }, ordinal: 0 }];
+
+  const entry = buildCheckpointBatchEntry({
+    checkpoint: createMockProgressCheckpoint({ rewardSlots }),
+    entropySource: 'server-key',
+    prevHash: 'hash_0',
+    previousNextSeed: 'seed_0',
+    startChainIndex: 0,
+    version: 2,
+  });
+
+  expect(entry.payload['rewardSlots']).toStrictEqual(rewardSlots);
+});
+
 test('it computes the entry hash as the canonical hash of its checkpoint fields', () => {
   const entry = buildCheckpointBatchEntry({
     checkpoint: createMockProgressCheckpoint({ nextSeed: 'seed_1', time: 12 }),

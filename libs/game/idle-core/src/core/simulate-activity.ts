@@ -6,6 +6,7 @@ import type {
   SimulationContext,
 } from '../types';
 import { logger } from '../utils/logger';
+import { buildWaveClearRewardSlots } from './utils/build-wave-clear-reward-slots';
 import { buildWaveClearRewards } from './utils/build-wave-clear-rewards';
 import { createCompletedCheckpoint } from './utils/create-completed-checkpoint';
 import { createFailedCheckpoint } from './utils/create-failed-checkpoint';
@@ -33,10 +34,11 @@ export async function* simulateActivity(
 
     if (activity.currentWave?.remaining === 0) {
       const rewards = buildWaveClearRewards(activity.currentWave, activity.difficulty);
+      const rewardSlots = buildWaveClearRewardSlots(activity.currentWave, activity.difficulty);
 
       activity.updateRewards(rewards);
 
-      const checkpoint = createProgressCheckpoint(activity, avatar, ctx, rewards);
+      const checkpoint = createProgressCheckpoint(activity, avatar, ctx, rewards, rewardSlots);
 
       if (checkpoint.levelUp) {
         activity.setLevelUp(checkpoint.levelUp);

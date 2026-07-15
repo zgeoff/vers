@@ -16,11 +16,13 @@ test('it creates a progress checkpoint', () => {
   activity.elapseTime(2500);
   activity.updateRewards({ xp: 15 });
 
-  const checkpoint = createProgressCheckpoint(activity, avatar, ctx, { xp: 15 });
+  const rewardSlots = [{ context: { nodeTier: 1 }, ordinal: 0 }];
+  const checkpoint = createProgressCheckpoint(activity, avatar, ctx, { xp: 15 }, rewardSlots);
 
   expect(checkpoint).toStrictEqual({
     nextSeed: expect.toBeString(),
     rewards: { xp: 15 },
+    rewardSlots,
     time: 2500,
     type: ActivityCheckpointType.Progress,
   });
@@ -34,7 +36,7 @@ test('it carries a levelUp when the reward delta crosses a level threshold', () 
 
   activity.updateRewards({ xp: 100 });
 
-  const checkpoint = createProgressCheckpoint(activity, avatar, ctx, { xp: 100 });
+  const checkpoint = createProgressCheckpoint(activity, avatar, ctx, { xp: 100 }, []);
 
   expect(checkpoint.levelUp).toStrictEqual({ from: 1, to: 2 });
 });
@@ -47,7 +49,7 @@ test('it omits levelUp when the reward delta stays within the current level', ()
 
   activity.updateRewards({ xp: 1 });
 
-  const checkpoint = createProgressCheckpoint(activity, avatar, ctx, { xp: 1 });
+  const checkpoint = createProgressCheckpoint(activity, avatar, ctx, { xp: 1 }, []);
 
   expect(checkpoint.levelUp).toBeUndefined();
 });
