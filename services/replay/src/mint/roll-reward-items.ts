@@ -2,7 +2,7 @@ import { buildPositionStream, getTables, rollItemFromStream } from '@vers/item-g
 import type { CryptoKey } from 'jose';
 import type { RewardFact } from '../replay/types';
 import type { MintedItem } from '../types';
-import { deriveAvatarRollKey } from './derive-avatar-roll-key';
+import { readAvatarRollKey } from './read-avatar-roll-key';
 
 interface RollRewardItemsDeps {
   readonly keysServiceURL: string;
@@ -33,7 +33,7 @@ export async function rollRewardItems(
     return [];
   }
 
-  const rollKey = await deriveAvatarRollKey(deps, {
+  const rollKey = await readAvatarRollKey(deps, {
     avatarID: input.avatarID,
     keyVersion: input.keyVersion,
   });
