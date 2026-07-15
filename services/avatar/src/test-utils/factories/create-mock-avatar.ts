@@ -12,6 +12,7 @@ export function createMockAvatar(
 ): Insertable<Avatars> {
   return {
     id: createId(),
+    mode: 'trade',
     name: faker.string.alpha({ casing: 'lower', length: { max: 12, min: 6 } }),
     userId: createId(),
     ...overrides,

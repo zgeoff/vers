@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import type { AvatarData } from '@vers/contract-avatar';
+import type { AvatarData, AvatarMode } from '@vers/contract-avatar';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
@@ -14,7 +14,7 @@ interface CreateAvatarOpts {
     readonly CONFLICT: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
-  readonly input: { readonly name: string };
+  readonly input: { readonly mode: AvatarMode; readonly name: string };
 }
 
 /**
@@ -30,6 +30,7 @@ export async function createAvatar(db: Kysely<DB>, opts: CreateAvatarOpts): Prom
       .insertInto('avatars')
       .values({
         id: createId(),
+        mode: opts.input.mode,
         name: opts.input.name,
         userId: opts.context.actingUserId,
       })

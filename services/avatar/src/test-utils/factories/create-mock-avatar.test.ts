@@ -6,16 +6,18 @@ test('it builds a default avatar row', () => {
 
   expect(row).toStrictEqual({
     id: expect.toBeString(),
+    mode: 'trade',
     name: expect.toBeString(),
     userId: expect.toBeString(),
   });
 });
 
 test('it applies overrides on top of the defaults', () => {
-  const row = createMockAvatar({ name: 'Fixedname', userId: 'user_1' });
+  const row = createMockAvatar({ mode: 'self_found', name: 'Fixedname', userId: 'user_1' });
 
   expect(row).toStrictEqual({
     id: expect.toBeString(),
+    mode: 'self_found',
     name: 'Fixedname',
     userId: 'user_1',
   });

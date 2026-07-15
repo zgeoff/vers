@@ -33,6 +33,52 @@ test('it updates the name of an owned avatar and reports the updated id', async 
   expect(row.name).toBe('Renamed');
 });
 
+test('it leaves an avatar mode unchanged after a rename', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
+
+  const created = await client.createAvatar({ mode: 'self_found', name: 'Steadfast' });
+
+  await client.updateAvatar({ id: created.id, name: 'Renamed' });
+
+  const row = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', created.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.mode).toBe('self_found');
+});
+
+test('it does not apply a mode carried on an updateAvatar payload', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
+
+  const created = await client.createAvatar({ mode: 'trade', name: 'Unswayed' });
+
+  // updateAvatar's input schema has no mode field — cast past the typed client to prove an extra
+  // key on the wire payload has no effect on the persisted row.
+  const updateAvatarWithMode = client.updateAvatar as (
+    input: Record<string, unknown>,
+  ) => Promise<unknown>;
+
+  await updateAvatarWithMode({ id: created.id, mode: 'self_found', name: 'UnswayedRenamed' });
+
+  const row = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', created.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.mode).toBe('trade');
+});
+
 test('it returns NOT_FOUND updating an avatar the caller does not own', async () => {
   await using ctx = await setupTest();
 
