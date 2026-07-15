@@ -1,5 +1,5 @@
-import type { CheckpointPayload, EntropySource } from '@vers/contract-activity';
-import { buildCheckpointHash } from '@vers/contract-activity';
+import type { CheckpointPayload, EntropySource, RewardSlot } from '@vers/contract-activity';
+import { RewardSlotSchema, buildCheckpointHash } from '@vers/contract-activity';
 import * as z from 'zod';
 import { TERMINAL_CHECKPOINT_TYPES } from './types';
 import type { CompareVerdict, ReplayedCheckpoint, RewardFact, StoredCheckpoint } from './types';
@@ -75,9 +75,15 @@ export function compareReplaySegment(
       return { kind: 'divergence', reason: 'reward-mismatch', version };
     }
 
-    const storedRewardSlots = findPayloadRewardSlots(storedCheckpoint.payload);
+    const storedRewardSlots = parsePayloadRewardSlots(storedCheckpoint.payload);
 
-    if (!hasMatchingRewardSlots(storedRewardSlots, replayedCheckpoint.rewardSlots)) {
+    if (storedRewardSlots.kind === 'malformed') {
+      return { kind: 'divergence', reason: 'reward-mismatch', version };
+    }
+
+    const storedSlots = storedRewardSlots.kind === 'present' ? storedRewardSlots.slots : undefined;
+
+    if (!hasMatchingRewardSlots(storedSlots, replayedCheckpoint.rewardSlots)) {
       return { kind: 'divergence', reason: 'reward-mismatch', version };
     }
 
@@ -141,25 +147,27 @@ function hasMatchingLevelUp(
   return stored.from === replayed.from && stored.to === replayed.to;
 }
 
-interface PayloadRewardSlot {
-  readonly context: { readonly nodeTier: number };
-  readonly ordinal: number;
-}
+type ParsedRewardSlots =
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'malformed' }
+  | { readonly kind: 'present'; readonly slots: ReadonlyArray<RewardSlot> };
 
-const RewardSlotContextSchema = z.object({ nodeTier: z.number() });
-const PayloadRewardSlotSchema = z.object({ context: RewardSlotContextSchema, ordinal: z.number() });
-const RewardSlotsSchema = z.array(PayloadRewardSlotSchema);
+const RewardSlotsSchema = z.array(RewardSlotSchema);
 
 /**
- * A stored checkpoint's `rewardSlots` field rides outside the hashed subset like `rewards`, and
- * is absent entirely from a checkpoint minted before this field existed.
+ * A stored checkpoint's `rewardSlots` field rides outside the hashed subset like `rewards`. An
+ * absent field is a checkpoint minted before the field existed and normalizes to nothing dropped;
+ * a present-but-malformed value is a bug or tamper the caller must diverge on, so the two are kept
+ * distinct rather than both collapsing to empty.
  */
-function findPayloadRewardSlots(
-  payload: Readonly<CheckpointPayload>,
-): ReadonlyArray<PayloadRewardSlot> | undefined {
+function parsePayloadRewardSlots(payload: Readonly<CheckpointPayload>): ParsedRewardSlots {
+  if (payload['rewardSlots'] === undefined) {
+    return { kind: 'absent' };
+  }
+
   const parsed = RewardSlotsSchema.safeParse(payload['rewardSlots']);
 
-  return parsed.success ? parsed.data : undefined;
+  return parsed.success ? { kind: 'present', slots: parsed.data } : { kind: 'malformed' };
 }
 
 /**
@@ -168,8 +176,8 @@ function findPayloadRewardSlots(
  * absent-in-both reads as the same "nothing dropped" fact as an explicit empty list.
  */
 function hasMatchingRewardSlots(
-  stored: ReadonlyArray<PayloadRewardSlot> | undefined,
-  replayed: ReadonlyArray<PayloadRewardSlot> | undefined,
+  stored: ReadonlyArray<RewardSlot> | undefined,
+  replayed: ReadonlyArray<RewardSlot> | undefined,
 ): boolean {
   const storedSlots = stored ?? [];
   const replayedSlots = replayed ?? [];

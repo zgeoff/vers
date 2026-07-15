@@ -648,3 +648,46 @@ test('it reports a reward mismatch when the stored reward slots diverge from the
 
   expect(verdict).toStrictEqual({ kind: 'divergence', reason: 'reward-mismatch', version: 1 });
 });
+
+test('it reports a reward mismatch when the stored reward slots are malformed', () => {
+  const seed = 'aa'.repeat(16);
+  const nextSeed = 'bb'.repeat(16);
+  const replayed = [{ nextSeed, rewards: { xp: 0 }, seed, time: 0, type: 'started' }];
+
+  const hash = buildCheckpointHash({
+    chainIndex: 1,
+    entropySource: 'server-key',
+    nextSeed,
+    prevHash: 'root-hash',
+    seed,
+    time: 0,
+    type: 'started',
+    version: 1,
+  });
+
+  const stored: Array<StoredCheckpoint> = [
+    {
+      hash,
+      payload: {
+        chainIndex: 1,
+        entropySource: 'server-key',
+        nextSeed,
+        rewards: { xp: 0 },
+        rewardSlots: 'invalid',
+        seed,
+        time: 0,
+        type: 'started',
+      },
+      prevHash: 'root-hash',
+      version: 1,
+    },
+  ];
+
+  const verdict = compareReplaySegment(stored, replayed, {
+    prevHash: 'root-hash',
+    seed,
+    startChainIndex: 0,
+  });
+
+  expect(verdict).toStrictEqual({ kind: 'divergence', reason: 'reward-mismatch', version: 1 });
+});

@@ -1,17 +1,14 @@
+import { RewardSlotSchema } from '@vers/contract-activity';
 import * as z from 'zod';
 
 const ActivityRewardsSchema = z.object({ xp: z.number() });
 const ActivityLevelUpSchema = z.object({ from: z.number(), to: z.number() });
 
 /**
- * Wire shape of one earned reward slot. Optional on the checkpoint: absent from a provider built
- * before this field existed, present (possibly empty) from one that emits it.
+ * `rewardSlots` reuses the canonical `RewardSlotSchema`, so its `nodeTier`/`ordinal` constraints
+ * stay identical to the append and compare paths. Optional on the checkpoint: absent from a
+ * provider built before this field existed, present (possibly empty) from one that emits it.
  */
-const RewardSlotSchema = z.object({
-  context: z.object({ nodeTier: z.int() }),
-  ordinal: z.int().min(0),
-});
-
 const sharedCheckpointShape = {
   levelUp: ActivityLevelUpSchema.optional(),
   nextSeed: z.string(),
