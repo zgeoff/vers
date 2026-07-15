@@ -8,9 +8,17 @@ import { runFastForward } from './run-fast-forward';
 import type { FastForwardProgress, ResyncResult } from './types';
 
 interface RunResyncOptions {
-  readonly avatar: AvatarData;
   readonly avatarID: string;
-  readonly buildActivityInput: (activity: ActivityData) => ActivityInput;
+
+  /**
+   * Derives the engine's simulation input and avatar from a server-authored activity row, called
+   * fresh for every continuation a fast-forward runs through.
+   */
+  readonly buildSimulationInput: (activity: ActivityData) => {
+    activity: ActivityInput;
+    avatar: AvatarData;
+  };
+
   readonly capMs?: number;
   readonly client: Pick<ActivityServiceClient, 'getLatestActivityProgress' | 'startActivity'>;
   readonly onProgress?: (progress: FastForwardProgress) => void;
@@ -22,7 +30,10 @@ interface RunResyncOptions {
  * fast-forward over the offline gap, a live re-attach, a rebase from a capped stop index, or
  * nothing. The confirmed head and server time are read before any long optimistic re-simulation
  * commits, so a stale local view never produces a large optimistic rollback. An avatar with no
- * activity history resolves to `none`.
+ * activity history resolves to `none`. An `attach-live` plan never registers the submitter itself
+ * — under the submitter's single-registration semantics, a premature empty-cursor registration is
+ * permanent, so the caller registers only once it has reconstructed the live simulation the cursor
+ * belongs to.
  */
 export async function runResync(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- carries a callback-bearing submitter handle and client, neither of which has a readonly form
@@ -34,7 +45,7 @@ export async function runResync(
 
   if (error !== null) {
     if (isDefinedError(error) && error.code === 'NOT_FOUND') {
-      return { plan: { kind: 'none' } };
+      return { plan: { kind: 'none' }, progress: null };
     }
 
     throw error;
@@ -45,25 +56,18 @@ export async function runResync(
     ...(options.capMs !== undefined && { capMs: options.capMs }),
   });
 
-  if (plan.kind === 'attach-live') {
-    await options.submitter.registerActivity(plan.context);
-
-    return { plan };
-  }
-
   if (plan.kind !== 'fast-forward') {
-    return { plan };
+    return { plan, progress };
   }
 
   const report = await runFastForward({
-    avatar: options.avatar,
     budgetMs: plan.budgetMs,
-    buildActivityInput: options.buildActivityInput,
+    buildSimulationInput: options.buildSimulationInput,
     client: options.client,
     progress,
     submitter: options.submitter,
     ...(options.onProgress !== undefined && { onProgress: options.onProgress }),
   });
 
-  return { plan, report };
+  return { plan, progress, report };
 }

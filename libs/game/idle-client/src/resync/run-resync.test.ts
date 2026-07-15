@@ -12,7 +12,9 @@ import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient } from '../submission/types';
+import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
 import { runResync } from './run-resync';
 
 function setupTest() {
@@ -25,6 +27,23 @@ function setupTest() {
   return { client, submitter };
 }
 
+interface MinimalStartedActivity {
+  readonly id: string;
+  readonly seed: string;
+}
+
+function buildSimulationInputForTest(activity: Readonly<MinimalStartedActivity>) {
+  return {
+    activity: createMockActivityInput({
+      enemies: [createMockEnemyData()],
+      failureAction: ActivityFailureAction.Abort,
+      id: activity.id,
+      seed: activity.seed,
+    }),
+    avatar: createMockAvatarData(),
+  };
+}
+
 test('it resolves to none for an avatar with no activity history', async () => {
   const ctx = setupTest();
 
@@ -35,20 +54,13 @@ test('it resolves to none for an avatar with no activity history', async () => {
   );
 
   const result = await runResync({
-    avatar: createMockAvatarData(),
     avatarID: 'avatar_1',
-    buildActivityInput: (started) =>
-      createMockActivityInput({
-        enemies: [createMockEnemyData()],
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
-      }),
+    buildSimulationInput: buildSimulationInputForTest,
     client: ctx.client,
     submitter: ctx.submitter,
   });
 
-  expect(result).toStrictEqual({ plan: { kind: 'none' } });
+  expect(result).toStrictEqual({ plan: { kind: 'none' }, progress: null });
 });
 
 test('it rebases from the stop index without simulating when the activity is capped', async () => {
@@ -66,15 +78,8 @@ test('it rebases from the stop index without simulating when the activity is cap
   );
 
   const result = await runResync({
-    avatar: createMockAvatarData(),
     avatarID: activity.avatarID,
-    buildActivityInput: (started) =>
-      createMockActivityInput({
-        enemies: [createMockEnemyData()],
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
-      }),
+    buildSimulationInput: buildSimulationInputForTest,
     client: ctx.client,
     submitter: ctx.submitter,
   });
@@ -92,7 +97,7 @@ test('it rebases from the stop index without simulating when the activity is cap
   });
 });
 
-test('it attaches live when the gap is negligible', async () => {
+test('it attaches live when the gap is negligible, leaving the submitter untouched', async () => {
   const ctx = setupTest();
 
   const serverTime = new Date();
@@ -110,21 +115,22 @@ test('it attaches live when the gap is negligible', async () => {
   );
 
   const result = await runResync({
-    avatar: createMockAvatarData(),
     avatarID: activity.avatarID,
-    buildActivityInput: (started) =>
-      createMockActivityInput({
-        enemies: [createMockEnemyData()],
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
-      }),
+    buildSimulationInput: buildSimulationInputForTest,
     client: ctx.client,
     submitter: ctx.submitter,
   });
 
   expect(result.plan.kind).toBe('attach-live');
   expect(result.report).toBeUndefined();
+  expect(result.progress?.activity).toStrictEqual(activity);
+
+  // the submitter was never registered for this activity, so a checkpoint for it is dropped
+  await ctx.submitter.submit(activity.id, createMockProgressCheckpoint());
+
+  const queued = await readQueuedCheckpoints(activity.id);
+
+  expect(queued).toStrictEqual([]);
 });
 
 test('it fast-forwards a real offline gap and reports the outcome', async () => {
@@ -150,16 +156,18 @@ test('it fast-forwards a real offline gap and reports the outcome', async () => 
   );
 
   const result = await runResync({
-    // life 1 fails the first attempt fast, and the abort policy ends the fast-forward there
-    avatar: createMockAvatarData({ life: 1 }),
     avatarID: activity.avatarID,
-    buildActivityInput: (started) =>
-      createMockActivityInput({
+    buildSimulationInput: (started) => ({
+      activity: createMockActivityInput({
         enemies: [createMockEnemyData()],
         failureAction: ActivityFailureAction.Abort,
         id: started.id,
         seed: started.seed,
       }),
+
+      // life 1 fails the first attempt fast, and the abort policy ends the fast-forward there
+      avatar: createMockAvatarData({ life: 1 }),
+    }),
     client: ctx.client,
     submitter: ctx.submitter,
   });

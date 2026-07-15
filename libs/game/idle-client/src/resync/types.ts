@@ -1,3 +1,4 @@
+import type { ActivityData } from '@vers/contract-activity';
 import type { ActivityServiceClient, ActivitySubmissionContext } from '../submission/types';
 
 export type LatestActivityProgress = Awaited<
@@ -25,11 +26,23 @@ export interface FastForwardProgress {
   readonly levelUps: number;
 }
 
+/**
+ * `activity`/`appendedHead` are the final row and confirmed head the fast-forward left off at —
+ * whichever continuation was live when the budget ran out or a failure aborted it — so a caller
+ * can attach to it directly without a further round trip.
+ */
 export interface FastForwardReport extends FastForwardProgress {
+  readonly activity: ActivityData;
+  readonly appendedHead: number;
   readonly reason: 'aborted-on-failure' | 'budget-exhausted';
 }
 
+/**
+ * `progress` is the confirmed snapshot the plan was decided from — `null` only when the avatar has
+ * no activity history at all, the one case nothing was ever fetched to report.
+ */
 export interface ResyncResult {
   readonly plan: ResyncPlan;
+  readonly progress: LatestActivityProgress | null;
   readonly report?: FastForwardReport;
 }
