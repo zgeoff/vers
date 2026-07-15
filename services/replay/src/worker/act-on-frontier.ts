@@ -12,20 +12,22 @@ import { buildSegmentDuration } from '../replay/build-segment-duration';
 import { compareReplaySegment } from '../replay/compare-replay-segment';
 import type { ReplayCache } from '../replay/create-replay-cache';
 import { findSeedDivergence } from '../replay/find-seed-divergence';
+import { isForwardExited } from '../replay/is-forward-exited';
 import { loadReplaySegment } from '../replay/load-replay-segment';
 import { toWireReplaySegmentInput } from '../replay/to-wire-replay-segment-input';
 import type { CompareVerdict, ReplaySegment, ReplayedCheckpoint } from '../replay/types';
-import { TERMINAL_CHECKPOINT_TYPES } from '../replay/types';
 import type { ReplayFrontier } from '../types';
 import { rejectActivity } from './reject-activity';
 import type { PendingCacheEffect, ReplayIterationOutcome, ReplayWorkerDeps } from './types';
+import { updateVerifiedAnchorFromPredecessor } from './update-verified-anchor-from-predecessor';
 
 /**
- * Adjudicates one claimed chain's replay frontier: loads its segment, re-derives the activity's
- * seed on its first verified batch, then dispatches by `simVersion` — the in-process incremental
- * cache for this deploy's own engine, the cross-version provider registry for everything else —
- * and turns the resulting verdict into a cursor-only apply, a confirmed rejection, or a park. Runs
- * inside the caller's transaction, alongside the chain claim it composes with.
+ * Adjudicates one claimed chain's replay frontier: loads its segment, catches the chain's verified
+ * anchor up to a forward-exited predecessor it missed, re-derives the activity's seed on its first
+ * verified batch, then dispatches by `simVersion` — the in-process incremental cache for this
+ * deploy's own engine, the cross-version provider registry for everything else — and turns the
+ * resulting verdict into a cursor-only apply, a confirmed rejection, or a park. Runs inside the
+ * caller's transaction, alongside the chain claim it composes with.
  */
 export async function actOnFrontier(
   trx: Transaction<DB>,
@@ -34,11 +36,25 @@ export async function actOnFrontier(
   cache: ReplayCache,
   frontier: Readonly<ReplayFrontier>,
 ): Promise<ReplayIterationOutcome> {
-  const segment = await loadReplaySegment(trx, frontier);
+  const loaded = await loadReplaySegment(trx, frontier);
 
-  if (segment === undefined) {
+  if (loaded === undefined) {
     return { kind: 'idle' };
   }
+
+  const reconciledAnchor = await updateVerifiedAnchorFromPredecessor(trx, loaded);
+
+  const segment: ReplaySegment =
+    reconciledAnchor === undefined
+      ? loaded
+      : {
+          ...loaded,
+          chain: {
+            ...loaded.chain,
+            verifiedChainIndex: reconciledAnchor.chainIndex,
+            verifiedNextSeed: reconciledAnchor.nextSeed,
+          },
+        };
 
   const seedDivergence = findSeedDivergence(segment);
 
@@ -222,14 +238,15 @@ async function applyMatch(
     'a compared segment always has at least one checkpoint',
   );
 
-  const isTerminal = TERMINAL_CHECKPOINT_TYPES.has(lastReplayed.type);
+  const forwardExited = isForwardExited(lastReplayed.type, segment.activity.status);
+  const advanceChain = forwardExited && lastStored.version === segment.activity.appendedHead;
 
   const result = await applyVerifiedSegment(trx, {
     activityID: segment.activity.id,
     avatarID: segment.activity.avatarID,
     expectedVerifiedHead: segment.verifiedHead,
     verifiedHead: lastStored.version,
-    ...(isTerminal && {
+    ...(advanceChain && {
       chain: {
         chainIndex: segment.activity.startChainIndex + lastStored.version,
         nextSeed: lastReplayed.nextSeed,
@@ -240,7 +257,7 @@ async function applyMatch(
   });
 
   const effect: PendingCacheEffect =
-    result.applied && !isTerminal && driver !== undefined
+    result.applied && !forwardExited && driver !== undefined
       ? {
           entry: { driver, emittedCount: lastStored.version, lastHash: lastStored.hash },
           kind: 'set',
