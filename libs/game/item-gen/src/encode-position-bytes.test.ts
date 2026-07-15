@@ -5,12 +5,15 @@ test('it encodes a reward coordinate to the frozen field layout', () => {
   const bytes = encodePositionBytes({
     kind: 'reward',
     avatarID: 'avatar-1',
-    nodeID: 'node-1',
+    scopeType: 'world_map_node',
+    scopeID: 'node-1',
     chainIndex: 3,
     ordinal: 0,
   });
 
-  expect(new TextDecoder().decode(bytes)).toBe('vers/roll-position/v1|reward|avatar-1|node-1|3|0');
+  expect(new TextDecoder().decode(bytes)).toBe(
+    'vers/roll-position/v1|reward|avatar-1|world_map_node|node-1|3|0',
+  );
 });
 
 test('it encodes a craft position to the frozen field layout', () => {
@@ -25,7 +28,8 @@ test('it never collides a craft position with a reward coordinate', () => {
   const reward = encodePositionBytes({
     kind: 'reward',
     avatarID: 'a',
-    nodeID: '1',
+    scopeType: 's',
+    scopeID: '1',
     chainIndex: 1,
     ordinal: 1,
   });
@@ -45,21 +49,42 @@ test('it rejects a negative position index', () => {
   ).toThrowWithMessage(Error, /craft position must be a non-negative integer/);
 });
 
-test('it rejects a node identifier containing the separator', () => {
+test('it rejects a scope identifier containing the separator', () => {
   expect(() =>
     encodePositionBytes({
       kind: 'reward',
       avatarID: 'a',
-      nodeID: 'n|1',
+      scopeType: 's',
+      scopeID: 'n|1',
       chainIndex: 1,
       ordinal: 0,
     }),
-  ).toThrowWithMessage(Error, /nodeID must not contain the separator/);
+  ).toThrowWithMessage(Error, /scopeID must not contain the separator/);
+});
+
+test('it rejects a scope type containing the separator', () => {
+  expect(() =>
+    encodePositionBytes({
+      kind: 'reward',
+      avatarID: 'a',
+      scopeType: 's|t',
+      scopeID: 'n',
+      chainIndex: 1,
+      ordinal: 0,
+    }),
+  ).toThrowWithMessage(Error, /scopeType must not contain the separator/);
 });
 
 test('it rejects a negative chain index', () => {
   expect(() =>
-    encodePositionBytes({ kind: 'reward', avatarID: 'a', nodeID: 'n', chainIndex: -1, ordinal: 0 }),
+    encodePositionBytes({
+      kind: 'reward',
+      avatarID: 'a',
+      scopeType: 's',
+      scopeID: 'n',
+      chainIndex: -1,
+      ordinal: 0,
+    }),
   ).toThrowWithMessage(Error, /chainIndex must be a non-negative integer/);
 });
 
@@ -74,7 +99,8 @@ test('it rejects a fractional ordinal', () => {
     encodePositionBytes({
       kind: 'reward',
       avatarID: 'a',
-      nodeID: 'n',
+      scopeType: 's',
+      scopeID: 'n',
       chainIndex: 1,
       ordinal: 0.5,
     }),

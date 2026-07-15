@@ -20,7 +20,7 @@ test('it rolls no items and dispatches nothing for an empty fact list', async ()
   const keyPair = await getTestServiceKeyPair();
 
   const items = await rollRewardItems(
-    { keysServiceURL: resolveServiceURL('keys'), privateKey: keyPair.privateKey },
+    { keysServiceURL: 'http://127.0.0.1:1', privateKey: keyPair.privateKey },
     {
       avatarID: 'avatar_1',
       contentVersion: '1',
@@ -60,8 +60,9 @@ test('it mints content identical to rolling the same coordinate directly', async
     avatarID: 'avatar_1',
     chainIndex: 5,
     kind: 'reward',
-    nodeID: 'node_1',
     ordinal: 0,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
   });
 
   const expectedItem = rollItemFromStream(getTables('1'), { nodeTier: 2 }, stream);

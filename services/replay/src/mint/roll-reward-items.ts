@@ -22,8 +22,8 @@ interface RollRewardItemsInput {
  * Rolls every verified reward fact from a segment into its coordinate's content: derives the
  * segment's avatar roll key once, then rolls each fact against it — byte-for-byte identical to
  * re-rolling the same coordinate later, since the interpreter is deterministic in the coordinate,
- * the key, and the content version alone. Dispatches to the keys service only when there is
- * something to mint.
+ * the key, the content version, and the slot context (`nodeTier`) alone. Dispatches to the keys
+ * service only when there is something to mint.
  */
 export async function rollRewardItems(
   deps: Readonly<RollRewardItemsDeps>,
@@ -45,8 +45,9 @@ export async function rollRewardItems(
       avatarID: input.avatarID,
       chainIndex: fact.chainIndex,
       kind: 'reward',
-      nodeID: input.scopeID,
       ordinal: fact.ordinal,
+      scopeID: input.scopeID,
+      scopeType: input.scopeType,
     });
 
     const item = rollItemFromStream(tables, { nodeTier: fact.nodeTier }, stream);

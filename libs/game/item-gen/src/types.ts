@@ -15,7 +15,8 @@ export interface RollStream {
 
 export interface RewardCoordinate {
   readonly avatarID: string;
-  readonly nodeID: string;
+  readonly scopeType: string;
+  readonly scopeID: string;
   readonly chainIndex: number;
   readonly ordinal: number;
 }
