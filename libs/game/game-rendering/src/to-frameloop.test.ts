@@ -1,14 +1,14 @@
 import { expect, test } from 'bun:test';
-import { presentationToFrameloop } from './presentation-to-frameloop';
+import { toFrameloop } from './to-frameloop';
 
 test('it stops the frameloop for a hidden presentation', () => {
-  expect(presentationToFrameloop('hidden')).toBe('never');
+  expect(toFrameloop('hidden')).toBe('never');
 });
 
 test('it keeps the frameloop always-on for a focus presentation', () => {
-  expect(presentationToFrameloop('focus')).toBe('always');
+  expect(toFrameloop('focus')).toBe('always');
 });
 
 test('it keeps the frameloop always-on for an ambient presentation', () => {
-  expect(presentationToFrameloop('ambient')).toBe('always');
+  expect(toFrameloop('ambient')).toBe('always');
 });

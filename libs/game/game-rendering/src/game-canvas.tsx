@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { WebGPURenderer } from 'three/webgpu';
 import type { WebGPURendererParameters } from 'three/webgpu';
 import { GameLoopDriver } from './game-loop-driver';
-import { presentationToFrameloop } from './presentation-to-frameloop';
+import { toFrameloop } from './to-frameloop';
 import { useSceneStateStore } from './use-scene-state-store';
 
 interface GameCanvasProps {
@@ -19,7 +19,7 @@ interface GameCanvasProps {
  */
 export function GameCanvas(props: Readonly<GameCanvasProps>): ReactNode {
   const forceWebGL = props.forceWebGL ?? false;
-  const frameloop = useSceneStateStore((state) => presentationToFrameloop(state.presentation));
+  const frameloop = useSceneStateStore((state) => toFrameloop(state.presentation));
 
   return (
     <Canvas

@@ -25,11 +25,11 @@ export interface CheckpointSubmitter {
   /**
    * Seeds an activity's chain-link cursor from its head row and resends whatever the durable
    * queue still holds pending for it. Idempotent per activity — a second call for an activity
-   * already attached this worker lifetime is a no-op, so it never clobbers an in-progress cursor.
-   * Resolves once the cursor is seeded from any pending rows, so a caller that awaits it before
-   * producing the activity's first checkpoint never races the resume read.
+   * already registered this worker lifetime is a no-op, so it never clobbers an in-progress
+   * cursor. Resolves once the cursor is seeded from any pending rows, so a caller that awaits it
+   * before producing the activity's first checkpoint never races the resume read.
    */
-  attach: (context: Readonly<ActivitySubmissionContext>) => Promise<void>;
+  registerActivity: (context: Readonly<ActivitySubmissionContext>) => Promise<void>;
 
   /**
    * Maps and enqueues one engine checkpoint for a previously attached activity, then schedules a
@@ -199,25 +199,7 @@ export function createCheckpointSubmitter(
     }
   };
 
-  const resumePendingCheckpoints = async (
-    activityID: string,
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cursor this function seeds in place from the durable queue
-    state: ActivityState,
-  ): Promise<void> => {
-    const rows = await readQueuedCheckpoints(activityID);
-
-    const lastRow = rows.at(-1);
-
-    if (lastRow !== undefined) {
-      state.nextVersion = lastRow.version + 1;
-      state.prevHash = lastRow.hash;
-      state.previousNextSeed = lastRow.payload.nextSeed;
-    }
-
-    await flush(activityID);
-  };
-
-  const attach = async (context: Readonly<ActivitySubmissionContext>): Promise<void> => {
+  const registerActivity = async (context: Readonly<ActivitySubmissionContext>): Promise<void> => {
     if (activityStates.has(context.activityID)) {
       return;
     }
@@ -236,7 +218,8 @@ export function createCheckpointSubmitter(
 
     activityStates.set(context.activityID, state);
 
-    await resumePendingCheckpoints(context.activityID, state);
+    await loadPendingCheckpoints(context.activityID, state);
+    await flush(context.activityID);
   };
 
   const submit = async (
@@ -291,5 +274,21 @@ export function createCheckpointSubmitter(
     }
   };
 
-  return { attach, submit };
+  return { registerActivity, submit };
+}
+
+async function loadPendingCheckpoints(
+  activityID: string,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cursor this function seeds in place from the durable queue
+  state: ActivityState,
+): Promise<void> {
+  const rows = await readQueuedCheckpoints(activityID);
+
+  const lastRow = rows.at(-1);
+
+  if (lastRow !== undefined) {
+    state.nextVersion = lastRow.version + 1;
+    state.prevHash = lastRow.hash;
+    state.previousNextSeed = lastRow.payload.nextSeed;
+  }
 }

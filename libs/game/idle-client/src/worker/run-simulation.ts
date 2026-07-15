@@ -54,19 +54,19 @@ export async function runSimulation(
   }
 
   if (action === 'halt-at-boundary') {
-    broadcastCapStatus(context, 0, true);
+    emitCapStatus(context, 0, true);
 
     return;
   }
 
   if (remainingBudgetMs <= OFFLINE_CAP_WARNING_MS) {
-    broadcastCapStatus(context, remainingBudgetMs, false);
+    emitCapStatus(context, remainingBudgetMs, false);
   }
 
   simulation.restartActivity();
 }
 
-function broadcastCapStatus(context: WorkerContext, remainingMs: number, halted: boolean) {
+function emitCapStatus(context: WorkerContext, remainingMs: number, halted: boolean) {
   const message = createOfflineCapStatusMessage(remainingMs, halted);
 
   for (const connection of context.connections) {

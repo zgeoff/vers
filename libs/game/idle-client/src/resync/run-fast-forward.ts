@@ -65,7 +65,7 @@ export async function runFastForward(
 
     const tail = attempt.checkpoints.slice(appendedHead);
 
-    await options.submitter.attach({
+    await options.submitter.registerActivity({
       activityID: activity.id,
       appendedHead,
       lastHash: activity.lastHash,

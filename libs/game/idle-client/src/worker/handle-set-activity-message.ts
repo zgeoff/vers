@@ -14,7 +14,7 @@ export async function handleSetActivityMessage(
   }
 
   if (message.submission) {
-    await context.getSubmitter().attach(message.submission);
+    await context.getSubmitter().registerActivity(message.submission);
   }
 
   simulation.startActivity(message.avatar, message.activity);

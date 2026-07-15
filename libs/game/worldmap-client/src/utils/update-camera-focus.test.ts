@@ -1,13 +1,13 @@
 import { expect, spyOn, test } from 'bun:test';
 import { PerspectiveCamera } from 'three';
-import { focusCameraOnPosition } from './focus-camera-on-position';
+import { updateCameraFocus } from './update-camera-focus';
 
 test('it updates camera position to focus on target', () => {
   const camera = new PerspectiveCamera();
 
   const updateProjectionMatrixSpy = spyOn(camera, 'updateProjectionMatrix');
 
-  focusCameraOnPosition(camera, [10, 20]);
+  updateCameraFocus(camera, [10, 20]);
 
   // our fixed height
   expect(camera.position.y).toBe(40);

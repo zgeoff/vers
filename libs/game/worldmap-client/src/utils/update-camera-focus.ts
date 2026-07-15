@@ -2,10 +2,7 @@ import type { PerspectiveCamera } from 'three';
 import { Vector3 } from 'three';
 import { CAMERA_DISTANCE, ISOMETRIC_OFFSET_X, ISOMETRIC_OFFSET_Z } from '../consts';
 
-export function focusCameraOnPosition(
-  camera: PerspectiveCamera,
-  position: readonly [number, number],
-) {
+export function updateCameraFocus(camera: PerspectiveCamera, position: readonly [number, number]) {
   const [x, y] = position;
 
   const offset = new Vector3();

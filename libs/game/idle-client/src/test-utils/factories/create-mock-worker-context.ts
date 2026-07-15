@@ -14,7 +14,7 @@ export function createMockWorkerContext(
   const connections = new Set(options.connections);
 
   const submitter: CheckpointSubmitter = options.submitter ?? {
-    attach: () => Promise.resolve(),
+    registerActivity: () => Promise.resolve(),
     submit: () => Promise.resolve(),
   };
 

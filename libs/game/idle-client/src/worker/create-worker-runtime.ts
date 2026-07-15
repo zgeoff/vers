@@ -98,13 +98,13 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     // ensure we're only running one loop per worker
     if (!running) {
       running = true;
-      void tick();
+      void runTickLoop();
     }
   };
 
   // our main loop function uses a fixed timestep to ensure consistent updates as
   // we're not directly tied to UI updates nor do we have access to requestAnimationFrame
-  const tick = async () => {
+  const runTickLoop = async () => {
     if (stopped) {
       return;
     }
@@ -126,9 +126,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
     lastFrameTime = now;
 
-    await delay(1);
+    await wait(1);
 
-    void tick();
+    void runTickLoop();
   };
 
   const stop = () => {
@@ -138,7 +138,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   return { connections, handleConnect, stop };
 }
 
-function delay(ms: number) {
+function wait(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
