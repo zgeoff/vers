@@ -29,24 +29,35 @@ const REPLAY_SERVICE_ENV_SHAPE = {
  */
 export interface ReplayService extends Service<typeof REPLAY_SERVICE_ENV_SHAPE> {
   readonly db: Kysely<DB>;
-  readonly privateKey: Promise<CryptoKey>;
+  readonly privateKey: CryptoKey;
+
+  /**
+   * Destroys the pool this factory opened itself from `DATABASE_URL` — a no-op when `config.db`
+   * was injected, since the caller owns that handle's lifecycle.
+   */
+  readonly stopDB: () => Promise<void>;
 }
 
 /**
  * Boots the replay service; the production entrypoint and every test call this as the one shared
  * config. `config.db` is injected only in tests — the production entrypoint always resolves its
- * own pool from `DATABASE_URL`.
+ * own pool from `DATABASE_URL`. The signing key is parsed and awaited here, before `listen()`
+ * ever runs, so a malformed `SERVICE_AUTH_PRIVATE_KEY` fails the boot rather than the first
+ * cross-version dispatch that needs it.
  */
 export async function createReplayService(
   config: CreateReplayServiceConfig = {},
 ): Promise<ReplayService> {
   let resolvedDB: Kysely<DB> | undefined;
-  let resolvedPrivateKey: Promise<CryptoKey> | undefined;
+  let ownsDB = false;
+  let resolvedPrivateKey: CryptoKey | undefined;
 
   const service = await createService({
-    buildRouter: (runtime) => {
+    buildRouter: async (runtime) => {
+      ownsDB = config.db === undefined;
       resolvedDB = config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL });
-      resolvedPrivateKey = parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
+
+      resolvedPrivateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
 
       return buildReplayRouter({ simVersion: runtime.env.SIM_ENGINE_HASH });
     },
@@ -59,5 +70,17 @@ export async function createReplayService(
     'buildRouter always resolves db and privateKey before returning',
   );
 
-  return { ...service, db: resolvedDB, privateKey: resolvedPrivateKey };
+  const db = resolvedDB;
+  const privateKey = resolvedPrivateKey;
+
+  return {
+    ...service,
+    db,
+    privateKey,
+    stopDB: async () => {
+      if (ownsDB) {
+        await db.destroy();
+      }
+    },
+  };
 }

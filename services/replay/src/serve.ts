@@ -18,15 +18,36 @@ service.listen();
 const worker = startReplayWorker({
   db: service.db,
   logger: service.logger,
-  privateKey: await service.privateKey,
+  privateKey: service.privateKey,
   simVersion: service.env.SIM_ENGINE_HASH,
 });
 
 process.on('SIGTERM', () => {
-  void stopGracefully();
+  void handleSIGTERM();
 });
 
+async function handleSIGTERM(): Promise<void> {
+  try {
+    await stopGracefully();
+  } catch (error) {
+    service.logger.error({ err: error }, 'graceful shutdown failed');
+    process.exit(1);
+  }
+}
+
+/**
+ * Stops accepting HTTP before draining the in-flight replay iteration, then closes the pool this
+ * process opened itself — each step runs even if an earlier one rejects, so a failure never
+ * strands the worker running or the pool open.
+ */
 async function stopGracefully(): Promise<void> {
-  await worker.stop();
-  await service.app.stop();
+  try {
+    await service.app.stop();
+  } finally {
+    try {
+      await worker.stop();
+    } finally {
+      await service.stopDB();
+    }
+  }
 }

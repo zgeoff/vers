@@ -3,18 +3,19 @@ import { runReplayIteration } from './run-replay-iteration';
 import type { ReplayWorkerDeps, ReplayWorkerHandle } from './types';
 
 /**
- * The idle poll starts here and backs off by one step per consecutive idle iteration, up to
- * `MAX_POLL_INTERVAL_MS` — a chain claimed on the very next iteration resets it.
+ * The idle poll starts here and backs off by one step per consecutive idle-or-errored iteration,
+ * up to `MAX_POLL_INTERVAL_MS` — a chain claimed on the very next iteration resets it.
  */
 const MIN_POLL_INTERVAL_MS = 1000;
 const MAX_POLL_INTERVAL_MS = 5000;
 
 /**
  * Starts the replay worker loop: claim, replay, adjudicate, repeat — one chain in flight at a
- * time, holding the in-process incremental cache for this process's lifetime. An idle iteration
- * sleeps before retrying, backing off as idleness continues; a claimed chain resets the backoff
- * and the loop continues immediately. `stop` lets the in-flight iteration finish and interrupts an
- * idle sleep rather than waiting it out.
+ * time, holding the in-process incremental cache for this process's lifetime. An idle iteration,
+ * and an errored one alike, sleeps before retrying, backing off as the streak continues — an
+ * outage never turns into a hot retry loop; a claimed chain resets the backoff and the loop
+ * continues immediately. `stop` lets the in-flight iteration finish and interrupts an idle sleep
+ * rather than waiting it out.
  */
 export function startReplayWorker(deps: Readonly<ReplayWorkerDeps>): ReplayWorkerHandle {
   const cache = createReplayCache();
@@ -26,7 +27,7 @@ export function startReplayWorker(deps: Readonly<ReplayWorkerDeps>): ReplayWorke
   const loop = (async () => {
     while (!controller.signal.aborted) {
       const outcome = await runReplayIteration(deps, cache).catch((error: unknown) => {
-        deps.logger.error({ error }, 'replay worker iteration threw unexpectedly');
+        deps.logger.error({ err: error }, 'replay worker iteration threw unexpectedly');
 
         return { kind: 'errored' as const };
       });
@@ -35,7 +36,7 @@ export function startReplayWorker(deps: Readonly<ReplayWorkerDeps>): ReplayWorke
         break;
       }
 
-      if (outcome.kind !== 'idle') {
+      if (outcome.kind !== 'idle' && outcome.kind !== 'errored') {
         idleStreak = 0;
         continue;
       }
@@ -61,11 +62,13 @@ function pickBackoffMs(idleStreak: number): number {
 
 /**
  * Resolves after `ms`, or immediately once `signal` aborts — an idle worker's sleep never
- * outlives a requested stop. The loser of the race leaves at most one already-fired listener or
- * timer behind; the listener is explicitly removed once the race settles either way.
+ * outlives a requested stop. The loser of the race leaves no timer or listener behind: both are
+ * explicitly cleared once the race settles either way, so a pending timeout never holds up an
+ * otherwise-finished shutdown.
  */
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   let onAbort: (() => void) | undefined;
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
 
   const abortSignal = new Promise<void>((resolve) => {
     onAbort = resolve;
@@ -74,12 +77,16 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 
   const timeout = new Promise<void>((resolve) => {
-    setTimeout(resolve, ms);
+    timeoutHandle = setTimeout(resolve, ms);
   });
 
   return Promise.race([timeout, abortSignal]).finally(() => {
     if (onAbort !== undefined) {
       signal.removeEventListener('abort', onAbort);
+    }
+
+    if (timeoutHandle !== undefined) {
+      clearTimeout(timeoutHandle);
     }
   });
 }
