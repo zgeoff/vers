@@ -685,7 +685,11 @@ test('it folds a retry firing while a flush is already in flight into the pendin
   const retryCall = retries[0]?.retry();
 
   while (track.mock.calls.length < 2) {
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise<void>((resolve) => {
+      setTimeout(() => {
+        resolve();
+      }, 0);
+    });
   }
 
   const secondRetry = retries[0]?.retry();

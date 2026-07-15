@@ -130,7 +130,11 @@ export function createCheckpointSubmitter(
       }, delayMs);
     });
 
-  const scheduleHeldRetry = (activityID: string, state: ActivityState): void => {
+  const scheduleHeldRetry = (
+    activityID: string,
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cursor this function bumps in place to back off the next retry
+    state: ActivityState,
+  ): void => {
     state.retryAttempt += 1;
     options.onHeld?.(activityID);
 

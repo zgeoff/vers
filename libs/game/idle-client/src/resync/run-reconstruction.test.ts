@@ -35,7 +35,6 @@ test('it reconstructs a simulation to the confirmed head, matching the original 
   let nextCheckpoint = null;
 
   while (nextCheckpoint === null) {
-    // oxlint-disable-next-line no-await-in-loop -- ticking one live simulation forward step by step until its next checkpoint lands
     nextCheckpoint = await result.simulation.run(SIMULATION_TIMESTEP_MS);
   }
 

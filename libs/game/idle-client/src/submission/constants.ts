@@ -12,9 +12,9 @@ export const ENTROPY_SOURCE_SERVER_KEY = 'server-key';
 
 /**
  * The base delay a held batch's retry backs off from, doubling per consecutive failure up to
- * `RETRY_BACKOFF_CAP_MS`.
+ * `RETRY_BACKOFF_CAP_MS` — a held batch's first retry waits exactly one progress-flush window.
  */
-export const RETRY_BACKOFF_BASE_MS = PROGRESS_FLUSH_INTERVAL_MS;
+export const RETRY_BACKOFF_BASE_MS = 10_000;
 
 /**
  * The ceiling a held batch's exponential retry backoff never exceeds.

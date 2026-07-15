@@ -31,7 +31,6 @@ function setupTest() {
 
 async function waitForMessageCount(received: ReadonlyArray<unknown>, count: number) {
   for (let attempt = 0; attempt < 200 && received.length < count; attempt += 1) {
-    // oxlint-disable-next-line no-await-in-loop -- polling for queued MessagePort deliveries, not a batch of independent async work
     await new Promise((resolve) => {
       setTimeout(resolve, 1);
     });

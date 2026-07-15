@@ -59,7 +59,7 @@ export function GameSimulationMount() {
     const worker = idleWorkerHandle.worker;
 
     if (worker === undefined || avatarID === undefined) {
-      return;
+      return () => {};
     }
 
     const handleOnline = () => {

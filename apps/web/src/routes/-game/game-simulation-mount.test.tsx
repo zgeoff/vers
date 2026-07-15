@@ -10,6 +10,15 @@ import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { GameSimulationMount } from './game-simulation-mount';
 
+function isRequestResyncMessage(value: unknown): value is { readonly type: 'request_resync' } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    value.type === 'request_resync'
+  );
+}
+
 function renderMount() {
   const queryClient = buildQueryClient();
 
@@ -166,9 +175,7 @@ test('it sends a resync request only once across re-renders', async () => {
         mount.refreshMount();
         mount.refreshMount();
 
-        const resyncCalls = calls.filter(
-          (call) => (call as { type: string }).type === 'request_resync',
-        );
+        const resyncCalls = calls.filter((call) => isRequestResyncMessage(call));
 
         expect(resyncCalls).toHaveLength(1);
       },
@@ -205,9 +212,7 @@ test('it resends a resync request when the browser reports coming back online', 
         globalThis.dispatchEvent(new Event('online'));
 
         await waitFor(() => {
-          const resyncCalls = calls.filter(
-            (call) => (call as { type: string }).type === 'request_resync',
-          );
+          const resyncCalls = calls.filter((call) => isRequestResyncMessage(call));
 
           expect(resyncCalls).toHaveLength(2);
         });

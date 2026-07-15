@@ -26,12 +26,10 @@ test('it broadcasts a simulation update once the installed simulation reports on
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   for (let tick = 0; tick < 20; tick += 1) {
-    // oxlint-disable-next-line no-await-in-loop -- ticking one live simulation forward step by step until an update lands
     await simulation.run(500);
   }
 
   for (let attempt = 0; attempt < 200 && received.length === 0; attempt += 1) {
-    // oxlint-disable-next-line no-await-in-loop -- polling for the queued MessagePort delivery
     await new Promise((resolve) => {
       setTimeout(resolve, 1);
     });

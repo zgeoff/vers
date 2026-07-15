@@ -99,7 +99,6 @@ test('it stops the simulation and broadcasts offline on a transport failure', as
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 
   for (let attempt = 0; attempt < 200 && received.length === 0; attempt += 1) {
-    // oxlint-disable-next-line no-await-in-loop -- polling for the queued MessagePort delivery
     await new Promise((resolve) => {
       setTimeout(resolve, 1);
     });
