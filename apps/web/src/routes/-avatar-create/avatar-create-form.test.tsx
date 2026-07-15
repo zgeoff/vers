@@ -44,7 +44,7 @@ test('it shows a permanence warning when Self-Found is selected', async () => {
   });
 });
 
-test('it submits mode self_found when Self-Found is selected', async () => {
+test('it creates a Self-Found avatar when that option is selected', async () => {
   const user = userEvent.setup();
 
   const signedIn = await createSignedInUser();

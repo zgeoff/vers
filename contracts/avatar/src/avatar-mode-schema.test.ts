@@ -13,5 +13,5 @@ test('it rejects an unrecognized mode', () => {
   const result = AvatarModeSchema.safeParse('hardcore');
 
   expect(result.success).toBeFalse();
-  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
+  expect(result.error?.issues).toIncludeAllPartialMembers([{ path: [] }]);
 });

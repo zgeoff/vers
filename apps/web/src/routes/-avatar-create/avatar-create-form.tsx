@@ -115,7 +115,7 @@ export function AvatarCreateForm() {
             <span className={modeLabelStyles}>Self-Found</span>
           </label>
           {mode === 'self_found' && (
-            <Text className={modeWarningStyles}>
+            <Text className={modeWarningStyles} role="alert">
               Self-Found is permanent. Nothing this avatar earns can ever be traded, gifted, or
               moved to another avatar. A player who never trades loses nothing by staying Trade.
             </Text>
