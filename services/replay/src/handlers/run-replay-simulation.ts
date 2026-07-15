@@ -22,12 +22,18 @@ export async function runReplaySimulation(
 ): Promise<ReplaySegmentOutput> {
   const result = await runSimulation(toEngineActivityInput(input.activity), input.avatar, {
     duration: input.duration,
+    ...(input.expectedCheckpointCount !== undefined && {
+      expectedCheckpointCount: input.expectedCheckpointCount,
+    }),
     ...(input.stopAtState !== undefined && { stopAtState: input.stopAtState }),
   });
 
   return {
     checkpoints: result.checkpoints.map(toWireActivityCheckpoint),
     elapsed: result.elapsed,
+    ...(result.haltedOnDurationCap !== undefined && {
+      haltedOnDurationCap: result.haltedOnDurationCap,
+    }),
   };
 }
 

@@ -908,6 +908,7 @@
         "@orpc/client": "catalog:",
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
+        "@vers/contract-activity": "workspace:*",
         "@vers/contract-replay": "workspace:*",
         "@vers/db": "workspace:*",
         "@vers/idle-core": "workspace:*",
@@ -917,6 +918,8 @@
         "@vers/utils": "workspace:*",
         "jose": "catalog:",
         "kysely": "catalog:",
+        "pino": "catalog:",
+        "tiny-invariant": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {

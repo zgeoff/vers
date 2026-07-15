@@ -168,10 +168,14 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 CodeRabbit and cubic review every PR, configured by `.coderabbit.yaml` and `cubic.yaml` at the repo
 root; CodeRabbit reads this file as its guidelines.
 
-- A PR is ready only after both bot reviews are read and every finding dispositioned: fix it, or
-  reply on its thread saying why not — when a finding contradicts this file, this file wins and the
-  reply names the rule. Reviews land within a few minutes of opening; read them with
-  `gh pr view <n> --comments` and `gh api repos/zgeoff/vers/pulls/<n>/comments`.
+- A PR is ready only after both bot reviews are read and every finding is answered on its own
+  thread: a fixed finding's reply cites the commit that fixed it; a declined finding's reply states
+  the reason — when a finding contradicts this file, this file wins and the reply names the rule.
+  Reviews land within a few minutes of opening; read them with `gh pr view <n> --comments` and
+  `gh api repos/zgeoff/vers/pulls/<n>/comments`.
+- Resolve a thread once its reply is posted, fixed and declined alike (GraphQL
+  `resolveReviewThread`). A finding the agent cannot confidently judge is escalation, not
+  disposition: reply saying so and leave the thread open for a human.
 - Never teach a bot through chat (`@coderabbitai` learnings and the like) — a correction to bot
   behaviour is an edit to `.coderabbit.yaml` or `cubic.yaml`, reviewed in a PR.
 - Bots review a PR once, at open; an agent invokes a re-review only when asked, never on its own

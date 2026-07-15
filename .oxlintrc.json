@@ -143,7 +143,7 @@
           { "from": "package", "name": "Collection", "package": "@msw/data" },
           {
             "from": "package",
-            "name": ["CryptoKey", "Request", "Response"],
+            "name": ["CryptoKey", "Request", "Response", "AbortSignal"],
             "package": "@types/node"
           },
           {
@@ -162,6 +162,8 @@
               "Uint8Array",
               "URL",
               "MouseEvent",
+              // a live cancellation handle: addEventListener/aborted state, no readonly form
+              "AbortSignal",
               // genuinely immutable, but its members are method signatures, which the
               // rule's default settings treat as mutable (typescript-eslint#8013)
               "ReadonlySet",
@@ -242,8 +244,13 @@
           },
           {
             "from": "file",
-            "name": ["Simulation", "SimulationContext"],
+            "name": ["Simulation", "SimulationContext", "SimulationDriver"],
             "path": "../idle-core/src/types/simulation.ts"
+          },
+          {
+            "from": "file",
+            "name": ["Simulation", "SimulationContext", "SimulationDriver"],
+            "path": "../../libs/game/idle-core/src/types/simulation.ts"
           },
           {
             "from": "file",

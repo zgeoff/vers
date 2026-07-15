@@ -49,6 +49,66 @@ test('it returns the oldest pending activity on the chain', async () => {
   });
 });
 
+test('it skips a rejected activity and returns the honest activity behind it', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  const chainKey = {
+    avatarID: chain.avatarId,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  };
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+    startChainIndex: 0,
+    status: 'rejected',
+  });
+
+  const honest = await createActivityRow(ctx.db, {
+    appendedHead: 2,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+    startChainIndex: 3,
+    status: 'active',
+  });
+
+  const frontier = await findReplayFrontier(ctx.db, chainKey);
+
+  expect(frontier).toStrictEqual({
+    activityID: honest.id,
+    appendedHead: 2,
+    replayAttempts: 0,
+    startChainIndex: 3,
+    status: 'active',
+    verifiedHead: 0,
+  });
+});
+
+test('it reports a chain with only a rejected activity as fully replayed', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+    status: 'rejected',
+  });
+
+  const frontier = await findReplayFrontier(ctx.db, {
+    avatarID: chain.avatarId,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
+
+  expect(frontier).toBeUndefined();
+});
+
 test('it reports a fully replayed chain as undefined', async () => {
   await using ctx = await setupTest();
 

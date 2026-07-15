@@ -12,6 +12,13 @@ export const ReplaySegmentInputSchema = z.object({
   duration: z.number(),
 
   /**
+   * The segment's own known checkpoint count — the primary halt for the provider's engine, with
+   * `duration` only the safety cap behind it. Omitted by an older dispatcher that predates the
+   * field.
+   */
+  expectedCheckpointCount: z.number().int().positive().optional(),
+
+  /**
    * Called cross-version — today's dispatcher can call a provider frozen weeks ago — so this
    * field only ever evolves additively.
    */

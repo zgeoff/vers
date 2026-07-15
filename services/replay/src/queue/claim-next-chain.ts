@@ -7,9 +7,12 @@ import type { ClaimedChain } from '../types';
  * `FOR UPDATE SKIP LOCKED` so concurrent workers each claim a different chain without waiting. A
  * chain has work when any of its activities has appends past its verified cursor; a chain whose
  * replay frontier is quarantined or parked is unclaimable, since per-chain FIFO forbids replaying
- * anything behind it. Must run inside the caller's transaction — the claim is the row lock, and it
- * releases on commit or rollback. The lock only prevents duplicated effort: exactly-once
- * application is the verified-cursor guard's job, not this lock's.
+ * anything behind it. A rejected frontier is final adjudication rather than an operator hold, so
+ * it stops counting as work too — its rewind already voided every successor rooted past the
+ * verified anchor, leaving nothing left behind it to unblock. Must run inside the caller's
+ * transaction — the claim is the row lock, and it releases on commit or rollback. The lock only
+ * prevents duplicated effort: exactly-once application is the verified-cursor guard's job, not
+ * this lock's.
  */
 export async function claimNextChain(trx: Transaction<DB>): Promise<ClaimedChain | undefined> {
   const row = await trx
@@ -23,6 +26,7 @@ export async function claimNextChain(trx: Transaction<DB>): Promise<ClaimedChain
           .whereRef('activities.scopeType', '=', 'chain.scopeType')
           .whereRef('activities.scopeId', '=', 'chain.scopeId')
           .whereRef('activities.appendedHead', '>', 'activities.verifiedHead')
+          .where('activities.status', '!=', 'rejected')
           .orderBy('activities.startChainIndex')
           .limit(1)
           .as('frontier'),

@@ -124,6 +124,55 @@ test('it skips a chain whose replay frontier is quarantined', async () => {
   expect(claimed).toBeUndefined();
 });
 
+test('it skips a rejected frontier and claims an honest activity behind it', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+    startChainIndex: 0,
+    status: 'rejected',
+  });
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 2,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+    startChainIndex: 3,
+    status: 'active',
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+
+  expect(claimed).toStrictEqual({
+    avatarID: chain.avatarId,
+    priority: 0,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
+});
+
+test('it does not re-claim a chain whose only pending work is a rejected activity', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+    startChainIndex: 0,
+    status: 'rejected',
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+
+  expect(claimed).toBeUndefined();
+});
+
 test('it skips a chain whose replay frontier is parked', async () => {
   await using ctx = await setupTest();
 

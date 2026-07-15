@@ -6,5 +6,6 @@
  * `@faker-js/faker`, a devDependency with no place in a shipped bundle.
  */
 export { createSimulation } from './core/create-simulation';
+export { createSimulationDriver } from './core/create-simulation-driver';
 export { runSimulation } from './core/run-simulation';
 export type * from './types';
