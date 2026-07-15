@@ -13,10 +13,50 @@
     }
   },
   "rules": {
-    // warn until the naming burn-down lands; `fake` and `seed` are this
-    // repo's verbs (test doubles, database seeding), `up`/`down` are
-    // Kysely-mandated migration exports
-    "zgeoff/function-verb": ["warn", { "verbs": ["fake", "seed"], "exemptNames": ["up", "down"] }],
+    // `up`/`down` are Kysely-mandated migration exports; the oRPC handler
+    // exemptions mirror their contract procedure names (the contract key is
+    // the public API vocabulary) and would misname the public API if
+    // renamed; worldMapNodeCodexQueryOptions follows the TanStack Query
+    // queryOptions convention; run2FA/get2FAVerificationURI are correctly
+    // named but the rule misses the digit boundary — remove on
+    // @zgeoff/oxlint-config 0.0.6
+    "zgeoff/function-verb": [
+      "error",
+      {
+        "verbs": [
+          "advance",
+          "compare",
+          "fake",
+          "flush",
+          "park",
+          "record",
+          "redirect",
+          "refresh",
+          "reject",
+          "report",
+          "restart",
+          "roll",
+          "schedule",
+          "seed",
+          "serve",
+          "submit",
+          "sweep"
+        ],
+        "exemptNames": [
+          "up",
+          "down",
+          "changePassword",
+          "consumePendingTransaction",
+          "consumeTransactionToken",
+          "replaySegment",
+          "resumeActivity",
+          "trackActivityProgress",
+          "worldMapNodeCodexQueryOptions",
+          "run2FA",
+          "get2FAVerificationURI"
+        ]
+      }
+    ],
 
     // the shared config's version minus ignorePattern — baseline(#236)
     // disable directives sit on their own line above the flagged site, and
