@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { Collection } from '@msw/data';
 import { createId } from '@paralleldrive/cuid2';
-import { AvatarDataSchema } from '@vers/contract-avatar';
+import { AvatarDataSchema, AvatarModeSchema } from '@vers/contract-avatar';
 import * as z from 'zod';
 
 /**
@@ -12,6 +12,7 @@ const AvatarRowSchema = AvatarDataSchema.extend({
   createdAt: z.date().default(() => new Date()),
   id: z.string().default(() => createId()),
   level: z.int().default(1),
+  mode: AvatarModeSchema.default('trade'),
   name: z
     .string()
     .default(() => faker.string.alpha({ casing: 'lower', length: { max: 12, min: 6 } })),
