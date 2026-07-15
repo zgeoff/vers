@@ -55,3 +55,17 @@ export interface SimulationContext {
 }
 
 export type SimulationListener = (state: LiveSimulation) => void;
+
+/**
+ * A resumable driver over one live simulation, started once on `(activity, avatar)`. Repeated
+ * `advanceToDuration` calls with a monotonically increasing `duration` tick the same simulation
+ * forward and return only the checkpoints newly emitted by that call — the simulation is never
+ * restarted or stopped between calls, so a stream replayed in several advances reproduces the same
+ * checkpoints as one call for the same final duration.
+ */
+export interface SimulationDriver {
+  advanceToDuration: (duration: number, stopAtState?: string) => Promise<Array<ActivityCheckpoint>>;
+  get elapsed(): number;
+  get rngState(): string;
+  stop: () => Promise<void>;
+}
