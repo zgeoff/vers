@@ -416,3 +416,72 @@ test('it discards the queue and stops the stream on SESSION_EVICTED', async () =
 
   expect(stillEmpty).toStrictEqual([]);
 });
+
+test('it seeds a checkpoint submitted during registration from the queued cursor', async () => {
+  await writeQueuedCheckpoint(
+    'race-activity',
+    createMockCheckpointBatchEntry({ hash: 'queued_hash', version: 5 }),
+  );
+
+  const ctx = setupTest({ scheduleFlush: () => {} });
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 5 })));
+
+  // deliberately not awaited: the submit lands while the seed read is still in flight
+  const registration = ctx.submitter.registerActivity({
+    activityID: 'race-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('race-activity', createMockProgressCheckpoint());
+
+  await registration;
+
+  const remaining = await readQueuedCheckpoints('race-activity');
+
+  expect(remaining).toHaveLength(1);
+  expect(remaining).toPartiallyContain({ prevHash: 'queued_hash', version: 6 });
+});
+
+test('it seeds a registration that arrives while another is already loading', async () => {
+  await writeQueuedCheckpoint(
+    'shared-seed-activity',
+    createMockCheckpointBatchEntry({ hash: 'queued_hash', version: 5 }),
+  );
+
+  const ctx = setupTest({ scheduleFlush: () => {} });
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 5 })));
+
+  const context = {
+    activityID: 'shared-seed-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  };
+
+  const first = ctx.submitter.registerActivity(context);
+
+  // awaiting only the overlapping registration must still leave the cursor fully seeded
+  await ctx.submitter.registerActivity(context);
+  await ctx.submitter.submit('shared-seed-activity', createMockProgressCheckpoint());
+
+  await first;
+
+  const remaining = await readQueuedCheckpoints('shared-seed-activity');
+
+  expect(remaining).toHaveLength(1);
+  expect(remaining).toPartiallyContain({ prevHash: 'queued_hash', version: 6 });
+});
+
+test('it drops a checkpoint for an activity that was never registered', async () => {
+  const ctx = setupTest({ scheduleFlush: () => {} });
+
+  await ctx.submitter.submit('unregistered-activity', createMockProgressCheckpoint());
+
+  const remaining = await readQueuedCheckpoints('unregistered-activity');
+
+  expect(remaining).toStrictEqual([]);
+});
