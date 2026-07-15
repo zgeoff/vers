@@ -49,6 +49,7 @@
         "@tanstack/react-router": "catalog:",
         "@tanstack/react-router-ssr-query": "catalog:",
         "@tanstack/react-start": "catalog:",
+        "@vers/contract-activity": "workspace:*",
         "@vers/contract-avatar": "workspace:*",
         "@vers/contract-base": "workspace:*",
         "@vers/contract-email": "workspace:*",

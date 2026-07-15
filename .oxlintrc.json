@@ -42,6 +42,7 @@
           "up",
           "down",
           "seed",
+          "activityRewardsQueryOptions",
           "changePassword",
           "consumePendingTransaction",
           "consumeTransactionToken",

@@ -1,12 +1,28 @@
 import { expect, test } from 'bun:test';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import { setSelectedNode } from '@vers/worldmap-client';
+import { buildQueryClient } from '../../lib/query/build-query-client';
+import { orpc } from '../../lib/rpc/orpc';
 import { removeSharedWorker } from '../../test-utils/remove-shared-worker';
 import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
 import { ExploreCurrentPanel } from './explore-current-panel';
+
+/**
+ * `ActivityRewardsPanel`'s `useQuery` needs a `QueryClient` in context; this file's tests assert
+ * synchronously on the effect's dispatched messages right after mounting, so they render bare
+ * (never through the async `renderWithRouter` transition) with just that one provider layered on.
+ */
+function renderExploreCurrentPanel() {
+  return render(
+    <QueryClientProvider client={buildQueryClient()}>
+      <ExploreCurrentPanel orpc={orpc} />
+    </QueryClientProvider>,
+  );
+}
 
 interface SetActivityMessage {
   readonly activity: { readonly id: string };
@@ -33,7 +49,7 @@ test('it shows a spinner and sends initialize before the worker reports its stat
       worker,
     },
     () => {
-      render(<ExploreCurrentPanel />);
+      renderExploreCurrentPanel();
     },
   );
 
@@ -53,7 +69,7 @@ test('it reports the simulation as unavailable when SharedWorker is unsupported'
       worker: undefined,
     },
     () => {
-      render(<ExploreCurrentPanel />);
+      renderExploreCurrentPanel();
     },
   );
 
@@ -69,7 +85,7 @@ test('it sends set-activity once initialized but the worker has not caught up ye
   await withIdleWorkerHandle(
     { activity: undefined, failureAction: ActivityFailureAction.Abort, initialized: true, worker },
     () => {
-      render(<ExploreCurrentPanel />);
+      renderExploreCurrentPanel();
     },
   );
 
@@ -96,7 +112,7 @@ test('it renders the node and its codex fragment once the worker reports the sen
   await withIdleWorkerHandle(
     { activity: undefined, failureAction: ActivityFailureAction.Abort, initialized: true, worker },
     () => {
-      render(<ExploreCurrentPanel />);
+      renderExploreCurrentPanel();
     },
   );
 
@@ -114,7 +130,7 @@ test('it renders the node and its codex fragment once the worker reports the sen
       worker,
     },
     async () => {
-      render(<ExploreCurrentPanel />);
+      renderExploreCurrentPanel();
 
       const codex = await screen.findByTestId('world-map-node-codex-stub');
 
@@ -135,7 +151,7 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
   await withIdleWorkerHandle(
     { activity: undefined, failureAction: ActivityFailureAction.Abort, initialized: true, worker },
     () => {
-      render(<ExploreCurrentPanel />);
+      renderExploreCurrentPanel();
     },
   );
 
@@ -153,7 +169,7 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
       worker,
     },
     async () => {
-      render(<ExploreCurrentPanel />);
+      renderExploreCurrentPanel();
 
       const checkbox = screen.getByLabelText('Auto-retry on failure');
 
