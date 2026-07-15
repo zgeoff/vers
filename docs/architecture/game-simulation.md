@@ -76,7 +76,10 @@ replayed) — the last chain hash, and the activity status.
 A queue-fed verifier replays submitted checkpoint batches and compares results. Replay is per-stream
 FIFO — version N+1 never verifies before N, because the seed chain would break — and the verifier
 replays from the `Started` snapshot under the engine version stamped into it, dispatched through a
-provider registry so old segments replay under the code and content that produced them.
+provider registry so old segments replay under the code and content that produced them. For the
+engine version this deploy runs, the worker holds each live stream's simulation in memory at its
+verified head and advances it by each new batch's delta rather than replaying from `Started` every
+time; a worker restart or cache eviction falls back to a from-`Started` rebuild.
 
 Ambiguity parks, it never rejects: a version mismatch, an unknown engine, or a timeout is held as an
 operational state, not judged as a cheat signal. Only reproducible divergence under a matched

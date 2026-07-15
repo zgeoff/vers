@@ -1,0 +1,85 @@
+import { createReplayCache } from '../replay/create-replay-cache';
+import { runReplayIteration } from './run-replay-iteration';
+import type { ReplayWorkerDeps, ReplayWorkerHandle } from './types';
+
+/**
+ * The idle poll starts here and backs off by one step per consecutive idle iteration, up to
+ * `MAX_POLL_INTERVAL_MS` — a chain claimed on the very next iteration resets it.
+ */
+const MIN_POLL_INTERVAL_MS = 1000;
+const MAX_POLL_INTERVAL_MS = 5000;
+
+/**
+ * Starts the replay worker loop: claim, replay, adjudicate, repeat — one chain in flight at a
+ * time, holding the in-process incremental cache for this process's lifetime. An idle iteration
+ * sleeps before retrying, backing off as idleness continues; a claimed chain resets the backoff
+ * and the loop continues immediately. `stop` lets the in-flight iteration finish and interrupts an
+ * idle sleep rather than waiting it out.
+ */
+export function startReplayWorker(deps: Readonly<ReplayWorkerDeps>): ReplayWorkerHandle {
+  const cache = createReplayCache();
+
+  const controller = new AbortController();
+
+  let idleStreak = 0;
+
+  const loop = (async () => {
+    while (!controller.signal.aborted) {
+      const outcome = await runReplayIteration(deps, cache).catch((error: unknown) => {
+        deps.logger.error({ error }, 'replay worker iteration threw unexpectedly');
+
+        return { kind: 'errored' as const };
+      });
+
+      if (controller.signal.aborted) {
+        break;
+      }
+
+      if (outcome.kind !== 'idle') {
+        idleStreak = 0;
+        continue;
+      }
+
+      idleStreak += 1;
+
+      await sleep(pickBackoffMs(idleStreak), controller.signal);
+    }
+  })();
+
+  return {
+    stop: async () => {
+      controller.abort();
+
+      await loop;
+    },
+  };
+}
+
+function pickBackoffMs(idleStreak: number): number {
+  return Math.min(MIN_POLL_INTERVAL_MS * idleStreak, MAX_POLL_INTERVAL_MS);
+}
+
+/**
+ * Resolves after `ms`, or immediately once `signal` aborts — an idle worker's sleep never
+ * outlives a requested stop. The loser of the race leaves at most one already-fired listener or
+ * timer behind; the listener is explicitly removed once the race settles either way.
+ */
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  let onAbort: (() => void) | undefined;
+
+  const abortSignal = new Promise<void>((resolve) => {
+    onAbort = resolve;
+
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+
+  const timeout = new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+  return Promise.race([timeout, abortSignal]).finally(() => {
+    if (onAbort !== undefined) {
+      signal.removeEventListener('abort', onAbort);
+    }
+  });
+}
