@@ -80,3 +80,29 @@ test('it converts an Abort failure action to its wire literal', () => {
 
   expect(job.activity.failureAction).toBe('abort');
 });
+
+test('it carries the expected checkpoint count and stopAtState when given', () => {
+  const activity = {
+    difficulty: 1,
+    enemies: [],
+    failureAction: ActivityFailureAction.Abort,
+    id: 'act_1',
+    name: 'World Map Encounter',
+    seed: 'aa'.repeat(16),
+    type: ActivityType.WorldMapEncounter,
+  };
+
+  const avatar = {
+    id: 'avatar_1',
+    level: 1,
+    life: 200,
+    name: 'Test Avatar',
+    paperdoll: { [EquipmentSlot.MainHand]: null },
+    xp: 0,
+  };
+
+  const job = toWireReplaySegmentInput(activity, avatar, 1000, 'engine-hash-1', 'bb'.repeat(16), 4);
+
+  expect(job.stopAtState).toBe('bb'.repeat(16));
+  expect(job.expectedCheckpointCount).toBe(4);
+});

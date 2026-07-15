@@ -1,6 +1,6 @@
 import type { ReplaySegmentInput } from '@vers/contract-replay';
 import type { ActivityInput, AvatarData } from '@vers/idle-core';
-import { ActivityFailureAction, EquipmentSlot } from '@vers/idle-core';
+import { ActivityFailureAction, ActivityType, EquipmentSlot } from '@vers/idle-core';
 
 const WIRE_FAILURE_ACTIONS: Record<
   ActivityFailureAction,
@@ -8,6 +8,10 @@ const WIRE_FAILURE_ACTIONS: Record<
 > = {
   [ActivityFailureAction.Abort]: 'abort',
   [ActivityFailureAction.Retry]: 'retry',
+};
+
+const WIRE_ACTIVITY_TYPES: Record<ActivityType, ReplaySegmentInput['activity']['type']> = {
+  [ActivityType.WorldMapEncounter]: 'world_map_encounter',
 };
 
 /**
@@ -21,6 +25,7 @@ export function toWireReplaySegmentInput(
   duration: number,
   simVersion: string,
   stopAtState?: string,
+  expectedCheckpointCount?: number,
 ): ReplaySegmentInput {
   return {
     activity: {
@@ -30,7 +35,7 @@ export function toWireReplaySegmentInput(
       id: activity.id,
       name: activity.name,
       seed: activity.seed,
-      type: 'world_map_encounter',
+      type: WIRE_ACTIVITY_TYPES[activity.type],
     },
     avatar: {
       id: avatar.id,
@@ -43,6 +48,7 @@ export function toWireReplaySegmentInput(
     duration,
     protocol: 1,
     simVersion,
+    ...(expectedCheckpointCount !== undefined && { expectedCheckpointCount }),
     ...(stopAtState !== undefined && { stopAtState }),
   };
 }

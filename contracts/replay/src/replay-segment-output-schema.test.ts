@@ -13,3 +13,13 @@ test('it rejects an output missing the elapsed duration', () => {
   expect(result.success).toBeFalse();
   expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['elapsed'] }));
 });
+
+test('it accepts a duration-cap-tripped output', () => {
+  const result = ReplaySegmentOutputSchema.safeParse({
+    checkpoints: [],
+    elapsed: 60_000,
+    haltedOnDurationCap: true,
+  });
+
+  expect(result.success).toBeTrue();
+});

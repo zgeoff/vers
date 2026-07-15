@@ -1,5 +1,11 @@
 import { UnreachableCodeError } from '@vers/utils';
-import type { ActivityCheckpoint, ActivityInput, AvatarData, SimulationDriver } from '../types';
+import type {
+  ActivityCheckpoint,
+  ActivityInput,
+  AvatarData,
+  SimulationAdvanceResult,
+  SimulationDriver,
+} from '../types';
 import { ActivityFailureAction } from '../types';
 import { isCompletedCheckpoint } from '../utils/is-completed-checkpoint';
 import { isFailedCheckpoint } from '../utils/is-failed-checkpoint';
@@ -10,13 +16,12 @@ import { SIMULATION_TIMESTEP_MS } from './simulation-timestep-ms';
 
 /**
  * Starts one live simulation on `(activity, avatar)` and returns a driver that advances it in
- * `SIMULATION_TIMESTEP_MS` steps up to a requested duration, capturing every checkpoint the
- * engine emits along the way — including a `Failed` retry's or a `Completed` clear's restart, so
- * a multi-wave, multi-attempt stream keeps flowing across calls exactly as it would in one call.
- * A tick that would carry `elapsed` past the requested `duration` is left uncommitted to the
- * returned checkpoints and the loop stops for this call only; the caller decides whether that's
- * the stream's true end (and stops the underlying simulation) or the boundary of one batch among
- * more to come.
+ * `SIMULATION_TIMESTEP_MS` steps, capturing every checkpoint the engine emits along the way —
+ * including a `Failed` retry's or a `Completed` clear's restart, so a multi-wave, multi-attempt
+ * stream keeps flowing across calls exactly as it would in one call. A checkpoint whose tick
+ * carries `elapsed` past `duration` is still returned to the caller — advancing never discards a
+ * checkpoint the underlying generator already produced, so a stream replayed in several calls
+ * loses nothing a one-shot call would have kept.
  */
 export function createSimulationDriver(
   activity: ActivityInput,
@@ -26,28 +31,42 @@ export function createSimulationDriver(
 
   simulation.startActivity(avatarData, activity);
 
+  let isTerminated = false;
+
   const advanceToDuration = async (
     duration: number,
     stopAtState?: string,
-  ): Promise<Array<ActivityCheckpoint>> => {
+    expectedCheckpointCount?: number,
+  ): Promise<SimulationAdvanceResult> => {
     const checkpoints: Array<ActivityCheckpoint> = [];
 
-    while (simulation.elapsed < duration) {
-      if (simulation.rngState === stopAtState) {
-        break;
-      }
+    if (isTerminated) {
+      return { checkpoints, haltedOnDurationCap: false };
+    }
 
+    while (simulation.elapsed < duration) {
       const checkpoint = await simulation.run(SIMULATION_TIMESTEP_MS);
 
       if (!checkpoint) {
         continue;
       }
 
-      if (simulation.elapsed > duration) {
-        break;
+      checkpoints.push(checkpoint);
+
+      if (checkpoints.length === expectedCheckpointCount) {
+        return { checkpoints, haltedOnDurationCap: false };
       }
 
-      checkpoints.push(checkpoint);
+      // A zero-consumption checkpoint can share its rngState with an earlier one in the same
+      // tail (a terminal that rolls nothing further than the checkpoint before it) — with a known
+      // count driving the halt, stopAtState is only a sanity signal, never an independent stop.
+      if (
+        expectedCheckpointCount === undefined &&
+        stopAtState !== undefined &&
+        simulation.rngState === stopAtState
+      ) {
+        return { checkpoints, haltedOnDurationCap: false };
+      }
 
       if (isStartedCheckpoint(checkpoint)) {
         continue;
@@ -56,7 +75,9 @@ export function createSimulationDriver(
       const isFailed = isFailedCheckpoint(checkpoint);
 
       if (isFailed && activity.failureAction === ActivityFailureAction.Abort) {
-        break;
+        isTerminated = true;
+
+        return { checkpoints, haltedOnDurationCap: false };
       }
 
       if (isFailed && activity.failureAction === ActivityFailureAction.Retry) {
@@ -76,7 +97,11 @@ export function createSimulationDriver(
       throw new UnreachableCodeError('every ActivityCheckpointType is handled above');
     }
 
-    return checkpoints;
+    return {
+      checkpoints,
+      haltedOnDurationCap:
+        expectedCheckpointCount !== undefined && checkpoints.length < expectedCheckpointCount,
+    };
   };
 
   return {
