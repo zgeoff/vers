@@ -160,7 +160,7 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 **Pure producers** — result comes from arguments alone, no side effects:
 
 | Prefix    | Contract                                       | Example                |
-| --------- | ----------------------------------------------- | ----------------------- |
+| --------- | ---------------------------------------------- | ---------------------- |
 | `compare` | aligned structures in, equivalence verdict out | `compareReplaySegment` |
 
 **Effectful** — consuming draws advances the supplied stream's cursor:
@@ -171,21 +171,21 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 
 **Effectful** — touches the world (filesystem, streams, processes, registries):
 
-| Prefix     | Contract                                                                               | Example                 |
-| ---------- | ----------------------------------------------------------------------------------------- | ------------------------ |
-| `advance`  | step a stateful cursor, clock, or simulation forward in place, optionally to a target  | `advanceToDuration`     |
-| `flush`    | deliver a durable outbound backlog to its remote sink, confirm receipt, empty the buffer | `flush`                |
-| `park`     | set a work item aside in a parked status for later resumption                         | `parkActivity`          |
-| `record`   | durably note that an event occurred (counter, log, audit row)                         | `recordFailedAttempt`   |
-| `redirect` | return a redirect response for a request failing a gate, else defer                   | `redirectToHTTPS`       |
-| `refresh`  | rebuild a derived resource in place from its current source, discarding prior contents | `refreshDevBase`       |
-| `reject`   | mark a work item refused and apply the consequences                                   | `rejectActivity`        |
-| `report`   | forward a fault to the error backend                                                  | `reportUnexpectedError` |
-| `restart`  | return a long-running resource to service from its initial state                      | `restartActivity`       |
-| `schedule` | enqueue an event or callback for deferred execution                                   | `scheduleEvent`         |
-| `serve`    | answer a request for a static resource, else defer                                    | `serveClientAssets`     |
-| `submit`   | accept a payload into a durable outbound queue and schedule its delivery              | `submit`                |
-| `sweep`    | bulk-remove stale or orphaned resources found by a scan, returning the set removed    | `sweepDevDBs`           |
+| Prefix     | Contract                                                                                 | Example                 |
+| ---------- | ---------------------------------------------------------------------------------------- | ----------------------- |
+| `advance`  | step a stateful cursor, clock, or simulation forward in place, optionally to a target    | `advanceToDuration`     |
+| `flush`    | deliver a durable outbound backlog to its remote sink, confirm receipt, empty the buffer | `flush`                 |
+| `park`     | set a work item aside in a parked status for later resumption                            | `parkActivity`          |
+| `record`   | durably note that an event occurred (counter, log, audit row)                            | `recordFailedAttempt`   |
+| `redirect` | return a redirect response for a request failing a gate, else defer                      | `redirectToHTTPS`       |
+| `refresh`  | rebuild a derived resource in place from its current source, discarding prior contents   | `refreshDevBase`        |
+| `reject`   | mark a work item refused and apply the consequences                                      | `rejectActivity`        |
+| `report`   | forward a fault to the error backend                                                     | `reportUnexpectedError` |
+| `restart`  | return a long-running resource to service from its initial state                         | `restartActivity`       |
+| `schedule` | enqueue an event or callback for deferred execution                                      | `scheduleEvent`         |
+| `serve`    | answer a request for a static resource, else defer                                       | `serveClientAssets`     |
+| `submit`   | accept a payload into a durable outbound queue and schedule its delivery                 | `submit`                |
+| `sweep`    | bulk-remove stale or orphaned resources found by a scan, returning the set removed       | `sweepDevDBs`           |
 
 ## Review bots
 
