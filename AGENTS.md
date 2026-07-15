@@ -153,6 +153,16 @@ implementing that algorithm — forcing list verbs onto textbook terms hides the
 - Pin exact versions — no `^`/`~` ranges. (`bun add` saves exact automatically via `exact = true` in
   bunfig.toml — the rule applies to hand-written edits.)
 
+## Function naming: project verbs
+
+Project-level additions to the shared function-naming taxonomy, under the same rules.
+
+**Effectful** — consuming draws advances the supplied stream's cursor:
+
+| Prefix | Contract                                                     | Example              |
+| ------ | ------------------------------------------------------------ | -------------------- |
+| `roll` | consume typed draws from a roll stream to produce an outcome | `rollItemFromStream` |
+
 ## Review bots
 
 CodeRabbit and cubic review every PR, configured by `.coderabbit.yaml` and `cubic.yaml` at the repo

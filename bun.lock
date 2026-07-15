@@ -526,6 +526,21 @@
         "typescript": "catalog:",
       },
     },
+    "libs/game/item-gen": {
+      "name": "@vers/item-gen",
+      "version": "0.0.0",
+      "dependencies": {
+        "@noble/hashes": "catalog:",
+        "@vers/roll-crypto": "workspace:*",
+        "tiny-invariant": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "libs/game/roll-crypto": {
       "name": "@vers/roll-crypto",
       "version": "0.0.0",
@@ -2412,6 +2427,8 @@
     "@vers/idle-core": ["@vers/idle-core@workspace:libs/game/idle-core"],
 
     "@vers/infra": ["@vers/infra@workspace:infra"],
+
+    "@vers/item-gen": ["@vers/item-gen@workspace:libs/game/item-gen"],
 
     "@vers/jobs": ["@vers/jobs@workspace:libs/service/jobs"],
 

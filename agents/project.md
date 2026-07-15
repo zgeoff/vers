@@ -1,3 +1,13 @@
+## Function naming: project verbs
+
+Project-level additions to the shared function-naming taxonomy, under the same rules.
+
+**Effectful** — consuming draws advances the supplied stream's cursor:
+
+| Prefix | Contract                                                     | Example              |
+| ------ | ------------------------------------------------------------ | -------------------- |
+| `roll` | consume typed draws from a roll stream to produce an outcome | `rollItemFromStream` |
+
 ## Review bots
 
 CodeRabbit and cubic review every PR, configured by `.coderabbit.yaml` and `cubic.yaml` at the repo
