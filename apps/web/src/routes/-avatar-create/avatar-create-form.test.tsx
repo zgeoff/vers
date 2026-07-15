@@ -1,6 +1,8 @@
 import { expect, test } from 'bun:test';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import * as db from '@vers/mock-services/db';
+import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { AvatarCreateForm } from './avatar-create-form';
@@ -39,5 +41,29 @@ test('it shows a permanence warning when Self-Found is selected', async () => {
 
     expect(selfFoundOption).toBeChecked();
     expect(screen.getByText(/Self-Found is permanent/)).toBeInTheDocument();
+  });
+});
+
+test('it submits mode self_found when Self-Found is selected', async () => {
+  const user = userEvent.setup();
+
+  const signedIn = await createSignedInUser();
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    renderWithRouter(<AvatarCreateForm />);
+
+    const nameField = await screen.findByLabelText('Name');
+
+    await user.type(nameField, 'Vagrant');
+    await user.click(screen.getByRole('radio', { name: 'Self-Found' }));
+    await user.click(screen.getByRole('button', { name: 'Create Avatar' }));
+
+    await waitFor(() => {
+      const created = db.avatarCollection.findFirst((q) =>
+        q.where({ name: 'Vagrant', userID: signedIn.userID }),
+      );
+
+      expect(created).toMatchObject({ mode: 'self_found' });
+    });
   });
 });
