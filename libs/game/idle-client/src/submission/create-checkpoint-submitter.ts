@@ -24,11 +24,11 @@ interface ActivityState {
 
 export interface CheckpointSubmitter {
   /**
-   * Seeds an activity's chain-link cursor from its head row and resends whatever the durable
-   * queue still holds pending for it. Idempotent per activity — every call for an activity this
-   * worker lifetime shares one seeding, so concurrent registrations from separate tabs resolve
-   * together and none clobbers an in-progress cursor. A failed seed read stops the activity's
-   * stream through `onInvalid`.
+   * Seeds an activity's chain-link cursor from its head row; the call that first registers the
+   * activity also resends whatever the durable queue still holds pending for it. Idempotent per
+   * activity — every call this worker lifetime shares one seeding, so concurrent registrations
+   * from separate tabs resolve together and none clobbers an in-progress cursor or piles on
+   * extra resends. A failed seed read stops the activity's stream through `onInvalid`.
    */
   registerActivity: (context: Readonly<ActivitySubmissionContext>) => Promise<void>;
 
@@ -230,13 +230,15 @@ export function createCheckpointSubmitter(
   };
 
   const registerActivity = async (context: Readonly<ActivitySubmissionContext>): Promise<void> => {
-    let registration = registrations.get(context.activityID);
+    const existing = registrations.get(context.activityID);
 
-    if (registration === undefined) {
-      registration = createActivityState(context);
-
-      registrations.set(context.activityID, registration);
+    if (existing !== undefined) {
+      return existing;
     }
+
+    const registration = createActivityState(context);
+
+    registrations.set(context.activityID, registration);
 
     await registration;
     await flush(context.activityID);

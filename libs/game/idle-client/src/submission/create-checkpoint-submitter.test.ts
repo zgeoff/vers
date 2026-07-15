@@ -455,17 +455,21 @@ test('it seeds a registration that arrives while another is already loading', as
 
   server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 5 })));
 
-  const context = {
+  const first = ctx.submitter.registerActivity({
     activityID: 'shared-seed-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
     startChainIndex: 0,
-  };
-
-  const first = ctx.submitter.registerActivity(context);
+  });
 
   // awaiting only the overlapping registration must still leave the cursor fully seeded
-  await ctx.submitter.registerActivity(context);
+  await ctx.submitter.registerActivity({
+    activityID: 'shared-seed-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
   await ctx.submitter.submit('shared-seed-activity', createMockProgressCheckpoint());
 
   await first;
