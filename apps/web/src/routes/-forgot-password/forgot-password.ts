@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { forgotPasswordHandler } from './forgot-password-handler';
+import { runForgotPassword } from './run-forgot-password';
 
 /**
  * The forgot-password form's submit action; field-level validation happens once inside the handler.
@@ -12,4 +12,4 @@ export const forgotPassword = createServerFn({ method: 'POST' })
 
     return formData;
   })
-  .handler((ctx) => forgotPasswordHandler(ctx.data));
+  .handler((ctx) => runForgotPassword(ctx.data));

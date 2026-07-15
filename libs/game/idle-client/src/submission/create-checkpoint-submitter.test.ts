@@ -39,7 +39,7 @@ test('it flushes immediately on a terminal checkpoint and confirms the queue on 
     }),
   );
 
-  await ctx.submitter.attach({
+  await ctx.submitter.registerActivity({
     activityID: 'success-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -76,7 +76,7 @@ test('it trims the queue to the CONFLICT appendedHead and resends the tail', asy
     }),
   );
 
-  await ctx.submitter.attach({
+  await ctx.submitter.registerActivity({
     activityID: 'conflict-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -111,7 +111,7 @@ test('it stops the stream and keeps queued rows on CHECKPOINT_INVALID', async ()
     }),
   );
 
-  await ctx.submitter.attach({
+  await ctx.submitter.registerActivity({
     activityID: 'invalid-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -145,7 +145,7 @@ test('it discards the queue on NOT_FOUND', async () => {
     }),
   );
 
-  await ctx.submitter.attach({
+  await ctx.submitter.registerActivity({
     activityID: 'not-found-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -176,7 +176,7 @@ test('it holds the queue on UNAUTHORIZED and resends on the next flush', async (
     }),
   );
 
-  await ctx.submitter.attach({
+  await ctx.submitter.registerActivity({
     activityID: 'unauthorized-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -224,7 +224,7 @@ test('it resends rows already queued from a previous worker lifetime on attach',
     }),
   );
 
-  await ctx.submitter.attach({
+  await ctx.submitter.registerActivity({
     activityID: 'resume-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -261,7 +261,7 @@ test('it defers a non-terminal checkpoint to the shared progress window', async 
     }),
   );
 
-  await ctx.submitter.attach({
+  await ctx.submitter.registerActivity({
     activityID: 'progress-window-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -283,7 +283,7 @@ test('it reports each acknowledged head after a successful flush', async () => {
 
   server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
 
-  await ctx.submitter.attach({
+  await ctx.submitter.registerActivity({
     activityID: 'acked-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -307,7 +307,7 @@ test('it stops the stream, discards the queue, and reports the stop index when t
     }),
   );
 
-  await ctx.submitter.attach({
+  await ctx.submitter.registerActivity({
     activityID: 'capped-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -343,7 +343,7 @@ test('it discards the queue and stops the stream on a stopped terminal status', 
     }),
   );
 
-  await ctx.submitter.attach({
+  await ctx.submitter.registerActivity({
     activityID: 'terminal-activity',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -370,7 +370,7 @@ test('it reports the stop index when a resend answers with the already-capped st
     }),
   );
 
-  await ctx.submitter.attach({
+  await ctx.submitter.registerActivity({
     activityID: 'already-capped-activity',
     appendedHead: 4,
     lastHash: 'head_hash',
@@ -393,7 +393,7 @@ test('it discards the queue and stops the stream on SESSION_EVICTED', async () =
     }),
   );
 
-  await ctx.submitter.attach({
+  await ctx.submitter.registerActivity({
     activityID: 'evicted-activity',
     appendedHead: 0,
     lastHash: 'start_hash',

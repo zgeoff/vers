@@ -46,7 +46,7 @@ export async function runResync(
   });
 
   if (plan.kind === 'attach-live') {
-    await options.submitter.attach(plan.context);
+    await options.submitter.registerActivity(plan.context);
 
     return { plan };
   }

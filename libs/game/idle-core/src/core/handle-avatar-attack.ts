@@ -9,7 +9,7 @@ export function handleAvatarAttack(_event: AvatarAttackEvent, avatar: Avatar, ac
   const enemy = activity.currentWave?.nextLivingEnemy;
 
   if (enemy) {
-    const damage = avatar.calcAttackDamage();
+    const damage = avatar.rollAttackDamage();
 
     logger.debug(`${label} --> ${damage} damage to ${enemy.id}`);
     enemy.receiveDamage(damage);

@@ -25,7 +25,7 @@ export function ChangeEmailForm() {
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   const [stepUpChallenge, setStepUpChallenge] = useState<StepUpChallenge | null>(null);
 
-  const submit = async (formData: FormData) => {
+  const handleSubmit = async (formData: FormData) => {
     setIsPending(true);
     setFieldErrors({});
 
@@ -68,7 +68,7 @@ export function ChangeEmailForm() {
 
           setStepUpChallenge(null);
           setPendingFormData(null);
-          void submit(resubmission);
+          void handleSubmit(resubmission);
         }}
       />
     );
@@ -85,7 +85,7 @@ export function ChangeEmailForm() {
         className={formStyles}
         onSubmit={(event) => {
           event.preventDefault();
-          void submit(new FormData(event.currentTarget));
+          void handleSubmit(new FormData(event.currentTarget));
         }}
       >
         <Field

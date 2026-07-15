@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import * as db from '@vers/mock-services/db';
 import { withRequestContext } from '../../test-utils/with-request-context';
-import { verifyStepUpTransactionToken } from './step-up-transaction-token';
+import { verifyStepUpTransactionToken } from './create-step-up-transaction-token';
 import { verifyStepUpHandler } from './verify-step-up-handler';
 
 test('it records a failed attempt and reports the remaining count for an incorrect code', async () => {

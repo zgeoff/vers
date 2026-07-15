@@ -15,8 +15,8 @@ import type {
 import { EntityStatus, EntityType, EquipmentSlot, LifecycleEvent } from '../types';
 import { createLogLabel } from '../utils/create-log-label';
 import { logger } from '../utils/logger';
-import { calcAvatarAttackDamage } from './utils/calc-avatar-attack-damage';
 import { handleReceiveAvatarDamage } from './utils/handle-receive-avatar-damage';
+import { rollAvatarAttackDamage } from './utils/roll-avatar-attack-damage';
 
 const DEFAULT_BEHAVIOUR_FACTORIES = [createAvatarWeaponAttackBehaviour];
 
@@ -34,7 +34,7 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     const behaviourState: AvatarBehaviourSnapshot = {};
 
     for (const behaviour of behaviours) {
-      addBehaviourState(behaviourState, behaviour.id, behaviour.getState());
+      updateBehaviourSnapshot(behaviourState, behaviour.id, behaviour.getState());
     }
 
     const mainHandWeapon = data.paperdoll[EquipmentSlot.MainHand];
@@ -74,7 +74,7 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     }
   };
 
-  const addBehaviour = (behaviour: AvatarBehaviour): void => {
+  const registerBehaviour = (behaviour: AvatarBehaviour): void => {
     behaviours.push(behaviour);
   };
 
@@ -118,14 +118,14 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     },
 
     // core
-    addBehaviour,
+    registerBehaviour,
     getSnapshot,
     handleTick,
     removeBehaviour,
     setState,
 
     // utils
-    calcAttackDamage: () => calcAvatarAttackDamage(avatar, ctx),
+    rollAttackDamage: () => rollAvatarAttackDamage(avatar, ctx),
     receiveDamage: (amount: number) => {
       handleReceiveAvatarDamage(amount, avatar);
 
@@ -143,7 +143,7 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     .map((createBehaviour) => createBehaviour(avatar))
     .filter((behaviour) => behaviour.predicate(avatar))
     .forEach((behaviour) => {
-      addBehaviour(behaviour);
+      registerBehaviour(behaviour);
     });
 
   return avatar;
@@ -158,7 +158,7 @@ function getInitialState(data: AvatarData): AvatarState {
 }
 
 // type safe util for adding our behaviour state to our serializable state
-function addBehaviourState<K extends BehaviourID>(
+function updateBehaviourSnapshot<K extends BehaviourID>(
   state: AvatarBehaviourSnapshot,
   id: K,
   value: AvatarBehaviourSnapshot[K],

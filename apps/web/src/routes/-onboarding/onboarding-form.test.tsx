@@ -1,7 +1,6 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { FormAction } from '../../lib/forms/types';
 import { buildDeferred } from '../../test-utils/build-deferred';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -95,7 +94,7 @@ test('it shows a generic failure message when the server rejects the submission'
 test('it disables the submit button while the account-creation request is pending', async () => {
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
-  const gatedAction: FormAction = () => deferred.promise;
+  const gatedAction = mock(() => deferred.promise);
 
   await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboarding-form-pending@vers.test' } } },

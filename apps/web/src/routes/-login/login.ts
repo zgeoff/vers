@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { loginHandler } from './login-handler';
+import { runLogin } from './run-login';
 
 /**
  * The login form's submit action; field-level validation happens once inside the handler.
@@ -12,4 +12,4 @@ export const login = createServerFn({ method: 'POST' })
 
     return formData;
   })
-  .handler((ctx) => loginHandler(ctx.data));
+  .handler((ctx) => runLogin(ctx.data));

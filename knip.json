@@ -33,7 +33,7 @@
         "src/routes/**/*.{ts,tsx}",
         "src/server.ts",
         "src/client.tsx",
-        "src/client-sentry.ts",
+        "src/start-sentry-react.ts",
         "src/router.tsx",
         "src/mocks/browser.ts",
         "src/lib/scene/types.ts",

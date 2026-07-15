@@ -1,4 +1,4 @@
-import { levelForXP } from '../../progression';
+import { buildLevelFromXP } from '../../progression';
 import type {
   Activity,
   ActivityLevelUp,
@@ -26,8 +26,8 @@ export function createProgressCheckpoint(
 ): ActivityProgressCheckpoint {
   const totalXPAfter = avatar.xp + activity.rewards.xp;
   const totalXPBefore = totalXPAfter - rewards.xp;
-  const previousLevel = levelForXP(totalXPBefore);
-  const currentLevel = levelForXP(totalXPAfter);
+  const previousLevel = buildLevelFromXP(totalXPBefore);
+  const currentLevel = buildLevelFromXP(totalXPAfter);
 
   const levelUp: ActivityLevelUp | undefined =
     currentLevel > previousLevel ? { from: previousLevel, to: currentLevel } : undefined;

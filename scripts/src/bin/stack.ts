@@ -1,10 +1,10 @@
 import { Command } from 'commander';
-import { exec } from '../stack/commands/exec';
-import { logs } from '../stack/commands/logs';
-import { rm } from '../stack/commands/rm';
+import { printLogs } from '../stack/commands/print-logs';
+import { printStatus } from '../stack/commands/print-status';
+import { removeServices } from '../stack/commands/remove-services';
+import { runInService } from '../stack/commands/run-in-service';
 import { start } from '../stack/commands/start';
 import type { StartOptions } from '../stack/commands/start';
-import { status } from '../stack/commands/status';
 import { stop } from '../stack/commands/stop';
 import type { ServiceID } from '../stack/types';
 import { parseServiceArg } from '../stack/utils/parse-service-arg';
@@ -35,7 +35,7 @@ program
   .description('Remove services')
   .argument('[service]', 'service to remove', parseServiceArg)
   .action(async (service?: ServiceID) => {
-    await rm(service);
+    await removeServices(service);
   });
 
 program
@@ -43,14 +43,14 @@ program
   .description('Follow service logs')
   .argument('[service]', 'service to follow logs for', parseServiceArg)
   .action(async (service?: ServiceID) => {
-    await logs(service);
+    await printLogs(service);
   });
 
 program
   .command('status')
   .description('Show services status')
   .action(async () => {
-    await status();
+    await printStatus();
   });
 
 program
@@ -60,7 +60,7 @@ program
   .argument('<command...>', 'command to execute')
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
   .action(async (service: ServiceID, command: Array<string>) => {
-    await exec(service, command);
+    await runInService(service, command);
   });
 
 program.parse();

@@ -39,7 +39,7 @@ test('it drops a port from the connections set', () => {
 
 test('it returns the injected submitter', () => {
   const submitter: CheckpointSubmitter = {
-    attach: mock(() => Promise.resolve()),
+    registerActivity: mock(() => Promise.resolve()),
     submit: mock(() => Promise.resolve()),
   };
 

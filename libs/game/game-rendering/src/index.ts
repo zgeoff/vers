@@ -2,7 +2,7 @@ export { createTunnel } from './create-tunnel';
 export { GameCanvas } from './game-canvas';
 export { getSceneState } from './get-scene-state';
 export { isSceneSwap } from './is-scene-swap';
-export { presentationToFrameloop } from './presentation-to-frameloop';
+export { toFrameloop } from './to-frameloop';
 export { registerGameLoopCallback } from './register-game-loop-callback';
 export { registerSatellite } from './register-satellite';
 export { removeSatellite } from './remove-satellite';

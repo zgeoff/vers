@@ -10,7 +10,7 @@ import { BehaviourID, LifecycleEvent } from '../../types';
 import { getInitialState } from './get-initial-state';
 import { getNextAttackTime } from './get-next-attack-time';
 import { handleTick } from './handle-tick';
-import { predicate } from './predicate';
+import { hasPrimaryAttack } from './has-primary-attack';
 
 export function create(entity: Enemy): EnemyPrimaryAttackBehaviour {
   let state = getInitialState();
@@ -48,7 +48,7 @@ export function create(entity: Enemy): EnemyPrimaryAttackBehaviour {
         handleReset();
       },
     },
-    predicate,
+    predicate: hasPrimaryAttack,
 
     // utils
     getState,

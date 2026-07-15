@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import type { SubmissionResult } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4';
@@ -16,9 +16,7 @@ const ReferenceSchema = z.object({
   password: z.string().min(8, 'Password is too short'),
 });
 
-function noopAction(): Promise<undefined> {
-  return Promise.resolve(undefined);
-}
+const noopAction = mock((): Promise<undefined> => Promise.resolve(undefined));
 
 function rejectWithResponse(): Promise<Response> {
   return Promise.resolve(new Response(null, { status: 400 }));
@@ -137,7 +135,7 @@ test('it shows no error after a redirect resolves the submission', async () => {
 test('it disables the submit button while the action is in flight', async () => {
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
-  const gatedAction: FormAction = () => deferred.promise;
+  const gatedAction = mock(() => deferred.promise);
 
   renderWithRouter(<ReferenceForm action={gatedAction} />);
 

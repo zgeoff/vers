@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { disableTwoFactorAuthHandler } from './disable-two-factor-auth-handler';
+import { runDisableTwoFactorAuth } from './run-disable-two-factor-auth';
 
 /**
  * The account hub's disable-2FA submit action.
@@ -12,4 +12,4 @@ export const disableTwoFactorAuth = createServerFn({ method: 'POST' })
 
     return formData;
   })
-  .handler((ctx) => disableTwoFactorAuthHandler(ctx.data));
+  .handler((ctx) => runDisableTwoFactorAuth(ctx.data));

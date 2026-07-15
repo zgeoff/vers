@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { avatarCreateHandler } from './avatar-create-handler';
+import { runAvatarCreate } from './run-avatar-create';
 
 /**
  * Field-level validation runs inside the submission handler, not this FormData type guard.
@@ -12,4 +12,4 @@ export const avatarCreate = createServerFn({ method: 'POST' })
 
     return formData;
   })
-  .handler((ctx) => avatarCreateHandler(ctx.data));
+  .handler((ctx) => runAvatarCreate(ctx.data));

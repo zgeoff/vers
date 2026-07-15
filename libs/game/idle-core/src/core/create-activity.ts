@@ -26,11 +26,11 @@ export function createActivity(
   const waves: Array<Wave> = getWaves(data, ctx, config);
   const isWavesRemaining = () => waves.some((wave) => wave.remaining > 0);
 
-  const moveToNextWave = () => {
+  const advanceWave = () => {
     currentWaveIdx++;
   };
 
-  const elapseTime = (time: number) => {
+  const advanceTime = (time: number) => {
     elapsed += time;
   };
 
@@ -90,8 +90,8 @@ export function createActivity(
 
     // utils
     updateRewards,
-    elapseTime,
-    moveToNextWave,
+    advanceTime,
+    advanceWave,
     setLevelUp,
   };
 }

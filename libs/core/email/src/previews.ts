@@ -1,10 +1,10 @@
-import { generateChangeEmailNotificationEmail } from './generate-change-email-notification';
-import { generateChangeEmailVerificationEmail } from './generate-change-email-verification';
-import { generateExistingAccountEmail } from './generate-existing-account-email';
-import { generatePasswordChangedEmail } from './generate-password-changed-email';
-import { generateResetPasswordEmail } from './generate-reset-password-email';
-import { generateTwoFactorEmail } from './generate-two-factor-email';
-import { generateWelcomeEmail } from './generate-welcome-email';
+import { renderChangeEmailNotificationEmail } from './render-change-email-notification-email';
+import { renderChangeEmailVerificationEmail } from './render-change-email-verification-email';
+import { renderExistingAccountEmail } from './render-existing-account-email';
+import { renderPasswordChangedEmail } from './render-password-changed-email';
+import { renderResetPasswordEmail } from './render-reset-password-email';
+import { renderTwoFactorEmail } from './render-two-factor-email';
+import { renderWelcomeEmail } from './render-welcome-email';
 
 interface Preview {
   name: string;
@@ -12,20 +12,20 @@ interface Preview {
 }
 
 /**
- * Sample-data render entries for every template generator, consumed by the
+ * Sample-data render entries for every template renderer, consumed by the
  * email-preview workflow (`yarn email:preview`). Entry names are the
- * generator export names kebab-cased with the `generate` prefix and `Email`
- * suffix stripped; a co-located test enforces one entry per generator export.
+ * renderer export names kebab-cased with the `render` prefix and `Email`
+ * suffix stripped; a co-located test enforces one entry per renderer export.
  */
 export const previews: ReadonlyArray<Preview> = [
   {
     name: 'change-email-notification',
-    render: () => generateChangeEmailNotificationEmail(),
+    render: () => renderChangeEmailNotificationEmail(),
   },
   {
     name: 'change-email-verification',
     render: () =>
-      generateChangeEmailVerificationEmail({
+      renderChangeEmailVerificationEmail({
         newEmail: 'new-email@example.com',
         verificationCode: '123456',
         verificationURL: 'https://versidle.com/verify-email?code=123456',
@@ -34,35 +34,35 @@ export const previews: ReadonlyArray<Preview> = [
   {
     name: 'existing-account',
     render: () =>
-      generateExistingAccountEmail({
+      renderExistingAccountEmail({
         email: 'player@example.com',
       }),
   },
   {
     name: 'password-changed',
     render: () =>
-      generatePasswordChangedEmail({
+      renderPasswordChangedEmail({
         email: 'player@example.com',
       }),
   },
   {
     name: 'reset-password',
     render: () =>
-      generateResetPasswordEmail({
+      renderResetPasswordEmail({
         resetURL: 'https://versidle.com/reset-password?token=123456',
       }),
   },
   {
     name: 'two-factor',
     render: () =>
-      generateTwoFactorEmail({
+      renderTwoFactorEmail({
         verificationCode: '123456',
       }),
   },
   {
     name: 'welcome',
     render: () =>
-      generateWelcomeEmail({
+      renderWelcomeEmail({
         verificationCode: '123456',
         verificationURL: 'https://versidle.com/verification?token=123456',
       }),

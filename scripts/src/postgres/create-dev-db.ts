@@ -1,5 +1,5 @@
 import { setTimeout as sleep } from 'node:timers/promises';
-import { migrateToLatest } from '@vers/db';
+import { applyMigrations } from '@vers/db';
 import postgres from 'postgres';
 import invariant from 'tiny-invariant';
 import { buildDevDSN } from './build-dev-dsn';
@@ -44,7 +44,7 @@ export async function createDevDB(config: Readonly<CreateDevDBConfig>): Promise<
     await pg.end();
   }
 
-  const result = await migrateToLatest({
+  const result = await applyMigrations({
     databaseURL: buildDevDSN(config.maintenanceDSN, config.dbName),
   });
 

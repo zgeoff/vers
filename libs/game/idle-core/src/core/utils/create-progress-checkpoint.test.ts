@@ -13,7 +13,7 @@ test('it creates a progress checkpoint', () => {
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData(), ctx);
 
-  activity.elapseTime(2500);
+  activity.advanceTime(2500);
   activity.updateRewards({ xp: 15 });
 
   const checkpoint = createProgressCheckpoint(activity, avatar, ctx, { xp: 15 }, [{ nodeTier: 1 }]);

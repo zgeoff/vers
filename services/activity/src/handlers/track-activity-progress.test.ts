@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
-import { buildFailureXPLoss, levelForXP } from '@vers/idle-core';
+import { buildFailureXPLoss, buildLevelFromXP } from '@vers/idle-core';
 import {
   createAnonymousViewer,
   createServiceToken,
@@ -435,7 +435,7 @@ test('it settles avatar xp and level from a completed terminal checkpoint', asyn
     .executeTakeFirstOrThrow();
 
   expect(updated.xp).toBe(rewardsXP);
-  expect(updated.level).toBe(levelForXP(rewardsXP));
+  expect(updated.level).toBe(buildLevelFromXP(rewardsXP));
 
   const updatedActivity = await ctx.db
     .selectFrom('activities')
@@ -488,7 +488,7 @@ test('it settles a clamped xp loss from a failed terminal checkpoint', async () 
 
   expect(loss).toBeGreaterThan(0);
   expect(updated.xp).toBe(startingXP + rewardsXP);
-  expect(updated.level).toBe(levelForXP(startingXP + rewardsXP));
+  expect(updated.level).toBe(buildLevelFromXP(startingXP + rewardsXP));
 });
 
 test('it advances the chain anchor to the terminal checkpoint on a completed batch', async () => {

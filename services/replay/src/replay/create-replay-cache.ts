@@ -21,20 +21,20 @@ interface CachedReplayStream {
 /**
  * An in-memory, least-recently-used cache of live in-process replay streams, keyed by activity id.
  * A `get` counts as a use and bumps the entry to most-recently-used; a `set` past `cap`, and an
- * explicit `evict`, stop the displaced entry's driver so its underlying generator cleans up
+ * explicit `remove`, stop the displaced entry's driver so its underlying generator cleans up
  * without waiting on GC. Never persisted — a worker restart is a cold cache, and every entry's
  * driver rebuilds lazily from the activity's `Started` snapshot on its next replay.
  */
 export interface ReplayCache {
-  evict: (activityID: string) => void;
   get: (activityID: string) => CachedReplayStream | undefined;
+  remove: (activityID: string) => void;
   set: (activityID: string, entry: Readonly<CachedReplayStream>) => void;
 }
 
 export function createReplayCache(cap: number = REPLAY_CACHE_CAP): ReplayCache {
   const entries = new Map<string, CachedReplayStream>();
 
-  const evict = (activityID: string): void => {
+  const remove = (activityID: string): void => {
     const entry = entries.get(activityID);
 
     entries.delete(activityID);
@@ -74,5 +74,5 @@ export function createReplayCache(cap: number = REPLAY_CACHE_CAP): ReplayCache {
     }
   };
 
-  return { evict, get, set };
+  return { get, remove, set };
 }

@@ -9,7 +9,7 @@ import { handleSetActivityMessage } from './handle-set-activity-message';
 
 function buildSpySubmitter(): CheckpointSubmitter {
   return {
-    attach: mock(() => Promise.resolve()),
+    registerActivity: mock(() => Promise.resolve()),
     submit: mock(() => Promise.resolve()),
   };
 }
@@ -54,7 +54,7 @@ test('it attaches the submission context to the submitter when provided', async 
 
   await handleSetActivityMessage(context, message);
 
-  expect(submitter.attach).toHaveBeenCalledExactlyOnceWith({
+  expect(submitter.registerActivity).toHaveBeenCalledExactlyOnceWith({
     activityID: 'activity_1',
     appendedHead: 0,
     lastHash: 'start_hash',
@@ -76,7 +76,7 @@ test('it does not attach when the message carries no submission context', async 
 
   await handleSetActivityMessage(context, message);
 
-  expect(submitter.attach).not.toHaveBeenCalled();
+  expect(submitter.registerActivity).not.toHaveBeenCalled();
 });
 
 test('it does nothing when no simulation is initialized', async () => {
@@ -97,5 +97,5 @@ test('it does nothing when no simulation is initialized', async () => {
 
   await handleSetActivityMessage(context, message);
 
-  expect(submitter.attach).not.toHaveBeenCalled();
+  expect(submitter.registerActivity).not.toHaveBeenCalled();
 });

@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { loadTwoFactorSetup } from './-account-2fa-verify/load-two-factor-setup';
 import { TwoFactorSetupForm } from './-account-2fa-verify/two-factor-setup-form';
-import { twoFactorSetupLoader } from './-account-2fa-verify/two-factor-setup-loader';
 
 const twoFactorSetupLoaderFn = createServerFn({ method: 'GET' }).handler(() =>
-  twoFactorSetupLoader(),
+  loadTwoFactorSetup(),
 );
 
 export const Route = createFileRoute('/account_/2fa/verify')({

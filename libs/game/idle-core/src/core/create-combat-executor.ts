@@ -25,7 +25,7 @@ export function createCombatExecutor(
     scheduledEvents.push(event);
   };
 
-  const processEvents = () => {
+  const applyEvents = () => {
     const sortEvents = createEventSorter(avatar);
 
     scheduledEvents.sort(sortEvents);
@@ -64,9 +64,9 @@ export function createCombatExecutor(
       enemy.handleTick(executor, ctx);
     });
 
-    processEvents();
+    applyEvents();
 
-    activity.elapseTime(delta);
+    activity.advanceTime(delta);
   };
 
   return executor;

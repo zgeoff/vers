@@ -92,7 +92,7 @@ test('it calls all registered handlers when handling a tick', () => {
     state: {},
   };
 
-  avatar.addBehaviour(behaviour);
+  avatar.registerBehaviour(behaviour);
   avatar.handleTick(combatExecutor, ctx);
 
   expect(handlerSpy).toHaveBeenCalledWith(avatar, combatExecutor, ctx);
@@ -118,7 +118,7 @@ test('it allows removing behaviours', () => {
     state: {},
   };
 
-  avatar.addBehaviour(behaviour);
+  avatar.registerBehaviour(behaviour);
   avatar.removeBehaviour(BehaviourID.Test);
   avatar.handleTick(combatExecutor, ctx);
 
@@ -160,7 +160,7 @@ test('it resets all behaviour states when resetting the avatar', () => {
     state: {},
   };
 
-  avatar.addBehaviour(behaviour);
+  avatar.registerBehaviour(behaviour);
   avatar.reset();
 
   expect(resetHandlerSpy).toHaveBeenCalledWith(avatar, ctx);
@@ -185,7 +185,7 @@ test('it allows for preserving avatar state when resetting', () => {
     },
   };
 
-  avatar.addBehaviour(behaviour);
+  avatar.registerBehaviour(behaviour);
   avatar.receiveDamage(100);
 
   expect(avatar.life).toBe(0);

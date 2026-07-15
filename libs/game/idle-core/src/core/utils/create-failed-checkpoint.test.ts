@@ -14,7 +14,7 @@ test('it creates a failed checkpoint with no loss at zero accrued xp', () => {
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
 
-  activity.elapseTime(2500);
+  activity.advanceTime(2500);
 
   const checkpoint = createFailedCheckpoint(activity, avatar, ctx);
 

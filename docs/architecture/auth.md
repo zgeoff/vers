@@ -9,17 +9,17 @@ short-lived token naming the acting user (`docs/architecture/service-contracts.m
 
 ## Session lifecycle
 
-A login runs in the edge's `loginHandler` (`apps/web/src/routes/-login/`):
+A login runs in the edge's `runLogin` (`apps/web/src/routes/-login/`):
 
 1. Honeypot and field validation, then `userClient.getUser` and `userClient.verifyPassword`. A wrong
    email or password reports one form-level error, never which was wrong.
 2. `sessionClient.createSession` writes an unverified session row — expiry 24 hours, or 7 days with
    `rememberMe`.
 3. With 2FA on the account, redirect to `/verify-otp` carrying the pending session id; otherwise
-   `completeSessionSignIn` runs directly.
+   `runSessionSignIn` runs directly.
 
-`completeSessionSignIn` (`apps/web/src/lib/auth/`) redirects to a force-logout prompt when the
-account already holds a live session; otherwise it calls `verifySession` and seals the cookie.
+`runSessionSignIn` (`apps/web/src/lib/auth/`) redirects to a force-logout prompt when the account
+already holds a live session; otherwise it calls `verifySession` and seals the cookie.
 `verifySession` (`services/session/src/handlers/`) mints the first access/refresh pair, flips the
 row to `verified`, and evicts every other session of the same user in one CTE — at most one verified
 session per user. Access tokens live 15 minutes and rotate through `refreshTokens`, which rejects a
@@ -49,12 +49,13 @@ expires after 5 minutes; `consumePendingTransaction` rejects a request whose act
 target does not match the stored row.
 
 The transaction token is an RS256 JWT minted and verified only inside the edge process
-(`step-up-transaction-token.ts`) — proof a code check passed, redeemable once by the mutation it
-names. It carries `action`, `target`, `sessionID`, and a `jti`, lives 5 minutes, and signs against a
-per-process in-memory keypair, since it never leaves the process that issued it. Single use is
-enforced by the `consumed_transaction_tokens` ledger: `consumeTransactionToken` records the `jti`,
-and a token whose `jti` is already recorded is rejected. `checkStepUp` also matches the token's
-`sessionID` before consuming it, so a token minted under one session cannot redeem under another.
+(`create-step-up-transaction-token.ts`) — proof a code check passed, redeemable once by the mutation
+it names. It carries `action`, `target`, `sessionID`, and a `jti`, lives 5 minutes, and signs
+against a per-process in-memory keypair, since it never leaves the process that issued it. Single
+use is enforced by the `consumed_transaction_tokens` ledger: `consumeTransactionToken` records the
+`jti`, and a token whose `jti` is already recorded is rejected. `checkStepUp` also matches the
+token's `sessionID` before consuming it, so a token minted under one session cannot redeem under
+another.
 
 ## TOTP verification
 

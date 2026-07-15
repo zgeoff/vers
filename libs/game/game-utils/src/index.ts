@@ -1,5 +1,5 @@
 export { buildStateFromSeed } from './build-state-from-seed';
-export { combineSeeds } from './combine-seeds';
+export { mergeSeeds } from './merge-seeds';
 export { createRNG } from './create-rng';
 export { createSeed } from './create-seed';
 export { decodeState } from './decode-state';

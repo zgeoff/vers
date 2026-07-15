@@ -14,7 +14,7 @@ test('it creates a completed checkpoint with the completion bonus', () => {
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(createMockAvatarData({ xp: 0 }), ctx);
 
-  activity.elapseTime(2500);
+  activity.advanceTime(2500);
 
   const checkpoint = createCompletedCheckpoint(activity, avatar, ctx);
 

@@ -1,6 +1,6 @@
 import { createId } from '@paralleldrive/cuid2';
 import { runWithStartContext } from '@tanstack/start-storage-context';
-import type { FakeSession } from './request-context-holder';
+import type { StubSession } from './request-context-holder';
 import { requestContextHolder } from './request-context-holder';
 
 interface RequestContextInit {
@@ -22,7 +22,7 @@ interface RequestContextOutcome<T> {
 }
 
 /**
- * Drives an async call inside a faked `@tanstack/react-start/server` ambient request: the preload
+ * Drives an async call inside a mocked `@tanstack/react-start/server` ambient request: the preload
  * installs a stub of that module's request/cookie-session reads and writes, and this util is the
  * only place a test may set what those reads see or seed a pre-existing cookie session. Also
  * establishes the Start framework's own request-scoped `AsyncLocalStorage` context, so a real
@@ -38,7 +38,7 @@ export async function withRequestContext<T>(
   init: Readonly<RequestContextInit>,
   run: () => Promise<T>,
 ): Promise<RequestContextOutcome<T>> {
-  const sessions = new Map<string, FakeSession>();
+  const sessions = new Map<string, StubSession>();
 
   for (const [name, data] of Object.entries(init.cookies ?? {})) {
     sessions.set(name, { createdAt: Date.now(), data: { ...data }, id: createId() });
@@ -69,14 +69,14 @@ export async function withRequestContext<T>(
       run,
     );
 
-    return { cookies: snapshotCookies(sessions), value };
+    return { cookies: toCookieSnapshot(sessions), value };
   } finally {
     requestContextHolder.current = null;
   }
 }
 
-function snapshotCookies(
-  sessions: ReadonlyMap<string, FakeSession>,
+function toCookieSnapshot(
+  sessions: ReadonlyMap<string, StubSession>,
 ): Record<string, Record<string, unknown> | undefined> {
   const cookies: Record<string, Record<string, unknown> | undefined> = {};
 
