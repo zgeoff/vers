@@ -37,12 +37,13 @@ Triage a GitHub issue the moment it's opened, not in a later pass:
 An open issue that isn't on the board with a milestone and status is a defect.
 
 A new issue's body follows its type's template in `.github/ISSUE_TEMPLATE` (feature, bug, upkeep). A
-feature issue whose outcome a player can perceive — every `area/game` feature — opens with a
+feature issue whose outcome a player can perceive — every `area/game` feature — carries a
 `## Player story` section: second person, present tense, what the player concretely sees or feels
 once it ships, including what they don't experience (no dupes, no lost progress), closing with a
 one-sentence distillation. The story names no implementation nouns — no table, field, component, or
-service names; machinery belongs in Scope. The issue-hygiene workflow checks every new issue's shape
-against these rules and comments the defects it finds.
+service names; machinery belongs in Scope. The issue-hygiene workflow checks each new issue's
+labels, milestone, and required sections (dep-health's generated report issues excepted) and
+comments the defects it finds.
 
 Upkeep issues are the exception: event- or date-triggered maintenance (dropping a dependency
 override, deleting an audit ignore) carries the `upkeep` label plus an area label, no milestone, and

@@ -64,6 +64,18 @@ test('it flags an untriaged issue once per missing triage field', () => {
   ]);
 });
 
+test('it rejects a priority label outside the supported set', () => {
+  const findings = checkIssue({
+    body: '## Scope\n\n- a behavior',
+    labels: ['feature', 'area/platform', 'p9-placeholder'],
+    milestone: 'P0 · Tooling',
+  });
+
+  expect(findings).toStrictEqual([
+    'missing a priority label (`p0-critical`, `p1-high`, `p2-medium`)',
+  ]);
+});
+
 test('it requires observed, expected, and repro sections on a bug', () => {
   const findings = checkIssue({
     body: '## Observed\n\nIt crashes.',

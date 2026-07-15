@@ -1,11 +1,13 @@
 import { $ } from 'bun';
-import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import { checkIssue } from '../issue-hygiene/check-issue';
 
 const issueNumber = Number(process.argv[2]);
 
-invariant(Number.isInteger(issueNumber) && issueNumber > 0, 'usage: issue-hygiene.ts <issue>');
+if (!Number.isInteger(issueNumber) || issueNumber <= 0) {
+  console.error('usage: issue-hygiene.ts <issue>');
+  process.exit(1);
+}
 
 const labelSchema = z.object({ name: z.string() });
 

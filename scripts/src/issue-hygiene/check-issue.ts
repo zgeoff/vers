@@ -6,6 +6,7 @@ import type { IssueShape } from './types';
  * reports, so the shape rules don't apply.
  */
 const EXEMPT_LABELS = new Set(['dep-audit', 'dep-outdated']);
+const PRIORITY_LABELS = new Set(['p0-critical', 'p1-high', 'p2-medium']);
 
 const TYPE_LABELS = new Set([
   'bug',
@@ -53,7 +54,7 @@ export function checkIssue(issue: IssueShape): Array<string> {
     findings.push('missing a type label (feature, bug, chore, …)');
   }
 
-  if (!issue.labels.some((label) => /^p\d-/.test(label))) {
+  if (!issue.labels.some((label) => PRIORITY_LABELS.has(label))) {
     findings.push('missing a priority label (`p0-critical`, `p1-high`, `p2-medium`)');
   }
 
