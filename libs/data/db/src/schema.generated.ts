@@ -13,6 +13,8 @@ export type ActivityStatus =
   | 'rejected'
   | 'stopped';
 
+export type AvatarMode = 'self_found' | 'trade';
+
 export type Generated<T> =
   T extends ColumnType<infer S, infer I, infer U>
     ? ColumnType<S, I | undefined, U>
@@ -84,6 +86,7 @@ export interface Avatars {
   createdAt: Generated<Timestamp>;
   id: string;
   level: Generated<number>;
+  mode: Generated<AvatarMode>;
   name: string;
   simBudgetMs: Generated<Int8>;
   simMeteredAt: Generated<Timestamp>;
