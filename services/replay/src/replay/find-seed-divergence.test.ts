@@ -11,6 +11,7 @@ test('it finds no divergence for a genesis activity seeded from the chain genesi
 test('it finds no divergence for a continuation seeded from the verified anchor', () => {
   const segment = createMockReplaySegment({
     activity: {
+      appendedTimeMs: 0,
       avatarID: 'avatar_1',
       buildSnapshot: { level: 1, xp: 0 },
       contentVersion: '0.0.0-dev',
@@ -41,6 +42,7 @@ test('it skips the check once an activity has already verified past its first ba
 test('it flags a genesis activity whose seed does not match the chain genesis', () => {
   const segment = createMockReplaySegment({
     activity: {
+      appendedTimeMs: 0,
       avatarID: 'avatar_1',
       buildSnapshot: { level: 1, xp: 0 },
       contentVersion: '0.0.0-dev',
@@ -69,6 +71,7 @@ test('it flags a genesis activity whose seed does not match the chain genesis', 
 test('it flags a continuation whose seed does not match the chain verified anchor', () => {
   const segment = createMockReplaySegment({
     activity: {
+      appendedTimeMs: 0,
       avatarID: 'avatar_1',
       buildSnapshot: { level: 1, xp: 0 },
       contentVersion: '0.0.0-dev',
@@ -97,6 +100,7 @@ test('it flags a continuation whose seed does not match the chain verified ancho
 test('it flags a continuation rooted ahead of the chain verified position', () => {
   const segment = createMockReplaySegment({
     activity: {
+      appendedTimeMs: 0,
       avatarID: 'avatar_1',
       buildSnapshot: { level: 1, xp: 0 },
       contentVersion: '0.0.0-dev',

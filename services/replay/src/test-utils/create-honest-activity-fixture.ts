@@ -7,6 +7,7 @@ import type { ActivityCheckpoint } from '@vers/idle-core';
 import { runSimulation } from '@vers/idle-core/replay';
 import type { Insertable, Kysely, Selectable } from 'kysely';
 import { buildReplaySimulationInput } from '../replay/build-replay-simulation-input';
+import { TERMINAL_CHECKPOINT_TYPES } from '../replay/types';
 import { createActivityRow } from './create-activity-row';
 import { createChainRow } from './create-chain-row';
 
@@ -42,8 +43,12 @@ interface CreateHonestActivityFixtureInput {
 /**
  * Builds and persists a chain's first activity by running the real engine — never a hand-crafted
  * stream — and hashing its output the same way the append path does, so the stored rows are
- * byte-identical to what an honest client would have submitted. `checkpoints` are the stored
- * rows a tamper test mutates; `engineCheckpoints` is the untouched engine output.
+ * byte-identical to what an honest client would have submitted. The engine output is truncated at
+ * its first terminal checkpoint: the append path ends an activity's append-ability on the first
+ * `completed`/`failed` checkpoint it accepts, so a stored stream past that point is a shape the
+ * server can never actually hold, however long a duration the engine ran for. `checkpoints` are
+ * the stored rows a tamper test mutates; `engineCheckpoints` is the untouched (truncated) engine
+ * output.
  */
 export async function createHonestActivityFixture(
   db: Kysely<DB>,
@@ -72,7 +77,7 @@ export async function createHonestActivityFixture(
     duration: input.duration ?? 80_000,
   });
 
-  const engineCheckpoints = simulationResult.checkpoints;
+  const engineCheckpoints = truncateAtFirstTerminal(simulationResult.checkpoints);
   const contentVersion = '0.0.0-dev';
   const keyVersion = 1;
   const simVersion = 'test-engine-hash';
@@ -92,7 +97,9 @@ export async function createHonestActivityFixture(
   });
 
   const activity = await createActivityRow(db, {
+    ...input.activity,
     appendedHead: checkpoints.length,
+    appendedTimeMs: Math.floor(engineCheckpoints.at(-1)?.time ?? 0),
     avatarId: chain.avatarId,
     buildSnapshot,
     contentVersion,
@@ -105,7 +112,6 @@ export async function createHonestActivityFixture(
     simVersion,
     startChainIndex: chain.appendedChainIndex,
     startHash,
-    ...input.activity,
   });
 
   if (checkpoints.length > 0) {
@@ -125,6 +131,20 @@ export async function createHonestActivityFixture(
   }
 
   return { activity, chain, checkpoints, engineCheckpoints };
+}
+
+/**
+ * Cuts the engine's output at its first `completed`/`failed` checkpoint, inclusive — the shape a
+ * stored stream is always found in, since the append path accepts nothing past a terminal.
+ */
+function truncateAtFirstTerminal(
+  checkpoints: ReadonlyArray<ActivityCheckpoint>,
+): Array<ActivityCheckpoint> {
+  const terminalIndex = checkpoints.findIndex((checkpoint) =>
+    TERMINAL_CHECKPOINT_TYPES.has(checkpoint.type),
+  );
+
+  return terminalIndex === -1 ? [...checkpoints] : checkpoints.slice(0, terminalIndex + 1);
 }
 
 /**

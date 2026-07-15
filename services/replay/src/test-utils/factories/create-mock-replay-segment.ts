@@ -2,36 +2,55 @@ import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
 import type { ReplaySegment } from '../../replay/types';
 
+interface CreateMockReplaySegmentOverrides extends Partial<
+  Omit<ReplaySegment, 'activity' | 'chain'>
+> {
+  readonly activity?: Partial<ReplaySegment['activity']>;
+  readonly chain?: Partial<ReplaySegment['chain']>;
+}
+
 /**
  * A plain, unpersisted replay segment with faker-generated defaults, shaped like a chain's first
- * activity with no stored checkpoints — a chain-continuation scenario overrides `activity`,
- * `chain`, and `verifiedHead` together, since they must stay internally consistent.
+ * activity with no stored checkpoints. `chain.genesisSeed`/`verifiedNextSeed` and the top-level
+ * `seed` rebuild from a merged `activity` override's own `seed` unless the caller explicitly
+ * overrides them too — a chain-continuation scenario overrides `chain` and `verifiedHead`
+ * directly for that reason.
  */
 export function createMockReplaySegment(
-  overrides: Readonly<Partial<ReplaySegment>> = {},
+  overrides: Readonly<CreateMockReplaySegmentOverrides> = {},
 ): ReplaySegment {
-  const seed = faker.string.hexadecimal({ casing: 'lower', length: 32, prefix: '' });
+  const randomSeed = faker.string.hexadecimal({ casing: 'lower', length: 32, prefix: '' });
   const prevHash = faker.string.hexadecimal({ casing: 'lower', length: 64, prefix: '' });
 
-  const segment: ReplaySegment = {
-    activity: {
-      avatarID: createId(),
-      buildSnapshot: { level: 1, xp: 0 },
-      contentVersion: '0.0.0-dev',
-      id: `act_${createId()}`,
-      keyVersion: 1,
-      scopeID: faker.string.alphanumeric({ casing: 'lower', length: 8 }),
-      scopeType: 'world_map_node',
-      seed,
-      simVersion: 'test-engine-hash',
-      startChainIndex: 0,
-    },
-    chain: { genesisSeed: seed, verifiedChainIndex: 0, verifiedNextSeed: seed },
-    checkpoints: [],
-    prevHash,
-    seed,
-    verifiedHead: 0,
+  const activity: ReplaySegment['activity'] = {
+    appendedTimeMs: 0,
+    avatarID: createId(),
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: '0.0.0-dev',
+    id: `act_${createId()}`,
+    keyVersion: 1,
+    scopeID: faker.string.alphanumeric({ casing: 'lower', length: 8 }),
+    scopeType: 'world_map_node',
+    seed: randomSeed,
+    simVersion: 'test-engine-hash',
+    startChainIndex: 0,
+    ...overrides.activity,
   };
 
-  return { ...segment, ...overrides };
+  const chain: ReplaySegment['chain'] = {
+    genesisSeed: activity.seed,
+    verifiedChainIndex: 0,
+    verifiedNextSeed: activity.seed,
+    ...overrides.chain,
+  };
+
+  return {
+    checkpoints: [],
+    prevHash,
+    seed: activity.seed,
+    verifiedHead: 0,
+    ...overrides,
+    activity,
+    chain,
+  };
 }

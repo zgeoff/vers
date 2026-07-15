@@ -36,6 +36,7 @@ test('it anchors a genesis segment on the activity startHash and seed', async ()
   });
 
   expect(segment?.activity).toStrictEqual({
+    appendedTimeMs: Number(fixture.activity.appendedTimeMs),
     avatarID: fixture.activity.avatarId,
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: fixture.activity.contentVersion,

@@ -19,6 +19,7 @@ export async function loadReplaySegment(
   const activity = await db
     .selectFrom('activities')
     .select([
+      'appendedTimeMs',
       'avatarId',
       'buildSnapshot',
       'contentVersion',
@@ -65,6 +66,7 @@ export async function loadReplaySegment(
 
   return {
     activity: {
+      appendedTimeMs: Number(activity.appendedTimeMs),
       avatarID: activity.avatarId,
       buildSnapshot: readBuildSnapshot(activity.buildSnapshot),
       contentVersion: activity.contentVersion,

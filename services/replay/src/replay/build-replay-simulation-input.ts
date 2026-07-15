@@ -1,5 +1,6 @@
 import type { ActivityInput, AvatarData } from '@vers/idle-core';
 import { ActivityFailureAction, ActivityType, EquipmentSlot } from '@vers/idle-core';
+import type { ReplaySimulationActivitySource } from './types';
 
 /**
  * The single encounter every replay drives, until a node-content service and avatar equipment
@@ -11,38 +12,33 @@ import { ActivityFailureAction, ActivityType, EquipmentSlot } from '@vers/idle-c
  * it, so a driver ever asked to `Retry`-and-continue past one would be reproducing a stream shape
  * the server can never actually hold.
  */
-const PLACEHOLDER_ENEMY = {
-  level: 1,
-  life: 30,
-  name: 'World Map Enemy',
-  primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-  xp: 10,
-};
+function buildPlaceholderEnemy() {
+  return {
+    level: 1,
+    life: 30,
+    name: 'World Map Enemy',
+    primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+    xp: 10,
+  };
+}
 
-const PLACEHOLDER_WEAPON = {
-  id: 'placeholder_weapon',
-  maxDamage: 20,
-  minDamage: 10,
-  name: 'Placeholder Blade',
-  speed: 0.8,
-};
+function buildPlaceholderWeapon() {
+  return {
+    id: 'placeholder_weapon',
+    maxDamage: 20,
+    minDamage: 10,
+    name: 'Placeholder Blade',
+    speed: 0.8,
+  };
+}
 
 const PLACEHOLDER_AVATAR_LIFE = 200;
 
 /**
- * The only stamped simulation inputs `buildReplaySimulationInput` reads — a subset of the
- * frontier segment's activity, so a test can build one inline without a full `ReplaySegment`.
- */
-export interface ReplaySimulationActivitySource {
-  readonly avatarID: string;
-  readonly buildSnapshot: { readonly level: number; readonly xp: number };
-  readonly id: string;
-  readonly seed: string;
-}
-
-/**
  * Builds the engine's `ActivityInput`/`AvatarData` a replay drives, from the activity's stamped
- * seed and build snapshot — the only simulation inputs the current schema persists.
+ * seed and build snapshot — the only simulation inputs the current schema persists. Returns fresh
+ * placeholder enemy/weapon objects on every call: the engine mutates its input in place, so a
+ * caller running several replay jobs from one shared literal would have them corrupt each other.
  */
 export function buildReplaySimulationInput(activity: Readonly<ReplaySimulationActivitySource>): {
   activity: ActivityInput;
@@ -51,7 +47,7 @@ export function buildReplaySimulationInput(activity: Readonly<ReplaySimulationAc
   return {
     activity: {
       difficulty: 1,
-      enemies: [PLACEHOLDER_ENEMY],
+      enemies: [buildPlaceholderEnemy()],
       failureAction: ActivityFailureAction.Abort,
       id: activity.id,
       name: 'World Map Encounter',
@@ -63,7 +59,7 @@ export function buildReplaySimulationInput(activity: Readonly<ReplaySimulationAc
       level: activity.buildSnapshot.level,
       life: PLACEHOLDER_AVATAR_LIFE,
       name: activity.avatarID,
-      paperdoll: { [EquipmentSlot.MainHand]: PLACEHOLDER_WEAPON },
+      paperdoll: { [EquipmentSlot.MainHand]: buildPlaceholderWeapon() },
       xp: activity.buildSnapshot.xp,
     },
   };
