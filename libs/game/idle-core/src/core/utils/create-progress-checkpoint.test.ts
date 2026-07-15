@@ -16,16 +16,36 @@ test('it creates a progress checkpoint', () => {
   activity.elapseTime(2500);
   activity.updateRewards({ xp: 15 });
 
-  const rewardSlots = [{ context: { nodeTier: 1 }, ordinal: 0 }];
-  const checkpoint = createProgressCheckpoint(activity, avatar, ctx, { xp: 15 }, rewardSlots);
+  const checkpoint = createProgressCheckpoint(activity, avatar, ctx, { xp: 15 }, [{ nodeTier: 1 }]);
 
   expect(checkpoint).toStrictEqual({
     nextSeed: expect.toBeString(),
     rewards: { xp: 15 },
-    rewardSlots,
+    rewardSlots: [{ context: { nodeTier: 1 }, ordinal: 0 }],
     time: 2500,
     type: ActivityCheckpointType.Progress,
   });
+});
+
+test('it numbers reward slots 0-contiguous across contexts from multiple waves', () => {
+  const ctx = createMockSimulationContext();
+  const activityData = createMockActivityInput();
+  const activity = createActivity(activityData, ctx);
+  const avatar = createAvatar(createMockAvatarData(), ctx);
+
+  activity.updateRewards({ xp: 0 });
+
+  const checkpoint = createProgressCheckpoint(activity, avatar, ctx, { xp: 0 }, [
+    { nodeTier: 2 },
+    { nodeTier: 2 },
+    { nodeTier: 3 },
+  ]);
+
+  expect(checkpoint.rewardSlots).toStrictEqual([
+    { context: { nodeTier: 2 }, ordinal: 0 },
+    { context: { nodeTier: 2 }, ordinal: 1 },
+    { context: { nodeTier: 3 }, ordinal: 2 },
+  ]);
 });
 
 test('it carries a levelUp when the reward delta crosses a level threshold', () => {

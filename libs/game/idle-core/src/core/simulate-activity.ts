@@ -34,11 +34,21 @@ export async function* simulateActivity(
 
     if (activity.currentWave?.remaining === 0) {
       const rewards = buildWaveClearRewards(activity.currentWave, activity.difficulty);
-      const rewardSlots = buildWaveClearRewardSlots(activity.currentWave, activity.difficulty);
+
+      const rewardSlotContexts = buildWaveClearRewardSlots(
+        activity.currentWave,
+        activity.difficulty,
+      );
 
       activity.updateRewards(rewards);
 
-      const checkpoint = createProgressCheckpoint(activity, avatar, ctx, rewards, rewardSlots);
+      const checkpoint = createProgressCheckpoint(
+        activity,
+        avatar,
+        ctx,
+        rewards,
+        rewardSlotContexts,
+      );
 
       if (checkpoint.levelUp) {
         activity.setLevelUp(checkpoint.levelUp);
