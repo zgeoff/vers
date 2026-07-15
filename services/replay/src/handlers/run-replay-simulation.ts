@@ -62,6 +62,7 @@ function toWireActivityCheckpoint(checkpoint: EngineActivityCheckpoint): Activit
   const shared = {
     nextSeed: checkpoint.nextSeed,
     rewards: checkpoint.rewards,
+    rewardSlots: checkpoint.rewardSlots.map((slot) => ({ ...slot, context: { ...slot.context } })),
     time: checkpoint.time,
     ...(checkpoint.levelUp !== undefined && { levelUp: checkpoint.levelUp }),
   };

@@ -2,7 +2,7 @@ import type { CheckpointPayload, EntropySource } from '@vers/contract-activity';
 import { buildCheckpointHash } from '@vers/contract-activity';
 import * as z from 'zod';
 import { TERMINAL_CHECKPOINT_TYPES } from './types';
-import type { CompareVerdict, ReplayedCheckpoint, StoredCheckpoint } from './types';
+import type { CompareVerdict, ReplayedCheckpoint, RewardFact, StoredCheckpoint } from './types';
 
 /**
  * The sole legal entropy-source tag until #467/#470 land mode-aware validation and self-found
@@ -40,6 +40,7 @@ export function compareReplaySegment(
 
   let prevHash = context.prevHash;
   let seed = context.seed;
+  const rewardFacts: Array<RewardFact> = [];
 
   for (const [index, storedCheckpoint] of stored.entries()) {
     // oxlint-disable-next-line typescript/no-non-null-assertion -- index bounds guarded by the length invariant above
@@ -74,6 +75,20 @@ export function compareReplaySegment(
       return { kind: 'divergence', reason: 'reward-mismatch', version };
     }
 
+    const storedRewardSlots = findPayloadRewardSlots(storedCheckpoint.payload);
+
+    if (!hasMatchingRewardSlots(storedRewardSlots, replayedCheckpoint.rewardSlots)) {
+      return { kind: 'divergence', reason: 'reward-mismatch', version };
+    }
+
+    for (const slot of replayedCheckpoint.rewardSlots ?? []) {
+      rewardFacts.push({
+        chainIndex: context.startChainIndex + version,
+        nodeTier: slot.context.nodeTier,
+        ordinal: slot.ordinal,
+      });
+    }
+
     prevHash = hash;
     seed = replayedCheckpoint.nextSeed;
   }
@@ -83,7 +98,7 @@ export function compareReplaySegment(
 
   return {
     kind: 'match',
-    rewardFacts: [],
+    rewardFacts,
     verifiedXPDelta: isTerminal ? (lastReplayed?.rewards.xp ?? 0) : 0,
   };
 }
@@ -124,4 +139,52 @@ function hasMatchingLevelUp(
   }
 
   return stored.from === replayed.from && stored.to === replayed.to;
+}
+
+interface PayloadRewardSlot {
+  readonly context: { readonly nodeTier: number };
+  readonly ordinal: number;
+}
+
+const RewardSlotContextSchema = z.object({ nodeTier: z.number() });
+const PayloadRewardSlotSchema = z.object({ context: RewardSlotContextSchema, ordinal: z.number() });
+const RewardSlotsSchema = z.array(PayloadRewardSlotSchema);
+
+/**
+ * A stored checkpoint's `rewardSlots` field rides outside the hashed subset like `rewards`, and
+ * is absent entirely from a checkpoint minted before this field existed.
+ */
+function findPayloadRewardSlots(
+  payload: Readonly<CheckpointPayload>,
+): ReadonlyArray<PayloadRewardSlot> | undefined {
+  const parsed = RewardSlotsSchema.safeParse(payload['rewardSlots']);
+
+  return parsed.success ? parsed.data : undefined;
+}
+
+/**
+ * Compares two reward-slot lists positionally after normalizing a missing list to empty — an old
+ * engine's checkpoint and an old provider's wire response both simply lack the field, so
+ * absent-in-both reads as the same "nothing dropped" fact as an explicit empty list.
+ */
+function hasMatchingRewardSlots(
+  stored: ReadonlyArray<PayloadRewardSlot> | undefined,
+  replayed: ReadonlyArray<PayloadRewardSlot> | undefined,
+): boolean {
+  const storedSlots = stored ?? [];
+  const replayedSlots = replayed ?? [];
+
+  if (storedSlots.length !== replayedSlots.length) {
+    return false;
+  }
+
+  return storedSlots.every((slot, index) => {
+    const other = replayedSlots[index];
+
+    return (
+      other !== undefined &&
+      slot.ordinal === other.ordinal &&
+      slot.context.nodeTier === other.context.nodeTier
+    );
+  });
 }

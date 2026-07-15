@@ -47,3 +47,25 @@ export interface GrantOnce {
 export interface SimVersionMismatchPayload {
   readonly data: { readonly providerSimVersion: string };
 }
+
+/**
+ * One rolled reward, ready for an `avatar_items` insert. The coordinate columns
+ * (`avatarId`/`scopeType`/`scopeId`/`chainIndex`/`ordinal`) are the row's identity, so an
+ * `ON CONFLICT DO NOTHING` insert makes re-minting the same fact idempotent.
+ */
+export interface MintedItem {
+  readonly affixes: ReadonlyArray<{
+    readonly affixID: string;
+    readonly groupID: string;
+    readonly value: number;
+  }>;
+  readonly avatarID: string;
+  readonly baseID: string;
+  readonly chainIndex: number;
+  readonly contentVersion: string;
+  readonly keyVersion: number;
+  readonly ordinal: number;
+  readonly rarityID: string;
+  readonly scopeID: string;
+  readonly scopeType: string;
+}

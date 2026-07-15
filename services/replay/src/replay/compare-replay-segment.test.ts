@@ -495,3 +495,156 @@ test('it chains the seed and hash forward across a multi-checkpoint segment', ()
 
   expect(verdict).toStrictEqual({ kind: 'match', rewardFacts: [], verifiedXPDelta: 0 });
 });
+
+test('it collects a reward fact per matching reward slot, keyed to the checkpoint chain index', () => {
+  const seed = 'aa'.repeat(16);
+  const nextSeed = 'bb'.repeat(16);
+
+  const rewardSlots = [
+    { context: { nodeTier: 1 }, ordinal: 0 },
+    { context: { nodeTier: 1 }, ordinal: 1 },
+  ];
+
+  const replayed = [
+    { nextSeed, rewards: { xp: 20 }, rewardSlots, seed, time: 0, type: 'progress' },
+  ];
+
+  const hash = buildCheckpointHash({
+    chainIndex: 4,
+    entropySource: 'server-key',
+    nextSeed,
+    prevHash: 'root-hash',
+    seed,
+    time: 0,
+    type: 'progress',
+    version: 1,
+  });
+
+  const stored: Array<StoredCheckpoint> = [
+    {
+      hash,
+      payload: {
+        chainIndex: 4,
+        entropySource: 'server-key',
+        nextSeed,
+        rewards: { xp: 20 },
+        rewardSlots,
+        seed,
+        time: 0,
+        type: 'progress',
+      },
+      prevHash: 'root-hash',
+      version: 1,
+    },
+  ];
+
+  const verdict = compareReplaySegment(stored, replayed, {
+    prevHash: 'root-hash',
+    seed,
+    startChainIndex: 3,
+  });
+
+  expect(verdict).toStrictEqual({
+    kind: 'match',
+    rewardFacts: [
+      { chainIndex: 4, nodeTier: 1, ordinal: 0 },
+      { chainIndex: 4, nodeTier: 1, ordinal: 1 },
+    ],
+    verifiedXPDelta: 0,
+  });
+});
+
+test('it matches when reward slots are absent from both the stored payload and the replay', () => {
+  const seed = 'aa'.repeat(16);
+  const nextSeed = 'bb'.repeat(16);
+  const replayed = [{ nextSeed, rewards: { xp: 0 }, seed, time: 0, type: 'started' }];
+
+  const hash = buildCheckpointHash({
+    chainIndex: 1,
+    entropySource: 'server-key',
+    nextSeed,
+    prevHash: 'root-hash',
+    seed,
+    time: 0,
+    type: 'started',
+    version: 1,
+  });
+
+  const stored: Array<StoredCheckpoint> = [
+    {
+      hash,
+      payload: {
+        chainIndex: 1,
+        entropySource: 'server-key',
+        nextSeed,
+        rewards: { xp: 0 },
+        seed,
+        time: 0,
+        type: 'started',
+      },
+      prevHash: 'root-hash',
+      version: 1,
+    },
+  ];
+
+  const verdict = compareReplaySegment(stored, replayed, {
+    prevHash: 'root-hash',
+    seed,
+    startChainIndex: 0,
+  });
+
+  expect(verdict).toStrictEqual({ kind: 'match', rewardFacts: [], verifiedXPDelta: 0 });
+});
+
+test('it reports a reward mismatch when the stored reward slots diverge from the replay', () => {
+  const seed = 'aa'.repeat(16);
+  const nextSeed = 'bb'.repeat(16);
+
+  const replayed = [
+    {
+      nextSeed,
+      rewards: { xp: 10 },
+      rewardSlots: [{ context: { nodeTier: 1 }, ordinal: 0 }],
+      seed,
+      time: 0,
+      type: 'progress',
+    },
+  ];
+
+  const hash = buildCheckpointHash({
+    chainIndex: 1,
+    entropySource: 'server-key',
+    nextSeed,
+    prevHash: 'root-hash',
+    seed,
+    time: 0,
+    type: 'progress',
+    version: 1,
+  });
+
+  const stored: Array<StoredCheckpoint> = [
+    {
+      hash,
+      payload: {
+        chainIndex: 1,
+        entropySource: 'server-key',
+        nextSeed,
+        rewards: { xp: 10 },
+        rewardSlots: [{ context: { nodeTier: 2 }, ordinal: 0 }],
+        seed,
+        time: 0,
+        type: 'progress',
+      },
+      prevHash: 'root-hash',
+      version: 1,
+    },
+  ];
+
+  const verdict = compareReplaySegment(stored, replayed, {
+    prevHash: 'root-hash',
+    seed,
+    startChainIndex: 0,
+  });
+
+  expect(verdict).toStrictEqual({ kind: 'divergence', reason: 'reward-mismatch', version: 1 });
+});

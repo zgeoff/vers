@@ -6,6 +6,7 @@ import invariant from 'tiny-invariant';
 import { applyVerifiedSegment } from '../apply/apply-verified-segment';
 import { parkActivity } from '../dispatch/park-activity';
 import { runReplaySegment } from '../dispatch/run-replay-segment';
+import { rollRewardItems } from '../mint/roll-reward-items';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
 import { buildReplaySimulationInput } from '../replay/build-replay-simulation-input';
 import { buildSegmentDuration } from '../replay/build-segment-duration';
@@ -15,7 +16,12 @@ import { findSeedDivergence } from '../replay/find-seed-divergence';
 import { isForwardExited } from '../replay/is-forward-exited';
 import { loadReplaySegment } from '../replay/load-replay-segment';
 import { toWireReplaySegmentInput } from '../replay/to-wire-replay-segment-input';
-import type { CompareVerdict, ReplaySegment, ReplayedCheckpoint } from '../replay/types';
+import type {
+  CompareVerdict,
+  ReplaySegment,
+  ReplayedCheckpoint,
+  RewardFact,
+} from '../replay/types';
 import type { ReplayFrontier } from '../types';
 import { rejectActivity } from './reject-activity';
 import type { PendingCacheEffect, ReplayIterationOutcome, ReplayWorkerDeps } from './types';
@@ -137,12 +143,12 @@ async function actInProcess(
   // A duration-cap trip on this (possibly cached) attempt isn't conclusive — a stale cache entry
   // can produce one too — so it falls through to the same fresh, full-segment confirmation a
   // compare divergence gets, rather than parking on an attempt that never finished comparing.
-  const isMatch =
-    !advance.haltedOnDurationCap &&
-    compareReplaySegment(unverified, replayed, compareContext).kind === 'match';
+  const verdict = advance.haltedOnDurationCap
+    ? undefined
+    : compareReplaySegment(unverified, replayed, compareContext);
 
-  if (isMatch) {
-    return applyMatch(trx, segment, replayed, driver);
+  if (verdict?.kind === 'match') {
+    return applyMatch(trx, deps, segment, replayed, driver, verdict.rewardFacts);
   }
 
   const confirmDriver = buildFreshDriver(segment);
@@ -196,12 +202,13 @@ async function actCrossVersion(
 
   // As in the in-process path, a duration-cap trip on this first attempt isn't conclusive on its
   // own — it falls through to the same fresh confirmation dispatch a compare divergence gets.
-  const isMatch =
-    outcome.output.haltedOnDurationCap !== true &&
-    compareReplaySegment(unverified, replayed, compareContext).kind === 'match';
+  const verdict =
+    outcome.output.haltedOnDurationCap === true
+      ? undefined
+      : compareReplaySegment(unverified, replayed, compareContext);
 
-  if (isMatch) {
-    return applyMatch(trx, segment, replayed, undefined);
+  if (verdict?.kind === 'match') {
+    return applyMatch(trx, deps, segment, replayed, undefined, verdict.rewardFacts);
   }
 
   const confirmOutcome = await runReplaySegment(runDeps, job);
@@ -226,9 +233,11 @@ async function actCrossVersion(
 
 async function applyMatch(
   trx: Transaction<DB>,
+  deps: Readonly<ReplayWorkerDeps>,
   segment: Readonly<ReplaySegment>,
   replayed: ReadonlyArray<ReplayedCheckpoint>,
   driver: SimulationDriver | undefined,
+  rewardFacts: ReadonlyArray<RewardFact>,
 ): Promise<ReplayIterationOutcome> {
   const lastReplayed = replayed.at(-1);
   const lastStored = segment.checkpoints.at(-1);
@@ -241,10 +250,23 @@ async function applyMatch(
   const forwardExited = isForwardExited(lastReplayed.type, segment.activity.status);
   const advanceChain = forwardExited && lastStored.version === segment.activity.appendedHead;
 
+  const items = await rollRewardItems(
+    { keysServiceURL: deps.keysServiceURL, privateKey: deps.privateKey },
+    {
+      avatarID: segment.activity.avatarID,
+      contentVersion: segment.activity.contentVersion,
+      keyVersion: segment.activity.keyVersion,
+      rewardFacts,
+      scopeID: segment.activity.scopeID,
+      scopeType: segment.activity.scopeType,
+    },
+  );
+
   const result = await applyVerifiedSegment(trx, {
     activityID: segment.activity.id,
     avatarID: segment.activity.avatarID,
     expectedVerifiedHead: segment.verifiedHead,
+    ...(items.length > 0 && { items }),
     verifiedHead: lastStored.version,
     ...(advanceChain && {
       chain: {

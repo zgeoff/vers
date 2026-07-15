@@ -86,7 +86,10 @@ export async function createHonestActivityFixture(
   });
 
   const engineCheckpoints = truncateAtFirstTerminal(simulationResult.checkpoints);
-  const contentVersion = '0.0.0-dev';
+
+  // The only content version `@vers/item-gen` has tables registered for — the mint step this
+  // fixture's checkpoints now carry reward slots into needs a real, loadable version.
+  const contentVersion = '1';
   const keyVersion = 1;
   const simVersion = 'test-engine-hash';
 
@@ -189,6 +192,7 @@ function buildHonestCheckpointRows(
       entropySource: 'server-key',
       nextSeed: checkpoint.nextSeed,
       rewards: checkpoint.rewards,
+      rewardSlots: checkpoint.rewardSlots,
       seed,
       time: checkpoint.time,
       type: checkpoint.type,

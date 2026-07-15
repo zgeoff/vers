@@ -231,3 +231,107 @@ test('it resets the attempt counter on a successful apply', async () => {
 
   expect(row.replayAttempts).toBe(0);
 });
+
+test('it mints reward items alongside the verified anchor', async () => {
+  await using ctx = await setupTest();
+
+  const avatar = await createAvatarRow(ctx.db);
+
+  const activity = await createActivityRow(ctx.db, {
+    appendedHead: 1,
+    avatarId: avatar.id,
+  });
+
+  const item = {
+    affixes: [{ affixID: 'affix_1', groupID: 'group_1', value: 5 }],
+    avatarID: avatar.id,
+    baseID: 'base_sword',
+    chainIndex: activity.startChainIndex + 1,
+    contentVersion: 'v1',
+    keyVersion: 1,
+    ordinal: 0,
+    rarityID: 'common',
+    scopeID: activity.scopeId,
+    scopeType: activity.scopeType,
+  };
+
+  await applyVerifiedSegment(ctx.db, {
+    activityID: activity.id,
+    avatarID: avatar.id,
+    expectedVerifiedHead: 0,
+    items: [item],
+    verifiedHead: 1,
+  });
+
+  const rows = await ctx.db
+    .selectFrom('avatarItems')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .execute();
+
+  expect(rows).toHaveLength(1);
+
+  expect(rows[0]).toMatchObject({
+    affixes: item.affixes,
+    baseId: item.baseID,
+    chainIndex: item.chainIndex,
+    ordinal: item.ordinal,
+    rarityId: item.rarityID,
+  });
+});
+
+test('it leaves one minted row set across a re-verified double apply', async () => {
+  await using ctx = await setupTest();
+
+  const avatar = await createAvatarRow(ctx.db);
+
+  const firstRun = await createActivityRow(ctx.db, {
+    appendedHead: 1,
+    avatarId: avatar.id,
+    status: 'stopped',
+  });
+
+  const secondRun = await createActivityRow(ctx.db, {
+    appendedHead: 1,
+    avatarId: avatar.id,
+    scopeId: firstRun.scopeId,
+    startChainIndex: 1,
+  });
+
+  const item = {
+    affixes: [],
+    avatarID: avatar.id,
+    baseID: 'base_sword',
+    chainIndex: firstRun.startChainIndex + 1,
+    contentVersion: 'v1',
+    keyVersion: 1,
+    ordinal: 0,
+    rarityID: 'common',
+    scopeID: firstRun.scopeId,
+    scopeType: firstRun.scopeType,
+  };
+
+  await applyVerifiedSegment(ctx.db, {
+    activityID: firstRun.id,
+    avatarID: avatar.id,
+    expectedVerifiedHead: 0,
+    items: [item],
+    verifiedHead: 1,
+  });
+
+  await applyVerifiedSegment(ctx.db, {
+    activityID: secondRun.id,
+    avatarID: avatar.id,
+    expectedVerifiedHead: 0,
+    items: [item],
+    verifiedHead: 1,
+  });
+
+  const rows = await ctx.db
+    .selectFrom('avatarItems')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .execute();
+
+  expect(rows).toHaveLength(1);
+});

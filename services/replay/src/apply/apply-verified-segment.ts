@@ -2,7 +2,7 @@ import type { DB } from '@vers/db';
 import { levelForXP } from '@vers/idle-core';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
-import type { GrantOnce } from '../types';
+import type { GrantOnce, MintedItem } from '../types';
 import { updateVerifiedChainAnchor } from './update-verified-chain-anchor';
 
 interface ChainAdvance {
@@ -23,6 +23,13 @@ interface ApplyVerifiedSegmentInput {
   readonly chain?: ChainAdvance;
   readonly expectedVerifiedHead: number;
   readonly grants?: ReadonlyArray<GrantOnce>;
+
+  /**
+   * Rolled reward content minted for this segment's verified reward facts. Inserted with
+   * `ON CONFLICT DO NOTHING`, keyed on the coordinate, so a re-verification of an already-applied
+   * segment never duplicates or re-rolls a row.
+   */
+  readonly items?: ReadonlyArray<MintedItem>;
   readonly verifiedHead: number;
 
   /**
@@ -97,6 +104,27 @@ async function applySegmentWrites(
       scopeID: input.chain.scopeID,
       scopeType: input.chain.scopeType,
     });
+  }
+
+  if (input.items !== undefined && input.items.length > 0) {
+    await trx
+      .insertInto('avatarItems')
+      .values(
+        input.items.map((item) => ({
+          affixes: item.affixes,
+          avatarId: item.avatarID,
+          baseId: item.baseID,
+          chainIndex: item.chainIndex,
+          contentVersion: item.contentVersion,
+          keyVersion: item.keyVersion,
+          ordinal: item.ordinal,
+          rarityId: item.rarityID,
+          scopeId: item.scopeID,
+          scopeType: item.scopeType,
+        })),
+      )
+      .onConflict((oc) => oc.doNothing())
+      .execute();
   }
 
   if (input.grants === undefined || input.grants.length === 0) {

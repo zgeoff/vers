@@ -1,0 +1,38 @@
+import { expect, test } from 'bun:test';
+import { bytesToHex } from '@noble/hashes/utils.js';
+import { resolveServiceURL } from '@vers/mock-services';
+import { getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { deriveAvatarRollKey } from './derive-avatar-roll-key';
+
+test('it derives the avatar roll key over real s2s auth against the mocked keys backend', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  const key = await deriveAvatarRollKey(
+    { keysServiceURL: resolveServiceURL('keys'), privateKey: keyPair.privateKey },
+    { avatarID: 'avatar_1', keyVersion: 1 },
+  );
+
+  expect(bytesToHex(key)).toMatch(/^[0-9a-f]{64}$/);
+});
+
+test('it derives the identical key for the identical avatar and key version', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  const deps = { keysServiceURL: resolveServiceURL('keys'), privateKey: keyPair.privateKey };
+
+  const first = await deriveAvatarRollKey(deps, { avatarID: 'avatar_1', keyVersion: 1 });
+  const second = await deriveAvatarRollKey(deps, { avatarID: 'avatar_1', keyVersion: 1 });
+
+  expect(bytesToHex(second)).toBe(bytesToHex(first));
+});
+
+test('it derives a different key for a different avatar', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  const deps = { keysServiceURL: resolveServiceURL('keys'), privateKey: keyPair.privateKey };
+
+  const first = await deriveAvatarRollKey(deps, { avatarID: 'avatar_1', keyVersion: 1 });
+  const second = await deriveAvatarRollKey(deps, { avatarID: 'avatar_2', keyVersion: 1 });
+
+  expect(bytesToHex(second)).not.toBe(bytesToHex(first));
+});
