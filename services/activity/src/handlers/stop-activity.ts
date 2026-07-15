@@ -51,7 +51,6 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
       activityId: stopped.id,
       appendedHead: stopped.appendedHead,
       avatarId: stopped.avatarId,
-      lastHash: stopped.lastHash,
       scopeId: stopped.scopeId,
       scopeType: stopped.scopeType,
       startChainIndex: stopped.startChainIndex,

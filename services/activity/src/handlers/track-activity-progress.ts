@@ -114,18 +114,7 @@ export async function trackActivityProgress(
   }
 
   if (head.status !== 'active') {
-    const outcome = pickTerminalOutcome(opts.input.checkpoints, head, opts.errors);
-
-    if (outcome instanceof Error) {
-      throw outcome;
-    }
-
-    opts.context.logger.info(
-      { activityID: opts.input.activityID },
-      'settled batch re-acknowledged after a dropped ack',
-    );
-
-    return outcome;
+    return checkAppendRace(db, opts);
   }
 
   if (head.writerSessionId !== null && head.writerSessionId !== actingSessionID) {
@@ -169,40 +158,19 @@ export async function trackActivityProgress(
         .where((eb) =>
           eb.or([eb('writerSessionId', 'is', null), eb('writerSessionId', '=', actingSessionID)]),
         )
-        .returning(['appendedHead', 'lastHash'])
+        .returning('appendedHead')
         .executeTakeFirst();
 
       if (capped === undefined) {
-        const current = await trx
-          .selectFrom('activities')
-          .select(['appendedHead', 'lastHash', 'status', 'writerSessionId'])
-          .where('id', '=', opts.input.activityID)
-          .executeTakeFirst();
+        const resolved = await checkAppendRace(trx, opts);
 
-        const outcome = pickAppendRaceOutcome(
-          opts.errors,
-          actingSessionID,
-          current,
-          opts.input.checkpoints,
-        );
-
-        if (outcome instanceof Error) {
-          throw outcome;
-        }
-
-        opts.context.logger.info(
-          { activityID: opts.input.activityID },
-          'settled batch re-acknowledged after a dropped ack',
-        );
-
-        return { appendedHead: outcome.appendedHead, kind: 'resolved' } as const;
+        return { appendedHead: resolved.appendedHead, kind: 'resolved' } as const;
       }
 
       await updateAppendedAnchorFromTail(trx, {
         activityId: opts.input.activityID,
         appendedHead: capped.appendedHead,
         avatarId: head.avatarId,
-        lastHash: capped.lastHash,
         scopeId: head.scopeId,
         scopeType: head.scopeType,
         startChainIndex: head.startChainIndex,
@@ -242,29 +210,9 @@ export async function trackActivityProgress(
       .executeTakeFirst();
 
     if (updated === undefined) {
-      const current = await trx
-        .selectFrom('activities')
-        .select(['appendedHead', 'lastHash', 'status', 'writerSessionId'])
-        .where('id', '=', opts.input.activityID)
-        .executeTakeFirst();
+      const resolved = await checkAppendRace(trx, opts);
 
-      const outcome = pickAppendRaceOutcome(
-        opts.errors,
-        actingSessionID,
-        current,
-        opts.input.checkpoints,
-      );
-
-      if (outcome instanceof Error) {
-        throw outcome;
-      }
-
-      opts.context.logger.info(
-        { activityID: opts.input.activityID },
-        'settled batch re-acknowledged after a dropped ack',
-      );
-
-      return outcome.appendedHead;
+      return resolved.appendedHead;
     }
 
     if (opts.input.checkpoints.length > 0) {
@@ -288,7 +236,6 @@ export async function trackActivityProgress(
         activityId: opts.input.activityID,
         appendedHead: newHead,
         avatarId: head.avatarId,
-        lastHash: newLastHash,
         scopeId: head.scopeId,
         scopeType: head.scopeType,
         startChainIndex: head.startChainIndex,
@@ -331,6 +278,40 @@ export async function trackActivityProgress(
   });
 
   return { appendedHead };
+}
+
+/**
+ * Resolves a batch that lost its guarded update, from a fresh read of the activity row. A batch
+ * that recomputes onto the settled tail is a dropped-ack retry: it re-acknowledges with the
+ * recorded head — logged, no writes. Every other outcome throws its typed error.
+ */
+async function checkAppendRace(
+  db: Kysely<DB>,
+  opts: TrackActivityProgressOpts,
+): Promise<{ appendedHead: number }> {
+  const current = await db
+    .selectFrom('activities')
+    .select(['appendedHead', 'lastHash', 'status', 'writerSessionId'])
+    .where('id', '=', opts.input.activityID)
+    .executeTakeFirst();
+
+  const outcome = pickAppendRaceOutcome(
+    opts.errors,
+    opts.context.actingSessionId,
+    current,
+    opts.input.checkpoints,
+  );
+
+  if (outcome instanceof Error) {
+    throw outcome;
+  }
+
+  opts.context.logger.info(
+    { activityID: opts.input.activityID },
+    'settled batch re-acknowledged after a dropped ack',
+  );
+
+  return { appendedHead: outcome.appendedHead };
 }
 
 interface SettledTailRow {

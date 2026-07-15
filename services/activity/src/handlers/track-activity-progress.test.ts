@@ -476,6 +476,56 @@ test('it advances the chain anchor to the terminal checkpoint on a failed batch'
   expect(chain.appendedChainIndex).toBe(terminal.payload.chainIndex);
 });
 
+test('it advances the chain anchor when the terminal segment consumed no entropy', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  // A checkpoint's seed is its own segment's origin, so a terminal whose segment rolled nothing
+  // carries nextSeed equal to seed while earlier checkpoints in the stream consumed entropy.
+  const restingSeed = 'aaaabbbbccccdddd';
+
+  const batch = createMockCheckpointBatch({
+    count: 2,
+    finalPayloadOverrides: {
+      nextSeed: restingSeed,
+      rewards: { xp: 100 },
+      seed: restingSeed,
+      type: 'completed',
+    },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  const terminal = batch[1]!;
+
+  const chain = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(chain.appendedNextSeed).toBe(restingSeed);
+  expect(chain.appendedChainIndex).toBe(terminal.payload.chainIndex);
+});
+
 test('it continues the next activity on the same node from the previous terminal checkpoint', async () => {
   await using ctx = await setupTest();
 
