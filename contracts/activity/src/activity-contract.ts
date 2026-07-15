@@ -11,11 +11,44 @@ const SimVersionProblemDataSchema = z.object({ currentSimVersion: z.string().nul
 const StaleHeadDataSchema = z.object({ appendedHead: z.int() });
 const TerminalStatusDataSchema = z.object({ appendedHead: z.int(), status: ActivityStatusSchema });
 
+const RewardItemAffixSchema = z.object({
+  affixID: z.string(),
+  groupID: z.string(),
+  value: z.number(),
+});
+
+const RewardItemSchema = z.object({
+  affixes: z.array(RewardItemAffixSchema),
+  baseID: z.string(),
+  contentVersion: z.string(),
+  rarityID: z.string(),
+});
+
+const RevealedRewardSchema = z.object({
+  chainIndex: z.int(),
+  item: RewardItemSchema,
+  ordinal: z.int(),
+});
+
 /**
  * The activities service's API: every procedure is authed and owner-scoped through the caller's
  * avatars.
  */
 export const activityContract = {
+  getActivityRewards: authedRoute
+    .route({
+      method: 'GET',
+      path: '/activities/{activityID}/rewards',
+      summary: "Get an activity's revealed reward-slot contents",
+    })
+    .input(z.object({ activityID: z.string() }))
+    .output(z.object({ items: z.array(RevealedRewardSchema), verifiedHead: z.int() }))
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'No activity with that id' },
+      }),
+    ),
+
   getCurrentActivity: authedRoute
     .route({
       method: 'GET',

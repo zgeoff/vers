@@ -24,9 +24,8 @@ beacon, a rotated key generation) is a new builder, never an interpreter change.
 ## The interpreter
 
 `@vers/item-gen` (`libs/game/item-gen`) holds the interpreter as pure functions over versioned table
-data. It is a `lib` consumed by the server (mint at settlement, the reveal read path, craft
-resolution) and by the client (device-custody local rolls), so it imports no service code and
-performs no I/O.
+data. It is a `lib` consumed by the server (mint at settlement, craft resolution) and by the client
+(device-custody local rolls), so it imports no service code and performs no I/O.
 
 - `rollItemFromStream(tables, context, stream)` rolls a complete item in canonical draw order:
   rarity, base, affix count, then each affix. `context` is the producing slot's trajectory facts —
@@ -43,9 +42,10 @@ market-grade quantity is a published scalar chosen by the player, never a rolled
 
 A content version pins table data and interpreter behaviour together. Inserting, removing, or
 reordering one draw shifts every draw after it in the sequence, so any change to the draw sequence
-is a new content version. Every shipped version stays loadable: mint, reveal, replay, and device
-rolls all resolve under the version pinned in the activity's `Started` snapshot and must agree
-byte-for-byte across deploys and key rotations.
+is a new content version. Every shipped version stays loadable: mint, replay, and device rolls all
+resolve under the version pinned in the activity's `Started` snapshot and must agree byte-for-byte
+across deploys and key rotations. The reveal read path resolves nothing itself — it returns the
+content version already stamped on the settlement mint's persisted row.
 
 ## Craft constraints
 
@@ -78,11 +78,11 @@ is server-computed, so there is nothing to replay.
 
 ## Call sites
 
-| Call site                               | Entry point             | Stream         | Key custody                   |
-| --------------------------------------- | ----------------------- | -------------- | ----------------------------- |
-| Mint at settlement (replay apply)       | `rollItemFromStream`    | keyed position | server                        |
-| Reveal read path (activity contract)    | `rollItemFromStream`    | keyed position | server                        |
-| Self-found local roll (client)          | `rollItemFromStream`    | keyed position | device                        |
-| Self-found replay verification (replay) | both entry points       | keyed position | server, re-derived device key |
-| Trade craft resolution                  | `rollAffixesFromStream` | salt           | server (sealed)               |
-| Self-found craft (client)               | `rollAffixesFromStream` | keyed position | device                        |
+| Call site                               | Entry point                        | Stream         | Key custody                   |
+| --------------------------------------- | ---------------------------------- | -------------- | ----------------------------- |
+| Mint at settlement (replay apply)       | `rollItemFromStream`               | keyed position | server                        |
+| Reveal read path (activity contract)    | none — returns the settlement mint | n/a            | server                        |
+| Self-found local roll (client)          | `rollItemFromStream`               | keyed position | device                        |
+| Self-found replay verification (replay) | both entry points                  | keyed position | server, re-derived device key |
+| Trade craft resolution                  | `rollAffixesFromStream`            | salt           | server (sealed)               |
+| Self-found craft (client)               | `rollAffixesFromStream`            | keyed position | device                        |
