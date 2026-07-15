@@ -1,6 +1,6 @@
 import { createId } from '@paralleldrive/cuid2';
 import { runWithStartContext } from '@tanstack/start-storage-context';
-import type { MockSession } from './request-context-holder';
+import type { StubSession } from './request-context-holder';
 import { requestContextHolder } from './request-context-holder';
 
 interface RequestContextInit {
@@ -38,7 +38,7 @@ export async function withRequestContext<T>(
   init: Readonly<RequestContextInit>,
   run: () => Promise<T>,
 ): Promise<RequestContextOutcome<T>> {
-  const sessions = new Map<string, MockSession>();
+  const sessions = new Map<string, StubSession>();
 
   for (const [name, data] of Object.entries(init.cookies ?? {})) {
     sessions.set(name, { createdAt: Date.now(), data: { ...data }, id: createId() });
@@ -76,7 +76,7 @@ export async function withRequestContext<T>(
 }
 
 function toCookieSnapshot(
-  sessions: ReadonlyMap<string, MockSession>,
+  sessions: ReadonlyMap<string, StubSession>,
 ): Record<string, Record<string, unknown> | undefined> {
   const cookies: Record<string, Record<string, unknown> | undefined> = {};
 

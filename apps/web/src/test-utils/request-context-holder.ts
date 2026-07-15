@@ -1,7 +1,7 @@
 /**
  * One mocked cookie session: mirrors the shape `@tanstack/react-start/server` itself returns.
  */
-export interface MockSession {
+export interface StubSession {
   createdAt: number;
   data: Record<string, unknown>;
   id: string;
@@ -14,7 +14,7 @@ export interface RequestContextState {
   readonly headers: Headers;
   readonly ip: string | undefined;
   readonly request: Request;
-  readonly sessions: Map<string, MockSession>;
+  readonly sessions: Map<string, StubSession>;
   readonly url: URL;
 }
 

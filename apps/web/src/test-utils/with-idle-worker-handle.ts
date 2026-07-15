@@ -1,5 +1,5 @@
 import { ActivityFailureAction } from '@vers/idle-core';
-import type { MockIdleWorkerHandle } from './idle-worker-handle-holder';
+import type { StubIdleWorkerHandle } from './idle-worker-handle-holder';
 import { idleWorkerHandleHolder } from './idle-worker-handle-holder';
 
 /**
@@ -7,7 +7,7 @@ import { idleWorkerHandleHolder } from './idle-worker-handle-holder';
  * default afterward — the only place a test may set what that mocked read returns.
  */
 export async function withIdleWorkerHandle<T>(
-  handle: Readonly<MockIdleWorkerHandle>,
+  handle: Readonly<StubIdleWorkerHandle>,
   run: () => Promise<T> | T,
 ): Promise<T> {
   idleWorkerHandleHolder.current = handle;

@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
 import { getFormProps, getInputProps, useForm } from '@conform-to/react';
 import type { SubmissionResult } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4';
@@ -16,9 +16,7 @@ const ReferenceSchema = z.object({
   password: z.string().min(8, 'Password is too short'),
 });
 
-function mockAction(): Promise<undefined> {
-  return Promise.resolve(undefined);
-}
+const noopAction = mock((): Promise<undefined> => Promise.resolve(undefined));
 
 function rejectWithResponse(): Promise<Response> {
   return Promise.resolve(new Response(null, { status: 400 }));
@@ -35,7 +33,7 @@ interface ReferenceFormProps {
  * result→UI mapping with no submit at all.
  */
 function ReferenceForm(props: ReferenceFormProps) {
-  const submission = useFormSubmit(props.action ?? mockAction, props.lastResult);
+  const submission = useFormSubmit(props.action ?? noopAction, props.lastResult);
 
   const [form, fields] = useForm({
     constraint: getZodConstraint(ReferenceSchema),
@@ -119,7 +117,7 @@ test('it shows a generic error message when the server rejects the submission', 
 test('it shows no error after a redirect resolves the submission', async () => {
   const user = userEvent.setup();
 
-  renderWithRouter(<ReferenceForm action={mockAction} />);
+  renderWithRouter(<ReferenceForm action={noopAction} />);
 
   const emailInput = await screen.findByPlaceholderText('Email');
 
@@ -137,9 +135,9 @@ test('it shows no error after a redirect resolves the submission', async () => {
 test('it disables the submit button while the action is in flight', async () => {
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
-  const mockGatedAction: FormAction = () => deferred.promise;
+  const gatedAction = mock(() => deferred.promise);
 
-  renderWithRouter(<ReferenceForm action={mockGatedAction} />);
+  renderWithRouter(<ReferenceForm action={gatedAction} />);
 
   const emailInput = await screen.findByPlaceholderText('Email');
 
