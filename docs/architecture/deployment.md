@@ -28,17 +28,19 @@ and mesh traffic is already encrypted, so services set `force_https = false`.
 Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.toml` or Dockerfile.
 Secrets are set with `fly secrets set` and never committed.
 
-| App                                                                          | Secrets                                                       |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `service-activity`, `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`                     |
-| `service-session`                                                            | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY`           |
-| `service-keys`                                                               | `ROLL_KEY_ROOTS`, `SERVICE_AUTH_PUBLIC_KEY`                   |
-| `app-web`                                                                    | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY` |
-| `vers-bugsink`                                                               | `SECRET_KEY`, `DATABASE_URL`, `CREATE_SUPERUSER` (first boot) |
+| App                                                                          | Secrets                                                               |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `service-activity`, `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`                             |
+| `service-session`                                                            | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY`                   |
+| `service-replay`                                                             | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`, `SERVICE_AUTH_PRIVATE_KEY` |
+| `service-keys`                                                               | `ROLL_KEY_ROOTS`, `SERVICE_AUTH_PUBLIC_KEY`                           |
+| `app-web`                                                                    | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY`         |
+| `vers-bugsink`                                                               | `SECRET_KEY`, `DATABASE_URL`, `CREATE_SUPERUSER` (first boot)         |
 
 - `SERVICE_AUTH_PUBLIC_KEY` — Ed25519 SPKI public key a service verifies inbound calls with.
-- `SERVICE_AUTH_PRIVATE_KEY` — its PKCS8 private half; `app-web` signs outbound s2s tokens with it,
-  each token's `aud` the target's registered service name (`service-user`).
+- `SERVICE_AUTH_PRIVATE_KEY` — its PKCS8 private half, held by the callers that sign outbound s2s
+  tokens: `app-web` toward the domain services, and `service-replay`'s worker toward version-pinned
+  replay providers. Each token's `aud` is the target's registered service name (`service-user`).
 - `JWT_SIGNING_PRIVKEY` — RS256 PKCS8 private key `service-session` signs user tokens with, under
   issuer and audience `API_IDENTIFIER`.
 - `SESSION_SECRET` — seals `app-web`'s cookies.
