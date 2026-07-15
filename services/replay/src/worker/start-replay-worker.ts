@@ -43,7 +43,7 @@ export function startReplayWorker(deps: Readonly<ReplayWorkerDeps>): ReplayWorke
 
       idleStreak += 1;
 
-      await sleep(pickBackoffMs(idleStreak), controller.signal);
+      await wait(pickBackoffMs(idleStreak), controller.signal);
     }
   })();
 
@@ -66,7 +66,7 @@ function pickBackoffMs(idleStreak: number): number {
  * explicitly cleared once the race settles either way, so a pending timeout never holds up an
  * otherwise-finished shutdown.
  */
-function sleep(ms: number, signal: AbortSignal): Promise<void> {
+function wait(ms: number, signal: AbortSignal): Promise<void> {
   let onAbort: (() => void) | undefined;
   let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
 

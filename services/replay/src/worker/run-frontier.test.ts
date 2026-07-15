@@ -5,7 +5,7 @@ import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bu
 import pino from 'pino';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
-import { actOnFrontier } from './act-on-frontier';
+import { runFrontier } from './run-frontier';
 
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
@@ -49,7 +49,7 @@ test('it defers the cache mutation until the caller applies it, never touching t
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    actOnFrontier(trx, deps, cache, {
+    runFrontier(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: firstBatchCount,
       replayAttempts: 0,
@@ -65,7 +65,7 @@ test('it defers the cache mutation until the caller applies it, never touching t
     pendingCache: { activityID: fixture.activity.id, effect: { kind: 'set' } },
   });
 
-  // actOnFrontier itself never wrote to the cache — only the caller applying the returned
+  // runFrontier itself never wrote to the cache — only the caller applying the returned
   // mutation after a successful commit would.
   expect(cache.get(fixture.activity.id)).toBeUndefined();
 });
@@ -82,7 +82,7 @@ test('it reports idle rather than throwing when the claimed activity row is gone
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    actOnFrontier(trx, deps, createReplayCache(), {
+    runFrontier(trx, deps, createReplayCache(), {
       activityID: 'act_gone',
       appendedHead: 3,
       replayAttempts: 0,

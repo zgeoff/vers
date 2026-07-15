@@ -85,7 +85,7 @@ export async function createHonestActivityFixture(
     duration: input.duration ?? 80_000,
   });
 
-  const engineCheckpoints = truncateAtFirstTerminal(simulationResult.checkpoints);
+  const engineCheckpoints = buildTerminalPrefix(simulationResult.checkpoints);
 
   // The only content version `@vers/item-gen` has tables registered for — the mint step this
   // fixture's checkpoints now carry reward slots into needs a real, loadable version.
@@ -148,7 +148,7 @@ export async function createHonestActivityFixture(
  * Cuts the engine's output at its first `completed`/`failed` checkpoint, inclusive — the shape a
  * stored stream is always found in, since the append path accepts nothing past a terminal.
  */
-function truncateAtFirstTerminal(
+function buildTerminalPrefix(
   checkpoints: ReadonlyArray<ActivityCheckpoint>,
 ): Array<ActivityCheckpoint> {
   const terminalIndex = checkpoints.findIndex((checkpoint) =>

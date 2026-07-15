@@ -31,7 +31,7 @@ test('it drops an evicted activity and stops its driver', () => {
   const entry = { driver: buildFakeDriver(), emittedCount: 1, lastHash: 'hash-1' };
 
   cache.set('act_1', entry);
-  cache.evict('act_1');
+  cache.remove('act_1');
 
   expect(cache.get('act_1')).toBeUndefined();
   expect(entry.driver.stop).toHaveBeenCalledOnce();

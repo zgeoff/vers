@@ -3,7 +3,7 @@ import { findReplayFrontier } from '../queue/find-replay-frontier';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
 import type { ReplayCache } from '../replay/create-replay-cache';
 import type { ReplayFrontier } from '../types';
-import { actOnFrontier } from './act-on-frontier';
+import { runFrontier } from './run-frontier';
 import type { ReplayIterationOutcome, ReplayWorkerDeps } from './types';
 
 /**
@@ -16,7 +16,7 @@ import type { ReplayIterationOutcome, ReplayWorkerDeps } from './types';
  */
 export async function runReplayIteration(
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose evict/get/set are its whole point; no readonly form is useful
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
 ): Promise<ReplayIterationOutcome> {
   let claimedFrontier: ReplayFrontier | undefined;
@@ -37,7 +37,7 @@ export async function runReplayIteration(
 
       claimedFrontier = frontier;
 
-      return actOnFrontier(trx, deps, cache, frontier);
+      return runFrontier(trx, deps, cache, frontier);
     });
 
     return applyPendingCacheEffect(cache, outcome);
@@ -47,14 +47,14 @@ export async function runReplayIteration(
 }
 
 /**
- * `applyMatch` never touches the cache itself — it returns the mutation it intends, and this
- * applies it only once the iteration's transaction has actually committed, so a commit failure
- * never leaves the cache reporting progress the database never persisted. The pending mutation is
- * an internal handoff between `actOnFrontier` and this caller, so it never reaches the returned
- * outcome.
+ * The cache mutation a matched, non-terminal segment intends is never applied by the frontier
+ * adjudication itself — it returns the mutation it intends, and this applies it only once the
+ * iteration's transaction has actually committed, so a commit failure never leaves the cache
+ * reporting progress the database never persisted. The pending mutation is an internal handoff
+ * between that adjudication and this caller, so it never reaches the returned outcome.
  */
 function applyPendingCacheEffect(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose evict/get/set are its whole point; no readonly form is useful
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   outcome: Readonly<ReplayIterationOutcome>,
 ): ReplayIterationOutcome {
@@ -65,7 +65,7 @@ function applyPendingCacheEffect(
   const pendingCache = outcome.pendingCache;
 
   if (pendingCache.effect.kind === 'evict') {
-    cache.evict(pendingCache.activityID);
+    cache.remove(pendingCache.activityID);
   } else {
     cache.set(pendingCache.activityID, pendingCache.effect.entry);
   }
@@ -75,7 +75,7 @@ function applyPendingCacheEffect(
 
 async function recordIterationFailure(
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose evict/get/set are its whole point; no readonly form is useful
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   frontier: ReplayFrontier | undefined,
   error: unknown,
@@ -85,7 +85,7 @@ async function recordIterationFailure(
   }
 
   deps.logger.error({ activityID: frontier.activityID, err: error }, 'replay iteration failed');
-  cache.evict(frontier.activityID);
+  cache.remove(frontier.activityID);
 
   const result = await updateReplayAttempts(deps.db, {
     activityID: frontier.activityID,

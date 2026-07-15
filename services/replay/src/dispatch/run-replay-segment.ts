@@ -57,14 +57,17 @@ export async function runReplaySegment(
     return { kind: 'expired' };
   }
 
-  return { kind: 'replayed', output: await callProvider(deps, version.providerUrl, job) };
+  return {
+    kind: 'replayed',
+    output: await sendProviderReplaySegment(deps, version.providerUrl, job),
+  };
 }
 
 /**
  * Calls the registered provider's own `replaySegment` endpoint, minting a short-lived s2s token
  * scoped to the replay audience.
  */
-async function callProvider(
+async function sendProviderReplaySegment(
   deps: Readonly<RunReplaySegmentDeps>,
   providerURL: string,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- job carries zod-inferred wire types with no readonly form

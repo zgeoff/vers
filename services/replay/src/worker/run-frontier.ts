@@ -35,10 +35,10 @@ import { updateVerifiedAnchorFromPredecessor } from './update-verified-anchor-fr
  * resulting verdict into a cursor-only apply, a confirmed rejection, or a park. Runs inside the
  * caller's transaction, alongside the chain claim it composes with.
  */
-export async function actOnFrontier(
+export async function runFrontier(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose evict/get/set are its whole point; no readonly form is useful
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   frontier: Readonly<ReplayFrontier>,
 ): Promise<ReplayIterationOutcome> {
@@ -69,10 +69,10 @@ export async function actOnFrontier(
   }
 
   if (segment.activity.simVersion === deps.simVersion) {
-    return actInProcess(trx, deps, cache, segment);
+    return runFrontierInProcess(trx, deps, cache, segment);
   }
 
-  return actCrossVersion(trx, deps, cache, segment);
+  return runFrontierCrossVersion(trx, deps, cache, segment);
 }
 
 interface NextSeedCheckpoint {
@@ -106,10 +106,10 @@ function isCacheCurrent(
   return entry.emittedCount === segment.verifiedHead && entry.lastHash === segment.prevHash;
 }
 
-async function actInProcess(
+async function runFrontierInProcess(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose evict/get/set are its whole point; no readonly form is useful
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
 ): Promise<ReplayIterationOutcome> {
@@ -120,7 +120,7 @@ async function actInProcess(
     rawCached !== undefined && isCacheCurrent(rawCached, segment) ? rawCached : undefined;
 
   if (rawCached !== undefined && cached === undefined) {
-    cache.evict(segment.activity.id);
+    cache.remove(segment.activity.id);
   }
 
   const compareContext = buildCompareContext(segment);
@@ -172,7 +172,7 @@ async function actInProcess(
   const confirmVerdict = compareReplaySegment(unverified, confirmReplayed, compareContext);
 
   if (confirmVerdict.kind === 'match') {
-    cache.evict(segment.activity.id);
+    cache.remove(segment.activity.id);
 
     return countFailedAttempt(trx, deps, segment);
   }
@@ -180,10 +180,10 @@ async function actInProcess(
   return rejectSegment(trx, deps, cache, segment, confirmVerdict, 'confirmed-on-fresh-replay');
 }
 
-async function actCrossVersion(
+async function runFrontierCrossVersion(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose evict/get/set are its whole point; no readonly form is useful
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
 ): Promise<ReplayIterationOutcome> {
@@ -294,7 +294,7 @@ type RejectionCause = 'confirmed-on-fresh-replay' | 'seed-validation-failed';
 async function rejectSegment(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose evict/get/set are its whole point; no readonly form is useful
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
   divergence: Extract<CompareVerdict, { kind: 'divergence' }>,
@@ -317,7 +317,7 @@ async function rejectSegment(
     scopeType: segment.activity.scopeType,
   });
 
-  cache.evict(segment.activity.id);
+  cache.remove(segment.activity.id);
 
   return { kind: 'rejected' };
 }
@@ -346,7 +346,7 @@ async function countFailedAttempt(
 async function parkFrontier(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose evict/get/set are its whole point; no readonly form is useful
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
   reason: 'durationCapExceeded' | 'expired' | 'unknownVersion',
@@ -357,7 +357,7 @@ async function parkFrontier(
 
   await parkActivity(trx, segment.activity.id);
 
-  cache.evict(segment.activity.id);
+  cache.remove(segment.activity.id);
 
   return { kind: 'parked', reason };
 }
