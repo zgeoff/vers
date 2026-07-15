@@ -290,3 +290,55 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
 
   expect(batches).toContainEqual({ activityID: liveActivityID });
 });
+
+test('it reconstructs a fast-forward report left mid-stream and registers from its recovered cursor', async () => {
+  // this seed's placeholder encounter completes in exactly 45s of simulated time with one
+  // confirmed ("started") checkpoint at its head; a 20s gap is enough to pick the fast-forward
+  // plan but far short of the 45s tail, so the budget check bails before any continuation is
+  // attempted, reporting back the very row the resync started from
+  const activity = createMockActivityData({
+    appendedHead: 1,
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(Date.now() - 20_000),
+  });
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      activity,
+      anchor: null,
+      appendedHead: 1,
+      serverTime: new Date(),
+      verifiedHead: 0,
+    })),
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      const [first] = opts.input.checkpoints;
+
+      // the started checkpoint's own nextSeed, not the activity row's start seed — proves the
+      // registered cursor chains onto the reconstruction, not a fresh checkpoint-0 sim
+      expect(first?.payload.seed).toBe('525ac5e6a97591b0a1877a6606b22d9c');
+
+      return { appendedHead: opts.input.expectedHead + opts.input.checkpoints.length };
+    }),
+  );
+
+  const ctx = setupTest();
+
+  await handleRequestResyncMessage(ctx.context, ctx.message);
+  await waitForMessageCount(ctx.received, 2);
+
+  expect(ctx.received).toStrictEqual([
+    { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
+    { status: { attempts: 0, kind: 'done', levelUps: 0 }, type: WorkerMessageType.ResyncStatus },
+  ]);
+
+  const simulation = ctx.context.getSimulation();
+
+  // the live sim attaches to the fast-forward's own head row — no continuation was ever started
+  expect(simulation?.activity?.id).toBe(activity.id);
+
+  const checkpoint = await simulation?.run(500);
+
+  if (checkpoint) {
+    await ctx.context.getSubmitter().submit(activity.id, checkpoint);
+  }
+});

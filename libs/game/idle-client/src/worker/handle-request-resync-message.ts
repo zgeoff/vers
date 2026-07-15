@@ -1,6 +1,6 @@
 import type { ActivityData } from '@vers/contract-activity';
-import type { Simulation } from '@vers/idle-core';
-import { buildSimulationInput, createSimulation } from '@vers/idle-core';
+import type { ActivityCheckpoint, Simulation } from '@vers/idle-core';
+import { ActivityCheckpointType, buildSimulationInput, createSimulation } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { runReconstruction } from '../resync/run-reconstruction';
 import { runResync } from '../resync/run-resync';
@@ -137,19 +137,7 @@ async function applyFastForward(
   }
 
   if (report.activity.status === 'active' && report.reason !== 'aborted-on-failure') {
-    await context.getSubmitter().registerActivity({
-      activityID: report.activity.id,
-      appendedHead: report.appendedHead,
-      lastHash: report.activity.lastHash,
-      startChainIndex: report.activity.startChainIndex,
-    });
-
-    const input = buildSimulationInput(report.activity);
-    const simulation = createSimulation();
-
-    simulation.startActivity(input.avatar, input.activity);
-
-    setLiveSimulation(context, report.activity, simulation);
+    await applyFastForwardAttach(context, report);
   }
 
   emitResyncStatus(context, {
@@ -157,6 +145,72 @@ async function applyFastForward(
     kind: 'done',
     levelUps: report.levelUps,
   });
+}
+
+/**
+ * Attaches the fast-forward's final row live, chaining onto its confirmed head exactly like a
+ * plain attach-live resync would: a fresh, checkpoint-0 simulation only when nothing is confirmed
+ * yet, otherwise a simulation reconstructed to the confirmed head so the registered cursor's
+ * `previousNextSeed` matches what the engine will actually emit next. `report.activity.status` is
+ * the row as fetched before this resync's own attempts ran, so it cannot show that the confirmed
+ * head itself already reached a terminal checkpoint — that's read off the reconstruction instead,
+ * and skips the attach entirely rather than installing a simulation with nothing left to submit.
+ */
+async function applyFastForwardAttach(
+  context: WorkerContext,
+  report: FastForwardReport,
+): Promise<void> {
+  const input = buildSimulationInput(report.activity);
+
+  if (report.appendedHead === 0) {
+    await context.getSubmitter().registerActivity({
+      activityID: report.activity.id,
+      appendedHead: 0,
+      lastHash: report.activity.lastHash,
+      startChainIndex: report.activity.startChainIndex,
+    });
+
+    const simulation = createSimulation();
+
+    simulation.startActivity(input.avatar, input.activity);
+
+    setLiveSimulation(context, report.activity, simulation);
+
+    return;
+  }
+
+  const reconstruction = await runReconstruction({
+    activity: input.activity,
+    appendedHead: report.appendedHead,
+    avatar: input.avatar,
+  });
+
+  if ('divergence' in reconstruction) {
+    emitDivergence(context, report.activity.id);
+
+    return;
+  }
+
+  if (isTerminalCheckpoint(reconstruction.lastCheckpoint)) {
+    return;
+  }
+
+  await context.getSubmitter().registerActivity({
+    activityID: report.activity.id,
+    appendedHead: report.appendedHead,
+    lastHash: report.activity.lastHash,
+    previousNextSeed: reconstruction.lastCheckpoint.nextSeed,
+    startChainIndex: report.activity.startChainIndex,
+  });
+
+  setLiveSimulation(context, report.activity, reconstruction.simulation);
+}
+
+function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {
+  return (
+    checkpoint.type === ActivityCheckpointType.Completed ||
+    checkpoint.type === ActivityCheckpointType.Failed
+  );
 }
 
 function setLiveSimulation(
