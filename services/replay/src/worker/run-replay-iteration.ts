@@ -22,26 +22,55 @@ export async function runReplayIteration(
   let claimedFrontier: ReplayFrontier | undefined;
 
   try {
-    return await deps.db.transaction().execute(async (trx) => {
+    const outcome = await deps.db.transaction().execute(async (trx) => {
       const chain = await claimNextChain(trx);
 
       if (chain === undefined) {
-        return { kind: 'idle' };
+        return { kind: 'idle' } as const;
       }
 
       const frontier = await findReplayFrontier(trx, chain);
 
       if (frontier === undefined) {
-        return { kind: 'idle' };
+        return { kind: 'idle' } as const;
       }
 
       claimedFrontier = frontier;
 
       return actOnFrontier(trx, deps, cache, frontier);
     });
+
+    return applyPendingCacheEffect(cache, outcome);
   } catch (error) {
     return recordIterationFailure(deps, cache, claimedFrontier, error);
   }
+}
+
+/**
+ * `applyMatch` never touches the cache itself — it returns the mutation it intends, and this
+ * applies it only once the iteration's transaction has actually committed, so a commit failure
+ * never leaves the cache reporting progress the database never persisted. The pending mutation is
+ * an internal handoff between `actOnFrontier` and this caller, so it never reaches the returned
+ * outcome.
+ */
+function applyPendingCacheEffect(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose evict/get/set are its whole point; no readonly form is useful
+  cache: ReplayCache,
+  outcome: Readonly<ReplayIterationOutcome>,
+): ReplayIterationOutcome {
+  if (outcome.kind !== 'matched' || outcome.pendingCache === undefined) {
+    return outcome;
+  }
+
+  const pendingCache = outcome.pendingCache;
+
+  if (pendingCache.effect.kind === 'evict') {
+    cache.evict(pendingCache.activityID);
+  } else {
+    cache.set(pendingCache.activityID, pendingCache.effect.entry);
+  }
+
+  return { kind: 'matched' };
 }
 
 async function recordIterationFailure(
@@ -55,10 +84,14 @@ async function recordIterationFailure(
     throw error;
   }
 
-  deps.logger.error({ activityID: frontier.activityID, error }, 'replay iteration failed');
+  deps.logger.error({ activityID: frontier.activityID, err: error }, 'replay iteration failed');
   cache.evict(frontier.activityID);
 
-  const result = await updateReplayAttempts(deps.db, { activityID: frontier.activityID });
+  const result = await updateReplayAttempts(deps.db, {
+    activityID: frontier.activityID,
+    status: frontier.status,
+    verifiedHead: frontier.verifiedHead,
+  });
 
   if (result?.quarantined === true) {
     deps.logger.error(

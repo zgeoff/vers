@@ -1,7 +1,24 @@
 import type { DB } from '@vers/db';
+import type { SimulationDriver } from '@vers/idle-core';
 import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import type pino from 'pino';
+
+/**
+ * The cache mutation `applyMatch` intends for a matched, non-terminal segment, applied only after
+ * the iteration's transaction has committed — the cache must never advance ahead of what actually
+ * persisted.
+ */
+export type PendingCacheEffect =
+  | { readonly kind: 'evict' }
+  | {
+      readonly entry: {
+        readonly driver: SimulationDriver;
+        readonly emittedCount: number;
+        readonly lastHash: string;
+      };
+      readonly kind: 'set';
+    };
 
 /**
  * What one worker iteration decided for the chain it claimed, or that it found no work.
@@ -9,8 +26,14 @@ import type pino from 'pino';
 export type ReplayIterationOutcome =
   | { readonly kind: 'errored' }
   | { readonly kind: 'idle' }
-  | { readonly kind: 'matched' }
-  | { readonly kind: 'parked'; readonly reason: 'expired' | 'unknownVersion' }
+  | {
+      readonly kind: 'matched';
+      readonly pendingCache?: { readonly activityID: string; readonly effect: PendingCacheEffect };
+    }
+  | {
+      readonly kind: 'parked';
+      readonly reason: 'durationCapExceeded' | 'expired' | 'unknownVersion';
+    }
   | { readonly kind: 'quarantined' }
   | { readonly kind: 'rejected' }
   | { readonly kind: 'unconfirmedDivergence' };

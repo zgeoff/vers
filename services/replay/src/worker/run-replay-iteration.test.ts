@@ -73,10 +73,14 @@ test('it verifies a later batch from held state, not a fresh from-Started replay
   });
 
   const totalCheckpoints = fixture.checkpoints.length;
-  const firstBatchCount = Math.floor(totalCheckpoints / 2);
+
+  // The stored stream carries only one terminal checkpoint, always its last — splitting one
+  // short of the end keeps both batches non-terminal, so the driver stays cached across both.
+  const secondBatchCount = totalCheckpoints - 1;
+  const firstBatchCount = Math.max(1, Math.floor(secondBatchCount / 2));
 
   expect(firstBatchCount).toBeGreaterThan(0);
-  expect(firstBatchCount).toBeLessThan(totalCheckpoints);
+  expect(firstBatchCount).toBeLessThan(secondBatchCount);
 
   await ctx.db
     .deleteFrom('activityCheckpoints')
@@ -109,7 +113,7 @@ test('it verifies a later batch from held state, not a fresh from-Started replay
 
   expect(cachedAfterFirst?.emittedCount).toBe(firstBatchCount);
 
-  const remaining = fixture.checkpoints.slice(firstBatchCount);
+  const remaining = fixture.checkpoints.slice(firstBatchCount, secondBatchCount);
 
   await ctx.db
     .insertInto('activityCheckpoints')
@@ -127,7 +131,10 @@ test('it verifies a later batch from held state, not a fresh from-Started replay
 
   await ctx.db
     .updateTable('activities')
-    .set({ appendedHead: totalCheckpoints, lastHash: fixture.checkpoints.at(-1)?.hash })
+    .set({
+      appendedHead: secondBatchCount,
+      lastHash: fixture.checkpoints[secondBatchCount - 1]?.hash,
+    })
     .where('id', '=', fixture.activity.id)
     .execute();
 
@@ -138,7 +145,7 @@ test('it verifies a later batch from held state, not a fresh from-Started replay
   const cachedAfterSecond = cache.get(fixture.activity.id);
 
   expect(cachedAfterSecond?.driver).toBe(cachedAfterFirst?.driver);
-  expect(cachedAfterSecond?.emittedCount).toBe(totalCheckpoints);
+  expect(cachedAfterSecond?.emittedCount).toBe(secondBatchCount);
 
   const updated = await ctx.db
     .selectFrom('activities')
@@ -146,10 +153,10 @@ test('it verifies a later batch from held state, not a fresh from-Started replay
     .where('id', '=', fixture.activity.id)
     .executeTakeFirstOrThrow();
 
-  expect(updated.verifiedHead).toBe(totalCheckpoints);
+  expect(updated.verifiedHead).toBe(secondBatchCount);
 });
 
-test('it rejects a tampered nextSeed, rewinds the chain, and voids an active successor', async () => {
+test('it rejects a checkpoint with a forged continuation seed, rewinds the chain, and voids an active successor', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
@@ -241,7 +248,7 @@ test('it rejects a tampered nextSeed, rewinds the chain, and voids an active suc
   expect(updatedSuccessor.status).toBe('rejected');
 });
 
-test('it rejects a tampered chainIndex', async () => {
+test('it rejects a checkpoint with a forged chain position', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
@@ -292,7 +299,7 @@ test('it rejects a tampered chainIndex', async () => {
   expect(outcome).toStrictEqual({ kind: 'rejected' });
 });
 
-test('it rejects a tampered entropySource tag', async () => {
+test('it rejects a checkpoint claiming the wrong entropy source', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
@@ -346,7 +353,7 @@ test('it rejects a tampered entropySource tag', async () => {
   expect(outcome).toStrictEqual({ kind: 'rejected' });
 });
 
-test('it rejects a tampered rewards.xp', async () => {
+test('it rejects a checkpoint with a forged reward total', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
@@ -482,6 +489,105 @@ test('it parks an activity stamped with a retention-expired sim version', async 
   const outcome = await runReplayIteration(deps, cache);
 
   expect(outcome).toStrictEqual({ kind: 'parked', reason: 'expired' });
+});
+
+test('it parks rather than rejects when the duration cap trips before the expected checkpoint count', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  // A claimed time far below what the stored stream actually took sizes a duration cap the
+  // engine can't reach even on a fresh, honest replay — an operational bound trip, not evidence
+  // the stream itself is dishonest.
+  await ctx.db
+    .updateTable('activities')
+    .set({ appendedTimeMs: 100 })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  const deps = {
+    db: ctx.db,
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const cache = createReplayCache();
+
+  const outcome = await runReplayIteration(deps, cache);
+
+  expect(outcome).toStrictEqual({ kind: 'parked', reason: 'durationCapExceeded' });
+
+  const updated = await ctx.db
+    .selectFrom('activities')
+    .select('status')
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated.status).toBe('parked');
+});
+
+test('it evicts and rebuilds from Started when the cached driver no longer matches the loaded segment', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const totalCheckpoints = fixture.checkpoints.length;
+  const firstBatchCount = totalCheckpoints - 1;
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ verifiedHead: firstBatchCount })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  const cache = createReplayCache();
+
+  // A cache entry keyed to this activity but stamped with coordinates from a different point in
+  // the stream — the state a stale or mismatched resume would leave behind.
+  cache.set(fixture.activity.id, {
+    driver: createSimulationDriver(
+      buildReplaySimulationInput({
+        avatarID: fixture.activity.avatarId,
+        buildSnapshot: { level: 1, xp: 0 },
+        id: fixture.activity.id,
+        seed: fixture.activity.seed,
+      }).activity,
+      buildReplaySimulationInput({
+        avatarID: fixture.activity.avatarId,
+        buildSnapshot: { level: 1, xp: 0 },
+        id: fixture.activity.id,
+        seed: fixture.activity.seed,
+      }).avatar,
+    ),
+    emittedCount: firstBatchCount,
+    lastHash: 'stale-hash-not-the-real-predecessor',
+  });
+
+  const deps = {
+    db: ctx.db,
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await runReplayIteration(deps, cache);
+
+  expect(outcome).toStrictEqual({ kind: 'matched' });
+
+  const updated = await ctx.db
+    .selectFrom('activities')
+    .select('verifiedHead')
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated.verifiedHead).toBe(totalCheckpoints);
 });
 
 test('it counts a replay error as a failed attempt and quarantines at the attempt limit', async () => {
