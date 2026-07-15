@@ -244,7 +244,6 @@ test('it mints reward items alongside the verified anchor', async () => {
 
   const item = {
     affixes: [{ affixID: 'affix_1', groupID: 'group_1', value: 5 }],
-    avatarID: avatar.id,
     baseID: 'base_sword',
     chainIndex: activity.startChainIndex + 1,
     contentVersion: 'v1',
@@ -300,7 +299,6 @@ test('it leaves one minted row set across a re-verified double apply', async () 
 
   const item = {
     affixes: [],
-    avatarID: avatar.id,
     baseID: 'base_sword',
     chainIndex: firstRun.startChainIndex + 1,
     contentVersion: 'v1',

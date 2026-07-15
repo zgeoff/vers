@@ -51,7 +51,9 @@ export interface SimVersionMismatchPayload {
 /**
  * One rolled reward, ready for an `avatar_items` insert. The coordinate columns
  * (`avatarId`/`scopeType`/`scopeId`/`chainIndex`/`ordinal`) are the row's identity, so an
- * `ON CONFLICT DO NOTHING` insert makes re-minting the same fact idempotent.
+ * `ON CONFLICT DO NOTHING` insert makes re-minting the same fact idempotent. The owning avatar is
+ * not carried here — a minted row belongs to the avatar whose verified segment is being applied,
+ * supplied at the insert.
  */
 export interface MintedItem {
   readonly affixes: ReadonlyArray<{
@@ -59,7 +61,6 @@ export interface MintedItem {
     readonly groupID: string;
     readonly value: number;
   }>;
-  readonly avatarID: string;
   readonly baseID: string;
   readonly chainIndex: number;
   readonly contentVersion: string;

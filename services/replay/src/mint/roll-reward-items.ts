@@ -54,7 +54,6 @@ export async function rollRewardItems(
 
     return {
       affixes: item.affixes,
-      avatarID: input.avatarID,
       baseID: item.baseID,
       chainIndex: fact.chainIndex,
       contentVersion: item.contentVersion,

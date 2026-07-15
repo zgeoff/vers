@@ -112,7 +112,7 @@ async function applySegmentWrites(
       .values(
         input.items.map((item) => ({
           affixes: item.affixes,
-          avatarId: item.avatarID,
+          avatarId: input.avatarID,
           baseId: item.baseID,
           chainIndex: item.chainIndex,
           contentVersion: item.contentVersion,

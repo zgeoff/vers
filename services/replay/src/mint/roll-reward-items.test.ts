@@ -70,7 +70,6 @@ test('it mints content identical to rolling the same coordinate directly', async
   expect(items).toStrictEqual([
     {
       affixes: expectedItem.affixes,
-      avatarID: 'avatar_1',
       baseID: expectedItem.baseID,
       chainIndex: 5,
       contentVersion: expectedItem.contentVersion,
