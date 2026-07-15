@@ -32,6 +32,32 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
   }
 
   const row = await db.transaction().execute(async (trx) => {
+    // A lockless read to learn which chain the active activity belongs to; the guarded update
+    // below re-verifies everything it found. Writers that touch both rows acquire the chain row
+    // before the activity row, so the chain lock comes first.
+    const active = await trx
+      .selectFrom('activities')
+      .select(['scopeId', 'scopeType'])
+      .where('avatarId', '=', opts.input.avatarID)
+      .where('status', '=', 'active')
+      .where('avatarId', 'in', (subquery) =>
+        subquery.selectFrom('avatars').select('id').where('userId', '=', actingUserID),
+      )
+      .executeTakeFirst();
+
+    if (active === undefined) {
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }
+
+    await trx
+      .selectFrom('activityChains')
+      .select('appendedChainIndex')
+      .where('avatarId', '=', opts.input.avatarID)
+      .where('scopeType', '=', active.scopeType)
+      .where('scopeId', '=', active.scopeId)
+      .forUpdate()
+      .execute();
+
     const stopped = await trx
       .updateTable('activities')
       .set({ status: 'stopped', stoppedAt: sql`now()` })

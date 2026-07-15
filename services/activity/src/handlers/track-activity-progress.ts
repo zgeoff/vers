@@ -149,6 +149,16 @@ export async function trackActivityProgress(
     // accepted, so no head, hash, or meter movement) while the capped transition and the chain's
     // consequent anchor advance commit together.
     const capOutcome = await db.transaction().execute(async (trx) => {
+      // Chain row before activity row — the one lock order every writer that touches both shares.
+      await trx
+        .selectFrom('activityChains')
+        .select('appendedChainIndex')
+        .where('avatarId', '=', head.avatarId)
+        .where('scopeType', '=', head.scopeType)
+        .where('scopeId', '=', head.scopeId)
+        .forUpdate()
+        .execute();
+
       const capped = await trx
         .updateTable('activities')
         .set({ status: 'capped', stoppedAt: sql`now()` })
@@ -187,6 +197,19 @@ export async function trackActivityProgress(
   }
 
   const appendedHead = await db.transaction().execute(async (trx) => {
+    // Only a terminal batch advances the chain anchor; a batch that never touches the chain row
+    // takes part in no lock ordering. When both rows are taken, the chain row comes first.
+    if (terminalRewardsXP !== undefined) {
+      await trx
+        .selectFrom('activityChains')
+        .select('appendedChainIndex')
+        .where('avatarId', '=', head.avatarId)
+        .where('scopeType', '=', head.scopeType)
+        .where('scopeId', '=', head.scopeId)
+        .forUpdate()
+        .execute();
+    }
+
     const updated = await trx
       .updateTable('activities')
       .set({

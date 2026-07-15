@@ -1,6 +1,5 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
-import type { Isolation } from '@vers/service-test-utils/bun';
 import {
   createServiceToken,
   createTestDB,
@@ -12,8 +11,13 @@ import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 
-async function setupTest(options: { readonly isolation?: Isolation } = {}) {
-  const db = await createTestDB(options);
+/**
+ * Several tests here drive startActivity, stopActivity, or trackActivityProgress, whose own
+ * `db.transaction()` can't nest under the default rollback-on-dispose isolation — this suite runs
+ * against a real, committed schema clone instead.
+ */
+async function setupTest() {
+  const db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
 
@@ -65,10 +69,8 @@ test('it stamps the acting session as the writer', async () => {
   expect(row.writerSessionId).toBe('session-b');
 });
 
-// schema isolation: this exercises stopActivity, whose own db.transaction() can't nest under the
-// default rollback-on-dispose isolation.
 test('it reports NOT_FOUND for a stopped activity', async () => {
-  await using ctx = await setupTest({ isolation: 'schema' });
+  await using ctx = await setupTest();
 
   const viewer = await createViewer({
     audience: 'service-activity',

@@ -7,7 +7,7 @@ import { createActivityService } from './create-activity-service';
 import { createAvatarRow } from './test-utils/create-avatar-row';
 
 test('it wires an injected db into the router instead of building one from env', async () => {
-  await using db = await createTestDB();
+  await using db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
 
@@ -35,7 +35,7 @@ test('it boots from env.DATABASE_URL when no db is injected', async () => {
 });
 
 test('it defaults the content and key versions when none are injected', async () => {
-  await using db = await createTestDB();
+  await using db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
 
@@ -55,7 +55,7 @@ test('it defaults the content and key versions when none are injected', async ()
 });
 
 test('it uses an injected content version when given', async () => {
-  await using db = await createTestDB();
+  await using db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
 
@@ -75,7 +75,7 @@ test('it uses an injected content version when given', async () => {
 });
 
 test('it uses an injected key version when given', async () => {
-  await using db = await createTestDB();
+  await using db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
 
