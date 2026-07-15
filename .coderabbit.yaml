@@ -17,17 +17,26 @@ reviews:
         server-minted secrets, table content the repo ships — are that territory,
         and invariant() is correct for them. Suggest ordinary control flow only
         for genuinely external input: request payloads, user-entered data.
+        Do not propose validation guards for values that are not caller
+        input — module-level constants, literals, compile-time-fixed
+        config. A guard against input that cannot occur is dead code,
+        not robustness.
     - path: '**/*.test.ts'
       instructions: |
-        Pure packages (libs, CLIs — no service or database edge) are mock-free:
-        plain arguments, options bags, and config literals are written inline at
-        the call site, even when repeated across tests. Do not suggest create-mock-*
-        factories or shared fixtures there; factories are for faker-defaulted
-        domain entities in service and app suites.
-        Golden and frozen-contract tests hardcode literals deliberately (domain
-        labels, canonical encodings, expected draw values). Never suggest replacing
-        such a literal with an import of the constant it verifies — if the constant
-        changes, the test must fail.
+        Test data comes in two kinds with different rules:
+        - Domain objects and DTOs come from the package's faker-defaulted
+          create-mock-* factories (test-utils/factories/) in every package
+          kind, pure libraries included. Never flag factory use as a
+          violation of the pure-package "mock-free" rule — that rule bans
+          test doubles (stubs, spies, module mocks), not data factories.
+        - Plain arguments, options bags, and config values are written
+          inline at the call site, even when repeated across tests. Do not
+          suggest extracting them into shared fixtures, baseline helpers,
+          or factories.
+        Golden and frozen-contract tests hardcode literals deliberately
+        (domain labels, canonical encodings, expected draw values). Never
+        suggest replacing such a literal with an import of the constant it
+        verifies — if the constant changes, the test must fail.
         expect(...).rejects/.resolves assertion chains are deliberately not
         awaited: Bun's matcher types declare them synchronous, per the AGENTS.md
         testing rules. Only toResolve()/toReject() return promises and are
