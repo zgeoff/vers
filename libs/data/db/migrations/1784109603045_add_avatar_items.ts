@@ -20,7 +20,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('affixes', 'jsonb', (col) => col.notNull())
     .addColumn('content_version', 'text', (col) => col.notNull())
     .addColumn('key_version', 'integer', (col) => col.notNull())
-    .addColumn('created_at', 'timestamp', (col) => col.notNull().defaultTo(sql`now()`))
+    .addColumn('created_at', 'timestamptz', (col) => col.notNull().defaultTo(sql`now()`))
     .addPrimaryKeyConstraint('avatar_items_pk', [
       'avatar_id',
       'scope_type',
