@@ -14,7 +14,7 @@ import { renderDBHubTOML } from '../postgres/render-dbhub-toml';
  * dbhub. Everything here runs before any tool call, so it must stay cheap and
  * local: DSN reads hit 1Password, never Neon.
  */
-async function launchPostgresMCP() {
+async function runPostgresMCP() {
   const branchResult = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
 
   const branch = branchResult.stdout.trim();
@@ -48,7 +48,7 @@ async function launchPostgresMCP() {
 }
 
 try {
-  await launchPostgresMCP();
+  await runPostgresMCP();
 } catch (error) {
   console.error('❌ failed to launch postgres MCP');
   console.error(error);

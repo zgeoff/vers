@@ -4,10 +4,10 @@ import { previews } from './previews';
 
 test('it has a preview entry for every template generator', () => {
   const expectedNames = Object.keys(generators)
-    .filter((exportName) => exportName.startsWith('generate'))
+    .filter((exportName) => exportName.startsWith('render'))
     .map((exportName) =>
       exportName
-        .replace(/^generate/, '')
+        .replace(/^render/, '')
         .replace(/Email$/, '')
         .replaceAll(/(?<=[a-z])(?=[A-Z])/g, '-')
         .toLowerCase(),

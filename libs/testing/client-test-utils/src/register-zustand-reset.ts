@@ -17,7 +17,7 @@ export function registerZustandReset(): void {
 
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- wraps zustand's own overloaded generic `create`; the wrapper is call-compatible but structurally distinct from the real signature
   const create = (<T>(stateCreator?: actualZustand.StateCreator<T>) => {
-    const curried = (creator: actualZustand.StateCreator<T>) => {
+    const createTrackedStore = (creator: actualZustand.StateCreator<T>) => {
       const store = actualCreate(creator);
       const initialState = store.getInitialState();
 
@@ -28,7 +28,9 @@ export function registerZustandReset(): void {
       return store;
     };
 
-    return typeof stateCreator === 'function' ? curried(stateCreator) : curried;
+    return typeof stateCreator === 'function'
+      ? createTrackedStore(stateCreator)
+      : createTrackedStore;
   }) as typeof actualZustand.create;
 
   void mock.module('zustand', () => ({ ...actualZustand, create }));

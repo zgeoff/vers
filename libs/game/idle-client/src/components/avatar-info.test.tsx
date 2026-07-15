@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
-import { nodeHasText } from '@vers/client-test-utils';
+import { makeNodeTextMatcher } from '@vers/client-test-utils';
 import { createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
 import { AvatarInfo } from './avatar-info';
 
@@ -23,8 +23,8 @@ test('it renders avatar information', () => {
   render(<AvatarInfo avatar={avatar} />);
 
   const avatarName = screen.getByText('Test Avatar');
-  const [lifeBar] = screen.getAllByText(nodeHasText('Life: 75 / 100'));
-  const level = screen.getByText(nodeHasText('Level 1'));
+  const [lifeBar] = screen.getAllByText(makeNodeTextMatcher('Life: 75 / 100'));
+  const level = screen.getByText(makeNodeTextMatcher('Level 1'));
 
   expect(avatarName).toBeInTheDocument();
   expect(lifeBar).toBeInTheDocument();

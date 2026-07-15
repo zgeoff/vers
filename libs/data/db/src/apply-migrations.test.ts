@@ -1,12 +1,12 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import postgres from 'postgres';
+import { applyMigrations } from './apply-migrations';
 import { createDB } from './create-db';
-import { migrateToLatest } from './migrate-to-latest';
 import { resolveTestDBTarget } from './test-support/resolve-test-db-target';
 
 /**
- * Creates a freshly minted, unmigrated database — the state `migrateToLatest`
+ * Creates a freshly minted, unmigrated database — the state `applyMigrations`
  * expects to find before it has ever run.
  */
 async function createEmptyDB() {
@@ -22,12 +22,12 @@ async function createEmptyDB() {
 
 test('it applies pending migrations once and is a no-op the second time', async () => {
   const databaseURL = await createEmptyDB();
-  const first = await migrateToLatest({ databaseURL });
+  const first = await applyMigrations({ databaseURL });
 
   expect(first.error).toBeUndefined();
   expect(first.results).not.toBeEmpty();
 
-  const second = await migrateToLatest({ databaseURL });
+  const second = await applyMigrations({ databaseURL });
 
   expect(second.error).toBeUndefined();
   expect(second.results).toBeEmpty();
@@ -36,7 +36,7 @@ test('it applies pending migrations once and is a no-op the second time', async 
 test('it creates the pending_transactions table with defaults applied', async () => {
   const databaseURL = await createEmptyDB();
 
-  await migrateToLatest({ databaseURL });
+  await applyMigrations({ databaseURL });
 
   const db = createDB({ databaseURL });
 
@@ -62,7 +62,7 @@ test('it creates the pending_transactions table with defaults applied', async ()
 test('it adds the consumed-transaction-token table and audit columns', async () => {
   const databaseURL = await createEmptyDB();
 
-  await migrateToLatest({ databaseURL });
+  await applyMigrations({ databaseURL });
 
   const db = createDB({ databaseURL });
 
@@ -117,7 +117,7 @@ test('it adds the consumed-transaction-token table and audit columns', async () 
 test('it bumps updated_at through the set_updated_at trigger on update', async () => {
   const databaseURL = await createEmptyDB();
 
-  await migrateToLatest({ databaseURL });
+  await applyMigrations({ databaseURL });
 
   const db = createDB({ databaseURL });
 

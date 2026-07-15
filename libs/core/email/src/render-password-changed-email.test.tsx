@@ -1,12 +1,12 @@
 import { expect, test } from 'bun:test';
-import { generatePasswordChangedEmail } from './generate-password-changed-email';
+import { renderPasswordChangedEmail } from './render-password-changed-email';
 
 test('it generates a password changed email with the provided configuration', async () => {
   const config = {
     email: 'test@example.com',
   };
 
-  const email = await generatePasswordChangedEmail(config);
+  const email = await renderPasswordChangedEmail(config);
 
   expect(email.html).toInclude('Your password has been changed');
   expect(email.html).toInclude('test@example.com');

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { generateWelcomeEmail } from './generate-welcome-email';
+import { renderWelcomeEmail } from './render-welcome-email';
 
 test('it generates a welcome email with the provided configuration', async () => {
   const config = {
@@ -7,7 +7,7 @@ test('it generates a welcome email with the provided configuration', async () =>
     verificationURL: 'https://versidle.com/verification?token=123456',
   };
 
-  const email = await generateWelcomeEmail(config);
+  const email = await renderWelcomeEmail(config);
 
   expect(email.html).toInclude('Welcome to vers');
   expect(email.html).toInclude(config.verificationCode);

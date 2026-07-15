@@ -8,12 +8,12 @@ import {
 } from '@vers/contract-email';
 import type { EmailClient } from '@vers/email';
 import {
-  generateChangeEmailNotificationEmail,
-  generateChangeEmailVerificationEmail,
-  generateExistingAccountEmail,
-  generatePasswordChangedEmail,
-  generateResetPasswordEmail,
-  generateWelcomeEmail,
+  renderChangeEmailNotificationEmail,
+  renderChangeEmailVerificationEmail,
+  renderExistingAccountEmail,
+  renderPasswordChangedEmail,
+  renderResetPasswordEmail,
+  renderWelcomeEmail,
 } from '@vers/email';
 import type { JobQueue } from '@vers/jobs';
 import { createJobQueue, defineJobs } from '@vers/jobs';
@@ -74,7 +74,7 @@ export function createEmailJobQueue(
     connectionString: config.connectionString,
     handlers: {
       'send-change-email-notification': async (payload, context) => {
-        const email = await generateChangeEmailNotificationEmail();
+        const email = await renderChangeEmailNotificationEmail();
 
         await emailClient.sendEmail({
           ...email,
@@ -84,7 +84,7 @@ export function createEmailJobQueue(
         });
       },
       'send-change-email-verification': async (payload, context) => {
-        const email = await generateChangeEmailVerificationEmail({
+        const email = await renderChangeEmailVerificationEmail({
           newEmail: payload.newEmail,
           verificationCode: payload.verificationCode,
           verificationURL: payload.verificationURL,
@@ -98,7 +98,7 @@ export function createEmailJobQueue(
         });
       },
       'send-existing-account': async (payload, context) => {
-        const email = await generateExistingAccountEmail({ email: payload.email });
+        const email = await renderExistingAccountEmail({ email: payload.email });
 
         await emailClient.sendEmail({
           ...email,
@@ -108,7 +108,7 @@ export function createEmailJobQueue(
         });
       },
       'send-password-changed': async (payload, context) => {
-        const email = await generatePasswordChangedEmail({ email: payload.email });
+        const email = await renderPasswordChangedEmail({ email: payload.email });
 
         await emailClient.sendEmail({
           ...email,
@@ -118,7 +118,7 @@ export function createEmailJobQueue(
         });
       },
       'send-reset-password': async (payload, context) => {
-        const email = await generateResetPasswordEmail({ resetURL: payload.resetURL });
+        const email = await renderResetPasswordEmail({ resetURL: payload.resetURL });
 
         await emailClient.sendEmail({
           ...email,
@@ -128,7 +128,7 @@ export function createEmailJobQueue(
         });
       },
       'send-welcome': async (payload, context) => {
-        const email = await generateWelcomeEmail({
+        const email = await renderWelcomeEmail({
           verificationCode: payload.verificationCode,
           verificationURL: payload.verificationURL,
         });

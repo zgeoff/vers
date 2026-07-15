@@ -14,10 +14,10 @@ interface Env {
  *     NODE_ENV: z.enum(['development', 'test', 'production', 'e2e']),
  *     // ... other env vars
  *   })
- *   .transform(addEnvUtils);
+ *   .transform(expandEnv);
  * ```
  */
-export function addEnvUtils<T extends Env>(env: T) {
+export function expandEnv<T extends Env>(env: T) {
   return {
     ...env,
     isDevelopment: env.NODE_ENV === 'development',

@@ -1,9 +1,9 @@
 import * as E from '@react-email/components';
-import { generateEmail } from './generate-email';
+import { renderEmail } from './render-email';
 import { ChangeEmailNotificationEmail } from './templates/change-email-notification';
 
-export function generateChangeEmailNotificationEmail() {
-  return generateEmail({
+export function renderChangeEmailNotificationEmail() {
+  return renderEmail({
     component: (
       <E.Html dir="ltr" lang="en">
         <ChangeEmailNotificationEmail />

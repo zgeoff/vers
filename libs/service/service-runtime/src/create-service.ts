@@ -109,7 +109,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
     ],
   });
 
-  mountORPCHandler(app, '/rpc', handler, {
+  registerORPCHandler(app, '/rpc', handler, {
     logger,
     publicKey,
     serviceName: config.name,
@@ -208,7 +208,7 @@ interface MountORPCHandlerDeps {
  * docs/architecture/service-contracts.md. Every response — including that 401 — carries the request's trace id
  * in `x-trace-id`, and the whole request runs inside its trace-context scope so logs correlate.
  */
-function mountORPCHandler(
+function registerORPCHandler(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- elysia app is a live framework instance with mutable routing state; no readonly form
   app: Elysia,
   prefix: `/${string}`,

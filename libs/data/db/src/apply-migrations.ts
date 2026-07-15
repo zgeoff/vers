@@ -6,12 +6,12 @@ import { createDB } from './create-db';
 
 /**
  * Absolute path to this package's kysely migrations. Shared by
- * `kysely.config.ts` and `migrateToLatest` so the CLI and the programmatic
- * entry point never point at different folders.
+ * `kysely.config.ts` and this package's programmatic migration runner so the
+ * CLI and the programmatic entry point never point at different folders.
  */
 export const migrationsFolder = path.join(import.meta.dirname, '../migrations');
 
-interface MigrateToLatestConfig {
+interface ApplyMigrationsConfig {
   readonly databaseURL: string;
 }
 
@@ -20,7 +20,7 @@ interface MigrateToLatestConfig {
  * starting from an empty database. The single programmatic composition
  * point for dev resets and test-DB setup.
  */
-export async function migrateToLatest(config: MigrateToLatestConfig): Promise<MigrationResultSet> {
+export async function applyMigrations(config: ApplyMigrationsConfig): Promise<MigrationResultSet> {
   const db = createDB({ databaseURL: config.databaseURL });
 
   const migrator = new Migrator({

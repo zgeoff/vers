@@ -1,5 +1,5 @@
 import postgres from 'postgres';
-import { migrateToLatest } from '../migrate-to-latest';
+import { applyMigrations } from '../apply-migrations';
 import { buildAdvisoryLockKey } from './build-advisory-lock-key';
 import { requireSafeDBIdentifier } from './require-safe-db-identifier';
 
@@ -13,7 +13,7 @@ interface CreateTestTemplateConfig {
  * `@vers/db` migration, safe to call concurrently from multiple `bun test`
  * processes racing on first use: an exclusive session advisory lock keyed by
  * the template name serializes the create-and-migrate sequence against other
- * calls to this function, and `migrateToLatest` is idempotent, so a template
+ * calls to this function, and `applyMigrations` is idempotent, so a template
  * that's already current is a no-op. The same lock key, taken in shared mode
  * by `createClonedDatabase`, keeps a clone from ever racing a migrate — a
  * clone whose source has an active connection is rejected by postgres.
@@ -42,7 +42,7 @@ export async function createTestTemplate(
         await session.unsafe(/* SQL */ `CREATE DATABASE ${config.templateDB}`);
       }
 
-      const result = await migrateToLatest({
+      const result = await applyMigrations({
         databaseURL: `${config.baseURI}/${config.templateDB}`,
       });
 

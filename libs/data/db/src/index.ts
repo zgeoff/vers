@@ -1,5 +1,5 @@
 export { createDB } from './create-db';
-export { migrateToLatest, migrationsFolder } from './migrate-to-latest';
+export { applyMigrations, migrationsFolder } from './apply-migrations';
 
 export type {
   Activities,

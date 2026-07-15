@@ -1,4 +1,4 @@
-import { migrateToLatest } from '@vers/db';
+import { applyMigrations } from '@vers/db';
 import { oraPromise } from 'ora';
 import { env } from '../postgres/env';
 import { pg } from '../postgres/pg';
@@ -91,7 +91,7 @@ async function resetDevDB() {
   };
 
   const migrationResult = await oraPromise(
-    migrateToLatest({ databaseURL: env.DATABASE_URL }),
+    applyMigrations({ databaseURL: env.DATABASE_URL }),
     kyselyMigrationSpinnerConfig,
   );
 

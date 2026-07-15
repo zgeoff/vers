@@ -1,5 +1,5 @@
 import * as E from '@react-email/components';
-import { generateEmail } from './generate-email';
+import { renderEmail } from './render-email';
 import { WelcomeEmail } from './templates/welcome-email';
 
 interface Config {
@@ -7,8 +7,8 @@ interface Config {
   verificationURL: string;
 }
 
-export function generateWelcomeEmail(config: Readonly<Config>) {
-  return generateEmail({
+export function renderWelcomeEmail(config: Readonly<Config>) {
+  return renderEmail({
     component: (
       <E.Html dir="ltr" lang="en">
         <WelcomeEmail

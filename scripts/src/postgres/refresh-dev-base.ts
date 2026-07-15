@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { migrateToLatest } from '@vers/db';
+import { applyMigrations } from '@vers/db';
 import { execa } from 'execa';
 import postgres from 'postgres';
 import { buildDevDSN } from './build-dev-dsn';
@@ -27,7 +27,7 @@ export async function refreshDevBase(maintenanceDSN: string, repoRoot: string): 
 
   const devBaseDSN = buildDevDSN(maintenanceDSN, 'dev_base');
 
-  const result = await migrateToLatest({ databaseURL: devBaseDSN });
+  const result = await applyMigrations({ databaseURL: devBaseDSN });
 
   if (result.error !== undefined) {
     throw result.error instanceof Error

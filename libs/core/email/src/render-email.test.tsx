@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { generateEmail } from './generate-email';
+import { renderEmail } from './render-email';
 
 function TestEmail() {
   return (
@@ -10,7 +10,7 @@ function TestEmail() {
 }
 
 test('it generates both HTML and plain text versions of the email', async () => {
-  const email = await generateEmail({
+  const email = await renderEmail({
     component: <TestEmail />,
   });
 
