@@ -4,8 +4,9 @@ import invariant from 'tiny-invariant';
 
 interface RunReconstructionOptions {
   /**
-   * The confirmed checkpoint count to reconstruct up to — always at least 1, since a resumable
-   * activity's `Started` checkpoint is its own first confirmed entry.
+   * The confirmed checkpoint count to reconstruct up to. Callers only invoke reconstruction once
+   * this is at least 1 — an appendedHead of 0 has no confirmed tail to replay and attaches
+   * directly from the row's own start fields instead.
    */
   readonly appendedHead: number;
   readonly activity: ActivityInput;

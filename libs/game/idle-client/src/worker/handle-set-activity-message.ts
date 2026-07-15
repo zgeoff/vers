@@ -14,7 +14,7 @@ export async function handleSetActivityMessage(
     return;
   }
 
-  const input = buildSimulationInput(message.activity);
+  const input = buildSimulationInput(message.activity, { failureAction: simulation.failureAction });
 
   await context.getSubmitter().registerActivity({
     activityID: message.activity.id,

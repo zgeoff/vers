@@ -1,8 +1,16 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
+import { createORPCClient } from '@orpc/client';
+import { RPCLink } from '@orpc/client/fetch';
+import type { ActivityData } from '@vers/contract-activity';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
-import { buildSimulationInput, runAttempt } from '@vers/idle-core';
+import type { ActivityCheckpoint } from '@vers/idle-core';
+import { SIMULATION_TIMESTEP_MS, buildSimulationInput, runAttempt } from '@vers/idle-core';
+import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
+import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
+import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import type { ActivityServiceClient } from '../submission/types';
 import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
 import type { RequestResyncMessage, WorkerMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
@@ -170,4 +178,115 @@ test('it reports a divergence via the checkpoint-stream-error channel and skips 
   ]);
 
   expect(ctx.context.getSimulation()).toBeNull();
+});
+
+test('it fast-forwards a short gap, broadcasts progress and final tallies, and installs a registered live sim on the final active row', async () => {
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }),
+  );
+
+  // this seed's placeholder encounter completes in exactly 45s of simulated time; a 50s gap
+  // leaves just under 5s of budget for the next continuation, too little for any encounter to
+  // reach a terminal checkpoint, so that continuation is guaranteed to be the fast-forward's
+  // unregistered final row regardless of its own random seed
+  const activity = createMockActivityData({
+    appendedHead: 0,
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(Date.now() - 50_000),
+  });
+
+  const startedActivities: Array<ActivityData> = [];
+  const batches: Array<{ readonly activityID: string }> = [];
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      activity,
+      anchor: null,
+      appendedHead: 0,
+      serverTime: new Date(),
+      verifiedHead: 0,
+    })),
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      batches.push({ activityID: opts.input.activityID });
+
+      const last = opts.input.checkpoints.at(-1);
+
+      return { appendedHead: last?.version ?? opts.input.expectedHead };
+    }),
+    mockActivityService.startActivity.handler((opts) => {
+      const started = createMockActivityData({ avatarID: opts.input.avatarID });
+
+      startedActivities.push(started);
+
+      return started;
+    }),
+  );
+
+  let capturedFlush: (() => Promise<void>) | undefined;
+  const onInvalid = mock<(activityID: string, reason: string) => void>();
+
+  const submitter = createCheckpointSubmitter({
+    client,
+    onInvalid,
+    scheduleFlush: (flush) => {
+      capturedFlush = flush;
+    },
+  });
+
+  const channel = new MessageChannel();
+
+  const received: Array<WorkerMessage> = [];
+
+  channel.port2.addEventListener('message', (event: MessageEvent<WorkerMessage>) => {
+    received.push(event.data);
+  });
+
+  channel.port2.start();
+
+  const context = createMockWorkerContext({ client, connections: [channel.port1], submitter });
+
+  const message: RequestResyncMessage = {
+    avatarID: activity.avatarID,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(context, message);
+  await waitForMessageCount(received, 3);
+
+  expect(received).toStrictEqual([
+    { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
+    {
+      status: { attempts: 1, kind: 'fast-forwarding', levelUps: 1 },
+      type: WorkerMessageType.ResyncStatus,
+    },
+    { status: { attempts: 1, kind: 'done', levelUps: 1 }, type: WorkerMessageType.ResyncStatus },
+  ]);
+
+  expect(startedActivities).toHaveLength(1);
+
+  const simulation = context.getSimulation();
+
+  invariant(simulation !== null, 'expected the fast-forward to install a live simulation');
+
+  const liveActivityID = simulation.activity?.id;
+
+  // the live sim attaches to the fast-forward's final, never-attempted continuation — not the
+  // first activity its one completed attempt already registered
+  expect(liveActivityID).toBe(startedActivities[0]?.id);
+  expect(liveActivityID).not.toBe(activity.id);
+  invariant(liveActivityID !== undefined, 'expected the live simulation to carry its activity id');
+
+  let checkpoint: ActivityCheckpoint | null = null;
+
+  while (checkpoint === null) {
+    checkpoint = await simulation.run(SIMULATION_TIMESTEP_MS);
+  }
+
+  // proves the fresh continuation's registration actually happened: an unregistered activity's
+  // checkpoint is silently dropped by the submitter rather than reaching the server
+  await context.getSubmitter().submit(liveActivityID, checkpoint);
+
+  await capturedFlush?.();
+
+  expect(batches).toContainEqual({ activityID: liveActivityID });
 });

@@ -50,7 +50,7 @@ async function startContinuationFrom(
   simulation: Simulation,
   row: Readonly<ActivityData>,
 ): Promise<void> {
-  const input = buildSimulationInput(row);
+  const input = buildSimulationInput(row, { failureAction: simulation.failureAction });
 
   simulation.startActivity(input.avatar, input.activity);
   context.setActivity(row);

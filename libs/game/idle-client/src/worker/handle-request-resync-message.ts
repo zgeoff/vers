@@ -70,7 +70,7 @@ async function applyResyncResult(
     return;
   }
 
-  applyFastForward(context, result.report);
+  await applyFastForward(context, result.report);
 }
 
 async function applyAttachLive(
@@ -90,6 +90,19 @@ async function applyAttachLive(
   );
 
   const input = buildSimulationInput(progress.activity);
+
+  if (plan.context.appendedHead === 0) {
+    await context.getSubmitter().registerActivity(plan.context);
+
+    const simulation = createSimulation();
+
+    simulation.startActivity(input.avatar, input.activity);
+
+    setLiveSimulation(context, progress.activity, simulation);
+    emitResyncStatus(context, { attempts: 0, kind: 'done', levelUps: 0 });
+
+    return;
+  }
 
   const reconstruction = await runReconstruction({
     activity: input.activity,
@@ -113,14 +126,24 @@ async function applyAttachLive(
   emitResyncStatus(context, { attempts: 0, kind: 'done', levelUps: 0 });
 }
 
-function applyFastForward(context: WorkerContext, report: FastForwardReport | undefined): void {
+async function applyFastForward(
+  context: WorkerContext,
+  report: FastForwardReport | undefined,
+): Promise<void> {
   if (report === undefined) {
     emitResyncStatus(context, { attempts: 0, kind: 'done', levelUps: 0 });
 
     return;
   }
 
-  if (report.activity.status === 'active') {
+  if (report.activity.status === 'active' && report.reason !== 'aborted-on-failure') {
+    await context.getSubmitter().registerActivity({
+      activityID: report.activity.id,
+      appendedHead: report.appendedHead,
+      lastHash: report.activity.lastHash,
+      startChainIndex: report.activity.startChainIndex,
+    });
+
     const input = buildSimulationInput(report.activity);
     const simulation = createSimulation();
 

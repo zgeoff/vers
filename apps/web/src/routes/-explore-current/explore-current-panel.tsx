@@ -25,7 +25,7 @@ import { ApproachingCapWarning } from './approaching-cap-warning';
  */
 type StartOutcome =
   | { readonly activity: ActivityData; readonly kind: 'started' }
-  | { readonly avatarID: string; readonly kind: 'attach' };
+  | { readonly activityID: string; readonly avatarID: string; readonly kind: 'attach' };
 
 async function startActivityForNode(avatarID: string, scopeID: string): Promise<StartOutcome> {
   const [error, started] = await safe(
@@ -41,7 +41,11 @@ async function startActivityForNode(avatarID: string, scopeID: string): Promise<
   }
 
   if (error.data.activity.scopeID === scopeID) {
-    return { avatarID: error.data.activity.avatarID, kind: 'attach' };
+    return {
+      activityID: error.data.activity.id,
+      avatarID: error.data.activity.avatarID,
+      kind: 'attach',
+    };
   }
 
   await activityClient.stopActivity({ avatarID });
@@ -88,7 +92,7 @@ export function ExploreCurrentPanel() {
       }
 
       if (outcome.kind === 'attach') {
-        setTargetActivityID(undefined);
+        setTargetActivityID(outcome.activityID);
         sendIdleRequestResync(idleWorkerHandle.worker, outcome.avatarID);
 
         return;
