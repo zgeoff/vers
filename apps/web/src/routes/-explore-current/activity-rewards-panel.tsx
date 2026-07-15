@@ -51,7 +51,12 @@ export function ActivityRewardsPanel(props: ActivityRewardsPanelProps) {
     return null;
   }
 
-  const pendingCount = countPendingRewardSlots(rewardSlotLedger, query.data.verifiedHead);
+  // A ledger built for a different activity describes a run this panel isn't showing, so its
+  // counts can't report pending rewards here.
+  const pendingCount =
+    rewardSlotLedger.activityID === props.activityID
+      ? countPendingRewardSlots(rewardSlotLedger.entries, query.data.verifiedHead)
+      : 0;
 
   return (
     <section className={panelStyles} data-testid="activity-rewards-panel">
@@ -68,7 +73,7 @@ export function ActivityRewardsPanel(props: ActivityRewardsPanelProps) {
               {item.item.rarityID} {item.item.baseID}
             </Text>
             {item.item.affixes.map((affix) => (
-              <Text key={affix.affixID}>
+              <Text key={`${affix.affixID}-${affix.groupID}`}>
                 {affix.affixID} +{affix.value}
               </Text>
             ))}

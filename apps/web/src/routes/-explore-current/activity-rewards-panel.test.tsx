@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { screen } from '@testing-library/react';
-import { updateRewardSlotLedger } from '@vers/idle-client';
+import { setRewardSlotLedger } from '@vers/idle-client';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { orpc } from '../../lib/rpc/orpc';
 import { server } from '../../mocks/node';
@@ -52,8 +52,13 @@ test('it shows the ambient catching-up line while ledger versions exceed the ver
 
   server.use(mockActivityService.getActivityRewards.handler({ items: [], verifiedHead: 3 }));
 
-  updateRewardSlotLedger({ activityID: 'activity_rewards_pending', count: 2, version: 3 });
-  updateRewardSlotLedger({ activityID: 'activity_rewards_pending', count: 4, version: 5 });
+  setRewardSlotLedger({
+    activityID: 'activity_rewards_pending',
+    entries: [
+      { count: 2, version: 3 },
+      { count: 4, version: 5 },
+    ],
+  });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderWithRouter(<ActivityRewardsPanel activityID="activity_rewards_pending" orpc={orpc} />);
@@ -70,11 +75,35 @@ test('it hides the catching-up line once the verified head has caught up to ever
 
   server.use(mockActivityService.getActivityRewards.handler({ items: [], verifiedHead: 5 }));
 
-  updateRewardSlotLedger({ activityID: 'activity_rewards_caught_up', count: 2, version: 3 });
-  updateRewardSlotLedger({ activityID: 'activity_rewards_caught_up', count: 4, version: 5 });
+  setRewardSlotLedger({
+    activityID: 'activity_rewards_caught_up',
+    entries: [
+      { count: 2, version: 3 },
+      { count: 4, version: 5 },
+    ],
+  });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderWithRouter(<ActivityRewardsPanel activityID="activity_rewards_caught_up" orpc={orpc} />);
+
+    await screen.findByTestId('activity-rewards-panel');
+
+    expect(screen.queryByTestId('activity-rewards-pending')).not.toBeInTheDocument();
+  });
+});
+
+test('it shows no catching-up line when the ledger belongs to a different activity', async () => {
+  const signedIn = await createSignedInUser();
+
+  server.use(mockActivityService.getActivityRewards.handler({ items: [], verifiedHead: 3 }));
+
+  setRewardSlotLedger({
+    activityID: 'activity_other',
+    entries: [{ count: 4, version: 5 }],
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    renderWithRouter(<ActivityRewardsPanel activityID="activity_rendered" orpc={orpc} />);
 
     await screen.findByTestId('activity-rewards-panel');
 
