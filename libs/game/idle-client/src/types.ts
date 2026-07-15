@@ -62,6 +62,11 @@ interface IWorkerMessage {
 }
 
 export interface InitialStateMessage extends IWorkerMessage {
+  /**
+   * The current activity's reward-slot ledger as the worker holds it, so a tab connecting mid-run
+   * catches up on pending rewards instead of starting empty.
+   */
+  readonly rewardSlotLedger: RewardSlotLedgerSnapshot;
   readonly state: SimulationSnapshot;
   readonly type: WorkerMessageType.InitialState;
 }
@@ -130,6 +135,15 @@ export interface OfflineCapStatus {
 export interface RewardSlotLedgerEntry {
   readonly count: number;
   readonly version: number;
+}
+
+/**
+ * A reward-slot ledger paired with the activity its entries belong to, so a consumer can tell
+ * whether the entries describe the activity it's rendering before trusting their counts.
+ */
+export interface RewardSlotLedgerSnapshot {
+  readonly activityID: null | string;
+  readonly entries: ReadonlyArray<RewardSlotLedgerEntry>;
 }
 
 /**

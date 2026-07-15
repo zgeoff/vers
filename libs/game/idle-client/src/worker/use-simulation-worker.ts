@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
+import { setRewardSlotLedger } from '../state/set-reward-slot-ledger';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
 import { setSimulationWorker } from '../state/set-simulation-worker';
@@ -66,6 +67,10 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
 
   if (isInitialStateMessage(event.data) || isUpdateMessage(event.data)) {
     setSimulationSnapshot(event.data.state);
+  }
+
+  if (isInitialStateMessage(event.data)) {
+    setRewardSlotLedger(event.data.rewardSlotLedger);
   }
 
   if (isCheckpointStreamInvalidMessage(event.data)) {

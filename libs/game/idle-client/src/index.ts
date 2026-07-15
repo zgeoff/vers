@@ -13,6 +13,7 @@ export type {
 
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
+export { setRewardSlotLedger } from './state/set-reward-slot-ledger';
 export { setSimulationWorker } from './state/set-simulation-worker';
 export { updateRewardSlotLedger } from './state/update-reward-slot-ledger';
 export { useOfflineCapStatus } from './state/use-offline-cap-status';

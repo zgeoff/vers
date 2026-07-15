@@ -33,6 +33,8 @@ export async function runSimulation(
   const version = await context.getSubmitter().submit(activityID, checkpoint);
 
   if (version !== undefined && checkpoint.rewardSlots.length > 0) {
+    context.recordRewardSlots(activityID, { count: checkpoint.rewardSlots.length, version });
+
     emitRewardSlotsRecorded(context, activityID, version, checkpoint.rewardSlots.length);
   }
 

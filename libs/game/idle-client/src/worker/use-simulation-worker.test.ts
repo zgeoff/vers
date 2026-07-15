@@ -10,6 +10,7 @@ import type {
   ClientMessage,
   InitialStateMessage,
   RewardSlotsRecordedMessage,
+  SimulationUpdateMessage,
 } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { useSimulationWorker } from './use-simulation-worker';
@@ -94,6 +95,7 @@ test('it updates simulation state from worker messages', async () => {
   worker.channel.port2.start();
 
   const message: InitialStateMessage = {
+    rewardSlotLedger: { activityID: null, entries: [] },
     state: { combat: { elapsed: 1000 }, failureAction: ActivityFailureAction.Retry },
     type: WorkerMessageType.InitialState,
   };
@@ -166,6 +168,8 @@ test('it sends a disconnect message on pagehide', async () => {
 test('it accumulates the reward-slot ledger from worker messages', async () => {
   registerSharedWorkerStub();
 
+  useIdleStore.setState({ checkpointStreamError: null });
+
   const hook = renderHook(() => useSimulationWorker());
 
   hook.rerender();
@@ -178,6 +182,7 @@ test('it accumulates the reward-slot ledger from worker messages', async () => {
   worker.channel.port2.start();
 
   const initialStateMessage: InitialStateMessage = {
+    rewardSlotLedger: { activityID: null, entries: [] },
     state: {
       activity: createMockActivitySnapshot({ id: 'activity_1' }),
       failureAction: ActivityFailureAction.Retry,
@@ -224,6 +229,8 @@ test('it accumulates the reward-slot ledger from worker messages', async () => {
 test('it resets the reward-slot ledger once a new activity reports its own message', async () => {
   registerSharedWorkerStub();
 
+  useIdleStore.setState({ checkpointStreamError: null });
+
   const hook = renderHook(() => useSimulationWorker());
 
   hook.rerender();
@@ -236,6 +243,7 @@ test('it resets the reward-slot ledger once a new activity reports its own messa
   worker.channel.port2.start();
 
   worker.channel.port2.postMessage({
+    rewardSlotLedger: { activityID: null, entries: [] },
     state: {
       activity: createMockActivitySnapshot({ id: 'activity_1' }),
       failureAction: ActivityFailureAction.Retry,
@@ -264,7 +272,7 @@ test('it resets the reward-slot ledger once a new activity reports its own messa
       failureAction: ActivityFailureAction.Retry,
     },
     type: WorkerMessageType.SimulationUpdate,
-  });
+  } satisfies SimulationUpdateMessage);
 
   await waitFor(() => {
     expect(useIdleStore.getState().activity?.id).toBe('activity_2');
@@ -280,4 +288,36 @@ test('it resets the reward-slot ledger once a new activity reports its own messa
   await waitFor(() => {
     expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 5, version: 1 }]);
   });
+});
+
+test('it installs the reward-slot ledger carried by the initial state', async () => {
+  registerSharedWorkerStub();
+
+  useIdleStore.setState({ rewardSlotLedger: [], rewardSlotLedgerActivityID: null });
+
+  const hook = renderHook(() => useSimulationWorker());
+
+  hook.rerender();
+
+  invariant(hook.result.current, 'Worker not initialized');
+
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a StubSharedWorker, so its return value has that shape at runtime
+  const worker = hook.result.current as unknown as StubSharedWorker;
+
+  worker.channel.port2.start();
+
+  worker.channel.port2.postMessage({
+    rewardSlotLedger: { activityID: 'activity_1', entries: [{ count: 2, version: 1 }] },
+    state: {
+      activity: createMockActivitySnapshot({ id: 'activity_1' }),
+      failureAction: ActivityFailureAction.Retry,
+    },
+    type: WorkerMessageType.InitialState,
+  } satisfies InitialStateMessage);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 2, version: 1 }]);
+  });
+
+  expect(useIdleStore.getState().rewardSlotLedgerActivityID).toBe('activity_1');
 });
