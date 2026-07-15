@@ -35,3 +35,35 @@ test('it clears fields the snapshot omits', () => {
   expect(useIdleStore.getState().avatar).toBeNull();
   expect(useIdleStore.getState().combat).toBeNull();
 });
+
+test('it resets the reward-slot ledger the moment the active activity changes', () => {
+  useIdleStore.setState({
+    activity: createMockActivitySnapshot({ id: 'activity_1' }),
+    rewardSlotLedger: [{ count: 2, version: 1 }],
+    rewardSlotLedgerActivityID: 'activity_1',
+  });
+
+  setSimulationSnapshot({
+    activity: createMockActivitySnapshot({ id: 'activity_2' }),
+    failureAction: ActivityFailureAction.Retry,
+  });
+
+  expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([]);
+  expect(useIdleStore.getState().rewardSlotLedgerActivityID).toBe('activity_2');
+});
+
+test('it leaves the reward-slot ledger untouched while the active activity stays the same', () => {
+  useIdleStore.setState({
+    activity: createMockActivitySnapshot({ id: 'activity_1' }),
+    rewardSlotLedger: [{ count: 2, version: 1 }],
+    rewardSlotLedgerActivityID: 'activity_1',
+  });
+
+  setSimulationSnapshot({
+    activity: createMockActivitySnapshot({ id: 'activity_1' }),
+    failureAction: ActivityFailureAction.Retry,
+  });
+
+  expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 2, version: 1 }]);
+  expect(useIdleStore.getState().rewardSlotLedgerActivityID).toBe('activity_1');
+});

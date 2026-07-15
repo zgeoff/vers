@@ -12,9 +12,8 @@ export interface SyncSlice {
   rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry>;
 
   /**
-   * The activity `rewardSlotLedger`'s entries belong to, tracked independently of the simulation
-   * snapshot's own activity field so a ledger reset never races that field's update — internal
-   * bookkeeping for `updateRewardSlotLedger`, with no selector of its own.
+   * The activity `rewardSlotLedger`'s entries belong to, kept in sync whenever the ledger resets
+   * or gains an entry — internal bookkeeping with no selector of its own.
    */
   rewardSlotLedgerActivityID: null | string;
 }
