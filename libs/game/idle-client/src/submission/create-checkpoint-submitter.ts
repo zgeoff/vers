@@ -1,6 +1,7 @@
 import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
+import invariant from 'tiny-invariant';
 import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
 import { ENTROPY_SOURCE_SERVER_KEY, PROGRESS_FLUSH_INTERVAL_MS } from './constants';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
@@ -23,20 +24,22 @@ interface ActivityState {
 
 export interface CheckpointSubmitter {
   /**
-   * Seeds an activity's chain-link cursor from its head row and resends whatever the durable
-   * queue still holds pending for it. Idempotent per activity — a second call for an activity
-   * already registered this worker lifetime is a no-op, so it never clobbers an in-progress
-   * cursor. Resolves once the cursor is seeded from any pending rows, so a caller that awaits it
-   * before producing the activity's first checkpoint never races the resume read.
+   * Seeds an activity's chain-link cursor from its head row; the call that first registers the
+   * activity also resends whatever the durable queue still holds pending for it. Idempotent per
+   * activity — every call this worker lifetime shares one seeding, so concurrent registrations
+   * from separate tabs resolve together and none clobbers an in-progress cursor or piles on
+   * extra resends. A failed seed read stops the activity's stream through `onInvalid`.
    */
   registerActivity: (context: Readonly<ActivitySubmissionContext>) => Promise<void>;
 
   /**
    * Maps and enqueues one engine checkpoint for a previously attached activity, then schedules a
    * flush: immediately for a terminal checkpoint, otherwise on the shared progress window.
-   * Silently drops the checkpoint if the activity was never attached or its stream is stopped.
-   * Resolves once the checkpoint is durably queued, so a caller that awaits each submission in
-   * order never races a later checkpoint's write against an earlier one's.
+   * Waits for the activity's registration to finish seeding the cursor, so a checkpoint produced
+   * while the seed read is still in flight never chains onto a stale hash. Silently drops the
+   * checkpoint if the activity was never attached or its stream is stopped. Resolves once the
+   * checkpoint is durably queued, so a caller that awaits each submission in order never races a
+   * later checkpoint's write against an earlier one's.
    */
   submit: (activityID: string, checkpoint: Readonly<ActivityCheckpoint>) => Promise<void>;
 }
@@ -84,6 +87,7 @@ export function createCheckpointSubmitter(
   options: Readonly<CreateCheckpointSubmitterOptions>,
 ): CheckpointSubmitter {
   const activityStates = new Map<string, ActivityState>();
+  const registrations = new Map<string, Promise<void>>();
 
   const scheduleFlush: (flush: () => Promise<void>) => void =
     options.scheduleFlush ??
@@ -199,11 +203,9 @@ export function createCheckpointSubmitter(
     }
   };
 
-  const registerActivity = async (context: Readonly<ActivitySubmissionContext>): Promise<void> => {
-    if (activityStates.has(context.activityID)) {
-      return;
-    }
-
+  const createActivityState = async (
+    context: Readonly<ActivitySubmissionContext>,
+  ): Promise<void> => {
     const state: ActivityState = {
       expectedHead: context.appendedHead,
       flushPending: false,
@@ -218,7 +220,27 @@ export function createCheckpointSubmitter(
 
     activityStates.set(context.activityID, state);
 
-    await loadPendingCheckpoints(context.activityID, state);
+    try {
+      await loadPendingCheckpoints(context.activityID, state);
+    } catch (error) {
+      state.invalid = true;
+
+      options.onInvalid(context.activityID, `pending-checkpoint read failed: ${String(error)}`);
+    }
+  };
+
+  const registerActivity = async (context: Readonly<ActivitySubmissionContext>): Promise<void> => {
+    const existing = registrations.get(context.activityID);
+
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const registration = createActivityState(context);
+
+    registrations.set(context.activityID, registration);
+
+    await registration;
     await flush(context.activityID);
   };
 
@@ -226,9 +248,19 @@ export function createCheckpointSubmitter(
     activityID: string,
     checkpoint: Readonly<ActivityCheckpoint>,
   ): Promise<void> => {
+    const registration = registrations.get(activityID);
+
+    if (registration === undefined) {
+      return;
+    }
+
+    await registration;
+
     const state = activityStates.get(activityID);
 
-    if (state === undefined || state.invalid) {
+    invariant(state !== undefined, 'a registered activity has no submission state');
+
+    if (state.invalid) {
       return;
     }
 
