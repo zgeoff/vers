@@ -54,13 +54,13 @@ test('it submits mode self_found when Self-Found is selected', async () => {
 
     const nameField = await screen.findByLabelText('Name');
 
-    await user.type(nameField, 'Vagrant');
+    await user.type(nameField, 'Outlander');
     await user.click(screen.getByRole('radio', { name: 'Self-Found' }));
     await user.click(screen.getByRole('button', { name: 'Create Avatar' }));
 
     await waitFor(() => {
       const created = db.avatarCollection.findFirst((q) =>
-        q.where({ name: 'Vagrant', userID: signedIn.userID }),
+        q.where({ name: 'Outlander', userID: signedIn.userID }),
       );
 
       expect(created).toMatchObject({ mode: 'self_found' });
