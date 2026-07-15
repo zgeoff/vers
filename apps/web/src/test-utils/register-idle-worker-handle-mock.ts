@@ -20,14 +20,20 @@ export function registerIdleWorkerHandleMock(): void {
   }));
 
   void mock.module('../lib/idle/send-idle-set-activity', () => ({
-    sendIdleSetActivity: (worker: StubSimulationWorker, activity: unknown, avatar: unknown) => {
-      worker.port.postMessage({ activity, avatar, type: 'set_activity' });
+    sendIdleSetActivity: (worker: StubSimulationWorker, activity: unknown) => {
+      worker.port.postMessage({ activity, type: 'set_activity' });
     },
   }));
 
   void mock.module('../lib/idle/send-idle-set-failure-action', () => ({
     sendIdleSetFailureAction: (worker: StubSimulationWorker, failureAction: unknown) => {
       worker.port.postMessage({ failureAction, type: 'set_failure_action' });
+    },
+  }));
+
+  void mock.module('../lib/idle/send-idle-request-resync', () => ({
+    sendIdleRequestResync: (worker: StubSimulationWorker, avatarID: unknown) => {
+      worker.port.postMessage({ avatarID, type: 'request_resync' });
     },
   }));
 

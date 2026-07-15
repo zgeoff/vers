@@ -1,26 +1,59 @@
+import { isDefinedError, safe } from '@orpc/client';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import type { ActivityData } from '@vers/contract-activity';
 import { CheckboxField, Spinner } from '@vers/design-system';
 import { ActivityFailureAction } from '@vers/idle-core';
-import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { useSelectedNode } from '@vers/worldmap-client';
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { SimulationUnsupportedNotice } from '../../components/simulation-unsupported-notice';
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
+import { activeAvatarQueryOptions } from '../../lib/avatar/active-avatar-query-options';
 import { IdleWorldMapEncounterActivity } from '../../lib/idle/idle-world-map-encounter-activity';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
+import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
 import { sendIdleSetActivity } from '../../lib/idle/send-idle-set-activity';
 import { sendIdleSetFailureAction } from '../../lib/idle/send-idle-set-failure-action';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { useIsSharedWorkerSupported } from '../../lib/platform/use-is-shared-worker-supported';
+import { activityClient } from '../../lib/rpc/clients/activity-client';
 import { ApproachingCapWarning } from './approaching-cap-warning';
 
 /**
- * Module-scoped so its identity — and its `id` — stays stable across renders.
+ * Starting the same scope the caller already has active isn't a failure — the CONFLICT payload's
+ * row is exactly the stream to attach to instead. A different scope stops that one first: an
+ * avatar has one active activity at a time.
  */
-const PLACEHOLDER_ACTIVITY = createMockActivityInput({
-  failureAction: ActivityFailureAction.Abort,
-});
+type StartOutcome =
+  | { readonly activity: ActivityData; readonly kind: 'started' }
+  | { readonly avatarID: string; readonly kind: 'attach' };
 
-const PLACEHOLDER_AVATAR = createMockAvatarData();
+async function startActivityForNode(avatarID: string, scopeID: string): Promise<StartOutcome> {
+  const [error, started] = await safe(
+    activityClient.startActivity({ avatarID, scopeID, scopeType: 'world_map_node' }),
+  );
+
+  if (error === null) {
+    return { activity: started, kind: 'started' };
+  }
+
+  if (!isDefinedError(error) || error.code !== 'CONFLICT') {
+    throw error;
+  }
+
+  if (error.data.activity.scopeID === scopeID) {
+    return { avatarID: error.data.activity.avatarID, kind: 'attach' };
+  }
+
+  await activityClient.stopActivity({ avatarID });
+
+  const retried = await activityClient.startActivity({
+    avatarID,
+    scopeID,
+    scopeType: 'world_map_node',
+  });
+
+  return { activity: retried, kind: 'started' };
+}
 
 /**
  * The world map node detail view: shows a spinner until the idle worker reports the activity it
@@ -30,8 +63,43 @@ export function ExploreCurrentPanel() {
   const isSharedWorkerSupported = useIsSharedWorkerSupported();
   const idleWorkerHandle = useIdleWorkerHandle();
   const selectedNode = useSelectedNode().node;
-  const isActivityReady = idleWorkerHandle.activity?.id === PLACEHOLDER_ACTIVITY.id;
+  const avatarQuery = useQuery(activeAvatarQueryOptions());
+  const avatarID = avatarQuery.data?.id;
   const isAutoRetryChecked = idleWorkerHandle.failureAction === ActivityFailureAction.Retry;
+  const [targetActivityID, setTargetActivityID] = useState<string | undefined>(undefined);
+
+  // the scope a start was last attempted for — one attempt per node selection, not per render
+  const [attemptedScopeID, setAttemptedScopeID] = useState<string | undefined>(undefined);
+
+  const isActivityReady =
+    targetActivityID !== undefined && idleWorkerHandle.activity?.id === targetActivityID;
+
+  const startMutation = useMutation({
+    mutationFn: () => {
+      if (avatarID === undefined || selectedNode === null) {
+        return Promise.resolve(undefined);
+      }
+
+      return startActivityForNode(avatarID, selectedNode.id);
+    },
+    onSuccess: (outcome) => {
+      if (outcome === undefined || idleWorkerHandle.worker === undefined) {
+        return;
+      }
+
+      if (outcome.kind === 'attach') {
+        setTargetActivityID(undefined);
+        sendIdleRequestResync(idleWorkerHandle.worker, outcome.avatarID);
+
+        return;
+      }
+
+      setTargetActivityID(outcome.activity.id);
+      sendIdleSetActivity(idleWorkerHandle.worker, outcome.activity);
+    },
+  });
+
+  const startActivity = startMutation.mutate;
 
   useEffect(() => {
     if (idleWorkerHandle.worker === undefined) {
@@ -44,10 +112,26 @@ export function ExploreCurrentPanel() {
       return;
     }
 
-    if (!isActivityReady) {
-      sendIdleSetActivity(idleWorkerHandle.worker, PLACEHOLDER_ACTIVITY, PLACEHOLDER_AVATAR);
+    if (
+      isActivityReady ||
+      avatarID === undefined ||
+      selectedNode === null ||
+      attemptedScopeID === selectedNode.id
+    ) {
+      return;
     }
-  }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, isActivityReady]);
+
+    setAttemptedScopeID(selectedNode.id);
+    startActivity();
+  }, [
+    idleWorkerHandle.worker,
+    idleWorkerHandle.initialized,
+    isActivityReady,
+    avatarID,
+    selectedNode,
+    attemptedScopeID,
+    startActivity,
+  ]);
 
   if (!isSharedWorkerSupported) {
     return <SimulationUnsupportedNotice />;

@@ -1,5 +1,5 @@
 import type { CheckpointStreamError } from '@vers/idle-client';
-import type { ActivitySnapshot } from '@vers/idle-core';
+import type { ActivitySnapshot, AvatarSnapshot } from '@vers/idle-core';
 import { ActivityFailureAction } from '@vers/idle-core';
 
 /**
@@ -11,7 +11,8 @@ export interface StubSimulationWorker {
 
 export interface StubIdleWorkerHandle {
   readonly activity: ActivitySnapshot | undefined;
-  readonly checkpointStreamError?: CheckpointStreamError;
+  readonly avatar?: AvatarSnapshot | undefined;
+  readonly checkpointStreamError?: CheckpointStreamError | undefined;
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
   readonly worker: StubSimulationWorker | undefined;
@@ -24,6 +25,7 @@ export interface StubIdleWorkerHandle {
 export const idleWorkerHandleHolder: { current: StubIdleWorkerHandle } = {
   current: {
     activity: undefined,
+    avatar: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: false,
     worker: undefined,

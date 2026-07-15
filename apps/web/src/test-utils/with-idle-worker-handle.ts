@@ -17,6 +17,7 @@ export async function withIdleWorkerHandle<T>(
   } finally {
     idleWorkerHandleHolder.current = {
       activity: undefined,
+      avatar: undefined,
       failureAction: ActivityFailureAction.Abort,
       initialized: false,
       worker: undefined,
