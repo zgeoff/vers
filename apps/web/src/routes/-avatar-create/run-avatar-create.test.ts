@@ -58,7 +58,7 @@ test('it creates a Self-Found avatar when that mode is requested', async () => {
   const signedIn = await createSignedInUser();
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
-    avatarCreateHandler(buildFormData({ mode: 'self_found', name: 'Vagrant' }))
+    runAvatarCreate(buildFormData({ mode: 'self_found', name: 'Vagrant' }))
       .then(() => null)
       .catch((error: unknown) => (isRedirect(error) ? error.options.href : null)),
   );
