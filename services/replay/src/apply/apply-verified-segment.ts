@@ -3,6 +3,7 @@ import { levelForXP } from '@vers/idle-core';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import type { GrantOnce } from '../types';
+import { updateVerifiedChainAnchor } from './update-verified-chain-anchor';
 
 interface ChainAdvance {
   readonly chainIndex: number;
@@ -89,17 +90,13 @@ async function applySegmentWrites(
   }
 
   if (input.chain !== undefined) {
-    await trx
-      .updateTable('activityChains')
-      .set({
-        verifiedChainIndex: input.chain.chainIndex,
-        verifiedNextSeed: input.chain.nextSeed,
-      })
-      .where('avatarId', '=', input.avatarID)
-      .where('scopeType', '=', input.chain.scopeType)
-      .where('scopeId', '=', input.chain.scopeID)
-      .where('verifiedChainIndex', '<', input.chain.chainIndex)
-      .execute();
+    await updateVerifiedChainAnchor(trx, {
+      avatarID: input.avatarID,
+      chainIndex: input.chain.chainIndex,
+      nextSeed: input.chain.nextSeed,
+      scopeID: input.chain.scopeID,
+      scopeType: input.chain.scopeType,
+    });
   }
 
   if (input.grants === undefined || input.grants.length === 0) {
