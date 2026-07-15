@@ -80,6 +80,20 @@ export interface AvatarGrants {
   kind: string;
 }
 
+export interface AvatarItems {
+  affixes: import('./types').Json;
+  avatarId: string;
+  baseId: string;
+  chainIndex: number;
+  contentVersion: string;
+  createdAt: Generated<Timestamp>;
+  keyVersion: number;
+  ordinal: number;
+  rarityId: string;
+  scopeId: string;
+  scopeType: string;
+}
+
 export interface Avatars {
   createdAt: Generated<Timestamp>;
   id: string;
@@ -166,6 +180,7 @@ export interface DB {
   activityChains: ActivityChains;
   activityCheckpoints: ActivityCheckpoints;
   avatarGrants: AvatarGrants;
+  avatarItems: AvatarItems;
   avatars: Avatars;
   consumedTransactionTokens: ConsumedTransactionTokens;
   pendingTransactions: PendingTransactions;

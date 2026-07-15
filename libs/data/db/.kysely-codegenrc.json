@@ -2,7 +2,8 @@
   "overrides": {
     "columns": {
       "activities.build_snapshot": "import('./types').Json",
-      "activity_checkpoints.payload": "import('./types').Json"
+      "activity_checkpoints.payload": "import('./types').Json",
+      "avatar_items.affixes": "import('./types').Json"
     }
   }
 }
