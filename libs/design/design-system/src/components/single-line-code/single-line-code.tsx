@@ -40,7 +40,7 @@ export function SingleLineCode(props: React.HTMLAttributes<HTMLElement>) {
   const { className, ...rest } = props;
   const codeRef = React.useRef<HTMLElement>(null);
 
-  const copyToClipboard = () => {
+  const handleCopyToClipboard = () => {
     void navigator.clipboard.writeText(codeRef.current?.textContent ?? '');
   };
 
@@ -49,7 +49,7 @@ export function SingleLineCode(props: React.HTMLAttributes<HTMLElement>) {
       <pre className={pre}>
         <code ref={codeRef} className={code} {...rest} />
       </pre>
-      <Icon.Clipboard className={copyButton} onClick={copyToClipboard} />
+      <Icon.Clipboard className={copyButton} onClick={handleCopyToClipboard} />
     </div>
   );
 }

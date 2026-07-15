@@ -1,13 +1,13 @@
 import { redirect } from '@tanstack/react-router';
-import { completeSessionSignIn } from '../../lib/auth/complete-session-sign-in';
 import { getVerifySession } from '../../lib/auth/get-verify-session';
+import { runSessionSignIn } from '../../lib/auth/run-session-sign-in';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import type { RunVerificationContext } from './types';
 
 /**
- * Completes a 2FA-gated login: the pending session id login-handler stashed is looked up
+ * Completes a 2FA-gated login: the pending session id the login submission stashed is looked up
  * alongside the account it belongs to, then finished exactly like a direct login would.
  */
 export async function run2FA(ctx: Readonly<RunVerificationContext>): Promise<never> {
@@ -33,5 +33,5 @@ export async function run2FA(ctx: Readonly<RunVerificationContext>): Promise<nev
     'login2FA#target': undefined,
   });
 
-  return completeSessionSignIn({ email: user.email, redirectTo: ctx.redirectTo, session });
+  return runSessionSignIn({ email: user.email, redirectTo: ctx.redirectTo, session });
 }

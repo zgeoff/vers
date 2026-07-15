@@ -2,7 +2,7 @@ import { useServerFn } from '@tanstack/react-start';
 import { Heading, OTPField, SingleLineCode, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
-import type { TwoFactorSetupData } from './two-factor-setup-loader';
+import type { TwoFactorSetupData } from './load-two-factor-setup';
 import type { VerifyTwoFactorSetupResult } from './types';
 import { verifyTwoFactorSetup } from './verify-two-factor-setup';
 

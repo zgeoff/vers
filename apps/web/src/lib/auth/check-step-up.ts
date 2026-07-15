@@ -3,8 +3,8 @@ import { getRequestIP } from '@tanstack/react-start/server';
 import type { SecureAction } from '@vers/contract-session';
 import { sessionClient } from '../rpc/clients/session-client';
 import { verificationClient } from '../rpc/clients/verification-client';
+import { verifyStepUpTransactionToken } from './create-step-up-transaction-token';
 import { getAuthSession } from './get-auth-session';
-import { verifyStepUpTransactionToken } from './step-up-transaction-token';
 
 type CheckStepUpResult =
   | { readonly status: 'not-needed' }

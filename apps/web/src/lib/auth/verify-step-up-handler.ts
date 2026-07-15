@@ -4,8 +4,8 @@ import { SecureActionSchema } from '@vers/contract-session';
 import * as z from 'zod';
 import { sessionClient } from '../rpc/clients/session-client';
 import { verificationClient } from '../rpc/clients/verification-client';
+import { createStepUpTransactionToken } from './create-step-up-transaction-token';
 import { getAuthSession } from './get-auth-session';
-import { mintStepUpTransactionToken } from './step-up-transaction-token';
 
 export const VerifyStepUpInputSchema = z.object({
   action: SecureActionSchema,
@@ -50,7 +50,7 @@ export async function verifyStepUpHandler(input: VerifyStepUpInput): Promise<Ver
     target: input.target,
   });
 
-  const minted = await mintStepUpTransactionToken({
+  const minted = await createStepUpTransactionToken({
     action: input.action,
     sessionID,
     target: input.target,

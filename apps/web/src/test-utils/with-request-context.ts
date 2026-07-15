@@ -69,13 +69,13 @@ export async function withRequestContext<T>(
       run,
     );
 
-    return { cookies: snapshotCookies(sessions), value };
+    return { cookies: toCookieSnapshot(sessions), value };
   } finally {
     requestContextHolder.current = null;
   }
 }
 
-function snapshotCookies(
+function toCookieSnapshot(
   sessions: ReadonlyMap<string, FakeSession>,
 ): Record<string, Record<string, unknown> | undefined> {
   const cookies: Record<string, Record<string, unknown> | undefined> = {};

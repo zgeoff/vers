@@ -1,13 +1,13 @@
 import { fileURLToPath } from 'node:url';
 import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server';
 import { serveStatic } from 'srvx/static';
-import { enforceHTTPS } from './server/enforce-https';
 import { env } from './server/env';
 import { logger } from './server/logger';
 import { makeRateLimiter } from './server/make-rate-limiter';
 import { makeRequestLogger } from './server/make-request-logger';
 import { makeSecureHeaders } from './server/make-secure-headers';
 import { withMiddleware } from './server/middleware';
+import { redirectToHTTPS } from './server/redirect-to-https';
 import { removeTrailingSlash } from './server/remove-trailing-slash';
 
 // resolved from this built file's own location (`dist/server/server.js`) rather than the
@@ -18,9 +18,9 @@ const CLIENT_ASSETS_DIRECTORY = fileURLToPath(new URL('../client', import.meta.u
 if (env.isProduction && env.SENTRY_DSN !== undefined) {
   // oxlint-disable-next-line unicorn/prefer-top-level-await -- sentry init is deliberately fire-and-forget so it never delays server startup
   void (async () => {
-    const sentryModule = await import('./server/init-sentry-node');
+    const sentryModule = await import('./server/start-sentry-node');
 
-    sentryModule.initSentryNode();
+    sentryModule.startSentryNode();
   })();
 }
 
@@ -49,7 +49,7 @@ const serverEntry = {
     [
       makeRequestLogger(logger, { colorize: !env.isProduction }),
       removeTrailingSlash,
-      enforceHTTPS,
+      redirectToHTTPS,
       makeSecureHeaders({ sentryOrigin: SENTRY_ORIGIN }),
       makeRateLimiter({ maxMultiple: RATE_LIMIT_MAX_MULTIPLE }),
       serveClientAssets,

@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { forceLogoutHandler } from './force-logout-handler';
+import { runForceLogout } from './run-force-logout';
 
 /**
  * The force-logout page's confirm/cancel submit action.
@@ -12,4 +12,4 @@ export const forceLogout = createServerFn({ method: 'POST' })
 
     return formData;
   })
-  .handler((ctx) => forceLogoutHandler(ctx.data));
+  .handler((ctx) => runForceLogout(ctx.data));

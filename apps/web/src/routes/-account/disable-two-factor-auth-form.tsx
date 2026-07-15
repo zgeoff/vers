@@ -20,7 +20,7 @@ export function DisableTwoFactorAuthForm() {
   const [isPending, setIsPending] = useState(false);
   const [stepUpChallenge, setStepUpChallenge] = useState<StepUpChallenge | null>(null);
 
-  const submit = async (stepUpToken?: string) => {
+  const handleSubmit = async (stepUpToken?: string) => {
     setIsPending(true);
     setFormError(null);
 
@@ -59,7 +59,7 @@ export function DisableTwoFactorAuthForm() {
         transactionID={stepUpChallenge.transactionID}
         onVerified={(token) => {
           setStepUpChallenge(null);
-          void submit(token);
+          void handleSubmit(token);
         }}
       />
     );
@@ -69,7 +69,7 @@ export function DisableTwoFactorAuthForm() {
     <>
       <StatusButton
         disabled={isPending}
-        onClick={() => void submit()}
+        onClick={() => void handleSubmit()}
         status={isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
         type="button"
       >

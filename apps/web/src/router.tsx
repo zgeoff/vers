@@ -5,7 +5,7 @@ import { getRequestHeader } from '@tanstack/react-start/server';
 import { getSceneState } from '@vers/game-rendering';
 import { buildQueryClient } from './lib/query/build-query-client';
 import { orpc } from './lib/rpc/orpc';
-import { classifySceneTransition } from './lib/scene/classify-scene-transition';
+import { buildSceneTransitionTypes } from './lib/scene/build-scene-transition-types';
 import { resolveSceneStateForLocation } from './lib/scene/resolve-scene-state-for-location';
 import { routeTree } from './routeTree.gen';
 import { CSP_NONCE_HEADER } from './server/csp-nonce-header';
@@ -35,7 +35,7 @@ export function getRouter() {
         const current = getSceneState();
         const next = resolveSceneStateForLocation(router, locationChangeInfo.toLocation, current);
 
-        return classifySceneTransition(current, next);
+        return buildSceneTransitionTypes(current, next);
       },
     },
     routeTree,

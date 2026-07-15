@@ -4,7 +4,7 @@ import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { checkStepUp } from './check-step-up';
-import { mintStepUpTransactionToken } from './step-up-transaction-token';
+import { createStepUpTransactionToken } from './create-step-up-transaction-token';
 
 test('it reports not-needed for a caller with no 2FA enabled', async () => {
   const signedIn = await createSignedInUser();
@@ -44,7 +44,7 @@ test('it verifies a valid transaction token minted for the same action, target, 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const minted = await mintStepUpTransactionToken({
+    const minted = await createStepUpTransactionToken({
       action: 'ChangePassword',
       sessionID: signedIn.sessionID,
       target: signedIn.userID,
@@ -66,7 +66,7 @@ test('it requires a new pending transaction for a token minted for a different a
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const minted = await mintStepUpTransactionToken({
+    const minted = await createStepUpTransactionToken({
       action: 'ChangePassword',
       sessionID: signedIn.sessionID,
       target: signedIn.userID,
@@ -88,7 +88,7 @@ test('it requires a new pending transaction for a token minted under a different
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const minted = await mintStepUpTransactionToken({
+    const minted = await createStepUpTransactionToken({
       action: 'ChangeEmail',
       sessionID: createId(),
       target: signedIn.userID,
@@ -110,7 +110,7 @@ test('it requires a new pending transaction when the same token is replayed', as
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const minted = await mintStepUpTransactionToken({
+    const minted = await createStepUpTransactionToken({
       action: 'ChangeEmail',
       sessionID: signedIn.sessionID,
       target: signedIn.userID,

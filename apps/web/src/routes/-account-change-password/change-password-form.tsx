@@ -31,7 +31,7 @@ export function ChangePasswordForm() {
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   const [stepUpChallenge, setStepUpChallenge] = useState<StepUpChallenge | null>(null);
 
-  const submit = async (formData: FormData) => {
+  const handleSubmit = async (formData: FormData) => {
     setIsPending(true);
     setFieldErrors({});
     setFormError(null);
@@ -81,7 +81,7 @@ export function ChangePasswordForm() {
 
           setStepUpChallenge(null);
           setPendingFormData(null);
-          void submit(resubmission);
+          void handleSubmit(resubmission);
         }}
       />
     );
@@ -97,7 +97,7 @@ export function ChangePasswordForm() {
         className={formStyles}
         onSubmit={(event) => {
           event.preventDefault();
-          void submit(new FormData(event.currentTarget));
+          void handleSubmit(new FormData(event.currentTarget));
         }}
       >
         <Field

@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { changeEmailHandler } from './change-email-handler';
+import { runChangeEmail } from './run-change-email';
 
 /**
  * The change-email form's submit action; field-level validation happens once inside the handler.
@@ -12,4 +12,4 @@ export const changeEmail = createServerFn({ method: 'POST' })
 
     return formData;
   })
-  .handler((ctx) => changeEmailHandler(ctx.data));
+  .handler((ctx) => runChangeEmail(ctx.data));

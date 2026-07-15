@@ -78,10 +78,10 @@ test('it shows a generic failure message for a rejected submission', async () =>
 test('it disables the submit button while the verify request is pending', async () => {
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
-  const gatedAction: FormAction = () => deferred.promise;
+  const fakeGatedAction: FormAction = () => deferred.promise;
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<VerifyOTPForm action={gatedAction} target="user_1" type="2fa" />);
+    renderWithRouter(<VerifyOTPForm action={fakeGatedAction} target="user_1" type="2fa" />);
 
     const otpInput = await screen.findByTestId('otp-input');
 

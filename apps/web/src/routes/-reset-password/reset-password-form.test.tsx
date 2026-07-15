@@ -97,12 +97,12 @@ test('it shows a generic failure message when the server rejects the submission'
 test('it disables the submit button while the reset request is pending', async () => {
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
-  const gatedAction: FormAction = () => deferred.promise;
+  const fakeGatedAction: FormAction = () => deferred.promise;
 
   await withRequestContext({}, async () => {
     renderWithRouter(
       <ResetPasswordForm
-        action={gatedAction}
+        action={fakeGatedAction}
         email="reset-form-pending@vers.test"
         resetToken="tok"
       />,

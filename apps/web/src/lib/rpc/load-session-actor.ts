@@ -1,8 +1,8 @@
 import { isDefinedError, safe } from '@orpc/client';
 import { getRequest } from '@tanstack/react-start/server';
 import * as jose from 'jose';
-import { clearAuthSession } from '../auth/clear-auth-session';
 import { getAuthSession } from '../auth/get-auth-session';
+import { removeAuthSession } from '../auth/remove-auth-session';
 import { updateAuthSession } from '../auth/update-auth-session';
 import { sessionExistenceClient } from './clients/session-existence-client';
 import { sessionRefreshClient } from './clients/session-refresh-client';
@@ -63,7 +63,7 @@ export async function loadSessionActor(): Promise<SessionActor | null> {
     const stillExists = await checkSessionStillExists(session.sessionID, session.userID);
 
     if (!stillExists) {
-      await clearAuthSession();
+      await removeAuthSession();
 
       return null;
     }
@@ -74,7 +74,7 @@ export async function loadSessionActor(): Promise<SessionActor | null> {
   const tokens = await resolveRefreshedTokens(session.sessionID, session.refreshToken);
 
   if (tokens === undefined) {
-    await clearAuthSession();
+    await removeAuthSession();
 
     return null;
   }

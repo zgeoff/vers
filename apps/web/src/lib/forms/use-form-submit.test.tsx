@@ -16,7 +16,7 @@ const ReferenceSchema = z.object({
   password: z.string().min(8, 'Password is too short'),
 });
 
-function noopAction(): Promise<undefined> {
+function fakeAction(): Promise<undefined> {
   return Promise.resolve(undefined);
 }
 
@@ -35,7 +35,7 @@ interface ReferenceFormProps {
  * result→UI mapping with no submit at all.
  */
 function ReferenceForm(props: ReferenceFormProps) {
-  const submission = useFormSubmit(props.action ?? noopAction, props.lastResult);
+  const submission = useFormSubmit(props.action ?? fakeAction, props.lastResult);
 
   const [form, fields] = useForm({
     constraint: getZodConstraint(ReferenceSchema),
@@ -119,7 +119,7 @@ test('it shows a generic error message when the server rejects the submission', 
 test('it shows no error after a redirect resolves the submission', async () => {
   const user = userEvent.setup();
 
-  renderWithRouter(<ReferenceForm action={noopAction} />);
+  renderWithRouter(<ReferenceForm action={fakeAction} />);
 
   const emailInput = await screen.findByPlaceholderText('Email');
 
@@ -137,9 +137,9 @@ test('it shows no error after a redirect resolves the submission', async () => {
 test('it disables the submit button while the action is in flight', async () => {
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
-  const gatedAction: FormAction = () => deferred.promise;
+  const fakeGatedAction: FormAction = () => deferred.promise;
 
-  renderWithRouter(<ReferenceForm action={gatedAction} />);
+  renderWithRouter(<ReferenceForm action={fakeGatedAction} />);
 
   const emailInput = await screen.findByPlaceholderText('Email');
 

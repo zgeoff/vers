@@ -1,9 +1,9 @@
 import { StartClient } from '@tanstack/react-start/client';
 import { StrictMode, startTransition } from 'react';
 import { hydrateRoot } from 'react-dom/client';
-import { initSentryReact } from './client-sentry';
+import { startSentryReact } from './start-sentry-react';
 
-initSentryReact();
+startSentryReact();
 
 startTransition(() => {
   hydrateRoot(
