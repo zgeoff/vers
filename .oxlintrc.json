@@ -13,6 +13,11 @@
     }
   },
   "rules": {
+    // warn until the naming burn-down lands; `fake` and `seed` are this
+    // repo's verbs (test doubles, database seeding), `up`/`down` are
+    // Kysely-mandated migration exports
+    "zgeoff/function-verb": ["warn", { "verbs": ["fake", "seed"], "exemptNames": ["up", "down"] }],
+
     // the shared config's version minus ignorePattern — baseline(#236)
     // disable directives sit on their own line above the flagged site, and
     // demanding a blank line above them separates them from it
