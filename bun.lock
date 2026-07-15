@@ -1093,7 +1093,7 @@
     "@zgeoff/bun-test-extended": "0.0.3",
     "@zgeoff/dbhub": "0.23.4",
     "@zgeoff/format-codemod": "0.0.6",
-    "@zgeoff/oxlint-config": "0.0.5",
+    "@zgeoff/oxlint-config": "0.0.6",
     "autoprefixer": "10.5.2",
     "babel-plugin-react-compiler": "1.0.0",
     "camera-controls": "3.1.2",
@@ -2652,7 +2652,7 @@
 
     "@zgeoff/format-codemod": ["@zgeoff/format-codemod@0.0.6", "", { "dependencies": { "oxc-parser": "0.137.0" }, "bin": { "format-codemod": "dist/cli.js" } }, "sha512-7m2Iiydwn2ekBB+t3LUI4sUPSkb5j3zr/JnqGmBg7u21nJlY2spCz+d56jcdAhqs7bLOixZtkY6Jr9UTP9XhgA=="],
 
-    "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.0.5", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.71.0" } }, "sha512-SF7u+kGHEItEhR6twHJ4HaB1v2SpW2txepLoTzJ5GWo2T2X3NCkd5gqgjFowDykvHFeDVPwFo1gf7y672N0f+w=="],
+    "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.0.6", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.71.0" } }, "sha512-svh9vchedZlLgnE1dewvAFLbEoQKYR35aSTKNvnGxkMWdK45XsLOOdSnYxntYOe4RYf9fibNNCuy5MFMCwJqcQ=="],
 
     "abbrev": ["abbrev@4.0.0", "", {}, "sha512-a1wflyaL0tHtJSmLSOVybYhy22vRih4eduhhrkcjgrWGnRfrZtovJ2FRjxuTtkkj47O/baf0R86QU5OuYpz8fA=="],
 

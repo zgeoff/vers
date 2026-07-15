@@ -17,9 +17,7 @@
     // exemptions mirror their contract procedure names (the contract key is
     // the public API vocabulary) and would misname the public API if
     // renamed; worldMapNodeCodexQueryOptions follows the TanStack Query
-    // queryOptions convention; run2FA/get2FAVerificationURI are correctly
-    // named but the rule misses the digit boundary — remove on
-    // @zgeoff/oxlint-config 0.0.6
+    // queryOptions convention
     "zgeoff/function-verb": [
       "error",
       {
@@ -51,9 +49,7 @@
           "replaySegment",
           "resumeActivity",
           "trackActivityProgress",
-          "worldMapNodeCodexQueryOptions",
-          "run2FA",
-          "get2FAVerificationURI"
+          "worldMapNodeCodexQueryOptions"
         ]
       }
     ],
