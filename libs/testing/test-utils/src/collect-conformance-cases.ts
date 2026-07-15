@@ -58,7 +58,7 @@ interface CollectConformanceCasesOptions {
 /**
  * Walks a contract router and builds the mechanical conformance cases every procedure must
  * satisfy: malformed input is rejected, anonymous calls to authed procedures are rejected, and the
- * contract generates a valid OpenAPI document. Cases are skipped rather than faked when they don't
+ * contract generates a valid OpenAPI document. Cases are skipped rather than mocked when they don't
  * apply to a given procedure (e.g. no input schema, or no sample input supplied).
  */
 export function collectConformanceCases(

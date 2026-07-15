@@ -95,12 +95,12 @@ test('it shows a generic failure message when the server rejects the submission'
 test('it disables the submit button while the account-creation request is pending', async () => {
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
-  const fakeGatedAction: FormAction = () => deferred.promise;
+  const mockGatedAction: FormAction = () => deferred.promise;
 
   await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboarding-form-pending@vers.test' } } },
     async () => {
-      renderWithRouter(<OnboardingForm action={fakeGatedAction} />);
+      renderWithRouter(<OnboardingForm action={mockGatedAction} />);
 
       const usernameField = await screen.findByLabelText('Username');
 

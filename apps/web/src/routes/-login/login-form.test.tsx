@@ -64,10 +64,10 @@ test('it shows a generic failure message when the server rejects the submission'
 test('it disables the submit button while the login request is pending', async () => {
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
-  const fakeGatedAction: FormAction = () => deferred.promise;
+  const mockGatedAction: FormAction = () => deferred.promise;
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<LoginForm action={fakeGatedAction} />);
+    renderWithRouter(<LoginForm action={mockGatedAction} />);
 
     const emailInput = await screen.findByLabelText('Email');
 

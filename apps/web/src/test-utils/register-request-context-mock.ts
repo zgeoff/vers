@@ -1,25 +1,25 @@
 import { mock } from 'bun:test';
 import * as reactStartServer from '@tanstack/react-start/server';
-import type { FakeSession, RequestContextState } from './request-context-holder';
+import type { MockSession, RequestContextState } from './request-context-holder';
 import { requestContextHolder } from './request-context-holder';
 
 /**
  * Installs the sanctioned ambient-context stub for `@tanstack/react-start/server`'s request and
  * cookie-session reads, called once from the test preload. Every other export of the real module
- * passes through unchanged; a call to a faked export outside a `withRequestContext` block throws,
+ * passes through unchanged; a call to a mocked export outside a `withRequestContext` block throws,
  * the same way the real module throws outside a live request.
  */
 export function registerRequestContextMock(): void {
   void mock.module('@tanstack/react-start/server', () => ({
     ...reactStartServer,
-    clearSession: fakeClearSession,
-    getRequest: fakeGetRequest,
-    getRequestHeader: fakeGetRequestHeader,
-    getRequestHeaders: fakeGetRequestHeaders,
-    getRequestIP: fakeGetRequestIP,
-    getRequestUrl: fakeGetRequestUrl,
-    getSession: fakeGetSession,
-    updateSession: fakeUpdateSession,
+    clearSession: mockClearSession,
+    getRequest: mockGetRequest,
+    getRequestHeader: mockGetRequestHeader,
+    getRequestHeaders: mockGetRequestHeaders,
+    getRequestIP: mockGetRequestIP,
+    getRequestUrl: mockGetRequestUrl,
+    getSession: mockGetSession,
+    updateSession: mockUpdateSession,
   }));
 }
 
@@ -33,39 +33,39 @@ function requireContext(): RequestContextState {
   return current;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the fake session store's Map is deliberately mutable; that mutability is the point of this test double
-function findOrCreateSession(state: RequestContextState, name: string): FakeSession {
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the mock session store's Map is deliberately mutable; that mutability is the point of this test double
+function findOrCreateSession(state: RequestContextState, name: string): MockSession {
   const existing = state.sessions.get(name);
 
   if (existing !== undefined) {
     return existing;
   }
 
-  const created: FakeSession = { createdAt: Date.now(), data: {}, id: crypto.randomUUID() };
+  const created: MockSession = { createdAt: Date.now(), data: {}, id: crypto.randomUUID() };
 
   state.sessions.set(name, created);
 
   return created;
 }
 
-interface FakeSessionConfig {
+interface MockSessionConfig {
   readonly name?: string;
 }
 
-type FakeSessionUpdate =
+type MockSessionUpdate =
   | Readonly<Record<string, unknown>>
   | ((data: Readonly<Record<string, unknown>>) => Record<string, unknown> | undefined);
 
-function fakeGetSession(config: FakeSessionConfig): Promise<FakeSession> {
+function mockGetSession(config: MockSessionConfig): Promise<MockSession> {
   const state = requireContext();
 
   return Promise.resolve(findOrCreateSession(state, config.name ?? 'h3'));
 }
 
-function fakeUpdateSession(
-  config: FakeSessionConfig,
-  update?: FakeSessionUpdate,
-): Promise<FakeSession> {
+function mockUpdateSession(
+  config: MockSessionConfig,
+  update?: MockSessionUpdate,
+): Promise<MockSession> {
   const state = requireContext();
   const session = findOrCreateSession(state, config.name ?? 'h3');
   const partial = typeof update === 'function' ? update(session.data) : update;
@@ -85,7 +85,7 @@ function fakeUpdateSession(
   return Promise.resolve(session);
 }
 
-function fakeClearSession(config: FakeSessionConfig): Promise<void> {
+function mockClearSession(config: MockSessionConfig): Promise<void> {
   const state = requireContext();
 
   state.sessions.delete(config.name ?? 'h3');
@@ -93,22 +93,22 @@ function fakeClearSession(config: FakeSessionConfig): Promise<void> {
   return Promise.resolve();
 }
 
-function fakeGetRequest(): Request {
+function mockGetRequest(): Request {
   return requireContext().request;
 }
 
-function fakeGetRequestUrl(): URL {
+function mockGetRequestUrl(): URL {
   return requireContext().url;
 }
 
-function fakeGetRequestIP(): string | undefined {
+function mockGetRequestIP(): string | undefined {
   return requireContext().ip;
 }
 
-function fakeGetRequestHeaders(): Headers {
+function mockGetRequestHeaders(): Headers {
   return requireContext().headers;
 }
 
-function fakeGetRequestHeader(name: string): string | undefined {
+function mockGetRequestHeader(name: string): string | undefined {
   return requireContext().headers.get(name) ?? undefined;
 }

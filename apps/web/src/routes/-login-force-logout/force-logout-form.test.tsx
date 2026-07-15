@@ -10,10 +10,10 @@ import { ForceLogoutForm } from './force-logout-form';
 test('it disables both buttons while confirming, then re-enables them', async () => {
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
-  const fakeGatedAction: FormAction = () => deferred.promise;
+  const mockGatedAction: FormAction = () => deferred.promise;
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<ForceLogoutForm action={fakeGatedAction} />);
+    renderWithRouter(<ForceLogoutForm action={mockGatedAction} />);
 
     const confirmButton = await screen.findByRole('button', { name: 'Confirm' });
 
@@ -32,10 +32,10 @@ test('it disables both buttons while confirming, then re-enables them', async ()
 test('it completes a cancel without leaving the buttons stuck disabled', async () => {
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
-  const fakeGatedAction: FormAction = () => deferred.promise;
+  const mockGatedAction: FormAction = () => deferred.promise;
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<ForceLogoutForm action={fakeGatedAction} />);
+    renderWithRouter(<ForceLogoutForm action={mockGatedAction} />);
 
     const cancelButton = await screen.findByRole('button', { name: 'Cancel' });
 

@@ -24,7 +24,7 @@
         "verbs": [
           "advance",
           "compare",
-          "fake",
+          "mock",
           "flush",
           "park",
           "record",
