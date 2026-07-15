@@ -94,7 +94,9 @@ export function AvatarCreateForm() {
             <input
               checked={mode === 'trade'}
               name="mode"
-              onChange={() => setMode('trade')}
+              onChange={() => {
+                setMode('trade');
+              }}
               type="radio"
               value="trade"
             />
@@ -104,7 +106,9 @@ export function AvatarCreateForm() {
             <input
               checked={mode === 'self_found'}
               name="mode"
-              onChange={() => setMode('self_found')}
+              onChange={() => {
+                setMode('self_found');
+              }}
               type="radio"
               value="self_found"
             />

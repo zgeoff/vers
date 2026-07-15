@@ -62,13 +62,12 @@ test('it does not apply a mode carried on an updateAvatar payload', async () => 
 
   const created = await client.createAvatar({ mode: 'trade', name: 'Unswayed' });
 
-  // updateAvatar's input schema has no mode field — cast past the typed client to prove an extra
-  // key on the wire payload has no effect on the persisted row.
-  const updateAvatarWithMode = client.updateAvatar as (
-    input: Record<string, unknown>,
-  ) => Promise<unknown>;
+  // updateAvatar's input schema declares no mode field; the extra key on this wire payload
+  // survives JS structural typing but is stripped by the server's zod parse before the handler
+  // ever sees it.
+  const payload = { id: created.id, mode: 'self_found', name: 'UnswayedRenamed' };
 
-  await updateAvatarWithMode({ id: created.id, mode: 'self_found', name: 'UnswayedRenamed' });
+  await client.updateAvatar(payload);
 
   const row = await ctx.db
     .selectFrom('avatars')
