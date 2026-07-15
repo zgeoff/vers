@@ -3,7 +3,12 @@ import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
-import { ENTROPY_SOURCE_SERVER_KEY, PROGRESS_FLUSH_INTERVAL_MS } from './constants';
+import {
+  ENTROPY_SOURCE_SERVER_KEY,
+  PROGRESS_FLUSH_INTERVAL_MS,
+  RETRY_BACKOFF_BASE_MS,
+  RETRY_BACKOFF_CAP_MS,
+} from './constants';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import { removeConfirmedCheckpoints } from './remove-confirmed-checkpoints';
 import { removeQueuedCheckpoints } from './remove-queued-checkpoints';
@@ -19,6 +24,7 @@ interface ActivityState {
   nextVersion: number;
   prevHash: string;
   previousNextSeed: string;
+  retryAttempt: number;
   startChainIndex: number;
 }
 
@@ -42,6 +48,12 @@ export interface CheckpointSubmitter {
    * later checkpoint's write against an earlier one's.
    */
   submit: (activityID: string, checkpoint: Readonly<ActivityCheckpoint>) => Promise<void>;
+
+  /**
+   * Resets every tracked activity's retry backoff and immediately flushes each one that isn't
+   * already stopped — the reconnect recovery path, called once connectivity returns.
+   */
+  flushHeld: () => Promise<void>;
 }
 
 interface CreateCheckpointSubmitterOptions {
@@ -67,11 +79,24 @@ interface CreateCheckpointSubmitterOptions {
   readonly onInvalid: (activityID: string, reason: string) => void;
 
   /**
+   * Called each time a batch is held for retry — a transport failure or `UNAUTHORIZED` — so the
+   * caller can report connectivity loss.
+   */
+  readonly onHeld?: (activityID: string) => void;
+
+  /**
    * Schedules a non-terminal checkpoint's deferred progress-window flush. Defaults to a
    * `PROGRESS_FLUSH_INTERVAL_MS` timer; a test injects a capturing stub to drive the window
    * without waiting on real time, awaiting the returned flush to drain it deterministically.
    */
   readonly scheduleFlush?: (flush: () => Promise<void>) => void;
+
+  /**
+   * Schedules a held batch's retry after `delayMs` of exponential backoff. Defaults to
+   * `setTimeout`; a test injects a capturing stub to assert the computed delay without waiting on
+   * real time.
+   */
+  readonly scheduleRetry?: (delayMs: number, retry: () => Promise<void>) => void;
 }
 
 /**
@@ -96,6 +121,26 @@ export function createCheckpointSubmitter(
         void flush();
       }, PROGRESS_FLUSH_INTERVAL_MS);
     });
+
+  const scheduleRetry: (delayMs: number, retry: () => Promise<void>) => void =
+    options.scheduleRetry ??
+    ((delayMs, retry) => {
+      setTimeout(() => {
+        void retry();
+      }, delayMs);
+    });
+
+  const scheduleHeldRetry = (activityID: string, state: ActivityState): void => {
+    state.retryAttempt += 1;
+    options.onHeld?.(activityID);
+
+    const delayMs = Math.min(
+      RETRY_BACKOFF_BASE_MS * 2 ** (state.retryAttempt - 1),
+      RETRY_BACKOFF_CAP_MS,
+    );
+
+    scheduleRetry(delayMs, () => flush(activityID));
+  };
 
   const flush = async (activityID: string): Promise<void> => {
     const state = activityStates.get(activityID);
@@ -131,12 +176,15 @@ export function createCheckpointSubmitter(
         await removeConfirmedCheckpoints(activityID, result.appendedHead);
 
         state.expectedHead = result.appendedHead;
+        state.retryAttempt = 0;
         options.onAcked?.(activityID, result.appendedHead);
 
         return;
       }
 
       if (!isDefinedError(error)) {
+        scheduleHeldRetry(activityID, state);
+
         return;
       }
 
@@ -191,7 +239,11 @@ export function createCheckpointSubmitter(
         state.invalid = true;
 
         await removeQueuedCheckpoints(activityID);
+
+        return;
       }
+
+      scheduleHeldRetry(activityID, state);
     } finally {
       state.inFlight = false;
 
@@ -215,6 +267,7 @@ export function createCheckpointSubmitter(
       nextVersion: context.appendedHead + 1,
       prevHash: context.lastHash,
       previousNextSeed: context.previousNextSeed ?? '',
+      retryAttempt: 0,
       startChainIndex: context.startChainIndex,
     };
 
@@ -306,7 +359,19 @@ export function createCheckpointSubmitter(
     }
   };
 
-  return { registerActivity, submit };
+  const flushHeld = async (): Promise<void> => {
+    await Promise.all(
+      [...activityStates.entries()]
+        .filter(([, state]) => !state.invalid)
+        .map(([activityID, state]) => {
+          state.retryAttempt = 0;
+
+          return flush(activityID);
+        }),
+    );
+  };
+
+  return { flushHeld, registerActivity, submit };
 }
 
 async function loadPendingCheckpoints(

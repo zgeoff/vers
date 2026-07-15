@@ -3,6 +3,7 @@ import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
+import { HttpResponse } from 'msw';
 import { server } from '../mocks/node';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
@@ -14,7 +15,10 @@ import type { ActivityServiceClient } from './types';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 function setupTest(
-  config: Readonly<{ scheduleFlush?: (flush: () => Promise<void>) => void }> = {},
+  config: Readonly<{
+    scheduleFlush?: (flush: () => Promise<void>) => void;
+    scheduleRetry?: (delayMs: number, retry: () => Promise<void>) => void;
+  }> = {},
 ) {
   const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
 
@@ -22,9 +26,18 @@ function setupTest(
   const onAcked = mock<(activityID: string, appendedHead: number) => void>();
   const onCapped = mock<(activityID: string, appendedHead: number) => void>();
   const onInvalid = mock<(activityID: string, reason: string) => void>();
-  const submitter = createCheckpointSubmitter({ client, onAcked, onCapped, onInvalid, ...config });
+  const onHeld = mock<(activityID: string) => void>();
 
-  return { onAcked, onCapped, onInvalid, submitter };
+  const submitter = createCheckpointSubmitter({
+    client,
+    onAcked,
+    onCapped,
+    onHeld,
+    onInvalid,
+    ...config,
+  });
+
+  return { onAcked, onCapped, onHeld, onInvalid, submitter };
 }
 
 test('it flushes immediately on a terminal checkpoint and confirms the queue on success', async () => {
@@ -486,6 +499,294 @@ test('it drops a checkpoint for an activity that was never registered', async ()
   await ctx.submitter.submit('unregistered-activity', createMockProgressCheckpoint());
 
   const remaining = await readQueuedCheckpoints('unregistered-activity');
+
+  expect(remaining).toStrictEqual([]);
+});
+
+test('it holds the queue and schedules a retry at the base delay on a transport failure', async () => {
+  const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+
+  const ctx = setupTest({
+    scheduleRetry: (delayMs, retry) => {
+      retries.push({ delayMs, retry });
+    },
+  });
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+
+  await ctx.submitter.registerActivity({
+    activityID: 'transport-failure-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('transport-failure-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onHeld).toHaveBeenCalledExactlyOnceWith('transport-failure-activity');
+  expect(retries).toHaveLength(1);
+  expect(retries[0]?.delayMs).toBe(10_000);
+
+  const stillQueued = await readQueuedCheckpoints('transport-failure-activity');
+
+  expect(stillQueued).toHaveLength(1);
+});
+
+test('it doubles the retry delay on each consecutive failure up to the cap', async () => {
+  const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+
+  const ctx = setupTest({
+    scheduleRetry: (delayMs, retry) => {
+      retries.push({ delayMs, retry });
+    },
+  });
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+
+  await ctx.submitter.registerActivity({
+    activityID: 'backoff-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('backoff-activity', createMockCompletedCheckpoint());
+
+  // fire the scheduled retry directly rather than a fresh submit, so each attempt resends the
+  // same held batch instead of queuing a new one
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const scheduled = retries.at(-1);
+
+    expect(scheduled).toBeDefined();
+
+    await scheduled?.retry();
+  }
+
+  expect(retries.map((entry) => entry.delayMs)).toStrictEqual([
+    10_000, 20_000, 40_000, 80_000, 160_000, 300_000, 300_000,
+  ]);
+});
+
+test('it resets the backoff exponent on a successful flush', async () => {
+  const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+  let shouldFail = true;
+
+  const ctx = setupTest({
+    scheduleRetry: (delayMs, retry) => {
+      retries.push({ delayMs, retry });
+    },
+  });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(() => {
+      if (shouldFail) {
+        return HttpResponse.error();
+      }
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'reset-backoff-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('reset-backoff-activity', createMockCompletedCheckpoint());
+
+  expect(retries).toHaveLength(1);
+  expect(retries[0]?.delayMs).toBe(10_000);
+
+  shouldFail = false;
+
+  await retries[0]?.retry();
+
+  const remaining = await readQueuedCheckpoints('reset-backoff-activity');
+
+  expect(remaining).toStrictEqual([]);
+
+  shouldFail = true;
+
+  await ctx.submitter.submit('reset-backoff-activity', createMockCompletedCheckpoint());
+
+  expect(retries).toHaveLength(2);
+  expect(retries[1]?.delayMs).toBe(10_000);
+});
+
+test('it holds the queue and schedules a retry identically on UNAUTHORIZED', async () => {
+  const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+
+  const ctx = setupTest({
+    scheduleRetry: (delayMs, retry) => {
+      retries.push({ delayMs, retry });
+    },
+  });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'unauthorized-backoff-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('unauthorized-backoff-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onHeld).toHaveBeenCalledExactlyOnceWith('unauthorized-backoff-activity');
+  expect(retries).toHaveLength(1);
+  expect(retries[0]?.delayMs).toBe(10_000);
+});
+
+test('it folds a retry firing while a flush is already in flight into the pending flush', async () => {
+  const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+  const track = mock<(input: unknown) => void>();
+  let releaseFirstCall: (() => void) | undefined;
+
+  const ctx = setupTest({
+    scheduleRetry: (delayMs, retry) => {
+      retries.push({ delayMs, retry });
+    },
+  });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(async (opts) => {
+      track(opts.input);
+
+      if (track.mock.calls.length === 1) {
+        return HttpResponse.error();
+      }
+
+      await new Promise<void>((resolve) => {
+        releaseFirstCall = resolve;
+      });
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'in-flight-retry-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('in-flight-retry-activity', createMockCompletedCheckpoint());
+
+  expect(retries).toHaveLength(1);
+
+  const retryCall = retries[0]?.retry();
+
+  while (track.mock.calls.length < 2) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  const secondRetry = retries[0]?.retry();
+
+  releaseFirstCall?.();
+
+  await retryCall;
+  await secondRetry;
+
+  expect(track).toHaveBeenCalledTimes(2);
+
+  const remaining = await readQueuedCheckpoints('in-flight-retry-activity');
+
+  expect(remaining).toStrictEqual([]);
+});
+
+test('it flushes every held activity immediately and resets their backoff', async () => {
+  const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+  let shouldFail = true;
+
+  const ctx = setupTest({
+    scheduleRetry: (delayMs, retry) => {
+      retries.push({ delayMs, retry });
+    },
+  });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(() => {
+      if (shouldFail) {
+        return HttpResponse.error();
+      }
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'flush-held-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('flush-held-activity', createMockCompletedCheckpoint());
+
+  expect(retries).toHaveLength(1);
+
+  shouldFail = false;
+
+  await ctx.submitter.flushHeld();
+
+  const remaining = await readQueuedCheckpoints('flush-held-activity');
+
+  expect(remaining).toStrictEqual([]);
+
+  shouldFail = true;
+
+  await ctx.submitter.submit('flush-held-activity', createMockCompletedCheckpoint());
+
+  expect(retries).toHaveLength(2);
+  expect(retries[1]?.delayMs).toBe(10_000);
+});
+
+test('it resends a held terminal checkpoint via the captured retry and empties the queue', async () => {
+  const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+  let shouldFail = true;
+
+  const ctx = setupTest({
+    scheduleRetry: (delayMs, retry) => {
+      retries.push({ delayMs, retry });
+    },
+  });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(() => {
+      if (shouldFail) {
+        return HttpResponse.error();
+      }
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'held-terminal-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('held-terminal-activity', createMockCompletedCheckpoint());
+
+  const heldRows = await readQueuedCheckpoints('held-terminal-activity');
+
+  expect(heldRows).toHaveLength(1);
+
+  shouldFail = false;
+
+  await retries[0]?.retry();
+
+  const remaining = await readQueuedCheckpoints('held-terminal-activity');
 
   expect(remaining).toStrictEqual([]);
 });

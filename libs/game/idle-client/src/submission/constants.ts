@@ -9,6 +9,17 @@ export const PROGRESS_FLUSH_INTERVAL_MS = 10_000;
  * server-custody roll.
  */
 export const ENTROPY_SOURCE_SERVER_KEY = 'server-key';
+
+/**
+ * The base delay a held batch's retry backs off from, doubling per consecutive failure up to
+ * `RETRY_BACKOFF_CAP_MS`.
+ */
+export const RETRY_BACKOFF_BASE_MS = PROGRESS_FLUSH_INTERVAL_MS;
+
+/**
+ * The ceiling a held batch's exponential retry backoff never exceeds.
+ */
+export const RETRY_BACKOFF_CAP_MS = 300_000;
 export const CHECKPOINT_QUEUE_DB_NAME = 'vers-idle-checkpoint-queue';
 export const CHECKPOINT_QUEUE_DB_VERSION = 1;
 export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
