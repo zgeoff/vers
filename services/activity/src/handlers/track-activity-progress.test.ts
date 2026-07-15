@@ -258,6 +258,101 @@ test('it rejects a hash that does not match its payload with CHECKPOINT_INVALID'
   ).rejects.toMatchObject({ code: 'CHECKPOINT_INVALID', data: { reason: 'hash-mismatch' } });
 });
 
+test('it accepts a batch whose reward slots parse with contiguous ordinals', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: {
+      rewardSlots: [
+        { context: { nodeTier: 1 }, ordinal: 0 },
+        { context: { nodeTier: 1 }, ordinal: 1 },
+      ],
+    },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  const result = await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  expect(result).toStrictEqual({ appendedHead: 1 });
+});
+
+test('it rejects a batch whose reward slots do not parse with CHECKPOINT_INVALID', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewardSlots: [{ context: { nodeTier: 1 }, ordinal: -1 }] },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  expect(
+    client.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
+  ).rejects.toMatchObject({
+    code: 'CHECKPOINT_INVALID',
+    data: { reason: 'invalid-reward-slots' },
+  });
+});
+
+test('it rejects a batch whose reward slot ordinals are not contiguous from 0 with CHECKPOINT_INVALID', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: {
+      rewardSlots: [
+        { context: { nodeTier: 1 }, ordinal: 0 },
+        { context: { nodeTier: 1 }, ordinal: 2 },
+      ],
+    },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  expect(
+    client.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
+  ).rejects.toMatchObject({
+    code: 'CHECKPOINT_INVALID',
+    data: { reason: 'invalid-reward-slots' },
+  });
+});
+
 test('it rejects appending to a stopped activity with ACTIVITY_TERMINAL', async () => {
   await using ctx = await setupTest();
 
