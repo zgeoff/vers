@@ -9,8 +9,10 @@ const REFETCH_INTERVAL_MS = 15_000;
 /**
  * Polls an activity's revealed rewards, merging each fresh keyset page onto whatever the cache
  * already holds — no push channel names when a reward's verifying stream advances, so a short
- * poll is the honest minimal trigger. Disabled with no `activityID`. `item.chainIndex <=
- * data.verifiedHead` is a caller's own test for whether a merged item is final or still pending.
+ * poll is the honest minimal trigger. Disabled with no `activityID`. Every returned item is
+ * already settled; each item's `chainIndex` is chain-absolute while the page's `verifiedHead`
+ * counts from the activity's own start, so comparing the two needs the activity row's
+ * `startChainIndex` offset.
  */
 export function useActivityRewards(activityID: string | undefined) {
   const queryClient = useQueryClient();

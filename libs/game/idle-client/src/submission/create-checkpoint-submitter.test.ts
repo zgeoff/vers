@@ -644,6 +644,80 @@ test('it holds the queue and schedules a retry identically on UNAUTHORIZED', asy
   expect(retries[0]?.delayMs).toBe(10_000);
 });
 
+test('it keeps a single pending retry per activity across repeated failures', async () => {
+  const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+
+  const ctx = setupTest({
+    scheduleRetry: (delayMs, retry) => {
+      retries.push({ delayMs, retry });
+    },
+  });
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+
+  await ctx.submitter.registerActivity({
+    activityID: 'single-retry-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  // each terminal submission flushes and fails immediately, but only the first failure may
+  // schedule a retry — the second folds into the pending one instead of starting a second chain
+  await ctx.submitter.submit('single-retry-activity', createMockCompletedCheckpoint());
+  await ctx.submitter.submit('single-retry-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onHeld).toHaveBeenCalledTimes(2);
+  expect(retries).toHaveLength(1);
+});
+
+test('it ignores a stale retry callback superseded by a reconnect flush', async () => {
+  const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+  const track = mock<() => void>();
+  let shouldFail = true;
+
+  const ctx = setupTest({
+    scheduleRetry: (delayMs, retry) => {
+      retries.push({ delayMs, retry });
+    },
+  });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(() => {
+      track();
+
+      if (shouldFail) {
+        return HttpResponse.error();
+      }
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'stale-retry-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('stale-retry-activity', createMockCompletedCheckpoint());
+
+  expect(retries).toHaveLength(1);
+
+  shouldFail = false;
+
+  await ctx.submitter.flushHeld();
+
+  expect(track).toHaveBeenCalledTimes(2);
+
+  // the reconnect flush superseded the earlier retry: firing it neither resends nor reschedules
+  await retries[0]?.retry();
+
+  expect(track).toHaveBeenCalledTimes(2);
+  expect(retries).toHaveLength(1);
+});
+
 test('it folds a retry firing while a flush is already in flight into the pending flush', async () => {
   const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
   const track = mock<(input: unknown) => void>();

@@ -1,7 +1,6 @@
-import { expect, onTestFinished, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { render, waitFor } from '@testing-library/react';
-import { setResyncStatus } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import * as db from '@vers/mock-services/db';
 import { buildQueryClient } from '../../lib/query/build-query-client';
@@ -183,16 +182,12 @@ test('it sends a resync request only once across re-renders', async () => {
   });
 });
 
-test('it resends a resync request when the browser reports coming back online', async () => {
+test('it requests another resync when the browser comes back online', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
   const calls: Array<unknown> = [];
   const worker = { port: { postMessage: (message: unknown) => calls.push(message) } };
-
-  onTestFinished(() => {
-    setResyncStatus(null);
-  });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     await withIdleWorkerHandle(
@@ -212,9 +207,7 @@ test('it resends a resync request when the browser reports coming back online', 
         globalThis.dispatchEvent(new Event('online'));
 
         await waitFor(() => {
-          const resyncCalls = calls.filter((call) => isRequestResyncMessage(call));
-
-          expect(resyncCalls).toHaveLength(2);
+          expect(calls.filter((call) => isRequestResyncMessage(call))).toHaveLength(2);
         });
       },
     );

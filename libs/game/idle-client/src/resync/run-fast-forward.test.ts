@@ -11,6 +11,7 @@ import {
 } from '@vers/idle-core/test-utils';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
+import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
@@ -287,10 +288,7 @@ test('it reports the final row it left off at, for a caller to attach directly',
 
   const lastStarted = ctx.startedActivities.at(-1);
 
-  if (lastStarted === undefined) {
-    throw new Error('expected at least one server-started continuation');
-  }
-
+  invariant(lastStarted !== undefined, 'expected at least one server-started continuation');
   expect(report.activity).toStrictEqual(lastStarted);
   expect(report.appendedHead).toBe(0);
 });

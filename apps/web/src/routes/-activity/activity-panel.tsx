@@ -39,9 +39,10 @@ const characterFrame = css({
 });
 
 /**
- * The activity screen: an ambient notice while any revealed reward is still short of the verified
- * head, and placeholder character-frame blocks until party state is wired up. Reward items
- * themselves — batches, per-item cards — are a different screen's concern.
+ * The activity screen: an ambient notice while the activity's appended progress is still ahead of
+ * its verified head — the stretch whose rewards are not yet settled — and placeholder
+ * character-frame blocks until party state is wired up. Reward items themselves — batches,
+ * per-item cards — are a different screen's concern.
  */
 export function ActivityPanel() {
   const avatarQuery = useQuery(activeAvatarQueryOptions());
@@ -52,21 +53,30 @@ export function ActivityPanel() {
     enabled: avatarID !== undefined,
   });
 
-  const activityID = currentActivityQuery.data?.id;
-  const rewardsQuery = useActivityRewards(activityID);
-  const verifiedHead = rewardsQuery.data?.verifiedHead ?? 0;
+  const activity = currentActivityQuery.data;
+  const rewardsQuery = useActivityRewards(activity?.id);
+
+  // both heads count from the activity's own start; the rewards poll advances the verified head
+  // between refetches of the activity row itself
+  const verifiedHead = Math.max(activity?.verifiedHead ?? 0, rewardsQuery.data?.verifiedHead ?? 0);
 
   const pendingCount =
-    rewardsQuery.data?.items.filter((item) => item.chainIndex > verifiedHead).length ?? 0;
+    activity === null || activity === undefined
+      ? 0
+      : Math.max(0, activity.appendedHead - verifiedHead);
 
   return (
     <main className={panel}>
       <Heading level={1}>Activity</Heading>
       {pendingCount > 0 && (
-        <div className={catchingUpPanel} data-testid="catching-up-indicator">
-          <Spinner />
-          <Text>Catching up — {pendingCount} rewards settling</Text>
-        </div>
+        <output className={catchingUpPanel} data-testid="catching-up-indicator">
+          <span aria-hidden="true">
+            <Spinner />
+          </span>
+          <Text>
+            Catching up — {pendingCount} {pendingCount === 1 ? 'reward' : 'rewards'} settling
+          </Text>
+        </output>
       )}
       <div className={characterFrameRow}>
         {CHARACTER_FRAMES.map((label) => (

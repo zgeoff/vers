@@ -7,6 +7,7 @@ import { runResync } from '../resync/run-resync';
 import type { FastForwardReport, ResyncPlan, ResyncResult } from '../resync/types';
 import type { RequestResyncMessage, ResyncStatus } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
+import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createResyncStatusMessage } from './create-resync-status-message';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import type { WorkerContext } from './types';
@@ -17,6 +18,8 @@ import type { WorkerContext } from './types';
  * broadcasts its own `ResyncStatus` progression, ending on `done` (or `capped`) so a connected
  * tab's welcome-back UI always resolves. A live simulation this resync would install is skipped
  * when a different activity went live while it was running — a fresher `SetActivity` always wins.
+ * A resync that fails outright reports the worker offline — the signal tabs use to explain a
+ * stalled catch-up — and never rejects; the next reconnect retries it.
  */
 export async function handleRequestResyncMessage(
   context: WorkerContext,
@@ -32,6 +35,10 @@ export async function handleRequestResyncMessage(
   emitResyncStatus(context, { kind: 'checking' });
 
   try {
+    // Held batches must land before the progress fetch, or the resync plans against an appended
+    // head those checkpoints are still about to advance.
+    await context.getSubmitter().flushHeld();
+
     const result = await runResync({
       avatarID: message.avatarID,
       buildSimulationInput,
@@ -43,6 +50,8 @@ export async function handleRequestResyncMessage(
     });
 
     await applyResyncResult(context, result);
+  } catch {
+    emitConnectionStatus(context, false);
   } finally {
     context.setResyncInFlight(false);
   }
@@ -52,8 +61,8 @@ async function applyResyncResult(
   context: WorkerContext,
   result: Readonly<ResyncResult>,
 ): Promise<void> {
-  if (result.plan.kind === 'none') {
-    emitResyncStatus(context, { attempts: 0, kind: 'done', levelUps: 0 });
+  if (result.report !== undefined) {
+    await applyFastForward(context, result.report);
 
     return;
   }
@@ -70,7 +79,7 @@ async function applyResyncResult(
     return;
   }
 
-  await applyFastForward(context, result.report);
+  emitResyncStatus(context, { attempts: 0, kind: 'done', levelUps: 0 });
 }
 
 async function applyAttachLive(
@@ -126,16 +135,7 @@ async function applyAttachLive(
   emitResyncStatus(context, { attempts: 0, kind: 'done', levelUps: 0 });
 }
 
-async function applyFastForward(
-  context: WorkerContext,
-  report: FastForwardReport | undefined,
-): Promise<void> {
-  if (report === undefined) {
-    emitResyncStatus(context, { attempts: 0, kind: 'done', levelUps: 0 });
-
-    return;
-  }
-
+async function applyFastForward(context: WorkerContext, report: FastForwardReport): Promise<void> {
   if (report.activity.status === 'active' && !report.finalRowTerminal) {
     await applyFastForwardAttach(context, report);
   }
@@ -233,6 +233,14 @@ function setLiveSimulation(
 
 function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>): void {
   const message = createResyncStatusMessage(status);
+
+  for (const connection of context.connections) {
+    connection.postMessage(message);
+  }
+}
+
+function emitConnectionStatus(context: WorkerContext, online: boolean): void {
+  const message = createConnectionStatusMessage(online);
 
   for (const connection of context.connections) {
     connection.postMessage(message);

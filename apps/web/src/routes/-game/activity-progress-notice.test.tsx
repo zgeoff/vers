@@ -44,7 +44,7 @@ test('it shows the activity name, wave progress, and running xp', async () => {
       const notice = screen.getByTestId('activity-progress-notice');
 
       expect(notice).toHaveTextContent('World Map Encounter');
-      expect(notice).toHaveTextContent('Wave 2 of 3');
+      expect(notice).toHaveTextContent('2 of 3 waves cleared');
       expect(notice).toHaveTextContent('+42 XP');
     },
   );

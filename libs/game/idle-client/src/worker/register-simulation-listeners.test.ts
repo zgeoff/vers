@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
+import { waitFor } from '@vers/test-utils';
 import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
 import type { WorkerMessage } from '../types';
 import { registerSimulationListeners } from './register-simulation-listeners';
@@ -29,11 +30,7 @@ test('it broadcasts a simulation update once the installed simulation reports on
     await simulation.run(500);
   }
 
-  for (let attempt = 0; attempt < 200 && received.length === 0; attempt += 1) {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 1);
-    });
-  }
-
-  expect(received).toPartiallyContain({ type: 'simulation_update' });
+  await waitFor(() => {
+    expect(received).toPartiallyContain({ type: 'simulation_update' });
+  });
 });

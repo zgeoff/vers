@@ -16,7 +16,10 @@ export async function handleSetActivityMessage(
 
   const input = buildSimulationInput(message.activity, { failureAction: simulation.failureAction });
 
-  await context.getSubmitter().registerActivity({
+  // The registration starts before the activity installs but is awaited only after: installing
+  // synchronously means a resync finishing during the seed read finds this fresher activity live
+  // and yields to it, while the submitter still holds any checkpoint until the seeding resolves.
+  const registration = context.getSubmitter().registerActivity({
     activityID: message.activity.id,
     appendedHead: message.activity.appendedHead,
     lastHash: message.activity.lastHash,
@@ -25,4 +28,6 @@ export async function handleSetActivityMessage(
 
   context.setActivity(message.activity);
   simulation.startActivity(input.avatar, input.activity);
+
+  await registration;
 }

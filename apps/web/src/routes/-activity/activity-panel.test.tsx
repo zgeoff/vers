@@ -1,10 +1,8 @@
 import { expect, test } from 'bun:test';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
-import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { buildQueryClient } from '../../lib/query/build-query-client';
-import { server } from '../../mocks/node';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ActivityPanel } from './activity-panel';
@@ -26,24 +24,16 @@ test('it renders the activity title and character frames with no catching-up ind
   expect(screen.queryByTestId('catching-up-indicator')).not.toBeInTheDocument();
 });
 
-test('it shows exactly one catching-up indicator while a revealed reward is still pending', async () => {
+test('it shows exactly one catching-up indicator while appended progress is still settling', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
-
-  server.use(
-    mockActivityService.getActivityRewards.handler(() => ({
-      items: [
-        {
-          chainIndex: 5,
-          item: { affixes: [], baseID: 'base_1', contentVersion: '1', rarityID: 'common' },
-          ordinal: 0,
-        },
-      ],
-      verifiedHead: 2,
-    })),
-  );
+  await db.activityCollection.create({
+    appendedHead: 3,
+    avatarID: avatar.id,
+    status: 'active',
+    verifiedHead: 2,
+  });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderPanel();
@@ -53,29 +43,43 @@ test('it shows exactly one catching-up indicator while a revealed reward is stil
     });
 
     expect(screen.getByTestId('catching-up-indicator')).toHaveTextContent(
-      'Catching up — 1 rewards settling',
+      'Catching up — 1 reward settling',
     );
   });
 });
 
-test('it shows no catching-up indicator once every revealed reward is verified', async () => {
+test('it pluralizes the catching-up notice when several rewards are settling', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+  await db.activityCollection.create({
+    appendedHead: 5,
+    avatarID: avatar.id,
+    status: 'active',
+    verifiedHead: 2,
+  });
 
-  server.use(
-    mockActivityService.getActivityRewards.handler(() => ({
-      items: [
-        {
-          chainIndex: 2,
-          item: { affixes: [], baseID: 'base_1', contentVersion: '1', rarityID: 'common' },
-          ordinal: 0,
-        },
-      ],
-      verifiedHead: 2,
-    })),
-  );
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    renderPanel();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('catching-up-indicator')).toHaveTextContent(
+        'Catching up — 3 rewards settling',
+      );
+    });
+  });
+});
+
+test('it shows no catching-up indicator once the appended progress is fully verified', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+
+  await db.activityCollection.create({
+    appendedHead: 2,
+    avatarID: avatar.id,
+    status: 'active',
+    verifiedHead: 2,
+  });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderPanel();

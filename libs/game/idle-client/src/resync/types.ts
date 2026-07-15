@@ -42,10 +42,18 @@ export interface FastForwardReport extends FastForwardProgress {
 
 /**
  * `progress` is the confirmed snapshot the plan was decided from — `null` only when the avatar has
- * no activity history at all, the one case nothing was ever fetched to report.
+ * no activity history at all, the one case nothing was ever fetched to report. A fast-forward plan
+ * always carries the report its run produced; no other plan kind has one, so a completed
+ * fast-forward can never be represented without its recovery data.
  */
-export interface ResyncResult {
-  readonly plan: ResyncPlan;
-  readonly progress: LatestActivityProgress | null;
-  readonly report?: FastForwardReport;
-}
+export type ResyncResult =
+  | {
+      readonly plan: Exclude<ResyncPlan, { kind: 'fast-forward' }>;
+      readonly progress: LatestActivityProgress | null;
+      readonly report?: undefined;
+    }
+  | {
+      readonly plan: Extract<ResyncPlan, { kind: 'fast-forward' }>;
+      readonly progress: LatestActivityProgress;
+      readonly report: FastForwardReport;
+    };

@@ -1,7 +1,4 @@
 import type { Simulation } from '@vers/idle-core';
-import { handleSimulationRestarted } from './handle-simulation-restarted';
-import { handleSimulationStarted } from './handle-simulation-started';
-import { handleSimulationStopped } from './handle-simulation-stopped';
 import { handleSimulationUpdate } from './handle-simulation-update';
 import type { WorkerContext } from './types';
 
@@ -13,17 +10,5 @@ import type { WorkerContext } from './types';
 export function registerSimulationListeners(context: WorkerContext, simulation: Simulation): void {
   simulation.addEventListener('updated', () => {
     handleSimulationUpdate(context);
-  });
-
-  simulation.addEventListener('stopped', () => {
-    handleSimulationStopped(context);
-  });
-
-  simulation.addEventListener('started', () => {
-    handleSimulationStarted(context);
-  });
-
-  simulation.addEventListener('restarted', () => {
-    handleSimulationRestarted(context);
   });
 }

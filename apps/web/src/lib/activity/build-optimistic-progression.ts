@@ -26,10 +26,11 @@ interface BuildOptimisticProgressionInput {
 
 /**
  * Derives the level/xp a screen renders while an activity is in flight. `buildSnapshot` is the
- * server-authored anchor pinned at the activity's start; the running simulation's `rewards.xp` is
- * an optimistic delta on top of it, added only while the live sim is still driving that same
- * activity — a stale sim left over from a different one contributes nothing. With no current
- * activity the settled avatar row is the truth: nothing is in flight to optimistically project.
+ * server-authored anchor pinned at the activity's start; the running simulation's level and
+ * `rewards.xp` are an optimistic overlay on top of it, applied only while the live sim is still
+ * driving that same activity — a stale sim left over from a different one contributes nothing.
+ * With no current activity the settled avatar row is the truth: nothing is in flight to
+ * optimistically project.
  */
 export function buildOptimisticProgression(
   input: Readonly<BuildOptimisticProgressionInput>,
@@ -39,10 +40,16 @@ export function buildOptimisticProgression(
   }
 
   const simMatchesCurrentActivity = input.simActivity?.id === input.currentActivity.id;
-  const bonusXP = simMatchesCurrentActivity ? (input.simActivity?.rewards.xp ?? 0) : 0;
+
+  if (!simMatchesCurrentActivity) {
+    return {
+      level: input.currentActivity.buildSnapshot.level,
+      xp: input.currentActivity.buildSnapshot.xp,
+    };
+  }
 
   return {
     level: input.simAvatar?.level ?? input.currentActivity.buildSnapshot.level,
-    xp: input.currentActivity.buildSnapshot.xp + bonusXP,
+    xp: input.currentActivity.buildSnapshot.xp + (input.simActivity?.rewards.xp ?? 0),
   };
 }

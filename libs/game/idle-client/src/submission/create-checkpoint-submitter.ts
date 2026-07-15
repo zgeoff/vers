@@ -6,7 +6,6 @@ import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
 import {
   ENTROPY_SOURCE_SERVER_KEY,
   PROGRESS_FLUSH_INTERVAL_MS,
-  RETRY_BACKOFF_BASE_MS,
   RETRY_BACKOFF_CAP_MS,
 } from './constants';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
@@ -25,6 +24,8 @@ interface ActivityState {
   prevHash: string;
   previousNextSeed: string;
   retryAttempt: number;
+  retryGeneration: number;
+  retryScheduled: boolean;
   startChainIndex: number;
 }
 
@@ -50,8 +51,10 @@ export interface CheckpointSubmitter {
   submit: (activityID: string, checkpoint: Readonly<ActivityCheckpoint>) => Promise<void>;
 
   /**
-   * Resets every tracked activity's retry backoff and immediately flushes each one that isn't
-   * already stopped — the reconnect recovery path, called once connectivity returns.
+   * Resets every tracked activity's retry backoff, supersedes any scheduled retry (its stale
+   * callback becomes a no-op), and immediately flushes each activity that isn't already stopped —
+   * the reconnect recovery path, called once connectivity returns. Each activity's flush settles
+   * independently, so one failure never blocks the rest of the drain.
    */
   flushHeld: () => Promise<void>;
 }
@@ -130,20 +133,39 @@ export function createCheckpointSubmitter(
       }, delayMs);
     });
 
+  // At most one retry is ever pending per activity: a failure while one is already scheduled
+  // reports held and defers to it, and a callback whose generation was superseded by a reconnect
+  // flush is a no-op — so retry chains can never multiply into a request storm during an outage.
   const scheduleHeldRetry = (
     activityID: string,
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cursor this function bumps in place to back off the next retry
     state: ActivityState,
   ): void => {
-    state.retryAttempt += 1;
     options.onHeld?.(activityID);
 
+    if (state.retryScheduled) {
+      return;
+    }
+
+    state.retryScheduled = true;
+    state.retryAttempt += 1;
+
+    const generation = state.retryGeneration;
+
     const delayMs = Math.min(
-      RETRY_BACKOFF_BASE_MS * 2 ** (state.retryAttempt - 1),
+      PROGRESS_FLUSH_INTERVAL_MS * 2 ** (state.retryAttempt - 1),
       RETRY_BACKOFF_CAP_MS,
     );
 
-    scheduleRetry(delayMs, () => flush(activityID));
+    scheduleRetry(delayMs, async () => {
+      if (generation !== state.retryGeneration) {
+        return;
+      }
+
+      state.retryScheduled = false;
+
+      await flush(activityID);
+    });
   };
 
   const flush = async (activityID: string): Promise<void> => {
@@ -227,6 +249,7 @@ export function createCheckpointSubmitter(
 
         state.expectedHead = error.data.appendedHead;
         state.flushPending = true;
+        state.retryAttempt = 0;
 
         return;
       }
@@ -272,6 +295,8 @@ export function createCheckpointSubmitter(
       prevHash: context.lastHash,
       previousNextSeed: context.previousNextSeed ?? '',
       retryAttempt: 0,
+      retryGeneration: 0,
+      retryScheduled: false,
       startChainIndex: context.startChainIndex,
     };
 
@@ -364,11 +389,13 @@ export function createCheckpointSubmitter(
   };
 
   const flushHeld = async (): Promise<void> => {
-    await Promise.all(
+    await Promise.allSettled(
       [...activityStates.entries()]
         .filter(([, state]) => !state.invalid)
         .map(([activityID, state]) => {
           state.retryAttempt = 0;
+          state.retryGeneration += 1;
+          state.retryScheduled = false;
 
           return flush(activityID);
         }),

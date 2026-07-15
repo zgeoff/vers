@@ -29,7 +29,7 @@ test('it ignores a sim delta from a different activity than the current one', ()
     simAvatar: { level: 4 },
   });
 
-  expect(result).toStrictEqual({ level: 4, xp: 400 });
+  expect(result).toStrictEqual({ level: 3, xp: 400 });
 });
 
 test('it renders the settled avatar row when no activity is current', () => {

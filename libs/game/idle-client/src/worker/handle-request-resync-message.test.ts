@@ -9,6 +9,7 @@ import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
+import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
@@ -16,7 +17,12 @@ import type { RequestResyncMessage, WorkerMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 
-function setupTest() {
+function setupTest(
+  config: Readonly<{
+    client?: ActivityServiceClient;
+    submitter?: Readonly<CheckpointSubmitter>;
+  }> = {},
+) {
   const channel = new MessageChannel();
 
   const received: Array<WorkerMessage> = [];
@@ -27,7 +33,7 @@ function setupTest() {
 
   channel.port2.start();
 
-  const context = createMockWorkerContext({ connections: [channel.port1] });
+  const context = createMockWorkerContext({ connections: [channel.port1], ...config });
 
   const message: RequestResyncMessage = {
     avatarID: 'avatar_1',
@@ -102,9 +108,12 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
   const appendedHead = attempt.checkpoints.length - 1;
   const lastConfirmed = attempt.checkpoints[appendedHead - 1];
 
-  if (lastConfirmed === undefined) {
-    throw new Error('expected a confirmed checkpoint short of the full stream');
-  }
+  invariant(
+    lastConfirmed !== undefined,
+    'expected a confirmed checkpoint short of the full stream',
+  );
+
+  const submittedSeeds: Array<string | undefined> = [];
 
   server.use(
     mockActivityService.getLatestActivityProgress.handler(() => ({
@@ -115,15 +124,27 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
       verifiedHead: 0,
     })),
     mockActivityService.trackActivityProgress.handler((opts) => {
-      const [first] = opts.input.checkpoints;
-
-      expect(first?.payload.seed).toBe(lastConfirmed.nextSeed);
+      submittedSeeds.push(opts.input.checkpoints[0]?.payload.seed);
 
       return { appendedHead: opts.input.expectedHead + opts.input.checkpoints.length };
     }),
   );
 
-  const ctx = setupTest();
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }),
+  );
+
+  let capturedFlush: (() => Promise<void>) | undefined;
+
+  const submitter = createCheckpointSubmitter({
+    client,
+    onInvalid: mock<(activityID: string, reason: string) => void>(),
+    scheduleFlush: (flush) => {
+      capturedFlush = flush;
+    },
+  });
+
+  const ctx = setupTest({ client, submitter });
 
   await handleRequestResyncMessage(ctx.context, ctx.message);
   await waitForMessageCount(ctx.received, 2);
@@ -135,15 +156,22 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
 
   const simulation = ctx.context.getSimulation();
 
-  expect(simulation?.activity?.id).toBe(activity.id);
+  invariant(simulation !== null, 'expected the resync to install a live simulation');
+  expect(simulation.activity?.id).toBe(activity.id);
 
   // submitting the reconstructed sim's next checkpoint proves the registered cursor chains onto
   // the recovered previousNextSeed, not the activity's own start seed
-  const checkpoint = await simulation?.run(500);
+  let checkpoint: ActivityCheckpoint | null = null;
 
-  if (checkpoint) {
-    await ctx.context.getSubmitter().submit(activity.id, checkpoint);
+  while (checkpoint === null) {
+    checkpoint = await simulation.run(SIMULATION_TIMESTEP_MS);
   }
+
+  await ctx.context.getSubmitter().submit(activity.id, checkpoint);
+
+  await capturedFlush?.();
+
+  expect(submittedSeeds).toStrictEqual([lastConfirmed.nextSeed]);
 });
 
 test('it reports a divergence via the checkpoint-stream-error channel and skips registration', async () => {
@@ -302,6 +330,8 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
     startedAt: new Date(Date.now() - 20_000),
   });
 
+  const submittedSeeds: Array<string | undefined> = [];
+
   server.use(
     mockActivityService.getLatestActivityProgress.handler(() => ({
       activity,
@@ -311,17 +341,27 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
       verifiedHead: 0,
     })),
     mockActivityService.trackActivityProgress.handler((opts) => {
-      const [first] = opts.input.checkpoints;
-
-      // the started checkpoint's own nextSeed, not the activity row's start seed — proves the
-      // registered cursor chains onto the reconstruction, not a fresh checkpoint-0 sim
-      expect(first?.payload.seed).toBe('525ac5e6a97591b0a1877a6606b22d9c');
+      submittedSeeds.push(opts.input.checkpoints[0]?.payload.seed);
 
       return { appendedHead: opts.input.expectedHead + opts.input.checkpoints.length };
     }),
   );
 
-  const ctx = setupTest();
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }),
+  );
+
+  let capturedFlush: (() => Promise<void>) | undefined;
+
+  const submitter = createCheckpointSubmitter({
+    client,
+    onInvalid: mock<(activityID: string, reason: string) => void>(),
+    scheduleFlush: (flush) => {
+      capturedFlush = flush;
+    },
+  });
+
+  const ctx = setupTest({ client, submitter });
 
   await handleRequestResyncMessage(ctx.context, ctx.message);
   await waitForMessageCount(ctx.received, 2);
@@ -333,12 +373,22 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
 
   const simulation = ctx.context.getSimulation();
 
+  invariant(simulation !== null, 'expected the fast-forward to install a live simulation');
+
   // the live sim attaches to the fast-forward's own head row — no continuation was ever started
-  expect(simulation?.activity?.id).toBe(activity.id);
+  expect(simulation.activity?.id).toBe(activity.id);
 
-  const checkpoint = await simulation?.run(500);
+  let checkpoint: ActivityCheckpoint | null = null;
 
-  if (checkpoint) {
-    await ctx.context.getSubmitter().submit(activity.id, checkpoint);
+  while (checkpoint === null) {
+    checkpoint = await simulation.run(SIMULATION_TIMESTEP_MS);
   }
+
+  await ctx.context.getSubmitter().submit(activity.id, checkpoint);
+
+  await capturedFlush?.();
+
+  // the started checkpoint's own nextSeed, not the activity row's start seed — proves the
+  // registered cursor chains onto the reconstruction, not a fresh checkpoint-0 sim
+  expect(submittedSeeds).toStrictEqual(['525ac5e6a97591b0a1877a6606b22d9c']);
 });

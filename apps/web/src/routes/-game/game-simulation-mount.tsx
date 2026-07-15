@@ -19,6 +19,7 @@ export function GameSimulationMount() {
   const resyncStatus = useResyncStatus();
   const avatarID = avatarQuery.data?.id;
   const hasSentResync = useRef(false);
+  const lastWorkerActivityID = useRef(idleWorkerHandle.activity?.id);
 
   useEffect(() => {
     if (idleWorkerHandle.worker !== undefined && !idleWorkerHandle.initialized) {
@@ -55,15 +56,16 @@ export function GameSimulationMount() {
     sendIdleRequestResync(idleWorkerHandle.worker, avatarID);
   }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID]);
 
+  // the tab relays connectivity to the worker: Chromium never fires online events inside a
+  // SharedWorker, so this is the reconnect trigger there. The worker single-flights concurrent
+  // requests and drains held batches before planning, so a duplicate relay is harmless
   useEffect(() => {
     const worker = idleWorkerHandle.worker;
 
-    if (worker === undefined || avatarID === undefined) {
-      return () => {};
-    }
-
     const handleOnline = () => {
-      sendIdleRequestResync(worker, avatarID);
+      if (worker !== undefined && avatarID !== undefined) {
+        sendIdleRequestResync(worker, avatarID);
+      }
     };
 
     globalThis.addEventListener('online', handleOnline);
@@ -72,6 +74,25 @@ export function GameSimulationMount() {
       globalThis.removeEventListener('online', handleOnline);
     };
   }, [idleWorkerHandle.worker, avatarID]);
+
+  // a live sim that rolls into a continuation switches activity rows mid-session; the server rows
+  // anchor optimistic progression, so any switch (or stop) refetches them
+  useEffect(() => {
+    const workerActivityID = idleWorkerHandle.activity?.id;
+
+    if (lastWorkerActivityID.current === workerActivityID) {
+      return;
+    }
+
+    lastWorkerActivityID.current = workerActivityID;
+    void queryClient.invalidateQueries({ queryKey: activeAvatarQueryOptions().queryKey });
+
+    if (avatarID !== undefined) {
+      void queryClient.invalidateQueries({
+        queryKey: currentActivityQueryOptions(avatarID).queryKey,
+      });
+    }
+  }, [idleWorkerHandle.activity?.id, avatarID, queryClient]);
 
   // a resync's outcome moves the confirmed head; re-anchoring buildSnapshot means refetching both
   // rows rather than trusting anything the tab computed optimistically

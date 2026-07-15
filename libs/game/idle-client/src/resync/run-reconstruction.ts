@@ -35,6 +35,12 @@ export async function runReconstruction(
   );
 
   const timestepMs = options.timestepMs ?? SIMULATION_TIMESTEP_MS;
+
+  invariant(
+    Number.isFinite(timestepMs) && timestepMs > 0,
+    'reconstruction requires a positive timestep to make forward progress',
+  );
+
   const simulation = createSimulation();
 
   simulation.startActivity(options.avatar, options.activity);

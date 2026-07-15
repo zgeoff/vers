@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -31,11 +31,19 @@ function isSetActivityMessage(value: unknown): value is SetActivityMessage {
 function renderPanel() {
   const queryClient = buildQueryClient();
 
-  return render(
+  const buildUI = () => (
     <QueryClientProvider client={queryClient}>
       <ExploreCurrentPanel />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+
+  const rendered = render(buildUI());
+
+  const refreshPanel = () => {
+    rendered.rerender(buildUI());
+  };
+
+  return { refreshPanel, rendered };
 }
 
 test('it shows a spinner and sends initialize before the worker reports its state', async () => {
@@ -88,6 +96,10 @@ test('it starts an activity for the selected node once initialized, sending the 
 
   server.use(mockActivityService.startActivity.handler(() => started));
 
+  onTestFinished(() => {
+    setSelectedNode(null);
+  });
+
   setSelectedNode(node);
 
   const calls: Array<unknown> = [];
@@ -120,7 +132,7 @@ test('it starts an activity for the selected node once initialized, sending the 
   });
 });
 
-test('it requests a resync instead of starting when CONFLICT reports the same scope', async () => {
+test('it requests a resync instead of starting when the same scope is already active', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
@@ -132,6 +144,10 @@ test('it requests a resync instead of starting when CONFLICT reports the same sc
       throw opts.errors.CONFLICT({ data: { activity: alreadyActive } });
     }),
   );
+
+  onTestFinished(() => {
+    setSelectedNode(null);
+  });
 
   setSelectedNode(node);
 
@@ -168,12 +184,18 @@ test('it renders the node and its codex fragment once the worker reports the sen
 
   server.use(mockActivityService.startActivity.handler(() => started));
 
+  onTestFinished(() => {
+    setSelectedNode(null);
+  });
+
   setSelectedNode(node);
 
   const calls: Array<unknown> = [];
   const worker = { port: { postMessage: (message: unknown) => calls.push(message) } };
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    let refreshPanel: (() => void) | undefined;
+
     await withIdleWorkerHandle(
       {
         activity: undefined,
@@ -182,7 +204,7 @@ test('it renders the node and its codex fragment once the worker reports the sen
         worker,
       },
       async () => {
-        renderPanel();
+        refreshPanel = renderPanel().refreshPanel;
 
         await waitFor(() => {
           expect(calls.some((call) => isSetActivityMessage(call))).toBeTrue();
@@ -198,11 +220,64 @@ test('it renders the node and its codex fragment once the worker reports the sen
         worker,
       },
       async () => {
-        renderPanel();
+        refreshPanel?.();
 
         const codex = await screen.findByTestId('world-map-node-codex-stub');
 
         expect(codex).toBeVisible();
+      },
+    );
+  });
+});
+
+test('it offers a retry instead of spinning forever when starting fails, and retries on demand', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+
+  const node = createMockWorldMapNode({ id: 'node_1' });
+  const started = createMockActivityData({ avatarID: avatar.id, scopeID: node.id });
+  let startCalls = 0;
+
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      startCalls += 1;
+
+      if (startCalls === 1) {
+        throw opts.errors.NOT_FOUND({ data: {} });
+      }
+
+      return started;
+    }),
+  );
+
+  onTestFinished(() => {
+    setSelectedNode(null);
+  });
+
+  setSelectedNode(node);
+
+  const calls: Array<unknown> = [];
+  const worker = { port: { postMessage: (message: unknown) => calls.push(message) } };
+  const user = userEvent.setup();
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    await withIdleWorkerHandle(
+      {
+        activity: undefined,
+        failureAction: ActivityFailureAction.Abort,
+        initialized: true,
+        worker,
+      },
+      async () => {
+        renderPanel();
+
+        const retry = await screen.findByTestId('start-activity-retry');
+
+        await user.click(retry);
+
+        await waitFor(() => {
+          expect(calls.some((call) => isSetActivityMessage(call))).toBeTrue();
+        });
       },
     );
   });
@@ -216,6 +291,10 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
   const started = createMockActivityData({ avatarID: avatar.id, scopeID: node.id });
 
   server.use(mockActivityService.startActivity.handler(() => started));
+
+  onTestFinished(() => {
+    setSelectedNode(null);
+  });
 
   setSelectedNode(node);
 

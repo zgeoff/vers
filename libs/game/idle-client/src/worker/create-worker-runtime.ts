@@ -5,7 +5,7 @@ import { SIMULATION_TIMESTEP_MS } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
-import type { ClientMessage } from '../types';
+import type { ClientMessage, WorkerMessage } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
@@ -49,12 +49,14 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   // submission; every ack re-anchors the budget at the cap.
   let lastAckAt = Date.now();
 
-  const emitConnectionStatus = (online: boolean) => {
-    const message = createConnectionStatusMessage(online);
-
+  const emitWorkerMessage = (message: WorkerMessage) => {
     for (const connection of connections) {
       connection.postMessage(message);
     }
+  };
+
+  const emitConnectionStatus = (online: boolean) => {
+    emitWorkerMessage(createConnectionStatusMessage(online));
   };
 
   const submitter = createCheckpointSubmitter({
@@ -63,21 +65,13 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       lastAckAt = Date.now();
     },
     onCapped: () => {
-      const message = createOfflineCapStatusMessage(0, true);
-
-      for (const connection of connections) {
-        connection.postMessage(message);
-      }
+      emitWorkerMessage(createOfflineCapStatusMessage(0, true));
     },
     onHeld: () => {
       emitConnectionStatus(false);
     },
     onInvalid: (activityID, reason) => {
-      const message = createCheckpointStreamInvalidMessage(activityID, reason);
-
-      for (const connection of connections) {
-        connection.postMessage(message);
-      }
+      emitWorkerMessage(createCheckpointStreamInvalidMessage(activityID, reason));
     },
   });
 
@@ -164,22 +158,32 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   };
 
   // The worker's own reconnect recovery: a returning connection resends whatever the submitter
-  // held, and self-triggers a resync when nothing is live to catch up an avatar it remembers.
-  self.addEventListener('online', () => {
-    void submitter.flushHeld();
+  // held, then — once the held tail is drained, so a resync never reads a stale appended head —
+  // self-triggers a resync when nothing is live to catch up an avatar it remembers.
+  const handleOnline = () => {
     emitConnectionStatus(true);
 
-    if (context.getSimulation() === null && resyncAvatarID !== null) {
-      void handleRequestResyncMessage(context, createRequestResyncMessage(resyncAvatarID));
-    }
-  });
+    void (async () => {
+      await submitter.flushHeld();
 
-  self.addEventListener('offline', () => {
+      if (context.getSimulation() === null && resyncAvatarID !== null) {
+        await handleRequestResyncMessage(context, createRequestResyncMessage(resyncAvatarID));
+      }
+    })();
+  };
+
+  const handleOffline = () => {
     emitConnectionStatus(false);
-  });
+  };
+
+  self.addEventListener('online', handleOnline);
+  self.addEventListener('offline', handleOffline);
 
   const stop = () => {
     stopped = true;
+
+    self.removeEventListener('online', handleOnline);
+    self.removeEventListener('offline', handleOffline);
   };
 
   return { connections, handleConnect, stop };

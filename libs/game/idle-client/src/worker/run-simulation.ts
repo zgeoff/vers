@@ -1,6 +1,5 @@
 import type { Simulation } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
-import invariant from 'tiny-invariant';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { OFFLINE_CAP_WARNING_MS } from './offline-cap-warning-ms';
 import { pickPostTerminalAction } from './pick-post-terminal-action';
@@ -67,7 +66,11 @@ export async function runSimulation(
 
   const activity = context.getActivity();
 
-  invariant(activity !== null, 'a running simulation always has its source activity row tracked');
+  // A SetActivity or resync that landed while the terminal batch was awaited owns the runtime
+  // now — starting a continuation for this stale row would overwrite its activity and scope.
+  if (context.getSimulation() !== simulation || activity?.id !== activityID) {
+    return;
+  }
 
   await runContinuation(context, simulation, activity);
 }

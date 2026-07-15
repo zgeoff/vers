@@ -16,8 +16,8 @@
     // `up`/`down` and `seed` are Kysely-mandated migration and seed-file
     // exports; the oRPC handler exemptions mirror their contract procedure
     // names (the contract key is the public API vocabulary) and would
-    // misname the public API if renamed; worldMapNodeCodexQueryOptions
-    // follows the TanStack Query queryOptions convention
+    // misname the public API if renamed; the `*QueryOptions` factories
+    // follow the TanStack Query queryOptions naming convention
     "zgeoff/function-verb": [
       "error",
       {
