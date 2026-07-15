@@ -4,7 +4,7 @@ import { toSafeRedirectPath } from './to-safe-redirect-path';
 import { updateAuthSession } from './update-auth-session';
 import { updateVerifySession } from './update-verify-session';
 
-interface CompleteSessionSignInOptions {
+interface RunSessionSignInOptions {
   readonly email: string;
   readonly redirectTo?: string | undefined;
   readonly session: { readonly expiresAt: Date; readonly id: string; readonly userID: string };
@@ -16,9 +16,7 @@ interface CompleteSessionSignInOptions {
  * pending session's id and owner, otherwise the session is verified directly and the auth cookie is
  * set.
  */
-export async function runSessionSignIn(
-  opts: Readonly<CompleteSessionSignInOptions>,
-): Promise<never> {
+export async function runSessionSignIn(opts: Readonly<RunSessionSignInOptions>): Promise<never> {
   const actingUserID = opts.session.userID;
 
   const otherSessions = await sessionClient.getSessions({}, { context: { actingUserID } });

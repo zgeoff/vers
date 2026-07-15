@@ -196,14 +196,14 @@ function createTrace(request: Request): TraceContext {
   return createTraceContext(parseTraceparent(request.headers.get('traceparent')) ?? undefined);
 }
 
-interface MountORPCHandlerDeps {
+interface RegisterORPCHandlerDeps {
   readonly logger: pino.Logger;
   readonly publicKey: CryptoKey;
   readonly serviceName: string;
 }
 
 /**
- * Mounts an oRPC fetch handler behind the s2s trust boundary: an invalid service token short-
+ * Registers an oRPC fetch handler behind the s2s trust boundary: an invalid service token short-
  * circuits with a plain 401 before the handler ever runs, per the auth/trust-boundary split in
  * docs/architecture/service-contracts.md. Every response — including that 401 — carries the request's trace id
  * in `x-trace-id`, and the whole request runs inside its trace-context scope so logs correlate.
@@ -213,7 +213,7 @@ function registerORPCHandler(
   app: Elysia,
   prefix: `/${string}`,
   handler: FetchHandler<ServiceContext>,
-  deps: MountORPCHandlerDeps,
+  deps: RegisterORPCHandlerDeps,
 ): void {
   app.all(
     `${prefix}*`,

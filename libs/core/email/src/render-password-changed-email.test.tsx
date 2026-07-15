@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { renderPasswordChangedEmail } from './render-password-changed-email';
 
-test('it generates a password changed email with the provided configuration', async () => {
+test('it renders a password changed email with the provided configuration', async () => {
   const config = {
     email: 'test@example.com',
   };

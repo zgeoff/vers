@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
-import { renderChangeEmailVerificationEmail } from './render-change-email-verification';
+import { renderChangeEmailVerificationEmail } from './render-change-email-verification-email';
 
-test('it generates a verification email with the provided configuration', async () => {
+test('it renders a verification email with the provided configuration', async () => {
   const config = {
     newEmail: 'new-email@example.com',
     verificationCode: '123456',

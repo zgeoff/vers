@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { renderTwoFactorEmail } from './render-two-factor-email';
 
-test('it generates a two-factor email with the provided configuration', async () => {
+test('it renders a two-factor email with the provided configuration', async () => {
   const config = {
     verificationCode: '123456',
   };

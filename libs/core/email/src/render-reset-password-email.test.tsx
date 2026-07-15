@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { renderResetPasswordEmail } from './render-reset-password-email';
 
-test('it generates a reset password email with the provided configuration', async () => {
+test('it renders a reset password email with the provided configuration', async () => {
   const config = {
     resetURL: 'https://versidle.com/reset?token=123456',
   };

@@ -1,5 +1,5 @@
-import { renderChangeEmailNotificationEmail } from './render-change-email-notification';
-import { renderChangeEmailVerificationEmail } from './render-change-email-verification';
+import { renderChangeEmailNotificationEmail } from './render-change-email-notification-email';
+import { renderChangeEmailVerificationEmail } from './render-change-email-verification-email';
 import { renderExistingAccountEmail } from './render-existing-account-email';
 import { renderPasswordChangedEmail } from './render-password-changed-email';
 import { renderResetPasswordEmail } from './render-reset-password-email';
@@ -12,10 +12,10 @@ interface Preview {
 }
 
 /**
- * Sample-data render entries for every template generator, consumed by the
+ * Sample-data render entries for every template renderer, consumed by the
  * email-preview workflow (`yarn email:preview`). Entry names are the
- * generator export names kebab-cased with the `render` prefix and `Email`
- * suffix stripped; a co-located test enforces one entry per generator export.
+ * renderer export names kebab-cased with the `render` prefix and `Email`
+ * suffix stripped; a co-located test enforces one entry per renderer export.
  */
 export const previews: ReadonlyArray<Preview> = [
   {

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { renderExistingAccountEmail } from './render-existing-account-email';
 
-test('it generates an existing account email with the provided configuration', async () => {
+test('it renders an existing account email with the provided configuration', async () => {
   const config = {
     email: 'test@example.com',
   };
