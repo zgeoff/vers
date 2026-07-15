@@ -7,7 +7,8 @@ import {
   createViewer,
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
-import { buildRPCTestClient } from '@vers/test-utils';
+import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import { sql } from 'kysely';
 import { createActivityService } from '../create-activity-service';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 
@@ -439,8 +440,9 @@ test('it roots a new activity at the anchor a concurrent forward exit commits', 
   const anchorSeed = '0f'.repeat(16);
 
   // A transaction holding the chain-row lock with an uncommitted anchor advance stands in for a
-  // forward exit still in flight: the concurrent start below must wait it out and root at the
-  // anchor it commits, never at the stale pre-advance position.
+  // forward exit still in flight. The advance commits only once the concurrent start is observed
+  // queued behind the lock, so the blocking interleaving is what actually runs — and a start that
+  // roots without ever taking the lock times the wait out and fails the test.
   const held = await ctx.db.transaction().execute(async (trx) => {
     await trx
       .updateTable('activityChains')
@@ -456,7 +458,18 @@ test('it roots a new activity at the anchor a concurrent forward exit commits', 
       scopeType: 'world_map_node',
     });
 
-    await Bun.sleep(75);
+    // pg_stat_activity is snapshot-cached for the duration of the polling transaction, so the
+    // wait reads pg_locks, which reports the lock manager live.
+    await waitFor(
+      async () => {
+        const blocked = await sql<{ waiting: number }>`
+          select count(*)::int as waiting from pg_locks where not granted
+        `.execute(trx);
+
+        expect(blocked.rows[0]?.waiting).toBeGreaterThan(0);
+      },
+      { intervalMs: 10, timeoutMs: 3000 },
+    );
 
     return { pending: start };
   });
