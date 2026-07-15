@@ -17,7 +17,7 @@ export function setSimulationSnapshot(snapshot: SimulationSnapshot) {
       avatar: snapshot.avatar ?? null,
       combat: snapshot.combat ?? null,
       failureAction: snapshot.failureAction,
-      ...(needsRewardSlotLedgerReset(state.activity?.id ?? null, activityID)
+      ...(needsRewardSlotLedgerReset(state.rewardSlotLedgerActivityID, activityID)
         ? { rewardSlotLedger: [], rewardSlotLedgerActivityID: activityID }
         : {}),
     };
@@ -25,8 +25,8 @@ export function setSimulationSnapshot(snapshot: SimulationSnapshot) {
 }
 
 function needsRewardSlotLedgerReset(
-  previousActivityID: string | null,
+  ledgerActivityID: string | null,
   nextActivityID: string | null,
 ): boolean {
-  return previousActivityID !== nextActivityID;
+  return ledgerActivityID !== nextActivityID;
 }

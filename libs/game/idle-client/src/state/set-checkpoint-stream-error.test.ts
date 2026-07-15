@@ -13,3 +13,18 @@ test('it updates the checkpoint stream error state', () => {
     reason: 'broken-chain-link',
   });
 });
+
+test('it clears the reward-slot ledger when the stream is rejected', () => {
+  useIdleStore.setState({
+    checkpointStreamError: null,
+    rewardSlotLedger: [{ count: 2, version: 1 }],
+  });
+
+  setCheckpointStreamError({ activityID: 'activity_1', reason: 'broken-chain-link' });
+  expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([]);
+
+  expect(useIdleStore.getState().checkpointStreamError).toStrictEqual({
+    activityID: 'activity_1',
+    reason: 'broken-chain-link',
+  });
+});
