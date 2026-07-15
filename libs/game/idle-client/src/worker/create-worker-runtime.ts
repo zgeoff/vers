@@ -1,3 +1,4 @@
+import type { ActivityData } from '@vers/contract-activity';
 import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { SIMULATION_TIMESTEP_MS } from '@vers/idle-core';
@@ -6,8 +7,11 @@ import { createActivityServiceClient } from '../submission/create-activity-servi
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ClientMessage } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
+import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
+import { createRequestResyncMessage } from './create-request-resync-message';
 import { handleClientMessage } from './handle-client-message';
+import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
 
@@ -31,18 +35,30 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
   const connections = new Set<MessagePort>();
 
+  const client = createActivityServiceClient();
   let simulation: null | Simulation = null;
+  let activity: ActivityData | null = null;
   let running = false;
   let stopped = false;
   let lastFrameTime = performance.now();
   let accumulator = 0;
+  let resyncAvatarID: string | null = null;
+  let resyncInFlight = false;
 
   // A fresh worker starts fully funded and drains toward the cap until its first acknowledged
   // submission; every ack re-anchors the budget at the cap.
   let lastAckAt = Date.now();
 
+  const emitConnectionStatus = (online: boolean) => {
+    const message = createConnectionStatusMessage(online);
+
+    for (const connection of connections) {
+      connection.postMessage(message);
+    }
+  };
+
   const submitter = createCheckpointSubmitter({
-    client: createActivityServiceClient(),
+    client,
     onAcked: () => {
       lastAckAt = Date.now();
     },
@@ -52,6 +68,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       for (const connection of connections) {
         connection.postMessage(message);
       }
+    },
+    onHeld: () => {
+      emitConnectionStatus(false);
     },
     onInvalid: (activityID, reason) => {
       const message = createCheckpointStreamInvalidMessage(activityID, reason);
@@ -64,11 +83,24 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
   const context: WorkerContext = {
     connections,
+    getActivity: () => activity,
+    getClient: () => client,
     getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
+    getResyncAvatarID: () => resyncAvatarID,
     getSimulation: () => simulation,
     getSubmitter: () => submitter,
+    isResyncInFlight: () => resyncInFlight,
     removeConnection: (port) => {
       connections.delete(port);
+    },
+    setActivity: (newActivity) => {
+      activity = newActivity;
+    },
+    setResyncAvatarID: (avatarID) => {
+      resyncAvatarID = avatarID;
+    },
+    setResyncInFlight: (inFlight) => {
+      resyncInFlight = inFlight;
     },
     setSimulation: (newSimulation) => {
       simulation = newSimulation;
@@ -130,6 +162,21 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
     void runTickLoop();
   };
+
+  // The worker's own reconnect recovery: a returning connection resends whatever the submitter
+  // held, and self-triggers a resync when nothing is live to catch up an avatar it remembers.
+  self.addEventListener('online', () => {
+    void submitter.flushHeld();
+    emitConnectionStatus(true);
+
+    if (context.getSimulation() === null && resyncAvatarID !== null) {
+      void handleRequestResyncMessage(context, createRequestResyncMessage(resyncAvatarID));
+    }
+  });
+
+  self.addEventListener('offline', () => {
+    emitConnectionStatus(false);
+  });
 
   const stop = () => {
     stopped = true;

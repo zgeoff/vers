@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { InitializeMessage, SetActivityMessage } from '../types';
 import { ClientMessageType } from '../types';
 import { isInitializeMessage } from './is-initialize-message';
@@ -13,12 +13,8 @@ test('it returns true if it is an initialize message', () => {
 });
 
 test('it returns false if it is not an initialize message', () => {
-  const avatar = createMockAvatarData();
-  const activity = createMockActivityInput();
-
   const message: SetActivityMessage = {
-    activity,
-    avatar,
+    activity: createMockActivityData(),
     type: ClientMessageType.SetActivity,
   };
 

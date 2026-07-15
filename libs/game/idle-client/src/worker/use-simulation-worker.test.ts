@@ -4,7 +4,13 @@ import { ActivityFailureAction } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { setSimulationWorker } from '../state/set-simulation-worker';
 import { useIdleStore } from '../state/use-idle-store';
-import type { CheckpointStreamInvalidMessage, ClientMessage, InitialStateMessage } from '../types';
+import type {
+  CheckpointStreamInvalidMessage,
+  ClientMessage,
+  ConnectionStatusMessage,
+  InitialStateMessage,
+  ResyncStatusMessage,
+} from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { useSimulationWorker } from './use-simulation-worker';
 
@@ -129,6 +135,62 @@ test('it reports a checkpoint stream error from worker messages', async () => {
       activityID: 'activity_1',
       reason: 'broken-chain-link',
     });
+  });
+});
+
+test('it maps a resync status message onto the store', async () => {
+  registerSharedWorkerStub();
+
+  const hook = renderHook(() => useSimulationWorker());
+
+  hook.rerender();
+
+  invariant(hook.result.current, 'Worker not initialized');
+
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a StubSharedWorker, so its return value has that shape at runtime
+  const worker = hook.result.current as unknown as StubSharedWorker;
+
+  worker.channel.port2.start();
+
+  const message: ResyncStatusMessage = {
+    status: { attempts: 2, kind: 'fast-forwarding', levelUps: 1 },
+    type: WorkerMessageType.ResyncStatus,
+  };
+
+  worker.channel.port2.postMessage(message);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().resyncStatus).toStrictEqual({
+      attempts: 2,
+      kind: 'fast-forwarding',
+      levelUps: 1,
+    });
+  });
+});
+
+test('it maps a connection status message onto the store', async () => {
+  registerSharedWorkerStub();
+
+  const hook = renderHook(() => useSimulationWorker());
+
+  hook.rerender();
+
+  invariant(hook.result.current, 'Worker not initialized');
+
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a StubSharedWorker, so its return value has that shape at runtime
+  const worker = hook.result.current as unknown as StubSharedWorker;
+
+  worker.channel.port2.start();
+
+  const message: ConnectionStatusMessage = {
+    online: false,
+    type: WorkerMessageType.ConnectionStatus,
+  };
+
+  worker.channel.port2.postMessage(message);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().connectionOnline).toBeFalse();
   });
 });
 

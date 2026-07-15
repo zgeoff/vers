@@ -1,10 +1,13 @@
 import { expect, test } from 'bun:test';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
-import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
+import { mockActivityService } from '@vers/mock-services/activity';
+import { server } from '../mocks/node';
 import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
 import type {
   DisconnectMessage,
   InitializeMessage,
+  RequestResyncMessage,
   SetActivityMessage,
   SetFailureActionMessage,
 } from '../types';
@@ -32,16 +35,14 @@ test('it handles setting the activity', async () => {
 
   const channel = new MessageChannel();
 
-  const avatar = createMockAvatarData();
   const simulation = createSimulation();
 
   context.setSimulation(simulation);
 
-  const activity = createMockActivityInput();
+  const activity = createMockActivityData();
 
   const message: SetActivityMessage = {
     activity,
-    avatar,
     type: ClientMessageType.SetActivity,
   };
 
@@ -50,7 +51,7 @@ test('it handles setting the activity', async () => {
   await handleClientMessage(context, channel.port2, event);
 
   expect(simulation.activity?.id).toBe(activity.id);
-  expect(simulation.avatar?.id).toBe(avatar.id);
+  expect(simulation.avatar?.id).toBe(activity.avatarID);
 });
 
 test('it handles setting the failure action', async () => {
@@ -72,6 +73,29 @@ test('it handles setting the failure action', async () => {
   await handleClientMessage(context, channel.port2, event);
 
   expect(simulation.failureAction).toBe(ActivityFailureAction.Retry);
+});
+
+test('it handles request resync messages', async () => {
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler((opts) => {
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  const context = createMockWorkerContext();
+
+  const channel = new MessageChannel();
+
+  const message: RequestResyncMessage = {
+    avatarID: 'avatar_1',
+    type: ClientMessageType.RequestResync,
+  };
+
+  const event = new MessageEvent('message', { data: message });
+
+  await handleClientMessage(context, channel.port2, event);
+
+  expect(context.getResyncAvatarID()).toBe('avatar_1');
 });
 
 test('it handles disconnect messages', async () => {

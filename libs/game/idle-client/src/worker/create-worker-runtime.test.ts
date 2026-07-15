@@ -1,5 +1,7 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import { mockActivityService } from '@vers/mock-services/activity';
+import { server } from '../mocks/node';
 import type {
   DisconnectMessage,
   InitializeMessage,
@@ -55,6 +57,8 @@ test('it sends the initial state', async () => {
 });
 
 test('it processes simulation updates', async () => {
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 0 })));
+
   const runtime = createWorkerRuntime();
 
   onTestFinished(() => {
@@ -74,8 +78,7 @@ test('it processes simulation updates', async () => {
   await initialized;
 
   const setActivityMessage: SetActivityMessage = {
-    activity: createMockActivityInput(),
-    avatar: createMockAvatarData(),
+    activity: createMockActivityData(),
     type: ClientMessageType.SetActivity,
   };
 
@@ -89,6 +92,8 @@ test('it processes simulation updates', async () => {
 });
 
 test('it stops broadcasting to a connection after it disconnects', async () => {
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 0 })));
+
   const runtime = createWorkerRuntime();
 
   onTestFinished(() => {
@@ -114,8 +119,7 @@ test('it stops broadcasting to a connection after it disconnects', async () => {
   const survivorUpdated = waitForMessage(survivor);
 
   survivor.postMessage({
-    activity: createMockActivityInput(),
-    avatar: createMockAvatarData(),
+    activity: createMockActivityData(),
     type: ClientMessageType.SetActivity,
   } satisfies SetActivityMessage);
 

@@ -1,12 +1,10 @@
+import type { ActivityData } from '@vers/contract-activity';
 import { createSetActivityMessage } from '@vers/idle-client';
-import type { ActivitySubmissionContext } from '@vers/idle-client';
-import type { ActivityInput, AvatarData } from '@vers/idle-core';
 
-export function sendIdleSetActivity(
-  worker: SharedWorker,
-  activity: ActivityInput,
-  avatar: AvatarData,
-  submission?: ActivitySubmissionContext,
-): void {
-  worker.port.postMessage(createSetActivityMessage(activity, avatar, submission));
+/**
+ * Tells the worker to start a fresh stream from the row a `startActivity` mutation just returned
+ * — resuming any other activity, live or offline, goes through `sendIdleRequestResync` instead.
+ */
+export function sendIdleSetActivity(worker: SharedWorker, activity: Readonly<ActivityData>): void {
+  worker.port.postMessage(createSetActivityMessage(activity));
 }

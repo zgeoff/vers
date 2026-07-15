@@ -1,14 +1,18 @@
 import { useEffect } from 'react';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
+import { setConnectionStatus } from '../state/set-connection-status';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
+import { setResyncStatus } from '../state/set-resync-status';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
 import { setSimulationWorker } from '../state/set-simulation-worker';
 import { useIdleStore } from '../state/use-idle-store';
 import type {
   CheckpointStreamInvalidMessage,
+  ConnectionStatusMessage,
   InitialStateMessage,
   OfflineCapStatusMessage,
+  ResyncStatusMessage,
   SimulationUpdateMessage,
   WorkerMessage,
 } from '../types';
@@ -79,6 +83,14 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
       remainingMs: event.data.remainingMs,
     });
   }
+
+  if (isResyncStatusMessage(event.data)) {
+    setResyncStatus(event.data.status);
+  }
+
+  if (isConnectionStatusMessage(event.data)) {
+    setConnectionStatus(event.data.online);
+  }
 }
 
 function isInitialStateMessage(message: WorkerMessage): message is InitialStateMessage {
@@ -97,4 +109,12 @@ function isCheckpointStreamInvalidMessage(
 
 function isOfflineCapStatusMessage(message: WorkerMessage): message is OfflineCapStatusMessage {
   return message.type === WorkerMessageType.OfflineCapStatus;
+}
+
+function isResyncStatusMessage(message: WorkerMessage): message is ResyncStatusMessage {
+  return message.type === WorkerMessageType.ResyncStatus;
+}
+
+function isConnectionStatusMessage(message: WorkerMessage): message is ConnectionStatusMessage {
+  return message.type === WorkerMessageType.ConnectionStatus;
 }

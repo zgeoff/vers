@@ -1,10 +1,11 @@
+import { buildSimulationInput } from '@vers/idle-core';
 import type { SetActivityMessage } from '../types';
 import type { WorkerContext } from './types';
 
 export async function handleSetActivityMessage(
   context: WorkerContext,
   message: SetActivityMessage,
-) {
+): Promise<void> {
   const simulation = context.getSimulation();
 
   if (!simulation) {
@@ -13,9 +14,15 @@ export async function handleSetActivityMessage(
     return;
   }
 
-  if (message.submission) {
-    await context.getSubmitter().registerActivity(message.submission);
-  }
+  const input = buildSimulationInput(message.activity);
 
-  simulation.startActivity(message.avatar, message.activity);
+  await context.getSubmitter().registerActivity({
+    activityID: message.activity.id,
+    appendedHead: message.activity.appendedHead,
+    lastHash: message.activity.lastHash,
+    startChainIndex: message.activity.startChainIndex,
+  });
+
+  context.setActivity(message.activity);
+  simulation.startActivity(input.avatar, input.activity);
 }

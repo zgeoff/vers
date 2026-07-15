@@ -1,4 +1,5 @@
 import { expect, mock, test } from 'bun:test';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { SimulationListener } from '@vers/idle-core';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import {
@@ -6,6 +7,8 @@ import {
   createMockAvatarData,
   createMockEnemyData,
 } from '@vers/idle-core/test-utils';
+import { mockActivityService } from '@vers/mock-services/activity';
+import { server } from '../mocks/node';
 import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
@@ -21,28 +24,34 @@ async function runSimulationSteps(
   }
 }
 
-test('it restarts the activity if it fails and the failure action is retry', async () => {
+test('it continues into a fresh server-started row if it fails and the failure action is retry', async () => {
+  const continuedActivity = createMockActivityData();
+
+  server.use(mockActivityService.startActivity.handler(() => continuedActivity));
+
   const context = createMockWorkerContext();
   const simulation = createSimulation();
-  const restartedSpy = mock<SimulationListener>();
+  const startedSpy = mock<SimulationListener>();
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
   const avatar = createMockAvatarData({ life: 1 });
   const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Retry });
 
+  context.setActivity(createMockActivityData());
   simulation.startActivity(avatar, activity);
-  simulation.addEventListener('restarted', restartedSpy);
+  simulation.addEventListener('started', startedSpy);
 
   await runSimulationSteps(context, simulation, 100, 50);
 
-  expect(restartedSpy).toHaveBeenCalled();
+  expect(startedSpy).toHaveBeenCalled();
   expect(simulation.activity).not.toBeNull();
+  expect(context.getActivity()).toStrictEqual(continuedActivity);
 });
 
-test('it does not restart the activity if it fails and the failure action is abort', async () => {
+test('it does not continue if it fails and the failure action is abort', async () => {
   const context = createMockWorkerContext();
   const simulation = createSimulation();
-  const restartedSpy = mock<SimulationListener>();
+  const startedSpy = mock<SimulationListener>();
   const stoppedSpy = mock<SimulationListener>();
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
@@ -50,39 +59,45 @@ test('it does not restart the activity if it fails and the failure action is abo
   const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Abort });
 
   simulation.startActivity(avatar, activity);
-  simulation.addEventListener('restarted', restartedSpy);
+  simulation.addEventListener('started', startedSpy);
   simulation.addEventListener('stopped', stoppedSpy);
 
   await runSimulationSteps(context, simulation, 100, 50);
 
-  expect(restartedSpy).not.toHaveBeenCalled();
+  expect(startedSpy).not.toHaveBeenCalled();
   expect(stoppedSpy).toHaveBeenCalled();
   expect(simulation.activity).toBeNull();
 });
 
 test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
-  'it restarts the activity if it completes, regardless of the failure action (%s)',
+  'it continues into a fresh server-started row if it completes, regardless of the failure action (%s)',
   async (failureAction) => {
+    const continuedActivity = createMockActivityData();
+
+    server.use(mockActivityService.startActivity.handler(() => continuedActivity));
+
     const context = createMockWorkerContext();
     const simulation = createSimulation();
-    const restartedSpy = mock<SimulationListener>();
+    const startedSpy = mock<SimulationListener>();
     const avatar = createMockAvatarData();
     const activity = createMockActivityInput({ enemies: [createMockEnemyData()], failureAction });
 
+    context.setActivity(createMockActivityData());
     simulation.startActivity(avatar, activity);
 
     const startingActivity = simulation.activity;
 
-    simulation.addEventListener('restarted', restartedSpy);
+    simulation.addEventListener('started', startedSpy);
 
     await runSimulationSteps(context, simulation, 100, 700);
 
-    expect(restartedSpy).toHaveBeenCalled();
+    expect(startedSpy).toHaveBeenCalled();
     expect(simulation.activity).not.toBe(startingActivity);
+    expect(context.getActivity()).toStrictEqual(continuedActivity);
   },
 );
 
-test('it halts at the boundary instead of restarting once the offline budget is spent', async () => {
+test('it halts at the boundary instead of continuing once the offline budget is spent', async () => {
   const channel = new MessageChannel();
 
   const received: Array<unknown> = [];
@@ -95,7 +110,7 @@ test('it halts at the boundary instead of restarting once the offline budget is 
 
   const context = createMockWorkerContext({ connections: [channel.port1], remainingBudgetMs: 0 });
   const simulation = createSimulation();
-  const restartedSpy = mock<SimulationListener>();
+  const startedSpy = mock<SimulationListener>();
   const stoppedSpy = mock<SimulationListener>();
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
@@ -103,12 +118,12 @@ test('it halts at the boundary instead of restarting once the offline budget is 
   const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Retry });
 
   simulation.startActivity(avatar, activity);
-  simulation.addEventListener('restarted', restartedSpy);
+  simulation.addEventListener('started', startedSpy);
   simulation.addEventListener('stopped', stoppedSpy);
 
   await runSimulationSteps(context, simulation, 100, 50);
 
-  expect(restartedSpy).not.toHaveBeenCalled();
+  expect(startedSpy).not.toHaveBeenCalled();
   expect(stoppedSpy).not.toHaveBeenCalled();
 
   // MessagePort delivery is a queued task; yield once so the broadcast lands

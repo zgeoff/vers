@@ -1,8 +1,10 @@
 import type { Simulation } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
+import invariant from 'tiny-invariant';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { OFFLINE_CAP_WARNING_MS } from './offline-cap-warning-ms';
 import { pickPostTerminalAction } from './pick-post-terminal-action';
+import { runContinuation } from './run-continuation';
 import type { WorkerContext } from './types';
 
 /**
@@ -63,7 +65,11 @@ export async function runSimulation(
     emitCapStatus(context, remainingBudgetMs, false);
   }
 
-  simulation.restartActivity();
+  const activity = context.getActivity();
+
+  invariant(activity !== null, 'a running simulation always has its source activity row tracked');
+
+  await runContinuation(context, simulation, activity);
 }
 
 function emitCapStatus(context: WorkerContext, remainingMs: number, halted: boolean) {

@@ -12,9 +12,11 @@ export type {
   ResyncResult,
 } from './resync/types';
 
+export { setConnectionStatus } from './state/set-connection-status';
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
 export { setSimulationWorker } from './state/set-simulation-worker';
+export { useConnectionStatus } from './state/use-connection-status';
 export { useOfflineCapStatus } from './state/use-offline-cap-status';
 export { useResyncStatus } from './state/use-resync-status';
 export { useActivity } from './state/use-activity';
@@ -26,6 +28,7 @@ export type { ActivitySubmissionContext } from './submission/types';
 export * from './types';
 export { createInitializeMessage } from './worker/create-initialize-message';
 export { OFFLINE_CAP_WARNING_MS } from './worker/offline-cap-warning-ms';
+export { createRequestResyncMessage } from './worker/create-request-resync-message';
 export { createSetActivityMessage } from './worker/create-set-activity-message';
 export { createSetFailureActionMessage } from './worker/create-set-failure-action-message';
 export { useSimulationWorker } from './worker/use-simulation-worker';

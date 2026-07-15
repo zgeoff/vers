@@ -1,14 +1,25 @@
+import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import type { ActivityServiceClient } from '../submission/types';
 
 /**
  * Accessors over the runtime's closure state, threaded to every message and simulation event
  * handler. `connections` is exposed read-only — `removeConnection` is the one mutation a handler
- * needs. `getSubmitter` always returns the same instance: the submitter exists for the runtime's
- * whole lifetime, where the simulation is created and later replaced.
+ * needs. `getSubmitter` and `getClient` always return the same instance: both exist for the
+ * runtime's whole lifetime, where the simulation is created and later replaced.
  */
 export interface WorkerContext {
   readonly connections: ReadonlySet<MessagePort>;
+
+  /**
+   * The server-authored row the live simulation was last installed from — the scope a terminal
+   * checkpoint's continuation starts its next row in, since the engine's own `ActivityInput`
+   * carries no scope or avatar id.
+   */
+  readonly getActivity: () => ActivityData | null;
+
+  readonly getClient: () => ActivityServiceClient;
 
   /**
    * The worker's conservative view of the avatar's offline-progress budget: the cap minus the
@@ -16,8 +27,25 @@ export interface WorkerContext {
    * server's meter, never over-run it.
    */
   readonly getRemainingBudgetMs: () => number;
+
+  /**
+   * The avatar a resync was last requested for — remembered so a reconnect can self-trigger a
+   * resync without a tab having to resend it. `null` until the tab's first request.
+   */
+  readonly getResyncAvatarID: () => string | null;
+
   readonly getSimulation: () => null | Simulation;
   readonly getSubmitter: () => CheckpointSubmitter;
+
+  /**
+   * Whether a resync is currently running — the orchestrator's single-flight guard; a request
+   * that arrives while one is in flight is dropped rather than queued.
+   */
+  readonly isResyncInFlight: () => boolean;
+
   readonly removeConnection: (port: MessagePort) => void;
+  readonly setActivity: (activity: ActivityData | null) => void;
+  readonly setResyncAvatarID: (avatarID: string) => void;
+  readonly setResyncInFlight: (inFlight: boolean) => void;
   readonly setSimulation: (simulation: null | Simulation) => void;
 }

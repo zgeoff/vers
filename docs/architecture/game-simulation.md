@@ -133,10 +133,17 @@ Four processes move simulation results around, each with one name. **Replay** is
 asynchronous re-execution of submitted checkpoints — the trust decision, and nothing else. A
 **resync** is the client's confirmed-state fetch (verified anchor, appended head, server time) and
 the decision it drives. A **fast-forward** is the client's catch-up simulation of an offline gap,
-run on return. **Reconstruction** is the first step inside a fast-forward: re-running the
-interrupted activity from its seed to rebuild simulation state the client no longer holds —
-determinism makes the result identical to the lost original, and the already-accepted prefix costs
-nothing against the budget.
+run on return. **Reconstruction** re-runs an activity from its seed to rebuild simulation state the
+client no longer holds — determinism makes the result identical to the lost original, and the
+already-accepted prefix costs nothing against the budget.
+
+A resync executes in the SharedWorker, since only the worker holds the one live simulation a plan
+might attach to; a tab triggers it with the avatar id alone and the worker derives everything else
+from the confirmed activity row. A negligible gap attaches to the live simulation directly:
+reconstruction recovers the submission cursor (the chain-link hash and seed the next checkpoint
+continues from) by replaying up to the confirmed head before the worker resumes ticking from there.
+A larger gap fast-forwards through one or more attempts first, then attaches the same way to
+whichever continuation is still active when the budget runs out.
 
 Offline progress is bounded by a per-avatar simulated-time meter, enforced on the append path — the
 server never simulates. The avatar's budget refills at wall-clock rate since it was last banked,
