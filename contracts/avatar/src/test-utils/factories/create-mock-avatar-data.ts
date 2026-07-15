@@ -9,6 +9,7 @@ export function createMockAvatarData(overrides: Partial<AvatarData> = {}): Avata
     createdAt,
     id: createId(),
     level: faker.number.int({ max: 99, min: 1 }),
+    mode: 'trade',
     name: faker.person.firstName(),
     updatedAt: createdAt,
     userID: createId(),

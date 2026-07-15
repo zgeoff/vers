@@ -51,5 +51,23 @@ test('it creates the avatar and redirects to the avatar page', async () => {
     q.where({ name: 'Karnak', userID: signedIn.userID }),
   );
 
-  expect(created).toMatchObject({ level: 1, name: 'Karnak', xp: 0 });
+  expect(created).toMatchObject({ level: 1, mode: 'trade', name: 'Karnak', xp: 0 });
+});
+
+test('it creates a Self-Found avatar when that mode is requested', async () => {
+  const signedIn = await createSignedInUser();
+
+  const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
+    avatarCreateHandler(buildFormData({ mode: 'self_found', name: 'Vagrant' }))
+      .then(() => null)
+      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null)),
+  );
+
+  expect(outcome.value).toBe('/avatar');
+
+  const created = db.avatarCollection.findFirst((q) =>
+    q.where({ name: 'Vagrant', userID: signedIn.userID }),
+  );
+
+  expect(created).toMatchObject({ mode: 'self_found' });
 });

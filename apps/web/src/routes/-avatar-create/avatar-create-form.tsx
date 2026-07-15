@@ -1,5 +1,6 @@
 import { useServerFn } from '@tanstack/react-start';
-import { Field, Heading, StatusButton } from '@vers/design-system';
+import type { AvatarMode } from '@vers/contract-avatar';
+import { Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { avatarCreate } from './avatar-create';
@@ -13,10 +14,38 @@ const formStyles = css({
   width: '96',
 });
 
+const modeGroupStyles = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2',
+  marginBottom: '3',
+});
+
+const modeOptionStyles = css({
+  alignItems: 'center',
+  display: 'flex',
+  flexFlow: 'row nowrap',
+  gap: '3',
+});
+
+const modeLabelStyles = css({
+  color: 'text.primary',
+  fontSize: 'md',
+});
+
+const modeWarningStyles = css({
+  borderColor: 'border.danger',
+  borderWidth: '[1px]',
+  color: 'text.danger',
+  fontSize: 'sm',
+  padding: '3',
+});
+
 export function AvatarCreateForm() {
   const avatarCreateFn = useServerFn(avatarCreate);
   const [fieldErrors, setFieldErrors] = useState<AvatarCreateResult['fieldErrors']>({});
   const [isPending, setIsPending] = useState(false);
+  const [mode, setMode] = useState<AvatarMode>('trade');
 
   const handleSubmit = async (form: HTMLFormElement) => {
     const formData = new FormData(form);
@@ -60,6 +89,38 @@ export function AvatarCreateForm() {
           }}
           labelProps={{ children: 'Name', htmlFor: 'name' }}
         />
+        <div className={modeGroupStyles} role="radiogroup" aria-label="Economy mode">
+          <label className={modeOptionStyles}>
+            <input
+              checked={mode === 'trade'}
+              name="mode"
+              onChange={() => {
+                setMode('trade');
+              }}
+              type="radio"
+              value="trade"
+            />
+            <span className={modeLabelStyles}>Trade</span>
+          </label>
+          <label className={modeOptionStyles}>
+            <input
+              checked={mode === 'self_found'}
+              name="mode"
+              onChange={() => {
+                setMode('self_found');
+              }}
+              type="radio"
+              value="self_found"
+            />
+            <span className={modeLabelStyles}>Self-Found</span>
+          </label>
+          {mode === 'self_found' && (
+            <Text className={modeWarningStyles} role="alert">
+              Self-Found is permanent. Nothing this avatar earns can ever be traded, gifted, or
+              moved to another avatar. A player who never trades loses nothing by staying Trade.
+            </Text>
+          )}
+        </div>
         <StatusButton
           disabled={isPending}
           status={isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}

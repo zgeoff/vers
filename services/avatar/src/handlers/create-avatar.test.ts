@@ -11,7 +11,7 @@ async function setupTest() {
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-test('it creates an avatar owned by the acting user', async () => {
+test('it creates an avatar owned by the acting user, defaulted to trade mode', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
@@ -24,11 +24,24 @@ test('it creates an avatar owned by the acting user', async () => {
     createdAt: expect.toBeValidDate(),
     id: expect.toBeString(),
     level: 1,
+    mode: 'trade',
     name: 'Brutus',
     updatedAt: expect.toBeValidDate(),
     userID: viewer.user.id,
     xp: 0,
   });
+});
+
+test('it creates an avatar with an explicitly chosen self_found mode', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
+
+  const avatar = await client.createAvatar({ mode: 'self_found', name: 'Vagrant' });
+
+  expect(avatar.mode).toBe('self_found');
 });
 
 test('it rejects a second avatar with a duplicate name with CONFLICT', async () => {

@@ -22,6 +22,7 @@ export const createAvatar = os.createAvatar.handler((opts) => {
     createdAt: now,
     id: createId(),
     level: 1,
+    mode: opts.input.mode,
     name: opts.input.name,
     updatedAt: now,
     userID: actingUserId,
