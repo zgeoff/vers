@@ -81,7 +81,7 @@ is server-computed, so there is nothing to replay.
 | Call site                               | Entry point                        | Stream         | Key custody                   |
 | --------------------------------------- | ---------------------------------- | -------------- | ----------------------------- |
 | Mint at settlement (replay apply)       | `rollItemFromStream`               | keyed position | server                        |
-| Reveal read path (activity contract)    | none — returns the settlement mint | n/a            | server                        |
+| Reveal read path (activity contract)    | none — returns the settlement mint | n/a            | n/a                           |
 | Self-found local roll (client)          | `rollItemFromStream`               | keyed position | device                        |
 | Self-found replay verification (replay) | both entry points                  | keyed position | server, re-derived device key |
 | Trade craft resolution                  | `rollAffixesFromStream`            | salt           | server (sealed)               |
