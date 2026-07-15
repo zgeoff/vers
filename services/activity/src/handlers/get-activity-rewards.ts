@@ -11,7 +11,7 @@ interface GetActivityRewardsOpts {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
-  readonly input: { readonly activityID: string; readonly afterChainIndex?: number };
+  readonly input: { readonly activityID: string; readonly afterChainIndex?: number | undefined };
 }
 
 interface RewardItem {
