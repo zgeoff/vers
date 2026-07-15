@@ -3,7 +3,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockKeysService } from '@vers/mock-services/keys';
 import { getTestServiceKeyPair } from '@vers/service-test-utils/bun';
-import { server } from '../mocks/node';
+import { server } from '../mocks/server';
 import { readAvatarRollKey } from './read-avatar-roll-key';
 
 test('it reads the avatar roll key over real s2s auth against the mocked keys backend', async () => {

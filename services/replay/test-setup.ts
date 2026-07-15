@@ -1,12 +1,11 @@
 import '@zgeoff/bun-test-extended';
-import { afterAll, afterEach } from 'bun:test';
 import {
   getTestServiceKeyPair,
   resolveTestDBTarget,
   setupBunTestDB,
 } from '@vers/service-test-utils/bun';
-import { registerBunTestCleanup } from '@vers/test-utils/bun';
-import { server } from './src/mocks/node';
+import { registerBunTestCleanup, registerMSWLifecycle } from '@vers/test-utils/bun';
+import { server } from './src/mocks/server';
 
 await setupBunTestDB();
 
@@ -17,17 +16,19 @@ process.env['SERVICE_AUTH_PUBLIC_KEY'] = serviceKeyPair.publicKeyPEM;
 // parsed by `envShape` but never read: each suite injects its transaction-bound db directly
 process.env['DATABASE_URL'] = `${resolveTestDBTarget().baseURI}/postgres`;
 
-// `bypass`, not the usual project-wide `error`: this package's other suites dispatch real HTTP to
-// ephemeral test-provider ports (the cross-version replay dispatch), which carry no mock handler
-// and must reach the real network rather than fail as unhandled.
-server.listen({ onUnhandledRequest: 'bypass' });
+// This package's cross-version replay suites dispatch real HTTP to ephemeral test-provider ports on
+// the loopback interface, which carry no mock handler; those bypass, and every other unhandled
+// request still errors as it does project-wide.
+registerMSWLifecycle(server, {
+  onUnhandledRequest: (request, print) => {
+    const hostname = new URL(request.url).hostname;
 
-afterEach(() => {
-  server.resetHandlers();
-});
+    if (hostname === '127.0.0.1' || hostname === 'localhost') {
+      return;
+    }
 
-afterAll(() => {
-  server.close();
+    print.error();
+  },
 });
 
 registerBunTestCleanup();
