@@ -32,7 +32,7 @@ export function buildReplaySimulationInput(activity: Readonly<ReplaySimulationAc
     avatar: {
       id: activity.avatarID,
       level: activity.buildSnapshot.level,
-      life: PLACEHOLDER_AVATAR_LIFE,
+      life: 200,
       name: activity.avatarID,
       paperdoll: { [EquipmentSlot.MainHand]: buildPlaceholderWeapon() },
       xp: activity.buildSnapshot.xp,
@@ -49,8 +49,6 @@ function buildPlaceholderEnemy() {
     xp: 10,
   };
 }
-
-const PLACEHOLDER_AVATAR_LIFE = 200;
 
 function buildPlaceholderWeapon() {
   return {
