@@ -28,17 +28,22 @@ and mesh traffic is already encrypted, so services set `force_https = false`.
 Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.toml` or Dockerfile.
 Secrets are set with `fly secrets set` and never committed.
 
-| App                                                                          | Secrets                                                       |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `service-activity`, `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`                     |
-| `service-session`                                                            | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY`           |
-| `service-keys`                                                               | `ROLL_KEY_ROOTS`, `SERVICE_AUTH_PUBLIC_KEY`                   |
-| `app-web`                                                                    | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY` |
-| `vers-bugsink`                                                               | `SECRET_KEY`, `DATABASE_URL`, `CREATE_SUPERUSER` (first boot) |
+| App                                                                          | Secrets                                                               |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `service-activity`, `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`                             |
+| `service-session`                                                            | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY`                   |
+| `service-replay`                                                             | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`, `SERVICE_AUTH_PRIVATE_KEY` |
+| `service-keys`                                                               | `ROLL_KEY_ROOTS`, `SERVICE_AUTH_PUBLIC_KEY`                           |
+| `app-web`                                                                    | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY`         |
+| `vers-bugsink`                                                               | `SECRET_KEY`, `DATABASE_URL`, `CREATE_SUPERUSER` (first boot)         |
 
 - `SERVICE_AUTH_PUBLIC_KEY` — Ed25519 SPKI public key a service verifies inbound calls with.
-- `SERVICE_AUTH_PRIVATE_KEY` — its PKCS8 private half; `app-web` signs outbound s2s tokens with it,
-  each token's `aud` the target's registered service name (`service-user`).
+- `SERVICE_AUTH_PRIVATE_KEY` — its PKCS8 private half, held by the callers that sign outbound s2s
+  tokens: `app-web` toward the domain services, and `service-replay`'s worker toward version-pinned
+  replay providers. Each token's `aud` is the target's registered service name (`service-user`).
+  Both signers hold the same key deliberately: verification checks signature, `iss`, and `aud` only,
+  so any holder can mint a token for any service — the private half is confined to first-party
+  callers, and a per-caller key split buys nothing until a caller with narrower trust exists.
 - `JWT_SIGNING_PRIVKEY` — RS256 PKCS8 private key `service-session` signs user tokens with, under
   issuer and audience `API_IDENTIFIER`.
 - `SESSION_SECRET` — seals `app-web`'s cookies.
@@ -192,7 +197,7 @@ Requires `flyctl` authenticated to the `vers` org, the Neon pooled `DATABASE_URL
 Create the apps:
 
 ```sh
-for app in app-web service-activity service-avatar service-keys service-session service-user service-verification; do
+for app in app-web service-activity service-avatar service-keys service-replay service-session service-user service-verification; do
   fly apps create "vers-$app" --org vers
 done
 ```
@@ -202,7 +207,7 @@ Give `app-web` public addresses; give each service a private Flycast address and
 ```sh
 fly ips allocate-v4 --shared -a vers-app-web
 fly ips allocate-v6 -a vers-app-web
-for svc in activity avatar keys session user verification; do
+for svc in activity avatar keys replay session user verification; do
   fly ips allocate-v6 --private -a "vers-service-$svc"
 done
 ```
@@ -244,6 +249,11 @@ fly secrets set -a vers-service-session \
   SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)" \
   API_IDENTIFIER=vers-api \
   JWT_SIGNING_PRIVKEY="$(cat session.key)"
+
+fly secrets set -a vers-service-replay \
+  DATABASE_URL="$DATABASE_URL" \
+  SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)" \
+  SERVICE_AUTH_PRIVATE_KEY="$(cat s2s.key)"
 
 fly secrets set -a vers-app-web \
   SESSION_SECRET="$(openssl rand -base64 32)" \
