@@ -17,12 +17,13 @@ export function encodePositionBytes(position: RollPosition): Uint8Array {
     return utf8ToBytes(`vers/roll-position/v1|craft|${position.avatarID}|${position.position}`);
   }
 
-  assertIdentifier(position.nodeID, 'nodeID');
+  assertIdentifier(position.scopeType, 'scopeType');
+  assertIdentifier(position.scopeID, 'scopeID');
   assertIndex(position.chainIndex, 'chainIndex');
   assertIndex(position.ordinal, 'ordinal');
 
   return utf8ToBytes(
-    `vers/roll-position/v1|reward|${position.avatarID}|${position.nodeID}|${position.chainIndex}|${position.ordinal}`,
+    `vers/roll-position/v1|reward|${position.avatarID}|${position.scopeType}|${position.scopeID}|${position.chainIndex}|${position.ordinal}`,
   );
 }
 

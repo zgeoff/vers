@@ -1,5 +1,5 @@
 import type { CheckpointBatchEntry, CheckpointPayload } from '@vers/contract-activity';
-import { buildCheckpointHash } from '@vers/contract-activity';
+import { RewardSlotSchema, buildCheckpointHash } from '@vers/contract-activity';
 import type { ActivityStatus, DB, Json } from '@vers/db';
 import { levelForXP } from '@vers/idle-core';
 import type { ServiceContext } from '@vers/service-runtime';
@@ -404,6 +404,30 @@ function pickTerminalOutcome(
   });
 }
 
+const RewardSlotsSchema = z.array(RewardSlotSchema);
+
+/**
+ * A checkpoint's `rewardSlots` field rides outside the hashed subset like `rewards`, so it's
+ * validated here rather than by `CheckpointPayloadSchema`. Absent is valid — an older client or a
+ * checkpoint that dropped nothing carries no key at all. Present, it must parse and its ordinals
+ * must run contiguous from 0 in list order.
+ */
+function findRewardSlotsInvalidReason(payload: Readonly<CheckpointPayload>): string | undefined {
+  if (!('rewardSlots' in payload)) {
+    return undefined;
+  }
+
+  const parsed = RewardSlotsSchema.safeParse(payload['rewardSlots']);
+
+  if (!parsed.success) {
+    return 'invalid-reward-slots';
+  }
+
+  const isContiguous = parsed.data.every((slot, index) => slot.ordinal === index);
+
+  return isContiguous ? undefined : 'invalid-reward-slots';
+}
+
 interface CheckpointBatchInput {
   readonly checkpoints: ReadonlyArray<CheckpointBatchEntry>;
   readonly expectedHead: number;
@@ -421,11 +445,11 @@ interface TrackActivityProgressHead {
 /**
  * Validates a checkpoint batch's internal shape ahead of the transactional head-row compare-and-swap: version
  * contiguity from `expectedHead + 1`, each entry's `chainIndex` continuity from
- * `head.startChainIndex`, each entry's cumulative `time` never regressing — within the batch
- * always, and from the head row's accounted time only when `expectedHead` still matches the head
- * row, since a stale batch predates that value — each entry's hash against its own payload, each
- * entry's chain link to the previous one, and (under the same head-match condition) the first
- * entry's link onto the current head.
+ * `head.startChainIndex`, each entry's optional `rewardSlots` shape and ordinal contiguity, each
+ * entry's cumulative `time` never regressing — within the batch always, and from the head row's
+ * accounted time only when `expectedHead` still matches the head row, since a stale batch predates
+ * that value — each entry's hash against its own payload, each entry's chain link to the previous
+ * one, and (under the same head-match condition) the first entry's link onto the current head.
  */
 function findInvalidReason(
   input: Readonly<CheckpointBatchInput>,
@@ -443,6 +467,12 @@ function findInvalidReason(
 
     if (checkpoint.payload.chainIndex !== head.startChainIndex + checkpoint.version) {
       return 'non-contiguous-chain-index';
+    }
+
+    const rewardSlotsReason = findRewardSlotsInvalidReason(checkpoint.payload);
+
+    if (rewardSlotsReason !== undefined) {
+      return rewardSlotsReason;
     }
 
     // The negated >= also rejects a NaN time, which would otherwise slip through as a 0 delta.

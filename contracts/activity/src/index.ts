@@ -18,3 +18,5 @@ export { createGenesisSeed } from './create-genesis-seed';
 export type { EntropySource } from './entropy-source-schema';
 export { EntropySourceSchema } from './entropy-source-schema';
 export { OFFLINE_PROGRESS_CAP_MS } from './offline-progress-cap-ms';
+export type { RewardSlot } from './reward-slot-schema';
+export { RewardSlotSchema } from './reward-slot-schema';

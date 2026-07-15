@@ -4,6 +4,7 @@ import { ActivityDataSchema } from './activity-data-schema';
 import { ActivityStatusSchema } from './activity-status-schema';
 import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
+import { ScopeIdentifierSchema } from './scope-identifier-schema';
 
 const CappedDataSchema = z.object({ appendedHead: z.int() });
 const CheckpointInvalidDataSchema = z.object({ reason: z.string() });
@@ -11,11 +12,44 @@ const SimVersionProblemDataSchema = z.object({ currentSimVersion: z.string().nul
 const StaleHeadDataSchema = z.object({ appendedHead: z.int() });
 const TerminalStatusDataSchema = z.object({ appendedHead: z.int(), status: ActivityStatusSchema });
 
+const RewardItemAffixSchema = z.object({
+  affixID: z.string(),
+  groupID: z.string(),
+  value: z.number(),
+});
+
+const RewardItemSchema = z.object({
+  affixes: z.array(RewardItemAffixSchema),
+  baseID: z.string(),
+  contentVersion: z.string(),
+  rarityID: z.string(),
+});
+
+const RevealedRewardSchema = z.object({
+  chainIndex: z.int().min(0),
+  item: RewardItemSchema,
+  ordinal: z.int().min(0),
+});
+
 /**
  * The activities service's API: every procedure is authed and owner-scoped through the caller's
  * avatars.
  */
 export const activityContract = {
+  getActivityRewards: authedRoute
+    .route({
+      method: 'GET',
+      path: '/activities/{activityID}/rewards',
+      summary: "Get an activity's revealed reward-slot contents",
+    })
+    .input(z.object({ activityID: z.string(), afterChainIndex: z.int().min(0).optional() }))
+    .output(z.object({ items: z.array(RevealedRewardSchema), verifiedHead: z.int() }))
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'No activity with that id' },
+      }),
+    ),
+
   getCurrentActivity: authedRoute
     .route({
       method: 'GET',
@@ -70,8 +104,8 @@ export const activityContract = {
     .input(
       z.object({
         avatarID: z.string(),
-        scopeID: z.string(),
-        scopeType: z.string(),
+        scopeID: ScopeIdentifierSchema,
+        scopeType: ScopeIdentifierSchema,
         simVersion: z.string().optional(),
       }),
     )

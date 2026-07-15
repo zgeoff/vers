@@ -21,6 +21,7 @@ test('it creates a completed checkpoint with the completion bonus', () => {
   expect(checkpoint).toStrictEqual({
     nextSeed: expect.toBeString(),
     rewards: { xp: buildCompletionXP(1) },
+    rewardSlots: [],
     time: 2500,
     type: ActivityCheckpointType.Completed,
   });

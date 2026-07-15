@@ -43,10 +43,16 @@ export type ReplayIterationOutcome =
  */
 export interface ReplayWorkerDeps {
   readonly db: Kysely<DB>;
+
+  /**
+   * The keys service origin the mint step derives a segment's avatar roll key from.
+   */
+  readonly keysServiceURL: string;
   readonly logger: pino.Logger;
 
   /**
-   * Signs the s2s token a cross-version dispatch to a remote provider carries.
+   * Signs the s2s token a cross-version dispatch to a remote provider, or a mint's derive-key
+   * dispatch to the keys service, carries.
    */
   readonly privateKey: CryptoKey;
 

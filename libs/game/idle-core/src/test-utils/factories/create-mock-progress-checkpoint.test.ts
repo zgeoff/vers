@@ -8,6 +8,7 @@ test('it creates a progress checkpoint with expected properties', () => {
   expect(checkpoint).toStrictEqual({
     nextSeed: expect.toBeString(),
     rewards: { xp: expect.toBeNumber() },
+    rewardSlots: [],
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Progress,
   });
@@ -17,12 +18,14 @@ test('it creates a progress checkpoint with custom properties', () => {
   const checkpoint = createMockProgressCheckpoint({
     nextSeed: 'seed_1',
     rewards: { xp: 15 },
+    rewardSlots: [{ context: { nodeTier: 2 }, ordinal: 0 }],
     time: 12,
   });
 
   expect(checkpoint).toStrictEqual({
     nextSeed: 'seed_1',
     rewards: { xp: 15 },
+    rewardSlots: [{ context: { nodeTier: 2 }, ordinal: 0 }],
     time: 12,
     type: ActivityCheckpointType.Progress,
   });

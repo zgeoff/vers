@@ -8,6 +8,7 @@ test('it creates a failed checkpoint with expected properties', () => {
   expect(checkpoint).toStrictEqual({
     nextSeed: expect.toBeString(),
     rewards: { xp: expect.toBeNumber() },
+    rewardSlots: [],
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Failed,
   });
@@ -17,12 +18,14 @@ test('it creates a failed checkpoint with custom properties', () => {
   const checkpoint = createMockFailedCheckpoint({
     nextSeed: 'seed_3',
     rewards: { xp: -5 },
+    rewardSlots: [],
     time: 30,
   });
 
   expect(checkpoint).toStrictEqual({
     nextSeed: 'seed_3',
     rewards: { xp: -5 },
+    rewardSlots: [],
     time: 30,
     type: ActivityCheckpointType.Failed,
   });

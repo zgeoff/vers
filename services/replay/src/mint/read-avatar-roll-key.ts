@@ -1,0 +1,50 @@
+import { hexToBytes } from '@noble/hashes/utils.js';
+import { createORPCClient } from '@orpc/client';
+import { RPCLink } from '@orpc/client/fetch';
+import type { ContractRouterClient } from '@orpc/contract';
+import type { keysContract } from '@vers/contract-keys';
+import { createServiceToken } from '@vers/service-auth';
+import type { CryptoKey } from 'jose';
+
+const DEFAULT_KEYS_DISPATCH_TIMEOUT_MS = 10_000;
+
+interface ReadAvatarRollKeyDeps {
+  readonly keysServiceURL: string;
+  readonly privateKey: CryptoKey;
+
+  /**
+   * Bounds the keys dispatch, so a hung keys service fails the mint rather than stalling the worker
+   * indefinitely.
+   */
+  readonly timeoutMs?: number;
+}
+
+interface ReadAvatarRollKeyInput {
+  readonly avatarID: string;
+  readonly keyVersion: number;
+}
+
+/**
+ * Reads an avatar's roll key from the keys service over real s2s auth, under `'trade'` (server)
+ * custody — the sole population until self-found verification lands.
+ */
+export async function readAvatarRollKey(
+  deps: Readonly<ReadAvatarRollKeyDeps>,
+  input: Readonly<ReadAvatarRollKeyInput>,
+): Promise<Uint8Array> {
+  const token = await createServiceToken({ audience: 'keys', privateKey: deps.privateKey });
+
+  const client: ContractRouterClient<typeof keysContract> = createORPCClient(
+    new RPCLink({
+      headers: { authorization: `Bearer ${token}` },
+      url: `${deps.keysServiceURL}/rpc`,
+    }),
+  );
+
+  const result = await client.deriveAvatarKey(
+    { avatarID: input.avatarID, keyVersion: input.keyVersion, population: 'trade' },
+    { signal: AbortSignal.timeout(deps.timeoutMs ?? DEFAULT_KEYS_DISPATCH_TIMEOUT_MS) },
+  );
+
+  return hexToBytes(result.key);
+}

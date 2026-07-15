@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createDB } from '@vers/db';
+import { resolveServiceURL } from '@vers/mock-services';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import pino from 'pino';
 import { startReplayWorker } from './start-replay-worker';
@@ -11,6 +12,7 @@ test('it starts against an idle queue and stop resolves once the loop exits', as
 
   const worker = startReplayWorker({
     db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
     logger: pino({ enabled: false }),
     privateKey: keyPair.privateKey,
     simVersion: 'test-engine-hash',
@@ -26,6 +28,7 @@ test('it interrupts an idle sleep on stop rather than waiting out its backoff ti
 
   const worker = startReplayWorker({
     db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
     logger: pino({ enabled: false }),
     privateKey: keyPair.privateKey,
     simVersion: 'test-engine-hash',
@@ -47,6 +50,7 @@ test('it does not hot-loop on a repeatedly erroring iteration, and stop still re
 
   const worker = startReplayWorker({
     db: unreachableDB,
+    keysServiceURL: resolveServiceURL('keys'),
     logger: pino({ enabled: false }),
     privateKey: keyPair.privateKey,
     simVersion: 'test-engine-hash',

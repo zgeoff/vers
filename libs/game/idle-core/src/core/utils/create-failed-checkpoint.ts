@@ -20,6 +20,7 @@ export function createFailedCheckpoint(
   return {
     nextSeed: ctx.rng.getState(),
     rewards,
+    rewardSlots: [],
     time: activity.elapsed,
     type: ActivityCheckpointType.Failed,
   };

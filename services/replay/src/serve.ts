@@ -17,6 +17,7 @@ service.listen();
 
 const worker = startReplayWorker({
   db: service.db,
+  keysServiceURL: service.env.KEYS_SERVICE_URL,
   logger: service.logger,
   privateKey: service.privateKey,
   simVersion: service.env.SIM_ENGINE_HASH,

@@ -25,6 +25,7 @@ export function createCompletedCheckpoint(
   return {
     nextSeed: ctx.rng.getState(),
     rewards,
+    rewardSlots: [],
     time: activity.elapsed,
     type: ActivityCheckpointType.Completed,
     ...(levelUp && { levelUp }),

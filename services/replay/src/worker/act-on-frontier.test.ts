@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { buildStateFromSeed } from '@vers/game-utils';
+import { resolveServiceURL } from '@vers/mock-services';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import pino from 'pino';
 import { createReplayCache } from '../replay/create-replay-cache';
@@ -41,6 +42,7 @@ test('it defers the cache mutation until the caller applies it, never touching t
 
   const deps = {
     db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -73,6 +75,7 @@ test('it reports idle rather than throwing when the claimed activity row is gone
 
   const deps = {
     db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',

@@ -10,6 +10,7 @@ test('it creates a started checkpoint', () => {
   expect(checkpoint).toStrictEqual({
     nextSeed: ctx.rng.getState(),
     rewards: { xp: 0 },
+    rewardSlots: [],
     seed: ctx.rng.getState(),
     time: 0,
     type: ActivityCheckpointType.Started,

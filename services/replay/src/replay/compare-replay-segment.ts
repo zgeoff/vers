@@ -1,8 +1,8 @@
-import type { CheckpointPayload, EntropySource } from '@vers/contract-activity';
-import { buildCheckpointHash } from '@vers/contract-activity';
+import type { CheckpointPayload, EntropySource, RewardSlot } from '@vers/contract-activity';
+import { RewardSlotSchema, buildCheckpointHash } from '@vers/contract-activity';
 import * as z from 'zod';
 import { TERMINAL_CHECKPOINT_TYPES } from './types';
-import type { CompareVerdict, ReplayedCheckpoint, StoredCheckpoint } from './types';
+import type { CompareVerdict, ReplayedCheckpoint, RewardFact, StoredCheckpoint } from './types';
 
 /**
  * The sole legal entropy-source tag until #467/#470 land mode-aware validation and self-found
@@ -40,6 +40,7 @@ export function compareReplaySegment(
 
   let prevHash = context.prevHash;
   let seed = context.seed;
+  const rewardFacts: Array<RewardFact> = [];
 
   for (const [index, storedCheckpoint] of stored.entries()) {
     // oxlint-disable-next-line typescript/no-non-null-assertion -- index bounds guarded by the length invariant above
@@ -74,6 +75,26 @@ export function compareReplaySegment(
       return { kind: 'divergence', reason: 'reward-mismatch', version };
     }
 
+    const storedRewardSlots = parsePayloadRewardSlots(storedCheckpoint.payload);
+
+    if (storedRewardSlots.kind === 'malformed') {
+      return { kind: 'divergence', reason: 'reward-mismatch', version };
+    }
+
+    const storedSlots = storedRewardSlots.kind === 'present' ? storedRewardSlots.slots : undefined;
+
+    if (!hasMatchingRewardSlots(storedSlots, replayedCheckpoint.rewardSlots)) {
+      return { kind: 'divergence', reason: 'reward-mismatch', version };
+    }
+
+    for (const slot of replayedCheckpoint.rewardSlots ?? []) {
+      rewardFacts.push({
+        chainIndex: context.startChainIndex + version,
+        nodeTier: slot.context.nodeTier,
+        ordinal: slot.ordinal,
+      });
+    }
+
     prevHash = hash;
     seed = replayedCheckpoint.nextSeed;
   }
@@ -83,7 +104,7 @@ export function compareReplaySegment(
 
   return {
     kind: 'match',
-    rewardFacts: [],
+    rewardFacts,
     verifiedXPDelta: isTerminal ? (lastReplayed?.rewards.xp ?? 0) : 0,
   };
 }
@@ -124,4 +145,54 @@ function hasMatchingLevelUp(
   }
 
   return stored.from === replayed.from && stored.to === replayed.to;
+}
+
+type ParsedRewardSlots =
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'malformed' }
+  | { readonly kind: 'present'; readonly slots: ReadonlyArray<RewardSlot> };
+
+const RewardSlotsSchema = z.array(RewardSlotSchema);
+
+/**
+ * A stored checkpoint's `rewardSlots` field rides outside the hashed subset like `rewards`. An
+ * absent field is a checkpoint minted before the field existed and normalizes to nothing dropped;
+ * a present-but-malformed value is a bug or tamper the caller must diverge on, so the two are kept
+ * distinct rather than both collapsing to empty.
+ */
+function parsePayloadRewardSlots(payload: Readonly<CheckpointPayload>): ParsedRewardSlots {
+  if (payload['rewardSlots'] === undefined) {
+    return { kind: 'absent' };
+  }
+
+  const parsed = RewardSlotsSchema.safeParse(payload['rewardSlots']);
+
+  return parsed.success ? { kind: 'present', slots: parsed.data } : { kind: 'malformed' };
+}
+
+/**
+ * Compares two reward-slot lists positionally after normalizing a missing list to empty — an old
+ * engine's checkpoint and an old provider's wire response both simply lack the field, so
+ * absent-in-both reads as the same "nothing dropped" fact as an explicit empty list.
+ */
+function hasMatchingRewardSlots(
+  stored: ReadonlyArray<RewardSlot> | undefined,
+  replayed: ReadonlyArray<RewardSlot> | undefined,
+): boolean {
+  const storedSlots = stored ?? [];
+  const replayedSlots = replayed ?? [];
+
+  if (storedSlots.length !== replayedSlots.length) {
+    return false;
+  }
+
+  return storedSlots.every((slot, index) => {
+    const other = replayedSlots[index];
+
+    return (
+      other !== undefined &&
+      slot.ordinal === other.ordinal &&
+      slot.context.nodeTier === other.context.nodeTier
+    );
+  });
 }

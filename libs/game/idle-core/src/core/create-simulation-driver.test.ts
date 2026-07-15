@@ -109,6 +109,7 @@ test('it stops at the specified rng state within a later advance', async () => {
   expect(result.checkpoints.at(-1)).toStrictEqual({
     nextSeed: '20c0dac3c8da96ee1a82332c38c2e8ae',
     rewards: expect.toBeObject(),
+    rewardSlots: expect.toBeArray(),
     time: expect.toBeNumber(),
     type: ActivityCheckpointType.Progress,
   });

@@ -63,16 +63,26 @@ export interface ReplayedCheckpoint {
   readonly levelUp?: { readonly from: number; readonly to: number } | undefined;
   readonly nextSeed: string;
   readonly rewards: { readonly xp: number };
+  readonly rewardSlots?:
+    | ReadonlyArray<{
+        readonly context: { readonly nodeTier: number };
+        readonly ordinal: number;
+      }>
+    | undefined;
   readonly seed?: string;
   readonly time: number;
   readonly type: string;
 }
 
 /**
- * A roll-slot fact from the replayed trajectory, reserved for #469's reveal path — no slot has
- * landed yet, so the type has no members and every verdict's `rewardFacts` is empty.
+ * A verified reward slot's coordinate and rolling context, resolved against the segment's own
+ * `startChainIndex` — the mint step's whole input for one slot.
  */
-type RewardFact = never;
+export interface RewardFact {
+  readonly chainIndex: number;
+  readonly nodeTier: number;
+  readonly ordinal: number;
+}
 
 /**
  * Why a segment's stored checkpoints failed to reproduce on replay.
