@@ -1,7 +1,7 @@
 import { CheckpointPayloadSchema } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
-import { isForwardExited } from '../replay/is-forward-exited';
+import { sql } from 'kysely';
 
 interface FindVerifiedAnchorPredecessorInput {
   readonly avatarID: string;
@@ -20,7 +20,9 @@ interface VerifiedAnchorPredecessor {
  * verified anchor — the only shape a missed verified-anchor advance can take, since per-chain FIFO
  * guarantees everything behind the claimed frontier already verified. Undefined when no such
  * activity exists, or its tail checkpoint consumed nothing (the Started-only case), meaning there
- * is nothing to reconcile.
+ * is nothing to reconcile. The row's own tail checkpoint carries the forward-exit filter, so at
+ * most one activity can ever match: the `appendedChainIndex` compare-and-swap admits only one
+ * activity to advance the anchor from a given chain position.
  */
 export async function findVerifiedAnchorPredecessor(
   trx: Kysely<DB>,
@@ -28,36 +30,27 @@ export async function findVerifiedAnchorPredecessor(
 ): Promise<VerifiedAnchorPredecessor | undefined> {
   const predecessor = await trx
     .selectFrom('activities')
-    .select(['appendedHead', 'id', 'status'])
-    .where('avatarId', '=', input.avatarID)
-    .where('scopeType', '=', input.scopeType)
-    .where('scopeId', '=', input.scopeID)
-    .where('startChainIndex', '=', input.verifiedChainIndex)
-    .where('status', 'in', ['stopped', 'capped'])
-    .where((eb) => eb('verifiedHead', '=', eb.ref('appendedHead')))
-    .where('appendedHead', '>', 0)
+    .innerJoin('activityCheckpoints', (join) =>
+      join
+        .onRef('activityCheckpoints.activityId', '=', 'activities.id')
+        .onRef('activityCheckpoints.version', '=', 'activities.appendedHead'),
+    )
+    .select('activityCheckpoints.payload')
+    .where('activities.avatarId', '=', input.avatarID)
+    .where('activities.scopeType', '=', input.scopeType)
+    .where('activities.scopeId', '=', input.scopeID)
+    .where('activities.startChainIndex', '=', input.verifiedChainIndex)
+    .where('activities.status', 'in', ['stopped', 'capped'])
+    .where((eb) => eb('activities.verifiedHead', '=', eb.ref('activities.appendedHead')))
+    .where('activities.appendedHead', '>', 0)
+    .where(sql<boolean>`activity_checkpoints.payload ->> 'type' != 'started'`)
     .executeTakeFirst();
 
   if (predecessor === undefined) {
     return undefined;
   }
 
-  const tail = await trx
-    .selectFrom('activityCheckpoints')
-    .select('payload')
-    .where('activityId', '=', predecessor.id)
-    .where('version', '=', predecessor.appendedHead)
-    .executeTakeFirst();
-
-  if (tail === undefined) {
-    return undefined;
-  }
-
-  const payload = CheckpointPayloadSchema.parse(tail.payload);
-
-  if (!isForwardExited(payload.type, predecessor.status)) {
-    return undefined;
-  }
+  const payload = CheckpointPayloadSchema.parse(predecessor.payload);
 
   return { chainIndex: payload.chainIndex, nextSeed: payload.nextSeed };
 }

@@ -153,6 +153,58 @@ test('it finds no predecessor whose tail checkpoint is the Started one', async (
   expect(predecessor).toBeUndefined();
 });
 
+test('it finds the consuming predecessor when a Started-only stopped activity shares its startChainIndex', async () => {
+  await using ctx = await setupTest();
+
+  const startedOnly = await createHonestActivityFixture(ctx.db, {
+    activity: { status: 'stopped' },
+    duration: 1,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  expect(startedOnly.checkpoints).toHaveLength(1);
+  expect(startedOnly.checkpoints[0]?.payload['type']).toBe('started');
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ verifiedHead: startedOnly.activity.appendedHead })
+    .where('id', '=', startedOnly.activity.id)
+    .execute();
+
+  const consuming = await createHonestActivityFixture(ctx.db, {
+    activity: { status: 'stopped' },
+    duration: 80_000,
+    rootChain: startedOnly.chain,
+    seed: buildStateFromSeed(3_047_525_658),
+    startChainIndex: startedOnly.activity.startChainIndex,
+  });
+
+  const tailCount = consuming.checkpoints.length - 1;
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ appendedHead: tailCount, verifiedHead: tailCount })
+    .where('id', '=', consuming.activity.id)
+    .execute();
+
+  const predecessor = await findVerifiedAnchorPredecessor(ctx.db, {
+    avatarID: consuming.activity.avatarId,
+    scopeID: consuming.activity.scopeId,
+    scopeType: consuming.activity.scopeType,
+    verifiedChainIndex: consuming.chain.verifiedChainIndex,
+  });
+
+  const tail = consuming.checkpoints[tailCount - 1];
+
+  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
+  expect(predecessor).toStrictEqual({
+    chainIndex: tail?.payload['chainIndex'] as number,
+    nextSeed: tail?.payload['nextSeed'] as string,
+  });
+
+  // oxlint-enable typescript/no-unsafe-type-assertion
+});
+
 test('it finds no predecessor rooted at a different chain position', async () => {
   await using ctx = await setupTest();
 
