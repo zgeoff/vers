@@ -66,7 +66,7 @@ test('it replays an honest full stream, matches, and advances the verified head 
   expect(idle).toStrictEqual({ kind: 'idle' });
 });
 
-test('it mints one avatar_items row per reward slot the verified stream earned', async () => {
+test('it mints one reward per slot earned by the verified stream', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {

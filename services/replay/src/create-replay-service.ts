@@ -18,7 +18,7 @@ interface CreateReplayServiceConfig {
 
 const REPLAY_SERVICE_ENV_SHAPE = {
   DATABASE_URL: z.string(),
-  KEYS_SERVICE_URL: z.string().min(1),
+  KEYS_SERVICE_URL: z.url(),
   SERVICE_AUTH_PRIVATE_KEY: z.string().min(1),
   SIM_ENGINE_HASH: z.string().min(1),
 };
