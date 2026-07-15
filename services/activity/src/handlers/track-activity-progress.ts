@@ -1,7 +1,7 @@
 import type { CheckpointBatchEntry, CheckpointPayload } from '@vers/contract-activity';
 import { RewardSlotSchema, buildCheckpointHash } from '@vers/contract-activity';
 import type { ActivityStatus, DB, Json } from '@vers/db';
-import { levelForXP } from '@vers/idle-core';
+import { buildLevelFromXP } from '@vers/idle-core';
 import type { ServiceContext } from '@vers/service-runtime';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
@@ -268,7 +268,7 @@ export async function trackActivityProgress(
 
       const settled = await trx
         .updateTable('avatars')
-        .set({ level: levelForXP(newXP), xp: newXP })
+        .set({ level: buildLevelFromXP(newXP), xp: newXP })
         .where('id', '=', head.avatarId)
         .where('xp', '=', head.xp)
         .executeTakeFirst();

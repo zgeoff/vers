@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import invariant from 'tiny-invariant';
 import { createAvatar } from '../entities/create-avatar';
-import { buildCompletionXP, levelForXP } from '../progression';
+import { buildCompletionXP, buildLevelFromXP } from '../progression';
 import { createMockActivityInput } from '../test-utils/factories/create-mock-activity-input';
 import { createMockAvatarData } from '../test-utils/factories/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/factories/create-mock-enemy-data';
@@ -15,7 +15,7 @@ import {
 import type { EquipmentWeapon } from '../types';
 import { createActivity } from './create-activity';
 import { createCombatExecutor } from './create-combat-executor';
-import { simulateActivity } from './simulate-activity';
+import { runActivity } from './run-activity';
 
 test('it immediately generates a started checkpoint', async () => {
   const avatarData = createMockAvatarData();
@@ -29,7 +29,7 @@ test('it immediately generates a started checkpoint', async () => {
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-  const generator = simulateActivity(executor, activity, avatar, ctx);
+  const generator = runActivity(executor, activity, avatar, ctx);
 
   const firstResult = await generator.next();
 
@@ -75,7 +75,7 @@ test('it generates wave killed checkpoints', async () => {
   const activity = createActivity(activityData, ctx, { waveSize: 5 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-  const generator = simulateActivity(executor, activity, avatar, ctx);
+  const generator = runActivity(executor, activity, avatar, ctx);
 
   // skip the started checkpoint
   await generator.next(1000);
@@ -140,7 +140,7 @@ test('it accrues rewards across multiple cleared waves', async () => {
   const activity = createActivity(activityData, ctx, { waveCount: 2, waveSize: 5 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-  const generator = simulateActivity(executor, activity, avatar, ctx);
+  const generator = runActivity(executor, activity, avatar, ctx);
 
   // skip the started checkpoint
   await generator.next(1000);
@@ -173,7 +173,7 @@ test('it generates a failed checkpoint when the avatar dies', async () => {
   const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-  const generator = simulateActivity(executor, activity, avatar, ctx);
+  const generator = runActivity(executor, activity, avatar, ctx);
 
   let result = await generator.next(1000);
 
@@ -221,7 +221,7 @@ test('it returns a completed checkpoint that folds in the completion bonus', asy
   const activity = createActivity(activityData, ctx, { waveCount: 1, waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-  const generator = simulateActivity(executor, activity, avatar, ctx);
+  const generator = runActivity(executor, activity, avatar, ctx);
 
   let result = await generator.next(1000);
 
@@ -267,7 +267,7 @@ test('it carries a levelUp when a completion bonus crosses a level threshold', a
   const activity = createActivity(activityData, ctx, { waveCount: 1, waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-  const generator = simulateActivity(executor, activity, avatar, ctx);
+  const generator = runActivity(executor, activity, avatar, ctx);
 
   let result = await generator.next(1000);
 
@@ -304,7 +304,7 @@ test('it records a levelUp checkpoint when a group clear crosses a level thresho
   const activity = createActivity(activityData, ctx, { waveCount: 1, waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-  const generator = simulateActivity(executor, activity, avatar, ctx);
+  const generator = runActivity(executor, activity, avatar, ctx);
 
   // skip the started checkpoint
   await generator.next(1000);
@@ -350,7 +350,7 @@ test('it keeps xp and a level-up earned on the same tick the avatar dies', async
   const activity = createActivity(activityData, ctx, { waveCount: 1, waveSize: 1 });
   const avatar = createAvatar(avatarData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
-  const generator = simulateActivity(executor, activity, avatar, ctx);
+  const generator = runActivity(executor, activity, avatar, ctx);
 
   // skip the started checkpoint
   await generator.next(1000);
@@ -377,5 +377,5 @@ test('it keeps xp and a level-up earned on the same tick the avatar dies', async
   // threshold of the level earned this same tick
   expect(failedCheckpoint.rewards.xp).toBeGreaterThan(0);
   expect(failedCheckpoint.rewards.xp).toBeLessThan(250);
-  expect(levelForXP(avatar.xp + failedCheckpoint.rewards.xp)).toBe(2);
+  expect(buildLevelFromXP(avatar.xp + failedCheckpoint.rewards.xp)).toBe(2);
 });

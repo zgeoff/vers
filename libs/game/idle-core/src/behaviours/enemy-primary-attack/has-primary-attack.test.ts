@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createEnemy } from '../../entities/create-enemy';
 import { createMockEnemyData } from '../../test-utils/factories/create-mock-enemy-data';
 import { createMockSimulationContext } from '../../test-utils/factories/create-mock-simulation-context';
-import { predicate } from './predicate';
+import { hasPrimaryAttack } from './has-primary-attack';
 
 test('it returns true when enemy has a primary attack', () => {
   const enemyData = createMockEnemyData({
@@ -15,7 +15,7 @@ test('it returns true when enemy has a primary attack', () => {
 
   const ctx = createMockSimulationContext();
   const enemy = createEnemy(enemyData, ctx);
-  const result = predicate(enemy);
+  const result = hasPrimaryAttack(enemy);
 
   expect(result).toBeTrue();
 });

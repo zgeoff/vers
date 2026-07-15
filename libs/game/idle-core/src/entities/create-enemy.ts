@@ -16,8 +16,8 @@ import type {
 import { EntityStatus, EntityType, LifecycleEvent } from '../types';
 import { createLogLabel } from '../utils/create-log-label';
 import { logger } from '../utils/logger';
-import { calcEnemyAttackDamage } from './utils/calc-enemy-attack-damage';
 import { handleReceiveEnemyDamage } from './utils/handle-receive-enemy-damage';
+import { rollEnemyAttackDamage } from './utils/roll-enemy-attack-damage';
 
 const DEFAULT_BEHAVIOUR_FACTORIES = [createEnemyPrimaryAttackBehaviour];
 
@@ -30,7 +30,7 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
     const behaviourState: EnemyBehaviourSnapshot = {};
 
     for (const behaviour of behaviours) {
-      addBehaviourState(behaviourState, behaviour.id, behaviour.getState());
+      updateBehaviourSnapshot(behaviourState, behaviour.id, behaviour.getState());
     }
 
     return {
@@ -60,7 +60,7 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
     }
   };
 
-  const addBehaviour = (behaviour: EnemyBehaviour): void => {
+  const registerBehaviour = (behaviour: EnemyBehaviour): void => {
     behaviours.push(behaviour);
   };
 
@@ -91,14 +91,14 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
     },
 
     // core
-    addBehaviour,
+    registerBehaviour,
     getSnapshot,
     handleTick,
     removeBehaviour,
     setState,
 
     // utils
-    calcAttackDamage: () => calcEnemyAttackDamage(enemy, ctx),
+    rollAttackDamage: () => rollEnemyAttackDamage(enemy, ctx),
     receiveDamage: (amount: number) => {
       handleReceiveEnemyDamage(amount, enemy);
 
@@ -112,7 +112,7 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
     .map((createBehaviour) => createBehaviour(enemy))
     .filter((behaviour) => behaviour.predicate(enemy))
     .forEach((behaviour) => {
-      addBehaviour(behaviour);
+      registerBehaviour(behaviour);
     });
 
   return enemy;
@@ -127,7 +127,7 @@ function getInitialState(data: EnemyData): EnemyState {
 }
 
 // type safe util for adding our behaviour state to our serializable state
-function addBehaviourState<K extends BehaviourID>(
+function updateBehaviourSnapshot<K extends BehaviourID>(
   state: EnemyBehaviourSnapshot,
   id: K,
   value: EnemyBehaviourSnapshot[K],

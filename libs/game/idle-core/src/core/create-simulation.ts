@@ -19,7 +19,7 @@ import type {
 import { ActivityFailureAction } from '../types';
 import { createActivity } from './create-activity';
 import { createCombatExecutor } from './create-combat-executor';
-import { simulateActivity } from './simulate-activity';
+import { runActivity } from './run-activity';
 import { getSnapshot } from './utils/get-snapshot';
 
 export function createSimulation(): Simulation {
@@ -85,7 +85,7 @@ export function createSimulation(): Simulation {
     _avatar = createAvatar(avatarData, ctx);
     _activity = createActivity(activityData, ctx);
     _combat = createCombatExecutor(_activity, _avatar, ctx);
-    _generator = simulateActivity(_combat, _activity, _avatar, ctx);
+    _generator = runActivity(_combat, _activity, _avatar, ctx);
 
     for (const listener of listeners.started) {
       listener(state);
@@ -118,7 +118,7 @@ export function createSimulation(): Simulation {
 
     _activity = createActivity(_activityData, ctx);
     _combat = createCombatExecutor(_activity, _avatar, ctx);
-    _generator = simulateActivity(_combat, _activity, _avatar, ctx);
+    _generator = runActivity(_combat, _activity, _avatar, ctx);
 
     for (const listener of listeners.restarted) {
       listener(state);

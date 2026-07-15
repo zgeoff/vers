@@ -42,7 +42,7 @@ interface IEntity<State extends object, EntitySnapshot extends object> {
 
   // core
   // oxlint-disable-next-line typescript/method-signature-style -- subtypes narrow the behaviour param; method syntax keeps the bivariant check that permits it
-  addBehaviour(behaviour: Behaviour): void;
+  registerBehaviour(behaviour: Behaviour): void;
   getSnapshot: () => EntitySnapshot;
   handleTick: (combatExecutor: CombatExecutor, ctx: SimulationContext) => void;
   removeBehaviour: (id: BehaviourID) => void;
@@ -90,10 +90,10 @@ export interface Avatar extends IEntity<AvatarState, AvatarSnapshot> {
 
   // core
   // oxlint-disable-next-line typescript/method-signature-style -- narrows the behaviour param; method syntax keeps the bivariant check that permits it
-  addBehaviour(behaviour: AvatarBehaviour): void;
+  registerBehaviour(behaviour: AvatarBehaviour): void;
 
   // utils
-  calcAttackDamage: () => number;
+  rollAttackDamage: () => number;
   reset: (config?: ResetConfig) => void;
   updateLevel: (level: number) => void;
 }
@@ -131,10 +131,10 @@ export interface Enemy extends IEntity<EnemyState, EnemySnapshot> {
 
   // core
   // oxlint-disable-next-line typescript/method-signature-style -- narrows the behaviour param; method syntax keeps the bivariant check that permits it
-  addBehaviour(behaviour: EnemyBehaviour): void;
+  registerBehaviour(behaviour: EnemyBehaviour): void;
 
   // utils
-  calcAttackDamage: () => number;
+  rollAttackDamage: () => number;
 }
 
 export enum EntityStatus {

@@ -1,4 +1,4 @@
-import { buildCompletionXP, levelForXP } from '../../progression';
+import { buildCompletionXP, buildLevelFromXP } from '../../progression';
 import type {
   Activity,
   ActivityCompletedCheckpoint,
@@ -16,8 +16,8 @@ export function createCompletedCheckpoint(
 ): ActivityCompletedCheckpoint {
   const completionXP = buildCompletionXP(activity.difficulty);
   const rewards: ActivityRewards = { xp: activity.rewards.xp + completionXP };
-  const previousLevel = levelForXP(avatar.xp + activity.rewards.xp);
-  const currentLevel = levelForXP(avatar.xp + rewards.xp);
+  const previousLevel = buildLevelFromXP(avatar.xp + activity.rewards.xp);
+  const currentLevel = buildLevelFromXP(avatar.xp + rewards.xp);
 
   const levelUp: ActivityLevelUp | undefined =
     currentLevel > previousLevel ? { from: previousLevel, to: currentLevel } : undefined;

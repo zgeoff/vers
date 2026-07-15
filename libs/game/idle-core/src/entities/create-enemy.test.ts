@@ -86,7 +86,7 @@ test('it calls all registered handlers when handling a tick', () => {
 
   invariant(enemy, 'enemy is required');
 
-  enemy.addBehaviour(behaviour);
+  enemy.registerBehaviour(behaviour);
   enemy.handleTick(combatExecutor, ctx);
 
   expect(handlerSpy).toHaveBeenCalledWith(enemy, combatExecutor, ctx);
@@ -117,7 +117,7 @@ test('it allows removing behaviours', () => {
 
   invariant(enemy, 'enemy is required');
 
-  enemy.addBehaviour(behaviour);
+  enemy.registerBehaviour(behaviour);
   enemy.removeBehaviour(BehaviourID.Test);
   enemy.handleTick(combatExecutor, ctx);
 

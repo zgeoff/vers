@@ -1,5 +1,5 @@
 import type { DB } from '@vers/db';
-import { levelForXP } from '@vers/idle-core';
+import { buildLevelFromXP } from '@vers/idle-core';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import type { GrantOnce, MintedItem } from '../types';
@@ -91,7 +91,7 @@ async function applySegmentWrites(
 
     await trx
       .updateTable('avatars')
-      .set({ level: levelForXP(settled.xp) })
+      .set({ level: buildLevelFromXP(settled.xp) })
       .where('id', '=', input.avatarID)
       .execute();
   }

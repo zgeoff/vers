@@ -87,9 +87,9 @@ export interface Activity {
 
   // utils
   updateRewards: (delta: ActivityRewards) => void;
-  elapseTime: (time: number) => void;
+  advanceTime: (time: number) => void;
   getSnapshot: () => ActivitySnapshot;
-  moveToNextWave: () => void;
+  advanceWave: () => void;
   setLevelUp: (levelUp: ActivityLevelUp) => void;
 }
 

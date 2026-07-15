@@ -3,7 +3,7 @@ import { createAvatar } from '../../entities/create-avatar';
 import { createMockAvatarData } from '../../test-utils/factories/create-mock-avatar-data';
 import { createMockSimulationContext } from '../../test-utils/factories/create-mock-simulation-context';
 import { EquipmentSlot } from '../../types';
-import { predicate } from './predicate';
+import { hasMainHandWeapon } from './has-main-hand-weapon';
 
 test('it returns true when avatar has a main hand weapon', () => {
   const avatarData = createMockAvatarData({
@@ -20,7 +20,7 @@ test('it returns true when avatar has a main hand weapon', () => {
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-  const result = predicate(avatar);
+  const result = hasMainHandWeapon(avatar);
 
   expect(result).toBeTrue();
 });
@@ -34,7 +34,7 @@ test('it returns false when avatar has no main hand weapon', () => {
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-  const result = predicate(avatar);
+  const result = hasMainHandWeapon(avatar);
 
   expect(result).toBeFalse();
 });

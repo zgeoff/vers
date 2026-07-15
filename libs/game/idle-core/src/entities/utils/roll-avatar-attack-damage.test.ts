@@ -3,7 +3,7 @@ import { createMockAvatarData } from '../../test-utils/factories/create-mock-ava
 import { createMockSimulationContext } from '../../test-utils/factories/create-mock-simulation-context';
 import { EquipmentSlot } from '../../types';
 import { createAvatar } from '../create-avatar';
-import { calcAvatarAttackDamage } from './calc-avatar-attack-damage';
+import { rollAvatarAttackDamage } from './roll-avatar-attack-damage';
 
 test('it calculates the damage for an avatar attack', () => {
   const avatarData = createMockAvatarData({
@@ -20,7 +20,7 @@ test('it calculates the damage for an avatar attack', () => {
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-  const damage = calcAvatarAttackDamage(avatar, ctx);
+  const damage = rollAvatarAttackDamage(avatar, ctx);
 
   expect(damage).toBe(10);
 });
