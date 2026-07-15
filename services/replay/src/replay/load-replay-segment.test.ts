@@ -36,6 +36,7 @@ test('it anchors a genesis segment on the activity startHash and seed', async ()
   });
 
   expect(segment?.activity).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
     appendedTimeMs: Number(fixture.activity.appendedTimeMs),
     avatarID: fixture.activity.avatarId,
     buildSnapshot: { level: 1, xp: 0 },
@@ -47,6 +48,7 @@ test('it anchors a genesis segment on the activity startHash and seed', async ()
     seed: fixture.activity.seed,
     simVersion: fixture.activity.simVersion,
     startChainIndex: fixture.activity.startChainIndex,
+    status: fixture.activity.status,
   });
 });
 

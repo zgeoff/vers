@@ -23,6 +23,7 @@ export function createMockReplaySegment(
   const prevHash = faker.string.hexadecimal({ casing: 'lower', length: 64, prefix: '' });
 
   const activity: ReplaySegment['activity'] = {
+    appendedHead: 0,
     appendedTimeMs: 0,
     avatarID: createId(),
     buildSnapshot: { level: 1, xp: 0 },
@@ -34,6 +35,7 @@ export function createMockReplaySegment(
     seed: randomSeed,
     simVersion: 'test-engine-hash',
     startChainIndex: 0,
+    status: 'active',
     ...overrides.activity,
   };
 

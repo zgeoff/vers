@@ -1,4 +1,5 @@
 import type { CheckpointPayload } from '@vers/contract-activity';
+import type { ActivityStatus } from '@vers/db';
 
 /**
  * A stored `activity_checkpoints` row, as read for comparison against a fresh replay.
@@ -28,6 +29,7 @@ export const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set(['complete
  */
 export interface ReplaySegment {
   readonly activity: {
+    readonly appendedHead: number;
     readonly appendedTimeMs: number;
     readonly avatarID: string;
     readonly buildSnapshot: { readonly level: number; readonly xp: number };
@@ -39,6 +41,7 @@ export interface ReplaySegment {
     readonly seed: string;
     readonly simVersion: string;
     readonly startChainIndex: number;
+    readonly status: ActivityStatus;
   };
   readonly chain: {
     readonly genesisSeed: string;

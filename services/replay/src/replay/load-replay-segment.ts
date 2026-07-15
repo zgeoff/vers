@@ -31,6 +31,7 @@ export async function loadReplaySegment(
       'simVersion',
       'startChainIndex',
       'startHash',
+      'status',
     ])
     .where('id', '=', frontier.activityID)
     .executeTakeFirst();
@@ -66,6 +67,7 @@ export async function loadReplaySegment(
 
   return {
     activity: {
+      appendedHead: frontier.appendedHead,
       appendedTimeMs: Number(activity.appendedTimeMs),
       avatarID: activity.avatarId,
       buildSnapshot: readBuildSnapshot(activity.buildSnapshot),
@@ -77,6 +79,7 @@ export async function loadReplaySegment(
       seed: activity.seed,
       simVersion: activity.simVersion,
       startChainIndex: activity.startChainIndex,
+      status: activity.status,
     },
     chain,
     checkpoints: rows.map((row) => ({
