@@ -9,17 +9,17 @@ short-lived token naming the acting user (`docs/architecture/service-contracts.m
 
 ## Session lifecycle
 
-A login runs in the edge's `loginHandler` (`apps/web/src/routes/-login/`):
+A login runs in the edge's `runLogin` (`apps/web/src/routes/-login/`):
 
 1. Honeypot and field validation, then `userClient.getUser` and `userClient.verifyPassword`. A wrong
    email or password reports one form-level error, never which was wrong.
 2. `sessionClient.createSession` writes an unverified session row — expiry 24 hours, or 7 days with
    `rememberMe`.
 3. With 2FA on the account, redirect to `/verify-otp` carrying the pending session id; otherwise
-   `completeSessionSignIn` runs directly.
+   `runSessionSignIn` runs directly.
 
-`completeSessionSignIn` (`apps/web/src/lib/auth/`) redirects to a force-logout prompt when the
-account already holds a live session; otherwise it calls `verifySession` and seals the cookie.
+`runSessionSignIn` (`apps/web/src/lib/auth/`) redirects to a force-logout prompt when the account
+already holds a live session; otherwise it calls `verifySession` and seals the cookie.
 `verifySession` (`services/session/src/handlers/`) mints the first access/refresh pair, flips the
 row to `verified`, and evicts every other session of the same user in one CTE — at most one verified
 session per user. Access tokens live 15 minutes and rotate through `refreshTokens`, which rejects a
