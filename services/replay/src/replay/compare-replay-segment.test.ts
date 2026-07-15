@@ -259,6 +259,52 @@ test('it reports a reward mismatch when the stored rewards.xp diverges from the 
   expect(verdict).toStrictEqual({ kind: 'divergence', reason: 'reward-mismatch', version: 1 });
 });
 
+test('it reports a reward mismatch when the stored levelUp diverges from the replay', () => {
+  const seed = 'aa'.repeat(16);
+  const nextSeed = 'bb'.repeat(16);
+
+  const replayed = [
+    { levelUp: { from: 1, to: 2 }, nextSeed, rewards: { xp: 40 }, seed, time: 0, type: 'progress' },
+  ];
+
+  const hash = buildCheckpointHash({
+    chainIndex: 1,
+    entropySource: 'server-key',
+    nextSeed,
+    prevHash: 'root-hash',
+    seed,
+    time: 0,
+    type: 'progress',
+    version: 1,
+  });
+
+  const stored: Array<StoredCheckpoint> = [
+    {
+      hash,
+      payload: {
+        chainIndex: 1,
+        entropySource: 'server-key',
+        levelUp: { from: 1, to: 3 },
+        nextSeed,
+        rewards: { xp: 40 },
+        seed,
+        time: 0,
+        type: 'progress',
+      },
+      prevHash: 'root-hash',
+      version: 1,
+    },
+  ];
+
+  const verdict = compareReplaySegment(stored, replayed, {
+    prevHash: 'root-hash',
+    seed,
+    startChainIndex: 0,
+  });
+
+  expect(verdict).toStrictEqual({ kind: 'divergence', reason: 'reward-mismatch', version: 1 });
+});
+
 test('it reports a checkpoint-count mismatch when the replay produces fewer checkpoints than stored', () => {
   const seed = 'aa'.repeat(16);
   const nextSeed = 'bb'.repeat(16);
@@ -302,6 +348,79 @@ test('it reports a checkpoint-count mismatch when the replay produces fewer chec
     kind: 'divergence',
     reason: 'checkpoint-count-mismatch',
     version: 1,
+  });
+});
+
+test('it reports the activity-wide version of a count mismatch on a later batch, not a tail-relative one', () => {
+  const seed = 'aa'.repeat(16);
+  const nextSeed = 'bb'.repeat(16);
+  const replayed = [{ nextSeed, rewards: { xp: 0 }, seed, time: 0, type: 'progress' }];
+
+  const hash = buildCheckpointHash({
+    chainIndex: 5,
+    entropySource: 'server-key',
+    nextSeed,
+    prevHash: 'root-hash',
+    seed,
+    time: 0,
+    type: 'progress',
+    version: 5,
+  });
+
+  const secondNextSeed = 'cc'.repeat(16);
+
+  const secondHash = buildCheckpointHash({
+    chainIndex: 6,
+    entropySource: 'server-key',
+    nextSeed: secondNextSeed,
+    prevHash: hash,
+    seed: nextSeed,
+    time: 1000,
+    type: 'progress',
+    version: 6,
+  });
+
+  const stored: Array<StoredCheckpoint> = [
+    {
+      hash,
+      payload: {
+        chainIndex: 5,
+        entropySource: 'server-key',
+        nextSeed,
+        rewards: { xp: 0 },
+        seed,
+        time: 0,
+        type: 'progress',
+      },
+      prevHash: 'root-hash',
+      version: 5,
+    },
+    {
+      hash: secondHash,
+      payload: {
+        chainIndex: 6,
+        entropySource: 'server-key',
+        nextSeed: secondNextSeed,
+        rewards: { xp: 0 },
+        seed: nextSeed,
+        time: 1000,
+        type: 'progress',
+      },
+      prevHash: hash,
+      version: 6,
+    },
+  ];
+
+  const verdict = compareReplaySegment(stored, replayed, {
+    prevHash: 'root-hash',
+    seed,
+    startChainIndex: 0,
+  });
+
+  expect(verdict).toStrictEqual({
+    kind: 'divergence',
+    reason: 'checkpoint-count-mismatch',
+    version: 6,
   });
 });
 

@@ -42,3 +42,65 @@ test('it reports a missing activity as undefined', async () => {
 
   expect(result).toBeUndefined();
 });
+
+test('it counts the attempt when the guarded verifiedHead and status still match', async () => {
+  await using ctx = await setupTest();
+
+  const activity = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    status: 'active',
+    verifiedHead: 1,
+  });
+
+  const result = await updateReplayAttempts(ctx.db, {
+    activityID: activity.id,
+    status: 'active',
+    verifiedHead: 1,
+  });
+
+  expect(result).toStrictEqual({ attempts: 1, quarantined: false });
+});
+
+test('it skips the attempt when another worker already verified past the guarded head', async () => {
+  await using ctx = await setupTest();
+
+  const activity = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    status: 'active',
+    verifiedHead: 2,
+  });
+
+  const result = await updateReplayAttempts(ctx.db, {
+    activityID: activity.id,
+    status: 'active',
+    verifiedHead: 1,
+  });
+
+  expect(result).toBeUndefined();
+
+  const row = await ctx.db
+    .selectFrom('activities')
+    .select('replayAttempts')
+    .where('id', '=', activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.replayAttempts).toBe(0);
+});
+
+test('it skips the attempt when another worker already adjudicated the activity out of its guarded status', async () => {
+  await using ctx = await setupTest();
+
+  const activity = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    status: 'rejected',
+    verifiedHead: 1,
+  });
+
+  const result = await updateReplayAttempts(ctx.db, {
+    activityID: activity.id,
+    status: 'active',
+    verifiedHead: 1,
+  });
+
+  expect(result).toBeUndefined();
+});

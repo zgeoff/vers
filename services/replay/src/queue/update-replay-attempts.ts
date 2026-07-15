@@ -10,6 +10,16 @@ export const MAX_REPLAY_ATTEMPTS = 5;
 interface UpdateReplayAttemptsInput {
   readonly activityID: string;
   readonly maxAttempts?: number;
+
+  /**
+   * Guards the increment to the frontier this iteration actually replayed against: skipped unless
+   * both are given. A caller counting a failure outside its claim transaction (the transaction
+   * already rolled back) supplies the `verifiedHead`/`status` it read at claim time, so a stale
+   * failure never lands against an activity another worker meanwhile verified or adjudicated out
+   * from under it.
+   */
+  readonly status?: ActivityStatus;
+  readonly verifiedHead?: number;
 }
 
 interface UpdateReplayAttemptsResult {
@@ -28,6 +38,7 @@ export async function updateReplayAttempts(
   input: Readonly<UpdateReplayAttemptsInput>,
 ): Promise<UpdateReplayAttemptsResult | undefined> {
   const maxAttempts = input.maxAttempts ?? MAX_REPLAY_ATTEMPTS;
+  const hasGuard = input.verifiedHead !== undefined && input.status !== undefined;
 
   const row = await db
     .updateTable('activities')
@@ -36,6 +47,11 @@ export async function updateReplayAttempts(
       status: sql<ActivityStatus>`CASE WHEN replay_attempts + 1 >= ${maxAttempts} THEN 'quarantined' ELSE status END`,
     }))
     .where('id', '=', input.activityID)
+    .$if(hasGuard, (qb) =>
+      qb
+        .where('verifiedHead', '=', input.verifiedHead ?? 0)
+        .where('status', '=', input.status ?? 'active'),
+    )
     .returning(['replayAttempts', 'status'])
     .executeTakeFirst();
 

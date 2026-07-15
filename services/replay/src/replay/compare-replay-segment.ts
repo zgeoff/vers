@@ -1,6 +1,7 @@
 import type { CheckpointPayload, EntropySource } from '@vers/contract-activity';
 import { buildCheckpointHash } from '@vers/contract-activity';
 import * as z from 'zod';
+import { TERMINAL_CHECKPOINT_TYPES } from './types';
 import type { CompareVerdict, ReplayedCheckpoint, StoredCheckpoint } from './types';
 
 /**
@@ -8,13 +9,6 @@ import type { CompareVerdict, ReplayedCheckpoint, StoredCheckpoint } from './typ
  * verification.
  */
 const SERVER_KEY_ENTROPY_SOURCE: EntropySource = 'server-key';
-
-/**
- * Checkpoint types whose engine restart resets the next checkpoint's `time` to zero — a segment
- * ending on one settles as this batch's terminal outcome, and `advanceDriverThroughCheckpoints`
- * reads the same set to find where a duration derived from stored checkpoints must reset too.
- */
-export const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set(['completed', 'failed']);
 
 interface CompareContext {
   readonly prevHash: string;
@@ -38,11 +32,10 @@ export function compareReplaySegment(
   context: Readonly<CompareContext>,
 ): CompareVerdict {
   if (stored.length !== replayed.length) {
-    return {
-      kind: 'divergence',
-      reason: 'checkpoint-count-mismatch',
-      version: Math.min(stored.length, replayed.length) + 1,
-    };
+    const firstUnmatched = stored[Math.min(stored.length, replayed.length)];
+    const version = firstUnmatched?.version ?? (stored.at(-1)?.version ?? 0) + 1;
+
+    return { kind: 'divergence', reason: 'checkpoint-count-mismatch', version };
   }
 
   let prevHash = context.prevHash;
@@ -75,6 +68,12 @@ export function compareReplaySegment(
       return { kind: 'divergence', reason: 'reward-mismatch', version };
     }
 
+    if (
+      !hasMatchingLevelUp(findPayloadLevelUp(storedCheckpoint.payload), replayedCheckpoint.levelUp)
+    ) {
+      return { kind: 'divergence', reason: 'reward-mismatch', version };
+    }
+
     prevHash = hash;
     seed = replayedCheckpoint.nextSeed;
   }
@@ -100,4 +99,29 @@ function findPayloadRewardsXP(payload: Readonly<CheckpointPayload>): number | un
   const parsed = RewardsSchema.safeParse(payload['rewards']);
 
   return parsed.success ? parsed.data.xp : undefined;
+}
+
+const LevelUpSchema = z.object({ from: z.number(), to: z.number() });
+
+/**
+ * A stored checkpoint's `levelUp` field rides outside the hashed subset like `rewards`, and is
+ * absent from the payload entirely on a checkpoint that crossed no level.
+ */
+function findPayloadLevelUp(
+  payload: Readonly<CheckpointPayload>,
+): { from: number; to: number } | undefined {
+  const parsed = LevelUpSchema.safeParse(payload['levelUp']);
+
+  return parsed.success ? parsed.data : undefined;
+}
+
+function hasMatchingLevelUp(
+  stored: Readonly<{ from: number; to: number }> | undefined,
+  replayed: Readonly<{ from: number; to: number }> | undefined,
+): boolean {
+  if (stored === undefined || replayed === undefined) {
+    return stored === replayed;
+  }
+
+  return stored.from === replayed.from && stored.to === replayed.to;
 }
