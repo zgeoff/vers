@@ -4,11 +4,13 @@ import { setOfflineCapStatus } from '../state/set-offline-cap-status';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
 import { setSimulationWorker } from '../state/set-simulation-worker';
+import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
 import { useIdleStore } from '../state/use-idle-store';
 import type {
   CheckpointStreamInvalidMessage,
   InitialStateMessage,
   OfflineCapStatusMessage,
+  RewardSlotsRecordedMessage,
   SimulationUpdateMessage,
   WorkerMessage,
 } from '../types';
@@ -79,6 +81,14 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
       remainingMs: event.data.remainingMs,
     });
   }
+
+  if (isRewardSlotsRecordedMessage(event.data)) {
+    updateRewardSlotLedger({
+      activityID: event.data.activityID,
+      count: event.data.rewardSlotCount,
+      version: event.data.version,
+    });
+  }
 }
 
 function isInitialStateMessage(message: WorkerMessage): message is InitialStateMessage {
@@ -97,4 +107,10 @@ function isCheckpointStreamInvalidMessage(
 
 function isOfflineCapStatusMessage(message: WorkerMessage): message is OfflineCapStatusMessage {
   return message.type === WorkerMessageType.OfflineCapStatus;
+}
+
+function isRewardSlotsRecordedMessage(
+  message: WorkerMessage,
+): message is RewardSlotsRecordedMessage {
+  return message.type === WorkerMessageType.RewardSlotsRecorded;
 }

@@ -489,3 +489,35 @@ test('it drops a checkpoint for an activity that was never registered', async ()
 
   expect(remaining).toStrictEqual([]);
 });
+
+test('it resolves each submit with the activity-relative version it assigned', async () => {
+  const ctx = setupTest();
+
+  await ctx.submitter.registerActivity({
+    activityID: 'versioned-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  const firstVersion = await ctx.submitter.submit(
+    'versioned-activity',
+    createMockStartedCheckpoint(),
+  );
+
+  const secondVersion = await ctx.submitter.submit(
+    'versioned-activity',
+    createMockProgressCheckpoint(),
+  );
+
+  expect(firstVersion).toBe(1);
+  expect(secondVersion).toBe(2);
+});
+
+test('it resolves with undefined for a checkpoint dropped by an unattached activity', async () => {
+  const ctx = setupTest();
+
+  const version = await ctx.submitter.submit('never-registered', createMockStartedCheckpoint());
+
+  expect(version).toBeUndefined();
+});

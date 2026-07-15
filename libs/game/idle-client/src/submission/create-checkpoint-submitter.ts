@@ -39,9 +39,13 @@ export interface CheckpointSubmitter {
    * while the seed read is still in flight never chains onto a stale hash. Silently drops the
    * checkpoint if the activity was never attached or its stream is stopped. Resolves once the
    * checkpoint is durably queued, so a caller that awaits each submission in order never races a
-   * later checkpoint's write against an earlier one's.
+   * later checkpoint's write against an earlier one's. Resolves with the activity-relative version
+   * assigned to the queued entry, or `undefined` when the checkpoint was dropped.
    */
-  submit: (activityID: string, checkpoint: Readonly<ActivityCheckpoint>) => Promise<void>;
+  submit: (
+    activityID: string,
+    checkpoint: Readonly<ActivityCheckpoint>,
+  ) => Promise<number | undefined>;
 }
 
 interface CreateCheckpointSubmitterOptions {
@@ -247,11 +251,11 @@ export function createCheckpointSubmitter(
   const submit = async (
     activityID: string,
     checkpoint: Readonly<ActivityCheckpoint>,
-  ): Promise<void> => {
+  ): Promise<number | undefined> => {
     const registration = registrations.get(activityID);
 
     if (registration === undefined) {
-      return;
+      return undefined;
     }
 
     await registration;
@@ -261,7 +265,7 @@ export function createCheckpointSubmitter(
     invariant(state !== undefined, 'a registered activity has no submission state');
 
     if (state.invalid) {
-      return;
+      return undefined;
     }
 
     const entry = buildCheckpointBatchEntry({
@@ -288,7 +292,7 @@ export function createCheckpointSubmitter(
 
       await flush(activityID);
 
-      return;
+      return entry.version;
     }
 
     if (!state.flushScheduled) {
@@ -304,6 +308,8 @@ export function createCheckpointSubmitter(
         await flush(activityID);
       });
     }
+
+    return entry.version;
   };
 
   return { registerActivity, submit };

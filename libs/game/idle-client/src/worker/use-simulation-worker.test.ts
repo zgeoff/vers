@@ -1,10 +1,16 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { renderHook, waitFor } from '@testing-library/react';
 import { ActivityFailureAction } from '@vers/idle-core';
+import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import invariant from 'tiny-invariant';
 import { setSimulationWorker } from '../state/set-simulation-worker';
 import { useIdleStore } from '../state/use-idle-store';
-import type { CheckpointStreamInvalidMessage, ClientMessage, InitialStateMessage } from '../types';
+import type {
+  CheckpointStreamInvalidMessage,
+  ClientMessage,
+  InitialStateMessage,
+  RewardSlotsRecordedMessage,
+} from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { useSimulationWorker } from './use-simulation-worker';
 
@@ -155,4 +161,123 @@ test('it sends a disconnect message on pagehide', async () => {
   const event = await received;
 
   expect(event.data).toStrictEqual({ type: ClientMessageType.Disconnect });
+});
+
+test('it accumulates the reward-slot ledger from worker messages', async () => {
+  registerSharedWorkerStub();
+
+  const hook = renderHook(() => useSimulationWorker());
+
+  hook.rerender();
+
+  invariant(hook.result.current, 'Worker not initialized');
+
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a StubSharedWorker, so its return value has that shape at runtime
+  const worker = hook.result.current as unknown as StubSharedWorker;
+
+  worker.channel.port2.start();
+
+  const initialStateMessage: InitialStateMessage = {
+    state: {
+      activity: createMockActivitySnapshot({ id: 'activity_1' }),
+      failureAction: ActivityFailureAction.Retry,
+    },
+    type: WorkerMessageType.InitialState,
+  };
+
+  worker.channel.port2.postMessage(initialStateMessage);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().activity?.id).toBe('activity_1');
+  });
+
+  const firstMessage: RewardSlotsRecordedMessage = {
+    activityID: 'activity_1',
+    rewardSlotCount: 2,
+    type: WorkerMessageType.RewardSlotsRecorded,
+    version: 1,
+  };
+
+  worker.channel.port2.postMessage(firstMessage);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 2, version: 1 }]);
+  });
+
+  const secondMessage: RewardSlotsRecordedMessage = {
+    activityID: 'activity_1',
+    rewardSlotCount: 3,
+    type: WorkerMessageType.RewardSlotsRecorded,
+    version: 2,
+  };
+
+  worker.channel.port2.postMessage(secondMessage);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([
+      { count: 2, version: 1 },
+      { count: 3, version: 2 },
+    ]);
+  });
+});
+
+test('it resets the reward-slot ledger once a new activity reports its own message', async () => {
+  registerSharedWorkerStub();
+
+  const hook = renderHook(() => useSimulationWorker());
+
+  hook.rerender();
+
+  invariant(hook.result.current, 'Worker not initialized');
+
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a StubSharedWorker, so its return value has that shape at runtime
+  const worker = hook.result.current as unknown as StubSharedWorker;
+
+  worker.channel.port2.start();
+
+  worker.channel.port2.postMessage({
+    state: {
+      activity: createMockActivitySnapshot({ id: 'activity_1' }),
+      failureAction: ActivityFailureAction.Retry,
+    },
+    type: WorkerMessageType.InitialState,
+  } satisfies InitialStateMessage);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().activity?.id).toBe('activity_1');
+  });
+
+  worker.channel.port2.postMessage({
+    activityID: 'activity_1',
+    rewardSlotCount: 2,
+    type: WorkerMessageType.RewardSlotsRecorded,
+    version: 1,
+  } satisfies RewardSlotsRecordedMessage);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 2, version: 1 }]);
+  });
+
+  worker.channel.port2.postMessage({
+    state: {
+      activity: createMockActivitySnapshot({ id: 'activity_2' }),
+      failureAction: ActivityFailureAction.Retry,
+    },
+    type: WorkerMessageType.SimulationUpdate,
+  });
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().activity?.id).toBe('activity_2');
+  });
+
+  worker.channel.port2.postMessage({
+    activityID: 'activity_2',
+    rewardSlotCount: 5,
+    type: WorkerMessageType.RewardSlotsRecorded,
+    version: 1,
+  } satisfies RewardSlotsRecordedMessage);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 5, version: 1 }]);
+  });
 });

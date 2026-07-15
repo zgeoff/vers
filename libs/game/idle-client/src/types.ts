@@ -53,6 +53,7 @@ export enum WorkerMessageType {
   CheckpointStreamInvalid = 'checkpoint_stream_invalid',
   InitialState = 'initial_state',
   OfflineCapStatus = 'offline_cap_status',
+  RewardSlotsRecorded = 'reward_slots_recorded',
   SimulationUpdate = 'simulation_update',
 }
 
@@ -91,10 +92,25 @@ export interface OfflineCapStatusMessage extends IWorkerMessage {
   readonly type: WorkerMessageType.OfflineCapStatus;
 }
 
+/**
+ * Reports a checkpoint's reward-slot count as it leaves the generator and enters the submission
+ * path, keyed by the activity-relative `version` the checkpoint chain assigns it — the same
+ * numbering the server's `verifiedHead` advances against. Only carries checkpoints the submitter
+ * actually queued and that earned at least one slot; a dropped or zero-slot checkpoint never
+ * broadcasts one of these.
+ */
+export interface RewardSlotsRecordedMessage extends IWorkerMessage {
+  readonly activityID: string;
+  readonly rewardSlotCount: number;
+  readonly type: WorkerMessageType.RewardSlotsRecorded;
+  readonly version: number;
+}
+
 export type WorkerMessage =
   | CheckpointStreamInvalidMessage
   | InitialStateMessage
   | OfflineCapStatusMessage
+  | RewardSlotsRecordedMessage
   | SimulationUpdateMessage;
 
 export interface CheckpointStreamError {
@@ -105,6 +121,15 @@ export interface CheckpointStreamError {
 export interface OfflineCapStatus {
   readonly halted: boolean;
   readonly remainingMs: number;
+}
+
+/**
+ * One checkpoint's recorded reward-slot count, keyed by the activity-relative version the
+ * checkpoint chain assigns it — the same numbering the server's `verifiedHead` advances against.
+ */
+export interface RewardSlotLedgerEntry {
+  readonly count: number;
+  readonly version: number;
 }
 
 /**

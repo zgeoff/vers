@@ -10,7 +10,7 @@ import { handleSetActivityMessage } from './handle-set-activity-message';
 function buildSpySubmitter(): CheckpointSubmitter {
   return {
     registerActivity: mock(() => Promise.resolve()),
-    submit: mock(() => Promise.resolve()),
+    submit: mock(() => Promise.resolve(undefined)),
   };
 }
 

@@ -6,6 +6,7 @@ import {
   createMockAvatarData,
   createMockEnemyData,
 } from '@vers/idle-core/test-utils';
+import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
@@ -137,4 +138,95 @@ test('it stops an aborted failure even when the budget is spent', async () => {
 
   expect(stoppedSpy).toHaveBeenCalled();
   expect(simulation.activity).toBeNull();
+});
+
+test('it broadcasts a reward-slot ledger message for each submitted checkpoint that earns slots', async () => {
+  const channel = new MessageChannel();
+
+  const received: Array<unknown> = [];
+
+  channel.port2.addEventListener('message', (event) => {
+    received.push(event.data);
+  });
+
+  channel.port2.start();
+
+  let nextVersion = 1;
+
+  const submitter: CheckpointSubmitter = {
+    registerActivity: () => Promise.resolve(),
+    submit: () => {
+      const version = nextVersion;
+
+      nextVersion += 1;
+
+      return Promise.resolve(version);
+    },
+  };
+
+  const context = createMockWorkerContext({ connections: [channel.port1], submitter });
+  const simulation = createSimulation();
+  const avatar = createMockAvatarData();
+  const activity = createMockActivityInput({ enemies: [createMockEnemyData()] });
+
+  simulation.startActivity(avatar, activity);
+
+  await runSimulationSteps(context, simulation, 100, 700);
+
+  // MessagePort delivery is a queued task; yield once so every broadcast lands
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+
+  const rewardMessages = received.filter(
+    (message): message is { rewardSlotCount: number; type: string; version: number } =>
+      typeof message === 'object' &&
+      message !== null &&
+      'type' in message &&
+      message.type === 'reward_slots_recorded',
+  );
+
+  expect(rewardMessages.length).toBeGreaterThan(0);
+  expect(rewardMessages.every((message) => message.rewardSlotCount > 0)).toBeTrue();
+
+  // the very first submitted checkpoint is the zero-slot Started checkpoint (version 1) — it
+  // never earns a broadcast of its own
+  expect(rewardMessages.some((message) => message.version === 1)).toBeFalse();
+});
+
+test('it never broadcasts a ledger message for a checkpoint the submitter dropped', async () => {
+  const channel = new MessageChannel();
+
+  const received: Array<unknown> = [];
+
+  channel.port2.addEventListener('message', (event) => {
+    received.push(event.data);
+  });
+
+  channel.port2.start();
+
+  // the default mock context's submitter always resolves `undefined`, standing in for a
+  // dropped checkpoint (an unattached or already-invalid activity)
+  const context = createMockWorkerContext({ connections: [channel.port1] });
+  const simulation = createSimulation();
+  const avatar = createMockAvatarData();
+  const activity = createMockActivityInput({ enemies: [createMockEnemyData()] });
+
+  simulation.startActivity(avatar, activity);
+
+  await runSimulationSteps(context, simulation, 100, 700);
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+
+  const rewardMessages = received.filter(
+    (message): message is { type: string } =>
+      typeof message === 'object' &&
+      message !== null &&
+      'type' in message &&
+      message.type === 'reward_slots_recorded',
+  );
+
+  expect(rewardMessages).toStrictEqual([]);
 });

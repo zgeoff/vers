@@ -15,7 +15,7 @@ export function createMockWorkerContext(
 
   const submitter: CheckpointSubmitter = options.submitter ?? {
     registerActivity: () => Promise.resolve(),
-    submit: () => Promise.resolve(),
+    submit: () => Promise.resolve(undefined),
   };
 
   let simulation: null | Simulation = null;
