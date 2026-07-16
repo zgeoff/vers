@@ -38,6 +38,8 @@ export function makeProductEventSender(
   return async (event) => {
     const body = JSON.stringify(encodeProductEventRow(event));
 
+    // the race bounds the wait rather than aborting the socket: signal instances don't survive
+    // environments that patch the fetch globals, and the runtime's pool reclaims the connection
     try {
       const response = await Promise.race([
         fetch(target, {

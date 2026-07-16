@@ -447,10 +447,13 @@ test('it broadcasts an activity completed message when an activity completes', a
 
   await connection.waitForMessages(1);
 
-  expect(connection.received).toPartiallyContain({
-    activityID: activity.id,
-    type: WorkerMessageType.ActivityCompleted,
-  });
+  const completedMessages = connection.received.filter(
+    (message) => message.type === WorkerMessageType.ActivityCompleted,
+  );
+
+  expect(completedMessages).toStrictEqual([
+    { activityID: activity.id, type: WorkerMessageType.ActivityCompleted },
+  ]);
 });
 
 test('it never broadcasts an activity completed message for a failed activity', async () => {

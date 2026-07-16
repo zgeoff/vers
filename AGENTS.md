@@ -369,12 +369,11 @@ game flows. Mechanics and the event registry live in `docs/architecture/analytic
 PR must satisfy:
 
 - Event names are snake_case `noun_pastparticiple` (`activity_started`); properties are ids of the
-  entities the event is about. Identity is stamped server-side from the caller's session — a
-  client payload never carries user or session keys.
+  entities the event is about. Identity is stamped server-side from the caller's session — a client
+  payload never carries user or session keys.
 - A new event lands with its entry in the `@vers/product-analytics` registry types, its arm in
-  app-web's ingest schema, any new column in
-  `infra/tinybird/datasources/product_events.datasource`, and its row in the
-  `docs/architecture/analytics.md` registry table — all in the same PR.
+  app-web's ingest schema, any new column in `infra/tinybird/datasources/product_events.datasource`,
+  and its row in the `docs/architecture/analytics.md` registry table — all in the same PR.
 - Emission is fire-and-forget through `emitProductEvent`: never await it, never gate a flow on it,
   and fire only on a confirmed outcome (a service response or a worker broadcast), never on intent
   alone.

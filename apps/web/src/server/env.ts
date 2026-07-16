@@ -11,7 +11,7 @@ const envSchema = z.object({
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
   SENTRY_DSN: z.url().optional(),
   TINYBIRD_INGEST_TOKEN: z.string().min(1).optional(),
-  TINYBIRD_URL: z.url().optional(),
+  TINYBIRD_URL: z.url({ protocol: /^https$/ }).optional(),
   UMAMI_URL: z.url().optional(),
   VITE_SENTRY_DSN: z.url().optional(),
   SERVICE_AUTH_PRIVATE_KEY: z.string().min(1),
