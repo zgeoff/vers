@@ -3,6 +3,7 @@ import { implement } from '@orpc/server';
 import { authedRoute, publicRoute } from '@vers/contract-base';
 import { createServiceToken, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient, collectConformanceCases } from '@vers/test-utils';
+import { updateEnv } from '@vers/test-utils/bun';
 import { expectTypeOf } from 'expect-type';
 import * as z from 'zod';
 import { createService } from './create-service';
@@ -39,6 +40,14 @@ function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
 }
 
 test('it throws at boot when SERVICE_AUTH_PUBLIC_KEY is missing', () => {
+  const originalPublicKey = process.env['SERVICE_AUTH_PUBLIC_KEY'];
+
+  onTestFinished(() => {
+    if (originalPublicKey !== undefined) {
+      process.env['SERVICE_AUTH_PUBLIC_KEY'] = originalPublicKey;
+    }
+  });
+
   delete process.env['SERVICE_AUTH_PUBLIC_KEY'];
   const contract = buildTestContract();
 
@@ -54,9 +63,22 @@ test('it throws at boot when SERVICE_AUTH_PUBLIC_KEY is missing', () => {
 test('it applies default PORT and LOG_LEVEL when unset', async () => {
   const keyPair = await getTestServiceKeyPair();
 
+  const originalLogLevel = process.env['LOG_LEVEL'];
+  const originalPort = process.env['PORT'];
+
+  onTestFinished(() => {
+    if (originalLogLevel !== undefined) {
+      process.env['LOG_LEVEL'] = originalLogLevel;
+    }
+
+    if (originalPort !== undefined) {
+      process.env['PORT'] = originalPort;
+    }
+  });
+
   delete process.env['LOG_LEVEL'];
   delete process.env['PORT'];
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -73,8 +95,8 @@ test('it applies default PORT and LOG_LEVEL when unset', async () => {
 test('it parses a service-specific envShape variable onto env', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['CUSTOM_GREETING'] = 'hi there';
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('CUSTOM_GREETING', 'hi there');
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -92,12 +114,8 @@ test('it parses a service-specific envShape variable onto env', async () => {
 test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugin and log shipping at boot', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['OTEL_EXPORTER_OTLP_ENDPOINT'] = 'http://127.0.0.1:1/';
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
-
-  onTestFinished(() => {
-    delete process.env['OTEL_EXPORTER_OTLP_ENDPOINT'];
-  });
+  updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://127.0.0.1:1/');
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -113,7 +131,7 @@ test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugi
 test('it serves a router built by an async buildRouter', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -145,7 +163,7 @@ test('it serves a router built by an async buildRouter', async () => {
 test('it rejects an /rpc call with no Authorization header with a plain 401', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -173,7 +191,7 @@ test('it rejects an /rpc call with no Authorization header with a plain 401', as
 test('it rejects an /rpc call with a garbage token with a plain 401', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -200,7 +218,7 @@ test('it rejects an /rpc call with a garbage token with a plain 401', async () =
 test('it rejects an /rpc call with an expired token with a plain 401', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -233,7 +251,7 @@ test('it rejects an /rpc call with an expired token with a plain 401', async () 
 test('it rejects an /rpc call with a wrong-audience token with a plain 401', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -265,7 +283,7 @@ test('it rejects an /rpc call with a wrong-audience token with a plain 401', asy
 test('it returns data from an authed procedure given a valid token naming an acting user', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -293,7 +311,7 @@ test('it returns data from an authed procedure given a valid token naming an act
 test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a valid anonymous token', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -321,7 +339,7 @@ test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a v
 test('it serves /health without any token', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -344,7 +362,7 @@ test('it serves /health without any token', async () => {
 test('it mints a fresh trace id when no traceparent is supplied', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -362,7 +380,7 @@ test('it mints a fresh trace id when no traceparent is supplied', async () => {
 test('it continues the trace named by an inbound traceparent header', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -384,7 +402,7 @@ test('it continues the trace named by an inbound traceparent header', async () =
 test('it mints a fresh trace id for a malformed traceparent header', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -406,7 +424,7 @@ test('it mints a fresh trace id for a malformed traceparent header', async () =>
 test('it masks an unexpected handler error as a bare INTERNAL_SERVER_ERROR', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -435,7 +453,7 @@ test('it masks an unexpected handler error as a bare INTERNAL_SERVER_ERROR', asy
 test('it does not serve the dropped /api and /spec.json paths', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -458,7 +476,7 @@ test('it does not serve the dropped /api and /spec.json paths', async () => {
 test('it passes every conformance case collected from its own contract', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -486,7 +504,7 @@ test('it passes every conformance case collected from its own contract', async (
 test('it logs one structured request line when an /rpc call completes', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -523,7 +541,7 @@ test('it logs one structured request line when an /rpc call completes', async ()
 test('it logs the rejection reason when the trust boundary rejects a request', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -557,7 +575,7 @@ test('it logs the rejection reason when the trust boundary rejects a request', a
 test('it logs a failed /rpc call at error severity', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
@@ -598,7 +616,7 @@ test('it logs a failed /rpc call at error severity', async () => {
 test('it serves /health without logging a request line', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
 
   const contract = buildTestContract();
 
