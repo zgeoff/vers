@@ -4,13 +4,14 @@ Where the stack runs, how a merge reaches production, and how to re-provision it
 
 ## Topology
 
-The stack runs on Fly.io in the `syd` region. `app-web` and `vers-bugsink` (the error tracker,
-`apps/bugsink` — public because browsers post error envelopes directly to it) hold the public
-addresses. The domain services — `service-activity`, `service-avatar`, `service-keys`,
-`service-session`, `service-user`, `service-verification` — are private, reachable only across the
-organization's 6PN WireGuard mesh. Postgres is a Neon project (see [database](./database.md)); no
-app runs its own database, Bugsink included. `service-keys` holds no database connection — its state
-is the `ROLL_KEY_ROOTS` secret alone.
+The stack runs on Fly.io in the `syd` region. `app-web`, `vers-bugsink` (the error tracker,
+`apps/bugsink` — public because browsers post error envelopes directly to it), and `vers-umami` (the
+web-analytics dashboard, `apps/umami` — tracker traffic instead arrives through `app-web`'s
+same-origin proxy) hold the public addresses. The domain services — `service-activity`,
+`service-avatar`, `service-keys`, `service-session`, `service-user`, `service-verification` — are
+private, reachable only across the organization's 6PN WireGuard mesh. Postgres is a Neon project
+(see [database](./database.md)); no app runs its own database, Bugsink included. `service-keys`
+holds no database connection — its state is the `ROLL_KEY_ROOTS` secret alone.
 
 Every app scales to zero. `auto_stop_machines = 'suspend'` parks an idle machine with its memory
 snapshot for sub-second wake. `app-web` keeps one machine warm (`min_machines_running = 1`) so a
@@ -36,6 +37,7 @@ Secrets are set with `fly secrets set` and never committed.
 | `service-keys`                                                               | `ROLL_KEY_ROOTS`, `SERVICE_AUTH_PUBLIC_KEY`                           |
 | `app-web`                                                                    | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY`         |
 | `vers-bugsink`                                                               | `SECRET_KEY`, `DATABASE_URL`, `CREATE_SUPERUSER` (first boot)         |
+| `vers-umami`                                                                 | `APP_SECRET`, `DATABASE_URL`                                          |
 
 - `SERVICE_AUTH_PUBLIC_KEY` — Ed25519 SPKI public key a service verifies inbound calls with.
 - `SERVICE_AUTH_PRIVATE_KEY` — its PKCS8 private half, held by the callers that sign outbound s2s
@@ -60,7 +62,9 @@ plus that signal's dataset (`Authorization=Bearer <token>,X-Axiom-Dataset=vers-t
 `VITE_SENTRY_DSN` GitHub Actions variable: the deploy workflow bakes it into `app-web`'s client
 bundle, and the same value is set as a `vers-app-web` secret so the runtime can allow the ingest
 origin in its CSP. Source-map uploads authenticate with the `SENTRY_AUTH_TOKEN` GitHub secret — a
-Bugsink API token; when it's unset the build skips source maps entirely.
+Bugsink API token; when it's unset the build skips source maps entirely. The deploy workflow bakes
+the `VITE_UMAMI_WEBSITE_ID` GitHub Actions variable into `app-web`'s client bundle; when it's unset
+the bundle ships no analytics tracker.
 
 ## Release
 
@@ -97,9 +101,10 @@ image versions".
 A rollout can fail on transient `syd` host-capacity refusals ("could not reserve resource"); Fly
 rolls back cleanly, so re-run the failed job.
 
-`vers-bugsink` deploys the pinned stock Bugsink image with no build. It isn't a workspace package,
-so its staleness trigger in `deploy.config.ts` is a path glob (`apps/bugsink/**`) rather than turbo
-affectedness. Upgrading Bugsink is a tag bump in its `fly.toml`.
+`vers-bugsink` and `vers-umami` deploy pinned stock images with no build. Neither sits in the turbo
+task graph, so their staleness triggers in `deploy.config.ts` are path globs (`apps/bugsink/**`,
+`apps/umami/**`) rather than turbo affectedness. Upgrading either is a tag bump — Bugsink on its
+`Dockerfile` `FROM` line, Umami on its `fly.toml` `[build]` image.
 
 ## Sim-version registry
 
@@ -295,6 +300,32 @@ secret, and set the web project's DSN as the `VITE_SENTRY_DSN` GitHub Actions va
 (`SENTRY_AUTH_TOKEN` GitHub secret) and one for the MCP server, added to the vault item as
 `mcp-token`.
 
+Stand up web analytics. The first deploy is by hand; CI redeploys it on later config changes. Umami
+boots with an `admin`/`umami` account; the password is changed on first login to the value on the
+`umami` item in the `vers` 1Password vault:
+
+```sh
+fly apps create vers-umami --org vers
+fly ips allocate-v4 --shared -a vers-umami
+fly ips allocate-v6 -a vers-umami
+
+neonctl databases create --name umami
+
+op item create --vault vers --category login --title umami \
+  --url https://vers-umami.fly.dev \
+  "username=admin" "password=$(openssl rand -base64 16)"
+
+fly secrets set -a vers-umami \
+  APP_SECRET="$(openssl rand -base64 32)" \
+  DATABASE_URL="<the umami database's pooled connection URL>"
+
+fly deploy --config apps/umami/fly.toml --ha=false
+```
+
+In the Umami UI, create the `vers` website and set its ID as the `VITE_UMAMI_WEBSITE_ID` GitHub
+Actions variable, then assemble the acquisition funnel report over the tracked events
+([analytics](./analytics.md)).
+
 Stand up the telemetry backend. The Axiom account is created in its UI; its standing tokens live on
 the `axiom` item in the `vers` 1Password vault: `ingest-token` (ingest on all datasets — the fleet's
 export credential) and `mcp-token` (query, for read-only investigation). Administration — creating
@@ -329,7 +360,7 @@ The next push to `main` fills the machines.
 ## Teardown
 
 ```sh
-for app in app-web bugsink service-avatar service-keys service-session service-user service-verification; do
+for app in app-web bugsink umami service-avatar service-keys service-session service-user service-verification; do
   fly apps destroy "vers-$app" --yes
 done
 ```

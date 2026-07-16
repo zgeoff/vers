@@ -214,6 +214,7 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+          VITE_UMAMI_WEBSITE_ID: ${{ vars.VITE_UMAMI_WEBSITE_ID }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SERVICE_AUTH_PUBLIC_KEY: ${{ vars.SERVICE_AUTH_PUBLIC_KEY }}
         with:

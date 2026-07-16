@@ -32,6 +32,8 @@ How the platform is built — system design, data flows, and operational wiring.
   secrets
 - [Service providers](./architecture/service-providers.md) — the external services and what each one
   owns
+- [Analytics](./architecture/analytics.md) — the web/product analytics split, funnel events, and the
+  privacy stance
 - [Feature flags](./architecture/feature-flags.md) — OpenFeature registry, resolution, and route
   gating
 - [Game rendering](./architecture/game-rendering.md) — the persistent three.js canvas and scene

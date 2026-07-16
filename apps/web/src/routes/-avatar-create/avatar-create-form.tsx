@@ -3,6 +3,7 @@ import type { AvatarMode } from '@vers/contract-avatar';
 import { Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
+import { sendAnalyticsEvent } from '../../lib/send-analytics-event';
 import { avatarCreate } from './avatar-create';
 import type { AvatarCreateResult } from './types';
 
@@ -59,6 +60,8 @@ export function AvatarCreateForm() {
       const result: AvatarCreateResult | undefined = await avatarCreateFn({ data: formData });
 
       if (result === undefined) {
+        sendAnalyticsEvent('avatar-created');
+
         return;
       }
 

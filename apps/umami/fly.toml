@@ -1,0 +1,28 @@
+# Self-hosted Umami web analytics. Public because browsers load the tracker
+# script and post pageview beacons directly to it. Deploys the pinned stock
+# image with no build; a merge to main touching this directory redeploys it,
+# and upgrading Umami is a tag bump on the [build] image line.
+app = 'vers-umami'
+primary_region = 'syd'
+
+[build]
+image = 'ghcr.io/umami-software/umami:3.2.0'
+
+[http_service]
+internal_port = 3000
+force_https = true
+auto_stop_machines = 'suspend'
+auto_start_machines = true
+min_machines_running = 0
+processes = ['app']
+
+[env]
+# beacons arrive through app-web's analytics proxy, which stamps the visitor's
+# address into this header — without it every event would geolocate to the proxy
+CLIENT_IP_HEADER = 'x-vers-client-ip'
+DISABLE_TELEMETRY = '1'
+
+[[vm]]
+memory = '1gb'
+cpu_kind = 'shared'
+cpus = 1

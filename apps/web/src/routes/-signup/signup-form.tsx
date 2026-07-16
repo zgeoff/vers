@@ -8,6 +8,7 @@ import { css } from '@vers/styled-system/css';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
 import type { FormAction } from '../../lib/forms/types';
 import { useFormSubmit } from '../../lib/forms/use-form-submit';
+import { sendAnalyticsEvent } from '../../lib/send-analytics-event';
 import { signup } from './signup';
 import { SignupFormSchema } from './signup-form-schema';
 
@@ -32,7 +33,10 @@ const submitButton = css({ marginBottom: '2' });
  */
 export function SignupForm(props: SignupFormProps) {
   const signupFn = useServerFn(signup);
-  const submission = useFormSubmit(props.action ?? signupFn, props.lastResult);
+
+  const submission = useFormSubmit(props.action ?? signupFn, props.lastResult, () => {
+    sendAnalyticsEvent('signup-complete');
+  });
 
   const [form, fields] = useForm({
     constraint: getZodConstraint(SignupFormSchema),

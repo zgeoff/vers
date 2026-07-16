@@ -335,6 +335,15 @@ container builds, and secrets: `docs/architecture/deployment.md`.
 - Deploy-phase jobs target the `production` GitHub environment; repo-level secrets carry only what
   PR checks need.
 
+## Analytics
+
+app-web ships self-hosted Umami web analytics (`apps/umami`). A player-facing flow whose completion
+is an acquisition-funnel step fires a curated event through `sendAnalyticsEvent`
+(`apps/web/src/lib/send-analytics-event.ts`) — weigh this when building or reshaping such flows.
+Analytics stays anonymous: no PII, and anything that would be joined to a user or avatar belongs in
+the product-analytics stream instead. Boundaries and privacy stance:
+`docs/architecture/analytics.md`.
+
 ## Postgres access (MCP)
 
 The `postgres` MCP server exposes production and dev sources; mechanics and provisioning live in

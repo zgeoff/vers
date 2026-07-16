@@ -17,9 +17,15 @@ const GENERIC_SUBMIT_ERROR = 'Something went wrong. Please try again.';
  * left to show), a `Response` returned for an out-of-band rejection (mapped to a form-level error),
  * or a `SubmissionResult` from `reply()` (shown as-is).
  *
- * An optional `lastResult` seeds the form before any dispatch; a dispatch's own reply supersedes it.
+ * An optional `lastResult` seeds the form before any dispatch; a dispatch's own reply supersedes
+ * it. An optional `onSuccess` fires once per confirmed-redirect resolution — the flow's completion
+ * signal — before the browser paints the destination.
  */
-export function useFormSubmit(action: FormAction, lastResult?: SubmissionResult): FormSubmission {
+export function useFormSubmit(
+  action: FormAction,
+  lastResult?: SubmissionResult,
+  onSuccess?: () => void,
+): FormSubmission {
   const [dispatchedResult, setDispatchedResult] = useState<SubmissionResult | undefined>(undefined);
   const [isPending, setIsPending] = useState(false);
 
@@ -30,6 +36,8 @@ export function useFormSubmit(action: FormAction, lastResult?: SubmissionResult)
       const result = await action({ data: formData });
 
       if (result === undefined) {
+        onSuccess?.();
+
         return;
       }
 
