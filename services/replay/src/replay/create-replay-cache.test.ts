@@ -1,5 +1,6 @@
 import { expect, mock, test } from 'bun:test';
 import type { SimulationDriver } from '@vers/idle-core';
+import { waitFor } from '@vers/test-utils';
 import { createReplayCache } from './create-replay-cache';
 
 function buildFakeDriver(): SimulationDriver {
@@ -80,4 +81,27 @@ test('it does not stop a re-set entry that reuses the same driver', () => {
   cache.set('act_1', { driver, emittedCount: 2, lastHash: 'hash-2' });
 
   expect(driver.stop).not.toHaveBeenCalled();
+});
+
+test('it reports a driver stop rejection instead of leaving it unhandled', async () => {
+  const reported: Array<unknown> = [];
+
+  const cache = createReplayCache(undefined, (stopError) => {
+    reported.push(stopError);
+  });
+
+  const failure = new Error('stop exploded');
+
+  const entry = {
+    driver: { ...buildFakeDriver(), stop: mock(() => Promise.reject(failure)) },
+    emittedCount: 1,
+    lastHash: 'hash-1',
+  };
+
+  cache.set('act_1', entry);
+  cache.remove('act_1');
+
+  await waitFor(() => {
+    expect(reported).toStrictEqual([failure]);
+  });
 });

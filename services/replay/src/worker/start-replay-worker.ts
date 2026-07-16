@@ -18,7 +18,9 @@ const MAX_POLL_INTERVAL_MS = 5000;
  * rather than waiting it out.
  */
 export function startReplayWorker(deps: Readonly<ReplayWorkerDeps>): ReplayWorkerHandle {
-  const cache = createReplayCache();
+  const cache = createReplayCache(undefined, (stopError) => {
+    deps.logger.error({ err: stopError }, 'replay cache driver stop failed');
+  });
 
   const controller = new AbortController();
 

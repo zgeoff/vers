@@ -1,7 +1,8 @@
-import { safe } from '@orpc/client';
+import { isDefinedError, safe } from '@orpc/client';
 import { redirect } from '@tanstack/react-router';
 import { requireAuth } from '../../lib/auth/require-auth';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
+import { logger } from '../../server/logger';
 import type { VerifyTwoFactorSetupResult } from './types';
 import { VerifyTwoFactorSetupFormSchema } from './verify-two-factor-setup-form-schema';
 
@@ -33,6 +34,10 @@ export async function verifyTwoFactorSetupHandler(
   );
 
   if (error) {
+    if (!isDefinedError(error)) {
+      logger.error({ err: error }, 'two-factor setup verification failed');
+    }
+
     return { formError: 'Invalid or expired code', status: 'invalid-fields' };
   }
 

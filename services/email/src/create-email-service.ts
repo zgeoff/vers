@@ -44,6 +44,12 @@ export async function createEmailService(
         onError: (error) => {
           runtime.logger.error({ err: error }, 'email job queue error');
         },
+        onJobError: (error, context) => {
+          runtime.logger.error(
+            { err: error, jobID: context.jobID, queue: context.queue },
+            'email job failed',
+          );
+        },
       });
 
       return buildEmailRouter({ logger: runtime.logger, queue });

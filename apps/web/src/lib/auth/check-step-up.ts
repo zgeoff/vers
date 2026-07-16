@@ -1,6 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 import { getRequestIP } from '@tanstack/react-start/server';
 import type { SecureAction } from '@vers/contract-session';
+import { logger } from '../../server/logger';
 import { sessionClient } from '../rpc/clients/session-client';
 import { verificationClient } from '../rpc/clients/verification-client';
 import { verifyStepUpTransactionToken } from './create-step-up-transaction-token';
@@ -61,7 +62,11 @@ async function tryConsumeStepUpToken(
   token: string,
   sessionID: string | null,
 ): Promise<boolean> {
-  const claims = await verifyStepUpTransactionToken(token).catch(() => null);
+  const claims = await verifyStepUpTransactionToken(token).catch((error: unknown) => {
+    logger.warn({ err: error }, 'step-up token verification failed');
+
+    return null;
+  });
 
   if (
     claims === null ||

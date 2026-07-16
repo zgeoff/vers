@@ -2,6 +2,7 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
 import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
+import invariant from 'tiny-invariant';
 import * as z from 'zod';
 import { createJobQueue } from './create-job-queue';
 import { defineJobs } from './define-jobs';
@@ -306,4 +307,74 @@ test('it fails a job whose stored payload no longer parses', async () => {
 
   expect(result).toStrictEqual({ completed: 0, failed: 1 });
   expect(received).toBeEmpty();
+});
+
+test('it reports a thrown handler error with the failed delivery it belongs to', async () => {
+  const connectionString = await createDatabaseFromTemplate();
+
+  const defs = defineJobs({ email: { retryLimit: 0, schema: z.object({ to: z.string() }) } });
+  const failures: Array<{ context: { jobID: string; queue: string }; error: unknown }> = [];
+
+  const queue = createJobQueue(defs, {
+    connectionString,
+    handlers: { email: () => Promise.reject(new Error('delivery exploded')) },
+    onJobError: (error, context) => {
+      failures.push({ context, error });
+    },
+  });
+
+  await queue.start();
+
+  onTestFinished(() => queue.stop());
+
+  const jobID = await queue.send('email', { to: 'a@example.com' });
+  const result = await queue.drain();
+
+  expect(result).toStrictEqual({ completed: 0, failed: 1 });
+  expect(failures).toHaveLength(1);
+  invariant(failures[0], 'one failure was reported');
+  expect(failures[0].context).toStrictEqual({ jobID, queue: 'email' });
+  expect(failures[0].error).toMatchObject({ message: 'delivery exploded' });
+});
+
+test('it reports the validation issues of a stored payload that no longer parses', async () => {
+  const connectionString = await createDatabaseFromTemplate();
+
+  const looseDefs = defineJobs({ email: { retryLimit: 0, schema: z.object({ to: z.string() }) } });
+
+  const writer = createJobQueue(looseDefs, {
+    connectionString,
+    handlers: { email: () => Promise.resolve() },
+  });
+
+  await writer.start();
+
+  onTestFinished(() => writer.stop());
+
+  const jobID = await writer.send('email', { to: 'a@example.com' });
+
+  const strictDefs = defineJobs({
+    email: { retryLimit: 0, schema: z.object({ retries: z.number(), to: z.string() }) },
+  });
+
+  const failures: Array<{ context: { jobID: string; queue: string }; error: unknown }> = [];
+
+  const reader = createJobQueue(strictDefs, {
+    connectionString,
+    handlers: { email: () => Promise.resolve() },
+    onJobError: (error, context) => {
+      failures.push({ context, error });
+    },
+  });
+
+  await reader.start();
+
+  onTestFinished(() => reader.stop());
+
+  await reader.drain();
+
+  expect(failures).toHaveLength(1);
+  invariant(failures[0], 'one failure was reported');
+  expect(failures[0].context).toStrictEqual({ jobID, queue: 'email' });
+  expect(failures[0].error).toMatchObject({ name: 'ZodError' });
 });

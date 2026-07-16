@@ -26,6 +26,8 @@ const worker = startReplayWorker({
   simVersion: service.env.SIM_ENGINE_HASH,
 });
 
+service.logger.info('replay worker started');
+
 process.on('SIGTERM', () => {
   void handleSIGTERM();
 });

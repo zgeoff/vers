@@ -1,8 +1,9 @@
-import { safe } from '@orpc/client';
+import { isDefinedError, safe } from '@orpc/client';
 import { redirect } from '@tanstack/react-router';
 import type { z } from 'zod';
 import { requireAuth } from '../../lib/auth/require-auth';
 import { avatarClient } from '../../lib/rpc/clients/avatar-client';
+import { logger } from '../../server/logger';
 import { AvatarCreateFormSchema } from './avatar-create-form-schema';
 import type { AvatarCreateResult } from './types';
 
@@ -26,6 +27,12 @@ export async function runAvatarCreate(formData: FormData): Promise<AvatarCreateR
   );
 
   if (error) {
+    // only the declared name conflict is normal flow; any other failure — transport, or a defined
+    // error the conflict message would misreport — is logged
+    if (!isDefinedError(error) || error.code !== 'CONFLICT') {
+      logger.error({ err: error }, 'avatar creation failed');
+    }
+
     return {
       fieldErrors: { name: 'An avatar with that name already exists' },
       status: 'invalid-fields',

@@ -1,4 +1,5 @@
 import { redirect } from '@tanstack/react-router';
+import { logger } from '../../server/logger';
 import { sessionClient } from '../rpc/clients/session-client';
 import { getAuthSession } from './get-auth-session';
 import { removeAuthSession } from './remove-auth-session';
@@ -23,7 +24,9 @@ export async function runLogout(options: LogoutOptions = {}): Promise<never> {
 
     await sessionClient
       .deleteSession({ id: sessionID }, { context: { actingUserID } })
-      .catch(() => {});
+      .catch((error: unknown) => {
+        logger.warn({ err: error }, 'session delete during logout failed');
+      });
   }
 
   await removeAuthSession();

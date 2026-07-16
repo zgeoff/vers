@@ -1,12 +1,13 @@
 import type { SubmissionResult } from '@conform-to/react';
 import { parseWithZod } from '@conform-to/zod/v4';
-import { safe } from '@orpc/client';
+import { isDefinedError, safe } from '@orpc/client';
 import { redirect } from '@tanstack/react-router';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { SpamError } from '../../lib/auth/spam-error';
 import { emailClient } from '../../lib/rpc/clients/email-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
+import { logger } from '../../server/logger';
 import { ResetPasswordFormSchema } from './reset-password-form-schema';
 
 const INVALID_LINK_ERROR = 'This reset link is invalid or has expired.';
@@ -52,6 +53,10 @@ export async function resetPasswordHandler(
   );
 
   if (error) {
+    if (!isDefinedError(error)) {
+      logger.error({ err: error }, 'password reset failed');
+    }
+
     return submission.reply({ formErrors: [INVALID_LINK_ERROR] });
   }
 
