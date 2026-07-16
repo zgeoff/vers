@@ -3,7 +3,7 @@ import { Heading, Text } from '@vers/design-system';
 import { useRewardSlotLedger } from '@vers/idle-client';
 import type { RewardSlotLedgerEntry } from '@vers/idle-client';
 import { css } from '@vers/styled-system/css';
-import { activityRewardsQueryOptions } from '../../lib/activity/activity-rewards-query-options';
+import { buildActivityRewardsQueryOptions } from '../../lib/activity/build-activity-rewards-query-options';
 import type { OrpcQueryUtils } from '../../lib/rpc/orpc';
 
 interface ActivityRewardsPanelProps {
@@ -43,7 +43,7 @@ export function ActivityRewardsPanel(props: ActivityRewardsPanelProps) {
   const rewardSlotLedger = useRewardSlotLedger();
 
   const query = useQuery({
-    ...activityRewardsQueryOptions(props.orpc, props.activityID ?? ''),
+    ...buildActivityRewardsQueryOptions(props.orpc, props.activityID ?? ''),
     enabled: props.activityID !== undefined,
   });
 
