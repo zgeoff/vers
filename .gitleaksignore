@@ -3,11 +3,6 @@
 # access to anything. A new secret in these files still flags: fingerprints
 # match one finding (commit, file, rule, line), not the file.
 
-# Commitless fingerprints: committed dev/test .env fixtures in the working
-# tree, matched by the pre-commit --staged scan when these files are edited.
-services/replay/.env.test:private-key:6
-services/session/.env.development:private-key:6
-
 # Historic: local-only signing keys in dev/test env files under the pre-2025
 # projects/ layout and their later moves; all mock-auth material.
 832044ec6803ce8dafdf6bbe3797f9edc2e9e637:services/replay/.env.test:private-key:5

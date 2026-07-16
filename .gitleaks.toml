@@ -1,16 +1,32 @@
 # Secret-scanning config for gitleaks (PR job + pre-commit hook). Extends the
-# default ruleset; allowlists cover only files whose purpose is to hold
-# throwaway key material. Committed dev/test .env fixtures are deliberately NOT
-# path-allowlisted — their known findings are pinned by fingerprint in
-# .gitleaksignore so any new secret in them still flags.
+# default ruleset; every allowlist is scoped to the rules its files actually
+# trip, so any other kind of secret in those files still flags. Findings in
+# immutable historic commits are pinned by fingerprint in .gitleaksignore.
 
 [extend]
 useDefault = true
 
 [[allowlists]]
+targetRules = ["private-key", "jwt"]
 description = "test files and test preloads hold intentionally fake keys and tokens"
 paths = ['''\.test\.tsx?$''', '''(^|/)test-setup\.ts$''']
 
 [[allowlists]]
+targetRules = ["private-key"]
 description = "committed .env examples document key shape with throwaway values"
 paths = ['''\.env(\.[\w.-]+)?\.example$''']
+
+# Matched by secret value AND path, so replacing or adding a key in these
+# fixture files flags until the new value is triaged here.
+[[allowlists]]
+targetRules = ["private-key"]
+description = "known throwaway signing keys in committed dev/test env fixtures"
+condition = "AND"
+paths = [
+  '''(^|/)services/replay/\.env\.test$''',
+  '''(^|/)services/session/\.env\.development$''',
+]
+regexes = [
+  '''MC4CAQAwBQYDK2VwBCIEIBMom57erggdVdDCIdRWS\+NKMykK\+I5BUKpuHziAq\+0W''',
+  '''MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\+ItgiAjP9V8TH''',
+]
