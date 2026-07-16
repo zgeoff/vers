@@ -2,8 +2,16 @@ import * as db from '../db';
 import { os } from './os';
 
 /**
- * Appends a checkpoint batch, mirroring the real service's state-derived rejections: a terminal
- * status refuses further appends, and a stale `expectedHead` is a retryable CONFLICT. Hash-chain
+ * Checkpoint types whose arrival closes the activity's stream, matching the set the real service
+ * settles terminal transitions against.
+ */
+const TERMINAL_CHECKPOINT_TYPES = new Set(['completed', 'failed']);
+
+/**
+ * Appends a checkpoint batch, mirroring the real service's state-derived transitions: a terminal
+ * status refuses further appends, a stale `expectedHead` is a retryable CONFLICT, and a batch
+ * ending on a terminal checkpoint closes the stream by flipping the row to `stopped` — so a
+ * follow-up start mints a fresh row instead of conflicting with a finished one. Hash-chain
  * validation, the offline-progress cap, and writer eviction need state the mock doesn't track —
  * those rejections are per-test overrides.
  */
@@ -54,12 +62,20 @@ export const trackActivityProgress = os.trackActivityProgress.handler(async (opt
   const appendedHead = activity.appendedHead + opts.input.checkpoints.length;
   const lastCheckpoint = opts.input.checkpoints.at(-1);
 
+  const closesStream =
+    lastCheckpoint !== undefined && TERMINAL_CHECKPOINT_TYPES.has(lastCheckpoint.payload.type);
+
   await db.activityCollection.update(activity, {
     data(record) {
       record.appendedAt = now;
       record.appendedHead = appendedHead;
       record.lastHash = lastCheckpoint === undefined ? record.lastHash : lastCheckpoint.hash;
       record.updatedAt = now;
+
+      if (closesStream) {
+        record.status = 'stopped';
+        record.stoppedAt = now;
+      }
     },
     strict: true,
   });
