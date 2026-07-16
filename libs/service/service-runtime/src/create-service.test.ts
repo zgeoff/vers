@@ -2,11 +2,12 @@ import { expect, onTestFinished, spyOn, test } from 'bun:test';
 import { implement } from '@orpc/server';
 import { authedRoute, publicRoute } from '@vers/contract-base';
 import { createServiceToken, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient, collectConformanceCases } from '@vers/test-utils';
+import { buildRPCTestClient, collectConformanceCases, waitFor } from '@vers/test-utils';
 import { updateEnv } from '@vers/test-utils/bun';
 import { expectTypeOf } from 'expect-type';
 import * as z from 'zod';
 import { createService } from './create-service';
+import { sentryHandle } from './sentry-handle';
 import type { ServiceContext } from './types';
 
 function buildTestContract() {
@@ -447,6 +448,59 @@ test('it masks an unexpected handler error as a bare INTERNAL_SERVER_ERROR', asy
     code: 'INTERNAL_SERVER_ERROR',
     message: 'Internal server error',
     status: 500,
+  });
+});
+
+interface FakeSentryScope {
+  readonly setTag: () => void;
+}
+
+test('it reports an unexpected handler error to the error backend exactly once', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+  delete process.env['SENTRY_DSN'];
+  const contract = buildTestContract();
+  const previousHandle = sentryHandle.current;
+  const reported: Array<unknown> = [];
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
+
+  // no SENTRY_DSN is set, so createService's own `startErrorReporting` call below no-ops and
+  // never overwrites this stub — the only two calls `reportUnexpectedError` makes
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a hand-built stub exposing only the two calls reportUnexpectedError makes; a real SentryModule handle isn't buildable inline
+  sentryHandle.current = {
+    captureException: (error: unknown) => {
+      reported.push(error);
+    },
+    withScope: (fn: (scope: Readonly<FakeSentryScope>) => void) => {
+      fn({ setTag: () => {} });
+    },
+  } as unknown as NonNullable<typeof sentryHandle.current>;
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  expect(client.throwPlainError({})).rejects.toMatchObject({
+    code: 'INTERNAL_SERVER_ERROR',
+  });
+
+  await waitFor(() => {
+    expect(reported).toHaveLength(1);
   });
 });
 

@@ -3,7 +3,7 @@ import { ORPCError, onError } from '@orpc/server';
 import type { FetchHandler } from '@orpc/server/fetch';
 import { RPCHandler } from '@orpc/server/fetch';
 import { TOKEN_ALGORITHM, parseServiceToken } from '@vers/service-auth';
-import { findTraceContext, withTraceContext } from '@vers/service-utils';
+import { withTraceContext } from '@vers/service-utils';
 import type { MetricsExport, OTLPLogStream } from '@vers/service-utils/otel';
 import type { TraceContext } from '@vers/trace';
 import { createTraceContext, parseTraceparent } from '@vers/trace';
@@ -14,6 +14,8 @@ import type pino from 'pino';
 import * as z from 'zod';
 import { BASE_ENV_SCHEMA } from './base-env-schema';
 import { createLogger } from './create-logger';
+import { reportUnexpectedError } from './report-unexpected-error';
+import { startErrorReporting } from './start-error-reporting';
 import type { ServiceContext } from './types';
 
 type ServiceEnv<TEnvShape extends z.ZodRawShape> = z.infer<typeof BASE_ENV_SCHEMA> &
@@ -64,8 +66,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
 
   const publicKey = await jose.importSPKI(env.SERVICE_AUTH_PUBLIC_KEY, TOKEN_ALGORITHM);
 
-  const reportError =
-    env.SENTRY_DSN === undefined ? undefined : await createErrorReporter(env.SENTRY_DSN);
+  await startErrorReporting(env.SENTRY_DSN);
 
   const router = await config.buildRouter({ env, logger });
 
@@ -106,7 +107,8 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
         }
 
         logger.error({ err: thrown }, 'unexpected service error');
-        reportError?.(thrown);
+
+        reportUnexpectedError(thrown);
       }),
     ],
   });
@@ -170,37 +172,6 @@ async function createLogShipper(serviceName: string): Promise<OTLPLogStream> {
   const otelModule = await import('@vers/service-utils/otel');
 
   return otelModule.createOTLPLogStream({ serviceName });
-}
-
-/**
- * Initializes the Sentry SDK and returns the reporting function the error interceptor calls. The
- * SDK is the only path to the error backend — pino stays a log-only sink — so one error is never
- * shipped twice. Trace ids ride along as an event tag, linking reports to log lines.
- */
-async function createErrorReporter(dsn: string): Promise<(error: unknown) => void> {
-  const sentry = await import('@sentry/bun');
-
-  // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes.
-  // Client reports are off: the error backend discards them, and their 60s flush keeps
-  // otherwise idle infrastructure awake.
-  sentry.init({
-    dsn,
-    dataCollection: { userInfo: true },
-    tracesSampleRate: 0,
-    sendClientReports: false,
-  });
-
-  return (error) => {
-    sentry.withScope((scope) => {
-      const trace = findTraceContext();
-
-      if (trace !== undefined) {
-        scope.setTag('traceID', trace.traceID);
-      }
-
-      sentry.captureException(error);
-    });
-  };
 }
 
 /**
