@@ -3,10 +3,10 @@ import { setResyncStatus, useResyncStatus } from '@vers/idle-client';
 import type { ResyncStatus } from '@vers/idle-client';
 
 /**
- * Masks the offline catch-up after an away-and-return: it opens the moment a resync starts,
- * reports attempts and level-ups as the fast-forward lands them, and stays up with the final
- * tally (or the cap notice) until dismissed. It never renders over a live simulation — only a
- * resync drives its store.
+ * Masks the offline catch-up after an away-and-return: it opens the moment a resync starts
+ * fast-forwarding a real away period, reports attempts and level-ups as they land, and stays up
+ * with the final tally (or the cap notice) until dismissed. A resync with no away period to
+ * report — a fresh login, a zero-gap reconnect — broadcasts no status, so it never opens this.
  */
 export function WelcomeBackModal() {
   const resyncStatus = useResyncStatus();
@@ -31,10 +31,6 @@ export function WelcomeBackModal() {
 }
 
 function formatResyncStatus(resyncStatus: Readonly<ResyncStatus>): string {
-  if (resyncStatus.kind === 'checking') {
-    return 'Checking your progress…';
-  }
-
   if (resyncStatus.kind === 'capped') {
     return 'Offline progress reached its cap. Your avatar held position — jump back in to continue.';
   }

@@ -30,7 +30,7 @@ function setupTest(
   return { connection, context };
 }
 
-test('it resolves to done with zero tallies for an avatar with no activity history', async () => {
+test('it broadcasts nothing for an avatar with no activity history', async () => {
   server.use(
     mockActivityService.getLatestActivityProgress.handler((opts) => {
       throw opts.errors.NOT_FOUND({ data: {} });
@@ -46,13 +46,11 @@ test('it resolves to done with zero tallies for an avatar with no activity histo
 
   await handleRequestResyncMessage(ctx.context, message);
 
-  await ctx.connection.waitForMessages(2);
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
 
-  expect(ctx.connection.received).toStrictEqual([
-    { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
-    { status: { attempts: 0, kind: 'done', levelUps: 0 }, type: WorkerMessageType.ResyncStatus },
-  ]);
-
+  expect(ctx.connection.received).toStrictEqual([]);
   expect(ctx.context.getSimulation()).toBeNull();
 });
 
@@ -78,10 +76,9 @@ test('it broadcasts capped and installs no simulation for a capped activity', as
 
   await handleRequestResyncMessage(ctx.context, message);
 
-  await ctx.connection.waitForMessages(2);
+  await ctx.connection.waitForMessages(1);
 
   expect(ctx.connection.received).toStrictEqual([
-    { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
     { status: { kind: 'capped' }, type: WorkerMessageType.ResyncStatus },
   ]);
 
@@ -144,12 +141,11 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
 
   await handleRequestResyncMessage(ctx.context, message);
 
-  await ctx.connection.waitForMessages(2);
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
 
-  expect(ctx.connection.received).toStrictEqual([
-    { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
-    { status: { attempts: 0, kind: 'done', levelUps: 0 }, type: WorkerMessageType.ResyncStatus },
-  ]);
+  expect(ctx.connection.received).toStrictEqual([]);
 
   const simulation = ctx.context.getSimulation();
 
@@ -196,16 +192,14 @@ test('it reports a divergence via the checkpoint-stream-error channel and skips 
 
   await handleRequestResyncMessage(ctx.context, message);
 
-  await ctx.connection.waitForMessages(3);
+  await ctx.connection.waitForMessages(1);
 
   expect(ctx.connection.received).toStrictEqual([
-    { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
     {
       activityID: activity.id,
       reason: 'reconstruction-divergence',
       type: WorkerMessageType.CheckpointStreamInvalid,
     },
-    { status: { attempts: 0, kind: 'done', levelUps: 0 }, type: WorkerMessageType.ResyncStatus },
   ]);
 
   expect(ctx.context.getSimulation()).toBeNull();
@@ -276,7 +270,10 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
   await ctx.connection.waitForMessages(3);
 
   expect(ctx.connection.received).toStrictEqual([
-    { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
+    {
+      status: { attempts: 0, kind: 'fast-forwarding', levelUps: 0 },
+      type: WorkerMessageType.ResyncStatus,
+    },
     {
       status: { attempts: 1, kind: 'fast-forwarding', levelUps: 1 },
       type: WorkerMessageType.ResyncStatus,
@@ -367,7 +364,10 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
   await ctx.connection.waitForMessages(2);
 
   expect(ctx.connection.received).toStrictEqual([
-    { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
+    {
+      status: { attempts: 0, kind: 'fast-forwarding', levelUps: 0 },
+      type: WorkerMessageType.ResyncStatus,
+    },
     { status: { attempts: 0, kind: 'done', levelUps: 0 }, type: WorkerMessageType.ResyncStatus },
   ]);
 
@@ -391,4 +391,38 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
   // the started checkpoint's own nextSeed, not the activity row's start seed — proves the
   // registered cursor chains onto the reconstruction, not a fresh checkpoint-0 sim
   expect(submittedSeeds).toStrictEqual(['525ac5e6a97591b0a1877a6606b22d9c']);
+});
+
+test('it attaches a fresh login live without broadcasting any catch-up status', async () => {
+  const activity = createMockActivityData({ appendedHead: 0, startedAt: new Date() });
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      activity,
+      anchor: null,
+      appendedHead: 0,
+      serverTime: new Date(),
+      verifiedHead: 0,
+    })),
+  );
+
+  const ctx = setupTest();
+
+  const message: RequestResyncMessage = {
+    avatarID: activity.avatarID,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+
+  expect(ctx.connection.received).toStrictEqual([]);
+
+  const simulation = ctx.context.getSimulation();
+
+  invariant(simulation !== null, 'expected the resync to install a live simulation');
+  expect(simulation.activity?.id).toBe(activity.id);
 });
