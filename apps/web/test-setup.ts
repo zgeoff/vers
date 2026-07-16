@@ -15,6 +15,10 @@ import { registerWorldmapSceneMock } from './src/test-utils/register-worldmap-sc
 
 process.env['SESSION_SECRET'] = 'test-session-secret-test-session-secret';
 
+// a resolvable Tinybird config so ingest suites observe the delivery path over MSW
+process.env['TINYBIRD_URL'] = 'https://tinybird.test';
+process.env['TINYBIRD_INGEST_TOKEN'] = 'test-tinybird-ingest-token';
+
 // a throwaway dev-only Ed25519 PKCS8 key, so the edge can mint s2s tokens under `bun test`
 process.env['SERVICE_AUTH_PRIVATE_KEY'] = `-----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VwBCIEIBMom57erggdVdDCIdRWS+NKMykK+I5BUKpuHziAq+0W

@@ -6,6 +6,7 @@ test('it builds the empty sync state', () => {
     checkpointFlushStall: null,
     checkpointStreamError: null,
     connectionOnline: null,
+    lastCompletedActivityID: null,
     offlineCapStatus: null,
     resyncStatus: null,
     rewardSlotLedger: [],

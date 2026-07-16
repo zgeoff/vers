@@ -3,6 +3,7 @@ export { avatarCollection } from './avatar-collection';
 export { avatarItemCollection } from './avatar-item-collection';
 export { checkpointCollection } from './checkpoint-collection';
 export { pendingTransactionCollection } from './pending-transaction-collection';
+export { productEventCollection } from './product-event-collection';
 export { sentEmailCollection } from './sent-email-collection';
 export { sessionCollection } from './session-collection';
 export { usedTransactionTokenCollection } from './used-transaction-token-collection';

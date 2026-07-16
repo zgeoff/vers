@@ -43,6 +43,7 @@
     "@vers/idle-core": "workspace:*",
     "@vers/mock-services": "workspace:*",
     "@vers/panda-preset": "workspace:*",
+    "@vers/product-analytics": "workspace:*",
     "@vers/service-auth": "workspace:*",
     "@vers/service-utils": "workspace:*",
     "@vers/styled-system": "workspace:*",

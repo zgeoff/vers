@@ -29,15 +29,15 @@ and mesh traffic is already encrypted, so services set `force_https = false`.
 Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.toml` or Dockerfile.
 Secrets are set with `fly secrets set` and never committed.
 
-| App                                                                          | Secrets                                                               |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `service-activity`, `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`                             |
-| `service-session`                                                            | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY`                   |
-| `service-replay`                                                             | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`, `SERVICE_AUTH_PRIVATE_KEY` |
-| `service-keys`                                                               | `ROLL_KEY_ROOTS`, `SERVICE_AUTH_PUBLIC_KEY`                           |
-| `app-web`                                                                    | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY`         |
-| `vers-bugsink`                                                               | `SECRET_KEY`, `DATABASE_URL`, `CREATE_SUPERUSER` (first boot)         |
-| `vers-umami`                                                                 | `APP_SECRET`, `DATABASE_URL`                                          |
+| App                                                                          | Secrets                                                                                                |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `service-activity`, `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`                                                              |
+| `service-session`                                                            | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY`                                                    |
+| `service-replay`                                                             | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`, `SERVICE_AUTH_PRIVATE_KEY`                                  |
+| `service-keys`                                                               | `ROLL_KEY_ROOTS`, `SERVICE_AUTH_PUBLIC_KEY`                                                            |
+| `app-web`                                                                    | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY`, `TINYBIRD_URL`, `TINYBIRD_INGEST_TOKEN` |
+| `vers-bugsink`                                                               | `SECRET_KEY`, `DATABASE_URL`, `CREATE_SUPERUSER` (first boot)                                          |
+| `vers-umami`                                                                 | `APP_SECRET`, `DATABASE_URL`                                                                           |
 
 - `SERVICE_AUTH_PUBLIC_KEY` — Ed25519 SPKI public key a service verifies inbound calls with.
 - `SERVICE_AUTH_PRIVATE_KEY` — its PKCS8 private half, held by the callers that sign outbound s2s
@@ -49,6 +49,9 @@ Secrets are set with `fly secrets set` and never committed.
 - `JWT_SIGNING_PRIVKEY` — RS256 PKCS8 private key `service-session` signs user tokens with, under
   issuer and audience `API_IDENTIFIER`.
 - `SESSION_SECRET` — seals `app-web`'s cookies.
+- `TINYBIRD_URL` / `TINYBIRD_INGEST_TOKEN` — the product-analytics Events API origin and a token
+  scoped to append on the `product_events` data source; either one absent disables product-event
+  delivery.
 - `ROLL_KEY_ROOTS` — JSON payload of avatar roll-key root secrets, one entry per population, each
   holding its current key version and every hex-encoded root version `service-keys` still derives
   against.
@@ -265,10 +268,15 @@ fly secrets set -a vers-service-replay \
 fly secrets set -a vers-app-web \
   SESSION_SECRET="$(openssl rand -base64 32)" \
   COOKIE_DOMAIN="$DOMAIN" \
-  SERVICE_AUTH_PRIVATE_KEY="$(cat s2s.key)"
+  SERVICE_AUTH_PRIVATE_KEY="$(cat s2s.key)" \
+  TINYBIRD_URL="$TINYBIRD_URL" \
+  TINYBIRD_INGEST_TOKEN="$TINYBIRD_INGEST_TOKEN"
 
 rm s2s.key s2s.pub session.key
 ```
+
+The Tinybird pair — the Events API origin and the `product_events` append token — comes from the
+`tinybird` item in the `vers` 1Password vault.
 
 Stand up the error tracker. The first deploy is by hand; CI redeploys it on later config changes.
 `--ha=false` keeps the app to one machine — Fly otherwise creates a pair on first deploy. The admin

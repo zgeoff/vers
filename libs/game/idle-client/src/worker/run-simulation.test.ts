@@ -17,6 +17,7 @@ import type { CheckpointSubmitter } from '../submission/create-checkpoint-submit
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
+import { WorkerMessageType } from '../types';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
 
@@ -426,4 +427,56 @@ test('it never broadcasts a ledger message for a checkpoint the submitter droppe
   );
 
   expect(rewardMessages).toStrictEqual([]);
+});
+
+test('it broadcasts an activity completed message when an activity completes', async () => {
+  const connection = createTestConnection();
+
+  const context = createStubWorkerContext({
+    connections: [connection.port],
+    remainingBudgetMs: 0,
+  });
+
+  const simulation = createSimulation();
+  const avatar = createMockAvatarData();
+  const activity = createMockActivityInput({ enemies: [createMockEnemyData()] });
+
+  simulation.startActivity(avatar, activity);
+
+  await runSimulationSteps(context, simulation, 100, 700);
+
+  await connection.waitForMessages(1);
+
+  const completedMessages = connection.received.filter(
+    (message) => message.type === WorkerMessageType.ActivityCompleted,
+  );
+
+  expect(completedMessages).toStrictEqual([
+    { activityID: activity.id, type: WorkerMessageType.ActivityCompleted },
+  ]);
+});
+
+test('it never broadcasts an activity completed message for a failed activity', async () => {
+  const connection = createTestConnection();
+  const context = createStubWorkerContext({ connections: [connection.port] });
+  const simulation = createSimulation();
+
+  // life of 1 dies on the very first hit taken, forcing a failed checkpoint
+  const avatar = createMockAvatarData({ life: 1 });
+  const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Abort });
+
+  simulation.startActivity(avatar, activity);
+
+  await runSimulationSteps(context, simulation, 100, 50);
+
+  // MessagePort delivery is a queued task; yield once so every broadcast lands
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+
+  const completedMessages = connection.received.filter(
+    (message) => message.type === WorkerMessageType.ActivityCompleted,
+  );
+
+  expect(completedMessages).toStrictEqual([]);
 });

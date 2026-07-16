@@ -68,6 +68,7 @@
         "@vers/idle-core": "workspace:*",
         "@vers/mock-services": "workspace:*",
         "@vers/panda-preset": "workspace:*",
+        "@vers/product-analytics": "workspace:*",
         "@vers/service-auth": "workspace:*",
         "@vers/service-utils": "workspace:*",
         "@vers/styled-system": "workspace:*",
@@ -640,6 +641,18 @@
         "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "pg": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "libs/service/product-analytics": {
+      "name": "@vers/product-analytics",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "msw": "catalog:",
         "typescript": "catalog:",
       },
     },
@@ -2473,6 +2486,8 @@
     "@vers/mock-services": ["@vers/mock-services@workspace:libs/testing/mock-services"],
 
     "@vers/panda-preset": ["@vers/panda-preset@workspace:libs/design/panda-preset"],
+
+    "@vers/product-analytics": ["@vers/product-analytics@workspace:libs/service/product-analytics"],
 
     "@vers/roll-crypto": ["@vers/roll-crypto@workspace:libs/game/roll-crypto"],
 

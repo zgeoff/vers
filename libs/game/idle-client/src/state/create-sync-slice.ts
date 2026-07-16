@@ -16,6 +16,12 @@ export interface SyncSlice {
    */
   connectionOnline: boolean | null;
 
+  /**
+   * The activity the worker most recently reported completed; completion is terminal per activity
+   * id, so every change is a fresh completion.
+   */
+  lastCompletedActivityID: null | string;
+
   offlineCapStatus: null | OfflineCapStatus;
   resyncStatus: null | ResyncStatus;
   rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry>;
@@ -32,6 +38,7 @@ export function createSyncSlice(): SyncSlice {
     checkpointFlushStall: null,
     checkpointStreamError: null,
     connectionOnline: null,
+    lastCompletedActivityID: null,
     offlineCapStatus: null,
     resyncStatus: null,
     rewardSlotLedger: [],

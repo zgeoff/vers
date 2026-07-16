@@ -15,6 +15,7 @@ import { sendIdleSetActivity } from '../../lib/idle/send-idle-set-activity';
 import { sendIdleSetFailureAction } from '../../lib/idle/send-idle-set-failure-action';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { useIsSharedWorkerSupported } from '../../lib/platform/use-is-shared-worker-supported';
+import { emitProductEvent } from '../../lib/product-events/emit-product-event';
 import { activityClient } from '../../lib/rpc/clients/activity-client';
 import type { OrpcQueryUtils } from '../../lib/rpc/orpc';
 import { ActivityRewardsPanel } from './activity-rewards-panel';
@@ -54,6 +55,20 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     selectedScopeIDRef.current = selectedNode?.id;
   }, [selectedNode]);
 
+  // the exploration commits when the encounter view opens for a node — independent of worker
+  // readiness, and a retried failed start on the same node never re-reports it
+  const lastExploredNodeID = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (selectedNode === null || lastExploredNodeID.current === selectedNode.id) {
+      return;
+    }
+
+    lastExploredNodeID.current = selectedNode.id;
+
+    emitProductEvent('node_explored', { nodeID: selectedNode.id });
+  }, [selectedNode]);
+
   const isActivityReady =
     attempt?.activityID !== undefined &&
     attempt.scopeID === selectedNode?.id &&
@@ -68,6 +83,12 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
       ),
     onSuccess: (outcome) => {
       const scopeID = outcome.kind === 'attach' ? outcome.scopeID : outcome.activity.scopeID;
+
+      // the service confirmed this start even when the player has already moved on, so it reports
+      // before the stale-selection guard; an attach resumes a start that already reported
+      if (outcome.kind === 'started') {
+        emitProductEvent('activity_started', { activityID: outcome.activity.id, nodeID: scopeID });
+      }
 
       // a selection change while the request was in flight makes this outcome stale
       if (idleWorkerHandle.worker === undefined || scopeID !== selectedNode?.id) {

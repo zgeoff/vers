@@ -27,6 +27,7 @@ export { useAvatar } from './state/use-avatar';
 export { useCheckpointFlushStall } from './state/use-checkpoint-flush-stall';
 export { useCheckpointStreamError } from './state/use-checkpoint-stream-error';
 export { useFailureAction } from './state/use-failure-action';
+export { useLastCompletedActivityID } from './state/use-last-completed-activity-id';
 export { useRewardSlotLedger } from './state/use-reward-slot-ledger';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
 export type { ActivitySubmissionContext } from './submission/types';

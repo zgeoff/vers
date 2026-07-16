@@ -7,6 +7,13 @@ import { activeAvatarQueryOptions } from '../../lib/avatar/active-avatar-query-o
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
 import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
+import { emitProductEvent } from '../../lib/product-events/emit-product-event';
+
+// page-lifetime analytics guards, deliberately outside the component: the game layout unmounts on
+// account-screen visits, and remounting must neither repeat a session start nor swallow a
+// completion the worker reported while unmounted
+let hasSentSessionStart = false;
+let lastEmittedCompletionID: string | undefined;
 
 /**
  * Renders nothing: a side-effect-only sibling to the game layout's outlet, so it returns null by
@@ -84,6 +91,35 @@ export function GameSimulationMount() {
 
     sendIdleRequestResync(idleWorkerHandle.worker, avatarID);
   }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID]);
+
+  // fires once per page load under the same gate as the resync: a live worker and a known avatar
+  // is the point the player is actually in the game
+  useEffect(() => {
+    if (
+      idleWorkerHandle.worker === undefined ||
+      !idleWorkerHandle.initialized ||
+      avatarID === undefined ||
+      hasSentSessionStart
+    ) {
+      return;
+    }
+
+    hasSentSessionStart = true;
+
+    emitProductEvent('session_started', {});
+  }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID]);
+
+  useEffect(() => {
+    const completedActivityID = idleWorkerHandle.lastCompletedActivityID;
+
+    if (completedActivityID === undefined || lastEmittedCompletionID === completedActivityID) {
+      return;
+    }
+
+    lastEmittedCompletionID = completedActivityID;
+
+    emitProductEvent('activity_completed', { activityID: completedActivityID });
+  }, [idleWorkerHandle.lastCompletedActivityID]);
 
   // the tab relays connectivity to the worker: Chromium never fires online events inside a
   // SharedWorker, so this is the reconnect trigger there. The worker single-flights concurrent

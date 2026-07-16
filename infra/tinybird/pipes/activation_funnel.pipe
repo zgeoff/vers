@@ -1,0 +1,32 @@
+TOKEN product_analytics_read READ
+
+DESCRIPTION >
+    Activation funnel: distinct users reaching each stage in order — session started, first
+    activity started, first activity completed — inside the requested window. windowFunnel counts
+    any correctly ordered sequence, so an out-of-order stray event never disqualifies a user.
+
+NODE user_funnel_levels
+SQL >
+    %
+    SELECT
+        user_id,
+        windowFunnel({{ Int32(window_seconds, 2592000) }})(
+            timestamp,
+            event_name = 'session_started',
+            event_name = 'activity_started',
+            event_name = 'activity_completed'
+        ) AS level
+    FROM product_events
+    WHERE timestamp >= {{ DateTime(start_date, '2026-01-01 00:00:00') }}
+        AND timestamp < {{ DateTime(end_date, '2100-01-01 00:00:00') }}
+    GROUP BY user_id
+
+NODE funnel
+SQL >
+    SELECT
+        countIf(level >= 1) AS session_started_users,
+        countIf(level >= 2) AS activity_started_users,
+        countIf(level >= 3) AS activity_completed_users
+    FROM user_funnel_levels
+
+TYPE ENDPOINT

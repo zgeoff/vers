@@ -362,6 +362,22 @@ Analytics events carry no PII and no user or avatar keys — data that would be 
 belongs in the product-analytics stream instead. Boundaries and privacy stance:
 `docs/architecture/analytics.md`.
 
+Tinybird carries the behavioural product-event stream. A game flow whose outcome feeds funnels,
+retention, or progression analysis fires a curated event through `emitProductEvent`
+(`apps/web/src/lib/product-events/emit-product-event.ts`) — weigh this when building or reshaping
+game flows. Mechanics and the event registry live in `docs/architecture/analytics.md`; the rules a
+PR must satisfy:
+
+- Event names are snake_case `noun_pastparticiple` (`activity_started`); properties are ids of the
+  entities the event is about. Identity is stamped server-side from the caller's session — a client
+  payload never carries user or session keys.
+- A new event lands with its entry in the `@vers/product-analytics` registry types, its arm in
+  app-web's ingest schema, any new column in `infra/tinybird/datasources/product_events.datasource`,
+  and its row in the `docs/architecture/analytics.md` registry table — all in the same PR.
+- Emission is fire-and-forget through `emitProductEvent`: never await it, never gate a flow on it,
+  and fire only for something that has already happened — a service response, a worker broadcast, a
+  completed client transition — never for intent.
+
 ## Postgres access (MCP)
 
 The `postgres` MCP server exposes production and dev sources; mechanics and provisioning live in
