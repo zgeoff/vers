@@ -112,7 +112,7 @@ on, and appears in three places: every pino log line the request writes (an
 every service response. A trace id from an error screen or a support report greps straight to the
 logs and the event.
 
-- The browser mints a fresh `traceparent` per RPC call (`createTraceparent`, app-web).
+- The browser mints a fresh `traceparent` per RPC call from the `@vers/trace` primitives.
 - app-web's server-side service links continue the ambient request's trace when it carries one and
   start a fresh trace otherwise; the browser-lane RPC proxy forwards headers wholesale, so browser
   traces pass through untouched.
