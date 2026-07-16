@@ -21,6 +21,10 @@ processes = ['app']
 BASE_URL = 'https://vers-bugsink.fly.dev'
 BEHIND_HTTPS_PROXY = 'True'
 SINGLE_USER = 'True'
+# Alert email goes out through Resend SMTP; EMAIL_HOST_PASSWORD (the API key) is a secret.
+EMAIL_HOST = 'smtp.resend.com'
+EMAIL_HOST_USER = 'resend'
+DEFAULT_FROM_EMAIL = 'Bugsink <noreply@transactional.versidle.com>'
 
 [[vm]]
 memory = '512mb'
