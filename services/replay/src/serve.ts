@@ -36,17 +36,24 @@ process.on('SIGTERM', () => {
 });
 
 async function handleSIGTERM(): Promise<void> {
-  try {
-    await withTraceContext(createTraceContext(), stopGracefully);
-  } catch (error) {
-    service.logger.error({ err: error }, 'graceful shutdown failed');
+  // the try/catch lives inside the trace scope so a shutdown report still carries its trace id
+  await withTraceContext(createTraceContext(), async () => {
+    try {
+      await stopGracefully();
+    } catch (error) {
+      service.logger.error({ err: error }, 'graceful shutdown failed');
 
-    reportUnexpectedError(error);
+      reportUnexpectedError(error);
 
-    await flushErrorReports();
+      const flushed = await flushErrorReports();
 
-    process.exit(1);
-  }
+      if (!flushed) {
+        service.logger.warn('error reports were still queued when the flush timed out');
+      }
+
+      process.exit(1);
+    }
+  });
 }
 
 /**

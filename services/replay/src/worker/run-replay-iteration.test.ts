@@ -6,7 +6,7 @@ import { buildStateFromSeed } from '@vers/game-utils';
 import { buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
 import { resolveServiceURL } from '@vers/mock-services';
-import { sentryHandle, startErrorReporting } from '@vers/service-runtime';
+import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { withTraceContext } from '@vers/service-utils';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
@@ -732,10 +732,10 @@ test('it reports an iteration failure exactly once when a frontier was claimed',
 
   const cache = createReplayCache();
   const recorded: Array<Readonly<ErrorEvent>> = [];
-  const previousHandle = sentryHandle.current;
+  const previousHandle = setSentryHandleForTesting(undefined);
 
   onTestFinished(() => {
-    sentryHandle.current = previousHandle;
+    setSentryHandleForTesting(previousHandle);
   });
 
   await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {

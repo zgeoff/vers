@@ -5,7 +5,7 @@ import { createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
 import { HttpResponse, http } from 'msw';
 import { createEmailJobQueue } from './create-email-job-queue';
 
-test('it invokes the passed-through onJobFailed when a send job fails', async () => {
+test('it reports a failed email delivery to the failure callback', async () => {
   const connectionString = await createDatabaseFromTemplate();
 
   server.use(

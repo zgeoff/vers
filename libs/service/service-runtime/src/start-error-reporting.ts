@@ -38,7 +38,11 @@ export async function startErrorReporting(
 
   sentry.init({
     dsn,
-    dataCollection: { userInfo: true },
+
+    // an explicit `dataCollection` makes the SDK's spec defaults the base, which collect every
+    // HTTP body type — and a failed request's body can carry credentials or tokens, so body
+    // capture is switched off wholesale
+    dataCollection: { httpBodies: [], userInfo: true },
     tracesSampleRate: 0,
     sendClientReports: false,
     ...(options.beforeSend !== undefined && { beforeSend: options.beforeSend }),

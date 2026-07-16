@@ -26,8 +26,9 @@ const logger = createLogger({ level: env.LOG_LEVEL, name: 'service-email-sweep' 
 // no later request nudged it) still lands within the hour
 await startErrorReporting(env.SENTRY_DSN);
 
-try {
-  await withTraceContext(createTraceContext(), async () => {
+// the try/catch lives inside the trace scope so a failure report still carries the run's trace id
+await withTraceContext(createTraceContext(), async () => {
+  try {
     const queue = createEmailJobQueue({
       connectionString: env.DATABASE_URL,
       emailClient: createEmailClient({ apiKey: env.RESEND_API_KEY, from: env.EMAIL_FROM }),
@@ -52,15 +53,27 @@ try {
     logger.info(result, 'swept the email queue');
 
     await queue.stop();
-  });
 
-  process.exit(0);
-} catch (error) {
-  logger.error({ err: error }, 'email sweep failed');
+    // reports captured during a successful drain (a per-job failure, a queue fault) still need
+    // delivery before the process dies
+    const flushed = await flushErrorReports();
 
-  reportUnexpectedError(error);
+    if (!flushed) {
+      logger.warn('error reports were still queued when the flush timed out');
+    }
 
-  await flushErrorReports();
+    process.exit(0);
+  } catch (error) {
+    logger.error({ err: error }, 'email sweep failed');
 
-  process.exit(1);
-}
+    reportUnexpectedError(error);
+
+    const flushed = await flushErrorReports();
+
+    if (!flushed) {
+      logger.warn('error reports were still queued when the flush timed out');
+    }
+
+    process.exit(1);
+  }
+});

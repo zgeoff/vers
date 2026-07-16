@@ -57,8 +57,9 @@ export interface CreateEmailJobQueueConfig {
   readonly onError?: (error: Error) => void;
 
   /**
-   * Called for every failed job delivery with its cause; defaults to `@vers/jobs`'s own
-   * `console.error` fallback when omitted.
+   * Called with every failed delivery's cause — a handler throw, a stored payload that no longer
+   * parses against its job's schema, or a completion-step rejection; defaults to `@vers/jobs`'s
+   * own `console.error` fallback when omitted.
    */
   readonly onJobFailed?: (error: unknown, context: Readonly<JobFailureContext>) => void;
 }

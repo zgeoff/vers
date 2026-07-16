@@ -1,19 +1,23 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { flushErrorReports } from './flush-error-reports';
-import { sentryHandle } from './sentry-handle';
+import { setSentryHandleForTesting } from './set-sentry-handle-for-testing';
 import { startErrorReporting } from './start-error-reporting';
 
-test('it resolves without starting the SDK when reporting was never started', async () => {
-  expect(sentryHandle.current).toBeUndefined();
-
-  await expect(flushErrorReports()).toResolve();
-});
-
-test('it resolves once every queued report is delivered', async () => {
-  const previousHandle = sentryHandle.current;
+test('it resolves true without starting the SDK when reporting was never started', () => {
+  const previousHandle = setSentryHandleForTesting(undefined);
 
   onTestFinished(() => {
-    sentryHandle.current = previousHandle;
+    setSentryHandleForTesting(previousHandle);
+  });
+
+  expect(flushErrorReports()).resolves.toBe(true);
+});
+
+test('it resolves true once every queued report is delivered', async () => {
+  const previousHandle = setSentryHandleForTesting(undefined);
+
+  onTestFinished(() => {
+    setSentryHandleForTesting(previousHandle);
   });
 
   await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
@@ -21,5 +25,5 @@ test('it resolves once every queued report is delivered', async () => {
     disableDefaultIntegrations: true,
   });
 
-  await expect(flushErrorReports()).toResolve();
+  expect(flushErrorReports()).resolves.toBe(true);
 });

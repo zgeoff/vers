@@ -243,13 +243,17 @@ function runJob(
     const parsed = def.schema.safeParse(job.data);
 
     if (!parsed.success) {
-      await boss.fail(queueName, job.id);
+      // reported before the fail round-trip so a rejecting `fail` can never mask the cause
+      onJobFailed(
+        new Error(`job "${queueName}" payload failed schema validation`, { cause: parsed.error }),
+        {
+          jobID: job.id,
+          name: queueName,
+          retriesExhausted: isRetriesExhausted(job),
+        },
+      );
 
-      onJobFailed(new Error(`job "${queueName}" payload failed schema validation`), {
-        jobID: job.id,
-        name: queueName,
-        retriesExhausted: isRetriesExhausted(job),
-      });
+      await boss.fail(queueName, job.id);
 
       return 'failed';
     }
@@ -261,13 +265,14 @@ function runJob(
 
       return 'completed';
     } catch (error) {
-      await boss.fail(queueName, job.id);
-
+      // reported before the fail round-trip so a rejecting `fail` can never mask the cause
       onJobFailed(error, {
         jobID: job.id,
         name: queueName,
         retriesExhausted: isRetriesExhausted(job),
       });
+
+      await boss.fail(queueName, job.id);
 
       return 'failed';
     }

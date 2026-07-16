@@ -4,7 +4,7 @@ export { createService } from './create-service';
 export type { Service, ServiceConfig } from './create-service';
 export { flushErrorReports } from './flush-error-reports';
 export { reportUnexpectedError } from './report-unexpected-error';
-export { sentryHandle } from './sentry-handle';
+export { setSentryHandleForTesting } from './set-sentry-handle-for-testing';
 export { startErrorReporting } from './start-error-reporting';
 export type { StartErrorReportingOptions } from './start-error-reporting';
 export type { ServiceContext } from './types';

@@ -1,6 +1,7 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
 import { findTraceContext } from '@vers/service-utils';
+import { waitFor } from '@vers/test-utils';
 import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
 import invariant from 'tiny-invariant';
@@ -339,11 +340,15 @@ test('it invokes onJobFailed with retriesExhausted reflecting whether this attem
 
   await queue.drain();
 
-  await new Promise((resolve) => {
-    setTimeout(resolve, 1500);
-  });
+  // the failed job sits out its one-second retry delay before a drain can fetch it again
+  await waitFor(
+    async () => {
+      await queue.drain();
 
-  await queue.drain();
+      expect(failures).toHaveLength(2);
+    },
+    { timeoutMs: 5000 },
+  );
 
   expect(failures).toStrictEqual([
     { jobID, name: 'email', retriesExhausted: false },

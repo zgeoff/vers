@@ -458,8 +458,9 @@ interface FakeSentryScope {
 test('it reports an unexpected handler error to the error backend exactly once', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
-  delete process.env['SENTRY_DSN'];
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
+  updateEnv('SENTRY_DSN', undefined);
+
   const contract = buildTestContract();
   const previousHandle = sentryHandle.current;
   const reported: Array<unknown> = [];

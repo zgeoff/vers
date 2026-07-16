@@ -111,10 +111,12 @@ What reports, by tier:
 | app-web client | `QueryCache`/`MutationCache` `onError`                                                                  | non-`ORPCError` failures (network, client bugs) — service errors were already reported by the service that produced them             |
 | app-web render | root route `errorComponent`                                                                             | render/loader errors nothing below caught                                                                                            |
 
-Every report carries a `traceID` event tag: the request's trace id for the RPC interceptor, and a
-fresh trace id scoping the individual unit of work — one worker iteration, one job's
-handle/complete/fail cycle, one drain, one sweep run — for a background report. The RPC path reports
-exactly once per unexpected throw.
+A service report carries a `traceID` event tag when the capture runs inside an active trace scope; a
+report emitted outside any scope, and every app-web capture, omits the tag. The RPC interceptor tags
+with the request's trace id. A background report — one worker iteration, one job's
+handle/complete/fail cycle, a boot drain, one sweep run — carries a fresh trace id scoping that unit
+of work, except that a request-triggered fire-and-forget drain inherits the originating request's
+trace. The RPC path reports exactly once per unexpected throw.
 
 ## Trace context
 

@@ -2,7 +2,7 @@ import { expect, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/bun';
 import { createDB } from '@vers/db';
 import { resolveServiceURL } from '@vers/mock-services';
-import { sentryHandle, startErrorReporting } from '@vers/service-runtime';
+import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { waitFor } from '@vers/test-utils';
 import pino from 'pino';
@@ -74,10 +74,10 @@ test('it reports an iteration failure carrying a trace id when no frontier was c
   const keyPair = await getTestServiceKeyPair();
 
   const recorded: Array<Readonly<ErrorEvent>> = [];
-  const previousHandle = sentryHandle.current;
+  const previousHandle = setSentryHandleForTesting(undefined);
 
   onTestFinished(() => {
-    sentryHandle.current = previousHandle;
+    setSentryHandleForTesting(previousHandle);
   });
 
   await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
@@ -97,12 +97,14 @@ test('it reports an iteration failure carrying a trace id when no frontier was c
     simVersion: 'test-engine-hash',
   });
 
+  onTestFinished(async () => {
+    await worker.stop();
+    await unreachableDB.destroy();
+  });
+
   await waitFor(() => {
     expect(recorded.length).toBeGreaterThan(0);
   });
-
-  await worker.stop();
-  await unreachableDB.destroy();
 
   expect(recorded[0]?.tags?.['traceID']).toMatch(/^[0-9a-f]{32}$/);
 });
