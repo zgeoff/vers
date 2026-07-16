@@ -129,6 +129,7 @@ Development:
 - Type Safety - [TypeScript](https://typescriptlang.org), [Zod](https://zod.dev)
 - Monitoring - [Bugsink](https://www.bugsink.com) (errors, Sentry protocol),
   [Axiom](https://axiom.co) (traces and logs via [OpenTelemetry](https://opentelemetry.io))
+- Analytics - [Umami](https://umami.is) (self-hosted web traffic and acquisition-funnel analytics)
 - Hosting - [Fly.io](https://fly.io) (compute), [Neon](https://neon.tech) (data)
 
 ## Projects
@@ -136,6 +137,7 @@ Development:
 Applications (`apps/`):
 
 - `apps/bugsink` - self-hosted error tracker, ingesting over the Sentry protocol
+- `apps/umami` - self-hosted web analytics, tracked through the web app's same-origin proxy
 - `apps/web` - TanStack Start web app; the trust edge and only public deployment
 - `apps/web-e2e` - e2e test suite for the web app
 

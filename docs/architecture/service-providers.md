@@ -26,7 +26,8 @@ the app owns the pipe, the provider owns one job.
 
 ## Analytics
 
-- **Umami** — web analytics, self-hosted. Traffic and page metrics for the web app.
+- **Umami** — web analytics, self-hosted on Fly (`apps/umami`). Traffic, acquisition, and funnel
+  metrics for the web app; the split against product analytics lives in [analytics](./analytics.md).
 - **Tinybird** — product analytics. Behavioural events land in managed ClickHouse and are served as
   SQL query endpoints.
 
