@@ -6,8 +6,8 @@ import { mockActivityService } from '@vers/mock-services/activity';
 import { HttpResponse } from 'msw';
 import { server } from '../mocks/node';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
-import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
-import type { WorkerMessage } from '../types';
+import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createTestConnection } from '../test-utils/create-test-connection';
 import { WorkerMessageType } from '../types';
 import { runContinuation } from './run-continuation';
 
@@ -25,7 +25,7 @@ test('it adopts a fresh server-started row for the same scope and registers from
   server.use(mockActivityService.startActivity.handler(() => startedActivity));
 
   const submitter = buildSpySubmitter();
-  const context = createMockWorkerContext({ submitter });
+  const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 
@@ -54,7 +54,7 @@ test('it adopts the CONFLICT payload row when one is already active for the scop
   );
 
   const submitter = buildSpySubmitter();
-  const context = createMockWorkerContext({ submitter });
+  const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 
@@ -76,18 +76,9 @@ test('it adopts the CONFLICT payload row when one is already active for the scop
 test('it stops the simulation and broadcasts offline on a transport failure', async () => {
   server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
 
-  const channel = new MessageChannel();
-
-  const received: Array<WorkerMessage> = [];
-
-  channel.port2.addEventListener('message', (event: MessageEvent<WorkerMessage>) => {
-    received.push(event.data);
-  });
-
-  channel.port2.start();
-
+  const connection = createTestConnection();
   const submitter = buildSpySubmitter();
-  const context = createMockWorkerContext({ connections: [channel.port1], submitter });
+  const context = createStubWorkerContext({ connections: [connection.port], submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 
@@ -98,11 +89,9 @@ test('it stops the simulation and broadcasts offline on a transport failure', as
   expect(simulation.activity).toBeNull();
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 
-  for (let attempt = 0; attempt < 200 && received.length === 0; attempt += 1) {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 1);
-    });
-  }
+  await connection.waitForMessages(1);
 
-  expect(received).toStrictEqual([{ online: false, type: WorkerMessageType.ConnectionStatus }]);
+  expect(connection.received).toStrictEqual([
+    { online: false, type: WorkerMessageType.ConnectionStatus },
+  ]);
 });

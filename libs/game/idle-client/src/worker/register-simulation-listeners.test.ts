@@ -2,22 +2,13 @@ import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { waitFor } from '@vers/test-utils';
-import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
-import type { WorkerMessage } from '../types';
+import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createTestConnection } from '../test-utils/create-test-connection';
 import { registerSimulationListeners } from './register-simulation-listeners';
 
 test('it broadcasts a simulation update once the installed simulation reports one', async () => {
-  const channel = new MessageChannel();
-
-  const received: Array<WorkerMessage> = [];
-
-  channel.port2.addEventListener('message', (event: MessageEvent<WorkerMessage>) => {
-    received.push(event.data);
-  });
-
-  channel.port2.start();
-
-  const context = createMockWorkerContext({ connections: [channel.port1] });
+  const connection = createTestConnection();
+  const context = createStubWorkerContext({ connections: [connection.port] });
   const simulation = createSimulation();
 
   context.setSimulation(simulation);
@@ -31,6 +22,6 @@ test('it broadcasts a simulation update once the installed simulation reports on
   }
 
   await waitFor(() => {
-    expect(received).toPartiallyContain({ type: 'simulation_update' });
+    expect(connection.received).toPartiallyContain({ type: 'simulation_update' });
   });
 });

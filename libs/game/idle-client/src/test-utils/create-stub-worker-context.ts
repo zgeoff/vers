@@ -3,20 +3,20 @@ import { RPCLink } from '@orpc/client/fetch';
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
-import type { CheckpointSubmitter } from '../../submission/create-checkpoint-submitter';
-import type { ActivityServiceClient } from '../../submission/types';
-import type { RewardSlotLedgerEntry } from '../../types';
-import type { WorkerContext } from '../../worker/types';
+import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import type { ActivityServiceClient } from '../submission/types';
+import type { RewardSlotLedgerEntry } from '../types';
+import type { WorkerContext } from '../worker/types';
 
-interface CreateMockWorkerContextOptions {
+interface CreateStubWorkerContextOptions {
   readonly client?: ActivityServiceClient;
   readonly connections?: ReadonlyArray<MessagePort>;
   readonly remainingBudgetMs?: number;
   readonly submitter?: Readonly<CheckpointSubmitter>;
 }
 
-export function createMockWorkerContext(
-  options: Readonly<CreateMockWorkerContextOptions> = {},
+export function createStubWorkerContext(
+  options: Readonly<CreateStubWorkerContextOptions> = {},
 ): WorkerContext {
   const connections = new Set(options.connections);
 

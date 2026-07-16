@@ -3,6 +3,7 @@ import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
+import { waitFor } from '@vers/test-utils';
 import { HttpResponse } from 'msw';
 import { server } from '../mocks/node';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
@@ -758,13 +759,9 @@ test('it folds a retry firing while a flush is already in flight into the pendin
 
   const retryCall = retries[0]?.retry();
 
-  while (track.mock.calls.length < 2) {
-    await new Promise<void>((resolve) => {
-      setTimeout(() => {
-        resolve();
-      }, 0);
-    });
-  }
+  await waitFor(() => {
+    expect(track.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
 
   const secondRetry = retries[0]?.retry();
 

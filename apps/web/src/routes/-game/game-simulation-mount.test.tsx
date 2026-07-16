@@ -130,8 +130,8 @@ test('it never sends a resync request without a known avatar', async () => {
   const calls: Array<unknown> = [];
   const worker = { port: { postMessage: (message: unknown) => calls.push(message) } };
 
-  await withRequestContext({}, () =>
-    withIdleWorkerHandle(
+  await withRequestContext({}, async () => {
+    await withIdleWorkerHandle(
       {
         activity: undefined,
         failureAction: ActivityFailureAction.Abort,
@@ -145,8 +145,8 @@ test('it never sends a resync request without a known avatar', async () => {
 
         expect(calls).not.toContainEqual(expect.objectContaining({ type: 'request_resync' }));
       },
-    ),
-  );
+    );
+  });
 });
 
 test('it sends a resync request only once across re-renders', async () => {

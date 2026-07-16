@@ -70,8 +70,6 @@ test('it returns an existing worker instead of creating a new one', () => {
 });
 
 test('it creates no worker when SharedWorker is unsupported', () => {
-  useIdleStore.setState({ worker: null });
-
   const originalSharedWorker = globalThis.SharedWorker;
 
   Reflect.set(globalThis, 'SharedWorker', undefined);

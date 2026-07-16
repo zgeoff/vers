@@ -1,62 +1,39 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { mockActivityService } from '@vers/mock-services/activity';
+import { waitFor } from '@vers/test-utils';
 import { server } from '../mocks/node';
-import type {
-  DisconnectMessage,
-  InitializeMessage,
-  SetActivityMessage,
-  WorkerMessage,
-} from '../types';
+import type { TestConnection } from '../test-utils/create-test-connection';
+import { createTestConnection } from '../test-utils/create-test-connection';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
 
-function createConnection(runtime: WorkerRuntime): MessagePort {
-  const channel = new MessageChannel();
+function createConnection(runtime: WorkerRuntime): TestConnection {
+  const connection = createTestConnection();
 
-  runtime.handleConnect(new MessageEvent('connect', { ports: [channel.port2] }));
-  channel.port1.start();
+  runtime.handleConnect(new MessageEvent('connect', { ports: [connection.port] }));
 
-  return channel.port1;
+  return connection;
 }
 
-function waitForMessage(port: MessagePort) {
-  return new Promise<MessageEvent<WorkerMessage>>((resolve) => {
-    port.addEventListener('message', resolve, { once: true });
-  });
-}
-
-async function waitForConnectionCount(runtime: WorkerRuntime, size: number) {
-  for (let attempt = 0; attempt < 50 && runtime.connections.size !== size; attempt++) {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 1);
-    });
-  }
-}
-
-test('it sends the initial state', async () => {
+test('it replies with the initial state to an initialize message', async () => {
   const runtime = createWorkerRuntime();
 
   onTestFinished(() => {
     runtime.stop();
   });
 
-  const port = createConnection(runtime);
-  const reply = waitForMessage(port);
+  const connection = createConnection(runtime);
 
-  const message: InitializeMessage = {
-    type: ClientMessageType.Initialize,
-  };
+  connection.post({ type: ClientMessageType.Initialize });
 
-  port.postMessage(message);
+  await connection.waitForMessages(1);
 
-  const event = await reply;
-
-  expect(event.data.type).toBe(WorkerMessageType.InitialState);
+  expect(connection.received[0]?.type).toBe(WorkerMessageType.InitialState);
 });
 
-test('it processes simulation updates', async () => {
+test('it broadcasts a simulation update once an activity is set', async () => {
   server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 0 })));
 
   const runtime = createWorkerRuntime();
@@ -65,30 +42,20 @@ test('it processes simulation updates', async () => {
     runtime.stop();
   });
 
-  const port = createConnection(runtime);
+  const connection = createConnection(runtime);
 
-  const initializeMessage: InitializeMessage = {
-    type: ClientMessageType.Initialize,
-  };
+  connection.post({ type: ClientMessageType.Initialize });
 
-  const initialized = waitForMessage(port);
+  await connection.waitForMessages(1);
 
-  port.postMessage(initializeMessage);
-
-  await initialized;
-
-  const setActivityMessage: SetActivityMessage = {
+  connection.post({
     activity: createMockActivityData(),
     type: ClientMessageType.SetActivity,
-  };
+  });
 
-  const updated = waitForMessage(port);
+  await connection.waitForMessages(2);
 
-  port.postMessage(setActivityMessage);
-
-  const event = await updated;
-
-  expect(event.data.type).toBe(WorkerMessageType.SimulationUpdate);
+  expect(connection.received[1]?.type).toBe(WorkerMessageType.SimulationUpdate);
 });
 
 test('it stops broadcasting to a connection after it disconnects', async () => {
@@ -102,28 +69,25 @@ test('it stops broadcasting to a connection after it disconnects', async () => {
 
   const survivor = createConnection(runtime);
   const leaving = createConnection(runtime);
-  const survivorInitialized = waitForMessage(survivor);
 
-  survivor.postMessage({ type: ClientMessageType.Initialize } satisfies InitializeMessage);
+  survivor.post({ type: ClientMessageType.Initialize });
 
-  await survivorInitialized;
+  await survivor.waitForMessages(1);
 
   expect(runtime.connections.size).toBe(2);
 
-  leaving.postMessage({ type: ClientMessageType.Disconnect } satisfies DisconnectMessage);
+  leaving.post({ type: ClientMessageType.Disconnect });
 
-  await waitForConnectionCount(runtime, 1);
+  await waitFor(() => {
+    expect(runtime.connections.size).toBe(1);
+  });
 
-  expect(runtime.connections.size).toBe(1);
-
-  const survivorUpdated = waitForMessage(survivor);
-
-  survivor.postMessage({
+  survivor.post({
     activity: createMockActivityData(),
     type: ClientMessageType.SetActivity,
-  } satisfies SetActivityMessage);
+  });
 
-  const event = await survivorUpdated;
+  await survivor.waitForMessages(2);
 
-  expect(event.data.type).toBe(WorkerMessageType.SimulationUpdate);
+  expect(survivor.received[1]?.type).toBe(WorkerMessageType.SimulationUpdate);
 });

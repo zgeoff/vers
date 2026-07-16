@@ -12,8 +12,9 @@ import { server } from '../mocks/node';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
-import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
-import type { RequestResyncMessage, WorkerMessage } from '../types';
+import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createTestConnection } from '../test-utils/create-test-connection';
+import type { RequestResyncMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 
@@ -23,32 +24,10 @@ function setupTest(
     submitter?: Readonly<CheckpointSubmitter>;
   }> = {},
 ) {
-  const channel = new MessageChannel();
+  const connection = createTestConnection();
+  const context = createStubWorkerContext({ connections: [connection.port], ...config });
 
-  const received: Array<WorkerMessage> = [];
-
-  channel.port2.addEventListener('message', (event: MessageEvent<WorkerMessage>) => {
-    received.push(event.data);
-  });
-
-  channel.port2.start();
-
-  const context = createMockWorkerContext({ connections: [channel.port1], ...config });
-
-  const message: RequestResyncMessage = {
-    avatarID: 'avatar_1',
-    type: ClientMessageType.RequestResync,
-  };
-
-  return { context, message, received };
-}
-
-async function waitForMessageCount(received: ReadonlyArray<unknown>, count: number) {
-  for (let attempt = 0; attempt < 200 && received.length < count; attempt += 1) {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 1);
-    });
-  }
+  return { connection, context };
 }
 
 test('it resolves to done with zero tallies for an avatar with no activity history', async () => {
@@ -60,10 +39,16 @@ test('it resolves to done with zero tallies for an avatar with no activity histo
 
   const ctx = setupTest();
 
-  await handleRequestResyncMessage(ctx.context, ctx.message);
-  await waitForMessageCount(ctx.received, 2);
+  const message: RequestResyncMessage = {
+    avatarID: 'avatar_1',
+    type: ClientMessageType.RequestResync,
+  };
 
-  expect(ctx.received).toStrictEqual([
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(2);
+
+  expect(ctx.connection.received).toStrictEqual([
     { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
     { status: { attempts: 0, kind: 'done', levelUps: 0 }, type: WorkerMessageType.ResyncStatus },
   ]);
@@ -86,10 +71,16 @@ test('it broadcasts capped and installs no simulation for a capped activity', as
 
   const ctx = setupTest();
 
-  await handleRequestResyncMessage(ctx.context, ctx.message);
-  await waitForMessageCount(ctx.received, 2);
+  const message: RequestResyncMessage = {
+    avatarID: 'avatar_1',
+    type: ClientMessageType.RequestResync,
+  };
 
-  expect(ctx.received).toStrictEqual([
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(2);
+
+  expect(ctx.connection.received).toStrictEqual([
     { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
     { status: { kind: 'capped' }, type: WorkerMessageType.ResyncStatus },
   ]);
@@ -146,10 +137,16 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
 
   const ctx = setupTest({ client, submitter });
 
-  await handleRequestResyncMessage(ctx.context, ctx.message);
-  await waitForMessageCount(ctx.received, 2);
+  const message: RequestResyncMessage = {
+    avatarID: activity.avatarID,
+    type: ClientMessageType.RequestResync,
+  };
 
-  expect(ctx.received).toStrictEqual([
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(2);
+
+  expect(ctx.connection.received).toStrictEqual([
     { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
     { status: { attempts: 0, kind: 'done', levelUps: 0 }, type: WorkerMessageType.ResyncStatus },
   ]);
@@ -192,10 +189,16 @@ test('it reports a divergence via the checkpoint-stream-error channel and skips 
 
   const ctx = setupTest();
 
-  await handleRequestResyncMessage(ctx.context, ctx.message);
-  await waitForMessageCount(ctx.received, 3);
+  const message: RequestResyncMessage = {
+    avatarID: 'avatar_1',
+    type: ClientMessageType.RequestResync,
+  };
 
-  expect(ctx.received).toStrictEqual([
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(3);
+
+  expect(ctx.connection.received).toStrictEqual([
     { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
     {
       activityID: activity.id,
@@ -261,27 +264,18 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
     },
   });
 
-  const channel = new MessageChannel();
-
-  const received: Array<WorkerMessage> = [];
-
-  channel.port2.addEventListener('message', (event: MessageEvent<WorkerMessage>) => {
-    received.push(event.data);
-  });
-
-  channel.port2.start();
-
-  const context = createMockWorkerContext({ client, connections: [channel.port1], submitter });
+  const ctx = setupTest({ client, submitter });
 
   const message: RequestResyncMessage = {
     avatarID: activity.avatarID,
     type: ClientMessageType.RequestResync,
   };
 
-  await handleRequestResyncMessage(context, message);
-  await waitForMessageCount(received, 3);
+  await handleRequestResyncMessage(ctx.context, message);
 
-  expect(received).toStrictEqual([
+  await ctx.connection.waitForMessages(3);
+
+  expect(ctx.connection.received).toStrictEqual([
     { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
     {
       status: { attempts: 1, kind: 'fast-forwarding', levelUps: 1 },
@@ -292,7 +286,7 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
 
   expect(startedActivities).toHaveLength(1);
 
-  const simulation = context.getSimulation();
+  const simulation = ctx.context.getSimulation();
 
   invariant(simulation !== null, 'expected the fast-forward to install a live simulation');
 
@@ -312,7 +306,7 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
 
   // proves the fresh continuation's registration actually happened: an unregistered activity's
   // checkpoint is silently dropped by the submitter rather than reaching the server
-  await context.getSubmitter().submit(liveActivityID, checkpoint);
+  await ctx.context.getSubmitter().submit(liveActivityID, checkpoint);
 
   await capturedFlush?.();
 
@@ -363,10 +357,16 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
 
   const ctx = setupTest({ client, submitter });
 
-  await handleRequestResyncMessage(ctx.context, ctx.message);
-  await waitForMessageCount(ctx.received, 2);
+  const message: RequestResyncMessage = {
+    avatarID: activity.avatarID,
+    type: ClientMessageType.RequestResync,
+  };
 
-  expect(ctx.received).toStrictEqual([
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(2);
+
+  expect(ctx.connection.received).toStrictEqual([
     { status: { kind: 'checking' }, type: WorkerMessageType.ResyncStatus },
     { status: { attempts: 0, kind: 'done', levelUps: 0 }, type: WorkerMessageType.ResyncStatus },
   ]);

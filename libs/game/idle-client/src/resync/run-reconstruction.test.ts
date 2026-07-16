@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { SIMULATION_TIMESTEP_MS, runAttempt } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
+import invariant from 'tiny-invariant';
 import { runReconstruction } from './run-reconstruction';
 
 test('it reconstructs a simulation to the confirmed head, matching the original stream exactly', async () => {
@@ -19,17 +20,13 @@ test('it reconstructs a simulation to the confirmed head, matching the original 
     avatar,
   });
 
-  if ('divergence' in result) {
-    throw new Error('expected a reconstructed simulation, got a divergence');
-  }
+  invariant(!('divergence' in result), 'expected a reconstructed simulation, got a divergence');
 
   const priorCheckpoint = attempt.checkpoints[targetHead - 1];
   const expectedNextCheckpoint = attempt.checkpoints[targetHead];
 
-  if (priorCheckpoint === undefined || expectedNextCheckpoint === undefined) {
-    throw new Error('expected both the prior and next original checkpoints to exist');
-  }
-
+  invariant(priorCheckpoint !== undefined, 'expected the prior original checkpoint to exist');
+  invariant(expectedNextCheckpoint !== undefined, 'expected the next original checkpoint to exist');
   expect(result.lastCheckpoint.nextSeed).toBe(priorCheckpoint.nextSeed);
 
   let nextCheckpoint = null;

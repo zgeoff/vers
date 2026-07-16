@@ -5,7 +5,7 @@ import { ActivityFailureAction } from '@vers/idle-core';
 /**
  * A duck-typed stand-in for `SharedWorker`: only the one channel the app ever writes to.
  */
-export interface StubSimulationWorker {
+interface StubSimulationWorker {
   readonly port: { readonly postMessage: (message: unknown) => void };
 }
 

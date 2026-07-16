@@ -15,7 +15,8 @@ import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
-import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
+import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createTestConnection } from '../test-utils/create-test-connection';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
 
@@ -65,7 +66,7 @@ test('it continues into a fresh server-started row if it fails and the failure a
     status: 'stopped',
   });
 
-  const context = createMockWorkerContext({ client: ctx.client });
+  const context = createStubWorkerContext({ client: ctx.client });
   const simulation = createSimulation();
   const startedSpy = mock<SimulationListener>();
 
@@ -96,7 +97,7 @@ test('it continues into a fresh server-started row if it fails and the failure a
 });
 
 test('it does not continue if it fails and the failure action is abort', async () => {
-  const context = createMockWorkerContext();
+  const context = createStubWorkerContext();
   const simulation = createSimulation();
   const startedSpy = mock<SimulationListener>();
   const stoppedSpy = mock<SimulationListener>();
@@ -128,7 +129,7 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
       status: 'stopped',
     });
 
-    const context = createMockWorkerContext({ client: ctx.client });
+    const context = createStubWorkerContext({ client: ctx.client });
     const simulation = createSimulation();
     const startedSpy = mock<SimulationListener>();
     const avatarData = createMockAvatarData();
@@ -178,7 +179,7 @@ test('it adopts a conflict row with no confirmed checkpoints as the continuation
     status: 'active',
   });
 
-  const context = createMockWorkerContext({ client: ctx.client });
+  const context = createStubWorkerContext({ client: ctx.client });
   const simulation = createSimulation();
   const startedSpy = mock<SimulationListener>();
 
@@ -229,7 +230,7 @@ test('it rebuilds through a resync when the conflict row already has confirmed c
     submit: () => Promise.resolve<number | undefined>(undefined),
   };
 
-  const context = createMockWorkerContext({ client: ctx.client, submitter });
+  const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
@@ -261,7 +262,7 @@ test('it skips the continuation when a fresher activity replaced this row mid-su
   const avatar = await db.avatarCollection.create({ userID: user.id });
   const ctx = await setupTest({ userID: user.id });
 
-  const context = createMockWorkerContext({ client: ctx.client });
+  const context = createStubWorkerContext({ client: ctx.client });
   const simulation = createSimulation();
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
@@ -286,17 +287,13 @@ test('it skips the continuation when a fresher activity replaced this row mid-su
 });
 
 test('it halts at the boundary instead of continuing once the offline budget is spent', async () => {
-  const channel = new MessageChannel();
+  const connection = createTestConnection();
 
-  const received: Array<unknown> = [];
-
-  channel.port2.addEventListener('message', (event) => {
-    received.push(event.data);
+  const context = createStubWorkerContext({
+    connections: [connection.port],
+    remainingBudgetMs: 0,
   });
 
-  channel.port2.start();
-
-  const context = createMockWorkerContext({ connections: [channel.port1], remainingBudgetMs: 0 });
   const simulation = createSimulation();
   const startedSpy = mock<SimulationListener>();
   const stoppedSpy = mock<SimulationListener>();
@@ -314,12 +311,9 @@ test('it halts at the boundary instead of continuing once the offline budget is 
   expect(startedSpy).not.toHaveBeenCalled();
   expect(stoppedSpy).not.toHaveBeenCalled();
 
-  // MessagePort delivery is a queued task; yield once so the broadcast lands
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
+  await connection.waitForMessages(1);
 
-  expect(received).toPartiallyContain({
+  expect(connection.received).toPartiallyContain({
     halted: true,
     remainingMs: 0,
     type: 'offline_cap_status',
@@ -327,7 +321,7 @@ test('it halts at the boundary instead of continuing once the offline budget is 
 });
 
 test('it stops an aborted failure even when the budget is spent', async () => {
-  const context = createMockWorkerContext({ remainingBudgetMs: 0 });
+  const context = createStubWorkerContext({ remainingBudgetMs: 0 });
   const simulation = createSimulation();
   const stoppedSpy = mock<SimulationListener>();
   const avatar = createMockAvatarData({ life: 1 });
@@ -367,7 +361,7 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
     },
   };
 
-  const context = createMockWorkerContext({ connections: [channel.port1], submitter });
+  const context = createStubWorkerContext({ connections: [channel.port1], submitter });
   const simulation = createSimulation();
   const avatar = createMockAvatarData();
   const activity = createMockActivityInput({ enemies: [createMockEnemyData()] });
@@ -410,7 +404,7 @@ test('it never broadcasts a ledger message for a checkpoint the submitter droppe
 
   // the default mock context's submitter always resolves `undefined`, standing in for a
   // dropped checkpoint (an unattached or already-invalid activity)
-  const context = createMockWorkerContext({ connections: [channel.port1] });
+  const context = createStubWorkerContext({ connections: [channel.port1] });
   const simulation = createSimulation();
   const avatar = createMockAvatarData();
   const activity = createMockActivityInput({ enemies: [createMockEnemyData()] });

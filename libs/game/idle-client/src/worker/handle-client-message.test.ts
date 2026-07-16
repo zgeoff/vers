@@ -3,7 +3,7 @@ import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
-import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
+import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import type {
   DisconnectMessage,
   InitializeMessage,
@@ -14,8 +14,8 @@ import type {
 import { ClientMessageType } from '../types';
 import { handleClientMessage } from './handle-client-message';
 
-test('it handles initialization messages', async () => {
-  const context = createMockWorkerContext();
+test('it installs a simulation on an initialize message', async () => {
+  const context = createStubWorkerContext();
 
   const channel = new MessageChannel();
 
@@ -30,8 +30,8 @@ test('it handles initialization messages', async () => {
   expect(context.getSimulation()).not.toBeNull();
 });
 
-test('it handles setting the activity', async () => {
-  const context = createMockWorkerContext();
+test('it starts the sent activity on the live simulation', async () => {
+  const context = createStubWorkerContext();
 
   const channel = new MessageChannel();
 
@@ -54,8 +54,8 @@ test('it handles setting the activity', async () => {
   expect(simulation.avatar?.id).toBe(activity.avatarID);
 });
 
-test('it handles setting the failure action', async () => {
-  const context = createMockWorkerContext();
+test('it applies the sent failure action to the live simulation', async () => {
+  const context = createStubWorkerContext();
 
   const channel = new MessageChannel();
 
@@ -75,14 +75,14 @@ test('it handles setting the failure action', async () => {
   expect(simulation.failureAction).toBe(ActivityFailureAction.Retry);
 });
 
-test('it handles request resync messages', async () => {
+test('it records the resync request for the requested avatar', async () => {
   server.use(
     mockActivityService.getLatestActivityProgress.handler((opts) => {
       throw opts.errors.NOT_FOUND({ data: {} });
     }),
   );
 
-  const context = createMockWorkerContext();
+  const context = createStubWorkerContext();
 
   const channel = new MessageChannel();
 
@@ -98,10 +98,10 @@ test('it handles request resync messages', async () => {
   expect(context.getResyncAvatarID()).toBe('avatar_1');
 });
 
-test('it handles disconnect messages', async () => {
+test('it drops the connection on a disconnect message', async () => {
   const channel = new MessageChannel();
 
-  const context = createMockWorkerContext({ connections: [channel.port2] });
+  const context = createStubWorkerContext({ connections: [channel.port2] });
 
   const message: DisconnectMessage = {
     type: ClientMessageType.Disconnect,

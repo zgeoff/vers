@@ -34,4 +34,6 @@ export { OFFLINE_CAP_WARNING_MS } from './worker/offline-cap-warning-ms';
 export { createRequestResyncMessage } from './worker/create-request-resync-message';
 export { createSetActivityMessage } from './worker/create-set-activity-message';
 export { createSetFailureActionMessage } from './worker/create-set-failure-action-message';
+export { isRequestResyncMessage } from './worker/is-request-resync-message';
+export { isSetActivityMessage } from './worker/is-set-activity-message';
 export { useSimulationWorker } from './worker/use-simulation-worker';

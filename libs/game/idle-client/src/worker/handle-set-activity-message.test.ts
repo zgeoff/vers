@@ -2,7 +2,7 @@ import { expect, mock, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
-import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
+import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import type { SetActivityMessage } from '../types';
 import { ClientMessageType } from '../types';
 import { handleSetActivityMessage } from './handle-set-activity-message';
@@ -17,7 +17,7 @@ function buildSpySubmitter(): CheckpointSubmitter {
 
 test('it starts the activity on the simulation', async () => {
   const submitter = buildSpySubmitter();
-  const context = createMockWorkerContext({ submitter });
+  const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
 
   context.setSimulation(simulation);
@@ -32,7 +32,7 @@ test('it starts the activity on the simulation', async () => {
 
 test('it registers the row against the submitter, seeded from its own chain-link fields', async () => {
   const submitter = buildSpySubmitter();
-  const context = createMockWorkerContext({ submitter });
+  const context = createStubWorkerContext({ submitter });
 
   context.setSimulation(createSimulation());
 
@@ -56,7 +56,7 @@ test('it registers the row against the submitter, seeded from its own chain-link
 });
 
 test('it remembers the row as the live simulation source', async () => {
-  const context = createMockWorkerContext();
+  const context = createStubWorkerContext();
 
   context.setSimulation(createSimulation());
 
@@ -70,7 +70,7 @@ test('it remembers the row as the live simulation source', async () => {
 
 test('it does nothing when no simulation is initialized', async () => {
   const submitter = buildSpySubmitter();
-  const context = createMockWorkerContext({ submitter });
+  const context = createStubWorkerContext({ submitter });
 
   const message: SetActivityMessage = {
     activity: createMockActivityData(),

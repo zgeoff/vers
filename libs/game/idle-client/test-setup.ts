@@ -5,6 +5,8 @@ import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
 import { registerZustandReset } from '@vers/client-test-utils';
 import { registerMSWLifecycle } from '@vers/test-utils/bun';
 import { server } from './src/mocks/node';
+import { CHECKPOINT_QUEUE_STORE_NAME } from './src/submission/constants';
+import { resolveCheckpointQueueDB } from './src/submission/resolve-checkpoint-queue-db';
 
 // a throwaway dev-only Ed25519 PKCS8 key, so tests can mint the access tokens the stateful
 // activity mock's session resolution decodes
@@ -24,7 +26,13 @@ registerMSWLifecycle(server);
 // dynamic import: RTL reads `document` at import time, so it must load after registration
 const reactTestingLibrary = await import('@testing-library/react');
 
-afterEach(() => {
+afterEach(async () => {
   reactTestingLibrary.cleanup();
   mock.restore();
+
+  // fake-indexeddb persists for the whole one-process run; sweep the durable checkpoint queue so
+  // no test depends on unique activity ids for isolation
+  const queueDB = await resolveCheckpointQueueDB();
+
+  await queueDB.clear(CHECKPOINT_QUEUE_STORE_NAME);
 });
