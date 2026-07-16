@@ -5,7 +5,7 @@ import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
-import { buildActivityMockHandlers, mockActivityService } from '@vers/mock-services/activity';
+import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
@@ -22,13 +22,11 @@ interface SetupTestConfig {
 }
 
 /**
- * Wires the stateful activity mock backend and an authed client acting as the given user, so
+ * Builds an authed client acting as the given user, so
  * continuation starts hit the same conflict/mint logic the real service applies to the rows the
  * test seeds in the mock db.
  */
 async function setupTest(config: Readonly<SetupTestConfig>) {
-  server.use(...buildActivityMockHandlers(resolveServiceURL('activity')));
-
   const token = await createTestAccessToken(config.userID);
 
   const client: ActivityServiceClient = createORPCClient(

@@ -4,9 +4,7 @@ import { RPCLink } from '@orpc/client/fetch';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
-import { buildActivityMockHandlers } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
-import { server } from '../mocks/node';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import type {
@@ -81,8 +79,6 @@ test('it applies the sent failure action to the live simulation', async () => {
 });
 
 test('it records the resync request for the requested avatar', async () => {
-  server.use(...buildActivityMockHandlers(resolveServiceURL('activity')));
-
   const user = await db.userCollection.create({});
   const avatar = await db.avatarCollection.create({ userID: user.id });
 

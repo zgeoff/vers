@@ -4,10 +4,8 @@ import { RPCLink } from '@orpc/client/fetch';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { SIMULATION_TIMESTEP_MS, buildSimulationInput, runAttempt } from '@vers/idle-core';
 import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
-import { buildActivityMockHandlers } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
-import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
@@ -21,14 +19,12 @@ interface SetupTestConfig {
 }
 
 /**
- * Wires the stateful activity mock backend, an authed client acting as the given user, and a
+ * Builds an authed client acting as the given user and a
  * worker context wearing that client — so a resync's fetch, append, and start calls hit the same
  * state transitions the real service applies to the rows the test seeds in the mock db. The
  * returned flush delivers whatever the submitter has scheduled since the last call.
  */
 async function setupTest(config: Readonly<SetupTestConfig>) {
-  server.use(...buildActivityMockHandlers(resolveServiceURL('activity')));
-
   const token = await createTestAccessToken(config.userID);
 
   const client: ActivityServiceClient = createORPCClient(
