@@ -41,7 +41,10 @@ The R2 credentials also live on the `bugsink-r2` item in the `vers` 1Password va
 
 ## Alerts
 
-New-issue, regression, and unmute alerts email the superuser account through Resend SMTP: the
+New-issue, regression, and unmute alerts deliver two ways. Every project carries a Discord
+messaging-service config pointing at the alarms channel's incoming webhook (the
+`bugsink-discord-webhook` item in the `vers` 1Password vault); a new project gets the same webhook
+added in its settings. Alert email to the superuser account goes out through Resend SMTP: the
 non-secret SMTP settings (`EMAIL_HOST`, `EMAIL_HOST_USER`, `DEFAULT_FROM_EMAIL`) live in `fly.toml`,
 and `EMAIL_HOST_PASSWORD` carries the API key. Per-project alert toggles live in each Bugsink
 project's settings.
