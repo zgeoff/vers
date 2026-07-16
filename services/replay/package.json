@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@noble/hashes": "catalog:",
+    "@opentelemetry/api": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
@@ -34,6 +35,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "catalog:",
+    "@opentelemetry/sdk-metrics": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",

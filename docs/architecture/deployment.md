@@ -56,15 +56,17 @@ Secrets are set with `fly secrets set` and never committed.
 
 Telemetry export rides the standard OTel env vars, optional on any app and set fleet-wide in
 practice: `OTEL_EXPORTER_OTLP_ENDPOINT` carries the backend's base URL (`https://api.axiom.co`), and
-`OTEL_EXPORTER_OTLP_TRACES_HEADERS` / `OTEL_EXPORTER_OTLP_LOGS_HEADERS` each carry the ingest token
-plus that signal's dataset (`Authorization=Bearer <token>,X-Axiom-Dataset=vers-traces` and
-`…=vers-logs`). A process with the endpoint unset emits no telemetry. The browser's DSN rides the
-`VITE_SENTRY_DSN` GitHub Actions variable: the deploy workflow bakes it into `app-web`'s client
-bundle, and the same value is set as a `vers-app-web` secret so the runtime can allow the ingest
-origin in its CSP. Source-map uploads authenticate with the `SENTRY_AUTH_TOKEN` GitHub secret — a
-Bugsink API token; when it's unset the build skips source maps entirely. The deploy workflow bakes
-the `VITE_UMAMI_WEBSITE_ID` GitHub Actions variable into `app-web`'s client bundle; when it's unset
-the bundle ships no analytics tracker.
+`OTEL_EXPORTER_OTLP_TRACES_HEADERS` / `OTEL_EXPORTER_OTLP_LOGS_HEADERS` /
+`OTEL_EXPORTER_OTLP_METRICS_HEADERS` each carry the ingest token plus that signal's dataset
+(`Authorization=Bearer <token>,X-Axiom-Dataset=vers-traces`, `…X-Axiom-Dataset=vers-logs`, and
+`…X-Axiom-Metrics-Dataset=vers-metrics` — metrics route by their own header name). A process with
+the endpoint unset emits no telemetry. The browser's DSN rides the `VITE_SENTRY_DSN` GitHub Actions
+variable: the deploy workflow bakes it into `app-web`'s client bundle, and the same value is set as
+a `vers-app-web` secret so the runtime can allow the ingest origin in its CSP. Source-map uploads
+authenticate with the `SENTRY_AUTH_TOKEN` GitHub secret — a Bugsink API token; when it's unset the
+build skips source maps entirely. The deploy workflow bakes the `VITE_UMAMI_WEBSITE_ID` GitHub
+Actions variable into `app-web`'s client bundle; when it's unset the bundle ships no analytics
+tracker.
 
 ## Release
 
@@ -349,18 +351,24 @@ for ds in vers-traces vers-logs; do
 done
 
 INGEST="$(op read 'op://vers/axiom/ingest-token')"
-for app in vers-app-web vers-service-activity vers-service-avatar vers-service-keys vers-service-session vers-service-user vers-service-verification; do
+for app in vers-app-web vers-service-activity vers-service-avatar vers-service-email vers-service-keys vers-service-replay vers-service-session vers-service-user vers-service-verification; do
   fly secrets set -a "$app" --stage \
     OTEL_EXPORTER_OTLP_ENDPOINT="https://api.axiom.co" \
     OTEL_EXPORTER_OTLP_TRACES_HEADERS="Authorization=Bearer ${INGEST},X-Axiom-Dataset=vers-traces" \
-    OTEL_EXPORTER_OTLP_LOGS_HEADERS="Authorization=Bearer ${INGEST},X-Axiom-Dataset=vers-logs"
+    OTEL_EXPORTER_OTLP_LOGS_HEADERS="Authorization=Bearer ${INGEST},X-Axiom-Dataset=vers-logs" \
+    OTEL_EXPORTER_OTLP_METRICS_HEADERS="Authorization=Bearer ${INGEST},X-Axiom-Metrics-Dataset=vers-metrics"
 done
 ```
 
+The `vers-metrics` dataset is created in the Axiom UI with the Metrics dataset type — the dataset
+API creates Events datasets, which reject OTLP metrics ingest.
+
 The `vers services — baseline` dashboard (request rate, 5xx responses, and p95 latency per service,
-plus an error-log stream) and the `vers 5xx responses` threshold monitor are created through the
-same API; the monitor notifies the `vers alerts` notifier. Agent access goes through the hosted MCP
-server (`https://mcp.axiom.co/mcp`, OAuth) declared in `.mcp.json`.
+plus an error-log stream) and the `vers 5xx responses` and `vers verification lag`
+(`vers.verification.lag` over its threshold — `docs/architecture/observability.md`) threshold
+monitors are created through the same API; the monitors notify the `vers alerts` notifier. Agent
+access goes through the hosted MCP server (`https://mcp.axiom.co/mcp`, OAuth) declared in
+`.mcp.json`.
 
 The next push to `main` fills the machines.
 

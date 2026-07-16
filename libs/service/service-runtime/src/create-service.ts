@@ -10,7 +10,7 @@ import {
   parseTraceparent,
   withTraceContext,
 } from '@vers/service-utils';
-import type { OTLPLogStream } from '@vers/service-utils/otel';
+import type { MetricsExport, OTLPLogStream } from '@vers/service-utils/otel';
 import { Elysia } from 'elysia';
 import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
@@ -39,6 +39,7 @@ export interface Service<TEnvShape extends z.ZodRawShape> {
   env: ServiceEnv<TEnvShape>;
   listen: (port?: number) => void;
   logger: pino.Logger;
+  stopTelemetry: () => Promise<void>;
 }
 
 /**
@@ -53,6 +54,11 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
 
   const otlpLogStream =
     env.OTEL_EXPORTER_OTLP_ENDPOINT === undefined ? undefined : await createLogShipper(config.name);
+
+  const metricsExport =
+    env.OTEL_EXPORTER_OTLP_ENDPOINT === undefined
+      ? undefined
+      : await startMetricsShipper(config.name);
 
   const logger = createLogger({
     level: env.LOG_LEVEL,
@@ -123,6 +129,9 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
       logger.info(`${config.name} listening on port ${app.server?.port ?? port ?? env.PORT}`);
     },
     logger,
+    stopTelemetry: async () => {
+      await Promise.all([metricsExport?.stop(), otlpLogStream?.flush()]);
+    },
   };
 }
 
@@ -145,6 +154,16 @@ function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
   }
 
   return { ...base.data, ...extra.data };
+}
+
+/**
+ * Loads the metrics export on demand, so the OpenTelemetry metrics SDK never loads in a process
+ * that doesn't export telemetry.
+ */
+async function startMetricsShipper(serviceName: string): Promise<MetricsExport> {
+  const otelModule = await import('@vers/service-utils/otel');
+
+  return otelModule.startMetricsExport({ serviceName });
 }
 
 /**
