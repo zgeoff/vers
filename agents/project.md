@@ -220,8 +220,8 @@ PR must satisfy:
   app-web's ingest schema, any new column in `infra/tinybird/datasources/product_events.datasource`,
   and its row in the `docs/architecture/analytics.md` registry table — all in the same PR.
 - Emission is fire-and-forget through `emitProductEvent`: never await it, never gate a flow on it,
-  and fire only on a confirmed outcome (a service response or a worker broadcast), never on intent
-  alone.
+  and fire only for something that has already happened — a service response, a worker broadcast, a
+  completed client transition — never for intent.
 
 ## Postgres access (MCP)
 

@@ -268,10 +268,15 @@ fly secrets set -a vers-service-replay \
 fly secrets set -a vers-app-web \
   SESSION_SECRET="$(openssl rand -base64 32)" \
   COOKIE_DOMAIN="$DOMAIN" \
-  SERVICE_AUTH_PRIVATE_KEY="$(cat s2s.key)"
+  SERVICE_AUTH_PRIVATE_KEY="$(cat s2s.key)" \
+  TINYBIRD_URL="$TINYBIRD_URL" \
+  TINYBIRD_INGEST_TOKEN="$TINYBIRD_INGEST_TOKEN"
 
 rm s2s.key s2s.pub session.key
 ```
+
+The Tinybird pair — the Events API origin and the `product_events` append token — comes from the
+`tinybird` item in the `vers` 1Password vault.
 
 Stand up the error tracker. The first deploy is by hand; CI redeploys it on later config changes.
 `--ha=false` keeps the app to one machine — Fly otherwise creates a pair on first deploy. The admin

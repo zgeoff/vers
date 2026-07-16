@@ -55,6 +55,20 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     selectedScopeIDRef.current = selectedNode?.id;
   }, [selectedNode]);
 
+  // the exploration commits when the encounter view opens for a node — independent of worker
+  // readiness, and a retried failed start on the same node never re-reports it
+  const lastExploredNodeID = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (selectedNode === null || lastExploredNodeID.current === selectedNode.id) {
+      return;
+    }
+
+    lastExploredNodeID.current = selectedNode.id;
+
+    emitProductEvent('node_explored', { nodeID: selectedNode.id });
+  }, [selectedNode]);
+
   const isActivityReady =
     attempt?.activityID !== undefined &&
     attempt.scopeID === selectedNode?.id &&
@@ -70,6 +84,12 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     onSuccess: (outcome) => {
       const scopeID = outcome.kind === 'attach' ? outcome.scopeID : outcome.activity.scopeID;
 
+      // the service confirmed this start even when the player has already moved on, so it reports
+      // before the stale-selection guard; an attach resumes a start that already reported
+      if (outcome.kind === 'started') {
+        emitProductEvent('activity_started', { activityID: outcome.activity.id, nodeID: scopeID });
+      }
+
       // a selection change while the request was in flight makes this outcome stale
       if (idleWorkerHandle.worker === undefined || scopeID !== selectedNode?.id) {
         return;
@@ -84,10 +104,6 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
 
       setAttempt({ activityID: outcome.activity.id, scopeID });
       sendIdleSetActivity(idleWorkerHandle.worker, outcome.activity);
-
-      // only a fresh server-confirmed start reports — an attach resumes an activity that already
-      // reported its own start
-      emitProductEvent('activity_started', { activityID: outcome.activity.id, nodeID: scopeID });
     },
   });
 
@@ -111,7 +127,6 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
 
     setAttempt({ scopeID: selectedNode.id });
     startActivity({ avatarID, scopeID: selectedNode.id });
-    emitProductEvent('node_explored', { nodeID: selectedNode.id });
   }, [
     idleWorkerHandle.worker,
     idleWorkerHandle.initialized,

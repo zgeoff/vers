@@ -71,6 +71,29 @@ test('it resolves false when the events endpoint rejects the row', async () => {
   expect(delivered).toBeFalse();
 });
 
+test('it resolves false when the events endpoint quarantines the row', async () => {
+  server.use(
+    http.post('https://api.example.tinybird.co/v0/events', () =>
+      HttpResponse.json({ quarantined_rows: 1, successful_rows: 0 }, { status: 202 }),
+    ),
+  );
+
+  const sendProductEvent = makeProductEventSender({
+    url: 'https://api.example.tinybird.co',
+    token: 'append-token',
+  });
+
+  const delivered = await sendProductEvent({
+    name: 'activity_completed',
+    properties: { activityID: 'activity-7' },
+    sessionID: 'session-7',
+    timestamp: new Date('2026-07-16T10:11:12.131Z'),
+    userID: 'user-7',
+  });
+
+  expect(delivered).toBeFalse();
+});
+
 test('it resolves false when the events endpoint is unreachable', async () => {
   server.use(http.post('https://api.example.tinybird.co/v0/events', () => HttpResponse.error()));
 

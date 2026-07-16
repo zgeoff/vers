@@ -8,6 +8,10 @@ import { sendStampedProductEvent } from './send-stamped-product-event';
  * comes only from the validated session, never from the payload.
  */
 export async function runProductEventIngest(event: ProductEvent): Promise<void> {
+  // arrival time, captured before session resolution so stage ordering never reflects
+  // session-service latency
+  const timestamp = new Date();
+
   const actor = await loadSessionActor();
 
   if (actor === null) {
@@ -17,7 +21,7 @@ export async function runProductEventIngest(event: ProductEvent): Promise<void> 
   await sendStampedProductEvent({
     ...event,
     sessionID: actor.sessionID,
-    timestamp: new Date(),
+    timestamp,
     userID: actor.userID,
   });
 }

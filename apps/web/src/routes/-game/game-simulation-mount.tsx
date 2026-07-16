@@ -9,6 +9,12 @@ import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { emitProductEvent } from '../../lib/product-events/emit-product-event';
 
+// page-lifetime analytics guards, deliberately outside the component: the game layout unmounts on
+// account-screen visits, and remounting must neither repeat a session start nor swallow a
+// completion the worker reported while unmounted
+let hasSentSessionStart = false;
+let lastEmittedCompletionID: string | undefined;
+
 /**
  * Renders nothing: a side-effect-only sibling to the game layout's outlet, so it returns null by
  * design.
@@ -20,9 +26,7 @@ export function GameSimulationMount() {
   const resyncStatus = useResyncStatus();
   const avatarID = avatarQuery.data?.id;
   const hasSentResync = useRef(false);
-  const hasSentSessionStart = useRef(false);
   const lastWorkerActivityID = useRef(idleWorkerHandle.activity?.id);
-  const lastEmittedCompletionID = useRef(idleWorkerHandle.lastCompletedActivityID);
 
   useEffect(() => {
     if (idleWorkerHandle.worker !== undefined && !idleWorkerHandle.initialized) {
@@ -66,29 +70,24 @@ export function GameSimulationMount() {
       idleWorkerHandle.worker === undefined ||
       !idleWorkerHandle.initialized ||
       avatarID === undefined ||
-      hasSentSessionStart.current
+      hasSentSessionStart
     ) {
       return;
     }
 
-    hasSentSessionStart.current = true;
+    hasSentSessionStart = true;
 
     emitProductEvent('session_started', {});
   }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID]);
 
-  // the ref starts at the mounted value, so re-entering the game layout never re-reports a
-  // completion the store still holds
   useEffect(() => {
     const completedActivityID = idleWorkerHandle.lastCompletedActivityID;
 
-    if (
-      completedActivityID === undefined ||
-      lastEmittedCompletionID.current === completedActivityID
-    ) {
+    if (completedActivityID === undefined || lastEmittedCompletionID === completedActivityID) {
       return;
     }
 
-    lastEmittedCompletionID.current = completedActivityID;
+    lastEmittedCompletionID = completedActivityID;
 
     emitProductEvent('activity_completed', { activityID: completedActivityID });
   }, [idleWorkerHandle.lastCompletedActivityID]);

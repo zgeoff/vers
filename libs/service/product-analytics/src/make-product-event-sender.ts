@@ -23,10 +23,10 @@ const UPSTREAM_DEADLINE_MS = 15_000;
 
 /**
  * Builds the sender that delivers stamped product events to the Tinybird Events API as NDJSON.
- * Delivery is best-effort: a rejected, non-2xx, or deadline-crossed send resolves `false` and is
- * never retried — analytics loss is acceptable, analytics failing a caller is not. The returned
- * promise settles only once delivery is confirmed or given up, so serverless callers can await it
- * before their process is eligible to stop.
+ * Delivery is best-effort: a rejected, quarantined, non-2xx, or deadline-crossed send resolves
+ * `false` and is never retried — analytics loss is acceptable, analytics failing a caller is not.
+ * The returned promise settles only once delivery is confirmed or given up, so serverless callers
+ * can await it before their process is eligible to stop.
  */
 export function makeProductEventSender(
   config: ProductEventSenderConfig,
@@ -36,11 +36,13 @@ export function makeProductEventSender(
   target.searchParams.set('name', EVENTS_DATA_SOURCE);
 
   return async (event) => {
-    const body = JSON.stringify(encodeProductEventRow(event));
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
     // the race bounds the wait rather than aborting the socket: signal instances don't survive
     // environments that patch the fetch globals, and the runtime's pool reclaims the connection
     try {
+      const body = JSON.stringify(encodeProductEventRow(event));
+
       const response = await Promise.race([
         fetch(target, {
           body,
@@ -50,25 +52,51 @@ export function makeProductEventSender(
           },
           method: 'POST',
         }),
-        waitUpstreamDeadline(),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => {
+            reject(new Error('product analytics upstream deadline exceeded'));
+          }, UPSTREAM_DEADLINE_MS);
+
+          timer.unref?.();
+        }),
       ]);
 
-      return response.ok;
+      if (!response.ok) {
+        return false;
+      }
+
+      const quarantinedRows = await readQuarantinedRowCount(response);
+
+      return quarantinedRows === 0;
     } catch {
       return false;
+    } finally {
+      clearTimeout(timer);
     }
   };
 }
 
 /**
- * Rejects once the upstream deadline passes; the timer never keeps the process alive.
+ * The Events API acknowledges with 202 even when rows fail schema validation, reporting them in
+ * `quarantined_rows` — a quarantined row never lands in the data source, so it counts as
+ * undelivered. An acknowledgement whose body doesn't carry the count reads as zero: the status
+ * already said accepted.
  */
-function waitUpstreamDeadline(): Promise<never> {
-  return new Promise((_resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error('product analytics upstream deadline exceeded'));
-    }, UPSTREAM_DEADLINE_MS);
+async function readQuarantinedRowCount(response: Response): Promise<number> {
+  try {
+    const payload: unknown = await response.json();
 
-    timer.unref?.();
-  });
+    if (
+      payload !== null &&
+      typeof payload === 'object' &&
+      'quarantined_rows' in payload &&
+      typeof payload.quarantined_rows === 'number'
+    ) {
+      return payload.quarantined_rows;
+    }
+
+    return 0;
+  } catch {
+    return 0;
+  }
 }

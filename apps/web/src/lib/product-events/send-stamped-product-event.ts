@@ -4,8 +4,8 @@ import { env } from '../../server/env';
 import { logger } from '../../server/logger';
 
 /**
- * The process-wide sender, built once from env; `null` when either Tinybird key is absent (every
- * non-production environment), which makes delivery a no-op.
+ * The process-wide sender, built once from env; `null` when either Tinybird key is absent, which
+ * makes delivery a no-op.
  */
 const sender =
   env.TINYBIRD_URL !== undefined && env.TINYBIRD_INGEST_TOKEN !== undefined

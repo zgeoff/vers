@@ -6,6 +6,7 @@ import invariant from 'tiny-invariant';
 import { setSimulationWorker } from '../state/set-simulation-worker';
 import { useIdleStore } from '../state/use-idle-store';
 import type {
+  ActivityCompletedMessage,
   CheckpointStreamInvalidMessage,
   ClientMessage,
   ConnectionStatusMessage,
@@ -138,6 +139,29 @@ test('it reports a checkpoint stream error from worker messages', async () => {
       activityID: 'activity_1',
       reason: 'broken-chain-link',
     });
+  });
+});
+
+test('it records the completed activity from worker messages', async () => {
+  registerSharedWorkerStub();
+
+  const hook = renderHook(() => useSimulationWorker());
+
+  hook.rerender();
+
+  const worker = getStubSharedWorker(hook.result.current);
+
+  worker.channel.port2.start();
+
+  const message: ActivityCompletedMessage = {
+    activityID: 'activity_1',
+    type: WorkerMessageType.ActivityCompleted,
+  };
+
+  worker.channel.port2.postMessage(message);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().lastCompletedActivityID).toBe('activity_1');
   });
 });
 

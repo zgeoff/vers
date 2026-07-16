@@ -10,10 +10,10 @@ export function emitProductEvent<N extends ProductEventName>(
   name: N,
   properties: ProductEventPropertiesMap[N],
 ): void {
-  void trySendProductEvent(name, properties);
+  void sendProductEventBestEffort(name, properties);
 }
 
-async function trySendProductEvent<N extends ProductEventName>(
+async function sendProductEventBestEffort<N extends ProductEventName>(
   name: N,
   properties: ProductEventPropertiesMap[N],
 ): Promise<void> {

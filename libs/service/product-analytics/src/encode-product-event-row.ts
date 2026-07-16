@@ -1,4 +1,4 @@
-import type { StampedProductEvent } from './types';
+import type { ProductEventName, StampedProductEvent } from './types';
 
 /**
  * The wire row the Tinybird events data source ingests: snake_case columns matching the data
@@ -7,7 +7,7 @@ import type { StampedProductEvent } from './types';
  */
 export interface ProductEventRow {
   readonly activity_id: string | null;
-  readonly event_name: string;
+  readonly event_name: ProductEventName;
   readonly node_id: string | null;
   readonly session_id: string;
   readonly timestamp: string;
