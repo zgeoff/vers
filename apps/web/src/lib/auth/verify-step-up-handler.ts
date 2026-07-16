@@ -1,7 +1,8 @@
-import { safe } from '@orpc/client';
+import { isDefinedError, safe } from '@orpc/client';
 import { getRequestIP } from '@tanstack/react-start/server';
 import { SecureActionSchema } from '@vers/contract-session';
 import * as z from 'zod';
+import { logger } from '../../server/logger';
 import { sessionClient } from '../rpc/clients/session-client';
 import { verificationClient } from '../rpc/clients/verification-client';
 import { createStepUpTransactionToken } from './create-step-up-transaction-token';
@@ -31,6 +32,10 @@ export async function verifyStepUpHandler(input: VerifyStepUpInput): Promise<Ver
   );
 
   if (codeError) {
+    if (!isDefinedError(codeError)) {
+      logger.error({ err: codeError }, 'step-up code check failed');
+    }
+
     const failedAttempt = await sessionClient.stepUp.recordFailedAttempt({
       id: input.transactionID,
     });

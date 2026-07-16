@@ -4,6 +4,7 @@ export type {
   CreateJobQueueConfig,
   DrainResult,
   JobContext,
+  JobFailureContext,
   JobQueue,
   SendJobOptions,
 } from './create-job-queue';

@@ -1,5 +1,6 @@
 import { UMAMI_PATHS } from '../lib/umami-paths';
 import { getClientIPAddress } from './get-client-ip-address';
+import { logger } from './logger';
 import type { Middleware } from './middleware';
 
 interface MakeUmamiProxyOptions {
@@ -84,7 +85,9 @@ async function sendUpstream(target: URL, init?: RelayInit): Promise<Response> {
   // reclaims the connection
   try {
     response = await Promise.race([fetch(target, init), deadline]);
-  } catch {
+  } catch (error) {
+    logger.warn({ err: error }, 'analytics upstream request failed');
+
     return new Response(null, { status: 502 });
   } finally {
     clearTimeout(timer);

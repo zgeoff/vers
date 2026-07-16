@@ -15,7 +15,7 @@ import {
   renderResetPasswordEmail,
   renderWelcomeEmail,
 } from '@vers/email';
-import type { JobQueue } from '@vers/jobs';
+import type { JobFailureContext, JobQueue } from '@vers/jobs';
 import { createJobQueue, defineJobs } from '@vers/jobs';
 
 /**
@@ -55,6 +55,12 @@ export interface CreateEmailJobQueueConfig {
    * `console.error` fallback when omitted.
    */
   readonly onError?: (error: Error) => void;
+
+  /**
+   * Called for every failed job delivery with its cause; defaults to `@vers/jobs`'s own
+   * `console.error` fallback when omitted.
+   */
+  readonly onJobError?: (error: unknown, context: Readonly<JobFailureContext>) => void;
 }
 
 /**
@@ -142,5 +148,6 @@ export function createEmailJobQueue(
       },
     },
     ...(config.onError !== undefined && { onError: config.onError }),
+    ...(config.onJobError !== undefined && { onJobError: config.onJobError }),
   });
 }

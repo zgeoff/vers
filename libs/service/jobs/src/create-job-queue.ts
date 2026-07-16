@@ -36,6 +36,14 @@ export interface JobContext {
   readonly jobID: string;
 }
 
+/**
+ * Identifies the failed delivery an `onJobError` call is about.
+ */
+export interface JobFailureContext {
+  readonly jobID: string;
+  readonly queue: string;
+}
+
 export interface CreateJobQueueConfig<TDefs extends JobDefs> {
   readonly connectionString: string;
   readonly handlers: {
@@ -51,6 +59,14 @@ export interface CreateJobQueueConfig<TDefs extends JobDefs> {
    * Defaults to logging via `console.error` so a fault is never silently swallowed.
    */
   readonly onError?: (error: Error) => void;
+
+  /**
+   * Called when a fetched job is failed — its handler threw, or its stored payload no longer
+   * parses against the job's schema. The drain result carries only counts, so this callback is
+   * the one place a failure's cause is reported. Defaults to logging via `console.error` so the
+   * cause is never discarded.
+   */
+  readonly onJobError?: (error: unknown, context: Readonly<JobFailureContext>) => void;
 }
 
 /**
@@ -79,17 +95,22 @@ export function createJobQueue<TDefs extends JobDefs>(
 
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- erases each job's payload type; the fetch/handle/complete loop re-correlates a handler with its schema by their shared runtime key
   const handlers = config.handlers as JobHandlers;
+  const onJobError = config.onJobError ?? printJobError;
 
   return {
     start: () => startQueues(boss, defs),
     stop: () => boss.stop(),
     send: (name, payload, opts) => sendJob(boss, defs, name, payload, opts),
-    drain: (name) => drainJobs(boss, defs, handlers, name),
+    drain: (name) => drainJobs(boss, defs, handlers, onJobError, name),
   };
 }
 
 function printJobQueueError(error: Error): void {
   console.error('[@vers/jobs] pg-boss error', error);
+}
+
+function printJobError(error: unknown, context: Readonly<JobFailureContext>): void {
+  console.error(`[@vers/jobs] job ${context.jobID} in "${context.queue}" failed`, error);
 }
 
 const DEAD_LETTER_SUFFIX = '.dead';
@@ -148,6 +169,7 @@ async function drainJobs(
   boss: PgBoss,
   defs: JobDefs,
   handlers: JobHandlers,
+  onJobError: (error: unknown, context: Readonly<JobFailureContext>) => void,
   name: string | undefined,
 ): Promise<DrainResult> {
   const names = name === undefined ? Object.keys(defs) : [name];
@@ -174,6 +196,8 @@ async function drainJobs(
         const parsed = def.schema.safeParse(job.data);
 
         if (!parsed.success) {
+          onJobError(parsed.error, { jobID: job.id, queue: queueName });
+
           await boss.fail(queueName, job.id);
 
           failed += 1;
@@ -186,7 +210,9 @@ async function drainJobs(
           await boss.complete(queueName, job.id);
 
           completed += 1;
-        } catch {
+        } catch (error) {
+          onJobError(error, { jobID: job.id, queue: queueName });
+
           await boss.fail(queueName, job.id);
 
           failed += 1;

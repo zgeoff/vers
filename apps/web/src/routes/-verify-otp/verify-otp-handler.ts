@@ -1,11 +1,12 @@
 import type { SubmissionResult } from '@conform-to/react';
 import { parseWithZod } from '@conform-to/zod/v4';
-import { safe } from '@orpc/client';
+import { isDefinedError, safe } from '@orpc/client';
 import { redirect } from '@tanstack/react-router';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { getVerifySession } from '../../lib/auth/get-verify-session';
 import { SpamError } from '../../lib/auth/spam-error';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
+import { logger } from '../../server/logger';
 import { runVerification } from './run-verification';
 import { VerifyOTPFormSchema } from './verify-otp-form-schema';
 
@@ -60,6 +61,10 @@ export async function verifyOTPHandler(formData: FormData): Promise<Response | S
   );
 
   if (verifyError) {
+    if (!isDefinedError(verifyError)) {
+      logger.error({ err: verifyError }, 'otp verification failed');
+    }
+
     return submission.reply({ formErrors: ['Invalid or expired code'] });
   }
 

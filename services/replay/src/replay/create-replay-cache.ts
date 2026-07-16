@@ -31,14 +31,32 @@ export interface ReplayCache {
   set: (activityID: string, entry: Readonly<CachedReplayStream>) => void;
 }
 
-export function createReplayCache(cap: number = REPLAY_CACHE_CAP): ReplayCache {
+/**
+ * `onStopError` receives a displaced entry's driver-stop rejection, which otherwise dies as an
+ * unhandled rejection; it defaults to `console.error` so a failed cleanup is never silent.
+ */
+export function createReplayCache(
+  cap: number = REPLAY_CACHE_CAP,
+  onStopError: (error: unknown) => void = printDriverStopError,
+): ReplayCache {
   const entries = new Map<string, CachedReplayStream>();
+
+  const stopDriver = async (driver: SimulationDriver): Promise<void> => {
+    try {
+      await driver.stop();
+    } catch (error) {
+      onStopError(error);
+    }
+  };
 
   const remove = (activityID: string): void => {
     const entry = entries.get(activityID);
 
     entries.delete(activityID);
-    void entry?.driver.stop();
+
+    if (entry !== undefined) {
+      void stopDriver(entry.driver);
+    }
   };
 
   const get = (activityID: string): CachedReplayStream | undefined => {
@@ -61,7 +79,7 @@ export function createReplayCache(cap: number = REPLAY_CACHE_CAP): ReplayCache {
     entries.set(activityID, entry);
 
     if (replaced !== undefined && replaced.driver !== entry.driver) {
-      void replaced.driver.stop();
+      void stopDriver(replaced.driver);
     }
 
     const oldestKey = entries.size > cap ? entries.keys().next().value : undefined;
@@ -70,9 +88,16 @@ export function createReplayCache(cap: number = REPLAY_CACHE_CAP): ReplayCache {
       const oldest = entries.get(oldestKey);
 
       entries.delete(oldestKey);
-      void oldest?.driver.stop();
+
+      if (oldest !== undefined) {
+        void stopDriver(oldest.driver);
+      }
     }
   };
 
   return { get, remove, set };
+}
+
+function printDriverStopError(error: unknown): void {
+  console.error('[service-replay] replay cache driver stop failed', error);
 }

@@ -8,6 +8,7 @@ import { SpamError } from '../../lib/auth/spam-error';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
+import { logger } from '../../server/logger';
 import { OnboardingFormSchema } from './onboarding-form-schema';
 import { requireOnboardingSession } from './require-onboarding-session';
 
@@ -49,6 +50,8 @@ export async function runOnboarding(formData: FormData): Promise<Response | Subm
         fieldErrors: { username: ['A user with that username already exists'] },
       });
     }
+
+    logger.error({ err: error }, 'onboarding account creation failed');
 
     return submission.reply({ formErrors: ['Something went wrong. Please try again.'] });
   }

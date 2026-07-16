@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { expect, spyOn, test } from 'bun:test';
+import { logger } from '../../server/logger';
 import { checkHoneypot } from './check-honeypot';
 import { HONEYPOT_FIELD_NAME, HONEYPOT_VALID_FROM_FIELD_NAME } from './honeypot-field-names';
 
@@ -20,6 +21,23 @@ test('it flags a submission with a filled-in honeypot field', () => {
   expect(() => {
     checkHoneypot(formData);
   }).toThrowWithMessage(Error, 'Form not submitted properly');
+});
+
+test('it logs a spam flag with its reason', () => {
+  const warnSpy = spyOn(logger, 'warn');
+
+  const formData = new FormData();
+
+  formData.set(HONEYPOT_FIELD_NAME, 'a bot filled this in');
+
+  expect(() => {
+    checkHoneypot(formData);
+  }).toThrow();
+
+  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
+    { reason: 'honeypot-field' },
+    'form submission flagged as spam',
+  );
 });
 
 test('it flags a submission whose valid-from field is an empty string outside test mode', () => {

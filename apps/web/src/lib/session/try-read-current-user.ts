@@ -1,6 +1,7 @@
 import { isDefinedError, safe } from '@orpc/client';
 import type { UnauthorizedReason } from '@vers/contract-base';
 import type { UserData } from '@vers/contract-user';
+import { logger } from '../../server/logger';
 import { userClient } from '../rpc/clients/user-client';
 
 /**
@@ -25,6 +26,8 @@ export async function tryReadCurrentUser(): Promise<CurrentUserResult> {
   if (isDefined && isDefinedError(error)) {
     return { authenticated: false, reason: error.data.reason };
   }
+
+  logger.error({ err: error }, 'current-user read failed');
 
   return { authenticated: false, reason: 'transport-error' };
 }
