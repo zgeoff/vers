@@ -2,15 +2,6 @@ import { expect, test } from 'bun:test';
 import { HttpResponse, http } from 'msw';
 import { makeProductEventSender } from './make-product-event-sender';
 import { server } from './mocks/server';
-import type { StampedProductEvent } from './types';
-
-const event: StampedProductEvent = {
-  name: 'activity_completed',
-  properties: { activityID: 'activity-7' },
-  sessionID: 'session-7',
-  timestamp: new Date('2026-07-16T10:11:12.131Z'),
-  userID: 'user-7',
-};
 
 test('it posts the encoded row to the events endpoint with the append token', async () => {
   const received: Array<{ authorization: string | null; body: string; url: string }> = [];
@@ -34,7 +25,13 @@ test('it posts the encoded row to the events endpoint with the append token', as
     token: 'append-token',
   });
 
-  const delivered = await sendProductEvent(event);
+  const delivered = await sendProductEvent({
+    name: 'activity_completed',
+    properties: { activityID: 'activity-7' },
+    sessionID: 'session-7',
+    timestamp: new Date('2026-07-16T10:11:12.131Z'),
+    userID: 'user-7',
+  });
 
   expect(delivered).toBeTrue();
   expect(received).toHaveLength(1);
@@ -63,7 +60,13 @@ test('it resolves false when the events endpoint rejects the row', async () => {
     token: 'append-token',
   });
 
-  const delivered = await sendProductEvent(event);
+  const delivered = await sendProductEvent({
+    name: 'activity_completed',
+    properties: { activityID: 'activity-7' },
+    sessionID: 'session-7',
+    timestamp: new Date('2026-07-16T10:11:12.131Z'),
+    userID: 'user-7',
+  });
 
   expect(delivered).toBeFalse();
 });
@@ -76,7 +79,13 @@ test('it resolves false when the events endpoint is unreachable', async () => {
     token: 'append-token',
   });
 
-  const delivered = await sendProductEvent(event);
+  const delivered = await sendProductEvent({
+    name: 'activity_completed',
+    properties: { activityID: 'activity-7' },
+    sessionID: 'session-7',
+    timestamp: new Date('2026-07-16T10:11:12.131Z'),
+    userID: 'user-7',
+  });
 
   expect(delivered).toBeFalse();
 });

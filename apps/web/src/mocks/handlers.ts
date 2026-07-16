@@ -5,26 +5,18 @@ import { buildEmailMockHandlers } from '@vers/mock-services/email';
 import { buildKeysMockHandlers } from '@vers/mock-services/keys';
 import { buildReplayMockHandlers } from '@vers/mock-services/replay';
 import { buildSessionMockHandlers } from '@vers/mock-services/session';
+import { buildTinybirdMockHandlers } from '@vers/mock-services/tinybird';
 import { buildUserMockHandlers } from '@vers/mock-services/user';
 import { buildVerificationMockHandlers } from '@vers/mock-services/verification';
 import type { HttpHandler } from 'msw';
-import { HttpResponse, http } from 'msw';
 import { SERVICE_URLS } from '../lib/rpc/service-urls';
 
 await createDemoSeed();
 
-/**
- * Accepts the product-event beacons component flows fire in passing, so a covered flow never
- * trips the unhandled-request error; ingest-path suites still observe delivery with their own
- * per-test handlers. Matched by path alone: the Tinybird origin comes from env the preload
- * assigns after this module's imports have already evaluated.
- */
-const tinybirdEventsHandler = http.post('*/v0/events', () =>
-  HttpResponse.json({ quarantined_rows: 0, successful_rows: 1 }, { status: 202 }),
-);
-
 export const handlers: Array<HttpHandler> = [
-  tinybirdEventsHandler,
+  // the literal origin pairs with the preload's TINYBIRD_URL assignment — env isn't readable
+  // here, since this module's imports evaluate before the preload's assignments run
+  ...buildTinybirdMockHandlers('https://tinybird.test'),
   ...buildUserMockHandlers(SERVICE_URLS.user),
   ...buildSessionMockHandlers(SERVICE_URLS.session),
   ...buildVerificationMockHandlers(SERVICE_URLS.verification),

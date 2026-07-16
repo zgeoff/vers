@@ -13,7 +13,8 @@
     "./email": "./src/email/index.ts",
     "./activity": "./src/activity/index.ts",
     "./keys": "./src/keys/index.ts",
-    "./replay": "./src/replay/index.ts"
+    "./replay": "./src/replay/index.ts",
+    "./tinybird": "./src/tinybird/index.ts"
   },
   "scripts": {
     "test": "bun test",
