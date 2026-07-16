@@ -68,4 +68,6 @@ test('it relays a redirect response even when its headers refuse the stamp', asy
 
   expect(response.status).toBe(301);
   expect(response.headers.get('location')).toBe('https://example.test/nexus');
+  expect(response).toBe(redirect);
+  expect(response.headers.get('x-trace-id')).toBeNull();
 });
