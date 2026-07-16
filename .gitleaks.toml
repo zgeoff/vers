@@ -11,10 +11,14 @@ targetRules = ["private-key", "jwt"]
 description = "test files and test preloads hold intentionally fake keys and tokens"
 paths = ['''\.test\.tsx?$''', '''(^|/)test-setup\.ts$''']
 
+# Matched by secret value AND path, so an example documenting a new key value
+# flags until that value is triaged here.
 [[allowlists]]
 targetRules = ["private-key"]
-description = "committed .env examples document key shape with throwaway values"
+description = "committed .env examples document key shape with a throwaway value"
+condition = "AND"
 paths = ['''\.env(\.[\w.-]+)?\.example$''']
+regexes = ['''MC4CAQAwBQYDK2VwBCIEII0t42Zs6tdR0AkoR3hBCw4ACRMg/RPZRdyZ2Pjz\+3wc''']
 
 # Matched by secret value AND path, so replacing or adding a key in these
 # fixture files flags until the new value is triaged here.
