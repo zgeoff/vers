@@ -1,5 +1,5 @@
+import type { TraceContext } from '@vers/trace';
 import { traceStorage } from './trace-storage';
-import type { TraceContext } from './types';
 
 /**
  * Runs the given scope with the trace context active, making it visible to `findTraceContext`

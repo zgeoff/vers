@@ -1,8 +1,8 @@
 import { RPCLink } from '@orpc/client/fetch';
 import { createIsomorphicFn } from '@tanstack/react-start';
 import type { ServiceName } from '@vers/service-auth';
-import { buildTraceparent, createTraceContext, findTraceContext } from '@vers/service-utils';
-import { createTraceparent } from '../trace/create-traceparent';
+import { findTraceContext } from '@vers/service-utils';
+import { buildTraceparent, createTraceContext } from '@vers/trace';
 import { createEdgeServiceToken } from './create-edge-service-token';
 import { loadSessionActor } from './load-session-actor';
 import { SERVICE_URLS } from './service-urls';
@@ -58,7 +58,7 @@ export function buildServiceLink(service: ServiceName): RPCLink<ServiceLinkConte
     .client(
       () =>
         new RPCLink<ServiceLinkContext>({
-          headers: () => ({ traceparent: createTraceparent() }),
+          headers: () => ({ traceparent: buildTraceparent(createTraceContext()) }),
           url: `${globalThis.location.origin}/api/rpc/${service}`,
         }),
     )();

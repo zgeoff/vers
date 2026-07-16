@@ -18,6 +18,7 @@
     "@sinclair/typebox": "catalog:",
     "@vers/service-auth": "workspace:*",
     "@vers/service-utils": "workspace:*",
+    "@vers/trace": "workspace:*",
     "elysia": "catalog:",
     "jose": "catalog:",
     "pino": "catalog:",

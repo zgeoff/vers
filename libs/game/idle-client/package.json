@@ -18,6 +18,7 @@
     "@vers/design-system": "workspace:*",
     "@vers/idle-core": "workspace:*",
     "@vers/styled-system": "workspace:*",
+    "@vers/trace": "workspace:*",
     "idb": "catalog:",
     "react": "catalog:",
     "tiny-invariant": "catalog:",

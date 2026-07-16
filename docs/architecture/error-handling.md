@@ -112,16 +112,18 @@ on, and appears in three places: every pino log line the request writes (an
 every service response. A trace id from an error screen or a support report greps straight to the
 logs and the event.
 
-- The browser mints a fresh `traceparent` per RPC call (`createTraceparent`, app-web).
+- The browser mints a fresh `traceparent` per RPC call from the `@vers/trace` primitives.
 - app-web's server-side service links continue the ambient request's trace when it carries one and
   start a fresh trace otherwise; the browser-lane RPC proxy forwards headers wholesale, so browser
   traces pass through untouched.
 - Services parse inbound `traceparent`, mint their hop's span id, and run the whole request inside
   `withTraceContext` (`@vers/service-utils`), which is what the pino mixin and Sentry tag read.
 
-The primitives (`parseTraceparent`, `buildTraceparent`, `createTraceContext`, `withTraceContext`,
-`findTraceContext`) live in `@vers/service-utils` and speak the frozen W3C format, so anything
-OpenTelemetry-instrumented interoperates at the header level.
+The pure primitives (`parseTraceparent`, `buildTraceparent`, `createTraceContext`, `TraceContext`)
+live in `@vers/trace` — isomorphic, so browser workers mint the same headers services parse — and
+speak the frozen W3C format, so anything OpenTelemetry-instrumented interoperates at the header
+level. The `AsyncLocalStorage`-bound scope helpers (`withTraceContext`, `findTraceContext`) stay in
+`@vers/service-utils`.
 
 ## app-web
 

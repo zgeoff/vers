@@ -19,6 +19,7 @@
     "@opentelemetry/resources": "catalog:",
     "@opentelemetry/sdk-logs": "catalog:",
     "@opentelemetry/sdk-metrics": "catalog:",
+    "@vers/trace": "workspace:*",
     "jose": "catalog:",
     "pino": "catalog:",
     "pino-pretty": "catalog:",
