@@ -13,5 +13,7 @@ test('it creates a checkpoint flush stalled message', () => {
   });
 
   // the literal pins the wire value so an enum-value change fails this test
-  expect(String(message.type)).toBe('checkpoint_flush_stalled');
+  const wireValue: string = message.type;
+
+  expect(wireValue).toBe('checkpoint_flush_stalled');
 });
