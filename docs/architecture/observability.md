@@ -25,8 +25,10 @@ calls it before closing its database pool, since a final gauge collection may st
 ## Log lines
 
 Every pino logger stamps the active request's trace id onto each entry through an AsyncLocalStorage
-mixin, and every HTTP response reports the same id in `x-trace-id`, so one trace id names a
-request's log lines across app-web and the services it called. The line-level conventions:
+mixin, and HTTP responses report the same id in `x-trace-id`, so one trace id names a request's log
+lines across app-web and the services it called. A response built with immutable headers (a
+`Response.redirect`) passes through unstamped and correlates through its request line instead. The
+line-level conventions:
 
 - Data rides in structured fields, never interpolated into the message:
   `logger.info({ method, path, status, durationMs }, 'request completed')`. The message is a stable

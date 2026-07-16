@@ -75,7 +75,8 @@ function pickRequestLogLevel(status: number, pathname: string): keyof RequestLog
 }
 
 /**
- * Rounds an elapsed-time reading to one decimal so a fast request doesn't log a duration of zero.
+ * Rounds an elapsed-time reading to one decimal, keeping the sub-millisecond resolution that
+ * whole-millisecond rounding would discard.
  */
 function toDurationMs(elapsedMs: number): number {
   return Math.round(elapsedMs * 10) / 10;

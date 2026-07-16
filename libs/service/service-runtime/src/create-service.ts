@@ -269,15 +269,26 @@ function registerORPCHandler(
           return response;
         }
 
-        const handled = await handler.handle(context.request, {
-          context: {
-            actingSessionId: resolution.actingSessionId,
-            actingUserId: resolution.actingUserId,
-            logger: deps.logger,
-            traceID: trace.traceID,
-          },
-          prefix,
-        });
+        let handled: Awaited<ReturnType<typeof handler.handle>>;
+
+        try {
+          handled = await handler.handle(context.request, {
+            context: {
+              actingSessionId: resolution.actingSessionId,
+              actingUserId: resolution.actingUserId,
+              logger: deps.logger,
+              traceID: trace.traceID,
+            },
+            prefix,
+          });
+        } catch (error) {
+          deps.logger.error(
+            { durationMs: toDurationMs(performance.now() - start), err: error, method, path },
+            'request failed',
+          );
+
+          throw error;
+        }
 
         const finalResponse = handled.matched
           ? handled.response
@@ -311,8 +322,8 @@ function pickRequestLogLevel(status: number): 'error' | 'info' | 'warn' {
 }
 
 /**
- * Rounds an elapsed-time reading to one decimal so sub-millisecond RPC handling doesn't log as
- * zero.
+ * Rounds an elapsed-time reading to one decimal, keeping the sub-millisecond resolution that
+ * whole-millisecond rounding would discard.
  */
 function toDurationMs(elapsedMs: number): number {
   return Math.round(elapsedMs * 10) / 10;
