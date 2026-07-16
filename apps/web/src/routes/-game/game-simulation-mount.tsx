@@ -7,6 +7,7 @@ import { activeAvatarQueryOptions } from '../../lib/avatar/active-avatar-query-o
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
 import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
+import { emitProductEvent } from '../../lib/product-events/emit-product-event';
 
 /**
  * Renders nothing: a side-effect-only sibling to the game layout's outlet, so it returns null by
@@ -19,7 +20,9 @@ export function GameSimulationMount() {
   const resyncStatus = useResyncStatus();
   const avatarID = avatarQuery.data?.id;
   const hasSentResync = useRef(false);
+  const hasSentSessionStart = useRef(false);
   const lastWorkerActivityID = useRef(idleWorkerHandle.activity?.id);
+  const lastEmittedCompletionID = useRef(idleWorkerHandle.lastCompletedActivityID);
 
   useEffect(() => {
     if (idleWorkerHandle.worker !== undefined && !idleWorkerHandle.initialized) {
@@ -55,6 +58,40 @@ export function GameSimulationMount() {
 
     sendIdleRequestResync(idleWorkerHandle.worker, avatarID);
   }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID]);
+
+  // fires once per page load under the same gate as the resync: a live worker and a known avatar
+  // is the point the player is actually in the game
+  useEffect(() => {
+    if (
+      idleWorkerHandle.worker === undefined ||
+      !idleWorkerHandle.initialized ||
+      avatarID === undefined ||
+      hasSentSessionStart.current
+    ) {
+      return;
+    }
+
+    hasSentSessionStart.current = true;
+
+    emitProductEvent('session_started', {});
+  }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID]);
+
+  // the ref starts at the mounted value, so re-entering the game layout never re-reports a
+  // completion the store still holds
+  useEffect(() => {
+    const completedActivityID = idleWorkerHandle.lastCompletedActivityID;
+
+    if (
+      completedActivityID === undefined ||
+      lastEmittedCompletionID.current === completedActivityID
+    ) {
+      return;
+    }
+
+    lastEmittedCompletionID.current = completedActivityID;
+
+    emitProductEvent('activity_completed', { activityID: completedActivityID });
+  }, [idleWorkerHandle.lastCompletedActivityID]);
 
   // the tab relays connectivity to the worker: Chromium never fires online events inside a
   // SharedWorker, so this is the reconnect trigger there. The worker single-flights concurrent

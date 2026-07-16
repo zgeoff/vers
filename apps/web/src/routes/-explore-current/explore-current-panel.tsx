@@ -15,6 +15,7 @@ import { sendIdleSetActivity } from '../../lib/idle/send-idle-set-activity';
 import { sendIdleSetFailureAction } from '../../lib/idle/send-idle-set-failure-action';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { useIsSharedWorkerSupported } from '../../lib/platform/use-is-shared-worker-supported';
+import { emitProductEvent } from '../../lib/product-events/emit-product-event';
 import { activityClient } from '../../lib/rpc/clients/activity-client';
 import type { OrpcQueryUtils } from '../../lib/rpc/orpc';
 import { ActivityRewardsPanel } from './activity-rewards-panel';
@@ -83,6 +84,10 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
 
       setAttempt({ activityID: outcome.activity.id, scopeID });
       sendIdleSetActivity(idleWorkerHandle.worker, outcome.activity);
+
+      // only a fresh server-confirmed start reports — an attach resumes an activity that already
+      // reported its own start
+      emitProductEvent('activity_started', { activityID: outcome.activity.id, nodeID: scopeID });
     },
   });
 
@@ -106,6 +111,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
 
     setAttempt({ scopeID: selectedNode.id });
     startActivity({ avatarID, scopeID: selectedNode.id });
+    emitProductEvent('node_explored', { nodeID: selectedNode.id });
   }, [
     idleWorkerHandle.worker,
     idleWorkerHandle.initialized,

@@ -25,6 +25,7 @@ export { useActivity } from './state/use-activity';
 export { useAvatar } from './state/use-avatar';
 export { useCheckpointStreamError } from './state/use-checkpoint-stream-error';
 export { useFailureAction } from './state/use-failure-action';
+export { useLastCompletedActivityID } from './state/use-last-completed-activity-id';
 export { useRewardSlotLedger } from './state/use-reward-slot-ledger';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
 export type { ActivitySubmissionContext } from './submission/types';

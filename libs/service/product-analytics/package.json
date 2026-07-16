@@ -1,0 +1,21 @@
+{
+  "name": "@vers/product-analytics",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@vers/test-utils": "workspace:*",
+    "@zgeoff/bun-test-extended": "catalog:",
+    "msw": "catalog:",
+    "typescript": "catalog:"
+  }
+}

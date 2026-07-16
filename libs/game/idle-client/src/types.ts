@@ -55,6 +55,7 @@ export type ClientMessage =
   | SetFailureActionMessage;
 
 export enum WorkerMessageType {
+  ActivityCompleted = 'activity_completed',
   CheckpointStreamInvalid = 'checkpoint_stream_invalid',
   ConnectionStatus = 'connection_status',
   InitialState = 'initial_state',
@@ -66,6 +67,15 @@ export enum WorkerMessageType {
 
 interface IWorkerMessage {
   readonly type: WorkerMessageType;
+}
+
+/**
+ * Reports that an activity's terminal completed checkpoint left the simulation — the one signal
+ * that an activity finished, as opposed to being stopped or replaced by a newer selection.
+ */
+export interface ActivityCompletedMessage extends IWorkerMessage {
+  readonly activityID: string;
+  readonly type: WorkerMessageType.ActivityCompleted;
 }
 
 export interface InitialStateMessage extends IWorkerMessage {
@@ -137,6 +147,7 @@ export interface RewardSlotsRecordedMessage extends IWorkerMessage {
 }
 
 export type WorkerMessage =
+  | ActivityCompletedMessage
   | CheckpointStreamInvalidMessage
   | ConnectionStatusMessage
   | InitialStateMessage

@@ -129,7 +129,8 @@ Development:
 - Type Safety - [TypeScript](https://typescriptlang.org), [Zod](https://zod.dev)
 - Monitoring - [Bugsink](https://www.bugsink.com) (errors, Sentry protocol),
   [Axiom](https://axiom.co) (traces and logs via [OpenTelemetry](https://opentelemetry.io))
-- Analytics - [Umami](https://umami.is) (self-hosted web traffic and acquisition-funnel analytics)
+- Analytics - [Umami](https://umami.is) (self-hosted web traffic and acquisition-funnel analytics),
+  [Tinybird](https://tinybird.co) (managed ClickHouse behind the product-event stream)
 - Hosting - [Fly.io](https://fly.io) (compute), [Neon](https://neon.tech) (data)
 
 ## Projects
@@ -186,6 +187,7 @@ Libraries (`libs/`, grouped by domain):
 - `libs/game/idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
 - `libs/game/idle-core` - deterministic seeded simulation engine
 - `libs/service/jobs` - typed pg-boss job queue wrapper: send, drain, and retry/dead-letter policy
+- `libs/service/product-analytics` - product-event registry types and the Tinybird Events API sender
 - `libs/service/service-auth` - s2s token minting, parsing, and audience derivation
 - `libs/service/service-runtime` - Elysia service runtime: createService, s2s auth, health, logging,
   OTel/Sentry wiring
@@ -200,4 +202,5 @@ Libraries (`libs/`, grouped by domain):
 
 Infrastructure:
 
-- `infra` - pulumi infrastructure definitions
+- `infra` - pulumi infrastructure definitions and the Tinybird workspace datafiles
+  (`infra/tinybird`)

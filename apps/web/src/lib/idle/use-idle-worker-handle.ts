@@ -3,6 +3,7 @@ import {
   useAvatar,
   useCheckpointStreamError,
   useFailureAction,
+  useLastCompletedActivityID,
   useSimulationInitialized,
   useSimulationWorker,
 } from '@vers/idle-client';
@@ -15,6 +16,7 @@ interface IdleWorkerHandle {
   readonly checkpointStreamError: CheckpointStreamError | undefined;
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
+  readonly lastCompletedActivityID: string | undefined;
   readonly worker: SharedWorker | undefined;
 }
 
@@ -30,6 +32,7 @@ export function useIdleWorkerHandle(): IdleWorkerHandle {
   const avatar = useAvatar();
   const failureAction = useFailureAction();
   const checkpointStreamError = useCheckpointStreamError();
+  const lastCompletedActivityID = useLastCompletedActivityID();
 
   return {
     activity: activity ?? undefined,
@@ -37,6 +40,7 @@ export function useIdleWorkerHandle(): IdleWorkerHandle {
     checkpointStreamError: checkpointStreamError ?? undefined,
     failureAction,
     initialized,
+    lastCompletedActivityID: lastCompletedActivityID ?? undefined,
     worker: worker ?? undefined,
   };
 }

@@ -1,0 +1,16 @@
+DESCRIPTION >
+    The behavioural product-event stream: one row per curated event, identity stamped server-side
+    by app-web's ingest action. Property columns are sparse — an event writes its own and leaves
+    the rest null.
+
+SCHEMA >
+    `timestamp` DateTime64(3) `json:$.timestamp`,
+    `event_name` LowCardinality(String) `json:$.event_name`,
+    `user_id` String `json:$.user_id`,
+    `session_id` String `json:$.session_id`,
+    `activity_id` Nullable(String) `json:$.activity_id`,
+    `node_id` Nullable(String) `json:$.node_id`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_SORTING_KEY "user_id, timestamp"

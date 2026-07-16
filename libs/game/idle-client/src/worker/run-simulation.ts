@@ -1,5 +1,6 @@
 import type { Simulation } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
+import { createActivityCompletedMessage } from './create-activity-completed-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { createRewardSlotsRecordedMessage } from './create-reward-slots-recorded-message';
 import { OFFLINE_CAP_WARNING_MS } from './offline-cap-warning-ms';
@@ -47,6 +48,10 @@ export async function runSimulation(
     return;
   }
 
+  if (checkpoint.type === ActivityCheckpointType.Completed) {
+    emitActivityCompleted(context, activityID);
+  }
+
   const remainingBudgetMs = context.getRemainingBudgetMs();
 
   const action = pickPostTerminalAction({
@@ -80,6 +85,14 @@ export async function runSimulation(
   }
 
   await runContinuation(context, simulation, activity);
+}
+
+function emitActivityCompleted(context: WorkerContext, activityID: string) {
+  const message = createActivityCompletedMessage(activityID);
+
+  for (const connection of context.connections) {
+    connection.postMessage(message);
+  }
 }
 
 function emitRewardSlotsRecorded(

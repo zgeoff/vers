@@ -16,6 +16,7 @@ export interface StubIdleWorkerHandle {
   readonly checkpointStreamError?: CheckpointStreamError | undefined;
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
+  readonly lastCompletedActivityID?: string | undefined;
   readonly worker: StubSimulationWorker | undefined;
 }
 

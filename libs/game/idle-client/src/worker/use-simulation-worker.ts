@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setConnectionStatus } from '../state/set-connection-status';
+import { setLastCompletedActivityID } from '../state/set-last-completed-activity-id';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
 import { setResyncStatus } from '../state/set-resync-status';
 import { setRewardSlotLedger } from '../state/set-reward-slot-ledger';
@@ -10,6 +11,7 @@ import { setSimulationWorker } from '../state/set-simulation-worker';
 import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
 import { useIdleStore } from '../state/use-idle-store';
 import type {
+  ActivityCompletedMessage,
   CheckpointStreamInvalidMessage,
   ConnectionStatusMessage,
   InitialStateMessage,
@@ -77,6 +79,10 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
     setRewardSlotLedger(event.data.rewardSlotLedger);
   }
 
+  if (isActivityCompletedMessage(event.data)) {
+    setLastCompletedActivityID(event.data.activityID);
+  }
+
   if (isCheckpointStreamInvalidMessage(event.data)) {
     setCheckpointStreamError({
       activityID: event.data.activityID,
@@ -114,6 +120,10 @@ function isInitialStateMessage(message: WorkerMessage): message is InitialStateM
 
 function isUpdateMessage(message: WorkerMessage): message is SimulationUpdateMessage {
   return message.type === WorkerMessageType.SimulationUpdate;
+}
+
+function isActivityCompletedMessage(message: WorkerMessage): message is ActivityCompletedMessage {
+  return message.type === WorkerMessageType.ActivityCompleted;
 }
 
 function isCheckpointStreamInvalidMessage(
