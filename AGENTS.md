@@ -468,36 +468,35 @@ Everywhere:
 - A factory is called in the test that uses its value, never through a helper that pre-configures
   overrides — a second layer of defaults is a shadow factory the test site can't see.
 - `test-utils/factories/` holds only faker-defaulted plain-data `create-mock-*` factories. Runtime
-  stand-ins — stub contexts, stub workers, message recorders — live directly in `test-utils/`,
-  named for the stand-in (`create-stub-worker-context`, `create-test-connection`), and are never
-  called factories.
+  stand-ins — stub contexts, stub workers, message recorders — live directly in `test-utils/`, named
+  for the stand-in (`create-stub-worker-context`, `create-test-connection`), and are never called
+  factories.
 - `setupTest` wires runtime — servers, handlers, clients, recorders — and returns no domain data and
   no data-builders.
-- `toStrictEqual` when the test determines every field of the expected value — the full shape is
-  the contract, and writing it out is the point. `toMatchObject`, or asymmetric matchers inside
+- `toStrictEqual` when the test determines every field of the expected value — the full shape is the
+  contract, and writing it out is the point. `toMatchObject`, or asymmetric matchers inside
   `toStrictEqual`, when the value carries fields the test doesn't determine: faker defaults,
-  timestamps, engine-computed state. Choosing partial because the full literal is long is a
-  defect — length is the contract. Never `toEqual`.
+  timestamps, engine-computed state. Choosing partial because the full literal is long is a defect —
+  length is the contract. Never `toEqual`.
 - A test body contains no branching: narrowing a maybe-value is a one-line `invariant(...)`
   (`tiny-invariant`), waiting on an async condition is `waitFor` (`@vers/test-utils`), and a
-  conditional path in a test means two tests. An `if` inside an MSW handler implementation
-  scripting a call sequence ("first call fails, second succeeds") is handler scripting, not test
-  branching.
+  conditional path in a test means two tests. An `if` inside an MSW handler implementation scripting
+  a call sequence ("first call fails, second succeeds") is handler scripting, not test branching.
 - Global mock reset lives in the preload's `afterEach` (`mock.restore()`), never per-test.
-- State a preload reset owns — Zustand stores (`registerZustandReset`,
-  `@vers/client-test-utils`), MSW handlers (`registerMSWLifecycle`), the `@msw/data` store,
-  registered mock holders, storage fakes — needs no per-test restore; adding one is noise. A
-  package that adopts a persistent storage fake (fake-indexeddb, localStorage) sweeps it in the
-  preload's `afterEach`; tests never rely on unique keys for isolation.
+- State a preload reset owns — Zustand stores (`registerZustandReset`, `@vers/client-test-utils`),
+  MSW handlers (`registerMSWLifecycle`), the `@msw/data` store, registered mock holders, storage
+  fakes — needs no per-test restore; adding one is noise. A package that adopts a persistent storage
+  fake (fake-indexeddb, localStorage) sweeps it in the preload's `afterEach`; tests never rely on
+  unique keys for isolation.
 - A test that mutates global or environment state the preload doesn't own restores it in an
   `onTestFinished(...)` callback registered inside the test — never `try`/`finally`, never a
   lifecycle hook — so teardown runs whether the test passes or throws. A setup helper may register
   it for its callers.
-- `mock.module` never appears in a test file and never targets a module for convenience. A module
-  is stubbed only when the test runtime cannot host what it provides (`SharedWorker`, WebGL, RSC
-  ambient context), via a preload `register-*-mock` module behind a mutable holder, with a
-  `with-*` writer as the only mutation path. A module mocked because of what it imports is a
-  module-graph defect — fix the entrypoint.
+- `mock.module` never appears in a test file and never targets a module for convenience. A module is
+  stubbed only when the test runtime cannot host what it provides (`SharedWorker`, WebGL, RSC
+  ambient context), via a preload `register-*-mock` module behind a mutable holder, with a `with-*`
+  writer as the only mutation path. A module mocked because of what it imports is a module-graph
+  defect — fix the entrypoint.
 - jest-extended matchers come from the `@zgeoff/bun-test-extended` preload; a package-local
   `augment-bun-test.ts` side-effect import brings their types into `tsc`.
 - Test titles describe observable behaviour and never cite internal identifiers
