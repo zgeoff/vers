@@ -19,7 +19,9 @@ function setupTest(
 ) {
   const link = new RPCLink<{ traceparent?: string }>({
     headers: (options) =>
-      options.context.traceparent === undefined ? {} : { traceparent: options.context.traceparent },
+      options.context?.traceparent === undefined
+        ? {}
+        : { traceparent: options.context.traceparent },
     url: `${resolveServiceURL('activity')}/rpc`,
   });
 
@@ -38,7 +40,7 @@ function setupTest(
     ...config,
   });
 
-  return { onAcked, onCapped, onFlushStalled, onInvalid, submitter };
+  return { client, onAcked, onCapped, onFlushStalled, onInvalid, submitter };
 }
 
 test('it flushes immediately on a terminal checkpoint and confirms the queue on success', async () => {
@@ -618,6 +620,7 @@ test('it resets the stall streak once a flush is answered', async () => {
 test('it sends a fresh traceparent with each flush and reports its trace id on rejection', async () => {
   const ctx = setupTest();
   const traceparents: Array<null | string> = [];
+  let attempt = 0;
 
   // the recording handler returns nothing, falling through to the mock service handler after it
   server.use(
@@ -625,6 +628,12 @@ test('it sends a fresh traceparent with each flush and reports its trace id on r
       traceparents.push(info.request.headers.get('traceparent'));
     }),
     mockActivityService.trackActivityProgress.handler((opts) => {
+      attempt += 1;
+
+      if (attempt === 1) {
+        throw new Error('backend unreachable');
+      }
+
       throw opts.errors.CHECKPOINT_INVALID({ data: { reason: 'broken-chain-link' } });
     }),
   );
@@ -637,15 +646,38 @@ test('it sends a fresh traceparent with each flush and reports its trace id on r
   });
 
   await ctx.submitter.submit('traced-activity', createMockCompletedCheckpoint());
+  await ctx.submitter.submit('traced-activity', createMockCompletedCheckpoint());
 
-  expect(traceparents).toHaveLength(1);
-  expect(traceparents[0]).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/);
+  expect(traceparents).toHaveLength(2);
+  expect(traceparents).toSatisfyAll((header) => /^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/.test(header));
+  expect(traceparents[1]).not.toBe(traceparents[0]);
 
-  const traceID = traceparents[0]?.split('-')[1];
+  const traceID = traceparents[1]?.split('-')[1];
 
   expect(ctx.onInvalid).toHaveBeenCalledExactlyOnceWith(
     'traced-activity',
     'broken-chain-link',
     traceID,
   );
+});
+
+test('it sends no trace header for a call made without per-call context', async () => {
+  const ctx = setupTest();
+  const traceparents: Array<null | string> = [];
+
+  // the recording handler returns nothing, falling through to the mock service handler after it
+  server.use(
+    http.post(`${resolveServiceURL('activity')}/rpc/*`, (info) => {
+      traceparents.push(info.request.headers.get('traceparent'));
+    }),
+    mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })),
+  );
+
+  await ctx.client.trackActivityProgress({
+    activityID: 'context-free-activity',
+    checkpoints: [createMockCheckpointBatchEntry({ version: 1 })],
+    expectedHead: 0,
+  });
+
+  expect(traceparents).toStrictEqual([null]);
 });

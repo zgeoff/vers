@@ -11,8 +11,11 @@ import type { ActivityCallContext, ActivityServiceClient } from './types';
  */
 export function createActivityServiceClient(): ActivityServiceClient {
   const link = new RPCLink<ActivityCallContext>({
+    // a call made with no options at all reaches this callback with an undefined context
     headers: (options) =>
-      options.context.traceparent === undefined ? {} : { traceparent: options.context.traceparent },
+      options.context?.traceparent === undefined
+        ? {}
+        : { traceparent: options.context.traceparent },
     url: `${self.location.origin}/api/rpc/activity`,
   });
 

@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/react';
+import { setCheckpointFlushStall } from '@vers/idle-client';
 import { useEffect } from 'react';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
@@ -52,6 +53,9 @@ export function GameSimulationMount() {
         ),
       );
     });
+
+    // consume the one-shot report so a later remount doesn't re-deliver it
+    setCheckpointFlushStall(null);
   }, [idleWorkerHandle.checkpointFlushStall]);
 
   return null;

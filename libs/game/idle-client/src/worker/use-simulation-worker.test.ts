@@ -147,6 +147,10 @@ test('it reports a checkpoint stream error from worker messages', async () => {
 test('it records a flush stall report from worker messages', async () => {
   registerSharedWorkerStub();
 
+  onTestFinished(() => {
+    useIdleStore.setState({ checkpointFlushStall: null });
+  });
+
   const hook = renderHook(() => useSimulationWorker());
 
   hook.rerender();

@@ -78,9 +78,10 @@ export interface SimulationUpdateMessage extends IWorkerMessage {
 }
 
 /**
- * Reports that an activity's checkpoint flushes have repeatedly failed to reach the activity
- * service. Telemetry only, not a stop signal: the stream stays live, its queue intact, and later
- * flushes keep retrying. `traceID` names the last failed attempt's trace for log correlation.
+ * Reports that an activity's checkpoint flushes have repeatedly failed without a defined
+ * contract outcome — transport failures or undeclared server errors. Telemetry only, not a stop
+ * signal: the stream stays live, its queue intact, and later flushes keep retrying. `traceID`
+ * names the last failed attempt's trace for log correlation.
  */
 export interface CheckpointFlushStalledMessage extends IWorkerMessage {
   readonly activityID: string;

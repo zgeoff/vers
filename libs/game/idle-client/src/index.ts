@@ -11,6 +11,7 @@ export type {
   ResyncResult,
 } from './resync/types';
 
+export { setCheckpointFlushStall } from './state/set-checkpoint-flush-stall';
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
 export { setRewardSlotLedger } from './state/set-reward-slot-ledger';

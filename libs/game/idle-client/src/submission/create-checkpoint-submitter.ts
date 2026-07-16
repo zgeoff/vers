@@ -71,10 +71,11 @@ interface CreateCheckpointSubmitterOptions {
   readonly onCapped?: (activityID: string, appendedHead: number) => void;
 
   /**
-   * Called once an activity's flush has failed to reach the service `FLUSH_STALL_THRESHOLD`
-   * times in a row — a transport failure or an undeclared server error each count, an answered
-   * request resets the streak. Telemetry only: the stream stays live, its queue intact, and later
-   * flushes keep retrying. `traceID` names the failed attempt's trace for log correlation.
+   * Called once an activity's flush has failed `FLUSH_STALL_THRESHOLD` times in a row without a
+   * defined contract outcome — a transport failure or an undeclared server error each count, a
+   * success or a defined contract error resets the streak. Telemetry only: the stream stays
+   * live, its queue intact, and later flushes keep retrying. `traceID` names the failed
+   * attempt's trace for log correlation.
    */
   readonly onFlushStalled?: (activityID: string, reason: string, traceID: string) => void;
 
@@ -101,8 +102,8 @@ interface CreateCheckpointSubmitterOptions {
  * respectively); `ACTIVITY_CAPPED`, `ACTIVITY_TERMINAL`, and `SESSION_EVICTED` stop the stream and
  * discard its rows — the server accepts nothing further for it; anything else — `UNAUTHORIZED` or
  * a transport failure — holds the queue untouched for the next flush tick. Each flush rides a
- * freshly minted trace, and a streak of unanswered flushes reports a stall without stopping the
- * stream.
+ * freshly minted trace, and a streak of non-defined flush failures reports a stall without
+ * stopping the stream.
  */
 export function createCheckpointSubmitter(
   options: Readonly<CreateCheckpointSubmitterOptions>,
@@ -177,7 +178,7 @@ export function createCheckpointSubmitter(
         return;
       }
 
-      // a defined error is an answered request: the service is reachable, so the stall streak ends
+      // a defined contract outcome ends the stall streak, whatever it decides for the stream
       state.consecutiveFlushFailures = 0;
 
       if (error.code === 'ACTIVITY_CAPPED') {
