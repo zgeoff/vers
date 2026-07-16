@@ -16,40 +16,38 @@ import { server } from '../../mocks/node';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { removeSharedWorker } from '../../test-utils/remove-shared-worker';
 import { render } from '../../test-utils/render';
-import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
+import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ExploreCurrentPanel } from './explore-current-panel';
 
-test('it shows a spinner and sends initialize before the worker reports its state', async () => {
+test('it shows a spinner and sends initialize before the worker reports its state', () => {
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
 
-  const rendered = await withIdleWorkerHandle(
-    {
-      activity: undefined,
-      failureAction: ActivityFailureAction.Abort,
-      initialized: false,
-      worker,
-    },
-    () => render(<ExploreCurrentPanel orpc={orpc} />),
-  );
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: false,
+    worker,
+  });
+
+  const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
 
   expect(calls).toStrictEqual([{ type: ClientMessageType.Initialize }]);
   expect(rendered.queryByTestId('world-map-node-codex-stub')).not.toBeInTheDocument();
 });
 
-test('it reports the simulation as unavailable when SharedWorker is unsupported', async () => {
+test('it reports the simulation as unavailable when SharedWorker is unsupported', () => {
   removeSharedWorker();
 
-  const rendered = await withIdleWorkerHandle(
-    {
-      activity: undefined,
-      failureAction: ActivityFailureAction.Abort,
-      initialized: false,
-      worker: undefined,
-    },
-    () => render(<ExploreCurrentPanel orpc={orpc} />),
-  );
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: false,
+    worker: undefined,
+  });
+
+  const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
 
   expect(rendered.getByRole('status')).toHaveTextContent(/activity simulation is unavailable/i);
 });
@@ -63,22 +61,19 @@ test('it starts an activity for the selected node once initialized, sending the 
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
 
-  await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    await withIdleWorkerHandle(
-      {
-        activity: undefined,
-        failureAction: ActivityFailureAction.Abort,
-        initialized: true,
-        worker,
-      },
-      async () => {
-        render(<ExploreCurrentPanel orpc={orpc} />);
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
 
-        await waitFor(() => {
-          expect(calls.some((call) => isSetActivityMessage(call))).toBeTrue();
-        });
-      },
-    );
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    render(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(calls.some((call) => isSetActivityMessage(call))).toBeTrue();
+    });
   });
 
   const sent = calls.find((call) => isSetActivityMessage(call));
@@ -112,27 +107,21 @@ test('it requests a resync instead of starting when the same scope is already ac
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
 
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
+
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    await withIdleWorkerHandle(
-      {
-        activity: undefined,
-        failureAction: ActivityFailureAction.Abort,
-        initialized: true,
-        worker,
-      },
-      async () => {
-        render(<ExploreCurrentPanel orpc={orpc} />);
+    render(<ExploreCurrentPanel orpc={orpc} />);
 
-        await waitFor(() => {
-          expect(calls).toContainEqual({
-            avatarID: avatar.id,
-            type: ClientMessageType.RequestResync,
-          });
-        });
+    await waitFor(() => {
+      expect(calls).toContainEqual({ avatarID: avatar.id, type: ClientMessageType.RequestResync });
+    });
 
-        expect(calls.some((call) => isSetActivityMessage(call))).toBeFalse();
-      },
-    );
+    expect(calls.some((call) => isSetActivityMessage(call))).toBeFalse();
   });
 });
 
@@ -146,44 +135,36 @@ test('it renders the node and its codex fragment once the worker reports the sen
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
 
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
+
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const rendered = await withIdleWorkerHandle(
-      {
-        activity: undefined,
-        failureAction: ActivityFailureAction.Abort,
-        initialized: true,
-        worker,
-      },
-      async () => {
-        const inner = render(<ExploreCurrentPanel orpc={orpc} />);
+    const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
 
-        await waitFor(() => {
-          expect(calls.some((call) => isSetActivityMessage(call))).toBeTrue();
-        });
-
-        return inner;
-      },
-    );
+    await waitFor(() => {
+      expect(calls.some((call) => isSetActivityMessage(call))).toBeTrue();
+    });
 
     const sent = calls.find((call) => isSetActivityMessage(call));
 
     invariant(sent !== undefined, 'expected a set-activity message');
 
-    await withIdleWorkerHandle(
-      {
-        activity: createMockActivitySnapshot({ id: sent.activity.id }),
-        failureAction: ActivityFailureAction.Abort,
-        initialized: true,
-        worker,
-      },
-      async () => {
-        rendered.refresh();
+    // the worker reporting the sent activity back is one setter call — mounted components
+    // re-render on it, no manual refresh
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: sent.activity.id }),
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      worker,
+    });
 
-        const codex = await rendered.findByTestId('world-map-node-codex-stub');
+    const codex = await rendered.findByTestId('world-map-node-codex-stub');
 
-        expect(codex).toBeVisible();
-      },
-    );
+    expect(codex).toBeVisible();
   });
 });
 
@@ -213,26 +194,23 @@ test('it offers a retry instead of spinning forever when starting fails, and ret
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
   const user = userEvent.setup();
 
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
+
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    await withIdleWorkerHandle(
-      {
-        activity: undefined,
-        failureAction: ActivityFailureAction.Abort,
-        initialized: true,
-        worker,
-      },
-      async () => {
-        const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
+    const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
 
-        const retry = await rendered.findByTestId('start-activity-retry');
+    const retry = await rendered.findByTestId('start-activity-retry');
 
-        await user.click(retry);
+    await user.click(retry);
 
-        await waitFor(() => {
-          expect(calls.some((call) => isSetActivityMessage(call))).toBeTrue();
-        });
-      },
-    );
+    await waitFor(() => {
+      expect(calls.some((call) => isSetActivityMessage(call))).toBeTrue();
+    });
   });
 });
 
@@ -247,50 +225,40 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
   const user = userEvent.setup();
 
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
+
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const rendered = await withIdleWorkerHandle(
-      {
-        activity: undefined,
-        failureAction: ActivityFailureAction.Abort,
-        initialized: true,
-        worker,
-      },
-      async () => {
-        const inner = render(<ExploreCurrentPanel orpc={orpc} />);
+    const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
 
-        await waitFor(() => {
-          expect(calls.some((call) => isSetActivityMessage(call))).toBeTrue();
-        });
-
-        return inner;
-      },
-    );
+    await waitFor(() => {
+      expect(calls.some((call) => isSetActivityMessage(call))).toBeTrue();
+    });
 
     const sent = calls.find((call) => isSetActivityMessage(call));
 
     invariant(sent !== undefined, 'expected a set-activity message');
 
-    await withIdleWorkerHandle(
-      {
-        activity: createMockActivitySnapshot({ id: sent.activity.id }),
-        failureAction: ActivityFailureAction.Abort,
-        initialized: true,
-        worker,
-      },
-      async () => {
-        rendered.refresh();
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: sent.activity.id }),
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      worker,
+    });
 
-        const checkbox = await rendered.findByLabelText('Auto-retry on failure');
+    const checkbox = await rendered.findByLabelText('Auto-retry on failure');
 
-        expect(checkbox).not.toBeChecked();
+    expect(checkbox).not.toBeChecked();
 
-        await user.click(checkbox);
+    await user.click(checkbox);
 
-        expect(calls).toContainEqual({
-          failureAction: ActivityFailureAction.Retry,
-          type: ClientMessageType.SetFailureAction,
-        });
-      },
-    );
+    expect(calls).toContainEqual({
+      failureAction: ActivityFailureAction.Retry,
+      type: ClientMessageType.SetFailureAction,
+    });
   });
 });

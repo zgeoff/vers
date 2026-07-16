@@ -5,7 +5,7 @@ import { createMockActivitySnapshot, createMockAvatarSnapshot } from '@vers/idle
 import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { render } from '../../test-utils/render';
-import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
+import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { AvatarProgression } from './avatar-progression';
 
@@ -49,23 +49,20 @@ test('it shows the optimistic total instead of the settled xp while an activity 
     status: 'active',
   });
 
+  setIdleWorkerHandle({
+    activity: createMockActivitySnapshot({ id: activity.id, rewards: { xp: 25 } }),
+    avatar: createMockAvatarSnapshot({ level: 3 }),
+    failureAction: ActivityFailureAction.Retry,
+    initialized: true,
+    worker: undefined,
+  });
+
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    await withIdleWorkerHandle(
-      {
-        activity: createMockActivitySnapshot({ id: activity.id, rewards: { xp: 25 } }),
-        avatar: createMockAvatarSnapshot({ level: 3 }),
-        failureAction: ActivityFailureAction.Retry,
-        initialized: true,
-        worker: undefined,
-      },
-      async () => {
-        const rendered = render(<AvatarProgression />);
+    const rendered = render(<AvatarProgression />);
 
-        const xp = await rendered.findByTestId('avatar-xp');
+    const xp = await rendered.findByTestId('avatar-xp');
 
-        expect(xp).toHaveTextContent('XP: 425');
-        expect(xp).not.toHaveTextContent('XP: 450');
-      },
-    );
+    expect(xp).toHaveTextContent('XP: 425');
+    expect(xp).not.toHaveTextContent('XP: 450');
   });
 });

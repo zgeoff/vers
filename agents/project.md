@@ -339,8 +339,9 @@ Everywhere:
   it for its callers.
 - `mock.module` never appears in a test file and never targets a module for convenience. A module is
   stubbed only when the test runtime cannot host what it provides (`SharedWorker`, WebGL, RSC
-  ambient context), via a preload `register-*-mock` module behind a mutable holder, with a `with-*`
-  writer as the only mutation path. A module mocked because of what it imports is a module-graph
+  ambient context), via a preload `register-*-mock` module behind a reactive stub store, with a
+  single exported writer (a `set-*` setter, or a `with-*` scope where the runtime demands a
+  callback) as the only mutation path. A module mocked because of what it imports is a module-graph
   defect — fix the entrypoint.
 - jest-extended matchers come from the `@zgeoff/bun-test-extended` preload; a package-local
   `augment-bun-test.ts` side-effect import brings their types into `tsc`.

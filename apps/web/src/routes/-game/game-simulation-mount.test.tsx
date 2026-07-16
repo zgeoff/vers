@@ -6,70 +6,66 @@ import { ActivityFailureAction } from '@vers/idle-core';
 import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { render } from '../../test-utils/render';
-import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
+import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { GameSimulationMount } from './game-simulation-mount';
 
-test('it sends the initialize message once a worker connects that has not reported state yet', async () => {
+test('it sends the initialize message once a worker connects that has not reported state yet', () => {
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
 
-  await withIdleWorkerHandle(
-    { activity: undefined, failureAction: ActivityFailureAction.Abort, initialized: false, worker },
-    () => {
-      render(<GameSimulationMount />);
-    },
-  );
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: false,
+    worker,
+  });
 
+  render(<GameSimulationMount />);
   expect(calls).toStrictEqual([{ type: ClientMessageType.Initialize }]);
 });
 
-test('it sends nothing once the worker has already reported its state and no avatar is known', async () => {
+test('it sends nothing once the worker has already reported its state and no avatar is known', () => {
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
 
-  await withIdleWorkerHandle(
-    { activity: undefined, failureAction: ActivityFailureAction.Abort, initialized: true, worker },
-    () => {
-      render(<GameSimulationMount />);
-    },
-  );
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
 
+  render(<GameSimulationMount />);
   expect(calls).toStrictEqual([]);
 });
 
-test('it sends nothing before a worker has connected', async () => {
+test('it sends nothing before a worker has connected', () => {
   const calls: Array<ClientMessage> = [];
 
-  await withIdleWorkerHandle(
-    {
-      activity: undefined,
-      failureAction: ActivityFailureAction.Abort,
-      initialized: false,
-      worker: undefined,
-    },
-    () => {
-      render(<GameSimulationMount />);
-      expect(calls).toStrictEqual([]);
-    },
-  );
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: false,
+    worker: undefined,
+  });
+
+  render(<GameSimulationMount />);
+  expect(calls).toStrictEqual([]);
 });
 
-test('it renders without error when the worker reports a stopped checkpoint stream', async () => {
-  await withIdleWorkerHandle(
-    {
-      activity: undefined,
-      checkpointStreamError: { activityID: 'activity_1', reason: 'broken-chain-link' },
-      failureAction: ActivityFailureAction.Abort,
-      initialized: true,
-      worker: undefined,
-    },
-    () => {
-      const rendered = render(<GameSimulationMount />);
+test('it renders without error when the worker reports a stopped checkpoint stream', () => {
+  setIdleWorkerHandle({
+    activity: undefined,
+    checkpointStreamError: { activityID: 'activity_1', reason: 'broken-chain-link' },
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker: undefined,
+  });
 
-      expect(rendered.container).toBeEmptyDOMElement();
-    },
-  );
+  const rendered = render(<GameSimulationMount />);
+
+  expect(rendered.container).toBeEmptyDOMElement();
 });
 
 test('it sends initialize then requests a resync once the active avatar resolves', async () => {
@@ -79,25 +75,19 @@ test('it sends initialize then requests a resync once the active avatar resolves
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
 
-  await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    await withIdleWorkerHandle(
-      {
-        activity: undefined,
-        failureAction: ActivityFailureAction.Abort,
-        initialized: true,
-        worker,
-      },
-      async () => {
-        render(<GameSimulationMount />);
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
 
-        await waitFor(() => {
-          expect(calls).toContainEqual({
-            avatarID: avatar.id,
-            type: ClientMessageType.RequestResync,
-          });
-        });
-      },
-    );
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    render(<GameSimulationMount />);
+
+    await waitFor(() => {
+      expect(calls).toContainEqual({ avatarID: avatar.id, type: ClientMessageType.RequestResync });
+    });
   });
 });
 
@@ -105,23 +95,20 @@ test('it never sends a resync request without a known avatar', async () => {
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
 
-  await withRequestContext({}, async () => {
-    await withIdleWorkerHandle(
-      {
-        activity: undefined,
-        failureAction: ActivityFailureAction.Abort,
-        initialized: true,
-        worker,
-      },
-      () => {
-        const rendered = render(<GameSimulationMount />);
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
 
-        rendered.refresh();
+  await withRequestContext({}, () => {
+    const rendered = render(<GameSimulationMount />);
 
-        expect(calls).not.toContainEqual(
-          expect.objectContaining({ type: ClientMessageType.RequestResync }),
-        );
-      },
+    rendered.refresh();
+
+    expect(calls).not.toContainEqual(
+      expect.objectContaining({ type: ClientMessageType.RequestResync }),
     );
   });
 });
@@ -133,32 +120,26 @@ test('it sends a resync request only once across re-renders', async () => {
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
 
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
+
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    await withIdleWorkerHandle(
-      {
-        activity: undefined,
-        failureAction: ActivityFailureAction.Abort,
-        initialized: true,
-        worker,
-      },
-      async () => {
-        const rendered = render(<GameSimulationMount />);
+    const rendered = render(<GameSimulationMount />);
 
-        await waitFor(() => {
-          expect(calls).toContainEqual({
-            avatarID: avatar.id,
-            type: ClientMessageType.RequestResync,
-          });
-        });
+    await waitFor(() => {
+      expect(calls).toContainEqual({ avatarID: avatar.id, type: ClientMessageType.RequestResync });
+    });
 
-        rendered.refresh();
-        rendered.refresh();
+    rendered.refresh();
+    rendered.refresh();
 
-        const resyncCalls = calls.filter((call) => isRequestResyncMessage(call));
+    const resyncCalls = calls.filter((call) => isRequestResyncMessage(call));
 
-        expect(resyncCalls).toHaveLength(1);
-      },
-    );
+    expect(resyncCalls).toHaveLength(1);
   });
 });
 
@@ -169,30 +150,24 @@ test('it requests another resync when the browser comes back online', async () =
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
 
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
+
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    await withIdleWorkerHandle(
-      {
-        activity: undefined,
-        failureAction: ActivityFailureAction.Abort,
-        initialized: true,
-        worker,
-      },
-      async () => {
-        render(<GameSimulationMount />);
+    render(<GameSimulationMount />);
 
-        await waitFor(() => {
-          expect(calls).toContainEqual({
-            avatarID: avatar.id,
-            type: ClientMessageType.RequestResync,
-          });
-        });
+    await waitFor(() => {
+      expect(calls).toContainEqual({ avatarID: avatar.id, type: ClientMessageType.RequestResync });
+    });
 
-        globalThis.dispatchEvent(new Event('online'));
+    globalThis.dispatchEvent(new Event('online'));
 
-        await waitFor(() => {
-          expect(calls.filter((call) => isRequestResyncMessage(call))).toHaveLength(2);
-        });
-      },
-    );
+    await waitFor(() => {
+      expect(calls.filter((call) => isRequestResyncMessage(call))).toHaveLength(2);
+    });
   });
 });

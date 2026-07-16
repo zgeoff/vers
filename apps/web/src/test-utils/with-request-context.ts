@@ -36,7 +36,7 @@ interface RequestContextOutcome<T> {
  */
 export async function withRequestContext<T>(
   init: Readonly<RequestContextInit>,
-  run: () => Promise<T>,
+  run: () => Promise<T> | T,
 ): Promise<RequestContextOutcome<T>> {
   const sessions = new Map<string, StubSession>();
 
