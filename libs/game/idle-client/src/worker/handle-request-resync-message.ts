@@ -43,6 +43,7 @@ export async function handleRequestResyncMessage(
       avatarID: message.avatarID,
       buildSimulationInput,
       client: context.getClient(),
+      isActivityLive: (activityID) => context.getSimulation()?.activity?.id === activityID,
       onProgress: (progress) => {
         emitResyncStatus(context, { ...progress, kind: 'fast-forwarding' });
       },

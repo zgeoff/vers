@@ -14,6 +14,8 @@ import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient } from '../submission/types';
+import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
+import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
 import { runResync } from './run-resync';
 
@@ -174,4 +176,132 @@ test('it fast-forwards a real offline gap and reports the outcome', async () => 
 
   expect(result.plan).toMatchObject({ budgetMs: 60_000, kind: 'fast-forward' });
   expect(result.report).toMatchObject({ attempts: 1, reason: 'aborted-on-failure' });
+});
+
+test('it delivers checkpoints a previous worker left queued and plans against the head they advanced', async () => {
+  const ctx = setupTest();
+
+  const serverTime = new Date();
+
+  const activity = createMockActivityData({ appendedAt: new Date(serverTime.getTime() - 60_000) });
+
+  await writeQueuedCheckpoint(
+    activity.id,
+    createMockCheckpointBatchEntry({ hash: 'stranded_hash_6', version: 6 }),
+  );
+
+  await writeQueuedCheckpoint(
+    activity.id,
+    createMockCheckpointBatchEntry({ hash: 'stranded_hash_7', version: 7 }),
+  );
+
+  let confirmedHead = 5;
+  const batches: Array<{ expectedHead: number; versions: Array<number> }> = [];
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      // once the stranded rows land, the refetched row is fresh — the offline gap is gone
+      activity: {
+        ...activity,
+        appendedAt: confirmedHead > 5 ? new Date() : activity.appendedAt,
+        appendedHead: confirmedHead,
+      },
+      anchor: null,
+      appendedHead: confirmedHead,
+      serverTime: confirmedHead > 5 ? new Date() : serverTime,
+      verifiedHead: 0,
+    })),
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      batches.push({
+        expectedHead: opts.input.expectedHead,
+        versions: opts.input.checkpoints.map((entry) => entry.version),
+      });
+
+      confirmedHead = opts.input.checkpoints.at(-1)?.version ?? opts.input.expectedHead;
+
+      return { appendedHead: confirmedHead };
+    }),
+  );
+
+  const result = await runResync({
+    avatarID: activity.avatarID,
+    buildSimulationInput: buildSimulationInputForTest,
+    client: ctx.client,
+    submitter: ctx.submitter,
+  });
+
+  expect(batches).toStrictEqual([{ expectedHead: 5, versions: [6, 7] }]);
+  expect(result.plan).toMatchObject({ context: { appendedHead: 7 }, kind: 'attach-live' });
+
+  const remaining = await readQueuedCheckpoints(activity.id);
+
+  expect(remaining).toStrictEqual([]);
+});
+
+test('it refuses to plan while stranded checkpoints cannot be delivered', async () => {
+  const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
+
+  const client: ActivityServiceClient = createORPCClient(link);
+  const onInvalid = mock<(activityID: string, reason: string) => void>();
+  const submitter = createCheckpointSubmitter({ client, onInvalid, scheduleRetry: () => {} });
+
+  const serverTime = new Date();
+
+  const activity = createMockActivityData({ appendedAt: new Date(serverTime.getTime() - 60_000) });
+
+  await writeQueuedCheckpoint(
+    activity.id,
+    createMockCheckpointBatchEntry({ hash: 'stranded_hash_6', version: 6 }),
+  );
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      activity,
+      anchor: null,
+      appendedHead: 5,
+      serverTime,
+      verifiedHead: 0,
+    })),
+    mockActivityService.trackActivityProgress.handler(() => {
+      throw new Error('unreachable service');
+    }),
+  );
+
+  expect(
+    runResync({
+      avatarID: activity.avatarID,
+      buildSimulationInput: buildSimulationInputForTest,
+      client,
+      submitter,
+    }),
+  ).rejects.toThrow('queued checkpoints could not be delivered');
+});
+
+test('it downgrades a fast-forward to attach-live when the activity is already simulating live', async () => {
+  const ctx = setupTest();
+
+  const serverTime = new Date();
+
+  const activity = createMockActivityData({ appendedAt: new Date(serverTime.getTime() - 60_000) });
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      activity,
+      anchor: null,
+      appendedHead: 3,
+      serverTime,
+      verifiedHead: 0,
+    })),
+  );
+
+  const result = await runResync({
+    avatarID: activity.avatarID,
+    buildSimulationInput: buildSimulationInputForTest,
+    client: ctx.client,
+    isActivityLive: (activityID) => activityID === activity.id,
+    submitter: ctx.submitter,
+  });
+
+  expect(result.plan).toMatchObject({ context: { appendedHead: 3 }, kind: 'attach-live' });
+  expect(result.report).toBeUndefined();
 });
