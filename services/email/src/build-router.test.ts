@@ -1,10 +1,18 @@
 import { expect, test } from 'bun:test';
+import { call } from '@orpc/server';
+import type { ErrorEvent } from '@sentry/bun';
 import type { EmailContract } from '@vers/contract-email';
 import { RESEND_ENDPOINT_URL, sentEmails, server } from '@vers/email/mocks';
 import type { CapturedEmail } from '@vers/email/mocks';
+import type { JobQueue } from '@vers/jobs';
+import { createLogger, startErrorReporting } from '@vers/service-runtime';
 import { createAnonymousViewer, createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient } from '@vers/test-utils';
+import { withTraceContext } from '@vers/service-utils';
+import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import { createTraceContext } from '@vers/trace';
 import { HttpResponse, http } from 'msw';
+import { buildEmailRouter } from './build-router';
+import type { EmailJobDefs } from './create-email-job-queue';
 import { createEmailService } from './create-email-service';
 
 /**
@@ -193,4 +201,54 @@ test('it keeps a job left failed by a downstream error for a later sweep', async
   const backoffDrain = await ctx.queue.drain('send-welcome');
 
   expect(backoffDrain).toStrictEqual({ completed: 0, failed: 0 });
+});
+
+test('it reports a fire-and-forget drain failure carrying the active trace id', async () => {
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  const logger = createLogger({ level: 'fatal', name: 'test-email-router' });
+
+  const stubQueue: JobQueue<EmailJobDefs> = {
+    drain: () => Promise.reject(new Error('drain failed')),
+    send: () => Promise.resolve('job-1'),
+    start: () => Promise.resolve(),
+    stop: () => Promise.resolve(),
+  };
+
+  const router = buildEmailRouter({ logger, queue: stubQueue });
+  const trace = createTraceContext();
+
+  await withTraceContext(trace, () =>
+    call(
+      router.sendWelcome,
+      {
+        to: 'player@example.com',
+        verificationCode: '123456',
+        verificationURL: 'https://versidle.com/verify',
+      },
+      {
+        context: {
+          actingSessionId: null,
+          actingUserId: null,
+          logger,
+          traceID: trace.traceID,
+        },
+      },
+    ),
+  );
+
+  await waitFor(() => {
+    expect(recorded).toHaveLength(1);
+  });
+
+  expect(recorded[0]?.tags).toMatchObject({ traceID: trace.traceID });
 });

@@ -60,7 +60,7 @@ export interface CreateEmailJobQueueConfig {
    * Called for every failed job delivery with its cause; defaults to `@vers/jobs`'s own
    * `console.error` fallback when omitted.
    */
-  readonly onJobError?: (error: unknown, context: Readonly<JobFailureContext>) => void;
+  readonly onJobFailed?: (error: unknown, context: Readonly<JobFailureContext>) => void;
 }
 
 /**
@@ -148,6 +148,6 @@ export function createEmailJobQueue(
       },
     },
     ...(config.onError !== undefined && { onError: config.onError }),
-    ...(config.onJobError !== undefined && { onJobError: config.onJobError }),
+    ...(config.onJobFailed !== undefined && { onJobFailed: config.onJobFailed }),
   });
 }
