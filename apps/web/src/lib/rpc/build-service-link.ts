@@ -1,9 +1,7 @@
 import { RPCLink } from '@orpc/client/fetch';
 import { createIsomorphicFn } from '@tanstack/react-start';
-import { getRequest } from '@tanstack/react-start/server';
 import type { ServiceName } from '@vers/service-auth';
-import type { TraceContext } from '@vers/service-utils';
-import { buildTraceparent, createTraceContext, parseTraceparent } from '@vers/service-utils';
+import { buildTraceparent, createTraceContext, findTraceContext } from '@vers/service-utils';
 import { createTraceparent } from '../trace/create-traceparent';
 import { createEdgeServiceToken } from './create-edge-service-token';
 import { loadSessionActor } from './load-session-actor';
@@ -48,7 +46,9 @@ export function buildServiceLink(service: ServiceName): RPCLink<ServiceLinkConte
               audience: service,
             });
 
-            const trace = createTraceContext(findAmbientTrace());
+            // mint this hop as a child of the request's ambient trace scope; outside a request
+            // (background work) no scope exists, which starts a fresh trace instead
+            const trace = createTraceContext(findTraceContext());
 
             return { authorization: `Bearer ${token}`, traceparent: buildTraceparent(trace) };
           },
@@ -62,17 +62,4 @@ export function buildServiceLink(service: ServiceName): RPCLink<ServiceLinkConte
           url: `${globalThis.location.origin}/api/rpc/${service}`,
         }),
     )();
-}
-
-/**
- * The trace named by the ambient request's `traceparent`, continuing the browser's trace across
- * this hop; undefined when the call runs outside a request (background work), which starts a fresh
- * trace instead. `getRequest` throws outside a request scope, so absence arrives as an exception.
- */
-function findAmbientTrace(): TraceContext | undefined {
-  try {
-    return parseTraceparent(getRequest().headers.get('traceparent')) ?? undefined;
-  } catch {
-    return undefined;
-  }
 }
