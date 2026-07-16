@@ -222,6 +222,8 @@ interface RegisterORPCHandlerDeps {
  * circuits with a plain 401 before the handler ever runs, per the auth/trust-boundary split in
  * docs/architecture/service-contracts.md. Every response — including that 401 — carries the request's trace id
  * in `x-trace-id`, and the whole request runs inside its trace-context scope so logs correlate.
+ * Every request logs one structured line on completion (method, path, status, duration), severity
+ * following the response status; a trust-boundary rejection's line carries the rejection reason.
  */
 function registerORPCHandler(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- elysia app is a live framework instance with mutable routing state; no readonly form
@@ -236,6 +238,13 @@ function registerORPCHandler(
       const trace = createTrace(context.request);
 
       return withTraceContext(trace, async () => {
+        const start = performance.now();
+        const method = context.request.method;
+
+        const url = new URL(context.request.url);
+
+        const path = url.pathname + url.search;
+
         const resolution = await parseServiceToken(context.request, {
           audience: deps.serviceName,
           publicKey: deps.publicKey,
@@ -245,6 +254,17 @@ function registerORPCHandler(
           const response = Response.json({ error: resolution.failure }, { status: 401 });
 
           response.headers.set('x-trace-id', trace.traceID);
+
+          deps.logger.warn(
+            {
+              durationMs: toDurationMs(performance.now() - start),
+              failure: resolution.failure,
+              method,
+              path,
+              status: 401,
+            },
+            'service token rejected',
+          );
 
           return response;
         }
@@ -265,9 +285,35 @@ function registerORPCHandler(
 
         finalResponse.headers.set('x-trace-id', trace.traceID);
 
+        deps.logger[pickRequestLogLevel(finalResponse.status)](
+          {
+            durationMs: toDurationMs(performance.now() - start),
+            method,
+            path,
+            status: finalResponse.status,
+          },
+          'request completed',
+        );
+
         return finalResponse;
       });
     },
     { parse: 'none' },
   );
+}
+
+function pickRequestLogLevel(status: number): 'error' | 'info' | 'warn' {
+  if (status >= 500) {
+    return 'error';
+  }
+
+  return status >= 400 ? 'warn' : 'info';
+}
+
+/**
+ * Rounds an elapsed-time reading to one decimal so sub-millisecond RPC handling doesn't log as
+ * zero.
+ */
+function toDurationMs(elapsedMs: number): number {
+  return Math.round(elapsedMs * 10) / 10;
 }

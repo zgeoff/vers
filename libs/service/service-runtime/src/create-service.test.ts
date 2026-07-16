@@ -1,4 +1,4 @@
-import { expect, onTestFinished, test } from 'bun:test';
+import { expect, onTestFinished, spyOn, test } from 'bun:test';
 import { implement } from '@orpc/server';
 import { authedRoute, publicRoute } from '@vers/contract-base';
 import { createServiceToken, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
@@ -481,4 +481,136 @@ test('it passes every conformance case collected from its own contract', async (
   for (const conformanceCase of cases) {
     await expect(conformanceCase.run(service.app)).toResolve();
   }
+});
+
+test('it logs one structured request line when an /rpc call completes', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const infoSpy = spyOn(service.logger, 'info');
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  await client.ping();
+
+  expect(infoSpy).toHaveBeenCalledExactlyOnceWith(
+    {
+      durationMs: expect.toBeNumber(),
+      method: 'POST',
+      path: '/rpc/ping',
+      status: 200,
+    },
+    'request completed',
+  );
+});
+
+test('it logs the rejection reason when the trust boundary rejects a request', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const warnSpy = spyOn(service.logger, 'warn');
+
+  await service.app.handle(
+    new Request('http://test.local/rpc/ping', {
+      headers: { authorization: 'Bearer not-a-real-token' },
+      method: 'POST',
+    }),
+  );
+
+  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
+    {
+      durationMs: expect.toBeNumber(),
+      failure: 'invalid-service-token',
+      method: 'POST',
+      path: '/rpc/ping',
+      status: 401,
+    },
+    'service token rejected',
+  );
+});
+
+test('it logs a failed /rpc call at error severity', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const errorSpy = spyOn(service.logger, 'error');
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  const pending = client.throwPlainError({});
+
+  expect(pending).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR' });
+
+  await expect(pending).toReject();
+
+  expect(errorSpy).toHaveBeenCalledWith(
+    {
+      durationMs: expect.toBeNumber(),
+      method: 'POST',
+      path: '/rpc/throwPlainError',
+      status: 500,
+    },
+    'request completed',
+  );
+});
+
+test('it serves /health without logging a request line', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  process.env['SERVICE_AUTH_PUBLIC_KEY'] = keyPair.publicKeyPEM;
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const infoSpy = spyOn(service.logger, 'info');
+
+  await service.app.handle(new Request('http://test.local/health'));
+
+  expect(infoSpy).not.toHaveBeenCalled();
 });
