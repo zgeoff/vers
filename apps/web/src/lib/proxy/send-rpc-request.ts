@@ -22,6 +22,22 @@ export async function sendRPCRequest(request: Request, service: ServiceName): Pr
   );
 
   const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
+  let body: Blob | undefined;
+
+  if (hasBody) {
+    try {
+      body = await request.blob();
+    } catch (error) {
+      // a caller that aborted mid-flight leaves its body stream unreadable — nothing is waiting
+      // for this response, so answer with 499 (client closed request) instead of letting the
+      // read failure escape as a server fault
+      if (request.signal.aborted) {
+        return new Response(null, { status: 499 });
+      }
+
+      throw error;
+    }
+  }
 
   const headers = new Headers(request.headers);
 
@@ -38,7 +54,7 @@ export async function sendRPCRequest(request: Request, service: ServiceName): Pr
   const response = await fetch(target, {
     headers,
     method: request.method,
-    ...(hasBody && { body: await request.blob() }),
+    ...(body !== undefined && { body }),
   });
 
   // fetch responses carry immutable headers, which the server framework must still be able to
