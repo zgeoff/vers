@@ -21,10 +21,12 @@ import { useSimulationWorker } from './use-simulation-worker';
  * simulation ticking) is covered by `create-worker-runtime.test.ts` — this file only exercises the
  * hook's own wiring.
  */
-class StubSharedWorker {
+class StubSharedWorker extends EventTarget {
   channel = new MessageChannel();
 
   port = this.channel.port1;
+
+  onerror = null;
 }
 
 function registerSharedWorkerStub() {
@@ -35,6 +37,12 @@ function registerSharedWorkerStub() {
   onTestFinished(() => {
     Reflect.set(globalThis, 'SharedWorker', originalSharedWorker);
   });
+}
+
+function getStubSharedWorker(current: SharedWorker | null): StubSharedWorker {
+  invariant(current instanceof StubSharedWorker, 'expected the hook to hold a StubSharedWorker');
+
+  return current;
 }
 
 test('it initializes the worker connection', () => {
@@ -50,8 +58,7 @@ test('it initializes the worker connection', () => {
 });
 
 test('it returns an existing worker instead of creating a new one', () => {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- StubSharedWorker stands in for a real SharedWorker; the hook only ever touches its `.port`
-  const worker = new StubSharedWorker() as unknown as SharedWorker;
+  const worker = new StubSharedWorker();
 
   setSimulationWorker(worker);
 
@@ -87,10 +94,7 @@ test('it updates simulation state from worker messages', async () => {
 
   hook.rerender();
 
-  invariant(hook.result.current, 'Worker not initialized');
-
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a StubSharedWorker, so its return value has that shape at runtime
-  const worker = hook.result.current as unknown as StubSharedWorker;
+  const worker = getStubSharedWorker(hook.result.current);
 
   worker.channel.port2.start();
 
@@ -117,10 +121,7 @@ test('it reports a checkpoint stream error from worker messages', async () => {
 
   hook.rerender();
 
-  invariant(hook.result.current, 'Worker not initialized');
-
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a StubSharedWorker, so its return value has that shape at runtime
-  const worker = hook.result.current as unknown as StubSharedWorker;
+  const worker = getStubSharedWorker(hook.result.current);
 
   worker.channel.port2.start();
 
@@ -147,10 +148,7 @@ test('it sends a disconnect message on pagehide', async () => {
 
   hook.rerender();
 
-  invariant(hook.result.current, 'Worker not initialized');
-
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a StubSharedWorker, so its return value has that shape at runtime
-  const worker = hook.result.current as unknown as StubSharedWorker;
+  const worker = getStubSharedWorker(hook.result.current);
 
   worker.channel.port2.start();
 
@@ -174,10 +172,7 @@ test('it accumulates the reward-slot ledger from worker messages', async () => {
 
   hook.rerender();
 
-  invariant(hook.result.current, 'Worker not initialized');
-
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a StubSharedWorker, so its return value has that shape at runtime
-  const worker = hook.result.current as unknown as StubSharedWorker;
+  const worker = getStubSharedWorker(hook.result.current);
 
   worker.channel.port2.start();
 
@@ -235,10 +230,7 @@ test('it resets the reward-slot ledger once a new activity reports its own messa
 
   hook.rerender();
 
-  invariant(hook.result.current, 'Worker not initialized');
-
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a StubSharedWorker, so its return value has that shape at runtime
-  const worker = hook.result.current as unknown as StubSharedWorker;
+  const worker = getStubSharedWorker(hook.result.current);
 
   worker.channel.port2.start();
 
@@ -299,10 +291,7 @@ test('it installs the reward-slot ledger carried by the initial state', async ()
 
   hook.rerender();
 
-  invariant(hook.result.current, 'Worker not initialized');
-
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a StubSharedWorker, so its return value has that shape at runtime
-  const worker = hook.result.current as unknown as StubSharedWorker;
+  const worker = getStubSharedWorker(hook.result.current);
 
   worker.channel.port2.start();
 
