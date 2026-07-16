@@ -12,6 +12,7 @@ export type {
   ConsumedTransactionTokens,
   DB,
   PendingTransactions,
+  Releases,
   Sessions,
   SimVersions,
   Users,

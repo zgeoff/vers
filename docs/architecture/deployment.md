@@ -83,11 +83,29 @@ rolls out:
    `deploy.config.ts` by a `manifest` job (the CLI's `list` command), so adding an app to the
    manifest is the whole change. Each leg self-gates: the CLI compares HEAD against the `GIT_SHA`
    stamped on the app's machines, so a rollout lost to an earlier failure ships on the next push.
-   Images build on Fly's remote builder — no image blob crosses from the GitHub runner.
-3. After deploying, the CLI waits for the fleet to report the new SHA, then runs the app's
-   post-deploy probes from `deploy.config.ts`.
-4. `verify-fleet` runs on every green push — even when every deploy leg skipped — and asserts every
-   manifest app is online and current, catching an app at zero machines or a fleet behind HEAD.
+3. A stale leg rolls out in two phases. The build phase runs `flyctl deploy --build-only --push` on
+   Fly's remote builder — no image blob crosses from the GitHub runner — pushing the image as
+   `registry.fly.io/<app>:deployment-<sha>`; both phases derive the tag from the commit, so no ref
+   travels between them, and re-running a leg overwrites its own tag instead of minting a new
+   artifact. The cutover phase deploys that pushed ref (`flyctl deploy --image`), waits for the
+   fleet to report the new SHA, then runs the app's post-deploy probes from `deploy.config.ts`. An
+   app with no Dockerfile (`vers-bugsink`) skips the build phase and cuts over to the image named in
+   its `fly.toml`.
+4. A rollout whose probes pass is recorded in the `releases` table (app, commit SHA, image ref, the
+   digest the fleet resolved it to) — the newest row per app is that app's rollback target. The
+   deploy legs require `DATABASE_URL` for this record.
+5. A rollout whose probes fail rolls back: the CLI redeploys the app's newest recorded release,
+   restamping that release's own `GIT_SHA` so the fleet reads stale against HEAD and the next push
+   ships the fix. The leg still fails — rollback restores service, it never greens the run. A failed
+   rollout is never recorded, and an app with no recorded release yet is left serving the broken
+   release, reported in the leg's log. Probes that fail on the restored release too mean the fault
+   predates the rollout; the leg reports that and leaves the fleet on the restored release.
+6. `verify-fleet` runs on every green push — even when every deploy leg skipped — and asserts every
+   manifest app is online and current, catching an app at zero machines or a fleet behind HEAD. A
+   rolled-back app reads stale there by design.
+
+Database migrations are never rolled back — a release must tolerate every migration applied after it
+shipped (expand/contract), which is what makes redeploying a previous image safe.
 
 A `fly machine run --schedule` machine is unmanaged: `fly deploy` never rolls its image forward. An
 app entry's `scheduledMachines` in `deploy.config.ts` declares each one (name, command, schedule,

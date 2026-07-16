@@ -196,11 +196,14 @@ jobs:
           # be many pushes old — the CLI needs full history
           fetch-depth: 0
 
-      # The CLI deploys via Fly's remote builder: the image builds and pushes
-      # inside Fly's network, avoiding a GitHub-runner-to-registry.fly.io blob
-      # upload, which 502s on the large compiled-binary layers. Each app's
-      # strategy (per fly.toml) gates cutover on the /health check, so a machine
-      # that fails to boot blocks the release.
+      # The CLI splits each rollout into build and cutover: the image builds
+      # and pushes on Fly's remote builder (inside Fly's network, avoiding a
+      # GitHub-runner-to-registry.fly.io blob upload, which 502s on the large
+      # compiled-binary layers), then the fleet cuts over to the pushed ref.
+      # Each app's strategy (per fly.toml) gates cutover on the /health check,
+      # so a machine that fails to boot blocks the release; a release that
+      # boots but fails its post-deploy probes is rolled back to the app's
+      # previous recorded release, with the leg left red to fix forward.
       #
       # syd host capacity is intermittently tight: a rollout that can't reserve a
       # machine fails with "insufficient resources / could not reserve resource"

@@ -1,7 +1,12 @@
 import { createDB } from '@vers/db';
+import type { DB } from '@vers/db';
+import { findLatestRelease, recordRelease } from '@vers/release-registry';
+import type { ReleaseRow } from '@vers/release-registry';
 import { updateExpiredSimVersions } from '@vers/sim-registry';
 import { Command } from 'commander';
 import { execa } from 'execa';
+import type { Kysely } from 'kysely';
+import { applyBuild } from '../deploy/apply-build';
 import { applyDeploy } from '../deploy/apply-deploy';
 import { applyRetentionActions } from '../deploy/apply-retention-actions';
 import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-actions';
@@ -98,30 +103,133 @@ async function runDeploy(app: string): Promise<void> {
 
   console.log(`deploying ${target.app} at ${sha} — ${staleReason}`);
 
+  const databaseURL = requireEnvVar(
+    'DATABASE_URL',
+    'the release record backing rollback lives in the shared database',
+  );
+
+  const db = createDB({ databaseURL });
+
+  try {
+    await runRollout(db, target, sha);
+  } finally {
+    await db.destroy();
+  }
+}
+
+/**
+ * One rollout: build and push the image (targets with no Dockerfile deploy their fly.toml image
+ * instead), cut the fleet over to it, reconcile, probe. Probes
+ * passing records the release as the app's next rollback target; probes failing rolls the fleet
+ * back to the previous recorded release and leaves the run red either way, so the failure ships
+ * forward on a later push instead of a broken release serving meanwhile.
+ */
+async function runRollout(db: Kysely<DB>, target: DeployTarget, sha: string): Promise<void> {
   await setEngineHashEnv(target);
-  await applyDeploy(target, sha);
+
+  const previous = await findLatestRelease(db, target.app);
+
+  const image = target.dockerfile === undefined ? null : await applyBuild(target, sha);
+
+  await applyDeploy(target, sha, image);
   await waitForDeployedSHA(target.app, sha);
   await runScheduledMachineReconcile(target);
   await runSimVersionReconcile(target);
 
   const findings = await runProbes(target.probes ?? []);
 
-  if (findings.length > 0) {
-    for (const finding of findings) {
-      console.error(`✗ ${target.app} — ${finding}`);
-    }
+  if (findings.length === 0) {
+    await recordRolloutRelease(db, target, sha, image);
 
-    process.exitCode = 1;
+    return;
   }
+
+  for (const finding of findings) {
+    console.error(`✗ ${target.app} — ${finding}`);
+  }
+
+  process.exitCode = 1;
+
+  if (previous === undefined) {
+    console.error(
+      `✗ ${target.app} — no recorded release to roll back to; the broken release is still serving`,
+    );
+
+    return;
+  }
+
+  await runRollback(target, previous);
+}
+
+/**
+ * Records the release the probes just blessed. A target that deploys a stock image has no built
+ * ref, so its deployable ref comes from the fleet; a fleet with no single resolved image skips
+ * the record rather than store a ref rollback couldn't deploy.
+ */
+async function recordRolloutRelease(
+  db: Kysely<DB>,
+  target: DeployTarget,
+  sha: string,
+  image: string | null,
+): Promise<void> {
+  const fleetImage = await readFleetImage(target.app);
+
+  const ref = image ?? (fleetImage === null ? null : `${fleetImage.repository}:${fleetImage.tag}`);
+
+  if (ref === null) {
+    console.log(`${target.app} has no single fleet image — skipping the release record`);
+
+    return;
+  }
+
+  await recordRelease(db, {
+    app: target.app,
+    gitSHA: sha,
+    image: ref,
+    imageDigest: fleetImage?.digest ?? null,
+  });
+}
+
+/**
+ * Redeploys the previous recorded release after a failed probe, restamping its own SHA so the
+ * fleet reads stale against HEAD and the next push ships the fix. Scheduled machines re-reconcile
+ * onto the restored image; the sim-version reconcile is skipped — it pairs the engine hash built
+ * from HEAD's source with whatever image the fleet runs, and after a rollback those no longer
+ * match.
+ */
+async function runRollback(target: DeployTarget, previous: ReleaseRow): Promise<void> {
+  console.error(`rolling ${target.app} back to ${previous.image} (${previous.gitSha})`);
+
+  await applyDeploy(target, previous.gitSha, previous.image);
+  await waitForDeployedSHA(target.app, previous.gitSha);
+  await runScheduledMachineReconcile(target);
+
+  const findings = await runProbes(target.probes ?? []);
+
+  if (findings.length === 0) {
+    console.error(
+      `✓ ${target.app} rolled back to ${previous.gitSha}; fix forward on the next push`,
+    );
+
+    return;
+  }
+
+  for (const finding of findings) {
+    console.error(`✗ ${target.app} after rollback — ${finding}`);
+  }
+
+  console.error(
+    `✗ ${target.app} — probes fail on the previous release too; the failure predates this deploy`,
+  );
 }
 
 const SIM_ENGINE_HASH_BUILD_ARG_NAMES = ['SIM_ENGINE_HASH', 'VITE_SIM_ENGINE_HASH'];
 
 /**
  * Computes the engine hash once and stamps it into both build-arg env names
- * a target might forward, when its manifest entry asks for either — so
- * `applyDeploy`'s existing env-forwarding picks it up without knowing which
- * name its own Dockerfile expects.
+ * a target might forward, when its manifest entry asks for either — the build
+ * phase's env-forwarding then picks it up without knowing which name the
+ * target's own Dockerfile expects.
  */
 async function setEngineHashEnv(target: DeployTarget): Promise<void> {
   const buildArgs = target.buildArgsFromEnv ?? [];
