@@ -2,10 +2,7 @@ import type { Simulation } from '@vers/idle-core';
 import { createSimulation } from '@vers/idle-core';
 import type { InitializeMessage } from '../types';
 import { createInitialStateMessage } from './create-initial-state-message';
-import { handleSimulationRestarted } from './handle-simulation-restarted';
-import { handleSimulationStarted } from './handle-simulation-started';
-import { handleSimulationStopped } from './handle-simulation-stopped';
-import { handleSimulationUpdate } from './handle-simulation-update';
+import { registerSimulationListeners } from './register-simulation-listeners';
 import type { WorkerContext } from './types';
 
 /**
@@ -32,21 +29,7 @@ function createSimulationForContext(context: WorkerContext): Simulation {
 
   context.setSimulation(simulation);
 
-  simulation.addEventListener('updated', () => {
-    handleSimulationUpdate(context);
-  });
-
-  simulation.addEventListener('stopped', () => {
-    handleSimulationStopped(context);
-  });
-
-  simulation.addEventListener('started', () => {
-    handleSimulationStarted(context);
-  });
-
-  simulation.addEventListener('restarted', () => {
-    handleSimulationRestarted(context);
-  });
+  registerSimulationListeners(context, simulation);
 
   return simulation;
 }

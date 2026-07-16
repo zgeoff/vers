@@ -105,14 +105,3 @@ export type CompareVerdict =
       readonly verifiedXPDelta: number;
     }
   | { readonly kind: 'divergence'; readonly reason: DivergenceReason; readonly version: number };
-
-/**
- * The only stamped simulation inputs a replay drive reads — a subset of the frontier segment's
- * activity, so a test can build one inline without a full `ReplaySegment`.
- */
-export interface ReplaySimulationActivitySource {
-  readonly avatarID: string;
-  readonly buildSnapshot: { readonly level: number; readonly xp: number };
-  readonly id: string;
-  readonly seed: string;
-}

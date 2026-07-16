@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
+import { setConnectionStatus } from '../state/set-connection-status';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
+import { setResyncStatus } from '../state/set-resync-status';
 import { setRewardSlotLedger } from '../state/set-reward-slot-ledger';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
@@ -9,8 +11,10 @@ import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
 import { useIdleStore } from '../state/use-idle-store';
 import type {
   CheckpointStreamInvalidMessage,
+  ConnectionStatusMessage,
   InitialStateMessage,
   OfflineCapStatusMessage,
+  ResyncStatusMessage,
   RewardSlotsRecordedMessage,
   SimulationUpdateMessage,
   WorkerMessage,
@@ -87,6 +91,14 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
     });
   }
 
+  if (isResyncStatusMessage(event.data)) {
+    setResyncStatus(event.data.status);
+  }
+
+  if (isConnectionStatusMessage(event.data)) {
+    setConnectionStatus(event.data.online);
+  }
+
   if (isRewardSlotsRecordedMessage(event.data)) {
     updateRewardSlotLedger({
       activityID: event.data.activityID,
@@ -112,6 +124,14 @@ function isCheckpointStreamInvalidMessage(
 
 function isOfflineCapStatusMessage(message: WorkerMessage): message is OfflineCapStatusMessage {
   return message.type === WorkerMessageType.OfflineCapStatus;
+}
+
+function isResyncStatusMessage(message: WorkerMessage): message is ResyncStatusMessage {
+  return message.type === WorkerMessageType.ResyncStatus;
+}
+
+function isConnectionStatusMessage(message: WorkerMessage): message is ConnectionStatusMessage {
+  return message.type === WorkerMessageType.ConnectionStatus;
 }
 
 function isRewardSlotsRecordedMessage(

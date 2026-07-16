@@ -2,6 +2,7 @@ import { Outlet, createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { resolveFlags } from '@vers/flags';
 import { requireAuth } from '../lib/auth/require-auth';
+import { ActivityProgressNotice } from './-game/activity-progress-notice';
 import { GameCanvasMount } from './-game/game-canvas-mount';
 import { GameNav } from './-game/game-nav';
 import { GameSimulationMount } from './-game/game-simulation-mount';
@@ -27,6 +28,7 @@ function GameLayout() {
       <GameSimulationMount />
       <WelcomeBackModal />
       <GameNav />
+      <ActivityProgressNotice />
       <Outlet />
     </>
   );

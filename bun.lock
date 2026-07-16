@@ -78,6 +78,7 @@
         "react-dom": "catalog:",
         "srvx": "catalog:",
         "three": "catalog:",
+        "tiny-invariant": "catalog:",
         "zod": "catalog:",
         "zustand": "catalog:",
       },

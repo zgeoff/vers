@@ -1,4 +1,6 @@
 import { expect, mock, test } from 'bun:test';
+import { createORPCClient } from '@orpc/client';
+import { RPCLink } from '@orpc/client/fetch';
 import type { SimulationListener } from '@vers/idle-core';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import {
@@ -6,10 +8,41 @@ import {
   createMockAvatarData,
   createMockEnemyData,
 } from '@vers/idle-core/test-utils';
+import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
+import { buildActivityMockHandlers } from '@vers/mock-services/activity';
+import * as db from '@vers/mock-services/db';
+import invariant from 'tiny-invariant';
+import { server } from '../mocks/node';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
-import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
+import type { ActivityServiceClient } from '../submission/types';
+import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createTestConnection } from '../test-utils/create-test-connection';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
+
+interface SetupTestConfig {
+  readonly userID: string;
+}
+
+/**
+ * Wires the stateful activity mock backend and an authed client acting as the given user, so
+ * continuation starts hit the same conflict/mint logic the real service applies to the rows the
+ * test seeds in the mock db.
+ */
+async function setupTest(config: Readonly<SetupTestConfig>) {
+  server.use(...buildActivityMockHandlers(resolveServiceURL('activity')));
+
+  const token = await createTestAccessToken(config.userID);
+
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({
+      headers: { authorization: `Bearer ${token}` },
+      url: `${resolveServiceURL('activity')}/rpc`,
+    }),
+  );
+
+  return { client };
+}
 
 async function runSimulationSteps(
   context: WorkerContext,
@@ -22,28 +55,51 @@ async function runSimulationSteps(
   }
 }
 
-test('it restarts the activity if it fails and the failure action is retry', async () => {
-  const context = createMockWorkerContext();
+test('it continues into a fresh server-started row if it fails and the failure action is retry', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  // the running row's terminal already landed server-side, so no active row blocks the start
+  const sourceRow = await db.activityCollection.create({
+    avatarID: avatar.id,
+    status: 'stopped',
+  });
+
+  const context = createStubWorkerContext({ client: ctx.client });
   const simulation = createSimulation();
-  const restartedSpy = mock<SimulationListener>();
+  const startedSpy = mock<SimulationListener>();
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
-  const avatar = createMockAvatarData({ life: 1 });
-  const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Retry });
+  const avatarData = createMockAvatarData({ life: 1 });
 
-  simulation.startActivity(avatar, activity);
-  simulation.addEventListener('restarted', restartedSpy);
+  const activity = createMockActivityInput({
+    failureAction: ActivityFailureAction.Retry,
+    id: sourceRow.id,
+  });
+
+  context.setActivity(sourceRow);
+  context.setSimulation(simulation);
+  simulation.startActivity(avatarData, activity);
+  simulation.addEventListener('started', startedSpy);
 
   await runSimulationSteps(context, simulation, 100, 50);
 
-  expect(restartedSpy).toHaveBeenCalled();
+  const minted = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: avatar.id, status: 'active' }),
+  );
+
+  invariant(minted !== undefined, 'the continuation minted an active row');
+  expect(startedSpy).toHaveBeenCalled();
   expect(simulation.activity).not.toBeNull();
+  expect(minted.scopeID).toBe(sourceRow.scopeID);
+  expect(context.getActivity()).toStrictEqual(minted);
 });
 
-test('it does not restart the activity if it fails and the failure action is abort', async () => {
-  const context = createMockWorkerContext();
+test('it does not continue if it fails and the failure action is abort', async () => {
+  const context = createStubWorkerContext();
   const simulation = createSimulation();
-  const restartedSpy = mock<SimulationListener>();
+  const startedSpy = mock<SimulationListener>();
   const stoppedSpy = mock<SimulationListener>();
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
@@ -51,52 +107,195 @@ test('it does not restart the activity if it fails and the failure action is abo
   const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Abort });
 
   simulation.startActivity(avatar, activity);
-  simulation.addEventListener('restarted', restartedSpy);
+  simulation.addEventListener('started', startedSpy);
   simulation.addEventListener('stopped', stoppedSpy);
 
   await runSimulationSteps(context, simulation, 100, 50);
 
-  expect(restartedSpy).not.toHaveBeenCalled();
+  expect(startedSpy).not.toHaveBeenCalled();
   expect(stoppedSpy).toHaveBeenCalled();
   expect(simulation.activity).toBeNull();
 });
 
 test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
-  'it restarts the activity if it completes, regardless of the failure action (%s)',
+  'it continues into a fresh server-started row if it completes, regardless of the failure action (%s)',
   async (failureAction) => {
-    const context = createMockWorkerContext();
-    const simulation = createSimulation();
-    const restartedSpy = mock<SimulationListener>();
-    const avatar = createMockAvatarData();
-    const activity = createMockActivityInput({ enemies: [createMockEnemyData()], failureAction });
+    const user = await db.userCollection.create({});
+    const avatar = await db.avatarCollection.create({ userID: user.id });
+    const ctx = await setupTest({ userID: user.id });
 
-    simulation.startActivity(avatar, activity);
+    const sourceRow = await db.activityCollection.create({
+      avatarID: avatar.id,
+      status: 'stopped',
+    });
+
+    const context = createStubWorkerContext({ client: ctx.client });
+    const simulation = createSimulation();
+    const startedSpy = mock<SimulationListener>();
+    const avatarData = createMockAvatarData();
+
+    const activity = createMockActivityInput({
+      enemies: [createMockEnemyData()],
+      failureAction,
+      id: sourceRow.id,
+    });
+
+    context.setActivity(sourceRow);
+    context.setSimulation(simulation);
+    simulation.startActivity(avatarData, activity);
 
     const startingActivity = simulation.activity;
 
-    simulation.addEventListener('restarted', restartedSpy);
+    simulation.addEventListener('started', startedSpy);
 
     await runSimulationSteps(context, simulation, 100, 700);
 
-    expect(restartedSpy).toHaveBeenCalled();
+    const minted = db.activityCollection.findFirst((q) =>
+      q.where({ avatarID: avatar.id, status: 'active' }),
+    );
+
+    invariant(minted !== undefined, 'the continuation minted an active row');
+    expect(startedSpy).toHaveBeenCalled();
     expect(simulation.activity).not.toBe(startingActivity);
+    expect(context.getActivity()).toStrictEqual(minted);
   },
 );
 
-test('it halts at the boundary instead of restarting once the offline budget is spent', async () => {
-  const channel = new MessageChannel();
+test('it adopts a conflict row with no confirmed checkpoints as the continuation', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
 
-  const received: Array<unknown> = [];
-
-  channel.port2.addEventListener('message', (event) => {
-    received.push(event.data);
+  const sourceRow = await db.activityCollection.create({
+    avatarID: avatar.id,
+    startedAt: new Date(Date.now() - 60_000),
+    status: 'stopped',
   });
 
-  channel.port2.start();
+  // a live never-appended row already owns the avatar, so the start conflicts with it
+  const conflictRow = await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: avatar.id,
+    status: 'active',
+  });
 
-  const context = createMockWorkerContext({ connections: [channel.port1], remainingBudgetMs: 0 });
+  const context = createStubWorkerContext({ client: ctx.client });
   const simulation = createSimulation();
-  const restartedSpy = mock<SimulationListener>();
+  const startedSpy = mock<SimulationListener>();
+
+  // life of 1 dies on the very first hit taken, forcing a failed checkpoint
+  const avatarData = createMockAvatarData({ life: 1 });
+
+  const activity = createMockActivityInput({
+    failureAction: ActivityFailureAction.Retry,
+    id: sourceRow.id,
+  });
+
+  context.setActivity(sourceRow);
+  context.setSimulation(simulation);
+  simulation.startActivity(avatarData, activity);
+  simulation.addEventListener('started', startedSpy);
+
+  await runSimulationSteps(context, simulation, 100, 50);
+
+  expect(startedSpy).toHaveBeenCalled();
+  expect(simulation.activity?.id).toBe(conflictRow.id);
+  expect(context.getActivity()).toStrictEqual(conflictRow);
+});
+
+test('it rebuilds through a resync when the conflict row already has confirmed checkpoints', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  const sourceRow = await db.activityCollection.create({
+    avatarID: avatar.id,
+    startedAt: new Date(Date.now() - 60_000),
+    status: 'stopped',
+  });
+
+  // a live progressed row owns the avatar: the conflict must rebuild, never adopt a zero cursor
+  const conflictRow = await db.activityCollection.create({
+    appendedAt: new Date(Date.now() - 2000),
+    appendedHead: 1,
+    avatarID: avatar.id,
+    status: 'active',
+  });
+
+  const registerActivity = mock<CheckpointSubmitter['registerActivity']>(() => Promise.resolve());
+
+  const submitter: CheckpointSubmitter = {
+    flushHeld: () => Promise.resolve(),
+    registerActivity,
+    submit: () => Promise.resolve<number | undefined>(undefined),
+  };
+
+  const context = createStubWorkerContext({ client: ctx.client, submitter });
+  const simulation = createSimulation();
+
+  // life of 1 dies on the very first hit taken, forcing a failed checkpoint
+  const avatarData = createMockAvatarData({ life: 1 });
+
+  const activity = createMockActivityInput({
+    failureAction: ActivityFailureAction.Retry,
+    id: sourceRow.id,
+  });
+
+  context.setActivity(sourceRow);
+  context.setSimulation(simulation);
+  simulation.startActivity(avatarData, activity);
+
+  await runSimulationSteps(context, simulation, 100, 50);
+
+  // the resync reconstructed the row's confirmed checkpoint and registered its real cursor —
+  // never a zero cursor onto a progressed stream
+  expect(registerActivity).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ activityID: conflictRow.id, appendedHead: 1 }),
+  );
+
+  expect(context.getSimulation()).not.toBe(simulation);
+  expect(context.getSimulation()?.activity?.id).toBe(conflictRow.id);
+});
+
+test('it skips the continuation when a fresher activity replaced this row mid-submission', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  const context = createStubWorkerContext({ client: ctx.client });
+  const simulation = createSimulation();
+
+  // life of 1 dies on the very first hit taken, forcing a failed checkpoint
+  const avatarData = createMockAvatarData({ life: 1 });
+  const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Retry });
+
+  // a different row is tracked than the one the simulation runs — the fresher-owner signal
+  const trackedRow = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+
+  context.setActivity(trackedRow);
+  context.setSimulation(simulation);
+  simulation.startActivity(avatarData, activity);
+
+  await runSimulationSteps(context, simulation, 100, 50);
+
+  // no continuation start reached the service: nothing was minted for the avatar
+  const minted = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: avatar.id, status: 'active' }),
+  );
+
+  expect(minted).toBeUndefined();
+});
+
+test('it halts at the boundary instead of continuing once the offline budget is spent', async () => {
+  const connection = createTestConnection();
+
+  const context = createStubWorkerContext({
+    connections: [connection.port],
+    remainingBudgetMs: 0,
+  });
+
+  const simulation = createSimulation();
+  const startedSpy = mock<SimulationListener>();
   const stoppedSpy = mock<SimulationListener>();
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
@@ -104,20 +303,17 @@ test('it halts at the boundary instead of restarting once the offline budget is 
   const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Retry });
 
   simulation.startActivity(avatar, activity);
-  simulation.addEventListener('restarted', restartedSpy);
+  simulation.addEventListener('started', startedSpy);
   simulation.addEventListener('stopped', stoppedSpy);
 
   await runSimulationSteps(context, simulation, 100, 50);
 
-  expect(restartedSpy).not.toHaveBeenCalled();
+  expect(startedSpy).not.toHaveBeenCalled();
   expect(stoppedSpy).not.toHaveBeenCalled();
 
-  // MessagePort delivery is a queued task; yield once so the broadcast lands
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
+  await connection.waitForMessages(1);
 
-  expect(received).toPartiallyContain({
+  expect(connection.received).toPartiallyContain({
     halted: true,
     remainingMs: 0,
     type: 'offline_cap_status',
@@ -125,7 +321,7 @@ test('it halts at the boundary instead of restarting once the offline budget is 
 });
 
 test('it stops an aborted failure even when the budget is spent', async () => {
-  const context = createMockWorkerContext({ remainingBudgetMs: 0 });
+  const context = createStubWorkerContext({ remainingBudgetMs: 0 });
   const simulation = createSimulation();
   const stoppedSpy = mock<SimulationListener>();
   const avatar = createMockAvatarData({ life: 1 });
@@ -154,6 +350,7 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
   let nextVersion = 1;
 
   const submitter: CheckpointSubmitter = {
+    flushHeld: () => Promise.resolve(),
     registerActivity: () => Promise.resolve(),
     submit: () => {
       const version = nextVersion;
@@ -164,7 +361,7 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
     },
   };
 
-  const context = createMockWorkerContext({ connections: [channel.port1], submitter });
+  const context = createStubWorkerContext({ connections: [channel.port1], submitter });
   const simulation = createSimulation();
   const avatar = createMockAvatarData();
   const activity = createMockActivityInput({ enemies: [createMockEnemyData()] });
@@ -207,7 +404,7 @@ test('it never broadcasts a ledger message for a checkpoint the submitter droppe
 
   // the default mock context's submitter always resolves `undefined`, standing in for a
   // dropped checkpoint (an unattached or already-invalid activity)
-  const context = createMockWorkerContext({ connections: [channel.port1] });
+  const context = createStubWorkerContext({ connections: [channel.port1] });
   const simulation = createSimulation();
   const avatar = createMockAvatarData();
   const activity = createMockActivityInput({ enemies: [createMockEnemyData()] });

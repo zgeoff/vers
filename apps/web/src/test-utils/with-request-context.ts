@@ -36,7 +36,7 @@ interface RequestContextOutcome<T> {
  */
 export async function withRequestContext<T>(
   init: Readonly<RequestContextInit>,
-  run: () => Promise<T>,
+  run: () => Promise<T> | T,
 ): Promise<RequestContextOutcome<T>> {
   const sessions = new Map<string, StubSession>();
 
@@ -54,25 +54,21 @@ export async function withRequestContext<T>(
     url: new URL(init.url ?? 'http://localhost/'),
   };
 
-  try {
-    const value = await runWithStartContext(
-      {
-        contextAfterGlobalMiddlewares: {},
-        executedRequestMiddlewares: new Set(),
-        getRouter: () => {
-          throw new Error('getRouter is not available under withRequestContext');
-        },
-        handlerType: 'serverFn',
-        request,
-        startOptions: {},
+  const value = await runWithStartContext(
+    {
+      contextAfterGlobalMiddlewares: {},
+      executedRequestMiddlewares: new Set(),
+      getRouter: () => {
+        throw new Error('getRouter is not available under withRequestContext');
       },
-      run,
-    );
+      handlerType: 'serverFn',
+      request,
+      startOptions: {},
+    },
+    run,
+  );
 
-    return { cookies: toCookieSnapshot(sessions), value };
-  } finally {
-    requestContextHolder.current = null;
-  }
+  return { cookies: toCookieSnapshot(sessions), value };
 }
 
 function toCookieSnapshot(

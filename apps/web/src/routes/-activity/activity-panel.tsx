@@ -1,5 +1,9 @@
-import { Heading, Text } from '@vers/design-system';
+import { useQuery } from '@tanstack/react-query';
+import { Heading, Spinner, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
+import { currentActivityQueryOptions } from '../../lib/activity/current-activity-query-options';
+import { useActivityRewards } from '../../lib/activity/use-activity-rewards';
+import { activeAvatarQueryOptions } from '../../lib/avatar/active-avatar-query-options';
 
 const CHARACTER_FRAMES: ReadonlyArray<string> = ['Vanguard', 'Support', 'Striker'];
 
@@ -14,8 +18,11 @@ const panel = css({
   padding: '6',
 });
 
-const lootPanel = css({
+const catchingUpPanel = css({
+  alignItems: 'center',
   backgroundColor: 'bg.panelElevated',
+  display: 'flex',
+  gap: '3',
   padding: '4',
 });
 
@@ -32,16 +39,45 @@ const characterFrame = css({
 });
 
 /**
- * Placeholder activity screen: static loot and character-frame blocks stand in until combat
- * rewards and party state are wired up.
+ * The activity screen: an ambient notice while the activity's appended progress is still ahead of
+ * its verified head — the stretch whose rewards are not yet settled — and placeholder
+ * character-frame blocks until party state is wired up. Reward items themselves — batches,
+ * per-item cards — are a different screen's concern.
  */
 export function ActivityPanel() {
+  const avatarQuery = useQuery(activeAvatarQueryOptions());
+  const avatarID = avatarQuery.data?.id;
+
+  const currentActivityQuery = useQuery({
+    ...currentActivityQueryOptions(avatarID ?? ''),
+    enabled: avatarID !== undefined,
+  });
+
+  const activity = currentActivityQuery.data;
+  const rewardsQuery = useActivityRewards(activity?.id);
+
+  // both heads count from the activity's own start; the rewards poll advances the verified head
+  // between refetches of the activity row itself
+  const verifiedHead = Math.max(activity?.verifiedHead ?? 0, rewardsQuery.data?.verifiedHead ?? 0);
+
+  const pendingCount =
+    activity === null || activity === undefined
+      ? 0
+      : Math.max(0, activity.appendedHead - verifiedHead);
+
   return (
     <main className={panel}>
       <Heading level={1}>Activity</Heading>
-      <div className={lootPanel} data-testid="loot-panel">
-        <Text>Loot drops will appear here once combat rewards are wired up.</Text>
-      </div>
+      {pendingCount > 0 && (
+        <output className={catchingUpPanel} data-testid="catching-up-indicator">
+          <span aria-hidden="true">
+            <Spinner />
+          </span>
+          <Text>
+            Catching up — {pendingCount} {pendingCount === 1 ? 'reward' : 'rewards'} settling
+          </Text>
+        </output>
+      )}
       <div className={characterFrameRow}>
         {CHARACTER_FRAMES.map((label) => (
           <div key={label} className={characterFrame} data-testid="character-frame">

@@ -1,15 +1,17 @@
 import {
   useActivity,
+  useAvatar,
   useCheckpointStreamError,
   useFailureAction,
   useSimulationInitialized,
   useSimulationWorker,
 } from '@vers/idle-client';
 import type { CheckpointStreamError } from '@vers/idle-client';
-import type { ActivityFailureAction, ActivitySnapshot } from '@vers/idle-core';
+import type { ActivityFailureAction, ActivitySnapshot, AvatarSnapshot } from '@vers/idle-core';
 
 interface IdleWorkerHandle {
   readonly activity: ActivitySnapshot | undefined;
+  readonly avatar: AvatarSnapshot | undefined;
   readonly checkpointStreamError: CheckpointStreamError | undefined;
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
@@ -25,11 +27,13 @@ export function useIdleWorkerHandle(): IdleWorkerHandle {
   const worker = useSimulationWorker();
   const initialized = useSimulationInitialized();
   const activity = useActivity();
+  const avatar = useAvatar();
   const failureAction = useFailureAction();
   const checkpointStreamError = useCheckpointStreamError();
 
   return {
     activity: activity ?? undefined,
+    avatar: avatar ?? undefined,
     checkpointStreamError: checkpointStreamError ?? undefined,
     failureAction,
     initialized,

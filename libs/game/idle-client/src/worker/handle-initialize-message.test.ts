@@ -1,12 +1,12 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
-import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
+import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import type { InitializeMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleInitializeMessage } from './handle-initialize-message';
 
 test('it initializes the simulation', () => {
-  const context = createMockWorkerContext();
+  const context = createStubWorkerContext();
 
   const message: InitializeMessage = {
     type: ClientMessageType.Initialize,
@@ -19,7 +19,7 @@ test('it initializes the simulation', () => {
 test('it sends an initial state message to all connections', async () => {
   const channel = new MessageChannel();
 
-  const context = createMockWorkerContext({ connections: [channel.port2] });
+  const context = createStubWorkerContext({ connections: [channel.port2] });
 
   channel.port1.start();
 
@@ -47,7 +47,7 @@ test('it sends an initial state message to all connections', async () => {
 test('it sends the retained reward-slot ledger to a connection that initializes mid-run', async () => {
   const channel = new MessageChannel();
 
-  const context = createMockWorkerContext({ connections: [channel.port2] });
+  const context = createStubWorkerContext({ connections: [channel.port2] });
 
   context.setSimulation(createSimulation());
   context.recordRewardSlots('activity_1', { count: 2, version: 1 });
@@ -73,7 +73,7 @@ test('it sends the retained reward-slot ledger to a connection that initializes 
 });
 
 test('it does not create a new simulation if one already exists', () => {
-  const context = createMockWorkerContext();
+  const context = createStubWorkerContext();
   const existingSimulation = createSimulation();
 
   context.setSimulation(existingSimulation);

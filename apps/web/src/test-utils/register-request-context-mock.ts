@@ -1,4 +1,4 @@
-import { mock } from 'bun:test';
+import { afterEach, mock } from 'bun:test';
 import * as reactStartServer from '@tanstack/react-start/server';
 import type { RequestContextState, StubSession } from './request-context-holder';
 import { requestContextHolder } from './request-context-holder';
@@ -19,6 +19,10 @@ type StubSessionUpdate =
  * methods so they carry the real module's export names.
  */
 export function registerRequestContextMock(): void {
+  afterEach(() => {
+    requestContextHolder.current = null;
+  });
+
   void mock.module('@tanstack/react-start/server', () => ({
     ...reactStartServer,
 
