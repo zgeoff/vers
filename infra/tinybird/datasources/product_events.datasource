@@ -1,3 +1,5 @@
+TOKEN product_events_append APPEND
+
 DESCRIPTION >
     The behavioural product-event stream: one row per curated event, identity stamped server-side
     by app-web's ingest action. Property columns are sparse — an event writes its own and leaves
