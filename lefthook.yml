@@ -25,6 +25,10 @@ pre-commit:
       glob: '**/*.graphql'
       run: bun run format
       stage_fixed: true
+    # last so it scans what the fixers above re-staged; needs the gitleaks
+    # binary on PATH (mise: `mise use -g gitleaks`)
+    - name: gitleaks
+      run: gitleaks git --pre-commit --staged --redact --no-banner
 
 commit-msg:
   jobs:
