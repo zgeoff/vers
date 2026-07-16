@@ -382,6 +382,23 @@
         "typescript": "catalog:",
       },
     },
+    "libs/data/release-registry": {
+      "name": "@vers/release-registry",
+      "version": "0.0.0",
+      "dependencies": {
+        "@faker-js/faker": "catalog:",
+        "@vers/db": "workspace:*",
+        "kysely": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "libs/data/sim-registry": {
       "name": "@vers/sim-registry",
       "version": "0.0.0",
@@ -826,6 +843,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@vers/db": "workspace:*",
+        "@vers/release-registry": "workspace:*",
         "@vers/sim-registry": "workspace:*",
         "@zgeoff/dbhub": "catalog:",
         "commander": "catalog:",
@@ -2488,6 +2506,8 @@
     "@vers/panda-preset": ["@vers/panda-preset@workspace:libs/design/panda-preset"],
 
     "@vers/product-analytics": ["@vers/product-analytics@workspace:libs/service/product-analytics"],
+
+    "@vers/release-registry": ["@vers/release-registry@workspace:libs/data/release-registry"],
 
     "@vers/roll-crypto": ["@vers/roll-crypto@workspace:libs/game/roll-crypto"],
 

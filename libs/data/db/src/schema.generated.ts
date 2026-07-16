@@ -127,6 +127,15 @@ export interface PendingTransactions {
   updatedAt: Generated<Timestamp>;
 }
 
+export interface Releases {
+  app: string;
+  deployedAt: Generated<Timestamp>;
+  gitSha: string;
+  id: Generated<Int8>;
+  image: string;
+  imageDigest: string | null;
+}
+
 export interface Sessions {
   createdAt: Generated<Timestamp>;
   expiresAt: Timestamp;
@@ -187,6 +196,7 @@ export interface DB {
   avatars: Avatars;
   consumedTransactionTokens: ConsumedTransactionTokens;
   pendingTransactions: PendingTransactions;
+  releases: Releases;
   sessions: Sessions;
   simVersions: SimVersions;
   users: Users;
