@@ -3,11 +3,13 @@ import { metrics } from '@opentelemetry/api';
 import { startMetricsExport } from './start-metrics-export';
 
 interface ReceivedExport {
-  readonly auth: string | null;
   readonly bodyBytes: number;
-  readonly contentType: string | null;
-  readonly dataset: string | null;
-  readonly path: string;
+  readonly headers: {
+    readonly auth: string | null;
+    readonly contentType: string | null;
+    readonly dataset: string | null;
+    readonly path: string;
+  };
 }
 
 test('it exports recorded instruments to the OTLP metrics endpoint with the env-configured headers', async () => {
@@ -18,11 +20,13 @@ test('it exports recorded instruments to the OTLP metrics endpoint with the env-
       const body = await request.arrayBuffer();
 
       received.push({
-        auth: request.headers.get('authorization'),
         bodyBytes: body.byteLength,
-        contentType: request.headers.get('content-type'),
-        dataset: request.headers.get('x-axiom-metrics-dataset'),
-        path: new URL(request.url).pathname,
+        headers: {
+          auth: request.headers.get('authorization'),
+          contentType: request.headers.get('content-type'),
+          dataset: request.headers.get('x-axiom-metrics-dataset'),
+          path: new URL(request.url).pathname,
+        },
       });
 
       return Response.json({});
@@ -65,7 +69,7 @@ test('it exports recorded instruments to the OTLP metrics endpoint with the env-
 
   expect(received).toHaveLength(1);
 
-  expect(received[0]).toMatchObject({
+  expect(received[0]?.headers).toStrictEqual({
     auth: 'Bearer test-token',
     contentType: 'application/x-protobuf',
     dataset: 'vers-metrics',

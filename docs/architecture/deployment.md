@@ -204,7 +204,7 @@ Requires `flyctl` authenticated to the `vers` org, the Neon pooled `DATABASE_URL
 Create the apps:
 
 ```sh
-for app in app-web service-activity service-avatar service-keys service-replay service-session service-user service-verification; do
+for app in app-web service-activity service-avatar service-email service-keys service-replay service-session service-user service-verification; do
   fly apps create "vers-$app" --org vers
 done
 ```
@@ -375,7 +375,7 @@ The next push to `main` fills the machines.
 ## Teardown
 
 ```sh
-for app in app-web bugsink umami service-avatar service-keys service-session service-user service-verification; do
+for app in app-web bugsink umami service-activity service-avatar service-email service-keys service-replay service-session service-user service-verification; do
   fly apps destroy "vers-$app" --yes
 done
 ```

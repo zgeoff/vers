@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { metrics } from '@opentelemetry/api';
 import {
   AggregationTemporality,
@@ -23,16 +23,17 @@ async function setupTest() {
 
   metrics.setGlobalMeterProvider(provider);
 
+  onTestFinished(async () => {
+    metrics.disable();
+
+    await provider.shutdown();
+  });
+
   return {
     db: handle.db,
     exporter,
     provider,
-    [Symbol.asyncDispose]: async () => {
-      metrics.disable();
-
-      await provider.shutdown();
-      await handle[Symbol.asyncDispose]();
-    },
+    [Symbol.asyncDispose]: () => handle[Symbol.asyncDispose](),
   };
 }
 
@@ -80,7 +81,9 @@ test('it observes the gauges from one database snapshot per collection', async (
   expect(headDelta?.dataPoints[0]?.value).toBeWithin(2.9, 3);
   expect(quarantined?.dataPoints[0]?.value).toBe(1);
 
-  expect(parked?.dataPoints[0]).toMatchObject({
+  const parkedPoint = parked?.dataPoints[0];
+
+  expect({ attributes: parkedPoint?.attributes, value: parkedPoint?.value }).toStrictEqual({
     attributes: { sim_version: 'engine-a' },
     value: 1,
   });
