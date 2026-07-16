@@ -13,8 +13,10 @@ interface RequestLoggerSink {
 
 /**
  * Builds the request-lifecycle logging middleware: one structured line per request on completion,
- * carrying method, path (with query string), status, and duration as queryable fields — data
- * never rides in the message text, and presentation is the transport's job. Severity follows
+ * carrying method, path, status, and duration as queryable fields — data never rides in the
+ * message text, and presentation is the transport's job. The query string never reaches the line:
+ * query params carry emailed tokens and auth codes, and a log stream is no place for either.
+ * Severity follows
  * outcome: 5xx at error, 4xx at warn, everything else at info — except a served static asset
  * (a pathname with a file extension), which logs at debug to keep asset traffic out of the
  * shipped stream. A handler that throws still logs, at error with the thrown value, before the
@@ -24,9 +26,8 @@ export function makeRequestLogger(logger: RequestLoggerSink): Middleware {
   return async (request, next) => {
     const start = performance.now();
 
-    const url = new URL(request.url);
+    const path = new URL(request.url).pathname;
 
-    const path = url.pathname + url.search;
     let response: Response;
 
     try {
@@ -45,7 +46,7 @@ export function makeRequestLogger(logger: RequestLoggerSink): Middleware {
       throw error;
     }
 
-    logger[pickRequestLogLevel(response.status, url.pathname)](
+    logger[pickRequestLogLevel(response.status, path)](
       {
         durationMs: toDurationMs(performance.now() - start),
         method: request.method,

@@ -40,7 +40,7 @@ test('it logs one structured line at info when a page request completes', async 
   });
 });
 
-test('it includes the query string in the logged path', async () => {
+test('it excludes the query string from the logged path', async () => {
   const lines: Array<{ fields: Record<string, unknown>; level: string; message: string }> = [];
 
   const requestLogger = makeRequestLogger({
@@ -62,8 +62,9 @@ test('it includes the query string in the logged path', async () => {
     Promise.resolve(new Response('ok')),
   );
 
+  expect(lines).toHaveLength(1);
   invariant(lines[0], 'one line was logged');
-  expect(lines[0].fields).toContainEntry(['path', '/login?next=/account']);
+  expect(lines[0].fields).toContainEntry(['path', '/login']);
 });
 
 test('it logs a client error response at warn', async () => {
@@ -88,6 +89,7 @@ test('it logs a client error response at warn', async () => {
     Promise.resolve(new Response('nope', { status: 404 })),
   );
 
+  expect(lines).toHaveLength(1);
   invariant(lines[0], 'one line was logged');
   expect(lines[0].level).toBe('warn');
   expect(lines[0].fields).toContainEntry(['status', 404]);
@@ -115,6 +117,7 @@ test('it logs a server error response at error', async () => {
     Promise.resolve(new Response('boom', { status: 500 })),
   );
 
+  expect(lines).toHaveLength(1);
   invariant(lines[0], 'one line was logged');
   expect(lines[0].level).toBe('error');
   expect(lines[0].fields).toContainEntry(['status', 500]);
@@ -142,6 +145,7 @@ test('it logs a served static asset at debug', async () => {
     Promise.resolve(new Response('js', { status: 200 })),
   );
 
+  expect(lines).toHaveLength(1);
   invariant(lines[0], 'one line was logged');
   expect(lines[0].level).toBe('debug');
 });
@@ -168,6 +172,7 @@ test('it logs a missing asset at warn rather than debug', async () => {
     Promise.resolve(new Response('nope', { status: 404 })),
   );
 
+  expect(lines).toHaveLength(1);
   invariant(lines[0], 'one line was logged');
   expect(lines[0].level).toBe('warn');
 });

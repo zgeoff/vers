@@ -241,9 +241,9 @@ function registerORPCHandler(
         const start = performance.now();
         const method = context.request.method;
 
-        const url = new URL(context.request.url);
-
-        const path = url.pathname + url.search;
+        // pathname only: a GET-mapped procedure encodes its input in the query string, and logged
+        // inputs belong to the handler's own lines, not the transport's
+        const path = new URL(context.request.url).pathname;
 
         const resolution = await parseServiceToken(context.request, {
           audience: deps.serviceName,

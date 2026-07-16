@@ -36,10 +36,11 @@ request's log lines across app-web and the services it called. The line-level co
 - A failure always emits a line at the site that decides the outcome — an error folded into a result
   value, a rejected token, a failed job — carrying the reason in a field (`err`, `failure`, the
   validation issues).
-- Each request logs one line on completion with `method`, `path` (query string included), `status`,
-  and `durationMs`. The service scaffold emits it for every `/rpc` request and leaves `/health`
-  unlogged so platform probes don't dominate volume; app-web's middleware emits it for every
-  request, at `debug` for a served static asset (a pathname with a file extension).
+- Each request logs one line on completion with `method`, `path`, `status`, and `durationMs`. The
+  query string never reaches a log line — query params carry emailed tokens, auth codes, and
+  GET-mapped procedure inputs. The service scaffold emits the line for every `/rpc` request and
+  leaves `/health` unlogged so platform probes don't dominate volume; app-web's middleware emits it
+  for every request, at `debug` for a served static asset (a pathname with a file extension).
 - Presentation is the transport's job: dev consoles pretty-print through `pino-pretty`, and call
   sites never embed color codes or decoration in the message.
 
