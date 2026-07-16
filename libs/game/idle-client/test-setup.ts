@@ -6,6 +6,12 @@ import { registerZustandReset } from '@vers/client-test-utils';
 import { registerMSWLifecycle } from '@vers/test-utils/bun';
 import { server } from './src/mocks/node';
 
+// a throwaway dev-only Ed25519 PKCS8 key, so tests can mint the access tokens the stateful
+// activity mock's session resolution decodes
+process.env['SERVICE_AUTH_PRIVATE_KEY'] = `-----BEGIN PRIVATE KEY-----
+MC4CAQAwBQYDK2VwBCIEIBMom57erggdVdDCIdRWS+NKMykK+I5BUKpuHziAq+0W
+-----END PRIVATE KEY-----`;
+
 GlobalRegistrator.register();
 expect.extend(jestDOMMatchers);
 
