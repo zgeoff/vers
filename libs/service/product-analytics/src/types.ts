@@ -22,7 +22,7 @@ interface NodeExploredProperties {
   readonly nodeID: string;
 }
 
-type EmptyProperties = Record<string, never>;
+type EmptyProperties = Readonly<Record<string, never>>;
 
 export type ProductEventName = keyof ProductEventPropertiesMap;
 
