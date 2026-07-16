@@ -266,16 +266,16 @@ failure path lands with the OpenTelemetry metrics that make it observable. Mecha
 full, and the instrument registry live in `docs/architecture/observability.md`; the rules a PR must
 satisfy:
 
-- Instruments are defined in the owning package through the global metrics API
-  (`metrics.getMeter`, `@opentelemetry/api`) — domain code never constructs, receives, or stops a
-  meter provider; the service scaffold owns that lifecycle.
+- Instruments are defined in the owning package through the global metrics API (`metrics.getMeter`,
+  `@opentelemetry/api`) — domain code never constructs, receives, or stops a meter provider; the
+  service scaffold owns that lifecycle.
 - Names are dot-namespaced `vers.<domain>.<measure>`; attributes are snake_case with closed value
   sets, never unbounded values like per-entity IDs.
 - A rare, meaningful event is a counter recorded at the site that decides it (a `record-*.ts`
   module). State that lives in the database observes through observable gauges — one batch callback
   per package, one snapshot query per collection, failures caught and logged, never thrown.
-- Every new instrument lands with its row in the `docs/architecture/observability.md` registry
-  table in the same PR.
+- Every new instrument lands with its row in the `docs/architecture/observability.md` registry table
+  in the same PR.
 
 ## Banned words
 
