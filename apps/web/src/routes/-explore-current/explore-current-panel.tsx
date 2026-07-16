@@ -2,13 +2,13 @@ import { isDefinedError, safe } from '@orpc/client';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { ActivityData } from '@vers/contract-activity';
 import { Button, CheckboxField, Spinner } from '@vers/design-system';
+import { WorldMapEncounterActivity } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { SimulationUnsupportedNotice } from '../../components/simulation-unsupported-notice';
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
 import { activeAvatarQueryOptions } from '../../lib/avatar/active-avatar-query-options';
-import { IdleWorldMapEncounterActivity } from '../../lib/idle/idle-world-map-encounter-activity';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
 import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
 import { sendIdleSetActivity } from '../../lib/idle/send-idle-set-activity';
@@ -159,7 +159,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
         labelProps={{ children: 'Auto-retry on failure', htmlFor: 'auto-retry-on-failure' }}
       />
       <ApproachingCapWarning />
-      <IdleWorldMapEncounterActivity />
+      <WorldMapEncounterActivity />
       <ActivityRewardsPanel activityID={idleWorkerHandle.activity?.id} orpc={props.orpc} />
       <Suspense fallback={<p data-testid="world-map-node-codex-loading">Loading codex…</p>}>
         <WorldMapNodeCodexSlot difficulty={selectedNode?.difficulty ?? 1} />

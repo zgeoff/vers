@@ -32,7 +32,7 @@ test('it ignores a sim delta from a different activity than the current one', ()
   expect(result).toStrictEqual({ level: 3, xp: 400 });
 });
 
-test('it renders the settled avatar row when no activity is current', () => {
+test('it reports the settled avatar totals when no activity is current', () => {
   const result = buildOptimisticProgression({
     avatar: { level: 5, xp: 900 },
     currentActivity: null,

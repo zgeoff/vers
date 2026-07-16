@@ -1,12 +1,13 @@
-import type { CheckpointStreamError } from '@vers/idle-client';
+import type { CheckpointStreamError, ClientMessage } from '@vers/idle-client';
 import type { ActivitySnapshot, AvatarSnapshot } from '@vers/idle-core';
 import { ActivityFailureAction } from '@vers/idle-core';
 
 /**
- * A duck-typed stand-in for `SharedWorker`: only the one channel the app ever writes to.
+ * A duck-typed stand-in for `SharedWorker`: only the one channel the app ever writes to, typed to
+ * the worker protocol so recorded messages narrow through the exported guards.
  */
 interface StubSimulationWorker {
-  readonly port: { readonly postMessage: (message: unknown) => void };
+  readonly port: { readonly postMessage: (message: ClientMessage) => void };
 }
 
 export interface StubIdleWorkerHandle {

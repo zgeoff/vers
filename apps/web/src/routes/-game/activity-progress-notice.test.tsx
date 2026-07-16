@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
-import { render, screen } from '@testing-library/react';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
+import { render } from '../../test-utils/render';
 import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
 import { ActivityProgressNotice } from './activity-progress-notice';
 
@@ -39,9 +39,8 @@ test('it shows the activity name, wave progress, and running xp', async () => {
       worker: undefined,
     },
     () => {
-      render(<ActivityProgressNotice />);
-
-      const notice = screen.getByTestId('activity-progress-notice');
+      const rendered = render(<ActivityProgressNotice />);
+      const notice = rendered.getByTestId('activity-progress-notice');
 
       expect(notice).toHaveTextContent('World Map Encounter');
       expect(notice).toHaveTextContent('2 of 3 waves cleared');
