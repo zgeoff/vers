@@ -1,7 +1,10 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
+import type { ErrorEvent } from '@sentry/bun';
 import { createDB } from '@vers/db';
 import { resolveServiceURL } from '@vers/mock-services';
+import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { waitFor } from '@vers/test-utils';
 import pino from 'pino';
 import { startReplayWorker } from './start-replay-worker';
 
@@ -63,4 +66,45 @@ test('it does not hot-loop on a repeatedly erroring iteration, and stop still re
   await expect(worker.stop()).toResolve();
 
   await unreachableDB.destroy();
+});
+
+test('it reports an iteration failure carrying a trace id when no frontier was claimed', async () => {
+  const unreachableDB = createDB({ databaseURL: 'postgresql://bad:bad@127.0.0.1:1/nope' });
+
+  const keyPair = await getTestServiceKeyPair();
+
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+  const previousHandle = setSentryHandleForTesting(undefined);
+
+  onTestFinished(() => {
+    setSentryHandleForTesting(previousHandle);
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  const worker = startReplayWorker({
+    db: unreachableDB,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: pino({ enabled: false }),
+    privateKey: keyPair.privateKey,
+    simVersion: 'test-engine-hash',
+  });
+
+  onTestFinished(async () => {
+    await worker.stop();
+    await unreachableDB.destroy();
+  });
+
+  await waitFor(() => {
+    expect(recorded.length).toBeGreaterThan(0);
+  });
+
+  expect(recorded[0]?.tags?.['traceID']).toMatch(/^[0-9a-f]{32}$/);
 });

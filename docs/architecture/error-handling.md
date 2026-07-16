@@ -94,15 +94,29 @@ The Sentry SDK (backed by the self-hosted Bugsink) is the **only** path to the e
 is a log-only sink. This split is what keeps one error from shipping twice, so never wire a log
 transport to the error backend and never `captureException` in code the central hooks already cover.
 
+`@vers/service-runtime` owns the one path a service takes to the error backend:
+`startErrorReporting` initializes the SDK from `SENTRY_DSN`, a no-op when it's undefined;
+`reportUnexpectedError` captures a failure tagged with the active trace id; `flushErrorReports`
+awaits delivery before a process exits. The RPC `onError` interceptor calls `reportUnexpectedError`
+directly, and so does every background swallow point — a worker loop iteration, a job queue's
+`onError` and dead-letter callbacks, a fire-and-forget drain, a sweep entrypoint, a shutdown
+handler. A process that never calls `createService` (a sweep entrypoint) calls `startErrorReporting`
+itself before its run.
+
 What reports, by tier:
 
-| Tier           | Hook                                     | Reports                                                                                                                  |
-| -------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| service        | `onError` interceptor in `createService` | non-`ORPCError` throws and 5xx `ORPCError`s                                                                              |
-| app-web client | `QueryCache`/`MutationCache` `onError`   | non-`ORPCError` failures (network, client bugs) — service errors were already reported by the service that produced them |
-| app-web render | root route `errorComponent`              | render/loader errors nothing below caught                                                                                |
+| Tier           | Hook                                                                                                    | Reports                                                                                                                              |
+| -------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| service        | `onError` interceptor in `createService`, and `reportUnexpectedError` at every background swallow point | non-`ORPCError` throws and 5xx `ORPCError`s from a request; an unexpected failure from a worker loop, job queue, drain, or sweep run |
+| app-web client | `QueryCache`/`MutationCache` `onError`                                                                  | non-`ORPCError` failures (network, client bugs) — service errors were already reported by the service that produced them             |
+| app-web render | root route `errorComponent`                                                                             | render/loader errors nothing below caught                                                                                            |
 
-Every service report carries the request's trace id as a `traceID` event tag.
+A service report carries a `traceID` event tag when the capture runs inside an active trace scope; a
+report emitted outside any scope, and every app-web capture, omits the tag. The RPC interceptor tags
+with the request's trace id. A background report — one worker iteration, one job's
+handle/complete/fail cycle, a boot drain, one sweep run — carries a fresh trace id scoping that unit
+of work, except that a request-triggered fire-and-forget drain inherits the originating request's
+trace. The RPC path reports exactly once per unexpected throw.
 
 ## Trace context
 

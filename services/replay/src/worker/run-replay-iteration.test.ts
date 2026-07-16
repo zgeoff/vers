@@ -1,12 +1,17 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
+import type { ErrorEvent } from '@sentry/bun';
 import { buildCheckpointHash } from '@vers/contract-activity';
 import type { Json } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
 import { resolveServiceURL } from '@vers/mock-services';
+import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { withTraceContext } from '@vers/service-utils';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
+import { waitFor } from '@vers/test-utils';
+import { createTraceContext } from '@vers/trace';
 import pino from 'pino';
 import { MAX_REPLAY_ATTEMPTS } from '../queue/update-replay-attempts';
 import { createReplayCache } from '../replay/create-replay-cache';
@@ -694,6 +699,65 @@ test('it counts a replay error as a failed attempt and quarantines at the attemp
 
   expect(updated.status).toBe('quarantined');
   expect(updated.replayAttempts).toBe(MAX_REPLAY_ATTEMPTS);
+});
+
+test('it reports an iteration failure exactly once when a frontier was claimed', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ simVersion: 'unreachable-provider-hash' })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  await createSimVersionRow(ctx.db, {
+    engineHash: 'unreachable-provider-hash',
+    providerUrl: 'http://127.0.0.1:1',
+    retainedUntil: new Date(Date.now() + 86_400_000),
+    status: 'active',
+  });
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const cache = createReplayCache();
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+  const previousHandle = setSentryHandleForTesting(undefined);
+
+  onTestFinished(() => {
+    setSentryHandleForTesting(previousHandle);
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  const trace = createTraceContext();
+
+  const outcome = await withTraceContext(trace, () => runReplayIteration(deps, cache));
+
+  expect(outcome).toStrictEqual({ kind: 'errored' });
+
+  await waitFor(() => {
+    expect(recorded).toHaveLength(1);
+  });
+
+  expect(recorded[0]?.tags).toMatchObject({ traceID: trace.traceID });
 });
 
 test('it does not reject a divergence that fails to reproduce on the fresh confirm replay', async () => {

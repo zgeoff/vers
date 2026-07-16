@@ -1,6 +1,6 @@
 import { createEmailClient } from '@vers/email';
 import type { JobQueue } from '@vers/jobs';
-import { createService } from '@vers/service-runtime';
+import { createService, reportUnexpectedError } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import invariant from 'tiny-invariant';
 import { buildEmailRouter } from './build-router';
@@ -43,12 +43,15 @@ export async function createEmailService(
         }),
         onError: (error) => {
           runtime.logger.error({ err: error }, 'email job queue error');
+
+          reportUnexpectedError(error);
         },
-        onJobError: (error, context) => {
-          runtime.logger.error(
-            { err: error, jobID: context.jobID, queue: context.queue },
-            'email job failed',
-          );
+        onJobFailed: (error, context) => {
+          runtime.logger.error({ err: error, ...context }, 'email job failed');
+
+          if (context.retriesExhausted) {
+            reportUnexpectedError(error);
+          }
         },
       });
 

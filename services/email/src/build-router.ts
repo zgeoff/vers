@@ -3,6 +3,7 @@ import { emailContract } from '@vers/contract-email';
 import type { EmailJobOutput } from '@vers/contract-email';
 import type { JobQueue } from '@vers/jobs';
 import type { ServiceContext } from '@vers/service-runtime';
+import { reportUnexpectedError } from '@vers/service-runtime';
 import type * as z from 'zod';
 import type { EmailJobDefs } from './create-email-job-queue';
 
@@ -45,7 +46,8 @@ interface SendHandlerOpts<TName extends keyof EmailJobDefs> {
 /**
  * Builds one procedure's handler: enqueues its payload under `name`, then nudges delivery without
  * gating the response — a fire-and-forget drain whose failures are pg-boss's retry/dead-letter
- * problem, not this request's.
+ * problem, not this request's. The detached drain starts inside the request's own trace scope, so
+ * a report it makes still carries the originating request's trace id.
  */
 function buildSendHandler<TName extends keyof EmailJobDefs>(
   deps: BuildEmailRouterDeps,
@@ -59,6 +61,8 @@ function buildSendHandler<TName extends keyof EmailJobDefs>(
         await deps.queue.drain(name);
       } catch (error) {
         deps.logger.error({ err: error, jobID, queue: name }, 'email job drain failed');
+
+        reportUnexpectedError(error);
       }
     })();
 

@@ -1,3 +1,5 @@
+import { withTraceContext } from '@vers/service-utils';
+import { createTraceContext } from '@vers/trace';
 import { PgBoss, fromKysely } from 'pg-boss';
 import type { KyselyTransactionLike } from 'pg-boss';
 import invariant from 'tiny-invariant';
@@ -37,12 +39,16 @@ export interface JobContext {
 }
 
 /**
- * Identifies the failed delivery an `onJobError` call is about.
+ * A failed job's identity plus whether this failure exhausted its retries — `true` means the job
+ * dead-letters (or is dropped, without a configured dead-letter queue) instead of retrying.
  */
 export interface JobFailureContext {
   readonly jobID: string;
-  readonly queue: string;
+  readonly name: string;
+  readonly retriesExhausted: boolean;
 }
+
+type OnJobFailed = (error: unknown, context: Readonly<JobFailureContext>) => void;
 
 export interface CreateJobQueueConfig<TDefs extends JobDefs> {
   readonly connectionString: string;
@@ -66,7 +72,7 @@ export interface CreateJobQueueConfig<TDefs extends JobDefs> {
    * this callback is the one place a failure's cause is reported. Defaults to logging via
    * `console.error` so the cause is never discarded.
    */
-  readonly onJobError?: (error: unknown, context: Readonly<JobFailureContext>) => void;
+  readonly onJobFailed?: OnJobFailed;
 }
 
 /**
@@ -95,13 +101,13 @@ export function createJobQueue<TDefs extends JobDefs>(
 
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- erases each job's payload type; the fetch/handle/complete loop re-correlates a handler with its schema by their shared runtime key
   const handlers = config.handlers as JobHandlers;
-  const onJobError = config.onJobError ?? printJobError;
+  const onJobFailed = config.onJobFailed ?? printJobError;
 
   return {
     start: () => startQueues(boss, defs),
     stop: () => boss.stop(),
     send: (name, payload, opts) => sendJob(boss, defs, name, payload, opts),
-    drain: (name) => drainJobs(boss, defs, handlers, onJobError, name),
+    drain: (name) => drainJobs(boss, defs, handlers, onJobFailed, name),
   };
 }
 
@@ -161,15 +167,25 @@ async function sendJob(
 }
 
 /**
+ * The slice of a fetched job `runJob` needs to complete or fail it and report a failure — narrower
+ * than `pg-boss`'s full `JobWithMetadata`, so every field here stays trivially readonly.
+ */
+interface FetchedJob {
+  readonly data: unknown;
+  readonly id: string;
+  readonly retryCount: number;
+  readonly retryLimit: number;
+}
+
+/**
  * One-shot fetch/handle/complete loop: batches until a queue is empty, then moves to the next
- * queue. A payload that no longer parses against its job's schema is failed without ever reaching
- * the handler, since pg-boss stores payloads as untyped jsonb.
+ * queue.
  */
 async function drainJobs(
   boss: PgBoss,
   defs: JobDefs,
   handlers: JobHandlers,
-  onJobError: (error: unknown, context: Readonly<JobFailureContext>) => void,
+  onJobFailed: OnJobFailed,
   name: string | undefined,
 ): Promise<DrainResult> {
   const names = name === undefined ? Object.keys(defs) : [name];
@@ -186,35 +202,18 @@ async function drainJobs(
     invariant(handler, `job "${queueName}" has no handler`);
 
     for (;;) {
-      const jobs = await boss.fetch<unknown>(queueName, { batchSize: 10 });
+      const jobs = await boss.fetch<unknown>(queueName, { batchSize: 10, includeMetadata: true });
 
       if (jobs.length === 0) {
         break;
       }
 
       for (const job of jobs) {
-        const parsed = def.schema.safeParse(job.data);
+        const outcome = await runJob(boss, queueName, def, handler, onJobFailed, job);
 
-        if (!parsed.success) {
-          onJobError(parsed.error, { jobID: job.id, queue: queueName });
-
-          await boss.fail(queueName, job.id);
-
-          failed += 1;
-          continue;
-        }
-
-        try {
-          await handler(parsed.data, { jobID: job.id });
-
-          await boss.complete(queueName, job.id);
-
+        if (outcome === 'completed') {
           completed += 1;
-        } catch (error) {
-          onJobError(error, { jobID: job.id, queue: queueName });
-
-          await boss.fail(queueName, job.id);
-
+        } else {
           failed += 1;
         }
       }
@@ -222,4 +221,69 @@ async function drainJobs(
   }
 
   return { completed, failed };
+}
+
+type JobOutcome = 'completed' | 'failed';
+
+/**
+ * Runs one job's parse/handle/complete/fail cycle inside its own fresh trace context, so a report
+ * `onJobFailed` makes and the log line around it correlate by trace id. A payload that no longer
+ * parses against its job's schema is failed without ever reaching the handler, since pg-boss
+ * stores payloads as untyped jsonb.
+ */
+function runJob(
+  boss: PgBoss,
+  queueName: string,
+  def: Readonly<JobDef>,
+  handler: JobHandlers[string],
+  onJobFailed: OnJobFailed,
+  job: Readonly<FetchedJob>,
+): Promise<JobOutcome> {
+  return withTraceContext(createTraceContext(), async () => {
+    const parsed = def.schema.safeParse(job.data);
+
+    if (!parsed.success) {
+      // reported before the fail round-trip so a rejecting `fail` can never mask the cause
+      onJobFailed(
+        new Error(`job "${queueName}" payload failed schema validation`, { cause: parsed.error }),
+        {
+          jobID: job.id,
+          name: queueName,
+          retriesExhausted: isRetriesExhausted(job),
+        },
+      );
+
+      await boss.fail(queueName, job.id);
+
+      return 'failed';
+    }
+
+    try {
+      await handler(parsed.data, { jobID: job.id });
+
+      await boss.complete(queueName, job.id);
+
+      return 'completed';
+    } catch (error) {
+      // reported before the fail round-trip so a rejecting `fail` can never mask the cause
+      onJobFailed(error, {
+        jobID: job.id,
+        name: queueName,
+        retriesExhausted: isRetriesExhausted(job),
+      });
+
+      await boss.fail(queueName, job.id);
+
+      return 'failed';
+    }
+  });
+}
+
+/**
+ * A fetched job's `retryCount` already reflects this attempt (pg-boss increments it on refetch,
+ * before the handler ever runs), so comparing it against `retryLimit` here mirrors exactly the
+ * condition pg-boss itself uses to decide retry vs. terminal when this attempt is failed.
+ */
+function isRetriesExhausted(job: Readonly<Pick<FetchedJob, 'retryCount' | 'retryLimit'>>): boolean {
+  return job.retryCount >= job.retryLimit;
 }

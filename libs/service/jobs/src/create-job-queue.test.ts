@@ -1,5 +1,7 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
+import { findTraceContext } from '@vers/service-utils';
+import { waitFor } from '@vers/test-utils';
 import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
 import invariant from 'tiny-invariant';
@@ -309,17 +311,24 @@ test('it fails a job whose stored payload no longer parses', async () => {
   expect(received).toBeEmpty();
 });
 
-test('it reports a thrown handler error with the failed delivery it belongs to', async () => {
+test('it invokes onJobFailed with retriesExhausted reflecting whether this attempt dead-letters', async () => {
   const connectionString = await createDatabaseFromTemplate();
 
-  const defs = defineJobs({ email: { retryLimit: 0, schema: z.object({ to: z.string() }) } });
-  const failures: Array<{ context: { jobID: string; queue: string }; error: unknown }> = [];
+  const defs = defineJobs({
+    email: { retryDelay: 1, retryLimit: 1, schema: z.object({ to: z.string() }) },
+  });
+
+  const failures: Array<{ jobID: string; name: string; retriesExhausted: boolean }> = [];
 
   const queue = createJobQueue(defs, {
     connectionString,
-    handlers: { email: () => Promise.reject(new Error('delivery exploded')) },
-    onJobError: (error, context) => {
-      failures.push({ context, error });
+    handlers: { email: () => Promise.reject(new Error('always fails')) },
+    onJobFailed: (_error, context) => {
+      failures.push({
+        jobID: context.jobID,
+        name: context.name,
+        retriesExhausted: context.retriesExhausted,
+      });
     },
   });
 
@@ -328,16 +337,26 @@ test('it reports a thrown handler error with the failed delivery it belongs to',
   onTestFinished(() => queue.stop());
 
   const jobID = await queue.send('email', { to: 'a@example.com' });
-  const result = await queue.drain();
 
-  expect(result).toStrictEqual({ completed: 0, failed: 1 });
-  expect(failures).toHaveLength(1);
-  invariant(failures[0], 'one failure was reported');
-  expect(failures[0].context).toStrictEqual({ jobID, queue: 'email' });
-  expect(failures[0].error).toMatchObject({ message: 'delivery exploded' });
+  await queue.drain();
+
+  // the failed job sits out its one-second retry delay before a drain can fetch it again
+  await waitFor(
+    async () => {
+      await queue.drain();
+
+      expect(failures).toHaveLength(2);
+    },
+    { timeoutMs: 5000 },
+  );
+
+  expect(failures).toStrictEqual([
+    { jobID, name: 'email', retriesExhausted: false },
+    { jobID, name: 'email', retriesExhausted: true },
+  ]);
 });
 
-test('it reports the validation issues of a stored payload that no longer parses', async () => {
+test('it invokes onJobFailed with a descriptive error when a stored payload no longer parses', async () => {
   const connectionString = await createDatabaseFromTemplate();
 
   const looseDefs = defineJobs({ email: { retryLimit: 0, schema: z.object({ to: z.string() }) } });
@@ -357,13 +376,19 @@ test('it reports the validation issues of a stored payload that no longer parses
     email: { retryLimit: 0, schema: z.object({ retries: z.number(), to: z.string() }) },
   });
 
-  const failures: Array<{ context: { jobID: string; queue: string }; error: unknown }> = [];
+  const failures: Array<{ jobID: string; message: string; retriesExhausted: boolean }> = [];
 
   const reader = createJobQueue(strictDefs, {
     connectionString,
     handlers: { email: () => Promise.resolve() },
-    onJobError: (error, context) => {
-      failures.push({ context, error });
+    onJobFailed: (error, context) => {
+      invariant(error instanceof Error, 'the schema-parse-failure branch reports an Error');
+
+      failures.push({
+        jobID: context.jobID,
+        message: error.message,
+        retriesExhausted: context.retriesExhausted,
+      });
     },
   });
 
@@ -373,8 +398,41 @@ test('it reports the validation issues of a stored payload that no longer parses
 
   await reader.drain();
 
-  expect(failures).toHaveLength(1);
-  invariant(failures[0], 'one failure was reported');
-  expect(failures[0].context).toStrictEqual({ jobID, queue: 'email' });
-  expect(failures[0].error).toMatchObject({ name: 'ZodError' });
+  expect(failures).toStrictEqual([
+    { jobID, message: 'job "email" payload failed schema validation', retriesExhausted: true },
+  ]);
+});
+
+test('it runs each drained job inside its own trace context', async () => {
+  const connectionString = await createDatabaseFromTemplate();
+
+  const defs = defineJobs({ email: { schema: z.object({ to: z.string() }) } });
+  const traceIDs: Array<string | undefined> = [];
+
+  const queue = createJobQueue(defs, {
+    connectionString,
+    handlers: {
+      email: () => {
+        traceIDs.push(findTraceContext()?.traceID);
+
+        return Promise.resolve();
+      },
+    },
+  });
+
+  await queue.start();
+
+  onTestFinished(() => queue.stop());
+
+  await queue.send('email', { to: 'a@example.com' });
+  await queue.send('email', { to: 'b@example.com' });
+  await queue.drain();
+
+  expect(traceIDs).toHaveLength(2);
+
+  const [firstTraceID, secondTraceID] = traceIDs;
+
+  invariant(firstTraceID !== undefined, 'the first job ran inside a trace context');
+  invariant(secondTraceID !== undefined, 'the second job ran inside a trace context');
+  expect(firstTraceID).not.toBe(secondTraceID);
 });

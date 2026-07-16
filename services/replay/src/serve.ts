@@ -1,3 +1,6 @@
+import { flushErrorReports, reportUnexpectedError } from '@vers/service-runtime';
+import { withTraceContext } from '@vers/service-utils';
+import { createTraceContext } from '@vers/trace';
 import { createReplayService } from './create-replay-service';
 import { getBakedEngineHash } from './get-baked-engine-hash';
 import { registerVerificationMetrics } from './metrics/register-verification-metrics';
@@ -33,12 +36,24 @@ process.on('SIGTERM', () => {
 });
 
 async function handleSIGTERM(): Promise<void> {
-  try {
-    await stopGracefully();
-  } catch (error) {
-    service.logger.error({ err: error }, 'graceful shutdown failed');
-    process.exit(1);
-  }
+  // the try/catch lives inside the trace scope so a shutdown report still carries its trace id
+  await withTraceContext(createTraceContext(), async () => {
+    try {
+      await stopGracefully();
+    } catch (error) {
+      service.logger.error({ err: error }, 'graceful shutdown failed');
+
+      reportUnexpectedError(error);
+
+      const flushed = await flushErrorReports();
+
+      if (!flushed) {
+        service.logger.warn('error reports were still queued when the flush timed out');
+      }
+
+      process.exit(1);
+    }
+  });
 }
 
 /**
