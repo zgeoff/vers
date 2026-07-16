@@ -298,7 +298,9 @@ fly secrets unset CREATE_SUPERUSER -a vers-bugsink
 
 In the Bugsink UI, create one project per app, set each project's DSN as that app's `SENTRY_DSN`
 secret, and set the web project's DSN as the `VITE_SENTRY_DSN` GitHub Actions variable plus a
-`vers-app-web` secret of the same name. Mint an API token for CI source-map uploads
+`vers-app-web` secret of the same name. Add the alarms Discord webhook (the
+`bugsink-discord-webhook` item in the `vers` 1Password vault) as each project's messaging service,
+so new-issue alerts reach the alarms channel. Mint an API token for CI source-map uploads
 (`SENTRY_AUTH_TOKEN` GitHub secret) and one for the MCP server, added to the vault item as
 `mcp-token`.
 
