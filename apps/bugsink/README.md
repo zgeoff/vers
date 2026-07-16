@@ -30,7 +30,6 @@ move across with `bugsink-manage migrate_to_current_objectstorage`.
 | `SECRET_KEY`           | `openssl rand -base64 50`                                  |
 | `DATABASE_URL`         | the Neon `bugsink` database, pooled connection URL         |
 | `CREATE_SUPERUSER`     | `email:password` — first boot only, unset after            |
-| `EMAIL_HOST_PASSWORD`  | the Resend API key (`resend` item, `vers` 1Password vault) |
 | `R2_ENDPOINT_URL`      | `https://<cloudflare-account-id>.r2.cloudflarestorage.com` |
 | `R2_BUCKET`            | `vers-bugsink-files`                                       |
 | `R2_ACCESS_KEY_ID`     | R2 S3 access key id                                        |
@@ -41,13 +40,11 @@ The R2 credentials also live on the `bugsink-r2` item in the `vers` 1Password va
 
 ## Alerts
 
-New-issue, regression, and unmute alerts deliver two ways. Every project carries a Discord
-messaging-service config pointing at the alarms channel's incoming webhook (the
-`bugsink-discord-webhook` item in the `vers` 1Password vault); a new project gets the same webhook
-added in its settings. Alert email to the superuser account goes out through Resend SMTP: the
-non-secret SMTP settings (`EMAIL_HOST`, `EMAIL_HOST_USER`, `DEFAULT_FROM_EMAIL`) live in `fly.toml`,
-and `EMAIL_HOST_PASSWORD` carries the API key. Per-project alert toggles live in each Bugsink
-project's settings.
+New-issue, regression, and unmute alerts post to the alarms Discord channel: every project carries a
+Discord messaging-service config pointing at the channel's incoming webhook (the
+`bugsink-discord-webhook` item in the `vers` 1Password vault), and a new project gets the same
+webhook added in its settings. No outgoing email is configured — alerting is webhook-only, and
+per-project alert toggles live in each Bugsink project's settings.
 
 ## Housekeeping
 

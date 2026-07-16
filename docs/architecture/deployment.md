@@ -28,14 +28,14 @@ and mesh traffic is already encrypted, so services set `force_https = false`.
 Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.toml` or Dockerfile.
 Secrets are set with `fly secrets set` and never committed.
 
-| App                                                                          | Secrets                                                                              |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `service-activity`, `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`                                            |
-| `service-session`                                                            | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY`                                  |
-| `service-replay`                                                             | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`, `SERVICE_AUTH_PRIVATE_KEY`                |
-| `service-keys`                                                               | `ROLL_KEY_ROOTS`, `SERVICE_AUTH_PUBLIC_KEY`                                          |
-| `app-web`                                                                    | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY`                        |
-| `vers-bugsink`                                                               | `SECRET_KEY`, `DATABASE_URL`, `EMAIL_HOST_PASSWORD`, `CREATE_SUPERUSER` (first boot) |
+| App                                                                          | Secrets                                                               |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `service-activity`, `service-avatar`, `service-user`, `service-verification` | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`                             |
+| `service-session`                                                            | the above + `API_IDENTIFIER`, `JWT_SIGNING_PRIVKEY`                   |
+| `service-replay`                                                             | `DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`, `SERVICE_AUTH_PRIVATE_KEY` |
+| `service-keys`                                                               | `ROLL_KEY_ROOTS`, `SERVICE_AUTH_PUBLIC_KEY`                           |
+| `app-web`                                                                    | `SESSION_SECRET`, `COOKIE_DOMAIN`, `SERVICE_AUTH_PRIVATE_KEY`         |
+| `vers-bugsink`                                                               | `SECRET_KEY`, `DATABASE_URL`, `CREATE_SUPERUSER` (first boot)         |
 
 - `SERVICE_AUTH_PUBLIC_KEY` — Ed25519 SPKI public key a service verifies inbound calls with.
 - `SERVICE_AUTH_PRIVATE_KEY` — its PKCS8 private half, held by the callers that sign outbound s2s
@@ -283,8 +283,7 @@ op item create --vault vers --category login --title bugsink \
 fly secrets set -a vers-bugsink \
   SECRET_KEY="$(openssl rand -base64 50)" \
   DATABASE_URL="<the bugsink database's pooled connection URL>" \
-  CREATE_SUPERUSER="me@$DOMAIN:$BUGSINK_ADMIN_PASSWORD" \
-  EMAIL_HOST_PASSWORD="<the Resend API key>"
+  CREATE_SUPERUSER="me@$DOMAIN:$BUGSINK_ADMIN_PASSWORD"
 
 fly deploy --config apps/bugsink/fly.toml --ha=false
 fly secrets unset CREATE_SUPERUSER -a vers-bugsink
@@ -292,7 +291,9 @@ fly secrets unset CREATE_SUPERUSER -a vers-bugsink
 
 In the Bugsink UI, create one project per app, set each project's DSN as that app's `SENTRY_DSN`
 secret, and set the web project's DSN as the `VITE_SENTRY_DSN` GitHub Actions variable plus a
-`vers-app-web` secret of the same name. Mint an API token for CI source-map uploads
+`vers-app-web` secret of the same name. Add the alarms Discord webhook (the
+`bugsink-discord-webhook` item in the `vers` 1Password vault) as each project's messaging service,
+so new-issue alerts reach the alarms channel. Mint an API token for CI source-map uploads
 (`SENTRY_AUTH_TOKEN` GitHub secret) and one for the MCP server, added to the vault item as
 `mcp-token`.
 
