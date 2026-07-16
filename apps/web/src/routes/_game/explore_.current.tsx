@@ -4,7 +4,7 @@ import { findActiveAvatar } from '../../lib/avatar/find-active-avatar';
 import { avatarClient } from '../../lib/rpc/clients/avatar-client';
 
 export const Route = createFileRoute('/_game/explore_/current')({
-  component: ExploreCurrentPanel,
+  component: ExploreCurrentPage,
   head: () => ({ meta: [{ title: 'vers | World Map Encounter' }] }),
   loader: async () => {
     const avatars = await avatarClient.getAvatars({});
@@ -17,3 +17,9 @@ export const Route = createFileRoute('/_game/explore_/current')({
   },
   staticData: { presentation: 'focus', scene: 'worldmap' },
 });
+
+function ExploreCurrentPage() {
+  const ctx = Route.useRouteContext();
+
+  return <ExploreCurrentPanel orpc={ctx.orpc} />;
+}

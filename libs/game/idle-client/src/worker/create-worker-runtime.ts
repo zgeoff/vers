@@ -5,7 +5,7 @@ import { SIMULATION_TIMESTEP_MS } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
-import type { ClientMessage, WorkerMessage } from '../types';
+import type { ClientMessage, RewardSlotLedgerEntry, WorkerMessage } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
@@ -48,6 +48,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   // A fresh worker starts fully funded and drains toward the cap until its first acknowledged
   // submission; every ack re-anchors the budget at the cap.
   let lastAckAt = Date.now();
+  let rewardSlotLedgerActivityID: null | string = null;
+  let rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry> = [];
 
   const emitWorkerMessage = (message: WorkerMessage) => {
     for (const connection of connections) {
@@ -81,9 +83,23 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     getClient: () => client,
     getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
     getResyncAvatarID: () => resyncAvatarID,
+    getRewardSlotLedger: () => ({
+      activityID: rewardSlotLedgerActivityID,
+      entries: rewardSlotLedger,
+    }),
     getSimulation: () => simulation,
     getSubmitter: () => submitter,
     isResyncInFlight: () => resyncInFlight,
+    recordRewardSlots: (activityID, entry) => {
+      if (rewardSlotLedgerActivityID === activityID) {
+        rewardSlotLedger = [...rewardSlotLedger, entry];
+
+        return;
+      }
+
+      rewardSlotLedgerActivityID = activityID;
+      rewardSlotLedger = [entry];
+    },
     removeConnection: (port) => {
       connections.delete(port);
     },

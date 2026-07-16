@@ -38,7 +38,36 @@ test('it sends an initial state message to all connections', async () => {
   const simulation = context.getSimulation();
 
   expect(event.data).toStrictEqual({
+    rewardSlotLedger: { activityID: null, entries: [] },
     state: simulation?.getSnapshot(),
+    type: WorkerMessageType.InitialState,
+  });
+});
+
+test('it sends the retained reward-slot ledger to a connection that initializes mid-run', async () => {
+  const channel = new MessageChannel();
+
+  const context = createMockWorkerContext({ connections: [channel.port2] });
+
+  context.setSimulation(createSimulation());
+  context.recordRewardSlots('activity_1', { count: 2, version: 1 });
+  channel.port1.start();
+
+  const received = new Promise<MessageEvent>((resolve) => {
+    channel.port1.addEventListener('message', resolve, { once: true });
+  });
+
+  const message: InitializeMessage = {
+    type: ClientMessageType.Initialize,
+  };
+
+  handleInitializeMessage(context, message);
+
+  const event = await received;
+
+  expect(event.data).toStrictEqual({
+    rewardSlotLedger: { activityID: 'activity_1', entries: [{ count: 2, version: 1 }] },
+    state: context.getSimulation()?.getSnapshot(),
     type: WorkerMessageType.InitialState,
   });
 });

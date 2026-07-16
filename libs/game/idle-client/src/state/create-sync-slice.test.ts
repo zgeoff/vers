@@ -7,5 +7,7 @@ test('it builds the empty sync state', () => {
     connectionOnline: null,
     offlineCapStatus: null,
     resyncStatus: null,
+    rewardSlotLedger: [],
+    rewardSlotLedgerActivityID: null,
   });
 });

@@ -3,9 +3,11 @@ import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setConnectionStatus } from '../state/set-connection-status';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
 import { setResyncStatus } from '../state/set-resync-status';
+import { setRewardSlotLedger } from '../state/set-reward-slot-ledger';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
 import { setSimulationWorker } from '../state/set-simulation-worker';
+import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
 import { useIdleStore } from '../state/use-idle-store';
 import type {
   CheckpointStreamInvalidMessage,
@@ -13,6 +15,7 @@ import type {
   InitialStateMessage,
   OfflineCapStatusMessage,
   ResyncStatusMessage,
+  RewardSlotsRecordedMessage,
   SimulationUpdateMessage,
   WorkerMessage,
 } from '../types';
@@ -70,6 +73,10 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
     setSimulationSnapshot(event.data.state);
   }
 
+  if (isInitialStateMessage(event.data)) {
+    setRewardSlotLedger(event.data.rewardSlotLedger);
+  }
+
   if (isCheckpointStreamInvalidMessage(event.data)) {
     setCheckpointStreamError({
       activityID: event.data.activityID,
@@ -90,6 +97,14 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
 
   if (isConnectionStatusMessage(event.data)) {
     setConnectionStatus(event.data.online);
+  }
+
+  if (isRewardSlotsRecordedMessage(event.data)) {
+    updateRewardSlotLedger({
+      activityID: event.data.activityID,
+      count: event.data.rewardSlotCount,
+      version: event.data.version,
+    });
   }
 }
 
@@ -117,4 +132,10 @@ function isResyncStatusMessage(message: WorkerMessage): message is ResyncStatusM
 
 function isConnectionStatusMessage(message: WorkerMessage): message is ConnectionStatusMessage {
   return message.type === WorkerMessageType.ConnectionStatus;
+}
+
+function isRewardSlotsRecordedMessage(
+  message: WorkerMessage,
+): message is RewardSlotsRecordedMessage {
+  return message.type === WorkerMessageType.RewardSlotsRecorded;
 }

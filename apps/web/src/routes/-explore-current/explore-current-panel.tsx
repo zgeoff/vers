@@ -16,6 +16,8 @@ import { sendIdleSetFailureAction } from '../../lib/idle/send-idle-set-failure-a
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { useIsSharedWorkerSupported } from '../../lib/platform/use-is-shared-worker-supported';
 import { activityClient } from '../../lib/rpc/clients/activity-client';
+import type { OrpcQueryUtils } from '../../lib/rpc/orpc';
+import { ActivityRewardsPanel } from './activity-rewards-panel';
 import { ApproachingCapWarning } from './approaching-cap-warning';
 
 interface StartAttempt {
@@ -23,12 +25,16 @@ interface StartAttempt {
   readonly scopeID: string;
 }
 
+interface ExploreCurrentPanelProps {
+  readonly orpc: OrpcQueryUtils;
+}
+
 /**
  * The world map node detail view: shows a spinner until the idle worker reports the activity it
  * was sent, then renders the encounter, its auto-retry toggle, and its codex slot. A failed start
  * renders a retry action instead of spinning forever.
  */
-export function ExploreCurrentPanel() {
+export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   const isSharedWorkerSupported = useIsSharedWorkerSupported();
   const idleWorkerHandle = useIdleWorkerHandle();
   const selectedNode = useSelectedNode().node;
@@ -154,6 +160,7 @@ export function ExploreCurrentPanel() {
       />
       <ApproachingCapWarning />
       <IdleWorldMapEncounterActivity />
+      <ActivityRewardsPanel activityID={idleWorkerHandle.activity?.id} orpc={props.orpc} />
       <Suspense fallback={<p data-testid="world-map-node-codex-loading">Loading codex…</p>}>
         <WorldMapNodeCodexSlot difficulty={selectedNode?.difficulty ?? 1} />
       </Suspense>

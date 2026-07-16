@@ -49,8 +49,7 @@
           "currentActivityQueryOptions",
           "replaySegment",
           "resumeActivity",
-          "trackActivityProgress",
-          "worldMapNodeCodexQueryOptions"
+          "trackActivityProgress"
         ]
       }
     ],

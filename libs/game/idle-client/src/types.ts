@@ -60,6 +60,7 @@ export enum WorkerMessageType {
   InitialState = 'initial_state',
   OfflineCapStatus = 'offline_cap_status',
   ResyncStatus = 'resync_status',
+  RewardSlotsRecorded = 'reward_slots_recorded',
   SimulationUpdate = 'simulation_update',
 }
 
@@ -68,6 +69,11 @@ interface IWorkerMessage {
 }
 
 export interface InitialStateMessage extends IWorkerMessage {
+  /**
+   * The current activity's reward-slot ledger as the worker holds it, so a tab connecting mid-run
+   * catches up on pending rewards instead of starting empty.
+   */
+  readonly rewardSlotLedger: RewardSlotLedgerSnapshot;
   readonly state: SimulationSnapshot;
   readonly type: WorkerMessageType.InitialState;
 }
@@ -116,12 +122,27 @@ export interface OfflineCapStatusMessage extends IWorkerMessage {
   readonly type: WorkerMessageType.OfflineCapStatus;
 }
 
+/**
+ * Reports a checkpoint's reward-slot count as it leaves the generator and enters the submission
+ * path, keyed by the activity-relative `version` the checkpoint chain assigns it — the same
+ * numbering the server's `verifiedHead` advances against. Only carries checkpoints the submitter
+ * actually queued and that earned at least one slot; a dropped or zero-slot checkpoint never
+ * broadcasts one of these.
+ */
+export interface RewardSlotsRecordedMessage extends IWorkerMessage {
+  readonly activityID: string;
+  readonly rewardSlotCount: number;
+  readonly type: WorkerMessageType.RewardSlotsRecorded;
+  readonly version: number;
+}
+
 export type WorkerMessage =
   | CheckpointStreamInvalidMessage
   | ConnectionStatusMessage
   | InitialStateMessage
   | OfflineCapStatusMessage
   | ResyncStatusMessage
+  | RewardSlotsRecordedMessage
   | SimulationUpdateMessage;
 
 export interface CheckpointStreamError {
@@ -132,6 +153,24 @@ export interface CheckpointStreamError {
 export interface OfflineCapStatus {
   readonly halted: boolean;
   readonly remainingMs: number;
+}
+
+/**
+ * One checkpoint's recorded reward-slot count, keyed by the activity-relative version the
+ * checkpoint chain assigns it — the same numbering the server's `verifiedHead` advances against.
+ */
+export interface RewardSlotLedgerEntry {
+  readonly count: number;
+  readonly version: number;
+}
+
+/**
+ * A reward-slot ledger paired with the activity its entries belong to, so a consumer can tell
+ * whether the entries describe the activity it's rendering before trusting their counts.
+ */
+export interface RewardSlotLedgerSnapshot {
+  readonly activityID: null | string;
+  readonly entries: ReadonlyArray<RewardSlotLedgerEntry>;
 }
 
 /**

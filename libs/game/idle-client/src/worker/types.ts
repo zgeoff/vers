@@ -2,6 +2,7 @@ import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
+import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
 
 /**
  * Accessors over the runtime's closure state, threaded to every message and simulation event
@@ -34,6 +35,11 @@ export interface WorkerContext {
    */
   readonly getResyncAvatarID: () => string | null;
 
+  /**
+   * The current activity's reward-slot ledger, retained so a tab connecting mid-run receives it in
+   * its initial state.
+   */
+  readonly getRewardSlotLedger: () => RewardSlotLedgerSnapshot;
   readonly getSimulation: () => null | Simulation;
   readonly getSubmitter: () => CheckpointSubmitter;
 
@@ -43,6 +49,11 @@ export interface WorkerContext {
    */
   readonly isResyncInFlight: () => boolean;
 
+  /**
+   * Appends one checkpoint's reward-slot count to the retained ledger, resetting it first when the
+   * activity differs from the one the retained entries belong to.
+   */
+  readonly recordRewardSlots: (activityID: string, entry: RewardSlotLedgerEntry) => void;
   readonly removeConnection: (port: MessagePort) => void;
   readonly setActivity: (activity: ActivityData | null) => void;
   readonly setResyncAvatarID: (avatarID: string) => void;

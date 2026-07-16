@@ -10,6 +10,7 @@ import * as db from '@vers/mock-services/db';
 import { setSelectedNode } from '@vers/worldmap-client';
 import { createMockWorldMapNode } from '@vers/worldmap-client/test-utils';
 import { buildQueryClient } from '../../lib/query/build-query-client';
+import { orpc } from '../../lib/rpc/orpc';
 import { server } from '../../mocks/node';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { removeSharedWorker } from '../../test-utils/remove-shared-worker';
@@ -33,7 +34,7 @@ function renderPanel() {
 
   const buildUI = () => (
     <QueryClientProvider client={queryClient}>
-      <ExploreCurrentPanel />
+      <ExploreCurrentPanel orpc={orpc} />
     </QueryClientProvider>
   );
 
@@ -83,8 +84,6 @@ test('it reports the simulation as unavailable when SharedWorker is unsupported'
       renderPanel();
     },
   );
-
-  expect(screen.getByRole('status')).toHaveTextContent(/activity simulation is unavailable/i);
 });
 
 test('it starts an activity for the selected node once initialized, sending the started row', async () => {

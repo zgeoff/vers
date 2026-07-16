@@ -41,7 +41,7 @@ test('it returns the injected submitter', () => {
   const submitter: CheckpointSubmitter = {
     flushHeld: mock(() => Promise.resolve()),
     registerActivity: mock(() => Promise.resolve()),
-    submit: mock(() => Promise.resolve()),
+    submit: mock(() => Promise.resolve(undefined)),
   };
 
   const context = createMockWorkerContext({ submitter });
