@@ -11,3 +11,18 @@ test('it creates a checkpoint stream invalid message', () => {
     type: WorkerMessageType.CheckpointStreamInvalid,
   });
 });
+
+test('it carries the rejecting request trace id when one is known', () => {
+  const message = createCheckpointStreamInvalidMessage(
+    'activity_1',
+    'broken-chain-link',
+    'trace_1',
+  );
+
+  expect(message).toStrictEqual({
+    activityID: 'activity_1',
+    reason: 'broken-chain-link',
+    traceID: 'trace_1',
+    type: WorkerMessageType.CheckpointStreamInvalid,
+  });
+});
