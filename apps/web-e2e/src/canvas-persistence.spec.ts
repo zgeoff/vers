@@ -23,7 +23,9 @@ test('it keeps the same canvas element across client-side game navigation', asyn
 
   await expect(page).toHaveURL(/\/login/);
 
-  await page.waitForLoadState('networkidle');
+  // hydration gate: the login form's submit handler attaches only once React commits; an
+  // earlier click falls back to the browser's native GET submit and never leaves /login
+  await page.locator('html[data-hydrated]').waitFor();
   await page.getByLabel('Email').fill('e2e-canvas@vers.test');
   await page.getByLabel('Password').fill('password123');
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
