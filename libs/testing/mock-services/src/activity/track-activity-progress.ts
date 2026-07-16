@@ -1,11 +1,7 @@
+import type { CheckpointPayload } from '@vers/contract-activity';
+import * as z from 'zod';
 import * as db from '../db';
 import { os } from './os';
-
-/**
- * Checkpoint types whose arrival closes the activity's stream, matching the set the real service
- * settles terminal transitions against.
- */
-const TERMINAL_CHECKPOINT_TYPES = new Set(['completed', 'failed']);
 
 /**
  * Appends a checkpoint batch, mirroring the real service's state-derived transitions: a terminal
@@ -61,9 +57,7 @@ export const trackActivityProgress = os.trackActivityProgress.handler(async (opt
 
   const appendedHead = activity.appendedHead + opts.input.checkpoints.length;
   const lastCheckpoint = opts.input.checkpoints.at(-1);
-
-  const closesStream =
-    lastCheckpoint !== undefined && TERMINAL_CHECKPOINT_TYPES.has(lastCheckpoint.payload.type);
+  const closesStream = lastCheckpoint !== undefined && hasTerminalRewards(lastCheckpoint.payload);
 
   await db.activityCollection.update(activity, {
     data(record) {
@@ -82,3 +76,19 @@ export const trackActivityProgress = os.trackActivityProgress.handler(async (opt
 
   return { appendedHead };
 });
+
+const TERMINAL_CHECKPOINT_TYPES = new Set(['completed', 'failed']);
+
+const TerminalRewardsSchema = z.object({ xp: z.number() });
+
+/**
+ * Whether a payload closes its stream: a terminal checkpoint type carrying a parseable final
+ * rewards total, the same gate the real service settles terminal transitions against — a terminal
+ * type with a malformed `rewards` shape settles nothing and leaves the row active.
+ */
+function hasTerminalRewards(payload: Readonly<CheckpointPayload>): boolean {
+  return (
+    TERMINAL_CHECKPOINT_TYPES.has(payload.type) &&
+    TerminalRewardsSchema.safeParse(payload['rewards']).success
+  );
+}
