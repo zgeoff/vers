@@ -32,6 +32,10 @@
       "name": "@vers/bugsink",
       "version": "0.0.0",
     },
+    "apps/umami": {
+      "name": "@vers/umami",
+      "version": "0.0.0",
+    },
     "apps/web": {
       "name": "@vers/web",
       "version": "0.0.0",
@@ -2480,6 +2484,8 @@
     "@vers/styled-system": ["@vers/styled-system@workspace:libs/design/styled-system"],
 
     "@vers/test-utils": ["@vers/test-utils@workspace:libs/testing/test-utils"],
+
+    "@vers/umami": ["@vers/umami@workspace:apps/umami"],
 
     "@vers/utils": ["@vers/utils@workspace:libs/core/utils"],
 
