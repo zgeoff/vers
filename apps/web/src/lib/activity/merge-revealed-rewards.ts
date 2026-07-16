@@ -7,9 +7,7 @@ import type { RevealedReward, RevealedRewardsPage } from './types';
  * fresher fetch's view of the settled boundary never regresses the cache's own.
  */
 export function mergeRevealedRewards(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RevealedReward is zod-inferred from the contract client's return type; its nested item fields have no readonly form
   previous: Readonly<RevealedRewardsPage> | undefined,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RevealedReward is zod-inferred from the contract client's return type; its nested item fields have no readonly form
   page: Readonly<RevealedRewardsPage>,
 ): RevealedRewardsPage {
   const merged = new Map<string, RevealedReward>();
@@ -28,9 +26,6 @@ export function mergeRevealedRewards(
   };
 }
 
-function buildRewardKey(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RevealedReward is zod-inferred from the contract client's return type; its nested item fields have no readonly form
-  item: Readonly<RevealedReward>,
-): string {
+function buildRewardKey(item: Readonly<RevealedReward>): string {
   return `${item.chainIndex}:${item.ordinal}`;
 }
