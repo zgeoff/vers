@@ -8,7 +8,7 @@ import {
   createMockEnemyData,
 } from '@vers/idle-core/test-utils';
 import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
-import { buildActivityMockHandlers, mockActivityService } from '@vers/mock-services/activity';
+import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
@@ -25,13 +25,11 @@ interface SetupTestConfig {
 }
 
 /**
- * Wires the stateful activity mock backend and an authed client acting as the given user, so the
+ * Builds an authed client acting as the given user, so the
  * resync's fetch, drain, and append calls hit the same state transitions the real service applies
  * to the rows the test seeds in the mock db.
  */
 async function setupTest(config: Readonly<SetupTestConfig>) {
-  server.use(...buildActivityMockHandlers(resolveServiceURL('activity')));
-
   const token = await createTestAccessToken(config.userID);
 
   const client: ActivityServiceClient = createORPCClient(

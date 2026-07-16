@@ -1,9 +1,13 @@
+import type { CheckpointPayload } from '@vers/contract-activity';
+import * as z from 'zod';
 import * as db from '../db';
 import { os } from './os';
 
 /**
- * Appends a checkpoint batch, mirroring the real service's state-derived rejections: a terminal
- * status refuses further appends, and a stale `expectedHead` is a retryable CONFLICT. Hash-chain
+ * Appends a checkpoint batch, mirroring the real service's state-derived transitions: a terminal
+ * status refuses further appends, a stale `expectedHead` is a retryable CONFLICT, and a batch
+ * ending on a terminal checkpoint closes the stream by flipping the row to `stopped` — so a
+ * follow-up start mints a fresh row instead of conflicting with a finished one. Hash-chain
  * validation, the offline-progress cap, and writer eviction need state the mock doesn't track —
  * those rejections are per-test overrides.
  */
@@ -53,6 +57,7 @@ export const trackActivityProgress = os.trackActivityProgress.handler(async (opt
 
   const appendedHead = activity.appendedHead + opts.input.checkpoints.length;
   const lastCheckpoint = opts.input.checkpoints.at(-1);
+  const closesStream = lastCheckpoint !== undefined && hasTerminalRewards(lastCheckpoint.payload);
 
   await db.activityCollection.update(activity, {
     data(record) {
@@ -60,9 +65,30 @@ export const trackActivityProgress = os.trackActivityProgress.handler(async (opt
       record.appendedHead = appendedHead;
       record.lastHash = lastCheckpoint === undefined ? record.lastHash : lastCheckpoint.hash;
       record.updatedAt = now;
+
+      if (closesStream) {
+        record.status = 'stopped';
+        record.stoppedAt = now;
+      }
     },
     strict: true,
   });
 
   return { appendedHead };
 });
+
+const TERMINAL_CHECKPOINT_TYPES = new Set(['completed', 'failed']);
+
+const TerminalRewardsSchema = z.object({ xp: z.number() });
+
+/**
+ * Whether a payload closes its stream: a terminal checkpoint type carrying a parseable final
+ * rewards total, the same gate the real service settles terminal transitions against — a terminal
+ * type with a malformed `rewards` shape settles nothing and leaves the row active.
+ */
+function hasTerminalRewards(payload: Readonly<CheckpointPayload>): boolean {
+  return (
+    TERMINAL_CHECKPOINT_TYPES.has(payload.type) &&
+    TerminalRewardsSchema.safeParse(payload['rewards']).success
+  );
+}

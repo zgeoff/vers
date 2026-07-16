@@ -1,15 +1,11 @@
 import { expect, mock, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
-import type { ActivityData } from '@vers/contract-activity';
-import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { SIMULATION_TIMESTEP_MS, buildSimulationInput, runAttempt } from '@vers/idle-core';
-import { resolveServiceURL } from '@vers/mock-services';
-import { mockActivityService } from '@vers/mock-services/activity';
+import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
+import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
-import { server } from '../mocks/node';
-import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
@@ -18,29 +14,49 @@ import type { RequestResyncMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 
-function setupTest(
-  config: Readonly<{
-    client?: ActivityServiceClient;
-    submitter?: Readonly<CheckpointSubmitter>;
-  }> = {},
-) {
-  const connection = createTestConnection();
-  const context = createStubWorkerContext({ connections: [connection.port], ...config });
-
-  return { connection, context };
+interface SetupTestConfig {
+  readonly userID: string;
 }
 
-test('it broadcasts nothing for an avatar with no activity history', async () => {
-  server.use(
-    mockActivityService.getLatestActivityProgress.handler((opts) => {
-      throw opts.errors.NOT_FOUND({ data: {} });
+/**
+ * Builds an authed client acting as the given user and a
+ * worker context wearing that client — so a resync's fetch, append, and start calls hit the same
+ * state transitions the real service applies to the rows the test seeds in the mock db. The
+ * returned flush delivers whatever the submitter has scheduled since the last call.
+ */
+async function setupTest(config: Readonly<SetupTestConfig>) {
+  const token = await createTestAccessToken(config.userID);
+
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({
+      headers: { authorization: `Bearer ${token}` },
+      url: `${resolveServiceURL('activity')}/rpc`,
     }),
   );
 
-  const ctx = setupTest();
+  let capturedFlush: (() => Promise<void>) | undefined;
+
+  const submitter = createCheckpointSubmitter({
+    client,
+    onInvalid: mock<(activityID: string, reason: string) => void>(),
+    scheduleFlush: (flush) => {
+      capturedFlush = flush;
+    },
+  });
+
+  const connection = createTestConnection();
+  const context = createStubWorkerContext({ client, connections: [connection.port], submitter });
+
+  return { client, connection, context, flush: () => capturedFlush?.() ?? Promise.resolve() };
+}
+
+test('it broadcasts nothing for an avatar with no activity history', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
 
   const message: RequestResyncMessage = {
-    avatarID: 'avatar_1',
+    avatarID: avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -60,22 +76,19 @@ test('it broadcasts nothing for an avatar with no activity history', async () =>
 });
 
 test('it broadcasts capped and installs no simulation for a capped activity', async () => {
-  const activity = createMockActivityData({ appendedHead: 5, status: 'capped' });
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
 
-  server.use(
-    mockActivityService.getLatestActivityProgress.handler(() => ({
-      activity,
-      anchor: null,
-      appendedHead: 5,
-      serverTime: new Date(),
-      verifiedHead: 3,
-    })),
-  );
-
-  const ctx = setupTest();
+  await db.activityCollection.create({
+    appendedHead: 5,
+    avatarID: avatar.id,
+    status: 'capped',
+    verifiedHead: 3,
+  });
 
   const message: RequestResyncMessage = {
-    avatarID: 'avatar_1',
+    avatarID: avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -91,7 +104,15 @@ test('it broadcasts capped and installs no simulation for a capped activity', as
 });
 
 test('it reconstructs and installs a live simulation mid-stream, registering from the recovered cursor', async () => {
-  const activity = createMockActivityData({ startedAt: new Date(Date.now() - 2000) });
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  const activity = await db.activityCollection.create({
+    avatarID: avatar.id,
+    startedAt: new Date(Date.now() - 2000),
+  });
+
   const input = buildSimulationInput(activity);
 
   const attempt = await runAttempt(input.activity, input.avatar, { maxDurationMs: 120_000 });
@@ -106,41 +127,15 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
     'expected a confirmed checkpoint short of the full stream',
   );
 
-  const submittedSeeds: Array<string | undefined> = [];
-
-  server.use(
-    mockActivityService.getLatestActivityProgress.handler(() => ({
-      activity,
-      anchor: null,
-      appendedHead,
-      serverTime: new Date(),
-      verifiedHead: 0,
-    })),
-    mockActivityService.trackActivityProgress.handler((opts) => {
-      submittedSeeds.push(opts.input.checkpoints[0]?.payload.seed);
-
-      return { appendedHead: opts.input.expectedHead + opts.input.checkpoints.length };
-    }),
-  );
-
-  const client: ActivityServiceClient = createORPCClient(
-    new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }),
-  );
-
-  let capturedFlush: (() => Promise<void>) | undefined;
-
-  const submitter = createCheckpointSubmitter({
-    client,
-    onInvalid: mock<(activityID: string, reason: string) => void>(),
-    scheduleFlush: (flush) => {
-      capturedFlush = flush;
+  await db.activityCollection.update(activity, {
+    data(record) {
+      record.appendedHead = appendedHead;
     },
+    strict: true,
   });
 
-  const ctx = setupTest({ client, submitter });
-
   const message: RequestResyncMessage = {
-    avatarID: activity.avatarID,
+    avatarID: avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -170,32 +165,38 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
   }
 
   await ctx.context.getSubmitter().submit(activity.id, checkpoint);
+  await ctx.flush();
 
-  await capturedFlush?.();
+  const landed = db.checkpointCollection.findMany((q) => q.where({ activityID: activity.id }));
 
-  expect(submittedSeeds).toStrictEqual([lastConfirmed.nextSeed]);
+  expect(landed.map((row) => row.payload.seed)).toStrictEqual([lastConfirmed.nextSeed]);
 });
 
 test('it reports a divergence via the checkpoint-stream-error channel and skips registration', async () => {
-  const activity = createMockActivityData({ startedAt: new Date(Date.now() - 2000) });
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  const activity = await db.activityCollection.create({
+    avatarID: avatar.id,
+    startedAt: new Date(Date.now() - 2000),
+  });
+
   const input = buildSimulationInput(activity);
 
   const attempt = await runAttempt(input.activity, input.avatar, { maxDurationMs: 120_000 });
 
-  server.use(
-    mockActivityService.getLatestActivityProgress.handler(() => ({
-      activity,
-      anchor: null,
-      appendedHead: attempt.checkpoints.length + 5,
-      serverTime: new Date(),
-      verifiedHead: 0,
-    })),
-  );
-
-  const ctx = setupTest();
+  // a confirmed head beyond anything the activity's own stream produced is unreachable by
+  // reconstruction, forcing the divergence path
+  await db.activityCollection.update(activity, {
+    data(record) {
+      record.appendedHead = attempt.checkpoints.length + 5;
+    },
+    strict: true,
+  });
 
   const message: RequestResyncMessage = {
-    avatarID: 'avatar_1',
+    avatarID: avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -215,62 +216,23 @@ test('it reports a divergence via the checkpoint-stream-error channel and skips 
 });
 
 test('it fast-forwards a short gap, broadcasts progress and final tallies, and installs a registered live sim on the final active row', async () => {
-  const client: ActivityServiceClient = createORPCClient(
-    new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }),
-  );
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
 
   // this seed's placeholder encounter completes in exactly 45s of simulated time; a 50s gap
   // leaves just under 5s of budget for the next continuation, too little for any encounter to
   // reach a terminal checkpoint, so that continuation is guaranteed to be the fast-forward's
   // unregistered final row regardless of its own random seed
-  const activity = createMockActivityData({
+  const activity = await db.activityCollection.create({
     appendedHead: 0,
+    avatarID: avatar.id,
     seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
     startedAt: new Date(Date.now() - 50_000),
   });
 
-  const startedActivities: Array<ActivityData> = [];
-  const batches: Array<{ readonly activityID: string }> = [];
-
-  server.use(
-    mockActivityService.getLatestActivityProgress.handler(() => ({
-      activity,
-      anchor: null,
-      appendedHead: 0,
-      serverTime: new Date(),
-      verifiedHead: 0,
-    })),
-    mockActivityService.trackActivityProgress.handler((opts) => {
-      batches.push({ activityID: opts.input.activityID });
-
-      const last = opts.input.checkpoints.at(-1);
-
-      return { appendedHead: last?.version ?? opts.input.expectedHead };
-    }),
-    mockActivityService.startActivity.handler((opts) => {
-      const started = createMockActivityData({ avatarID: opts.input.avatarID });
-
-      startedActivities.push(started);
-
-      return started;
-    }),
-  );
-
-  let capturedFlush: (() => Promise<void>) | undefined;
-  const onInvalid = mock<(activityID: string, reason: string) => void>();
-
-  const submitter = createCheckpointSubmitter({
-    client,
-    onInvalid,
-    scheduleFlush: (flush) => {
-      capturedFlush = flush;
-    },
-  });
-
-  const ctx = setupTest({ client, submitter });
-
   const message: RequestResyncMessage = {
-    avatarID: activity.avatarID,
+    avatarID: avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -290,19 +252,22 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
     { status: { attempts: 1, kind: 'done', levelUps: 1 }, type: WorkerMessageType.ResyncStatus },
   ]);
 
-  expect(startedActivities).toHaveLength(1);
+  // the completed attempt's terminal batch closed the seeded row, so the backend holds exactly
+  // one fresh active continuation for the avatar
+  const minted = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: avatar.id, status: 'active' }),
+  );
+
+  invariant(minted !== undefined, 'expected the fast-forward to mint an active continuation');
+  expect(minted.id).not.toBe(activity.id);
 
   const simulation = ctx.context.getSimulation();
 
   invariant(simulation !== null, 'expected the fast-forward to install a live simulation');
 
-  const liveActivityID = simulation.activity?.id;
-
   // the live sim attaches to the fast-forward's final, never-attempted continuation — not the
   // first activity its one completed attempt already registered
-  expect(liveActivityID).toBe(startedActivities[0]?.id);
-  expect(liveActivityID).not.toBe(activity.id);
-  invariant(liveActivityID !== undefined, 'expected the live simulation to carry its activity id');
+  expect(simulation.activity?.id).toBe(minted.id);
 
   let checkpoint: ActivityCheckpoint | null = null;
 
@@ -312,59 +277,32 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
 
   // proves the fresh continuation's registration actually happened: an unregistered activity's
   // checkpoint is silently dropped by the submitter rather than reaching the server
-  await ctx.context.getSubmitter().submit(liveActivityID, checkpoint);
+  await ctx.context.getSubmitter().submit(minted.id, checkpoint);
+  await ctx.flush();
 
-  await capturedFlush?.();
+  const landed = db.checkpointCollection.findMany((q) => q.where({ activityID: minted.id }));
 
-  expect(batches).toContainEqual({ activityID: liveActivityID });
+  expect(landed).toHaveLength(1);
 });
 
 test('it reconstructs a fast-forward report left mid-stream and registers from its recovered cursor', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
   // this seed's placeholder encounter completes in exactly 45s of simulated time with one
   // confirmed ("started") checkpoint at its head; a 20s gap is enough to pick the fast-forward
   // plan but far short of the 45s tail, so the budget check bails before any continuation is
   // attempted, reporting back the very row the resync started from
-  const activity = createMockActivityData({
+  const activity = await db.activityCollection.create({
     appendedHead: 1,
+    avatarID: avatar.id,
     seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
     startedAt: new Date(Date.now() - 20_000),
   });
 
-  const submittedSeeds: Array<string | undefined> = [];
-
-  server.use(
-    mockActivityService.getLatestActivityProgress.handler(() => ({
-      activity,
-      anchor: null,
-      appendedHead: 1,
-      serverTime: new Date(),
-      verifiedHead: 0,
-    })),
-    mockActivityService.trackActivityProgress.handler((opts) => {
-      submittedSeeds.push(opts.input.checkpoints[0]?.payload.seed);
-
-      return { appendedHead: opts.input.expectedHead + opts.input.checkpoints.length };
-    }),
-  );
-
-  const client: ActivityServiceClient = createORPCClient(
-    new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }),
-  );
-
-  let capturedFlush: (() => Promise<void>) | undefined;
-
-  const submitter = createCheckpointSubmitter({
-    client,
-    onInvalid: mock<(activityID: string, reason: string) => void>(),
-    scheduleFlush: (flush) => {
-      capturedFlush = flush;
-    },
-  });
-
-  const ctx = setupTest({ client, submitter });
-
   const message: RequestResyncMessage = {
-    avatarID: activity.avatarID,
+    avatarID: avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -394,31 +332,28 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
   }
 
   await ctx.context.getSubmitter().submit(activity.id, checkpoint);
-
-  await capturedFlush?.();
+  await ctx.flush();
 
   // the started checkpoint's own nextSeed, not the activity row's start seed — proves the
   // registered cursor chains onto the reconstruction, not a fresh checkpoint-0 sim
-  expect(submittedSeeds).toStrictEqual(['525ac5e6a97591b0a1877a6606b22d9c']);
+  const landed = db.checkpointCollection.findMany((q) => q.where({ activityID: activity.id }));
+
+  expect(landed.map((row) => row.payload.seed)).toStrictEqual(['525ac5e6a97591b0a1877a6606b22d9c']);
 });
 
 test('it attaches a fresh login live without broadcasting any catch-up status', async () => {
-  const activity = createMockActivityData({ appendedHead: 0, startedAt: new Date() });
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
 
-  server.use(
-    mockActivityService.getLatestActivityProgress.handler(() => ({
-      activity,
-      anchor: null,
-      appendedHead: 0,
-      serverTime: new Date(),
-      verifiedHead: 0,
-    })),
-  );
-
-  const ctx = setupTest();
+  const activity = await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: avatar.id,
+    startedAt: new Date(),
+  });
 
   const message: RequestResyncMessage = {
-    avatarID: activity.avatarID,
+    avatarID: avatar.id,
     type: ClientMessageType.RequestResync,
   };
 

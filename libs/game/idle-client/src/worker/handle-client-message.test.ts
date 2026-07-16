@@ -1,8 +1,11 @@
 import { expect, test } from 'bun:test';
+import { createORPCClient } from '@orpc/client';
+import { RPCLink } from '@orpc/client/fetch';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
-import { mockActivityService } from '@vers/mock-services/activity';
-import { server } from '../mocks/node';
+import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
+import * as db from '@vers/mock-services/db';
+import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import type {
   DisconnectMessage,
@@ -76,18 +79,22 @@ test('it applies the sent failure action to the live simulation', async () => {
 });
 
 test('it records the resync request for the requested avatar', async () => {
-  server.use(
-    mockActivityService.getLatestActivityProgress.handler((opts) => {
-      throw opts.errors.NOT_FOUND({ data: {} });
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({
+      headers: { authorization: `Bearer ${await createTestAccessToken(user.id)}` },
+      url: `${resolveServiceURL('activity')}/rpc`,
     }),
   );
 
-  const context = createStubWorkerContext();
+  const context = createStubWorkerContext({ client });
 
   const channel = new MessageChannel();
 
   const message: RequestResyncMessage = {
-    avatarID: 'avatar_1',
+    avatarID: avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -95,7 +102,7 @@ test('it records the resync request for the requested avatar', async () => {
 
   await handleClientMessage(context, channel.port2, event);
 
-  expect(context.getResyncAvatarID()).toBe('avatar_1');
+  expect(context.getResyncAvatarID()).toBe(avatar.id);
 });
 
 test('it drops the connection on a disconnect message', async () => {
