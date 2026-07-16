@@ -16,6 +16,12 @@ test('it mounts a second canvas for the avatar satellite and drops it on navigat
     }
   });
 
+  // a zero-gap resync can open the welcome-back dialog at any point after login;
+  // dismiss it whenever it would intercept an action
+  await page.addLocatorHandler(page.getByRole('dialog', { name: 'Welcome back' }), (dialog) =>
+    dialog.getByRole('button', { name: 'Close' }).click(),
+  );
+
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/avatar');
 
