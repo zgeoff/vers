@@ -22,10 +22,7 @@ paths = ['''\.env(\.[\w.-]+)?\.example$''']
 targetRules = ["private-key"]
 description = "known throwaway signing keys in committed dev/test env fixtures"
 condition = "AND"
-paths = [
-  '''(^|/)services/replay/\.env\.test$''',
-  '''(^|/)services/session/\.env\.development$''',
-]
+paths = ['''(^|/)services/replay/\.env\.test$''', '''(^|/)services/session/\.env\.development$''']
 regexes = [
   '''MC4CAQAwBQYDK2VwBCIEIBMom57erggdVdDCIdRWS\+NKMykK\+I5BUKpuHziAq\+0W''',
   '''MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\+ItgiAjP9V8TH''',
