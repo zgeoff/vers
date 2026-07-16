@@ -46,11 +46,16 @@ test('it broadcasts nothing for an avatar with no activity history', async () =>
 
   await handleRequestResyncMessage(ctx.context, message);
 
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
+  // posted on the worker's own port after the handler settles, this arrives after anything the
+  // handler broadcast on the same channel — an empty prefix proves the resync stayed silent
+  ctx.connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
 
-  expect(ctx.connection.received).toStrictEqual([]);
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    { online: true, type: WorkerMessageType.ConnectionStatus },
+  ]);
+
   expect(ctx.context.getSimulation()).toBeNull();
 });
 
@@ -141,11 +146,15 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
 
   await handleRequestResyncMessage(ctx.context, message);
 
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
+  // posted on the worker's own port after the handler settles, this arrives after anything the
+  // handler broadcast on the same channel — an empty prefix proves the resync stayed silent
+  ctx.connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
 
-  expect(ctx.connection.received).toStrictEqual([]);
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    { online: true, type: WorkerMessageType.ConnectionStatus },
+  ]);
 
   const simulation = ctx.context.getSimulation();
 
@@ -415,11 +424,15 @@ test('it attaches a fresh login live without broadcasting any catch-up status', 
 
   await handleRequestResyncMessage(ctx.context, message);
 
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
+  // posted on the worker's own port after the handler settles, this arrives after anything the
+  // handler broadcast on the same channel — an empty prefix proves the resync stayed silent
+  ctx.connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
 
-  expect(ctx.connection.received).toStrictEqual([]);
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    { online: true, type: WorkerMessageType.ConnectionStatus },
+  ]);
 
   const simulation = ctx.context.getSimulation();
 
