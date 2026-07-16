@@ -20,6 +20,7 @@ export { useOfflineCapStatus } from './state/use-offline-cap-status';
 export { useResyncStatus } from './state/use-resync-status';
 export { useActivity } from './state/use-activity';
 export { useAvatar } from './state/use-avatar';
+export { useCheckpointFlushStall } from './state/use-checkpoint-flush-stall';
 export { useCheckpointStreamError } from './state/use-checkpoint-stream-error';
 export { useFailureAction } from './state/use-failure-action';
 export { useRewardSlotLedger } from './state/use-reward-slot-ledger';

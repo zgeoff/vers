@@ -17,16 +17,42 @@ export function GameSimulationMount() {
   }, [idleWorkerHandle.worker, idleWorkerHandle.initialized]);
 
   useEffect(() => {
-    if (idleWorkerHandle.checkpointStreamError === undefined) {
+    const streamError = idleWorkerHandle.checkpointStreamError;
+
+    if (streamError === undefined) {
       return;
     }
 
-    Sentry.captureException(
-      new Error(
-        `checkpoint stream rejected for activity ${idleWorkerHandle.checkpointStreamError.activityID}: ${idleWorkerHandle.checkpointStreamError.reason}`,
-      ),
-    );
+    Sentry.withScope((scope) => {
+      if (streamError.traceID !== undefined) {
+        scope.setTag('traceID', streamError.traceID);
+      }
+
+      Sentry.captureException(
+        new Error(
+          `checkpoint stream rejected for activity ${streamError.activityID}: ${streamError.reason}`,
+        ),
+      );
+    });
   }, [idleWorkerHandle.checkpointStreamError]);
+
+  useEffect(() => {
+    const flushStall = idleWorkerHandle.checkpointFlushStall;
+
+    if (flushStall === undefined) {
+      return;
+    }
+
+    Sentry.withScope((scope) => {
+      scope.setTag('traceID', flushStall.traceID);
+
+      Sentry.captureException(
+        new Error(
+          `checkpoint flush stalled for activity ${flushStall.activityID}: ${flushStall.reason}`,
+        ),
+      );
+    });
+  }, [idleWorkerHandle.checkpointFlushStall]);
 
   return null;
 }

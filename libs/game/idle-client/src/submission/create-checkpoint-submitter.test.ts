@@ -3,6 +3,7 @@ import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
+import { http } from 'msw';
 import { server } from '../mocks/node';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
@@ -16,15 +17,28 @@ import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 function setupTest(
   config: Readonly<{ scheduleFlush?: (flush: () => Promise<void>) => void }> = {},
 ) {
-  const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
+  const link = new RPCLink<{ traceparent?: string }>({
+    headers: (options) =>
+      options.context.traceparent === undefined ? {} : { traceparent: options.context.traceparent },
+    url: `${resolveServiceURL('activity')}/rpc`,
+  });
 
   const client: ActivityServiceClient = createORPCClient(link);
   const onAcked = mock<(activityID: string, appendedHead: number) => void>();
   const onCapped = mock<(activityID: string, appendedHead: number) => void>();
-  const onInvalid = mock<(activityID: string, reason: string) => void>();
-  const submitter = createCheckpointSubmitter({ client, onAcked, onCapped, onInvalid, ...config });
+  const onFlushStalled = mock<(activityID: string, reason: string, traceID: string) => void>();
+  const onInvalid = mock<(activityID: string, reason: string, traceID?: string) => void>();
 
-  return { onAcked, onCapped, onInvalid, submitter };
+  const submitter = createCheckpointSubmitter({
+    client,
+    onAcked,
+    onCapped,
+    onFlushStalled,
+    onInvalid,
+    ...config,
+  });
+
+  return { onAcked, onCapped, onFlushStalled, onInvalid, submitter };
 }
 
 test('it flushes immediately on a terminal checkpoint and confirms the queue on success', async () => {
@@ -121,7 +135,12 @@ test('it stops the stream and keeps queued rows on CHECKPOINT_INVALID', async ()
   await ctx.submitter.submit('invalid-activity', createMockStartedCheckpoint());
   await ctx.submitter.submit('invalid-activity', createMockCompletedCheckpoint());
 
-  expect(ctx.onInvalid).toHaveBeenCalledExactlyOnceWith('invalid-activity', 'broken-chain-link');
+  expect(ctx.onInvalid).toHaveBeenCalledExactlyOnceWith(
+    'invalid-activity',
+    'broken-chain-link',
+    expect.stringMatching(/^[0-9a-f]{32}$/),
+  );
+
   expect(track).toHaveBeenCalledOnce();
 
   const remaining = await readQueuedCheckpoints('invalid-activity');
@@ -520,4 +539,113 @@ test('it resolves with undefined for a checkpoint dropped by an unattached activ
   const version = await ctx.submitter.submit('never-registered', createMockStartedCheckpoint());
 
   expect(version).toBeUndefined();
+});
+
+test('it reports a stall once after repeated unanswered flushes and keeps the queue', async () => {
+  const ctx = setupTest();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(() => {
+      throw new Error('backend unreachable');
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'stalled-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('stalled-activity', createMockCompletedCheckpoint());
+  await ctx.submitter.submit('stalled-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onFlushStalled).not.toHaveBeenCalled();
+
+  await ctx.submitter.submit('stalled-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onFlushStalled).toHaveBeenCalledExactlyOnceWith(
+    'stalled-activity',
+    expect.toInclude('INTERNAL_SERVER_ERROR'),
+    expect.stringMatching(/^[0-9a-f]{32}$/),
+  );
+
+  // the streak keeps failing past the threshold without a second report
+  await ctx.submitter.submit('stalled-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onFlushStalled).toHaveBeenCalledOnce();
+
+  const remaining = await readQueuedCheckpoints('stalled-activity');
+
+  expect(remaining).toHaveLength(4);
+});
+
+test('it resets the stall streak once a flush is answered', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      if (track.mock.calls.length === 3) {
+        throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+      }
+
+      throw new Error('backend unreachable');
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'recovering-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  // two unanswered flushes, an answered one, then two more unanswered: no streak reaches three
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await ctx.submitter.submit('recovering-activity', createMockCompletedCheckpoint());
+  }
+
+  expect(ctx.onFlushStalled).not.toHaveBeenCalled();
+
+  await ctx.submitter.submit('recovering-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onFlushStalled).toHaveBeenCalledOnce();
+});
+
+test('it sends a fresh traceparent with each flush and reports its trace id on rejection', async () => {
+  const ctx = setupTest();
+  const traceparents: Array<null | string> = [];
+
+  // the recording handler returns nothing, falling through to the mock service handler after it
+  server.use(
+    http.post(`${resolveServiceURL('activity')}/rpc/*`, (info) => {
+      traceparents.push(info.request.headers.get('traceparent'));
+    }),
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({ data: { reason: 'broken-chain-link' } });
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'traced-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('traced-activity', createMockCompletedCheckpoint());
+
+  expect(traceparents).toHaveLength(1);
+  expect(traceparents[0]).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/);
+
+  const traceID = traceparents[0]?.split('-')[1];
+
+  expect(ctx.onInvalid).toHaveBeenCalledExactlyOnceWith(
+    'traced-activity',
+    'broken-chain-link',
+    traceID,
+  );
 });

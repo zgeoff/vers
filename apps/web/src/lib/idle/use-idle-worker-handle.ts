@@ -1,15 +1,17 @@
 import {
   useActivity,
+  useCheckpointFlushStall,
   useCheckpointStreamError,
   useFailureAction,
   useSimulationInitialized,
   useSimulationWorker,
 } from '@vers/idle-client';
-import type { CheckpointStreamError } from '@vers/idle-client';
+import type { CheckpointFlushStall, CheckpointStreamError } from '@vers/idle-client';
 import type { ActivityFailureAction, ActivitySnapshot } from '@vers/idle-core';
 
 interface IdleWorkerHandle {
   readonly activity: ActivitySnapshot | undefined;
+  readonly checkpointFlushStall: CheckpointFlushStall | undefined;
   readonly checkpointStreamError: CheckpointStreamError | undefined;
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
@@ -27,9 +29,11 @@ export function useIdleWorkerHandle(): IdleWorkerHandle {
   const activity = useActivity();
   const failureAction = useFailureAction();
   const checkpointStreamError = useCheckpointStreamError();
+  const checkpointFlushStall = useCheckpointFlushStall();
 
   return {
     activity: activity ?? undefined,
+    checkpointFlushStall: checkpointFlushStall ?? undefined,
     checkpointStreamError: checkpointStreamError ?? undefined,
     failureAction,
     initialized,

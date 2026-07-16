@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { setCheckpointFlushStall } from '../state/set-checkpoint-flush-stall';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
 import { setRewardSlotLedger } from '../state/set-reward-slot-ledger';
@@ -8,6 +9,7 @@ import { setSimulationWorker } from '../state/set-simulation-worker';
 import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
 import { useIdleStore } from '../state/use-idle-store';
 import type {
+  CheckpointFlushStalledMessage,
   CheckpointStreamInvalidMessage,
   InitialStateMessage,
   OfflineCapStatusMessage,
@@ -73,10 +75,19 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
     setRewardSlotLedger(event.data.rewardSlotLedger);
   }
 
+  if (isCheckpointFlushStalledMessage(event.data)) {
+    setCheckpointFlushStall({
+      activityID: event.data.activityID,
+      reason: event.data.reason,
+      traceID: event.data.traceID,
+    });
+  }
+
   if (isCheckpointStreamInvalidMessage(event.data)) {
     setCheckpointStreamError({
       activityID: event.data.activityID,
       reason: event.data.reason,
+      ...(event.data.traceID === undefined ? {} : { traceID: event.data.traceID }),
     });
   }
 
@@ -102,6 +113,12 @@ function isInitialStateMessage(message: WorkerMessage): message is InitialStateM
 
 function isUpdateMessage(message: WorkerMessage): message is SimulationUpdateMessage {
   return message.type === WorkerMessageType.SimulationUpdate;
+}
+
+function isCheckpointFlushStalledMessage(
+  message: WorkerMessage,
+): message is CheckpointFlushStalledMessage {
+  return message.type === WorkerMessageType.CheckpointFlushStalled;
 }
 
 function isCheckpointStreamInvalidMessage(

@@ -5,6 +5,7 @@ import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ClientMessage, RewardSlotLedgerEntry } from '../types';
+import { createCheckpointFlushStalledMessage } from './create-checkpoint-flush-stalled-message';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { handleClientMessage } from './handle-client-message';
@@ -55,8 +56,15 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
         connection.postMessage(message);
       }
     },
-    onInvalid: (activityID, reason) => {
-      const message = createCheckpointStreamInvalidMessage(activityID, reason);
+    onFlushStalled: (activityID, reason, traceID) => {
+      const message = createCheckpointFlushStalledMessage(activityID, reason, traceID);
+
+      for (const connection of connections) {
+        connection.postMessage(message);
+      }
+    },
+    onInvalid: (activityID, reason, traceID) => {
+      const message = createCheckpointStreamInvalidMessage(activityID, reason, traceID);
 
       for (const connection of connections) {
         connection.postMessage(message);

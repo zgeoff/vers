@@ -65,3 +65,24 @@ test('it renders without error when the worker reports a stopped checkpoint stre
     },
   );
 });
+
+test('it renders without error when the worker reports a stalled checkpoint flush', async () => {
+  await withIdleWorkerHandle(
+    {
+      activity: undefined,
+      checkpointFlushStall: {
+        activityID: 'activity_1',
+        reason: 'network down',
+        traceID: 'trace_1',
+      },
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      worker: undefined,
+    },
+    () => {
+      const rendered = render(<GameSimulationMount />);
+
+      expect(rendered.container).toBeEmptyDOMElement();
+    },
+  );
+});

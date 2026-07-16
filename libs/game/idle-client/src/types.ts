@@ -50,6 +50,7 @@ export type ClientMessage =
   | SetFailureActionMessage;
 
 export enum WorkerMessageType {
+  CheckpointFlushStalled = 'checkpoint_flush_stalled',
   CheckpointStreamInvalid = 'checkpoint_stream_invalid',
   InitialState = 'initial_state',
   OfflineCapStatus = 'offline_cap_status',
@@ -77,12 +78,26 @@ export interface SimulationUpdateMessage extends IWorkerMessage {
 }
 
 /**
+ * Reports that an activity's checkpoint flushes have repeatedly failed to reach the activity
+ * service. Telemetry only, not a stop signal: the stream stays live, its queue intact, and later
+ * flushes keep retrying. `traceID` names the last failed attempt's trace for log correlation.
+ */
+export interface CheckpointFlushStalledMessage extends IWorkerMessage {
+  readonly activityID: string;
+  readonly reason: string;
+  readonly traceID: string;
+  readonly type: WorkerMessageType.CheckpointFlushStalled;
+}
+
+/**
  * Reports that the activity service rejected an activity's stream with `CHECKPOINT_INVALID`: the
  * worker has stopped submitting checkpoints for it, keeping the queued rows for debugging.
+ * `traceID` names the rejecting request's trace; a stream stopped by a local failure carries none.
  */
 export interface CheckpointStreamInvalidMessage extends IWorkerMessage {
   readonly activityID: string;
   readonly reason: string;
+  readonly traceID?: string;
   readonly type: WorkerMessageType.CheckpointStreamInvalid;
 }
 
@@ -112,15 +127,27 @@ export interface RewardSlotsRecordedMessage extends IWorkerMessage {
 }
 
 export type WorkerMessage =
+  | CheckpointFlushStalledMessage
   | CheckpointStreamInvalidMessage
   | InitialStateMessage
   | OfflineCapStatusMessage
   | RewardSlotsRecordedMessage
   | SimulationUpdateMessage;
 
+/**
+ * The latest flush-stall report as tabs hold it — telemetry for the error backend, with the
+ * stream still live and retrying.
+ */
+export interface CheckpointFlushStall {
+  readonly activityID: string;
+  readonly reason: string;
+  readonly traceID: string;
+}
+
 export interface CheckpointStreamError {
   readonly activityID: string;
   readonly reason: string;
+  readonly traceID?: string;
 }
 
 export interface OfflineCapStatus {

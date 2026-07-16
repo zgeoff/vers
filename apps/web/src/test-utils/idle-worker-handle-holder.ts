@@ -1,4 +1,4 @@
-import type { CheckpointStreamError } from '@vers/idle-client';
+import type { CheckpointFlushStall, CheckpointStreamError } from '@vers/idle-client';
 import type { ActivitySnapshot } from '@vers/idle-core';
 import { ActivityFailureAction } from '@vers/idle-core';
 
@@ -11,6 +11,7 @@ export interface StubSimulationWorker {
 
 export interface StubIdleWorkerHandle {
   readonly activity: ActivitySnapshot | undefined;
+  readonly checkpointFlushStall?: CheckpointFlushStall;
   readonly checkpointStreamError?: CheckpointStreamError;
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
