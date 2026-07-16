@@ -259,6 +259,24 @@ The full conventions — taxonomy, code registry, trace context, reporting split
   central in `buildQueryClient`; a per-query `retry` override needs a behavioural reason the default
   policy can't express.
 
+## Metrics
+
+Instrumentation is part of a feature, not a follow-up: work that adds a pipeline, queue, worker, or
+failure path lands with the OpenTelemetry metrics that make it observable. Mechanics, conventions in
+full, and the instrument registry live in `docs/architecture/observability.md`; the rules a PR must
+satisfy:
+
+- Instruments are defined in the owning package through the global metrics API (`metrics.getMeter`,
+  `@opentelemetry/api`) — domain code never constructs, receives, or stops a meter provider; the
+  service scaffold owns that lifecycle.
+- Names are dot-namespaced `vers.<domain>.<measure>`; attributes are snake_case with closed value
+  sets, never unbounded values like per-entity IDs.
+- A rare, meaningful event is a counter recorded at the site that decides it (a `record-*.ts`
+  module). State that lives in the database observes through observable gauges — one batch callback
+  per package, one snapshot query per collection, failures caught and logged, never thrown.
+- Every new instrument lands with its row in the `docs/architecture/observability.md` registry table
+  in the same PR.
+
 ## Banned words
 
 Overused jargon a plainer word covers; applies to all prose — docs, comments, PR descriptions, issue

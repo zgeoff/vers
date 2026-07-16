@@ -7,6 +7,7 @@ import invariant from 'tiny-invariant';
 import { applyVerifiedSegment } from '../apply/apply-verified-segment';
 import { parkActivity } from '../dispatch/park-activity';
 import { runReplaySegment } from '../dispatch/run-replay-segment';
+import { recordRejection } from '../metrics/record-rejection';
 import { rollRewardItems } from '../mint/roll-reward-items';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
 import { buildSegmentDuration } from '../replay/build-segment-duration';
@@ -306,9 +307,18 @@ async function rejectSegment(
       : 'replay divergence confirmed on a fresh replay; rejecting activity';
 
   deps.logger.error(
-    { activityID: segment.activity.id, reason: divergence.reason, version: divergence.version },
+    {
+      activityID: segment.activity.id,
+      appendedHead: segment.activity.appendedHead,
+      reason: divergence.reason,
+      simVersion: segment.activity.simVersion,
+      verifiedHead: segment.verifiedHead,
+      version: divergence.version,
+    },
     message,
   );
+
+  recordRejection('integrity-mismatch');
 
   await rejectActivity(trx, {
     activityID: segment.activity.id,
@@ -353,7 +363,22 @@ async function parkFrontier(
 ): Promise<ReplayIterationOutcome> {
   const message = pickParkMessage(reason);
 
-  deps.logger.warn({ activityID: segment.activity.id }, message);
+  deps.logger.warn(
+    {
+      activityID: segment.activity.id,
+      appendedHead: segment.activity.appendedHead,
+      appendedTimeMs: segment.activity.appendedTimeMs,
+      checkpointCount: segment.checkpoints.length,
+      reason,
+      simVersion: segment.activity.simVersion,
+      verifiedHead: segment.verifiedHead,
+    },
+    message,
+  );
+
+  const rejectionReason = reason === 'durationCapExceeded' ? 'elapsed-time' : 'version-park';
+
+  recordRejection(rejectionReason);
 
   await parkActivity(trx, segment.activity.id);
 
