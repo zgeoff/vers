@@ -119,9 +119,11 @@ logs and the event.
 - Services parse inbound `traceparent`, mint their hop's span id, and run the whole request inside
   `withTraceContext` (`@vers/service-utils`), which is what the pino mixin and Sentry tag read.
 
-The primitives (`parseTraceparent`, `buildTraceparent`, `createTraceContext`, `withTraceContext`,
-`findTraceContext`) live in `@vers/service-utils` and speak the frozen W3C format, so anything
-OpenTelemetry-instrumented interoperates at the header level.
+The pure primitives (`parseTraceparent`, `buildTraceparent`, `createTraceContext`, `TraceContext`)
+live in `@vers/trace` — isomorphic, so browser workers mint the same headers services parse — and
+speak the frozen W3C format, so anything OpenTelemetry-instrumented interoperates at the header
+level. The `AsyncLocalStorage`-bound scope helpers (`withTraceContext`, `findTraceContext`) stay in
+`@vers/service-utils`.
 
 ## app-web
 

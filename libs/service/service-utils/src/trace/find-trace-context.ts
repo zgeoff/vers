@@ -1,5 +1,5 @@
+import type { TraceContext } from '@vers/trace';
 import { traceStorage } from './trace-storage';
-import type { TraceContext } from './types';
 
 /**
  * The active request's trace context; undefined outside a `withTraceContext` scope (boot code,

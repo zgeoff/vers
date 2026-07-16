@@ -1,6 +1,7 @@
 import { ORPCError, isDefinedError, safe } from '@orpc/client';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
+import { buildTraceparent, createTraceContext } from '@vers/trace';
 import invariant from 'tiny-invariant';
 import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
 import {
@@ -9,7 +10,6 @@ import {
   PROGRESS_FLUSH_INTERVAL_MS,
   RETRY_BACKOFF_CAP_MS,
 } from './constants';
-import { createTraceparent } from './create-traceparent';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import { removeConfirmedCheckpoints } from './remove-confirmed-checkpoints';
 import { removeQueuedCheckpoints } from './remove-queued-checkpoints';
@@ -209,7 +209,7 @@ export function createCheckpointSubmitter(
         return;
       }
 
-      const trace = createTraceparent();
+      const trace = createTraceContext();
 
       const [error, result] = await safe(
         options.client.trackActivityProgress(
@@ -218,7 +218,7 @@ export function createCheckpointSubmitter(
             checkpoints: rows,
             expectedHead: state.expectedHead,
           },
-          { context: { traceparent: trace.traceparent } },
+          { context: { traceparent: buildTraceparent(trace) } },
         ),
       );
 

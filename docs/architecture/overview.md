@@ -169,6 +169,7 @@ Libraries (`libs/`, grouped by domain):
 
 - `libs/core/email` - Resend wrapper and react-email template factories
 - `libs/core/flags` - OpenFeature-backed feature flag registry and env provider
+- `libs/core/trace` - isomorphic W3C trace-context primitives (mint, serialize, parse)
 - `libs/core/utils` - low-level platform-agnostic utils
 - `libs/data/data` - core static game data
 - `libs/data/db` - kysely connection helper, migrations, and generated database types
