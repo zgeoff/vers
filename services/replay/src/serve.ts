@@ -1,3 +1,6 @@
+import { flushErrorReports, reportUnexpectedError } from '@vers/service-runtime';
+import { withTraceContext } from '@vers/service-utils';
+import { createTraceContext } from '@vers/trace';
 import { createReplayService } from './create-replay-service';
 import { getBakedEngineHash } from './get-baked-engine-hash';
 import { registerVerificationMetrics } from './metrics/register-verification-metrics';
@@ -34,9 +37,14 @@ process.on('SIGTERM', () => {
 
 async function handleSIGTERM(): Promise<void> {
   try {
-    await stopGracefully();
+    await withTraceContext(createTraceContext(), stopGracefully);
   } catch (error) {
     service.logger.error({ err: error }, 'graceful shutdown failed');
+
+    reportUnexpectedError(error);
+
+    await flushErrorReports();
+
     process.exit(1);
   }
 }

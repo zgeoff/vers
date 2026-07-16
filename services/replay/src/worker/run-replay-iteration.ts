@@ -1,3 +1,4 @@
+import { reportUnexpectedError } from '@vers/service-runtime';
 import { claimNextChain } from '../queue/claim-next-chain';
 import { findReplayFrontier } from '../queue/find-replay-frontier';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
@@ -85,6 +86,9 @@ async function recordIterationFailure(
   }
 
   deps.logger.error({ activityID: frontier.activityID, err: error }, 'replay iteration failed');
+
+  reportUnexpectedError(error);
+
   cache.remove(frontier.activityID);
 
   const result = await updateReplayAttempts(deps.db, {
