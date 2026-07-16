@@ -1,5 +1,6 @@
 export { activityCollection } from './activity-collection';
 export { avatarCollection } from './avatar-collection';
+export { avatarItemCollection } from './avatar-item-collection';
 export { checkpointCollection } from './checkpoint-collection';
 export { pendingTransactionCollection } from './pending-transaction-collection';
 export { sentEmailCollection } from './sent-email-collection';

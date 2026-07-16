@@ -1,9 +1,8 @@
 import { expect, test } from 'bun:test';
 import { screen } from '@testing-library/react';
 import { setRewardSlotLedger } from '@vers/idle-client';
-import { mockActivityService } from '@vers/mock-services/activity';
+import * as db from '@vers/mock-services/db';
 import { orpc } from '../../lib/rpc/orpc';
-import { server } from '../../mocks/node';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -17,24 +16,25 @@ test('it renders nothing without an active activity', () => {
 
 test('it renders settled reward items once the query resolves', async () => {
   const signedIn = await createSignedInUser();
+  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  server.use(
-    mockActivityService.getActivityRewards.handler({
-      items: [
-        {
-          chainIndex: 3,
-          item: {
-            affixes: [{ affixID: 'affix_flat_damage', groupID: 'damage', value: 12 }],
-            baseID: 'base_longsword',
-            contentVersion: 'v1',
-            rarityID: 'rare',
-          },
-          ordinal: 0,
-        },
-      ],
-      verifiedHead: 3,
-    }),
-  );
+  const activity = await db.activityCollection.create({
+    avatarID: avatar.id,
+    id: 'activity_rewards_settled',
+    verifiedHead: 3,
+  });
+
+  await db.avatarItemCollection.create({
+    affixes: [{ affixID: 'affix_flat_damage', groupID: 'damage', value: 12 }],
+    avatarID: activity.avatarID,
+    baseID: 'base_longsword',
+    chainIndex: 3,
+    contentVersion: 'v1',
+    ordinal: 0,
+    rarityID: 'rare',
+    scopeID: activity.scopeID,
+    scopeType: activity.scopeType,
+  });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderWithRouter(<ActivityRewardsPanel activityID="activity_rewards_settled" orpc={orpc} />);
@@ -49,8 +49,13 @@ test('it renders settled reward items once the query resolves', async () => {
 
 test('it shows the ambient catching-up line while ledger versions exceed the verified head', async () => {
   const signedIn = await createSignedInUser();
+  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  server.use(mockActivityService.getActivityRewards.handler({ items: [], verifiedHead: 3 }));
+  await db.activityCollection.create({
+    avatarID: avatar.id,
+    id: 'activity_rewards_pending',
+    verifiedHead: 3,
+  });
 
   setRewardSlotLedger({
     activityID: 'activity_rewards_pending',
@@ -72,8 +77,13 @@ test('it shows the ambient catching-up line while ledger versions exceed the ver
 
 test('it hides the catching-up line once the verified head has caught up to every ledger version', async () => {
   const signedIn = await createSignedInUser();
+  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  server.use(mockActivityService.getActivityRewards.handler({ items: [], verifiedHead: 5 }));
+  await db.activityCollection.create({
+    avatarID: avatar.id,
+    id: 'activity_rewards_caught_up',
+    verifiedHead: 5,
+  });
 
   setRewardSlotLedger({
     activityID: 'activity_rewards_caught_up',
@@ -94,8 +104,13 @@ test('it hides the catching-up line once the verified head has caught up to ever
 
 test('it shows no catching-up line when the ledger belongs to a different activity', async () => {
   const signedIn = await createSignedInUser();
+  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  server.use(mockActivityService.getActivityRewards.handler({ items: [], verifiedHead: 3 }));
+  await db.activityCollection.create({
+    avatarID: avatar.id,
+    id: 'activity_rendered',
+    verifiedHead: 3,
+  });
 
   setRewardSlotLedger({
     activityID: 'activity_other',
