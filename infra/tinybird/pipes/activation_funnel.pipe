@@ -11,7 +11,7 @@ SQL >
     SELECT
         user_id,
         windowFunnel({{ Int32(window_seconds, 2592000) }})(
-            timestamp,
+            toDateTime(timestamp),
             event_name = 'session_started',
             event_name = 'activity_started',
             event_name = 'activity_completed'

@@ -76,3 +76,6 @@ styled-system-studio
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# tinybird CLI local auth state
+.tinyb
