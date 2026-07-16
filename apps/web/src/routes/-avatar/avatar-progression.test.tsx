@@ -60,9 +60,13 @@ test('it shows the optimistic total instead of the settled xp while an activity 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(<AvatarProgression />);
 
+    // the row shows the settled xp until the current-activity query resolves and overlays it
     const xp = await rendered.findByTestId('avatar-xp');
 
-    expect(xp).toHaveTextContent('XP: 425');
+    await waitFor(() => {
+      expect(xp).toHaveTextContent('XP: 425');
+    });
+
     expect(xp).not.toHaveTextContent('XP: 450');
   });
 });
