@@ -59,7 +59,7 @@ export function SignupForm(props: SignupFormProps) {
         <Heading level={2}>Create an account</Heading>
         <Text>Please enter your details to create an account</Text>
       </section>
-      <form {...getFormProps(form)} className={formStyles}>
+      <form {...getFormProps(form)} className={formStyles} method="post">
         <HoneypotInputs />
         <Field
           errors={fields.email.errors ?? []}
