@@ -347,11 +347,11 @@ kind, since an events dataset rejects OTLP metrics ingest:
 ```sh
 ADMIN="$(op read 'op://vers/axiom/admin-token')"
 for ds in vers-traces vers-logs; do
-  curl -s -X POST https://api.axiom.co/v1/datasets \
+  curl -sS --fail -X POST https://api.axiom.co/v1/datasets \
     -H "Authorization: Bearer $ADMIN" -H "Content-Type: application/json" \
     -d "{\"name\":\"$ds\"}"
 done
-curl -s -X POST https://api.axiom.co/v2/datasets \
+curl -sS --fail -X POST https://api.axiom.co/v2/datasets \
   -H "Authorization: Bearer $ADMIN" -H "Content-Type: application/json" \
   -d '{"name":"vers-metrics","kind":"otel:metrics:v1"}'
 
