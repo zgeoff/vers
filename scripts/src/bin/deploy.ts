@@ -118,7 +118,8 @@ async function runDeploy(app: string): Promise<void> {
 }
 
 /**
- * One rollout: build and push the image, cut the fleet over to it, reconcile, probe. Probes
+ * One rollout: build and push the image (targets with no Dockerfile deploy their fly.toml image
+ * instead), cut the fleet over to it, reconcile, probe. Probes
  * passing records the release as the app's next rollback target; probes failing rolls the fleet
  * back to the previous recorded release and leaves the run red either way, so the failure ships
  * forward on a later push instead of a broken release serving meanwhile.

@@ -104,8 +104,8 @@ rolls out:
    manifest app is online and current, catching an app at zero machines or a fleet behind HEAD. A
    rolled-back app reads stale there by design.
 
-Database migrations are never rolled back — a release must tolerate the schema one migration ahead
-of it (expand/contract), which is what makes redeploying the previous image safe.
+Database migrations are never rolled back — a release must tolerate every migration applied after it
+shipped (expand/contract), which is what makes redeploying a previous image safe.
 
 A `fly machine run --schedule` machine is unmanaged: `fly deploy` never rolls its image forward. An
 app entry's `scheduledMachines` in `deploy.config.ts` declares each one (name, command, schedule,
