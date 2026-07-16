@@ -1,14 +1,15 @@
 import type { DB } from '@vers/db';
 import type { SimulationDriver } from '@vers/idle-core';
+import { buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
 import type { Transaction } from 'kysely';
 import invariant from 'tiny-invariant';
 import { applyVerifiedSegment } from '../apply/apply-verified-segment';
 import { parkActivity } from '../dispatch/park-activity';
 import { runReplaySegment } from '../dispatch/run-replay-segment';
+import { recordRejection } from '../metrics/record-rejection';
 import { rollRewardItems } from '../mint/roll-reward-items';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
-import { buildReplaySimulationInput } from '../replay/build-replay-simulation-input';
 import { buildSegmentDuration } from '../replay/build-segment-duration';
 import { compareReplaySegment } from '../replay/compare-replay-segment';
 import type { ReplayCache } from '../replay/create-replay-cache';
@@ -306,9 +307,18 @@ async function rejectSegment(
       : 'replay divergence confirmed on a fresh replay; rejecting activity';
 
   deps.logger.error(
-    { activityID: segment.activity.id, reason: divergence.reason, version: divergence.version },
+    {
+      activityID: segment.activity.id,
+      appendedHead: segment.activity.appendedHead,
+      reason: divergence.reason,
+      simVersion: segment.activity.simVersion,
+      verifiedHead: segment.verifiedHead,
+      version: divergence.version,
+    },
     message,
   );
+
+  recordRejection('integrity-mismatch');
 
   await rejectActivity(trx, {
     activityID: segment.activity.id,
@@ -353,7 +363,22 @@ async function parkFrontier(
 ): Promise<ReplayIterationOutcome> {
   const message = pickParkMessage(reason);
 
-  deps.logger.warn({ activityID: segment.activity.id }, message);
+  deps.logger.warn(
+    {
+      activityID: segment.activity.id,
+      appendedHead: segment.activity.appendedHead,
+      appendedTimeMs: segment.activity.appendedTimeMs,
+      checkpointCount: segment.checkpoints.length,
+      reason,
+      simVersion: segment.activity.simVersion,
+      verifiedHead: segment.verifiedHead,
+    },
+    message,
+  );
+
+  const rejectionReason = reason === 'durationCapExceeded' ? 'elapsed-time' : 'version-park';
+
+  recordRejection(rejectionReason);
 
   await parkActivity(trx, segment.activity.id);
 
@@ -375,13 +400,13 @@ function pickParkMessage(reason: 'durationCapExceeded' | 'expired' | 'unknownVer
 }
 
 function buildFreshDriver(segment: Readonly<ReplaySegment>): SimulationDriver {
-  const input = buildReplaySimulationInput(segment.activity);
+  const input = buildSimulationInput(segment.activity);
 
   return createSimulationDriver(input.activity, input.avatar);
 }
 
 function buildCrossVersionJob(segment: Readonly<ReplaySegment>) {
-  const input = buildReplaySimulationInput(segment.activity);
+  const input = buildSimulationInput(segment.activity);
   const stopAtState = findStopAtState(segment.checkpoints);
 
   const duration = buildSegmentDuration(

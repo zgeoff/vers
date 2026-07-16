@@ -1,14 +1,18 @@
+import type { ActivityData } from '@vers/contract-activity';
 import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { SIMULATION_TIMESTEP_MS } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
-import type { ClientMessage, RewardSlotLedgerEntry } from '../types';
+import type { ClientMessage, RewardSlotLedgerEntry, WorkerMessage } from '../types';
 import { createCheckpointFlushStalledMessage } from './create-checkpoint-flush-stalled-message';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
+import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
+import { createRequestResyncMessage } from './create-request-resync-message';
 import { handleClientMessage } from './handle-client-message';
+import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
 
@@ -32,11 +36,15 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
   const connections = new Set<MessagePort>();
 
+  const client = createActivityServiceClient();
   let simulation: null | Simulation = null;
+  let activity: ActivityData | null = null;
   let running = false;
   let stopped = false;
   let lastFrameTime = performance.now();
   let accumulator = 0;
+  let resyncAvatarID: string | null = null;
+  let resyncInFlight = false;
 
   // A fresh worker starts fully funded and drains toward the cap until its first acknowledged
   // submission; every ack re-anchors the budget at the cap.
@@ -44,43 +52,48 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let rewardSlotLedgerActivityID: null | string = null;
   let rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry> = [];
 
+  const emitWorkerMessage = (message: WorkerMessage) => {
+    for (const connection of connections) {
+      connection.postMessage(message);
+    }
+  };
+
+  const emitConnectionStatus = (online: boolean) => {
+    emitWorkerMessage(createConnectionStatusMessage(online));
+  };
+
   const submitter = createCheckpointSubmitter({
-    client: createActivityServiceClient(),
+    client,
     onAcked: () => {
       lastAckAt = Date.now();
     },
     onCapped: () => {
-      const message = createOfflineCapStatusMessage(0, true);
-
-      for (const connection of connections) {
-        connection.postMessage(message);
-      }
+      emitWorkerMessage(createOfflineCapStatusMessage(0, true));
+    },
+    onHeld: () => {
+      emitConnectionStatus(false);
     },
     onFlushStalled: (activityID, reason, traceID) => {
-      const message = createCheckpointFlushStalledMessage(activityID, reason, traceID);
-
-      for (const connection of connections) {
-        connection.postMessage(message);
-      }
+      emitWorkerMessage(createCheckpointFlushStalledMessage(activityID, reason, traceID));
     },
     onInvalid: (activityID, reason, traceID) => {
-      const message = createCheckpointStreamInvalidMessage(activityID, reason, traceID);
-
-      for (const connection of connections) {
-        connection.postMessage(message);
-      }
+      emitWorkerMessage(createCheckpointStreamInvalidMessage(activityID, reason, traceID));
     },
   });
 
   const context: WorkerContext = {
     connections,
+    getActivity: () => activity,
+    getClient: () => client,
     getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
+    getResyncAvatarID: () => resyncAvatarID,
     getRewardSlotLedger: () => ({
       activityID: rewardSlotLedgerActivityID,
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
     getSubmitter: () => submitter,
+    isResyncInFlight: () => resyncInFlight,
     recordRewardSlots: (activityID, entry) => {
       if (rewardSlotLedgerActivityID === activityID) {
         rewardSlotLedger = [...rewardSlotLedger, entry];
@@ -93,6 +106,15 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     removeConnection: (port) => {
       connections.delete(port);
+    },
+    setActivity: (newActivity) => {
+      activity = newActivity;
+    },
+    setResyncAvatarID: (avatarID) => {
+      resyncAvatarID = avatarID;
+    },
+    setResyncInFlight: (inFlight) => {
+      resyncInFlight = inFlight;
     },
     setSimulation: (newSimulation) => {
       simulation = newSimulation;
@@ -155,8 +177,33 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     void runTickLoop();
   };
 
+  // The worker's own reconnect recovery: a returning connection resends whatever the submitter
+  // held, then — once the held tail is drained, so a resync never reads a stale appended head —
+  // self-triggers a resync when nothing is live to catch up an avatar it remembers.
+  const handleOnline = () => {
+    emitConnectionStatus(true);
+
+    void (async () => {
+      await submitter.flushHeld();
+
+      if (context.getSimulation() === null && resyncAvatarID !== null) {
+        await handleRequestResyncMessage(context, createRequestResyncMessage(resyncAvatarID));
+      }
+    })();
+  };
+
+  const handleOffline = () => {
+    emitConnectionStatus(false);
+  };
+
+  self.addEventListener('online', handleOnline);
+  self.addEventListener('offline', handleOffline);
+
   const stop = () => {
     stopped = true;
+
+    self.removeEventListener('online', handleOnline);
+    self.removeEventListener('offline', handleOffline);
   };
 
   return { connections, handleConnect, stop };

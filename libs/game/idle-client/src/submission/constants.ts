@@ -11,6 +11,12 @@ export const PROGRESS_FLUSH_INTERVAL_MS = 10_000;
 export const ENTROPY_SOURCE_SERVER_KEY = 'server-key';
 
 /**
+ * The ceiling a held batch's exponential retry backoff never exceeds. The backoff's base is
+ * `PROGRESS_FLUSH_INTERVAL_MS`: a held batch's first retry waits exactly one flush window.
+ */
+export const RETRY_BACKOFF_CAP_MS = 300_000;
+
+/**
  * How many consecutive flushes must fail without a defined contract outcome — a transport
  * failure or an undeclared server error — before the submitter reports the stream as stalled. A
  * success or a defined contract error resets the streak.

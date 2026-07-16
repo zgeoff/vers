@@ -1,6 +1,7 @@
 export { WorldMapEncounterActivity } from './world-map-encounter-activity';
 export { planResync } from './resync/plan-resync';
 export { runFastForward } from './resync/run-fast-forward';
+export { runReconstruction } from './resync/run-reconstruction';
 export { runResync } from './resync/run-resync';
 
 export type {
@@ -12,10 +13,12 @@ export type {
 } from './resync/types';
 
 export { setCheckpointFlushStall } from './state/set-checkpoint-flush-stall';
+export { setConnectionStatus } from './state/set-connection-status';
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
 export { setRewardSlotLedger } from './state/set-reward-slot-ledger';
 export { setSimulationWorker } from './state/set-simulation-worker';
+export { useConnectionStatus } from './state/use-connection-status';
 export { updateRewardSlotLedger } from './state/update-reward-slot-ledger';
 export { useOfflineCapStatus } from './state/use-offline-cap-status';
 export { useResyncStatus } from './state/use-resync-status';
@@ -30,6 +33,9 @@ export type { ActivitySubmissionContext } from './submission/types';
 export * from './types';
 export { createInitializeMessage } from './worker/create-initialize-message';
 export { OFFLINE_CAP_WARNING_MS } from './worker/offline-cap-warning-ms';
+export { createRequestResyncMessage } from './worker/create-request-resync-message';
 export { createSetActivityMessage } from './worker/create-set-activity-message';
 export { createSetFailureActionMessage } from './worker/create-set-failure-action-message';
+export { isRequestResyncMessage } from './worker/is-request-resync-message';
+export { isSetActivityMessage } from './worker/is-set-activity-message';
 export { useSimulationWorker } from './worker/use-simulation-worker';

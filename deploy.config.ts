@@ -81,7 +81,12 @@ export default defineDeployManifest({
     },
     {
       app: 'vers-app-web',
-      buildArgsFromEnv: ['SENTRY_AUTH_TOKEN', 'VITE_SENTRY_DSN', 'VITE_SIM_ENGINE_HASH'],
+      buildArgsFromEnv: [
+        'SENTRY_AUTH_TOKEN',
+        'VITE_SENTRY_DSN',
+        'VITE_SIM_ENGINE_HASH',
+        'VITE_UMAMI_WEBSITE_ID',
+      ],
       configDir: 'apps/web',
       dockerfile: 'apps/web/Dockerfile',
       minStartedMachines: 1,
@@ -100,6 +105,11 @@ export default defineDeployManifest({
       app: 'vers-bugsink',
       configDir: 'apps/bugsink',
       trigger: { globs: ['apps/bugsink/**'], kind: 'paths' },
+    },
+    {
+      app: 'vers-umami',
+      configDir: 'apps/umami',
+      trigger: { globs: ['apps/umami/**'], kind: 'paths' },
     },
   ],
 });

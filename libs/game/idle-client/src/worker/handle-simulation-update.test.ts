@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
-import { createMockWorkerContext } from '../test-utils/factories/create-mock-worker-context';
+import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { WorkerMessageType } from '../types';
 import { handleSimulationUpdate } from './handle-simulation-update';
 
@@ -9,7 +9,7 @@ test('it sends simulation update messages to all connections', async () => {
 
   const channel = new MessageChannel();
 
-  const context = createMockWorkerContext({ connections: [channel.port2] });
+  const context = createStubWorkerContext({ connections: [channel.port2] });
 
   context.setSimulation(simulation);
   channel.port1.start();

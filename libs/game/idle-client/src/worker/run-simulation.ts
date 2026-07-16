@@ -4,6 +4,7 @@ import { createOfflineCapStatusMessage } from './create-offline-cap-status-messa
 import { createRewardSlotsRecordedMessage } from './create-reward-slots-recorded-message';
 import { OFFLINE_CAP_WARNING_MS } from './offline-cap-warning-ms';
 import { pickPostTerminalAction } from './pick-post-terminal-action';
+import { runContinuation } from './run-continuation';
 import type { WorkerContext } from './types';
 
 /**
@@ -70,7 +71,15 @@ export async function runSimulation(
     emitCapStatus(context, remainingBudgetMs, false);
   }
 
-  simulation.restartActivity();
+  const activity = context.getActivity();
+
+  // A SetActivity or resync that landed while the terminal batch was awaited owns the runtime
+  // now — starting a continuation for this stale row would overwrite its activity and scope.
+  if (context.getSimulation() !== simulation || activity?.id !== activityID) {
+    return;
+  }
+
+  await runContinuation(context, simulation, activity);
 }
 
 function emitRewardSlotsRecorded(

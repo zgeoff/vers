@@ -259,6 +259,24 @@ The full conventions — taxonomy, code registry, trace context, reporting split
   central in `buildQueryClient`; a per-query `retry` override needs a behavioural reason the default
   policy can't express.
 
+## Metrics
+
+Instrumentation is part of a feature, not a follow-up: work that adds a pipeline, queue, worker, or
+failure path lands with the OpenTelemetry metrics that make it observable. Mechanics, conventions in
+full, and the instrument registry live in `docs/architecture/observability.md`; the rules a PR must
+satisfy:
+
+- Instruments are defined in the owning package through the global metrics API (`metrics.getMeter`,
+  `@opentelemetry/api`) — domain code never constructs, receives, or stops a meter provider; the
+  service scaffold owns that lifecycle.
+- Names are dot-namespaced `vers.<domain>.<measure>`; attributes are snake_case with closed value
+  sets, never unbounded values like per-entity IDs.
+- A rare, meaningful event is a counter recorded at the site that decides it (a `record-*.ts`
+  module). State that lives in the database observes through observable gauges — one batch callback
+  per package, one snapshot query per collection, failures caught and logged, never thrown.
+- Every new instrument lands with its row in the `docs/architecture/observability.md` registry table
+  in the same PR.
+
 ## Banned words
 
 Overused jargon a plainer word covers; applies to all prose — docs, comments, PR descriptions, issue
@@ -334,6 +352,15 @@ container builds, and secrets: `docs/architecture/deployment.md`.
   service.
 - Deploy-phase jobs target the `production` GitHub environment; repo-level secrets carry only what
   PR checks need.
+
+## Analytics
+
+app-web ships self-hosted Umami web analytics (`apps/umami`). A player-facing flow whose completion
+is an acquisition-funnel step fires a curated event through `sendAnalyticsEvent`
+(`apps/web/src/lib/send-analytics-event.ts`) — weigh this when building or reshaping such flows.
+Analytics events carry no PII and no user or avatar keys — data that would be joined to a user
+belongs in the product-analytics stream instead. Boundaries and privacy stance:
+`docs/architecture/analytics.md`.
 
 ## Postgres access (MCP)
 
@@ -467,13 +494,37 @@ Everywhere:
   fixtures shared between tests.
 - A factory is called in the test that uses its value, never through a helper that pre-configures
   overrides — a second layer of defaults is a shadow factory the test site can't see.
+- `test-utils/factories/` holds only faker-defaulted plain-data `create-mock-*` factories. Runtime
+  stand-ins — stub contexts, stub workers, message recorders — live directly in `test-utils/`, named
+  for the stand-in (`create-stub-worker-context`, `create-test-connection`), and are never called
+  factories.
 - `setupTest` wires runtime — servers, handlers, clients, recorders — and returns no domain data and
   no data-builders.
-- `toStrictEqual`, not `toEqual`, for object assertions; asymmetric matchers inside it are fine.
+- `toStrictEqual` when the test determines every field of the expected value — the full shape is the
+  contract, and writing it out is the point. `toMatchObject`, or asymmetric matchers inside
+  `toStrictEqual`, when the value carries fields the test doesn't determine: faker defaults,
+  timestamps, engine-computed state. Choosing partial because the full literal is long is a defect —
+  length is the contract. Never `toEqual`.
+- A test body contains no branching: narrowing a maybe-value is a one-line `invariant(...)`
+  (`tiny-invariant`), waiting on an async condition is `waitFor` (`@vers/test-utils`), and a
+  conditional path in a test means two tests. An `if` inside an MSW handler implementation scripting
+  a call sequence ("first call fails, second succeeds") is handler scripting, not test branching.
 - Global mock reset lives in the preload's `afterEach` (`mock.restore()`), never per-test.
-- A test that mutates global or environment state restores it in an `onTestFinished(...)` callback
-  registered inside the test — not `try`/`finally`, not a lifecycle hook — so teardown runs whether
-  the test passes or throws. A setup helper may register it for its callers.
+- State a preload reset owns — Zustand stores (`registerZustandReset`, `@vers/client-test-utils`),
+  MSW handlers (`registerMSWLifecycle`), the `@msw/data` store, registered mock holders, storage
+  fakes — needs no per-test restore; adding one is noise. A package that adopts a persistent storage
+  fake (fake-indexeddb, localStorage) sweeps it in the preload's `afterEach`; tests never rely on
+  unique keys for isolation.
+- A test that mutates global or environment state the preload doesn't own restores it in an
+  `onTestFinished(...)` callback registered inside the test — never `try`/`finally`, never a
+  lifecycle hook — so teardown runs whether the test passes or throws. A setup helper may register
+  it for its callers.
+- `mock.module` never appears in a test file and never targets a module for convenience. A module is
+  stubbed only when the test runtime cannot host what it provides (`SharedWorker`, WebGL, RSC
+  ambient context), via a preload `register-*-mock` module behind a reactive stub store, with a
+  single exported writer (a `set-*` setter, or a `with-*` scope where the runtime demands a
+  callback) as the only mutation path. A module mocked because of what it imports is a module-graph
+  defect — fix the entrypoint.
 - jest-extended matchers come from the `@zgeoff/bun-test-extended` preload; a package-local
   `augment-bun-test.ts` side-effect import brings their types into `tsc`.
 - Test titles describe observable behaviour and never cite internal identifiers
@@ -503,9 +554,13 @@ Everywhere:
 - MSW mocks the external HTTP/service boundary — never internal abstractions. One shared `server`
   (`setupServer()`) per package in a `mocks/` module, its lifecycle wired by
   `registerMSWLifecycle(server)` (`@vers/test-utils/bun`) in the preload with
-  `onUnhandledRequest: 'error'`. Tests add per-test handlers with `server.use(...)`, including
-  override and upstream-failure cases; for oRPC procedures, build them with `buildMockService` /
-  `mockService` (`@vers/client-test-utils/orpc`).
+  `onUnhandledRequest: 'error'`. For oRPC procedures, per-test handlers are built with
+  `buildMockService` / `mockService` (`@vers/client-test-utils/orpc`).
+- A per-test `server.use(...)` handler models a deviation — an error code, a transport failure, a
+  scripted call sequence — or captures inputs for assertion. Happy-path behaviour comes from the
+  service's stateful mock handlers over the `@msw/data` store (`build<Service>MockHandlers`,
+  `@vers/mock-services`), driven by seeding its collections; a handler that re-implements service
+  logic inline is a defect.
 - Stateful backends use `@msw/data`: an in-memory store built from a zod schema
   (`new Collection({ schema })`, `.create()`/`.createMany()`, `.findFirst()`/`.findMany()`,
   `.defineRelations()`) read and written directly from the oRPC mock handlers — never `@msw/data`'s
@@ -513,9 +568,11 @@ Everywhere:
   the value is arbitrary — except a discriminator whose value gives a row its meaning; the preload
   seeds faker once so runs are reproducible, and a `.create()` call never restates a default.
 - React: React Testing Library on happy-dom (registered in the preload). Prefer the project `render`
-  util over bare RTL and the utils it returns over the imported `screen`; load data through the MSW
-  handlers and `@msw/data` store rather than stubbing hooks or poking Zustand; `waitFor` the fetch
-  before asserting.
+  util over bare RTL and the utils it returns over the imported `screen`; a test that needs its own
+  provider tree may use bare RTL `render`, still asserting through the returned utils. Load server
+  data through the MSW handlers and `@msw/data` store — never by stubbing hooks. Drive client state
+  through a package's exported setters (`setSelectedNode`), never raw `setState` pokes; `waitFor`
+  the fetch before asserting.
 
 ### RSC and server functions
 
@@ -534,10 +591,9 @@ Everywhere:
 - The Flight pipeline (`renderServerComponent`, composite components) and ambient reads cannot run
   under bun test (one module graph, no `react-server` export condition); their coverage is the
   real-runtime smoke suite.
-- Ambient request context (`@tanstack/react-start/server`) is a mockable boundary: stub it only
-  through the shared `withRequestContext` util, installed once in the preload behind a mutable
-  holder — never Start's RSC/render APIs, never modules we own. A direct `mock.module` in a test
-  file is a review finding. Every stubbed ambient path is also crossed by the smoke suite.
+- Ambient request context (`@tanstack/react-start/server`) is stubbed only through the shared
+  `withRequestContext` util, installed once in the preload behind a mutable holder — never Start's
+  RSC/render APIs. Every stubbed ambient path is also crossed by the smoke suite.
 
 ### Forms (Conform)
 

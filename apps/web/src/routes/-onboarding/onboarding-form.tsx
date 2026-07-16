@@ -8,6 +8,7 @@ import { css } from '@vers/styled-system/css';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
 import type { FormAction } from '../../lib/forms/types';
 import { useFormSubmit } from '../../lib/forms/use-form-submit';
+import { sendAnalyticsEvent } from '../../lib/send-analytics-event';
 import { onboarding } from './onboarding';
 import { OnboardingFormSchema } from './onboarding-form-schema';
 
@@ -30,7 +31,10 @@ const formStyles = css({
  */
 export function OnboardingForm(props: OnboardingFormProps) {
   const onboardingFn = useServerFn(onboarding);
-  const submission = useFormSubmit(props.action ?? onboardingFn, props.lastResult);
+
+  const submission = useFormSubmit(props.action ?? onboardingFn, props.lastResult, () => {
+    sendAnalyticsEvent('onboarding-complete');
+  });
 
   const [form, fields] = useForm({
     constraint: getZodConstraint(OnboardingFormSchema),

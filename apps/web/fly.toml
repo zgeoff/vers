@@ -31,6 +31,7 @@ ACTIVITY_SERVICE_URL = 'http://vers-service-activity.flycast'
 AVATAR_SERVICE_URL = 'http://vers-service-avatar.flycast'
 EMAIL_SERVICE_URL = 'http://vers-service-email.flycast'
 SESSION_SERVICE_URL = 'http://vers-service-session.flycast'
+UMAMI_URL = 'https://vers-umami.fly.dev'
 USER_SERVICE_URL = 'http://vers-service-user.flycast'
 VERIFICATION_SERVICE_URL = 'http://vers-service-verification.flycast'
 

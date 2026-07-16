@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { screen, waitFor } from '@testing-library/react';
+import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
@@ -9,23 +9,23 @@ import { AvatarCreateForm } from './avatar-create-form';
 
 test('it renders the name field and submit button', async () => {
   await withRequestContext({}, async () => {
-    renderWithRouter(<AvatarCreateForm />);
+    const rendered = renderWithRouter(<AvatarCreateForm />);
 
-    const nameField = await screen.findByLabelText('Name');
+    const nameField = await rendered.findByLabelText('Name');
 
     expect(nameField).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create Avatar' })).toBeInTheDocument();
+    expect(rendered.getByRole('button', { name: 'Create Avatar' })).toBeInTheDocument();
   });
 });
 
 test('it defaults to Trade mode with no permanence warning shown', async () => {
   await withRequestContext({}, async () => {
-    renderWithRouter(<AvatarCreateForm />);
+    const rendered = renderWithRouter(<AvatarCreateForm />);
 
-    const tradeOption = await screen.findByRole('radio', { name: 'Trade' });
+    const tradeOption = await rendered.findByRole('radio', { name: 'Trade' });
 
     expect(tradeOption).toBeChecked();
-    expect(screen.queryByText(/Self-Found is permanent/)).not.toBeInTheDocument();
+    expect(rendered.queryByText(/Self-Found is permanent/)).not.toBeInTheDocument();
   });
 });
 
@@ -33,14 +33,14 @@ test('it shows a permanence warning when Self-Found is selected', async () => {
   const user = userEvent.setup();
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<AvatarCreateForm />);
+    const rendered = renderWithRouter(<AvatarCreateForm />);
 
-    const selfFoundOption = await screen.findByRole('radio', { name: 'Self-Found' });
+    const selfFoundOption = await rendered.findByRole('radio', { name: 'Self-Found' });
 
     await user.click(selfFoundOption);
 
     expect(selfFoundOption).toBeChecked();
-    expect(screen.getByText(/Self-Found is permanent/)).toBeInTheDocument();
+    expect(rendered.getByText(/Self-Found is permanent/)).toBeInTheDocument();
   });
 });
 
@@ -50,13 +50,13 @@ test('it creates a Self-Found avatar when that option is selected', async () => 
   const signedIn = await createSignedInUser();
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    renderWithRouter(<AvatarCreateForm />);
+    const rendered = renderWithRouter(<AvatarCreateForm />);
 
-    const nameField = await screen.findByLabelText('Name');
+    const nameField = await rendered.findByLabelText('Name');
 
     await user.type(nameField, 'Outlander');
-    await user.click(screen.getByRole('radio', { name: 'Self-Found' }));
-    await user.click(screen.getByRole('button', { name: 'Create Avatar' }));
+    await user.click(rendered.getByRole('radio', { name: 'Self-Found' }));
+    await user.click(rendered.getByRole('button', { name: 'Create Avatar' }));
 
     await waitFor(() => {
       const created = db.avatarCollection.findFirst((q) =>

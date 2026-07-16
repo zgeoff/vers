@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
-import { EquipmentSlot } from '@vers/idle-core';
-import { buildReplaySimulationInput } from './build-replay-simulation-input';
+import { ActivityFailureAction, EquipmentSlot } from '../types';
+import { buildSimulationInput } from './build-simulation-input';
 
-test('it carries the activity id, avatar id, seed, and build snapshot into the engine input', () => {
-  const result = buildReplaySimulationInput({
+test('it derives the activity id, avatar id, seed, and build snapshot from the source row', () => {
+  const result = buildSimulationInput({
     avatarID: 'avatar_1',
     buildSnapshot: { level: 3, xp: 450 },
     id: 'act_1',
@@ -12,12 +12,13 @@ test('it carries the activity id, avatar id, seed, and build snapshot into the e
 
   expect(result.activity.id).toBe('act_1');
   expect(result.activity.seed).toBe('aa'.repeat(16));
+  expect(result.activity.failureAction).toBe(ActivityFailureAction.Abort);
   expect(result.avatar.id).toBe('avatar_1');
   expect(result.avatar.level).toBe(3);
   expect(result.avatar.xp).toBe(450);
 });
 
-test('it builds the same input for the same activity source', () => {
+test('it builds the same input for the same source row', () => {
   const source = {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
@@ -25,7 +26,7 @@ test('it builds the same input for the same activity source', () => {
     seed: 'bb'.repeat(16),
   };
 
-  expect(buildReplaySimulationInput(source)).toStrictEqual(buildReplaySimulationInput(source));
+  expect(buildSimulationInput(source)).toStrictEqual(buildSimulationInput(source));
 });
 
 test('it returns fresh enemy and weapon objects on every call, never a shared reference', () => {
@@ -36,12 +37,26 @@ test('it returns fresh enemy and weapon objects on every call, never a shared re
     seed: 'bb'.repeat(16),
   };
 
-  const first = buildReplaySimulationInput(source);
-  const second = buildReplaySimulationInput(source);
+  const first = buildSimulationInput(source);
+  const second = buildSimulationInput(source);
 
   expect(first.activity.enemies[0]).not.toBe(second.activity.enemies[0]);
 
   expect(first.avatar.paperdoll[EquipmentSlot.MainHand]).not.toBe(
     second.avatar.paperdoll[EquipmentSlot.MainHand],
   );
+});
+
+test('it honors a failureAction override', () => {
+  const result = buildSimulationInput(
+    {
+      avatarID: 'avatar_1',
+      buildSnapshot: { level: 1, xp: 0 },
+      id: 'act_1',
+      seed: 'cc'.repeat(16),
+    },
+    { failureAction: ActivityFailureAction.Retry },
+  );
+
+  expect(result.activity.failureAction).toBe(ActivityFailureAction.Retry);
 });

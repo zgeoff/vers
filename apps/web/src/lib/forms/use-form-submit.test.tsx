@@ -25,6 +25,7 @@ function rejectWithResponse(): Promise<Response> {
 interface ReferenceFormProps {
   readonly action?: FormAction;
   readonly lastResult?: SubmissionResult;
+  readonly onSuccess?: () => void;
 }
 
 /**
@@ -33,7 +34,7 @@ interface ReferenceFormProps {
  * result→UI mapping with no submit at all.
  */
 function ReferenceForm(props: ReferenceFormProps) {
-  const submission = useFormSubmit(props.action ?? noopAction, props.lastResult);
+  const submission = useFormSubmit(props.action ?? noopAction, props.lastResult, props.onSuccess);
 
   const [form, fields] = useForm({
     constraint: getZodConstraint(ReferenceSchema),
@@ -130,6 +131,42 @@ test('it shows no error after a redirect resolves the submission', async () => {
   });
 
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
+test('it reports success once a redirect resolves the submission', async () => {
+  const user = userEvent.setup();
+  const onSuccess = mock(() => {});
+
+  renderWithRouter(<ReferenceForm action={noopAction} onSuccess={onSuccess} />);
+
+  const emailInput = await screen.findByPlaceholderText('Email');
+
+  await user.type(emailInput, 'player@vers.test');
+  await user.type(screen.getByPlaceholderText('Password'), 'password123');
+  await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+  await waitFor(() => {
+    expect(onSuccess).toHaveBeenCalledOnce();
+  });
+});
+
+test('it reports no success when the server rejects the submission', async () => {
+  const user = userEvent.setup();
+  const onSuccess = mock(() => {});
+
+  renderWithRouter(<ReferenceForm action={rejectWithResponse} onSuccess={onSuccess} />);
+
+  const emailInput = await screen.findByPlaceholderText('Email');
+
+  await user.type(emailInput, 'player@vers.test');
+  await user.type(screen.getByPlaceholderText('Password'), 'password123');
+  await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+  await waitFor(() => {
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+
+  expect(onSuccess).not.toHaveBeenCalled();
 });
 
 test('it disables the submit button while the action is in flight', async () => {

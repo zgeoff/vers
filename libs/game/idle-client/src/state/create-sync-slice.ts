@@ -9,6 +9,13 @@ import type {
 export interface SyncSlice {
   checkpointFlushStall: CheckpointFlushStall | null;
   checkpointStreamError: CheckpointStreamError | null;
+
+  /**
+   * The worker's last-reported connectivity to the activity service: `null` until its first
+   * report, so a consumer can distinguish "unknown yet" from a confirmed offline state.
+   */
+  connectionOnline: boolean | null;
+
   offlineCapStatus: null | OfflineCapStatus;
   resyncStatus: null | ResyncStatus;
   rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry>;
@@ -24,6 +31,7 @@ export function createSyncSlice(): SyncSlice {
   return {
     checkpointFlushStall: null,
     checkpointStreamError: null,
+    connectionOnline: null,
     offlineCapStatus: null,
     resyncStatus: null,
     rewardSlotLedger: [],

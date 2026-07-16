@@ -6,9 +6,11 @@ import { logger } from './server/logger';
 import { makeRateLimiter } from './server/make-rate-limiter';
 import { makeRequestLogger } from './server/make-request-logger';
 import { makeSecureHeaders } from './server/make-secure-headers';
+import { makeUmamiProxy } from './server/make-umami-proxy';
 import { withMiddleware } from './server/middleware';
 import { redirectToHTTPS } from './server/redirect-to-https';
 import { removeTrailingSlash } from './server/remove-trailing-slash';
+import { withRequestTrace } from './server/with-request-trace';
 
 // resolved from this built file's own location (`dist/server/server.js`) rather than the
 // process's cwd, since the root `server.mjs` shim and the Docker runtime image invoke this bundle
@@ -47,11 +49,14 @@ function serveClientAssets(request: Request, next: () => Promise<Response>): Pro
 const serverEntry = {
   fetch: withMiddleware(
     [
+      // outermost so the request logger's lines already run inside the trace scope
+      withRequestTrace,
       makeRequestLogger(logger, { colorize: !env.isProduction }),
       removeTrailingSlash,
       redirectToHTTPS,
       makeSecureHeaders({ sentryOrigin: SENTRY_ORIGIN }),
       makeRateLimiter({ maxMultiple: RATE_LIMIT_MAX_MULTIPLE }),
+      makeUmamiProxy({ upstream: env.UMAMI_URL ?? null }),
       serveClientAssets,
     ],
     createStartHandler(defaultStreamHandler),

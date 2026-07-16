@@ -2,13 +2,13 @@ import { expect, test } from 'bun:test';
 import { buildCheckpointHash } from '@vers/contract-activity';
 import type { Json } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
+import { buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
 import { resolveServiceURL } from '@vers/mock-services';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import pino from 'pino';
 import { MAX_REPLAY_ATTEMPTS } from '../queue/update-replay-attempts';
-import { buildReplaySimulationInput } from '../replay/build-replay-simulation-input';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
@@ -607,13 +607,13 @@ test('it evicts and rebuilds from Started when the cached driver no longer match
   // the stream — the state a stale or mismatched resume would leave behind.
   cache.set(fixture.activity.id, {
     driver: createSimulationDriver(
-      buildReplaySimulationInput({
+      buildSimulationInput({
         avatarID: fixture.activity.avatarId,
         buildSnapshot: { level: 1, xp: 0 },
         id: fixture.activity.id,
         seed: fixture.activity.seed,
       }).activity,
-      buildReplaySimulationInput({
+      buildSimulationInput({
         avatarID: fixture.activity.avatarId,
         buildSnapshot: { level: 1, xp: 0 },
         id: fixture.activity.id,
@@ -718,7 +718,7 @@ test('it does not reject a divergence that fails to reproduce on the fresh confi
 
   const cache = createReplayCache();
 
-  const corruptInput = buildReplaySimulationInput({
+  const corruptInput = buildSimulationInput({
     avatarID: fixture.activity.avatarId,
     buildSnapshot: { level: 1, xp: 0 },
     id: fixture.activity.id,

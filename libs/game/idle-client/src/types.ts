@@ -1,14 +1,16 @@
-import type {
-  ActivityFailureAction,
-  ActivityInput,
-  AvatarData,
-  SimulationSnapshot,
-} from '@vers/idle-core';
-import type { ActivitySubmissionContext } from './submission/types';
+import type { ActivityData } from '@vers/contract-activity';
+import type { ActivityFailureAction, SimulationSnapshot } from '@vers/idle-core';
 
+/**
+ * `SetActivity` is for a fresh stream the tab just started through the `startActivity` mutation —
+ * it carries the row that mutation returned. Resuming any other activity, live or offline, always
+ * goes through `RequestResync`; the worker alone derives its simulation input and submission
+ * context from the confirmed row, never trusting a tab's locally reconstructed one.
+ */
 export enum ClientMessageType {
   Disconnect = 'disconnect',
   Initialize = 'initialize',
+  RequestResync = 'request_resync',
   SetActivity = 'set_activity',
   SetFailureAction = 'set_failure_action',
 }
@@ -18,15 +20,7 @@ interface IClientMessage {
 }
 
 export interface SetActivityMessage extends IClientMessage {
-  readonly activity: ActivityInput;
-  readonly avatar: AvatarData;
-
-  /**
-   * The stream's chain-link starting point, present only when the caller has the server-authored
-   * `ActivityData` to submit checkpoints against — absent, no checkpoint for this activity is
-   * submitted.
-   */
-  readonly submission?: ActivitySubmissionContext;
+  readonly activity: ActivityData;
   readonly type: ClientMessageType.SetActivity;
 }
 
@@ -43,17 +37,30 @@ export interface DisconnectMessage extends IClientMessage {
   readonly type: ClientMessageType.Disconnect;
 }
 
+/**
+ * Asks the worker to resync the avatar's confirmed activity state — the tab's own trigger for a
+ * catch-up the worker alone plans and runs, since only the worker holds the live simulation a plan
+ * might attach to.
+ */
+export interface RequestResyncMessage extends IClientMessage {
+  readonly avatarID: string;
+  readonly type: ClientMessageType.RequestResync;
+}
+
 export type ClientMessage =
   | DisconnectMessage
   | InitializeMessage
+  | RequestResyncMessage
   | SetActivityMessage
   | SetFailureActionMessage;
 
 export enum WorkerMessageType {
   CheckpointFlushStalled = 'checkpoint_flush_stalled',
   CheckpointStreamInvalid = 'checkpoint_stream_invalid',
+  ConnectionStatus = 'connection_status',
   InitialState = 'initial_state',
   OfflineCapStatus = 'offline_cap_status',
+  ResyncStatus = 'resync_status',
   RewardSlotsRecorded = 'reward_slots_recorded',
   SimulationUpdate = 'simulation_update',
 }
@@ -75,6 +82,24 @@ export interface InitialStateMessage extends IWorkerMessage {
 export interface SimulationUpdateMessage extends IWorkerMessage {
   readonly state: SimulationSnapshot;
   readonly type: WorkerMessageType.SimulationUpdate;
+}
+
+/**
+ * Reports a resync's lifecycle as it runs in the worker, so every connected tab can render the
+ * same catch-up state.
+ */
+export interface ResyncStatusMessage extends IWorkerMessage {
+  readonly status: ResyncStatus;
+  readonly type: WorkerMessageType.ResyncStatus;
+}
+
+/**
+ * Reports the worker's connectivity to the activity service, from the shared worker's own
+ * `online`/`offline` events — the signal a tab uses to explain a stalled catch-up.
+ */
+export interface ConnectionStatusMessage extends IWorkerMessage {
+  readonly online: boolean;
+  readonly type: WorkerMessageType.ConnectionStatus;
 }
 
 /**
@@ -130,8 +155,10 @@ export interface RewardSlotsRecordedMessage extends IWorkerMessage {
 export type WorkerMessage =
   | CheckpointFlushStalledMessage
   | CheckpointStreamInvalidMessage
+  | ConnectionStatusMessage
   | InitialStateMessage
   | OfflineCapStatusMessage
+  | ResyncStatusMessage
   | RewardSlotsRecordedMessage
   | SimulationUpdateMessage;
 

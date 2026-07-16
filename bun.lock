@@ -32,6 +32,10 @@
       "name": "@vers/bugsink",
       "version": "0.0.0",
     },
+    "apps/umami": {
+      "name": "@vers/umami",
+      "version": "0.0.0",
+    },
     "apps/web": {
       "name": "@vers/web",
       "version": "0.0.0",
@@ -78,6 +82,7 @@
         "react-dom": "catalog:",
         "srvx": "catalog:",
         "three": "catalog:",
+        "tiny-invariant": "catalog:",
         "zod": "catalog:",
         "zustand": "catalog:",
       },
@@ -670,10 +675,13 @@
       "name": "@vers/service-utils",
       "version": "0.0.0",
       "dependencies": {
+        "@opentelemetry/api": "catalog:",
         "@opentelemetry/api-logs": "catalog:",
         "@opentelemetry/exporter-logs-otlp-proto": "catalog:",
+        "@opentelemetry/exporter-metrics-otlp-proto": "catalog:",
         "@opentelemetry/resources": "catalog:",
         "@opentelemetry/sdk-logs": "catalog:",
+        "@opentelemetry/sdk-metrics": "catalog:",
         "jose": "catalog:",
         "pino": "catalog:",
         "pino-pretty": "catalog:",
@@ -908,6 +916,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@noble/hashes": "catalog:",
+        "@opentelemetry/api": "catalog:",
         "@orpc/client": "catalog:",
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
@@ -929,6 +938,7 @@
       },
       "devDependencies": {
         "@faker-js/faker": "catalog:",
+        "@opentelemetry/sdk-metrics": "catalog:",
         "@paralleldrive/cuid2": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
@@ -1039,11 +1049,14 @@
     "@noble/hashes": "2.2.0",
     "@openfeature/core": "1.11.0",
     "@openfeature/server-sdk": "1.22.0",
+    "@opentelemetry/api": "1.9.1",
     "@opentelemetry/api-logs": "0.220.0",
     "@opentelemetry/exporter-logs-otlp-proto": "0.220.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "0.220.0",
     "@opentelemetry/exporter-trace-otlp-proto": "0.220.0",
     "@opentelemetry/resources": "2.9.0",
     "@opentelemetry/sdk-logs": "0.220.0",
+    "@opentelemetry/sdk-metrics": "2.9.0",
     "@orpc/client": "1.14.6",
     "@orpc/contract": "1.14.6",
     "@orpc/openapi": "1.14.6",
@@ -2480,6 +2493,8 @@
     "@vers/styled-system": ["@vers/styled-system@workspace:libs/design/styled-system"],
 
     "@vers/test-utils": ["@vers/test-utils@workspace:libs/testing/test-utils"],
+
+    "@vers/umami": ["@vers/umami@workspace:apps/umami"],
 
     "@vers/utils": ["@vers/utils@workspace:libs/core/utils"],
 

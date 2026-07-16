@@ -1,5 +1,3 @@
-import { afterEach, mock } from 'bun:test';
+import { registerBunTestCleanup } from '@vers/test-utils/bun';
 
-afterEach(() => {
-  mock.restore();
-});
+registerBunTestCleanup();

@@ -7,6 +7,7 @@ import {
   ENTROPY_SOURCE_SERVER_KEY,
   FLUSH_STALL_THRESHOLD,
   PROGRESS_FLUSH_INTERVAL_MS,
+  RETRY_BACKOFF_CAP_MS,
 } from './constants';
 import { createTraceparent } from './create-traceparent';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
@@ -25,6 +26,9 @@ interface ActivityState {
   nextVersion: number;
   prevHash: string;
   previousNextSeed: string;
+  retryAttempt: number;
+  retryGeneration: number;
+  retryScheduled: boolean;
   startChainIndex: number;
 }
 
@@ -52,6 +56,14 @@ export interface CheckpointSubmitter {
     activityID: string,
     checkpoint: Readonly<ActivityCheckpoint>,
   ) => Promise<number | undefined>;
+
+  /**
+   * Resets every tracked activity's retry backoff, supersedes any scheduled retry (its stale
+   * callback becomes a no-op), and immediately flushes each activity that isn't already stopped —
+   * the reconnect recovery path, called once connectivity returns. Each activity's flush settles
+   * independently, so one failure never blocks the rest of the drain.
+   */
+  flushHeld: () => Promise<void>;
 }
 
 interface CreateCheckpointSubmitterOptions {
@@ -87,11 +99,24 @@ interface CreateCheckpointSubmitterOptions {
   readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
 
   /**
+   * Called each time a batch is held for retry — a transport failure or `UNAUTHORIZED` — so the
+   * caller can report connectivity loss.
+   */
+  readonly onHeld?: (activityID: string) => void;
+
+  /**
    * Schedules a non-terminal checkpoint's deferred progress-window flush. Defaults to a
    * `PROGRESS_FLUSH_INTERVAL_MS` timer; a test injects a capturing stub to drive the window
    * without waiting on real time, awaiting the returned flush to drain it deterministically.
    */
   readonly scheduleFlush?: (flush: () => Promise<void>) => void;
+
+  /**
+   * Schedules a held batch's retry after `delayMs` of exponential backoff. Defaults to
+   * `setTimeout`; a test injects a capturing stub to assert the computed delay without waiting on
+   * real time.
+   */
+  readonly scheduleRetry?: (delayMs: number, retry: () => Promise<void>) => void;
 }
 
 /**
@@ -118,6 +143,49 @@ export function createCheckpointSubmitter(
         void flush();
       }, PROGRESS_FLUSH_INTERVAL_MS);
     });
+
+  const scheduleRetry: (delayMs: number, retry: () => Promise<void>) => void =
+    options.scheduleRetry ??
+    ((delayMs, retry) => {
+      setTimeout(() => {
+        void retry();
+      }, delayMs);
+    });
+
+  // At most one retry is ever pending per activity: a failure while one is already scheduled
+  // reports held and defers to it, and a callback whose generation was superseded by a reconnect
+  // flush is a no-op — so retry chains can never multiply into a request storm during an outage.
+  const scheduleHeldRetry = (
+    activityID: string,
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cursor this function bumps in place to back off the next retry
+    state: ActivityState,
+  ): void => {
+    options.onHeld?.(activityID);
+
+    if (state.retryScheduled) {
+      return;
+    }
+
+    state.retryScheduled = true;
+    state.retryAttempt += 1;
+
+    const generation = state.retryGeneration;
+
+    const delayMs = Math.min(
+      PROGRESS_FLUSH_INTERVAL_MS * 2 ** (state.retryAttempt - 1),
+      RETRY_BACKOFF_CAP_MS,
+    );
+
+    scheduleRetry(delayMs, async () => {
+      if (generation !== state.retryGeneration) {
+        return;
+      }
+
+      state.retryScheduled = false;
+
+      await flush(activityID);
+    });
+  };
 
   const flush = async (activityID: string): Promise<void> => {
     const state = activityStates.get(activityID);
@@ -160,6 +228,7 @@ export function createCheckpointSubmitter(
         await removeConfirmedCheckpoints(activityID, result.appendedHead);
 
         state.expectedHead = result.appendedHead;
+        state.retryAttempt = 0;
         options.onAcked?.(activityID, result.appendedHead);
 
         return;
@@ -174,6 +243,8 @@ export function createCheckpointSubmitter(
 
           options.onFlushStalled?.(activityID, reason, trace.traceID);
         }
+
+        scheduleHeldRetry(activityID, state);
 
         return;
       }
@@ -216,6 +287,7 @@ export function createCheckpointSubmitter(
 
         state.expectedHead = error.data.appendedHead;
         state.flushPending = true;
+        state.retryAttempt = 0;
 
         return;
       }
@@ -232,7 +304,11 @@ export function createCheckpointSubmitter(
         state.invalid = true;
 
         await removeQueuedCheckpoints(activityID);
+
+        return;
       }
+
+      scheduleHeldRetry(activityID, state);
     } finally {
       state.inFlight = false;
 
@@ -257,6 +333,9 @@ export function createCheckpointSubmitter(
       nextVersion: context.appendedHead + 1,
       prevHash: context.lastHash,
       previousNextSeed: context.previousNextSeed ?? '',
+      retryAttempt: 0,
+      retryGeneration: 0,
+      retryScheduled: false,
       startChainIndex: context.startChainIndex,
     };
 
@@ -350,7 +429,21 @@ export function createCheckpointSubmitter(
     return entry.version;
   };
 
-  return { registerActivity, submit };
+  const flushHeld = async (): Promise<void> => {
+    await Promise.allSettled(
+      [...activityStates.entries()]
+        .filter(([, state]) => !state.invalid)
+        .map(([activityID, state]) => {
+          state.retryAttempt = 0;
+          state.retryGeneration += 1;
+          state.retryScheduled = false;
+
+          return flush(activityID);
+        }),
+    );
+  };
+
+  return { flushHeld, registerActivity, submit };
 }
 
 async function loadPendingCheckpoints(
