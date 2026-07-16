@@ -63,8 +63,12 @@ interface RelayInit {
 async function sendUpstream(target: URL, init?: RelayInit): Promise<Response> {
   let response: Response;
 
+  // a stalled upstream must not pin request handlers — analytics traffic gives up quickly and the
+  // tracker tolerates the loss. The race bounds the wait rather than aborting the socket: signal
+  // instances don't survive environments that patch the fetch globals, and the runtime's pool
+  // reclaims the connection
   try {
-    response = await fetch(target, init);
+    response = await Promise.race([fetch(target, init), waitUpstreamDeadline()]);
   } catch {
     return new Response(null, { status: 502 });
   }
@@ -78,5 +82,20 @@ async function sendUpstream(target: URL, init?: RelayInit): Promise<Response> {
     headers,
     status: response.status,
     statusText: response.statusText,
+  });
+}
+
+const UPSTREAM_DEADLINE_MS = 5000;
+
+/**
+ * Rejects once the upstream deadline passes; the timer never keeps the process alive.
+ */
+function waitUpstreamDeadline(): Promise<never> {
+  return new Promise((_resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('analytics upstream deadline exceeded'));
+    }, UPSTREAM_DEADLINE_MS);
+
+    timer.unref?.();
   });
 }

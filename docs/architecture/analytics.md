@@ -9,7 +9,8 @@ avatar is a product event; data about the site is web analytics.
 
 Umami is self-hosted on Fly (`apps/umami`, deployed as `vers-umami`) with its data in a dedicated
 database in the shared Neon project. It is cookieless — visitor identity is a salted hash that
-rotates daily — so it needs no consent banner and cannot reconstruct a visitor across days.
+rotates daily, so the tracker stores nothing on the device and cannot reconstruct a visitor across
+days.
 
 The web app injects the tracker from its root route when a website ID is baked into the client
 bundle (`VITE_UMAMI_WEBSITE_ID`); non-production builds omit it, so dev, test, and e2e traffic never
@@ -39,7 +40,9 @@ confirms success; element-level clicks can instead carry a `data-umami-event` at
 
 ## Privacy stance
 
-- No PII crosses into analytics — no emails, user IDs, avatar names, or free-text input.
+- Events and pageviews carry no PII — no emails, user IDs, avatar names, or free-text input. The
+  visitor's address reaches Umami only to derive coarse geolocation and the daily visitor hash;
+  Umami stores the derived values, never the address itself.
 - Umami's `identify()` API stays unused: linking a visitor to an account converts anonymous traffic
   measurement into user tracking.
 - Session replay and heatmaps stay off: recording interactions and DOM snapshots cuts against the

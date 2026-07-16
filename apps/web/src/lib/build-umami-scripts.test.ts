@@ -15,3 +15,8 @@ test('it builds a deferred tracker tag riding the same-origin proxy paths', () =
 test('it yields no tags when the website ID is not configured', () => {
   expect(buildUmamiScripts(undefined)).toStrictEqual([]);
 });
+
+test('it yields no tags for a blank website ID', () => {
+  expect(buildUmamiScripts('')).toStrictEqual([]);
+  expect(buildUmamiScripts('   ')).toStrictEqual([]);
+});

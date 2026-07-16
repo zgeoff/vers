@@ -301,8 +301,8 @@ secret, and set the web project's DSN as the `VITE_SENTRY_DSN` GitHub Actions va
 `mcp-token`.
 
 Stand up web analytics. The first deploy is by hand; CI redeploys it on later config changes. Umami
-boots with an `admin`/`umami` account; the password is changed on first login to the value on the
-`umami` item in the `vers` 1Password vault:
+boots with an `admin`/`umami` account, so the rotation to the vault value runs in the same block —
+the stock credential is live from first boot until it does:
 
 ```sh
 fly apps create vers-umami --org vers
@@ -320,6 +320,13 @@ fly secrets set -a vers-umami \
   DATABASE_URL="<the umami database's pooled connection URL>"
 
 fly deploy --config apps/umami/fly.toml --ha=false
+
+TOKEN=$(curl -s https://vers-umami.fly.dev/api/auth/login \
+  -H 'content-type: application/json' \
+  -d '{"username":"admin","password":"umami"}' | jq -r .token)
+curl -s -X POST https://vers-umami.fly.dev/api/me/password \
+  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -d "{\"currentPassword\":\"umami\",\"newPassword\":\"$(op read 'op://vers/umami/password')\"}"
 ```
 
 In the Umami UI, create the `vers` website and set its ID as the `VITE_UMAMI_WEBSITE_ID` GitHub

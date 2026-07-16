@@ -36,7 +36,13 @@ export function useFormSubmit(
       const result = await action({ data: formData });
 
       if (result === undefined) {
-        onSuccess?.();
+        // the submission already succeeded server-side — a completion callback's failure
+        // (an analytics hook, say) must never turn that into a rejected submission
+        try {
+          onSuccess?.();
+        } catch {
+          // intentionally swallowed
+        }
 
         return;
       }

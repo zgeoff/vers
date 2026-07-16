@@ -340,8 +340,8 @@ container builds, and secrets: `docs/architecture/deployment.md`.
 app-web ships self-hosted Umami web analytics (`apps/umami`). A player-facing flow whose completion
 is an acquisition-funnel step fires a curated event through `sendAnalyticsEvent`
 (`apps/web/src/lib/send-analytics-event.ts`) — weigh this when building or reshaping such flows.
-Analytics stays anonymous: no PII, and anything that would be joined to a user or avatar belongs in
-the product-analytics stream instead. Boundaries and privacy stance:
+Analytics events carry no PII and no user or avatar keys — data that would be joined to a user
+belongs in the product-analytics stream instead. Boundaries and privacy stance:
 `docs/architecture/analytics.md`.
 
 ## Postgres access (MCP)
