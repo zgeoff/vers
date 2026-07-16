@@ -101,7 +101,7 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
         <Heading level={2}>{HEADING_BY_TYPE[props.type]}</Heading>
         <Text>{INSTRUCTION_BY_TYPE[props.type]}</Text>
       </section>
-      <form {...getFormProps(form)} className={formStyles}>
+      <form {...getFormProps(form)} className={formStyles} method="post">
         <HoneypotInputs />
         <OTPField
           className={otpField}

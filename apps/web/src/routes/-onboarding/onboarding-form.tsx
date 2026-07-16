@@ -76,7 +76,7 @@ export function OnboardingForm(props: OnboardingFormProps) {
         <Heading level={2}>Welcome to vers</Heading>
         <Text>Please enter your details to create an account</Text>
       </section>
-      <form {...getFormProps(form)} className={formStyles}>
+      <form {...getFormProps(form)} className={formStyles} method="post">
         <HoneypotInputs />
         <Field
           errors={fields.username.errors ?? []}

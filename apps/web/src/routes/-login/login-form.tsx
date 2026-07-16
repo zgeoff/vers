@@ -64,7 +64,7 @@ export function LoginForm(props: LoginFormProps) {
         <Heading level={2}>Welcome back</Heading>
         <Text>Please enter your details to login</Text>
       </section>
-      <form {...getFormProps(form)} className={formStyles}>
+      <form {...getFormProps(form)} className={formStyles} method="post">
         <HoneypotInputs />
         <Field
           errors={fields.email.errors ?? []}
