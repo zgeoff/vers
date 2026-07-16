@@ -85,7 +85,10 @@ async function sendUpstream(target: URL, init?: RelayInit): Promise<Response> {
   });
 }
 
-const UPSTREAM_DEADLINE_MS = 5000;
+// generous enough to cover the upstream's full cold-start chain — Fly machine wake, app boot, and
+// the database compute resuming — which a first beacon after an idle period pays all at once;
+// dropping that beacon undercounts landings, the funnel's first step
+const UPSTREAM_DEADLINE_MS = 15_000;
 
 /**
  * Rejects once the upstream deadline passes; the timer never keeps the process alive.
