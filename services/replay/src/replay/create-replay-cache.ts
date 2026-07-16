@@ -32,8 +32,10 @@ export interface ReplayCache {
 }
 
 /**
- * `onStopError` receives a displaced entry's driver-stop rejection, which otherwise dies as an
- * unhandled rejection; it defaults to `console.error` so a failed cleanup is never silent.
+ * `onStopError` receives the driver-stop rejection of any entry the cache lets go — removed,
+ * replaced, or evicted past the cap — which otherwise dies as an unhandled rejection; it defaults
+ * to `console.error` so a failed cleanup is never silent. A throw from the callback itself falls
+ * back to `console.error` rather than escaping.
  */
 export function createReplayCache(
   cap: number = REPLAY_CACHE_CAP,
@@ -45,7 +47,11 @@ export function createReplayCache(
     try {
       await driver.stop();
     } catch (error) {
-      onStopError(error);
+      try {
+        onStopError(error);
+      } catch {
+        printDriverStopError(error);
+      }
     }
   };
 

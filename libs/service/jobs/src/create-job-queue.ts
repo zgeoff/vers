@@ -61,10 +61,10 @@ export interface CreateJobQueueConfig<TDefs extends JobDefs> {
   readonly onError?: (error: Error) => void;
 
   /**
-   * Called when a fetched job is failed — its handler threw, or its stored payload no longer
-   * parses against the job's schema. The drain result carries only counts, so this callback is
-   * the one place a failure's cause is reported. Defaults to logging via `console.error` so the
-   * cause is never discarded.
+   * Called when a fetched job is failed — its handler or completion step threw, or its stored
+   * payload no longer parses against the job's schema. The drain result carries only counts, so
+   * this callback is the one place a failure's cause is reported. Defaults to logging via
+   * `console.error` so the cause is never discarded.
    */
   readonly onJobError?: (error: unknown, context: Readonly<JobFailureContext>) => void;
 }
@@ -110,7 +110,7 @@ function printJobQueueError(error: Error): void {
 }
 
 function printJobError(error: unknown, context: Readonly<JobFailureContext>): void {
-  console.error(`[@vers/jobs] job ${context.jobID} in "${context.queue}" failed`, error);
+  console.error('[@vers/jobs] job failed', { err: error, ...context });
 }
 
 const DEAD_LETTER_SUFFIX = '.dead';
