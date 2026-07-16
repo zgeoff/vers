@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import type { WorkerMessageType } from '../types';
 import { createCheckpointFlushStalledMessage } from './create-checkpoint-flush-stalled-message';
 
 test('it creates a checkpoint flush stalled message', () => {
@@ -9,6 +10,6 @@ test('it creates a checkpoint flush stalled message', () => {
     activityID: 'activity_1',
     reason: 'network down',
     traceID: 'trace_1',
-    type: 'checkpoint_flush_stalled',
+    type: 'checkpoint_flush_stalled' as WorkerMessageType.CheckpointFlushStalled,
   });
 });

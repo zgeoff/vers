@@ -649,7 +649,11 @@ test('it sends a fresh traceparent with each flush and reports its trace id on r
   await ctx.submitter.submit('traced-activity', createMockCompletedCheckpoint());
 
   expect(traceparents).toHaveLength(2);
-  expect(traceparents).toSatisfyAll((header) => /^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/.test(header));
+
+  expect(traceparents).toSatisfyAll(
+    (header: null | string) => header !== null && /^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/.test(header),
+  );
+
   expect(traceparents[1]).not.toBe(traceparents[0]);
 
   const traceID = traceparents[1]?.split('-')[1];
