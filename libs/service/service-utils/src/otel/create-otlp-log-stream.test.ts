@@ -1,4 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
+import { updateEnv } from '@vers/test-utils/bun';
 import { createOTLPLogStream } from './create-otlp-log-stream';
 
 interface ReceivedExport {
@@ -29,27 +30,14 @@ test('it ships written lines to the OTLP logs endpoint with the env-configured h
     port: 0,
   });
 
-  const previousEndpoint = process.env['OTEL_EXPORTER_OTLP_ENDPOINT'];
-  const previousHeaders = process.env['OTEL_EXPORTER_OTLP_LOGS_HEADERS'];
+  updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', `http://127.0.0.1:${server.port}`);
 
-  process.env['OTEL_EXPORTER_OTLP_ENDPOINT'] = `http://127.0.0.1:${server.port}`;
-
-  process.env['OTEL_EXPORTER_OTLP_LOGS_HEADERS'] =
-    'Authorization=Bearer test-token,X-Axiom-Dataset=vers-logs';
+  updateEnv(
+    'OTEL_EXPORTER_OTLP_LOGS_HEADERS',
+    'Authorization=Bearer test-token,X-Axiom-Dataset=vers-logs',
+  );
 
   onTestFinished(async () => {
-    if (previousEndpoint === undefined) {
-      delete process.env['OTEL_EXPORTER_OTLP_ENDPOINT'];
-    } else {
-      process.env['OTEL_EXPORTER_OTLP_ENDPOINT'] = previousEndpoint;
-    }
-
-    if (previousHeaders === undefined) {
-      delete process.env['OTEL_EXPORTER_OTLP_LOGS_HEADERS'];
-    } else {
-      process.env['OTEL_EXPORTER_OTLP_LOGS_HEADERS'] = previousHeaders;
-    }
-
     await server.stop();
   });
 

@@ -1,5 +1,6 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { metrics } from '@opentelemetry/api';
+import { updateEnv } from '@vers/test-utils/bun';
 import { startMetricsExport } from './start-metrics-export';
 
 interface ReceivedExport {
@@ -34,27 +35,14 @@ test('it exports recorded instruments to the OTLP metrics endpoint with the env-
     port: 0,
   });
 
-  const previousEndpoint = process.env['OTEL_EXPORTER_OTLP_ENDPOINT'];
-  const previousHeaders = process.env['OTEL_EXPORTER_OTLP_METRICS_HEADERS'];
+  updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', `http://127.0.0.1:${server.port}`);
 
-  process.env['OTEL_EXPORTER_OTLP_ENDPOINT'] = `http://127.0.0.1:${server.port}`;
-
-  process.env['OTEL_EXPORTER_OTLP_METRICS_HEADERS'] =
-    'Authorization=Bearer test-token,X-Axiom-Metrics-Dataset=vers-metrics';
+  updateEnv(
+    'OTEL_EXPORTER_OTLP_METRICS_HEADERS',
+    'Authorization=Bearer test-token,X-Axiom-Metrics-Dataset=vers-metrics',
+  );
 
   onTestFinished(async () => {
-    if (previousEndpoint === undefined) {
-      delete process.env['OTEL_EXPORTER_OTLP_ENDPOINT'];
-    } else {
-      process.env['OTEL_EXPORTER_OTLP_ENDPOINT'] = previousEndpoint;
-    }
-
-    if (previousHeaders === undefined) {
-      delete process.env['OTEL_EXPORTER_OTLP_METRICS_HEADERS'];
-    } else {
-      process.env['OTEL_EXPORTER_OTLP_METRICS_HEADERS'] = previousHeaders;
-    }
-
     metrics.disable();
 
     await server.stop();

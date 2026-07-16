@@ -1,6 +1,7 @@
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
+import { jsonArrayFrom } from 'kysely/helpers/postgres';
 
 interface ParkedBacklogEntry {
   readonly count: number;
@@ -14,13 +15,6 @@ export interface VerificationSnapshot {
   readonly quarantinedCount: number;
 }
 
-interface AggregateRow {
-  readonly delta: number;
-  readonly lag: number;
-  readonly parked: ReadonlyArray<ParkedBacklogEntry>;
-  readonly quarantined: number;
-}
-
 /**
  * One statement over the activity streams for the verification gauges — a single consistent
  * snapshot of the age of the oldest unverified append, the p95 appended-vs-verified head delta,
@@ -30,29 +24,47 @@ interface AggregateRow {
  * Empty aggregates report 0.
  */
 export async function loadVerificationSnapshot(db: Kysely<DB>): Promise<VerificationSnapshot> {
-  const unverified = sql`appended_head > verified_head and status <> 'rejected'`;
+  const row = await db
+    .selectFrom('activities')
+    .select((eb) => {
+      const unverified = eb.and([
+        eb('appendedHead', '>', eb.ref('verifiedHead')),
+        eb('status', '<>', 'rejected'),
+      ]);
 
-  const aggregate = await sql<AggregateRow>`
-    select
-      coalesce(extract(epoch from (now() - min(appended_at) filter (where ${unverified})))::float8, 0) as lag,
-      coalesce((percentile_cont(0.95) within group (order by appended_head - verified_head) filter (where ${unverified}))::float8, 0) as delta,
-      (count(*) filter (where status = 'quarantined'))::int as quarantined,
-      coalesce(
-        (
-          select json_agg(json_build_object('simVersion', backlog.sim_version, 'count', backlog.parked_count))
-          from (
-            select sim_version, count(*)::int as parked_count
-            from activities
-            where status = 'parked'
-            group by sim_version
-          ) as backlog
-        ),
-        '[]'::json
-      ) as parked
-    from activities
-  `.execute(db);
+      const oldestUnverified = eb.fn.min('appendedAt').filterWhere(unverified);
 
-  const [row] = aggregate.rows;
+      // `extract(epoch from …)` and `percentile_cont`'s within-group ordering have no builder
+      // API; the fragments embed builder expressions so column names stay plugin-translated
+      return [
+        eb.fn
+          .coalesce(
+            sql<number>`extract(epoch from (now() - ${oldestUnverified}))::float8`,
+            sql<number>`0`,
+          )
+          .as('lag'),
+        eb.fn
+          .coalesce(
+            sql<number>`(percentile_cont(0.95) within group (order by ${eb.ref('appendedHead')} - ${eb.ref('verifiedHead')}) filter (where ${unverified}))::float8`,
+            sql<number>`0`,
+          )
+          .as('delta'),
+        eb
+          .cast<number>(eb.fn.countAll().filterWhere('status', '=', 'quarantined'), 'integer')
+          .as('quarantined'),
+        jsonArrayFrom(
+          eb
+            .selectFrom('activities as parked')
+            .select((pb) => [
+              'parked.simVersion',
+              pb.cast<number>(pb.fn.countAll(), 'integer').as('count'),
+            ])
+            .where('parked.status', '=', 'parked')
+            .groupBy('parked.simVersion'),
+        ).as('parked'),
+      ];
+    })
+    .executeTakeFirst();
 
   return {
     headDeltaP95: row?.delta ?? 0,
