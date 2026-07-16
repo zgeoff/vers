@@ -306,7 +306,9 @@ fly secrets unset CREATE_SUPERUSER -a vers-bugsink
 
 In the Bugsink UI, create one project per app, set each project's DSN as that app's `SENTRY_DSN`
 secret, and set the web project's DSN as the `VITE_SENTRY_DSN` GitHub Actions variable plus a
-`vers-app-web` secret of the same name. Mint an API token for CI source-map uploads
+`vers-app-web` secret of the same name. Add the alarms Discord webhook (the
+`bugsink-discord-webhook` item in the `vers` 1Password vault) as each project's messaging service,
+so new-issue alerts reach the alarms channel. Mint an API token for CI source-map uploads
 (`SENTRY_AUTH_TOKEN` GitHub secret) and one for the MCP server, added to the vault item as
 `mcp-token`.
 
@@ -345,18 +347,23 @@ Actions variable, then assemble the acquisition funnel report over the tracked e
 
 Stand up the telemetry backend. The Axiom account is created in its UI; its standing tokens live on
 the `axiom` item in the `vers` 1Password vault: `ingest-token` (ingest on all datasets — the fleet's
-export credential) and `mcp-token` (query, for read-only investigation). Administration — creating
-datasets, dashboards, monitors, notifiers — uses a short-lived token minted in the UI with
-management scopes and revoked when the work is done. Create one dataset per signal and point the
-fleet at them:
+export credential), `mcp-token` (query, for read-only investigation), and `admin-token` (an advanced
+API token with create/read/update — never delete — on datasets, monitors, notifiers, and dashboards,
+for agent-driven administration). Destructive administration (deleting any of those) uses a
+short-lived token minted in the UI with the needed scopes and revoked when the work is done. Create
+one dataset per signal and point the fleet at them — the metrics dataset needs the `otel:metrics:v1`
+kind, since an events dataset rejects OTLP metrics ingest:
 
 ```sh
-ADMIN="<short-lived management token from the Axiom UI>"
+ADMIN="$(op read 'op://vers/axiom/admin-token')"
 for ds in vers-traces vers-logs; do
-  curl -s -X POST https://api.axiom.co/v1/datasets \
+  curl -sS --fail -X POST https://api.axiom.co/v1/datasets \
     -H "Authorization: Bearer $ADMIN" -H "Content-Type: application/json" \
     -d "{\"name\":\"$ds\"}"
 done
+curl -sS --fail -X POST https://api.axiom.co/v2/datasets \
+  -H "Authorization: Bearer $ADMIN" -H "Content-Type: application/json" \
+  -d '{"name":"vers-metrics","kind":"otel:metrics:v1"}'
 
 INGEST="$(op read 'op://vers/axiom/ingest-token')"
 for app in vers-app-web vers-service-activity vers-service-avatar vers-service-email vers-service-keys vers-service-replay vers-service-session vers-service-user vers-service-verification; do
@@ -368,13 +375,10 @@ for app in vers-app-web vers-service-activity vers-service-avatar vers-service-e
 done
 ```
 
-The `vers-metrics` dataset is created in the Axiom UI with the Metrics dataset type — the dataset
-API creates Events datasets, which reject OTLP metrics ingest.
-
 The `vers services — baseline` dashboard (request rate, 5xx responses, and p95 latency per service,
 plus an error-log stream) and the `vers 5xx responses` and `vers verification lag`
 (`vers.verification.lag` over its threshold — `docs/architecture/observability.md`) threshold
-monitors are created through the same API; the monitors notify the `vers alerts` notifier. Agent
+monitors are created through the same API; the monitors notify the `vers alarms` notifier. Agent
 access goes through the hosted MCP server (`https://mcp.axiom.co/mcp`, OAuth) declared in
 `.mcp.json`.
 

@@ -38,6 +38,14 @@ move across with `bugsink-manage migrate_to_current_objectstorage`.
 The R2 credentials also live on the `bugsink-r2` item in the `vers` 1Password vault. Unset the four
 `R2_*` secrets and Bugsink falls back to storing files in the database.
 
+## Alerts
+
+New-issue, regression, and unmute alerts post to the alarms Discord channel: every project carries a
+Discord messaging-service config pointing at the channel's incoming webhook (the
+`bugsink-discord-webhook` item in the `vers` 1Password vault), and a new project gets the same
+webhook added in its settings. No outgoing email is configured — alerting is webhook-only, and
+per-project alert toggles live in each Bugsink project's settings.
+
 ## Housekeeping
 
 The `.github/workflows/bugsink-vacuum.yml` workflow runs `bugsink-manage vacuum_files` monthly (and

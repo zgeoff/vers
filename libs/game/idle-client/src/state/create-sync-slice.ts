@@ -1,4 +1,5 @@
 import type {
+  CheckpointFlushStall,
   CheckpointStreamError,
   OfflineCapStatus,
   ResyncStatus,
@@ -6,6 +7,7 @@ import type {
 } from '../types';
 
 export interface SyncSlice {
+  checkpointFlushStall: CheckpointFlushStall | null;
   checkpointStreamError: CheckpointStreamError | null;
 
   /**
@@ -33,6 +35,7 @@ export interface SyncSlice {
 
 export function createSyncSlice(): SyncSlice {
   return {
+    checkpointFlushStall: null,
     checkpointStreamError: null,
     connectionOnline: null,
     lastCompletedActivityID: null,

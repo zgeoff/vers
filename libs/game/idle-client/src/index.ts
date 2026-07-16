@@ -12,6 +12,7 @@ export type {
   ResyncResult,
 } from './resync/types';
 
+export { setCheckpointFlushStall } from './state/set-checkpoint-flush-stall';
 export { setConnectionStatus } from './state/set-connection-status';
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
@@ -23,6 +24,7 @@ export { useOfflineCapStatus } from './state/use-offline-cap-status';
 export { useResyncStatus } from './state/use-resync-status';
 export { useActivity } from './state/use-activity';
 export { useAvatar } from './state/use-avatar';
+export { useCheckpointFlushStall } from './state/use-checkpoint-flush-stall';
 export { useCheckpointStreamError } from './state/use-checkpoint-stream-error';
 export { useFailureAction } from './state/use-failure-action';
 export { useLastCompletedActivityID } from './state/use-last-completed-activity-id';

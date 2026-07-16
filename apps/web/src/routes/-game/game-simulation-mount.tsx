@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useResyncStatus } from '@vers/idle-client';
+import { setCheckpointFlushStall, useResyncStatus } from '@vers/idle-client';
 import { useEffect, useRef } from 'react';
 import { currentActivityQueryOptions } from '../../lib/activity/current-activity-query-options';
 import { activeAvatarQueryOptions } from '../../lib/avatar/active-avatar-query-options';
@@ -35,16 +35,45 @@ export function GameSimulationMount() {
   }, [idleWorkerHandle.worker, idleWorkerHandle.initialized]);
 
   useEffect(() => {
-    if (idleWorkerHandle.checkpointStreamError === undefined) {
+    const streamError = idleWorkerHandle.checkpointStreamError;
+
+    if (streamError === undefined) {
       return;
     }
 
-    Sentry.captureException(
-      new Error(
-        `checkpoint stream rejected for activity ${idleWorkerHandle.checkpointStreamError.activityID}: ${idleWorkerHandle.checkpointStreamError.reason}`,
-      ),
-    );
+    Sentry.withScope((scope) => {
+      if (streamError.traceID !== undefined) {
+        scope.setTag('traceID', streamError.traceID);
+      }
+
+      Sentry.captureException(
+        new Error(
+          `checkpoint stream rejected for activity ${streamError.activityID}: ${streamError.reason}`,
+        ),
+      );
+    });
   }, [idleWorkerHandle.checkpointStreamError]);
+
+  useEffect(() => {
+    const flushStall = idleWorkerHandle.checkpointFlushStall;
+
+    if (flushStall === undefined) {
+      return;
+    }
+
+    Sentry.withScope((scope) => {
+      scope.setTag('traceID', flushStall.traceID);
+
+      Sentry.captureException(
+        new Error(
+          `checkpoint flush stalled for activity ${flushStall.activityID}: ${flushStall.reason}`,
+        ),
+      );
+    });
+
+    // consume the one-shot report so a later remount doesn't re-deliver it
+    setCheckpointFlushStall(null);
+  }, [idleWorkerHandle.checkpointFlushStall]);
 
   // sends once per page load, only once the worker has reported its initial state and an active
   // avatar is known — an activity started fresh goes through SetActivity, never this path

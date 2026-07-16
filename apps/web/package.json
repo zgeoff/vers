@@ -47,6 +47,7 @@
     "@vers/service-auth": "workspace:*",
     "@vers/service-utils": "workspace:*",
     "@vers/styled-system": "workspace:*",
+    "@vers/trace": "workspace:*",
     "@vers/worldmap-client": "workspace:*",
     "@vers/worldmap-core": "workspace:*",
     "jose": "catalog:",

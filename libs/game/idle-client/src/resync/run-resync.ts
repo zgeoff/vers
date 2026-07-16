@@ -30,7 +30,14 @@ interface RunResyncOptions {
    */
   readonly isActivityLive?: (activityID: string) => boolean;
 
+  /**
+   * Reports fast-forward tallies as they land, starting with a zero-tally report the moment a
+   * fast-forward plan is committed — before any checkpoint work — so a caller masking the
+   * catch-up can open its cover for the whole run, not just from the first landed batch. Plans
+   * that run no fast-forward (live re-attach, rebase, none) never report through this callback.
+   */
   readonly onProgress?: (progress: FastForwardProgress) => void;
+
   readonly submitter: CheckpointSubmitter;
 }
 
@@ -81,6 +88,8 @@ export async function runResync(
   if (isLive) {
     return { plan: { context: plan.context, kind: 'attach-live' }, progress };
   }
+
+  options.onProgress?.({ attempts: 0, levelUps: 0 });
 
   const report = await runFastForward({
     budgetMs: plan.budgetMs,

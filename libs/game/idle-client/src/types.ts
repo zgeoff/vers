@@ -56,6 +56,7 @@ export type ClientMessage =
 
 export enum WorkerMessageType {
   ActivityCompleted = 'activity_completed',
+  CheckpointFlushStalled = 'checkpoint_flush_stalled',
   CheckpointStreamInvalid = 'checkpoint_stream_invalid',
   ConnectionStatus = 'connection_status',
   InitialState = 'initial_state',
@@ -112,12 +113,27 @@ export interface ConnectionStatusMessage extends IWorkerMessage {
 }
 
 /**
+ * Reports that an activity's checkpoint flushes have repeatedly failed without a defined
+ * contract outcome — transport failures or undeclared server errors. Telemetry only, not a stop
+ * signal: the stream stays live, its queue intact, and later flushes keep retrying. `traceID`
+ * names the last failed attempt's trace for log correlation.
+ */
+export interface CheckpointFlushStalledMessage extends IWorkerMessage {
+  readonly activityID: string;
+  readonly reason: string;
+  readonly traceID: string;
+  readonly type: WorkerMessageType.CheckpointFlushStalled;
+}
+
+/**
  * Reports that the activity service rejected an activity's stream with `CHECKPOINT_INVALID`: the
  * worker has stopped submitting checkpoints for it, keeping the queued rows for debugging.
+ * `traceID` names the rejecting request's trace; a stream stopped by a local failure carries none.
  */
 export interface CheckpointStreamInvalidMessage extends IWorkerMessage {
   readonly activityID: string;
   readonly reason: string;
+  readonly traceID?: string;
   readonly type: WorkerMessageType.CheckpointStreamInvalid;
 }
 
@@ -148,6 +164,7 @@ export interface RewardSlotsRecordedMessage extends IWorkerMessage {
 
 export type WorkerMessage =
   | ActivityCompletedMessage
+  | CheckpointFlushStalledMessage
   | CheckpointStreamInvalidMessage
   | ConnectionStatusMessage
   | InitialStateMessage
@@ -156,9 +173,20 @@ export type WorkerMessage =
   | RewardSlotsRecordedMessage
   | SimulationUpdateMessage;
 
+/**
+ * The latest flush-stall report as tabs hold it — telemetry for the error backend, with the
+ * stream still live and retrying.
+ */
+export interface CheckpointFlushStall {
+  readonly activityID: string;
+  readonly reason: string;
+  readonly traceID: string;
+}
+
 export interface CheckpointStreamError {
   readonly activityID: string;
   readonly reason: string;
+  readonly traceID?: string;
 }
 
 export interface OfflineCapStatus {
@@ -185,12 +213,11 @@ export interface RewardSlotLedgerSnapshot {
 }
 
 /**
- * The catch-up flow's lifecycle as tabs observe it: checking the confirmed state, fast-forwarding
- * with running attempt and level-up counts, done with the final tallies, or capped when the
- * server stopped the stream at the offline-progress bound.
+ * The catch-up flow's lifecycle as tabs observe it: fast-forwarding with running attempt and
+ * level-up counts, done with the final tallies, or capped when the server stopped the stream at
+ * the offline-progress bound. A resync with no real away period broadcasts nothing.
  */
 export type ResyncStatus =
   | { readonly attempts: number; readonly kind: 'done'; readonly levelUps: number }
   | { readonly attempts: number; readonly kind: 'fast-forwarding'; readonly levelUps: number }
-  | { readonly kind: 'capped' }
-  | { readonly kind: 'checking' };
+  | { readonly kind: 'capped' };

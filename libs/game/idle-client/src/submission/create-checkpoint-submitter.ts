@@ -1,10 +1,12 @@
-import { isDefinedError, safe } from '@orpc/client';
+import { ORPCError, isDefinedError, safe } from '@orpc/client';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
+import { buildTraceparent, createTraceContext } from '@vers/trace';
 import invariant from 'tiny-invariant';
 import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
 import {
   ENTROPY_SOURCE_SERVER_KEY,
+  FLUSH_STALL_THRESHOLD,
   PROGRESS_FLUSH_INTERVAL_MS,
   RETRY_BACKOFF_CAP_MS,
 } from './constants';
@@ -15,6 +17,7 @@ import type { ActivityServiceClient, ActivitySubmissionContext } from './types';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 interface ActivityState {
+  consecutiveFlushFailures: number;
   expectedHead: number;
   flushPending: boolean;
   flushScheduled: boolean;
@@ -80,10 +83,20 @@ interface CreateCheckpointSubmitterOptions {
   readonly onCapped?: (activityID: string, appendedHead: number) => void;
 
   /**
-   * Called once a `CHECKPOINT_INVALID` response stops an activity's stream, so the caller can
-   * notify connected tabs and report the rejection.
+   * Called once an activity's flush has failed `FLUSH_STALL_THRESHOLD` times in a row without a
+   * defined contract outcome — a transport failure or an undeclared server error each count, a
+   * success or a defined contract error resets the streak. Telemetry only: the stream stays
+   * live, its queue intact, and later flushes keep retrying. `traceID` names the failed
+   * attempt's trace for log correlation.
    */
-  readonly onInvalid: (activityID: string, reason: string) => void;
+  readonly onFlushStalled?: (activityID: string, reason: string, traceID: string) => void;
+
+  /**
+   * Called once a `CHECKPOINT_INVALID` response stops an activity's stream, so the caller can
+   * notify connected tabs and report the rejection. `traceID` names the rejecting request's
+   * trace; a stream stopped by a local failure carries none.
+   */
+  readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
 
   /**
    * Called each time a batch is held for retry — a transport failure or `UNAUTHORIZED` — so the
@@ -113,7 +126,9 @@ interface CreateCheckpointSubmitterOptions {
  * it; `CHECKPOINT_INVALID` and `NOT_FOUND` stop the stream (keeping and discarding its queue rows,
  * respectively); `ACTIVITY_CAPPED`, `ACTIVITY_TERMINAL`, and `SESSION_EVICTED` stop the stream and
  * discard its rows — the server accepts nothing further for it; anything else — `UNAUTHORIZED` or
- * a transport failure — holds the queue untouched for the next flush tick.
+ * a transport failure — holds the queue untouched for the next flush tick. Each flush rides a
+ * freshly minted trace, and a streak of non-defined flush failures reports a stall without
+ * stopping the stream.
  */
 export function createCheckpointSubmitter(
   options: Readonly<CreateCheckpointSubmitterOptions>,
@@ -194,15 +209,22 @@ export function createCheckpointSubmitter(
         return;
       }
 
+      const trace = createTraceContext();
+
       const [error, result] = await safe(
-        options.client.trackActivityProgress({
-          activityID,
-          checkpoints: rows,
-          expectedHead: state.expectedHead,
-        }),
+        options.client.trackActivityProgress(
+          {
+            activityID,
+            checkpoints: rows,
+            expectedHead: state.expectedHead,
+          },
+          { context: { traceparent: buildTraceparent(trace) } },
+        ),
       );
 
       if (error === null) {
+        state.consecutiveFlushFailures = 0;
+
         await removeConfirmedCheckpoints(activityID, result.appendedHead);
 
         state.expectedHead = result.appendedHead;
@@ -213,10 +235,22 @@ export function createCheckpointSubmitter(
       }
 
       if (!isDefinedError(error)) {
+        state.consecutiveFlushFailures += 1;
+
+        if (state.consecutiveFlushFailures === FLUSH_STALL_THRESHOLD) {
+          const reason =
+            error instanceof ORPCError ? `${error.code}: ${error.message}` : String(error);
+
+          options.onFlushStalled?.(activityID, reason, trace.traceID);
+        }
+
         scheduleHeldRetry(activityID, state);
 
         return;
       }
+
+      // a defined contract outcome ends the stall streak, whatever it decides for the stream
+      state.consecutiveFlushFailures = 0;
 
       if (error.code === 'ACTIVITY_CAPPED') {
         state.invalid = true;
@@ -261,7 +295,7 @@ export function createCheckpointSubmitter(
       if (error.code === 'CHECKPOINT_INVALID') {
         state.invalid = true;
 
-        options.onInvalid(activityID, error.data.reason);
+        options.onInvalid(activityID, error.data.reason, trace.traceID);
 
         return;
       }
@@ -290,6 +324,7 @@ export function createCheckpointSubmitter(
     context: Readonly<ActivitySubmissionContext>,
   ): Promise<void> => {
     const state: ActivityState = {
+      consecutiveFlushFailures: 0,
       expectedHead: context.appendedHead,
       flushPending: false,
       flushScheduled: false,

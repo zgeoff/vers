@@ -41,7 +41,7 @@ lands with the metrics that make it observable. The conventions:
   observes.
 - Every instrument lands with its row in the registry below, in the same PR.
 
-Alerting is Axiom threshold monitors over these datasets, notifying the `vers alerts` notifier.
+Alerting is Axiom threshold monitors over these datasets, notifying the `vers alarms` notifier.
 
 ## Instrument registry
 
@@ -65,4 +65,4 @@ problems needing fleet action), `elapsed-time` (replay duration cap tripped — 
 Each recording's log line carries the raw numbers behind it (heads, checkpoint counts, sim version).
 
 The `vers verification lag` threshold monitor watches `vers.verification.lag` and notifies
-`vers alerts`.
+`vers alarms`.

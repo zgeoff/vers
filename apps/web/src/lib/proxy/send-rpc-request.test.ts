@@ -125,3 +125,34 @@ test('it returns a response whose headers the server can still modify', async ()
     outcome.value.headers.delete('x-upstream');
   }).not.toThrow();
 });
+
+test('it answers an aborted request whose body is unreadable with a client-closed status', async () => {
+  const controller = new AbortController();
+
+  const request = new Request('http://app.test/api/rpc/user/updateEmail', {
+    body: JSON.stringify({ email: 'new@vers.test' }),
+    method: 'POST',
+    signal: controller.signal,
+  });
+
+  await request.blob();
+
+  controller.abort();
+
+  const outcome = await withRequestContext({}, () => sendRPCRequest(request, 'user'));
+
+  expect(outcome.value.status).toBe(499);
+});
+
+test('it rethrows a body read failure for a caller that is still connected', async () => {
+  const request = new Request('http://app.test/api/rpc/user/updateEmail', {
+    body: JSON.stringify({ email: 'new@vers.test' }),
+    method: 'POST',
+  });
+
+  await request.blob();
+
+  const promise = withRequestContext({}, () => sendRPCRequest(request, 'user'));
+
+  expect(promise).rejects.toBeInstanceOf(TypeError);
+});

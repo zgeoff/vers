@@ -47,7 +47,7 @@ export function ForgotPasswordForm(props: ForgotPasswordFormProps) {
         <Heading level={2}>Forgot your password?</Heading>
         <Text>No worries, we&apos;ll send you reset instructions to your email address.</Text>
       </section>
-      <form {...getFormProps(form)} className={formStyles}>
+      <form {...getFormProps(form)} className={formStyles} method="post">
         <HoneypotInputs />
         <Field
           errors={fields.email.errors ?? []}

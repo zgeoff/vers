@@ -171,3 +171,17 @@ test('it requests another resync when the browser comes back online', async () =
     });
   });
 });
+
+test('it renders without error when the worker reports a stalled checkpoint flush', () => {
+  setIdleWorkerHandle({
+    activity: undefined,
+    checkpointFlushStall: { activityID: 'activity_1', reason: 'network down', traceID: 'trace_1' },
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker: undefined,
+  });
+
+  const rendered = render(<GameSimulationMount />);
+
+  expect(rendered.container).toBeEmptyDOMElement();
+});

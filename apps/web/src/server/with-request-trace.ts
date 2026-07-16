@@ -1,4 +1,5 @@
-import { createTraceContext, parseTraceparent, withTraceContext } from '@vers/service-utils';
+import { withTraceContext } from '@vers/service-utils';
+import { createTraceContext, parseTraceparent } from '@vers/trace';
 
 /**
  * Runs the request inside its W3C trace-context scope: a valid inbound `traceparent` continues the

@@ -17,7 +17,19 @@ export interface CheckpointQueueSchema extends DBSchema {
   };
 }
 
-export type ActivityServiceClient = ContractRouterClient<typeof activityContract>;
+/**
+ * Per-call client context the worker's `RPCLink` reads: a minted `traceparent` sent as the
+ * request's trace header, so the service continues the worker's trace instead of starting a
+ * fresh one.
+ */
+export interface ActivityCallContext {
+  readonly traceparent?: string;
+}
+
+export type ActivityServiceClient = ContractRouterClient<
+  typeof activityContract,
+  ActivityCallContext
+>;
 
 /**
  * The chain-link state an activity's stream starts submission from: `appendedHead` seeds the

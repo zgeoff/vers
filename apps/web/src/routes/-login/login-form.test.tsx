@@ -114,3 +114,21 @@ test('it renders the redirect target as a hidden field', async () => {
     expect(hiddenInput.value).toBe('/nexus');
   });
 });
+
+test('it declares a POST submit so a pre-hydration fallback never puts credentials in the URL', async () => {
+  await withRequestContext({}, async () => {
+    renderWithRouter(<LoginForm />);
+
+    const form = await waitFor(() => {
+      const element = document.querySelector('form');
+
+      if (element === null) {
+        throw new Error('expected the login form to be present');
+      }
+
+      return element;
+    });
+
+    expect(form).toHaveAttribute('method', 'post');
+  });
+});

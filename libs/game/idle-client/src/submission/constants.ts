@@ -15,6 +15,13 @@ export const ENTROPY_SOURCE_SERVER_KEY = 'server-key';
  * `PROGRESS_FLUSH_INTERVAL_MS`: a held batch's first retry waits exactly one flush window.
  */
 export const RETRY_BACKOFF_CAP_MS = 300_000;
+
+/**
+ * How many consecutive flushes must fail without a defined contract outcome — a transport
+ * failure or an undeclared server error — before the submitter reports the stream as stalled. A
+ * success or a defined contract error resets the streak.
+ */
+export const FLUSH_STALL_THRESHOLD = 3;
 export const CHECKPOINT_QUEUE_DB_NAME = 'vers-idle-checkpoint-queue';
 export const CHECKPOINT_QUEUE_DB_VERSION = 1;
 export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';

@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { TraceContext } from './types';
+import type { TraceContext } from '@vers/trace';
 
 /**
  * Process-wide holder for the active request's trace context. Written only by

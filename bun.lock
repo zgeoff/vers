@@ -72,6 +72,7 @@
         "@vers/service-auth": "workspace:*",
         "@vers/service-utils": "workspace:*",
         "@vers/styled-system": "workspace:*",
+        "@vers/trace": "workspace:*",
         "@vers/worldmap-client": "workspace:*",
         "@vers/worldmap-core": "workspace:*",
         "jose": "catalog:",
@@ -334,6 +335,16 @@
         "zod": "catalog:",
       },
     },
+    "libs/core/trace": {
+      "name": "@vers/trace",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "libs/core/utils": {
       "name": "@vers/utils",
       "version": "0.0.0",
@@ -494,6 +505,7 @@
         "@vers/design-system": "workspace:*",
         "@vers/idle-core": "workspace:*",
         "@vers/styled-system": "workspace:*",
+        "@vers/trace": "workspace:*",
         "idb": "catalog:",
         "react": "catalog:",
         "tiny-invariant": "catalog:",
@@ -668,6 +680,7 @@
         "@sinclair/typebox": "catalog:",
         "@vers/service-auth": "workspace:*",
         "@vers/service-utils": "workspace:*",
+        "@vers/trace": "workspace:*",
         "elysia": "catalog:",
         "jose": "catalog:",
         "pino": "catalog:",
@@ -695,6 +708,7 @@
         "@opentelemetry/resources": "catalog:",
         "@opentelemetry/sdk-logs": "catalog:",
         "@opentelemetry/sdk-metrics": "catalog:",
+        "@vers/trace": "workspace:*",
         "jose": "catalog:",
         "pino": "catalog:",
         "pino-pretty": "catalog:",
@@ -2508,6 +2522,8 @@
     "@vers/styled-system": ["@vers/styled-system@workspace:libs/design/styled-system"],
 
     "@vers/test-utils": ["@vers/test-utils@workspace:libs/testing/test-utils"],
+
+    "@vers/trace": ["@vers/trace@workspace:libs/core/trace"],
 
     "@vers/umami": ["@vers/umami@workspace:apps/umami"],
 

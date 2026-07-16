@@ -62,7 +62,7 @@ export function ResetPasswordForm(props: ResetPasswordFormProps) {
         <Heading level={2}>Reset your password</Heading>
         <Text>Please enter your new password</Text>
       </section>
-      <form {...getFormProps(form)} className={formStyles}>
+      <form {...getFormProps(form)} className={formStyles} method="post">
         <HoneypotInputs />
         <input name="email" type="hidden" value={props.email} />
         <input name="resetToken" type="hidden" value={props.resetToken} />

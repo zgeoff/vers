@@ -33,7 +33,10 @@ test('it serves the signed-in home page server-rendered, lands at respite, and l
 }) => {
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/login');
-  await page.waitForLoadState('networkidle');
+
+  // hydration gate: the login form's submit handler attaches only once React commits; an
+  // earlier click falls back to the browser's native GET submit and never leaves /login
+  await page.locator('html[data-hydrated]').waitFor();
   await page.getByLabel('Email').fill('demo@vers.test');
   await page.getByLabel('Password').fill('password123');
   await page.getByRole('button', { exact: true, name: 'Login' }).click();

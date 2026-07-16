@@ -14,12 +14,14 @@ import type { WorkerContext } from './types';
 
 /**
  * Orchestrates one resync request end to end: single-flight per worker, since two concurrent
- * resyncs would each reconstruct their own simulation and race to install it. Every plan kind
- * broadcasts its own `ResyncStatus` progression, ending on `done` (or `capped`) so a connected
- * tab's welcome-back UI always resolves. A live simulation this resync would install is skipped
- * when a different activity went live while it was running — a fresher `SetActivity` always wins.
- * A resync that fails outright reports the worker offline — the signal tabs use to explain a
- * stalled catch-up — and never rejects; the next reconnect retries it.
+ * resyncs would each reconstruct their own simulation and race to install it. Only a plan that
+ * covers a real away period — a fast-forward or a capped rebase — broadcasts a `ResyncStatus`
+ * progression, ending on `done` (or `capped`) so a connected tab's welcome-back UI always
+ * resolves; a zero-gap outcome (live re-attach, no activity) stays silent, so a fresh login never
+ * opens that UI. A live simulation this resync would install is skipped when a different activity
+ * went live while it was running — a fresher `SetActivity` always wins. A resync that fails
+ * outright reports the worker offline — the signal tabs use to explain a stalled catch-up — and
+ * never rejects; the next reconnect retries it.
  */
 export async function handleRequestResyncMessage(
   context: WorkerContext,
@@ -31,8 +33,6 @@ export async function handleRequestResyncMessage(
 
   context.setResyncInFlight(true);
   context.setResyncAvatarID(message.avatarID);
-
-  emitResyncStatus(context, { kind: 'checking' });
 
   try {
     // Held batches must land before the progress fetch, or the resync plans against an appended
@@ -76,11 +76,7 @@ async function applyResyncResult(
 
   if (result.plan.kind === 'attach-live') {
     await applyAttachLive(context, result.plan, result.progress);
-
-    return;
   }
-
-  emitResyncStatus(context, { attempts: 0, kind: 'done', levelUps: 0 });
 }
 
 async function applyAttachLive(
@@ -89,8 +85,6 @@ async function applyAttachLive(
   progress: ResyncResult['progress'],
 ): Promise<void> {
   if (context.getSimulation()?.activity?.id === plan.context.activityID) {
-    emitResyncStatus(context, { attempts: 0, kind: 'done', levelUps: 0 });
-
     return;
   }
 
@@ -109,7 +103,6 @@ async function applyAttachLive(
     simulation.startActivity(input.avatar, input.activity);
 
     setLiveSimulation(context, progress.activity, simulation);
-    emitResyncStatus(context, { attempts: 0, kind: 'done', levelUps: 0 });
 
     return;
   }
@@ -122,7 +115,6 @@ async function applyAttachLive(
 
   if ('divergence' in reconstruction) {
     emitDivergence(context, plan.context.activityID);
-    emitResyncStatus(context, { attempts: 0, kind: 'done', levelUps: 0 });
 
     return;
   }
@@ -133,7 +125,6 @@ async function applyAttachLive(
   });
 
   setLiveSimulation(context, progress.activity, reconstruction.simulation);
-  emitResyncStatus(context, { attempts: 0, kind: 'done', levelUps: 0 });
 }
 
 async function applyFastForward(context: WorkerContext, report: FastForwardReport): Promise<void> {

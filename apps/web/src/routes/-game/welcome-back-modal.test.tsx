@@ -9,8 +9,8 @@ test('it renders nothing while no resync is underway', () => {
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
-test('it masks the check before any attempts land', () => {
-  setResyncStatus({ kind: 'checking' });
+test('it masks the catch-up from its zero-tally start', () => {
+  setResyncStatus({ attempts: 0, kind: 'fast-forwarding', levelUps: 0 });
 
   onTestFinished(() => {
     setResyncStatus(null);
@@ -18,7 +18,7 @@ test('it masks the check before any attempts land', () => {
 
   render(<WelcomeBackModal />);
   expect(screen.getByText('Welcome back')).toBeInTheDocument();
-  expect(screen.getByText('Checking your progress…')).toBeInTheDocument();
+  expect(screen.getByText('Catching up… 0 attempts, 0 level-ups so far.')).toBeInTheDocument();
 });
 
 test('it reports the running tally while fast-forwarding', () => {

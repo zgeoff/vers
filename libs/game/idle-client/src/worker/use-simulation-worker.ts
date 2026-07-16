@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { setCheckpointFlushStall } from '../state/set-checkpoint-flush-stall';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setConnectionStatus } from '../state/set-connection-status';
 import { setLastCompletedActivityID } from '../state/set-last-completed-activity-id';
@@ -12,6 +13,7 @@ import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
 import { useIdleStore } from '../state/use-idle-store';
 import type {
   ActivityCompletedMessage,
+  CheckpointFlushStalledMessage,
   CheckpointStreamInvalidMessage,
   ConnectionStatusMessage,
   InitialStateMessage,
@@ -83,10 +85,19 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
     setLastCompletedActivityID(event.data.activityID);
   }
 
+  if (isCheckpointFlushStalledMessage(event.data)) {
+    setCheckpointFlushStall({
+      activityID: event.data.activityID,
+      reason: event.data.reason,
+      traceID: event.data.traceID,
+    });
+  }
+
   if (isCheckpointStreamInvalidMessage(event.data)) {
     setCheckpointStreamError({
       activityID: event.data.activityID,
       reason: event.data.reason,
+      ...(event.data.traceID === undefined ? {} : { traceID: event.data.traceID }),
     });
   }
 
@@ -124,6 +135,12 @@ function isUpdateMessage(message: WorkerMessage): message is SimulationUpdateMes
 
 function isActivityCompletedMessage(message: WorkerMessage): message is ActivityCompletedMessage {
   return message.type === WorkerMessageType.ActivityCompleted;
+}
+
+function isCheckpointFlushStalledMessage(
+  message: WorkerMessage,
+): message is CheckpointFlushStalledMessage {
+  return message.type === WorkerMessageType.CheckpointFlushStalled;
 }
 
 function isCheckpointStreamInvalidMessage(

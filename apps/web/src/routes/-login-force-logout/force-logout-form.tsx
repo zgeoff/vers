@@ -49,7 +49,7 @@ export function ForceLogoutForm(props: ForceLogoutFormProps) {
         <Text>Would you like to logout your other sessions?</Text>
       </section>
 
-      <form {...getFormProps(form)} className={buttonContainer}>
+      <form {...getFormProps(form)} className={buttonContainer} method="post">
         <StatusButton
           disabled={submission.isPending}
           name="intent"

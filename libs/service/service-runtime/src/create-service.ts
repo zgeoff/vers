@@ -3,14 +3,10 @@ import { ORPCError, onError } from '@orpc/server';
 import type { FetchHandler } from '@orpc/server/fetch';
 import { RPCHandler } from '@orpc/server/fetch';
 import { TOKEN_ALGORITHM, parseServiceToken } from '@vers/service-auth';
-import type { TraceContext } from '@vers/service-utils';
-import {
-  createTraceContext,
-  findTraceContext,
-  parseTraceparent,
-  withTraceContext,
-} from '@vers/service-utils';
+import { findTraceContext, withTraceContext } from '@vers/service-utils';
 import type { MetricsExport, OTLPLogStream } from '@vers/service-utils/otel';
+import type { TraceContext } from '@vers/trace';
+import { createTraceContext, parseTraceparent } from '@vers/trace';
 import { Elysia } from 'elysia';
 import type { CryptoKey } from 'jose';
 import * as jose from 'jose';

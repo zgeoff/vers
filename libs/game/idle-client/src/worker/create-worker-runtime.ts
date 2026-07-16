@@ -6,6 +6,7 @@ import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ClientMessage, RewardSlotLedgerEntry, WorkerMessage } from '../types';
+import { createCheckpointFlushStalledMessage } from './create-checkpoint-flush-stalled-message';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
@@ -72,8 +73,11 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     onHeld: () => {
       emitConnectionStatus(false);
     },
-    onInvalid: (activityID, reason) => {
-      emitWorkerMessage(createCheckpointStreamInvalidMessage(activityID, reason));
+    onFlushStalled: (activityID, reason, traceID) => {
+      emitWorkerMessage(createCheckpointFlushStalledMessage(activityID, reason, traceID));
+    },
+    onInvalid: (activityID, reason, traceID) => {
+      emitWorkerMessage(createCheckpointStreamInvalidMessage(activityID, reason, traceID));
     },
   });
 

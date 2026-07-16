@@ -7,6 +7,7 @@ import { setSimulationWorker } from '../state/set-simulation-worker';
 import { useIdleStore } from '../state/use-idle-store';
 import type {
   ActivityCompletedMessage,
+  CheckpointFlushStalledMessage,
   CheckpointStreamInvalidMessage,
   ClientMessage,
   ConnectionStatusMessage,
@@ -129,6 +130,7 @@ test('it reports a checkpoint stream error from worker messages', async () => {
   const message: CheckpointStreamInvalidMessage = {
     activityID: 'activity_1',
     reason: 'broken-chain-link',
+    traceID: 'trace_1',
     type: WorkerMessageType.CheckpointStreamInvalid,
   };
 
@@ -138,6 +140,40 @@ test('it reports a checkpoint stream error from worker messages', async () => {
     expect(useIdleStore.getState().checkpointStreamError).toStrictEqual({
       activityID: 'activity_1',
       reason: 'broken-chain-link',
+      traceID: 'trace_1',
+    });
+  });
+});
+
+test('it records a flush stall report from worker messages', async () => {
+  registerSharedWorkerStub();
+
+  onTestFinished(() => {
+    useIdleStore.setState({ checkpointFlushStall: null });
+  });
+
+  const hook = renderHook(() => useSimulationWorker());
+
+  hook.rerender();
+
+  const worker = getStubSharedWorker(hook.result.current);
+
+  worker.channel.port2.start();
+
+  const message: CheckpointFlushStalledMessage = {
+    activityID: 'activity_1',
+    reason: 'network down',
+    traceID: 'trace_1',
+    type: WorkerMessageType.CheckpointFlushStalled,
+  };
+
+  worker.channel.port2.postMessage(message);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().checkpointFlushStall).toStrictEqual({
+      activityID: 'activity_1',
+      reason: 'network down',
+      traceID: 'trace_1',
     });
   });
 });
