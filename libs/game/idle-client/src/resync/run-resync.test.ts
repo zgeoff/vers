@@ -305,3 +305,41 @@ test('it downgrades a fast-forward to attach-live when the activity is already s
   expect(result.plan).toMatchObject({ context: { appendedHead: 3 }, kind: 'attach-live' });
   expect(result.report).toBeUndefined();
 });
+
+test('it leaves a live activity queue untouched instead of draining it', async () => {
+  const ctx = setupTest();
+
+  const serverTime = new Date();
+
+  const activity = createMockActivityData({ appendedAt: new Date(serverTime.getTime() - 2000) });
+
+  // a checkpoint the live writer queued during the fetch round trip — pipeline, not stranded work
+  await writeQueuedCheckpoint(
+    activity.id,
+    createMockCheckpointBatchEntry({ hash: 'in_flight_hash_6', version: 6 }),
+  );
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      activity,
+      anchor: null,
+      appendedHead: 5,
+      serverTime,
+      verifiedHead: 0,
+    })),
+  );
+
+  const result = await runResync({
+    avatarID: activity.avatarID,
+    buildSimulationInput: buildSimulationInputForTest,
+    client: ctx.client,
+    isActivityLive: (activityID) => activityID === activity.id,
+    submitter: ctx.submitter,
+  });
+
+  expect(result.plan.kind).toBe('attach-live');
+
+  const stillQueued = await readQueuedCheckpoints(activity.id);
+
+  expect(stillQueued).toHaveLength(1);
+});

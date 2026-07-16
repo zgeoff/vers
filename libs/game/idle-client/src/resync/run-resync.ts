@@ -42,7 +42,8 @@ interface RunResyncOptions {
  * activity history resolves to `none`. Checkpoints the durable queue still holds for the fetched
  * activity — rows a previous worker queued but never delivered — are drained first and the
  * snapshot refetched, so the plan and any reconstruction target the head those rows advanced;
- * planning past them would re-emit their content at shifted versions and corrupt the stream. An
+ * planning past them would re-emit their content at shifted versions and corrupt the stream. A
+ * live activity is never drained: its queue is the running writer's own pipeline. An
  * `attach-live` plan never registers the submitter itself — under the submitter's
  * single-registration semantics, a premature empty-cursor registration is permanent, so the
  * caller registers only once it has reconstructed the live simulation the cursor belongs to.
@@ -57,8 +58,11 @@ export async function runResync(
     return { plan: { kind: 'none' }, progress: null };
   }
 
-  const drained = await drainQueuedCheckpoints(options.submitter, first);
-
+  // A live activity's queued rows are its writer's normal in-flight pipeline, not stranded
+  // work — draining would re-register as a no-op, find the rows still queued, and falsely
+  // report a healthy session offline.
+  const isLive = options.isActivityLive?.(first.activity.id) === true;
+  const drained = isLive ? false : await drainQueuedCheckpoints(options.submitter, first);
   const progress = drained ? await readLatestProgress(options) : first;
 
   if (progress === null) {
@@ -74,7 +78,7 @@ export async function runResync(
     return { plan, progress };
   }
 
-  if (options.isActivityLive?.(progress.activity.id) === true) {
+  if (isLive) {
     return { plan: { context: plan.context, kind: 'attach-live' }, progress };
   }
 
