@@ -51,7 +51,7 @@ const serverEntry = {
     [
       // outermost so the request logger's lines already run inside the trace scope
       withRequestTrace,
-      makeRequestLogger(logger, { colorize: !env.isProduction }),
+      makeRequestLogger(logger),
       removeTrailingSlash,
       redirectToHTTPS,
       makeSecureHeaders({ sentryOrigin: SENTRY_ORIGIN }),

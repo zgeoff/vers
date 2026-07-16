@@ -22,6 +22,30 @@ per-signal headers carry the ingest token and dataset routing. Metrics route by 
 which otherwise keeps the event loop alive. An entrypoint that traps SIGTERM for a graceful drain
 calls it before closing its database pool, since a final gauge collection may still query.
 
+## Log lines
+
+Every pino logger stamps the active request's trace id onto each entry through an AsyncLocalStorage
+mixin, and HTTP responses report the same id in `x-trace-id`, so one trace id names a request's log
+lines across app-web and the services it called. A response built with immutable headers (a
+`Response.redirect`) passes through unstamped and correlates through its request line instead. The
+line-level conventions:
+
+- Data rides in structured fields, never interpolated into the message:
+  `logger.info({ method, path, status, durationMs }, 'request completed')`. The message is a stable
+  label for the event; the fields are what Axiom queries filter and aggregate on.
+- Severity follows outcome: a 5xx response or a thrown handler logs at `error`, a 4xx at `warn`,
+  everything else at `info`.
+- A failure always emits a line at the site that decides the outcome — an error folded into a result
+  value, a rejected token, a failed job — carrying the reason in a field (`err`, `failure`, the
+  validation issues).
+- Each request logs one line on completion with `method`, `path`, `status`, and `durationMs`. The
+  query string never reaches a log line — query params carry emailed tokens, auth codes, and
+  GET-mapped procedure inputs. The service scaffold emits the line for every `/rpc` request and
+  leaves `/health` unlogged so platform probes don't dominate volume; app-web's middleware emits it
+  for every request, at `debug` for a served static asset (a pathname with a file extension).
+- Presentation is the transport's job: dev consoles pretty-print through `pino-pretty`, and call
+  sites never embed color codes or decoration in the message.
+
 ## Metrics
 
 Instrumentation is part of a feature: work that adds a pipeline, queue, worker, or failure path

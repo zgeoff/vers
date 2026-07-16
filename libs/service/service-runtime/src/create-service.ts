@@ -222,6 +222,8 @@ interface RegisterORPCHandlerDeps {
  * circuits with a plain 401 before the handler ever runs, per the auth/trust-boundary split in
  * docs/architecture/service-contracts.md. Every response — including that 401 — carries the request's trace id
  * in `x-trace-id`, and the whole request runs inside its trace-context scope so logs correlate.
+ * Every request logs one structured line on completion (method, path, status, duration), severity
+ * following the response status; a trust-boundary rejection's line carries the rejection reason.
  */
 function registerORPCHandler(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- elysia app is a live framework instance with mutable routing state; no readonly form
@@ -236,6 +238,13 @@ function registerORPCHandler(
       const trace = createTrace(context.request);
 
       return withTraceContext(trace, async () => {
+        const start = performance.now();
+        const method = context.request.method;
+
+        // pathname only: a GET-mapped procedure encodes its input in the query string, and logged
+        // inputs belong to the handler's own lines, not the transport's
+        const path = new URL(context.request.url).pathname;
+
         const resolution = await parseServiceToken(context.request, {
           audience: deps.serviceName,
           publicKey: deps.publicKey,
@@ -246,18 +255,40 @@ function registerORPCHandler(
 
           response.headers.set('x-trace-id', trace.traceID);
 
+          deps.logger.warn(
+            {
+              durationMs: toDurationMs(performance.now() - start),
+              failure: resolution.failure,
+              method,
+              path,
+              status: 401,
+            },
+            'service token rejected',
+          );
+
           return response;
         }
 
-        const handled = await handler.handle(context.request, {
-          context: {
-            actingSessionId: resolution.actingSessionId,
-            actingUserId: resolution.actingUserId,
-            logger: deps.logger,
-            traceID: trace.traceID,
-          },
-          prefix,
-        });
+        let handled: Awaited<ReturnType<typeof handler.handle>>;
+
+        try {
+          handled = await handler.handle(context.request, {
+            context: {
+              actingSessionId: resolution.actingSessionId,
+              actingUserId: resolution.actingUserId,
+              logger: deps.logger,
+              traceID: trace.traceID,
+            },
+            prefix,
+          });
+        } catch (error) {
+          deps.logger.error(
+            { durationMs: toDurationMs(performance.now() - start), err: error, method, path },
+            'request failed',
+          );
+
+          throw error;
+        }
 
         const finalResponse = handled.matched
           ? handled.response
@@ -265,9 +296,35 @@ function registerORPCHandler(
 
         finalResponse.headers.set('x-trace-id', trace.traceID);
 
+        deps.logger[pickRequestLogLevel(finalResponse.status)](
+          {
+            durationMs: toDurationMs(performance.now() - start),
+            method,
+            path,
+            status: finalResponse.status,
+          },
+          'request completed',
+        );
+
         return finalResponse;
       });
     },
     { parse: 'none' },
   );
+}
+
+function pickRequestLogLevel(status: number): 'error' | 'info' | 'warn' {
+  if (status >= 500) {
+    return 'error';
+  }
+
+  return status >= 400 ? 'warn' : 'info';
+}
+
+/**
+ * Rounds an elapsed-time reading to one decimal, keeping the sub-millisecond resolution that
+ * whole-millisecond rounding would discard.
+ */
+function toDurationMs(elapsedMs: number): number {
+  return Math.round(elapsedMs * 10) / 10;
 }
