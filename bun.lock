@@ -645,6 +645,8 @@
       "name": "@vers/jobs",
       "version": "0.0.0",
       "dependencies": {
+        "@vers/service-utils": "workspace:*",
+        "@vers/trace": "workspace:*",
         "kysely": "catalog:",
         "pg-boss": "catalog:",
         "tiny-invariant": "catalog:",
