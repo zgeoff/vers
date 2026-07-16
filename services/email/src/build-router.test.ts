@@ -1,11 +1,11 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { call } from '@orpc/server';
 import type { ErrorEvent } from '@sentry/bun';
 import type { EmailContract } from '@vers/contract-email';
 import { RESEND_ENDPOINT_URL, sentEmails, server } from '@vers/email/mocks';
 import type { CapturedEmail } from '@vers/email/mocks';
 import type { JobQueue } from '@vers/jobs';
-import { createLogger, startErrorReporting } from '@vers/service-runtime';
+import { createLogger, sentryHandle, startErrorReporting } from '@vers/service-runtime';
 import { createAnonymousViewer, createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
 import { withTraceContext } from '@vers/service-utils';
 import { buildRPCTestClient, waitFor } from '@vers/test-utils';
@@ -205,6 +205,11 @@ test('it keeps a job left failed by a downstream error for a later sweep', async
 
 test('it reports a fire-and-forget drain failure carrying the active trace id', async () => {
   const recorded: Array<Readonly<ErrorEvent>> = [];
+  const previousHandle = sentryHandle.current;
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
 
   await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
     beforeSend: (event) => {

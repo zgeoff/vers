@@ -1,8 +1,8 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/bun';
 import { createDB } from '@vers/db';
 import { resolveServiceURL } from '@vers/mock-services';
-import { startErrorReporting } from '@vers/service-runtime';
+import { sentryHandle, startErrorReporting } from '@vers/service-runtime';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { waitFor } from '@vers/test-utils';
 import pino from 'pino';
@@ -74,6 +74,11 @@ test('it reports an iteration failure carrying a trace id when no frontier was c
   const keyPair = await getTestServiceKeyPair();
 
   const recorded: Array<Readonly<ErrorEvent>> = [];
+  const previousHandle = sentryHandle.current;
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
 
   await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
     beforeSend: (event) => {
