@@ -1,10 +1,12 @@
 import { expect, test } from 'bun:test';
-import { render, screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import { setSelectedNode } from '@vers/worldmap-client';
+import { orpc } from '../../lib/rpc/orpc';
 import { removeSharedWorker } from '../../test-utils/remove-shared-worker';
+import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withIdleWorkerHandle } from '../../test-utils/with-idle-worker-handle';
 import { ExploreCurrentPanel } from './explore-current-panel';
 
@@ -32,8 +34,12 @@ test('it shows a spinner and sends initialize before the worker reports its stat
       initialized: false,
       worker,
     },
-    () => {
-      render(<ExploreCurrentPanel />);
+    async () => {
+      renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+      await waitFor(() => {
+        expect(calls).toContainEqual({ type: 'initialize' });
+      });
     },
   );
 
@@ -52,12 +58,14 @@ test('it reports the simulation as unavailable when SharedWorker is unsupported'
       initialized: false,
       worker: undefined,
     },
-    () => {
-      render(<ExploreCurrentPanel />);
+    async () => {
+      renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+      const status = await screen.findByRole('status');
+
+      expect(status).toHaveTextContent(/activity simulation is unavailable/i);
     },
   );
-
-  expect(screen.getByRole('status')).toHaveTextContent(/activity simulation is unavailable/i);
 });
 
 test('it sends set-activity once initialized but the worker has not caught up yet', async () => {
@@ -68,12 +76,14 @@ test('it sends set-activity once initialized but the worker has not caught up ye
 
   await withIdleWorkerHandle(
     { activity: undefined, failureAction: ActivityFailureAction.Abort, initialized: true, worker },
-    () => {
-      render(<ExploreCurrentPanel />);
+    async () => {
+      renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+      await waitFor(() => {
+        expect(calls).toHaveLength(1);
+      });
     },
   );
-
-  expect(calls).toHaveLength(1);
 
   const [sentMessage] = calls;
 
@@ -95,8 +105,12 @@ test('it renders the node and its codex fragment once the worker reports the sen
   // the worker as having caught up to that exact activity
   await withIdleWorkerHandle(
     { activity: undefined, failureAction: ActivityFailureAction.Abort, initialized: true, worker },
-    () => {
-      render(<ExploreCurrentPanel />);
+    async () => {
+      renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+      await waitFor(() => {
+        expect(calls).toHaveLength(1);
+      });
     },
   );
 
@@ -114,7 +128,7 @@ test('it renders the node and its codex fragment once the worker reports the sen
       worker,
     },
     async () => {
-      render(<ExploreCurrentPanel />);
+      renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
 
       const codex = await screen.findByTestId('world-map-node-codex-stub');
 
@@ -134,8 +148,12 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
   // the worker as having caught up to that exact activity
   await withIdleWorkerHandle(
     { activity: undefined, failureAction: ActivityFailureAction.Abort, initialized: true, worker },
-    () => {
-      render(<ExploreCurrentPanel />);
+    async () => {
+      renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+      await waitFor(() => {
+        expect(calls).toHaveLength(1);
+      });
     },
   );
 
@@ -153,9 +171,9 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
       worker,
     },
     async () => {
-      render(<ExploreCurrentPanel />);
+      renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
 
-      const checkbox = screen.getByLabelText('Auto-retry on failure');
+      const checkbox = await screen.findByLabelText('Auto-retry on failure');
 
       expect(checkbox).not.toBeChecked();
 

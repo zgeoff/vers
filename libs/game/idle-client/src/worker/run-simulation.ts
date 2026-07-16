@@ -1,6 +1,7 @@
 import type { Simulation } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
+import { createRewardSlotsRecordedMessage } from './create-reward-slots-recorded-message';
 import { OFFLINE_CAP_WARNING_MS } from './offline-cap-warning-ms';
 import { pickPostTerminalAction } from './pick-post-terminal-action';
 import type { WorkerContext } from './types';
@@ -29,7 +30,13 @@ export async function runSimulation(
     return;
   }
 
-  await context.getSubmitter().submit(activityID, checkpoint);
+  const version = await context.getSubmitter().submit(activityID, checkpoint);
+
+  if (version !== undefined && checkpoint.rewardSlots.length > 0) {
+    context.recordRewardSlots(activityID, { count: checkpoint.rewardSlots.length, version });
+
+    emitRewardSlotsRecorded(context, activityID, version, checkpoint.rewardSlots.length);
+  }
 
   const isTerminal =
     checkpoint.type === ActivityCheckpointType.Completed ||
@@ -64,6 +71,19 @@ export async function runSimulation(
   }
 
   simulation.restartActivity();
+}
+
+function emitRewardSlotsRecorded(
+  context: WorkerContext,
+  activityID: string,
+  version: number,
+  rewardSlotCount: number,
+) {
+  const message = createRewardSlotsRecordedMessage(activityID, version, rewardSlotCount);
+
+  for (const connection of context.connections) {
+    connection.postMessage(message);
+  }
 }
 
 function emitCapStatus(context: WorkerContext, remainingMs: number, halted: boolean) {

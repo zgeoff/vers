@@ -4,7 +4,7 @@ import { SIMULATION_TIMESTEP_MS } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
-import type { ClientMessage } from '../types';
+import type { ClientMessage, RewardSlotLedgerEntry } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { handleClientMessage } from './handle-client-message';
@@ -40,6 +40,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   // A fresh worker starts fully funded and drains toward the cap until its first acknowledged
   // submission; every ack re-anchors the budget at the cap.
   let lastAckAt = Date.now();
+  let rewardSlotLedgerActivityID: null | string = null;
+  let rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry> = [];
 
   const submitter = createCheckpointSubmitter({
     client: createActivityServiceClient(),
@@ -65,8 +67,22 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   const context: WorkerContext = {
     connections,
     getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
+    getRewardSlotLedger: () => ({
+      activityID: rewardSlotLedgerActivityID,
+      entries: rewardSlotLedger,
+    }),
     getSimulation: () => simulation,
     getSubmitter: () => submitter,
+    recordRewardSlots: (activityID, entry) => {
+      if (rewardSlotLedgerActivityID === activityID) {
+        rewardSlotLedger = [...rewardSlotLedger, entry];
+
+        return;
+      }
+
+      rewardSlotLedgerActivityID = activityID;
+      rewardSlotLedger = [entry];
+    },
     removeConnection: (port) => {
       connections.delete(port);
     },

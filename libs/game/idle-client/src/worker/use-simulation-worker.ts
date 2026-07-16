@@ -1,14 +1,17 @@
 import { useEffect } from 'react';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
+import { setRewardSlotLedger } from '../state/set-reward-slot-ledger';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
 import { setSimulationWorker } from '../state/set-simulation-worker';
+import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
 import { useIdleStore } from '../state/use-idle-store';
 import type {
   CheckpointStreamInvalidMessage,
   InitialStateMessage,
   OfflineCapStatusMessage,
+  RewardSlotsRecordedMessage,
   SimulationUpdateMessage,
   WorkerMessage,
 } from '../types';
@@ -66,6 +69,10 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
     setSimulationSnapshot(event.data.state);
   }
 
+  if (isInitialStateMessage(event.data)) {
+    setRewardSlotLedger(event.data.rewardSlotLedger);
+  }
+
   if (isCheckpointStreamInvalidMessage(event.data)) {
     setCheckpointStreamError({
       activityID: event.data.activityID,
@@ -77,6 +84,14 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
     setOfflineCapStatus({
       halted: event.data.halted,
       remainingMs: event.data.remainingMs,
+    });
+  }
+
+  if (isRewardSlotsRecordedMessage(event.data)) {
+    updateRewardSlotLedger({
+      activityID: event.data.activityID,
+      count: event.data.rewardSlotCount,
+      version: event.data.version,
     });
   }
 }
@@ -97,4 +112,10 @@ function isCheckpointStreamInvalidMessage(
 
 function isOfflineCapStatusMessage(message: WorkerMessage): message is OfflineCapStatusMessage {
   return message.type === WorkerMessageType.OfflineCapStatus;
+}
+
+function isRewardSlotsRecordedMessage(
+  message: WorkerMessage,
+): message is RewardSlotsRecordedMessage {
+  return message.type === WorkerMessageType.RewardSlotsRecorded;
 }

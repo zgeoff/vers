@@ -6,5 +6,7 @@ test('it builds the empty sync state', () => {
     checkpointStreamError: null,
     offlineCapStatus: null,
     resyncStatus: null,
+    rewardSlotLedger: [],
+    rewardSlotLedgerActivityID: null,
   });
 });

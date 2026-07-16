@@ -13,13 +13,16 @@ export type {
 
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
+export { setRewardSlotLedger } from './state/set-reward-slot-ledger';
 export { setSimulationWorker } from './state/set-simulation-worker';
+export { updateRewardSlotLedger } from './state/update-reward-slot-ledger';
 export { useOfflineCapStatus } from './state/use-offline-cap-status';
 export { useResyncStatus } from './state/use-resync-status';
 export { useActivity } from './state/use-activity';
 export { useAvatar } from './state/use-avatar';
 export { useCheckpointStreamError } from './state/use-checkpoint-stream-error';
 export { useFailureAction } from './state/use-failure-action';
+export { useRewardSlotLedger } from './state/use-reward-slot-ledger';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
 export type { ActivitySubmissionContext } from './submission/types';
 export * from './types';

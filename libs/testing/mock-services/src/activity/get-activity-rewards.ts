@@ -2,9 +2,9 @@ import * as db from '../db';
 import { os } from './os';
 
 /**
- * Returns an owned activity's revealed reward-slot contents. The mock backend carries no minted
- * `avatar_items` rows, so `items` is always empty — a test asserting on revealed content seeds its
- * own override.
+ * Returns an owned activity's revealed reward-slot contents: the minted `avatarItemCollection` rows
+ * matching the activity's scope, gated to coordinates at or below its verified anchor and ordered by
+ * chain position then slot ordinal. Seed the collection to assert on revealed content.
  */
 export const getActivityRewards = os.getActivityRewards.handler((opts) => {
   const actingUserId = opts.context.actingUserId;
@@ -27,5 +27,31 @@ export const getActivityRewards = os.getActivityRewards.handler((opts) => {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  return { items: [], verifiedHead: activity.verifiedHead };
+  const minChainIndex = Math.max(activity.startChainIndex, opts.input.afterChainIndex ?? -1);
+  const maxChainIndex = activity.startChainIndex + activity.verifiedHead;
+
+  const rows = db.avatarItemCollection.findMany(
+    (q) =>
+      q.where({
+        avatarID: activity.avatarID,
+        chainIndex: (value) => value > minChainIndex && value <= maxChainIndex,
+        scopeID: activity.scopeID,
+        scopeType: activity.scopeType,
+      }),
+    { orderBy: [{ chainIndex: 'asc' }, { ordinal: 'asc' }] },
+  );
+
+  return {
+    items: rows.map((row) => ({
+      chainIndex: row.chainIndex,
+      item: {
+        affixes: row.affixes,
+        baseID: row.baseID,
+        contentVersion: row.contentVersion,
+        rarityID: row.rarityID,
+      },
+      ordinal: row.ordinal,
+    })),
+    verifiedHead: activity.verifiedHead,
+  };
 });
