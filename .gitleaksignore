@@ -1,0 +1,33 @@
+# Triaged findings pinned by fingerprint. Every entry is a throwaway dev/test
+# key or a dead token in an immutable historic commit — nothing here grants
+# access to anything. A new secret in these files still flags: fingerprints
+# match one finding (commit, file, rule, line), not the file.
+
+# Commitless fingerprints: committed dev/test .env fixtures in the working
+# tree, matched by the pre-commit --staged scan when these files are edited.
+services/replay/.env.test:private-key:6
+services/session/.env.development:private-key:6
+
+# Historic: local-only signing keys in dev/test env files under the pre-2025
+# projects/ layout and their later moves; all mock-auth material.
+832044ec6803ce8dafdf6bbe3797f9edc2e9e637:services/replay/.env.test:private-key:5
+cfa3d357be8574fe0c030c3a31c2c7e7fc430fb4:projects/service-session/.env.development:private-key:6
+f6e68fd8f44ca9f1d3d91e7957b442383133be4a:projects/service-session/.env.development:private-key:6
+448b14f7c3029b65b3094a2465752919d8e2193f:projects/service-api/.env.development:private-key:12
+448b14f7c3029b65b3094a2465752919d8e2193f:projects/service-api/.env.test:private-key:12
+448b14f7c3029b65b3094a2465752919d8e2193f:projects/service-session/.env.development:private-key:7
+448b14f7c3029b65b3094a2465752919d8e2193f:projects/service-session/.env.test:private-key:7
+7f04881c3ee5b8991d228ffa4e4b8ee24ed4a921:projects/service-api/.env.development:private-key:12
+7f04881c3ee5b8991d228ffa4e4b8ee24ed4a921:projects/service-api/.env.test:private-key:12
+7f04881c3ee5b8991d228ffa4e4b8ee24ed4a921:projects/service-session/.env.development:private-key:6
+7f04881c3ee5b8991d228ffa4e4b8ee24ed4a921:projects/service-session/.env.test:private-key:6
+
+# Historic: Auth0 dev-tenant client config in the old app-web env files.
+d27d31e287ca8dee7432e4be56f1e0f14466ccab:projects/app-web/.env.development:generic-api-key:6
+d27d31e287ca8dee7432e4be56f1e0f14466ccab:projects/app-web/.env.production:generic-api-key:6
+
+# Historic: Nx Cloud access token from the abandoned Nx setup; the workspace
+# it addressed is gone from this repo.
+8bf95e0dd84ecf654bf68c705648da4d5ba37ebc:nx.json:generic-api-key:54
+01b0f423a0cbee4d0294a0b21106d40438e7fd57:nx.json:generic-api-key:54
+46d58d3373f97746c52daa4974ccff2dc1e3d809:nx.json:generic-api-key:55

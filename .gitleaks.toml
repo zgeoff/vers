@@ -1,0 +1,16 @@
+# Secret-scanning config for gitleaks (PR job + pre-commit hook). Extends the
+# default ruleset; allowlists cover only files whose purpose is to hold
+# throwaway key material. Committed dev/test .env fixtures are deliberately NOT
+# path-allowlisted — their known findings are pinned by fingerprint in
+# .gitleaksignore so any new secret in them still flags.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "test files and test preloads hold intentionally fake keys and tokens"
+paths = ['''\.test\.tsx?$''', '''(^|/)test-setup\.ts$''']
+
+[[allowlists]]
+description = "committed .env examples document key shape with throwaway values"
+paths = ['''\.env(\.[\w.-]+)?\.example$''']
