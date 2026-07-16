@@ -64,6 +64,11 @@ services:
       - services/keys/.env.development
     ports:
       - '3008:3008'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3008/health']
+      interval: 2s
+      timeout: 3s
+      retries: 15
   service-replay:
     build:
       context: .
@@ -83,7 +88,7 @@ services:
       postgres:
         condition: service_healthy
       service-keys:
-        condition: service_started
+        condition: service_healthy
   service-session:
     build:
       context: .
