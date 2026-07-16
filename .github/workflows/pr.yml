@@ -25,6 +25,9 @@ jobs:
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # the action's hard-coded default (8.24.3) predates the root-level
+          # [[allowlists]] syntax .gitleaks.toml relies on and silently ignores it
+          GITLEAKS_VERSION: 8.30.1
 
   checks:
     runs-on: ubuntu-latest
