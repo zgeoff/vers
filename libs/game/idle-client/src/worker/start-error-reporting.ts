@@ -42,8 +42,6 @@ export async function startErrorReporting(
 
   const sentry = await import('@sentry/browser');
 
-  sentryHandle.current = sentry;
-
   sentry.init({
     dsn,
 
@@ -57,4 +55,8 @@ export async function startErrorReporting(
     ...(options.disableDefaultIntegrations === true && { defaultIntegrations: false }),
     ...(options.environment !== undefined && { environment: options.environment }),
   });
+
+  // published only after a successful init: a throw above leaves the handle undefined, so fault
+  // reporting keeps its no-op path instead of capturing through a dead SDK
+  sentryHandle.current = sentry;
 }
