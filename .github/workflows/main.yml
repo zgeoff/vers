@@ -163,21 +163,73 @@ jobs:
         id: list
         run: echo "apps=$(bun scripts/src/bin/deploy.ts list)" >> "$GITHUB_OUTPUT"
 
+  build:
+    name: Build
+    needs: [checks, manifest]
+    # build images for every stale app as soon as checks are green — the phase
+    # has no fleet side effects, so it runs beside migrate rather than after
+    # it. Each leg self-gates inside the deploy CLI: it compares HEAD against
+    # the GIT_SHA stamped on the app's machines, so a build skipped by an
+    # earlier failure or cancellation stays "stale" and ships on the next push.
+    if: ${{ needs.checks.result == 'success' && needs.manifest.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment: production
+    # worst observed leg (app-web remote build) is ~4 minutes; headroom for
+    # builder variance without holding the queue
+    timeout-minutes: 15
+    # one build per app at a time — a newer run's build overwrites the same
+    # commit-derived tag only after the earlier one finishes with it
+    concurrency:
+      group: ${{ github.workflow }}-build-${{ matrix.app }}
+      cancel-in-progress: false
+    strategy:
+      # each app is independent — one build failing must not abandon the others
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.manifest.outputs.apps) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # staleness runs turbo/git against each app's deployed SHA, which can
+          # be many pushes old — the CLI needs full history
+          fetch-depth: 0
+
+      # The image builds and pushes on Fly's remote builder (inside Fly's
+      # network, avoiding a GitHub-runner-to-registry.fly.io blob upload, which
+      # 502s on the large compiled-binary layers), tagged by commit SHA so the
+      # cutover phase derives the same ref without anything travelling between
+      # the jobs.
+      #
+      # app-web's image build bakes the browser DSN into the client bundle and
+      # uploads source maps to the error tracker; both no-op when the token/DSN
+      # aren't configured (the CLI forwards build args only when set).
+      - name: Build ${{ matrix.app }}
+        uses: ./.github/actions/fly-deploy
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+          VITE_UMAMI_WEBSITE_ID: ${{ vars.VITE_UMAMI_WEBSITE_ID }}
+        with:
+          args: build --app ${{ matrix.app }}
+          fly-api-token: ${{ secrets.FLY_API_TOKEN }}
+
   deploy:
     name: Deploy
-    needs: [checks, migrate, manifest]
-    # deploy only a fully green build, after the shared schema is current. Each
-    # leg self-gates inside the deploy CLI: it compares HEAD against the GIT_SHA
-    # stamped on the app's machines, so a deploy skipped by an earlier failure
-    # or cancellation stays "stale" and ships on the next push instead of being
-    # lost with the push delta.
+    needs: [checks, migrate, manifest, build]
+    # cut over only a fully green build, after the shared schema is current.
+    # The build job is an ordering edge, not a gate: its matrix result is the
+    # worst leg across all apps, and one app's failed build must not abandon
+    # the others' rollouts — an app whose own build failed cuts over to a
+    # missing ref and its leg fails alone. Legs self-gate on staleness exactly
+    # as the build phase does.
     if:
-      ${{ needs.checks.result == 'success' && needs.migrate.result == 'success' &&
+      ${{ !cancelled() && needs.checks.result == 'success' && needs.migrate.result == 'success' &&
       needs.manifest.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
-    # worst observed leg (app-web remote build + bluegreen cutover) is ~5
-    # minutes; 3× headroom for builder variance without holding the queue
+    # bluegreen cutover plus probes is ~3 minutes at worst; headroom without
+    # holding the queue
     timeout-minutes: 15
     # never cancel a rollout mid-flight; a newer run's deploy waits its turn
     concurrency:
@@ -196,10 +248,7 @@ jobs:
           # be many pushes old — the CLI needs full history
           fetch-depth: 0
 
-      # The CLI splits each rollout into build and cutover: the image builds
-      # and pushes on Fly's remote builder (inside Fly's network, avoiding a
-      # GitHub-runner-to-registry.fly.io blob upload, which 502s on the large
-      # compiled-binary layers), then the fleet cuts over to the pushed ref.
+      # The fleet cuts over to the ref the build phase pushed for this commit.
       # Each app's strategy (per fly.toml) gates cutover on the /health check,
       # so a machine that fails to boot blocks the release; a release that
       # boots but fails its post-deploy probes is rolled back to the app's
@@ -208,20 +257,13 @@ jobs:
       # syd host capacity is intermittently tight: a rollout that can't reserve a
       # machine fails with "insufficient resources / could not reserve resource"
       # and Fly rolls it back cleanly — re-run the failed job.
-      #
-      # app-web's image build bakes the browser DSN into the client bundle and
-      # uploads source maps to the error tracker; both no-op when the token/DSN
-      # aren't configured (the CLI forwards build args only when set).
       - name: Deploy ${{ matrix.app }}
         uses: ./.github/actions/fly-deploy
         env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
-          VITE_UMAMI_WEBSITE_ID: ${{ vars.VITE_UMAMI_WEBSITE_ID }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SERVICE_AUTH_PUBLIC_KEY: ${{ vars.SERVICE_AUTH_PUBLIC_KEY }}
         with:
-          args: deploy --app ${{ matrix.app }}
+          args: cutover --app ${{ matrix.app }}
           fly-api-token: ${{ secrets.FLY_API_TOKEN }}
 
   verify-fleet:
@@ -253,7 +295,7 @@ jobs:
 
   alert:
     name: Alert on failure
-    needs: [checks, migrate, manifest, deploy, verify-fleet]
+    needs: [checks, migrate, manifest, build, deploy, verify-fleet]
     # a red main pipeline pages the team channel: agent-driven pushes mean
     # nobody is necessarily watching the Actions tab, and a failed deploy or
     # fleet verification left unnoticed is exactly how version skew lingers

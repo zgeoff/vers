@@ -11,6 +11,7 @@ import { applyDeploy } from '../deploy/apply-deploy';
 import { applyRetentionActions } from '../deploy/apply-retention-actions';
 import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-actions';
 import { applySimVersionActions } from '../deploy/apply-sim-version-actions';
+import { buildImageRef } from '../deploy/build-image-ref';
 import { buildProviderAppName } from '../deploy/build-provider-app-name';
 import { checkParkedApp } from '../deploy/check-parked-app';
 import { checkTarget } from '../deploy/check-target';
@@ -48,6 +49,29 @@ program
   });
 
 program
+  .command('build')
+  .description('build and push an app image when its fleet is stale relative to HEAD')
+  .requiredOption('--app <name>', 'fly app name from the manifest')
+  .action(async (options: DeployCommandOptions) => {
+    await runBuild(options.app);
+  });
+
+program
+  .command('cutover')
+  .description('cut a stale app over to the image its build phase pushed for HEAD')
+  .requiredOption('--app <name>', 'fly app name from the manifest')
+  .action(async (options: DeployCommandOptions) => {
+    await runCutover(options.app);
+  });
+
+program
+  .command('images')
+  .description("print each buildable app's deployable image ref for HEAD as JSON")
+  .action(async () => {
+    await runImages();
+  });
+
+program
   .command('verify')
   .description('assert every app is online and current; any finding fails the run')
   .action(async () => {
@@ -82,6 +106,141 @@ program
   });
 
 async function runDeploy(app: string): Promise<void> {
+  const staleness = await checkTargetStaleness(app);
+
+  if (staleness.staleReason === null) {
+    await runReconcilesForCurrentTarget(staleness);
+
+    return;
+  }
+
+  const target = staleness.target;
+
+  console.log(`deploying ${target.app} at ${staleness.sha} — ${staleness.staleReason}`);
+
+  await setEngineHashEnv(target);
+
+  const image = target.dockerfile === undefined ? null : await applyBuild(target, staleness.sha);
+
+  await withReleaseDB(async (db) => {
+    await runRollout(db, target, staleness.sha, image);
+  });
+}
+
+async function runBuild(app: string): Promise<void> {
+  const staleness = await checkTargetStaleness(app);
+
+  const target = staleness.target;
+
+  if (staleness.staleReason === null) {
+    console.log(
+      `${target.app} is current at ${staleness.state.deployedSHA ?? 'unknown'} — skipping`,
+    );
+
+    return;
+  }
+
+  if (target.dockerfile === undefined) {
+    console.log(`${target.app} has no dockerfile — nothing to build`);
+
+    return;
+  }
+
+  console.log(`building ${target.app} at ${staleness.sha} — ${staleness.staleReason}`);
+
+  await setEngineHashEnv(target);
+
+  const image = await applyBuild(target, staleness.sha);
+
+  console.log(`pushed ${image}`);
+}
+
+async function runCutover(app: string): Promise<void> {
+  const staleness = await checkTargetStaleness(app);
+
+  if (staleness.staleReason === null) {
+    await runReconcilesForCurrentTarget(staleness);
+
+    return;
+  }
+
+  const target = staleness.target;
+
+  console.log(`deploying ${target.app} at ${staleness.sha} — ${staleness.staleReason}`);
+
+  // the build phase already pushed this exact ref — both phases derive it from (app, HEAD), so
+  // nothing needs to travel between the jobs
+  const image =
+    target.dockerfile === undefined ? null : buildImageRef(target.app, staleness.sha).ref;
+
+  await withReleaseDB(async (db) => {
+    await runRollout(db, target, staleness.sha, image);
+  });
+}
+
+/**
+ * Resolves the image ref each buildable app's cutover would deploy for HEAD: a stale app's is the
+ * ref its build phase pushes for this commit, a current app's is its newest recorded release
+ * (falling back to the fleet's resolved image for an app predating release records). Consumers —
+ * the full-stack e2e harness — get every ref in one JSON object on stdout.
+ */
+async function runImages(): Promise<void> {
+  const manifest = await loadDeployManifest();
+  const sha = await readHeadSHA();
+
+  const refs: Record<string, string> = {};
+
+  await withReleaseDB(async (db) => {
+    for (const target of manifest.apps) {
+      if (target.dockerfile === undefined) {
+        continue;
+      }
+
+      const state = await readAppState(target.app);
+
+      const changes = state.deployedSHA === null ? null : await readChangesSince(state.deployedSHA);
+      const staleReason = findStaleReason(target, changes);
+
+      if (staleReason !== null) {
+        refs[target.app] = buildImageRef(target.app, sha).ref;
+        continue;
+      }
+
+      const release = await findLatestRelease(db, target.app);
+
+      if (release !== undefined) {
+        refs[target.app] = release.image;
+        continue;
+      }
+
+      const fleetImage = await readFleetImage(target.app);
+
+      if (fleetImage === null) {
+        throw new Error(
+          `${target.app} has no built ref, recorded release, or single fleet image to resolve`,
+        );
+      }
+
+      refs[target.app] = `${fleetImage.repository}:${fleetImage.tag}`;
+    }
+  });
+
+  console.log(JSON.stringify(refs));
+}
+
+interface TargetStaleness {
+  readonly sha: string;
+  readonly staleReason: string | null;
+  readonly state: Awaited<ReturnType<typeof readAppState>>;
+  readonly target: DeployTarget;
+}
+
+/**
+ * The staleness preamble every per-app phase shares: resolve the target, then compare HEAD
+ * against the SHA stamped on its machines. Each phase re-runs this rather than trusting an
+ * earlier phase's answer, so a phase skipped by a failure upstream stays self-gating.
+ */
+async function checkTargetStaleness(app: string): Promise<TargetStaleness> {
   const manifest = await loadDeployManifest();
 
   const target = requireTarget(manifest, app);
@@ -92,17 +251,24 @@ async function runDeploy(app: string): Promise<void> {
   const changes = state.deployedSHA === null ? null : await readChangesSince(state.deployedSHA);
   const staleReason = findStaleReason(target, changes);
 
-  if (staleReason === null) {
-    console.log(`${target.app} is current at ${state.deployedSHA ?? 'unknown'} — skipping`);
+  return { sha, staleReason, state, target };
+}
 
-    await runScheduledMachineReconcile(target);
-    await runSimVersionReconcile(target);
+/**
+ * The skipped-rollout path `deploy` and `cutover` share: a current fleet still gets its scheduled
+ * machines and sim version reconciled, so drift converges on the next push rather than waiting
+ * for a commit that redeploys the app.
+ */
+async function runReconcilesForCurrentTarget(staleness: TargetStaleness): Promise<void> {
+  console.log(
+    `${staleness.target.app} is current at ${staleness.state.deployedSHA ?? 'unknown'} — skipping`,
+  );
 
-    return;
-  }
+  await runScheduledMachineReconcile(staleness.target);
+  await runSimVersionReconcile(staleness.target);
+}
 
-  console.log(`deploying ${target.app} at ${sha} — ${staleReason}`);
-
+async function withReleaseDB(run: (db: Kysely<DB>) => Promise<void>): Promise<void> {
   const databaseURL = requireEnvVar(
     'DATABASE_URL',
     'the release record backing rollback lives in the shared database',
@@ -111,25 +277,26 @@ async function runDeploy(app: string): Promise<void> {
   const db = createDB({ databaseURL });
 
   try {
-    await runRollout(db, target, sha);
+    await run(db);
   } finally {
     await db.destroy();
   }
 }
 
 /**
- * One rollout: build and push the image (targets with no Dockerfile deploy their fly.toml image
- * instead), cut the fleet over to it, reconcile, probe. Probes
+ * One rollout from an already-built image (null for targets that deploy their fly.toml stock
+ * image): cut the fleet over, reconcile, probe. Probes
  * passing records the release as the app's next rollback target; probes failing rolls the fleet
  * back to the previous recorded release and leaves the run red either way, so the failure ships
  * forward on a later push instead of a broken release serving meanwhile.
  */
-async function runRollout(db: Kysely<DB>, target: DeployTarget, sha: string): Promise<void> {
-  await setEngineHashEnv(target);
-
+async function runRollout(
+  db: Kysely<DB>,
+  target: DeployTarget,
+  sha: string,
+  image: string | null,
+): Promise<void> {
   const previous = await findLatestRelease(db, target.app);
-
-  const image = target.dockerfile === undefined ? null : await applyBuild(target, sha);
 
   await applyDeploy(target, sha, image);
   await waitForDeployedSHA(target.app, sha);
