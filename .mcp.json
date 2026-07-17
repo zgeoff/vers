@@ -12,7 +12,7 @@
       "command": "sh",
       "args": [
         "-c",
-        "BUGSINK_TOKEN=\"$(op read 'op://vers/bugsink/mcp-token')\" exec npx -y @zgeoff/bugsink-mcp"
+        "BUGSINK_TOKEN=\"$(op read 'op://vers/bugsink/mcp-token')\" exec npx -y @zgeoff/bugsink-mcp@0.2.0"
       ],
       "env": {
         "BUGSINK_URL": "https://vers-bugsink.fly.dev"
@@ -21,6 +21,23 @@
     "postgres": {
       "command": "bun",
       "args": ["scripts/src/bin/pg-mcp-launch.ts"]
+    },
+    "tinybird": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "exec npx -y @zgeoff/mcp-remote@0.1.38 \"https://mcp.tinybird.co?token=$(op read 'op://vers/tinybird/read-token')&host=https://api.us-east.tinybird.co\""
+      ]
+    },
+    "umami": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "UMAMI_USERNAME=\"$(op read 'op://vers/umami/username')\" UMAMI_PASSWORD=\"$(op read 'op://vers/umami/password')\" exec npx -y @zgeoff/umami-mcp@0.1.0"
+      ],
+      "env": {
+        "UMAMI_API_BASE": "https://vers-umami.fly.dev/api"
+      }
     }
   }
 }

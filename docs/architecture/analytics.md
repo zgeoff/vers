@@ -20,6 +20,9 @@ answered by the analytics proxy in `app-web`'s server middleware, which forwards
 paths with neutral names keep the tracker off ad-blocker lists that match Umami's default script
 name and third-party analytics origins.
 
+The `umami` MCP server (`.mcp.json`, `@zgeoff/umami-mcp` launched with the dashboard credentials
+from the `vers` vault's `umami` item) lets agent sessions query the dashboard's stats.
+
 Route changes auto-track as pageviews through the tracker's History API hooks. A play session parked
 on one route for hours reads as a single pageview — gameplay engagement is a product-analytics
 question, and pageview counts are not bent toward answering it.
@@ -91,8 +94,10 @@ Worker-broadcast events reach every connected tab, so a multi-tab player can lan
 - `TINYBIRD_URL` and `TINYBIRD_INGEST_TOKEN` — the workspace region's Events API origin and a token
   scoped to append on `product_events` — are Fly secrets on the web app; either one absent disables
   delivery.
-- Query endpoints authenticate with the read token the pipe deploy creates
-  (`product_analytics_read`).
+- Query endpoints authenticate with the read token the deployment creates
+  (`product_analytics_read`), which reads the data source and every declared endpoint.
+- The `tinybird` MCP server (`.mcp.json`, Tinybird's hosted `mcp.tinybird.co`) connects with that
+  read token, so agent sessions query endpoints and run read-only SQL over the event stream.
 - The workspace admin token lives in the `vers` 1Password vault (`tinybird` item).
 
 ### Privacy
