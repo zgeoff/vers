@@ -54,14 +54,18 @@ export default defineConfig({
       stderr: 'pipe',
       stdout: 'pipe',
       timeout: 60 * 1000,
-      url: 'http://localhost:3003/health',
+
+      // the same override-then-default resolution the spawned listeners apply per service
+      url: `${process.env['USER_SERVICE_URL'] ?? 'http://localhost:3003'}/health`,
     },
     {
       // every spec runs against the deployable artifact, exactly as built — no mock backend
       // in-process, no build-time env overrides. The e2e turbo task depends on the app's build
       // task, so the artifact is already on disk (cached or fresh) — serving it here must not
       // rebuild it. Downstream service calls leave the process over HTTP and land on the mock
-      // listeners above.
+      // listeners above. Never reuse an already-listening server: whatever answers on this port
+      // (a leftover vite dev, another app) is not the artifact, and reusing it silently voids
+      // the production-build guarantee.
       command: 'node ./server.mjs',
       cwd: appWebRoot,
       env: {
@@ -75,7 +79,7 @@ export default defineConfig({
         // Start's session sealing rejects any password under 32 characters
         SESSION_SECRET: 'e2e-session-secret-32-characters',
       },
-      reuseExistingServer: process.env['CI'] === undefined,
+      reuseExistingServer: false,
       stderr: 'pipe',
       stdout: 'pipe',
       timeout: 240 * 1000,

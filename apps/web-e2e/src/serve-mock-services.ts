@@ -60,6 +60,10 @@ for (const service of SERVICES) {
 
       return handled.matched ? handled.response : new Response(null, { status: 404 });
     },
+
+    // never the wildcard interface: these routers accept unverified bearer subjects and expose
+    // mutating procedures, so nothing beyond this host may reach them
+    hostname: url.hostname,
     port: Number(url.port),
   });
 
