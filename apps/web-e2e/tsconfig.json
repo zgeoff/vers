@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2024", "DOM"],
-    "types": ["node"]
+    "types": ["node", "bun"]
   },
   "include": ["playwright.config.ts", "src/**/*.ts"]
 }

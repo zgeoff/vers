@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForHoneypotWindow } from './wait-for-honeypot-window';
 
 /**
  * `/avatar` mounts its own satellite canvas alongside the persistent world canvas: two `<canvas>`
@@ -26,6 +27,9 @@ test('it mounts a second canvas for the avatar satellite and drops it on navigat
   await page.locator('html[data-hydrated]').waitFor();
   await page.getByLabel('Email').fill('e2e-avatar-satellite@vers.test');
   await page.getByLabel('Password').fill('password123');
+
+  await waitForHoneypotWindow(page);
+
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
   await expect(page).toHaveURL(/\/avatar$/);

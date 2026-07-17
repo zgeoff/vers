@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForHoneypotWindow } from './wait-for-honeypot-window';
 
 /**
  * Exercises the Flight pipeline against a live dev server booted against the mock backend: the
@@ -39,6 +40,9 @@ test('it serves the signed-in home page server-rendered, lands at respite, and l
   await page.locator('html[data-hydrated]').waitFor();
   await page.getByLabel('Email').fill('demo@vers.test');
   await page.getByLabel('Password').fill('password123');
+
+  await waitForHoneypotWindow(page);
+
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
   await page.waitForURL(/\/respite$/);
 

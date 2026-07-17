@@ -2,7 +2,6 @@ import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env['BASE_URL'] ?? 'http://localhost:3000';
-const productionBaseURL = process.env['PRODUCTION_BASE_URL'] ?? 'http://localhost:3010';
 
 // having a million issues trying to use __dirname to establish a reliable path
 // so it's easier to do this to handle the case when this file gets parsed for
@@ -46,51 +45,45 @@ export default defineConfig({
   },
   webServer: [
     {
-      // the dev server's own vite plugin starts the mock backend, giving journey specs the mock
-      // services a signed-in flow needs. Only `vite dev` fires that plugin's `configureServer`
-      // hook, so the production build below can't host it. The explicit port keeps a BASE_URL
-      // override honest — vite's config pins a default port that would win otherwise.
-      command: `bun run dev --port ${new URL(baseURL).port}`,
+      // the stateful mock backends as real HTTP listeners on the service dev ports the artifact's
+      // SERVICE_URLS defaults resolve. Never reuse an already-listening server: a service
+      // answering on these ports could be the real dev stack, and specs must never mutate it.
+      command: 'bun src/serve-mock-services.ts',
+      cwd: projectRoot,
+      reuseExistingServer: false,
+      stderr: 'pipe',
+      stdout: 'pipe',
+      timeout: 60 * 1000,
+
+      // the same override-then-default resolution the spawned listeners apply per service
+      url: `${process.env['USER_SERVICE_URL'] ?? 'http://localhost:3003'}/health`,
+    },
+    {
+      // every spec runs against the deployable artifact, exactly as built — no mock backend
+      // in-process, no build-time env overrides. The e2e turbo task depends on the app's build
+      // task, so the artifact is already on disk (cached or fresh) — serving it here must not
+      // rebuild it. Downstream service calls leave the process over HTTP and land on the mock
+      // listeners above. Never reuse an already-listening server: whatever answers on this port
+      // (a leftover vite dev, another app) is not the artifact, and reusing it silently voids
+      // the production-build guarantee.
+      command: 'node ./server.mjs',
       cwd: appWebRoot,
       env: {
         // canvas-persistence.spec.ts clicks through to the Market nav link
         FEATURE_MARKET: 'true',
 
-        // specs submit forms instantly; the bot-pacing floor would reject every one of them
-        VITE_HONEYPOT_MIN_FILL_TIME_MS: '0',
-
-        PLAYWRIGHT_TEST_BASE_URL: baseURL,
-
-        // Start's session sealing rejects any password under 32 characters
-        SESSION_SECRET: 'e2e-session-secret-32-characters',
-      },
-      reuseExistingServer: process.env['CI'] === undefined,
-      stderr: 'pipe',
-      stdout: 'pipe',
-      timeout: 240 * 1000,
-      url: baseURL,
-    },
-    {
-      // the real production artifact on its own port, so a smoke spec can prove the deployable
-      // build serves traffic. The e2e turbo task depends on the app's build task, so the artifact
-      // is already on disk (cached or fresh) — serving it here must not rebuild it. It hosts no
-      // mock backend, so only routes that call no downstream service (the health check, the
-      // anonymous home page) work.
-      command: 'node ./server.mjs',
-      cwd: appWebRoot,
-      env: {
         LOGGING: 'warn',
         NODE_ENV: 'production',
-        PORT: new URL(productionBaseURL).port,
+        PORT: new URL(baseURL).port,
 
         // Start's session sealing rejects any password under 32 characters
         SESSION_SECRET: 'e2e-session-secret-32-characters',
       },
-      reuseExistingServer: process.env['CI'] === undefined,
+      reuseExistingServer: false,
       stderr: 'pipe',
       stdout: 'pipe',
       timeout: 240 * 1000,
-      url: `${productionBaseURL}/health`,
+      url: `${baseURL}/health`,
     },
   ],
 

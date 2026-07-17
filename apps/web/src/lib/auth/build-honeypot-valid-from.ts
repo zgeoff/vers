@@ -4,16 +4,10 @@
 const HONEYPOT_MIN_FILL_TIME_MS = 1500;
 
 /**
- * Computes the valid-from timestamp for a freshly rendered form.
- *
- * Client hydration recomputes the rendered value, so the override must reach the browser bundle:
- * `VITE_HONEYPOT_MIN_FILL_TIME_MS` lifts the human-speed floor so e2e runs can submit forms
- * instantly. Production builds never set it.
+ * Computes the valid-from timestamp for a freshly rendered form. The floor has no env override:
+ * e2e specs pace their submits past the window instead, so the artifact under test enforces the
+ * same timing it ships with.
  */
 export function buildHoneypotValidFrom(): string {
-  const envOverride: string | undefined = import.meta.env['VITE_HONEYPOT_MIN_FILL_TIME_MS'];
-  const overrideMs = Number(envOverride);
-  const minFillTimeMs = Number.isFinite(overrideMs) ? overrideMs : HONEYPOT_MIN_FILL_TIME_MS;
-
-  return String(Date.now() + minFillTimeMs);
+  return String(Date.now() + HONEYPOT_MIN_FILL_TIME_MS);
 }
