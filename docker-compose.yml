@@ -12,12 +12,28 @@ services:
       - '5433'
     ports:
       - '5433:5433'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U admin -d vers -p 5433']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+  service-activity:
+    build:
+      context: .
+      dockerfile: services/activity/Dockerfile
+    env_file:
+      - services/activity/.env.development
+    environment:
+      - DATABASE_URL=postgresql://admin:password@postgres:5433/vers
+    ports:
+      - '3006:3006'
+    depends_on:
+      postgres:
+        condition: service_healthy
   service-avatar:
     build:
       context: .
       dockerfile: services/avatar/Dockerfile
-      args:
-        BUILD_MODE: development
     env_file:
       - services/avatar/.env.development
     environment:
@@ -25,13 +41,58 @@ services:
     ports:
       - '3005:3005'
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+  service-email:
+    build:
+      context: .
+      dockerfile: services/email/Dockerfile
+    env_file:
+      - services/email/.env.development
+    environment:
+      - DATABASE_URL=postgresql://admin:password@postgres:5433/vers
+    ports:
+      - '3007:3007'
+    depends_on:
+      postgres:
+        condition: service_healthy
+  service-keys:
+    build:
+      context: .
+      dockerfile: services/keys/Dockerfile
+    env_file:
+      - services/keys/.env.development
+    ports:
+      - '3008:3008'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3008/health']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+  service-replay:
+    build:
+      context: .
+      dockerfile: services/replay/Dockerfile
+      args:
+        # the sim version baked into the compiled binary; harnesses that replay real segments
+        # override this with the hash `loadEngineHash` computes for the same commit
+        SIM_ENGINE_HASH: ${SIM_ENGINE_HASH:-development}
+    env_file:
+      - services/replay/.env.development
+    environment:
+      - DATABASE_URL=postgresql://admin:password@postgres:5433/vers
+      - KEYS_SERVICE_URL=http://service-keys:3008
+    ports:
+      - '3009:3009'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-keys:
+        condition: service_healthy
   service-session:
     build:
       context: .
       dockerfile: services/session/Dockerfile
-      args:
-        BUILD_MODE: development
     env_file:
       - services/session/.env.development
     environment:
@@ -39,13 +100,12 @@ services:
     ports:
       - '3002:3002'
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
   service-user:
     build:
       context: .
       dockerfile: services/user/Dockerfile
-      args:
-        BUILD_MODE: development
     env_file:
       - services/user/.env.development
     environment:
@@ -53,13 +113,12 @@ services:
     ports:
       - '3003:3003'
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
   service-verification:
     build:
       context: .
       dockerfile: services/verification/Dockerfile
-      args:
-        BUILD_MODE: development
     env_file:
       - services/verification/.env.development
     environment:
@@ -67,6 +126,7 @@ services:
     ports:
       - '3004:3004'
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 volumes:
   postgres:
