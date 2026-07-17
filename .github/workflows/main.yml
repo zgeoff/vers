@@ -194,6 +194,8 @@ jobs:
           # staleness runs turbo/git against each app's deployed SHA, which can
           # be many pushes old — the CLI needs full history
           fetch-depth: 0
+          # no later step needs authenticated git access
+          persist-credentials: false
 
       # The image builds and pushes on Fly's remote builder (inside Fly's
       # network, avoiding a GitHub-runner-to-registry.fly.io blob upload, which
@@ -311,8 +313,8 @@ jobs:
             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           FAILED: >-
             checks=${{ needs.checks.result }}, migrate=${{ needs.migrate.result }}, manifest=${{
-            needs.manifest.result }}, deploy=${{ needs.deploy.result }}, verify-fleet=${{
-            needs.verify-fleet.result }}
+            needs.manifest.result }}, build=${{ needs.build.result }}, deploy=${{
+            needs.deploy.result }}, verify-fleet=${{ needs.verify-fleet.result }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           if [ -z "${WEBHOOK_URL}" ]; then

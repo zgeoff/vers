@@ -95,7 +95,8 @@ rolls out:
    app with no Dockerfile (`vers-bugsink`) has no build leg work and cuts over to the image named in
    its `fly.toml`. The CLI's `deploy` command runs both phases in one invocation for a manual
    rollout; `images` prints each buildable app's deployable ref for HEAD (the commit-derived tag
-   when stale, the newest recorded release otherwise) as JSON.
+   when stale, the newest recorded release otherwise, the fleet's resolved image for an app with no
+   recorded release yet) as JSON.
 4. A rollout whose probes pass is recorded in the `releases` table (app, commit SHA, image ref, the
    digest the fleet resolved it to) — the newest row per app is that app's rollback target. The
    cutover legs require `DATABASE_URL` for this record.
