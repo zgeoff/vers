@@ -12,7 +12,7 @@
       "command": "sh",
       "args": [
         "-c",
-        "BUGSINK_TOKEN=\"$(op read 'op://vers/bugsink/mcp-token')\" exec npx -y @zgeoff/bugsink-mcp"
+        "BUGSINK_TOKEN=\"$(op read 'op://vers/bugsink/mcp-token')\" exec npx -y @zgeoff/bugsink-mcp@0.2.0"
       ],
       "env": {
         "BUGSINK_URL": "https://vers-bugsink.fly.dev"
@@ -26,17 +26,17 @@
       "command": "sh",
       "args": [
         "-c",
-        "exec npx -y mcp-remote \"https://mcp.tinybird.co?token=$(op read 'op://vers/tinybird/read-token')&host=https://api.us-east.tinybird.co\""
+        "exec npx -y mcp-remote@0.1.38 \"https://mcp.tinybird.co?token=$(op read 'op://vers/tinybird/read-token')&host=https://api.us-east.tinybird.co\""
       ]
     },
     "umami": {
       "command": "sh",
       "args": [
         "-c",
-        "UMAMI_USERNAME=\"$(op read 'op://vers/umami/username')\" UMAMI_PASSWORD=\"$(op read 'op://vers/umami/password')\" exec uvx umami-mcp-server"
+        "UMAMI_USERNAME=\"$(op read 'op://vers/umami/username')\" UMAMI_PASSWORD=\"$(op read 'op://vers/umami/password')\" exec uvx umami-mcp-server==0.1.1"
       ],
       "env": {
-        "UMAMI_URL": "https://vers-umami.fly.dev"
+        "UMAMI_API_BASE": "https://vers-umami.fly.dev/api"
       }
     }
   }
