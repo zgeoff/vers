@@ -517,6 +517,7 @@
       "dependencies": {
         "@orpc/client": "catalog:",
         "@orpc/contract": "catalog:",
+        "@sentry/browser": "catalog:",
         "@vers/client-test-utils": "workspace:*",
         "@vers/contract-activity": "workspace:*",
         "@vers/design-system": "workspace:*",
@@ -542,6 +543,7 @@
         "happy-dom": "catalog:",
         "msw": "catalog:",
         "typescript": "catalog:",
+        "vite": "catalog:",
       },
     },
     "libs/game/idle-core": {
@@ -1130,6 +1132,7 @@
     "@react-three/fiber": "9.6.1",
     "@react-three/test-renderer": "9.1.0",
     "@rolldown/plugin-babel": "0.2.3",
+    "@sentry/browser": "10.63.0",
     "@sentry/bun": "10.63.0",
     "@sentry/node": "10.63.0",
     "@sentry/react": "10.63.0",

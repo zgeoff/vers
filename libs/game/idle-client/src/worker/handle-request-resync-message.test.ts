@@ -1,10 +1,12 @@
-import { expect, mock, test } from 'bun:test';
+import { expect, mock, onTestFinished, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
+import type { ErrorEvent } from '@sentry/browser';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { SIMULATION_TIMESTEP_MS, buildSimulationInput, runAttempt } from '@vers/idle-core';
 import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
+import { waitFor } from '@vers/test-utils';
 import invariant from 'tiny-invariant';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
@@ -13,6 +15,8 @@ import { createTestConnection } from '../test-utils/create-test-connection';
 import type { RequestResyncMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
+import { sentryHandle } from './sentry-handle';
+import { startErrorReporting } from './start-error-reporting';
 
 interface SetupTestConfig {
   readonly userID: string;
@@ -373,4 +377,53 @@ test('it attaches a fresh login live without broadcasting any catch-up status', 
 
   invariant(simulation !== null, 'expected the resync to install a live simulation');
   expect(simulation.activity?.id).toBe(activity.id);
+});
+
+test('it reports a fault to the error backend and folds to offline when the resync fails outright', async () => {
+  const previousHandle = sentryHandle.current;
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  const connection = createTestConnection();
+
+  const context = createStubWorkerContext({
+    connections: [connection.port],
+    submitter: {
+      flushHeld: () => Promise.reject(new Error('held flush exploded')),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+    },
+  });
+
+  const message: RequestResyncMessage = {
+    avatarID: 'avatar-with-held-tail',
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(context, message);
+
+  await connection.waitForMessages(1);
+
+  expect(connection.received).toStrictEqual([
+    { online: false, type: WorkerMessageType.ConnectionStatus },
+  ]);
+
+  await waitFor(() => {
+    expect(recorded).toHaveLength(1);
+  });
+
+  expect(recorded[0]?.tags).toMatchObject({ site: 'resync' });
+  expect(context.isResyncInFlight()).toBe(false);
 });

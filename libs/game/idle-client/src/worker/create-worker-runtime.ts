@@ -13,6 +13,7 @@ import { createOfflineCapStatusMessage } from './create-offline-cap-status-messa
 import { createRequestResyncMessage } from './create-request-resync-message';
 import { handleClientMessage } from './handle-client-message';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
+import { reportWorkerFault } from './report-worker-fault';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
 
@@ -131,7 +132,13 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     port.start();
 
     port.addEventListener('message', (messageEvent: MessageEvent<ClientMessage>) => {
-      void handleClientMessage(context, port, messageEvent);
+      void (async () => {
+        try {
+          await handleClientMessage(context, port, messageEvent);
+        } catch (error) {
+          reportWorkerFault('message-routing', error);
+        }
+      })();
     });
 
     // Chrome fires 'close' when the peer disconnects (shipped 2024); Firefox/Safari support is
@@ -144,7 +151,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     // ensure we're only running one loop per worker
     if (!running) {
       running = true;
-      void runTickLoop();
+
+      scheduleTick();
     }
   };
 
@@ -174,7 +182,19 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
     await wait(1);
 
-    void runTickLoop();
+    scheduleTick();
+  };
+
+  // a crash still stops the loop — the fault is reported, and restarting a simulation that throws
+  // deterministically would only flood the error backend with the same crash every tick
+  const scheduleTick = () => {
+    void (async () => {
+      try {
+        await runTickLoop();
+      } catch (error) {
+        reportWorkerFault('tick-loop', error);
+      }
+    })();
   };
 
   // The worker's own reconnect recovery: a returning connection resends whatever the submitter
@@ -184,10 +204,14 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     emitConnectionStatus(true);
 
     void (async () => {
-      await submitter.flushHeld();
+      try {
+        await submitter.flushHeld();
 
-      if (context.getSimulation() === null && resyncAvatarID !== null) {
-        await handleRequestResyncMessage(context, createRequestResyncMessage(resyncAvatarID));
+        if (context.getSimulation() === null && resyncAvatarID !== null) {
+          await handleRequestResyncMessage(context, createRequestResyncMessage(resyncAvatarID));
+        }
+      } catch (error) {
+        reportWorkerFault('reconnect', error);
       }
     })();
   };

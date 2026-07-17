@@ -10,6 +10,7 @@ import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createResyncStatusMessage } from './create-resync-status-message';
 import { registerSimulationListeners } from './register-simulation-listeners';
+import { reportWorkerFault } from './report-worker-fault';
 import type { WorkerContext } from './types';
 
 /**
@@ -20,8 +21,8 @@ import type { WorkerContext } from './types';
  * resolves; a zero-gap outcome (live re-attach, no activity) stays silent, so a fresh login never
  * opens that UI. A live simulation this resync would install is skipped when a different activity
  * went live while it was running — a fresher `SetActivity` always wins. A resync that fails
- * outright reports the worker offline — the signal tabs use to explain a stalled catch-up — and
- * never rejects; the next reconnect retries it.
+ * outright forwards the fault to the error backend and reports the worker offline — the signal
+ * tabs use to explain a stalled catch-up — and never rejects; the next reconnect retries it.
  */
 export async function handleRequestResyncMessage(
   context: WorkerContext,
@@ -51,7 +52,8 @@ export async function handleRequestResyncMessage(
     });
 
     await applyResyncResult(context, result);
-  } catch {
+  } catch (error) {
+    reportWorkerFault('resync', error);
     emitConnectionStatus(context, false);
   } finally {
     context.setResyncInFlight(false);
