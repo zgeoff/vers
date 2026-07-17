@@ -219,12 +219,12 @@ jobs:
   deploy:
     name: Deploy
     needs: [checks, migrate, manifest, build]
-    # cut over only a fully green build, after the shared schema is current.
-    # The build job is an ordering edge, not a gate: its matrix result is the
-    # worst leg across all apps, and one app's failed build must not abandon
-    # the others' rollouts — an app whose own build failed cuts over to a
-    # missing ref and its leg fails alone. Legs self-gate on staleness exactly
-    # as the build phase does.
+    # cut over after the build phase completes and the shared schema is
+    # current. The build job is an ordering edge, not a gate: its matrix
+    # result is the worst leg across all apps, and one app's failed build must
+    # not abandon the others' rollouts — an app whose own build failed cuts
+    # over to a missing ref and its leg fails alone. Legs self-gate on
+    # staleness exactly as the build phase does.
     if:
       ${{ !cancelled() && needs.checks.result == 'success' && needs.migrate.result == 'success' &&
       needs.manifest.result == 'success' }}

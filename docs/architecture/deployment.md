@@ -92,7 +92,7 @@ rolls out:
    travels between the jobs, and re-running a leg overwrites its own tag instead of minting a new
    artifact. A stale cutover leg deploys that pushed ref (`flyctl deploy --image`), waits for the
    fleet to report the new SHA, then runs the app's post-deploy probes from `deploy.config.ts`. An
-   app with no Dockerfile (`vers-bugsink`) has no build leg work and cuts over to the image named in
+   app with no Dockerfile (`vers-umami`) has no build leg work and cuts over to the image named in
    its `fly.toml`. The CLI's `deploy` command runs both phases in one invocation for a manual
    rollout; `images` prints each buildable app's deployable ref for HEAD (the commit-derived tag
    when stale, the newest recorded release otherwise, the fleet's resolved image for an app with no
@@ -130,10 +130,11 @@ image versions".
 A rollout can fail on transient `syd` host-capacity refusals ("could not reserve resource"); Fly
 rolls back cleanly, so re-run the failed job.
 
-`vers-bugsink` and `vers-umami` deploy pinned stock images with no build. Neither sits in the turbo
-task graph, so their staleness triggers in `deploy.config.ts` are path globs (`apps/bugsink/**`,
+`vers-bugsink` and `vers-umami` ship pinned upstream images. Neither sits in the turbo task graph,
+so their staleness triggers in `deploy.config.ts` are path globs (`apps/bugsink/**`,
 `apps/umami/**`) rather than turbo affectedness. Upgrading either is a tag bump — Bugsink on its
-`Dockerfile` `FROM` line, Umami on its `fly.toml` `[build]` image.
+`Dockerfile` `FROM` line (a thin config layer its build leg bakes like any other app's), Umami on
+its `fly.toml` `[build]` image, deployed with no build leg at all.
 
 ## Sim-version registry
 
