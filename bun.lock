@@ -120,9 +120,13 @@
       "name": "@vers/web-e2e",
       "version": "0.0.0",
       "devDependencies": {
+        "@orpc/server": "catalog:",
         "@playwright/test": "catalog:",
+        "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@vers/contract-activity": "workspace:*",
+        "@vers/mock-services": "workspace:*",
+        "@vers/service-auth": "workspace:*",
         "typescript": "catalog:",
       },
     },

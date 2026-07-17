@@ -41,6 +41,9 @@
       ],
       "ignoreDependencies": ["pino", "pino-pretty"]
     },
+    "apps/web-e2e": {
+      "entry": ["src/serve-mock-services.ts"]
+    },
     "libs/data/db": {
       "entry": ["kysely.config.ts", "migrations/*.ts", "seeds/*.ts"]
     },

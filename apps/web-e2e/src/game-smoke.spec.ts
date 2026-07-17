@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForHoneypotWindow } from './wait-for-honeypot-window';
 
 test('it renders respite, avatar, and explore for a signed-in caller without console errors', async ({
   page,
@@ -21,6 +22,9 @@ test('it renders respite, avatar, and explore for a signed-in caller without con
   await page.locator('html[data-hydrated]').waitFor();
   await page.getByLabel('Email').fill('e2e-game@vers.test');
   await page.getByLabel('Password').fill('password123');
+
+  await waitForHoneypotWindow(page);
+
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
   await expect(page).toHaveURL(/\/respite$/);

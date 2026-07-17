@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForHoneypotWindow } from './wait-for-honeypot-window';
 
 /**
  * The `_game` layout mounts its canvas once and never remounts it across child-route navigation:
@@ -28,6 +29,9 @@ test('it keeps the same canvas element across client-side game navigation', asyn
   await page.locator('html[data-hydrated]').waitFor();
   await page.getByLabel('Email').fill('e2e-canvas@vers.test');
   await page.getByLabel('Password').fill('password123');
+
+  await waitForHoneypotWindow(page);
+
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
   await expect(page).toHaveURL(/\/explore$/);
