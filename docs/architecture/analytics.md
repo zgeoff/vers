@@ -20,9 +20,8 @@ answered by the analytics proxy in `app-web`'s server middleware, which forwards
 paths with neutral names keep the tracker off ad-blocker lists that match Umami's default script
 name and third-party analytics origins.
 
-The `umami` MCP server (`.mcp.json`, the community `umami-mcp-server` package launched with the
-dashboard credentials from the `vers` vault's `umami` item) lets agent sessions query the
-dashboard's stats.
+The `umami` MCP server (`.mcp.json`, `@zgeoff/umami-mcp` launched with the dashboard credentials
+from the `vers` vault's `umami` item) lets agent sessions query the dashboard's stats.
 
 Route changes auto-track as pageviews through the tracker's History API hooks. A play session parked
 on one route for hours reads as a single pageview — gameplay engagement is a product-analytics
