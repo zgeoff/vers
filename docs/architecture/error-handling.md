@@ -1,7 +1,7 @@
 # Error handling
 
 How failures are classified, declared, transported, retried, reported, and traced across the
-services and app-web.
+services, app-web, and the idle worker.
 
 ## Taxonomy
 
@@ -110,6 +110,16 @@ What reports, by tier:
 | service        | `onError` interceptor in `createService`, and `reportUnexpectedError` at every background swallow point | non-`ORPCError` throws and 5xx `ORPCError`s from a request; an unexpected failure from a worker loop, job queue, drain, or sweep run |
 | app-web client | `QueryCache`/`MutationCache` `onError`                                                                  | non-`ORPCError` failures (network, client bugs) — service errors were already reported by the service that produced them             |
 | app-web render | root route `errorComponent`                                                                             | render/loader errors nothing below caught                                                                                            |
+| idle worker    | `reportWorkerFault` at each swallow point, plus the SDK's default global handlers                       | message-routing, tick-loop, reconnect-recovery, and resync failures the worker otherwise swallows                                    |
+
+The idle SharedWorker (`@vers/idle-client`) runs its own SDK instance: `startErrorReporting`
+initializes `@sentry/browser` inside the worker scope from `VITE_SENTRY_DSN`, a no-op when it's
+undefined, so capture works with every tab closed. `reportWorkerFault` tags each event with a `site`
+tag (`message-routing`, `tick-loop`, `reconnect`, `resync`) naming the swallow point that caught it;
+the SDK's default global handlers net any throw those sites miss. Capture never changes the worker's
+failure behaviour — a failed resync still folds to an offline status, and a tick-loop crash still
+stops the loop, since restarting a simulation that throws deterministically would resubmit the same
+crash every tick.
 
 A service report carries a `traceID` event tag when the capture runs inside an active trace scope; a
 report emitted outside any scope, and every app-web capture, omits the tag. The RPC interceptor tags
