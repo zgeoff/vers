@@ -1,4 +1,5 @@
 TOKEN product_events_append APPEND
+TOKEN product_analytics_read READ
 
 DESCRIPTION >
     The behavioural product-event stream: one row per curated event, identity stamped server-side
