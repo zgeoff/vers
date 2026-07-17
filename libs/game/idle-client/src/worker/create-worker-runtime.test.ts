@@ -6,7 +6,6 @@ import { waitFor } from '@vers/test-utils';
 import { server } from '../mocks/node';
 import type { TestConnection } from '../test-utils/create-test-connection';
 import { createTestConnection } from '../test-utils/create-test-connection';
-import type { ClientMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
@@ -128,13 +127,10 @@ test('it reports a fault to the error backend when a message makes its handler t
   // a version-skewed tab can post an activity shape this worker build cannot derive a simulation
   // input from — the handler's throw must land in the error backend, not vanish into the void'd
   // routing promise
-  connection.post(
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a version-skewed tab posts shapes outside this build's ClientMessage union; the cast models exactly that input
-    {
-      activity: { ...createMockActivityData(), buildSnapshot: undefined },
-      type: ClientMessageType.SetActivity,
-    } as unknown as ClientMessage,
-  );
+  connection.postRaw({
+    activity: { ...createMockActivityData(), buildSnapshot: undefined },
+    type: ClientMessageType.SetActivity,
+  });
 
   await waitFor(() => {
     expect(recorded).toHaveLength(1);

@@ -20,6 +20,12 @@ export interface TestConnection {
   readonly post: (message: ClientMessage) => void;
 
   /**
+   * Posts an arbitrary payload from the test's end of the channel — the channel itself is untyped
+   * at runtime, and a peer on another build can post shapes outside this build's message union.
+   */
+  readonly postRaw: (message: unknown) => void;
+
+  /**
    * Resolves once at least `count` messages have arrived; rethrows the failed length assertion
    * when the wait times out, so a missing broadcast fails loudly at the wait itself.
    */
@@ -44,6 +50,9 @@ export function createTestConnection(): TestConnection {
   return {
     port: channel.port1,
     post: (message) => {
+      channel.port2.postMessage(message);
+    },
+    postRaw: (message) => {
       channel.port2.postMessage(message);
     },
     received,
