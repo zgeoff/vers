@@ -27,7 +27,9 @@ export interface StartErrorReportingOptions {
  * Initializes the Sentry SDK that `reportWorkerFault` captures through, inside the shared
  * worker's own scope — capture must not depend on a window client being connected, since a worker
  * can fault with every tab gone. A no-op when `dsn` is undefined, so a DSN-less worker never
- * loads the SDK. The SDK's default global handlers stay on in production, netting any throw the
+ * loads the SDK. Never rejects: a bootstrap failure leaves reporting off with a console warning,
+ * since an unhandled rejection from the reporting path itself is the one fault nothing can
+ * capture. The SDK's default global handlers stay on in production, netting any throw the
  * explicit capture sites miss. Tracing lives on the OpenTelemetry path; the error backend drops
  * transaction envelopes. Client reports are off: the error backend discards them, and their
  * periodic flush would keep an idle worker chattering.
@@ -40,23 +42,27 @@ export async function startErrorReporting(
     return;
   }
 
-  const sentry = await import('@sentry/browser');
+  try {
+    const sentry = await import('@sentry/browser');
 
-  sentry.init({
-    dsn,
+    sentry.init({
+      dsn,
 
-    // an explicit `dataCollection` makes the SDK's spec defaults the base, which collect every
-    // HTTP body type — and a failed checkpoint submission's body carries the session token, so
-    // body capture is switched off wholesale
-    dataCollection: { httpBodies: [], userInfo: true },
-    tracesSampleRate: 0,
-    sendClientReports: false,
-    ...(options.beforeSend !== undefined && { beforeSend: options.beforeSend }),
-    ...(options.disableDefaultIntegrations === true && { defaultIntegrations: false }),
-    ...(options.environment !== undefined && { environment: options.environment }),
-  });
+      // an explicit `dataCollection` makes the SDK's spec defaults the base, which collect every
+      // HTTP body type — and a failed checkpoint submission's body carries the session token, so
+      // body capture is switched off wholesale
+      dataCollection: { httpBodies: [], userInfo: true },
+      tracesSampleRate: 0,
+      sendClientReports: false,
+      ...(options.beforeSend !== undefined && { beforeSend: options.beforeSend }),
+      ...(options.disableDefaultIntegrations === true && { defaultIntegrations: false }),
+      ...(options.environment !== undefined && { environment: options.environment }),
+    });
 
-  // published only after a successful init: a throw above leaves the handle undefined, so fault
-  // reporting keeps its no-op path instead of capturing through a dead SDK
-  sentryHandle.current = sentry;
+    // published only after a successful init: a failure above leaves the handle undefined, so
+    // fault reporting keeps its no-op path instead of capturing through a dead SDK
+    sentryHandle.current = sentry;
+  } catch (error) {
+    console.warn('error reporting failed to start', error);
+  }
 }
