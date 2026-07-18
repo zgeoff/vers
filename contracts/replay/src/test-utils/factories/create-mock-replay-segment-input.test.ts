@@ -7,15 +7,19 @@ test('it builds a request with a single enemy and no weapon equipped', () => {
   expect(input).toStrictEqual({
     activity: {
       difficulty: 1,
-      enemies: [
-        {
-          level: 1,
-          life: 30,
-          name: 'Test Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        },
-      ],
+      encounter: {
+        waves: [
+          [
+            {
+              level: 1,
+              life: 30,
+              name: 'Test Enemy',
+              primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+              xp: 10,
+            },
+          ],
+        ],
+      },
       failureAction: 'retry',
       id: expect.toBeString(),
       name: 'World Map Encounter',

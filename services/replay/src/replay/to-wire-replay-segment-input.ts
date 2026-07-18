@@ -30,7 +30,11 @@ export function toWireReplaySegmentInput(
   return {
     activity: {
       difficulty: activity.difficulty,
-      enemies: activity.enemies,
+      encounter: {
+        waves: activity.encounter.waves.map((wave) =>
+          wave.map((enemy) => ({ ...enemy, primaryAttack: { ...enemy.primaryAttack } })),
+        ),
+      },
       failureAction: WIRE_FAILURE_ACTIONS[activity.failureAction],
       id: activity.id,
       name: activity.name,

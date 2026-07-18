@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import { EnemyDataSchema } from './enemy-data-schema';
+import { EncounterDefinitionSchema } from './encounter-definition-schema';
 
 /**
  * Wire shape of the engine's `WorldMapEncounterActivityInput` — the only activity variant the
@@ -7,7 +7,7 @@ import { EnemyDataSchema } from './enemy-data-schema';
  */
 export const ActivityInputSchema = z.object({
   difficulty: z.number(),
-  enemies: z.array(EnemyDataSchema),
+  encounter: EncounterDefinitionSchema,
   failureAction: z.enum(['abort', 'retry']),
   id: z.string(),
   name: z.string(),

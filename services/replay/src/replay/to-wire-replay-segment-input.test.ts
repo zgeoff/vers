@@ -5,15 +5,19 @@ import { toWireReplaySegmentInput } from './to-wire-replay-segment-input';
 test('it converts the engine activity and avatar to the wire shape', () => {
   const activity = {
     difficulty: 1,
-    enemies: [
-      {
-        level: 1,
-        life: 30,
-        name: 'Foe',
-        primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-        xp: 10,
-      },
-    ],
+    encounter: {
+      waves: [
+        [
+          {
+            level: 1,
+            life: 30,
+            name: 'Foe',
+            primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+            xp: 10,
+          },
+        ],
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: 'act_1',
     name: 'World Map Encounter',
@@ -35,7 +39,7 @@ test('it converts the engine activity and avatar to the wire shape', () => {
   expect(job).toStrictEqual({
     activity: {
       difficulty: 1,
-      enemies: activity.enemies,
+      encounter: activity.encounter,
       failureAction: 'retry',
       id: 'act_1',
       name: 'World Map Encounter',
@@ -59,7 +63,7 @@ test('it converts the engine activity and avatar to the wire shape', () => {
 test('it converts an Abort failure action to its wire literal', () => {
   const activity = {
     difficulty: 1,
-    enemies: [],
+    encounter: { waves: [] },
     failureAction: ActivityFailureAction.Abort,
     id: 'act_1',
     name: 'World Map Encounter',
@@ -84,7 +88,7 @@ test('it converts an Abort failure action to its wire literal', () => {
 test('it carries the expected checkpoint count and stopAtState when given', () => {
   const activity = {
     difficulty: 1,
-    enemies: [],
+    encounter: { waves: [] },
     failureAction: ActivityFailureAction.Abort,
     id: 'act_1',
     name: 'World Map Encounter',
