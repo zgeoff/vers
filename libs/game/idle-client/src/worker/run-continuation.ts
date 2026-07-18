@@ -17,10 +17,13 @@ import type { WorkerContext } from './types';
  * live for the avatar: a different, never-appended row is adopted directly from its start fields,
  * while a progressed row — or this same row, its terminal append still unacknowledged — is handed
  * to a full resync, which reconstructs its confirmed checkpoints before attaching; adopting either
- * from a zero cursor would fork the checkpoint chain. A transport failure stops and uninstalls the
- * simulation and reports the worker offline rather than retrying inline — the next reconnect
- * resync rebuilds from the server's confirmed state. Any other rejection also stops and uninstalls
- * the simulation, but without the offline signal: the service answered, so the failure is the
+ * from a zero cursor would fork the checkpoint chain. The same-row case also records a pending
+ * continuation, so a resync that finds the row still closed once the terminal append drains plans
+ * to start the next row itself rather than idling. A transport failure stops and uninstalls the
+ * simulation, records the same pending continuation, and reports the worker offline rather than
+ * retrying inline — the next reconnect resync rebuilds from the server's confirmed state and
+ * honors the pending intent. Any other rejection also stops and uninstalls the simulation, but
+ * without the offline signal or a pending record: the service answered, so the failure is the
  * activity's, not the connection's.
  */
 export async function runContinuation(
@@ -51,6 +54,10 @@ export async function runContinuation(
       return;
     }
 
+    if (row.id === activity.id) {
+      setPendingContinuation(context, activity);
+    }
+
     await simulation.stopActivity();
 
     context.setSimulation(null);
@@ -65,6 +72,7 @@ export async function runContinuation(
   context.setSimulation(null);
 
   if (!isDefinedError(error)) {
+    setPendingContinuation(context, activity);
     emitConnectionStatus(context, false);
   }
 }
@@ -84,6 +92,15 @@ async function startContinuationFrom(
     appendedHead: 0,
     lastHash: row.startHash,
     startChainIndex: row.startChainIndex,
+  });
+}
+
+function setPendingContinuation(context: WorkerContext, activity: Readonly<ActivityData>): void {
+  context.setPendingContinuation({
+    activityID: activity.id,
+    avatarID: activity.avatarID,
+    scopeID: activity.scopeID,
+    scopeType: activity.scopeType,
   });
 }
 

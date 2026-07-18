@@ -7,12 +7,13 @@ import { resolveServiceURL } from '@vers/mock-services';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry } from '../types';
-import type { WorkerContext } from '../worker/types';
+import type { PendingContinuation, WorkerContext } from '../worker/types';
 
 interface CreateStubWorkerContextOptions {
   readonly client?: ActivityServiceClient;
   readonly connections?: ReadonlyArray<MessagePort>;
   readonly failureAction?: ActivityFailureAction;
+  readonly pendingContinuation?: PendingContinuation | null;
   readonly remainingBudgetMs?: number;
   readonly submitter?: Readonly<CheckpointSubmitter>;
 }
@@ -35,6 +36,7 @@ export function createStubWorkerContext(
 
   let simulation: null | Simulation = null;
   let activity: ActivityData | null = null;
+  let pendingContinuation: PendingContinuation | null = options.pendingContinuation ?? null;
   let resyncAvatarID: string | null = null;
   let resyncInFlight = false;
   let rewardSlotLedgerActivityID: null | string = null;
@@ -48,6 +50,7 @@ export function createStubWorkerContext(
     getActivity: () => activity,
     getClient: () => client,
     getFailureAction: () => failureAction,
+    getPendingContinuation: () => pendingContinuation,
     getRemainingBudgetMs: () => options.remainingBudgetMs ?? Number.MAX_SAFE_INTEGER,
     getResyncAvatarID: () => resyncAvatarID,
     getRewardSlotLedger: () => ({
@@ -83,6 +86,9 @@ export function createStubWorkerContext(
     },
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
+    },
+    setPendingContinuation: (pending) => {
+      pendingContinuation = pending;
     },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;

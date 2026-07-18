@@ -33,9 +33,12 @@ import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
+import type { PendingContinuation } from './types';
 
 interface SetupTestConfig {
   readonly failureAction?: ActivityFailureAction;
+  readonly pendingContinuation?: PendingContinuation | null;
+  readonly remainingBudgetMs?: number;
   readonly userID: string;
 }
 
@@ -72,6 +75,10 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
     connections: [connection.port],
     submitter,
     ...(config.failureAction === undefined ? {} : { failureAction: config.failureAction }),
+    ...(config.pendingContinuation !== undefined && {
+      pendingContinuation: config.pendingContinuation,
+    }),
+    ...(config.remainingBudgetMs !== undefined && { remainingBudgetMs: config.remainingBudgetMs }),
   });
 
   return { client, connection, context, flush: () => capturedFlush?.() ?? Promise.resolve() };
@@ -723,6 +730,204 @@ test('it keeps the dirty flag when the resync push to the server fails', async (
     dirty: true,
     failureAction: ActivityFailureAction.Retry,
   });
+});
+
+test("it starts a fresh row, installs a live simulation with the worker's failure action, and clears the pending continuation", async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ failureAction: 'retry', userID: user.id });
+  const stopped = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+
+  const ctx = await setupTest({
+    pendingContinuation: {
+      activityID: stopped.id,
+      avatarID: avatar.id,
+      scopeID: stopped.scopeID,
+      scopeType: stopped.scopeType,
+    },
+    userID: user.id,
+  });
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  const minted = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: avatar.id, status: 'active' }),
+  );
+
+  invariant(minted !== undefined, 'expected the continue plan to mint a fresh row');
+  expect(minted.scopeID).toBe(stopped.scopeID);
+
+  const simulation = ctx.context.getSimulation();
+
+  invariant(simulation !== null, 'expected the continue plan to install a live simulation');
+  expect(simulation.activity?.id).toBe(minted.id);
+  expect(simulation.failureAction).toBe(ActivityFailureAction.Retry);
+  expect(ctx.context.getPendingContinuation()).toBeNull();
+});
+
+test('it adopts a fresh row another session raced in ahead of the continuation and clears the pending continuation', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const stopped = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+
+  // the racing row lands between the resync's progress fetch and its start call, so it must not
+  // exist when the plan is computed — the scripted handler mints it at start time and answers
+  // CONFLICT with it, exactly as the real service would
+  server.use(
+    mockActivityService.startActivity.handler(async (opts) => {
+      const racing = await db.activityCollection.create({
+        appendedHead: 0,
+        avatarID: avatar.id,
+        status: 'active',
+      });
+
+      throw opts.errors.CONFLICT({ data: { activity: racing } });
+    }),
+  );
+
+  const ctx = await setupTest({
+    pendingContinuation: {
+      activityID: stopped.id,
+      avatarID: avatar.id,
+      scopeID: stopped.scopeID,
+      scopeType: stopped.scopeType,
+    },
+    userID: user.id,
+  });
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  const racing = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: avatar.id, status: 'active' }),
+  );
+
+  invariant(racing !== undefined, 'expected the scripted handler to mint the racing row');
+
+  const simulation = ctx.context.getSimulation();
+
+  invariant(simulation !== null, 'expected the racing row to be adopted into a live simulation');
+  expect(simulation.activity?.id).toBe(racing.id);
+  expect(ctx.context.getActivity()).toStrictEqual(racing);
+  expect(ctx.context.getPendingContinuation()).toBeNull();
+});
+
+test('it halts at the boundary and keeps the pending continuation when the offline budget is spent', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const stopped = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+
+  const pending: PendingContinuation = {
+    activityID: stopped.id,
+    avatarID: avatar.id,
+    scopeID: stopped.scopeID,
+    scopeType: stopped.scopeType,
+  };
+
+  const ctx = await setupTest({
+    pendingContinuation: pending,
+    remainingBudgetMs: 0,
+    userID: user.id,
+  });
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    { halted: true, remainingMs: 0, type: WorkerMessageType.OfflineCapStatus },
+  ]);
+
+  expect(ctx.context.getSimulation()).toBeNull();
+  expect(ctx.context.getPendingContinuation()).toStrictEqual(pending);
+
+  const minted = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: avatar.id, status: 'active' }),
+  );
+
+  expect(minted).toBeUndefined();
+});
+
+test('it keeps the pending continuation and reports offline when starting the continued row fails on transport', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const stopped = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+
+  const pending: PendingContinuation = {
+    activityID: stopped.id,
+    avatarID: avatar.id,
+    scopeID: stopped.scopeID,
+    scopeType: stopped.scopeType,
+  };
+
+  server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
+
+  const ctx = await setupTest({ pendingContinuation: pending, userID: user.id });
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    { online: false, type: WorkerMessageType.ConnectionStatus },
+  ]);
+
+  expect(ctx.context.getSimulation()).toBeNull();
+  expect(ctx.context.getPendingContinuation()).toStrictEqual(pending);
+});
+
+test('it clears the pending continuation and reports the resync failure status on a defined error other than CONFLICT', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const stopped = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+
+  const pending: PendingContinuation = {
+    activityID: stopped.id,
+    avatarID: avatar.id,
+    scopeID: stopped.scopeID,
+    scopeType: stopped.scopeType,
+  };
+
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.CHAIN_QUARANTINED({ data: {} });
+    }),
+  );
+
+  const ctx = await setupTest({ pendingContinuation: pending, userID: user.id });
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    { status: { avatarID: avatar.id, kind: 'failed' }, type: WorkerMessageType.ResyncStatus },
+  ]);
+
+  expect(ctx.context.getPendingContinuation()).toBeNull();
 });
 
 test('it reports a fault to the error backend and broadcasts a failed status when the resync fails outright', async () => {

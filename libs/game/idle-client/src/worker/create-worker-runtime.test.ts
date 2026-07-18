@@ -8,11 +8,15 @@ import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
+import { http } from 'msw';
+import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
+import { createFastClock } from '../test-utils/create-fast-clock';
 import type { TestConnection } from '../test-utils/create-test-connection';
 import { createTestConnection } from '../test-utils/create-test-connection';
+import { makeFailFirstMatchHandler } from '../test-utils/make-fail-first-match-handler';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
@@ -86,9 +90,6 @@ test('it retains the cached dirty flag across boot so the next resync flushes it
 
   const token = await createTestAccessToken(user.id);
 
-  // the runtime's production client resolves its URL from `self.location.origin`, unreachable in
-  // this test env — an authed client wired at the mocked backend is the only way to route its
-  // calls, standing in for it here the way `timestep` already stands in for the tick rate
   const client: ActivityServiceClient = createORPCClient(
     new RPCLink({
       headers: { authorization: `Bearer ${token}` },
@@ -214,4 +215,218 @@ test('it reports a fault to the error backend when a message makes its handler t
   });
 
   expect(recorded[0]?.tags).toMatchObject({ site: 'message-routing' });
+});
+
+test('it resumes into a fresh row once a same-row CONFLICT resync drains a held terminal append', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const token = await createTestAccessToken(user.id);
+
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({
+      headers: { authorization: `Bearer ${token}` },
+      url: `${resolveServiceURL('activity')}/rpc`,
+    }),
+  );
+
+  // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
+  // below collapses that wait into a single tick-loop frame
+  const activity = await db.activityCollection.create({
+    avatarID: avatar.id,
+    encounterNode: { difficulty: 1 },
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+  });
+
+  // holds this activity's terminal append once: the row it closes stays active server-side, so
+  // the continuation's own startActivity call races back a same-row CONFLICT
+  server.use(
+    http.post(
+      `${resolveServiceURL('activity')}/rpc/trackActivityProgress`,
+      makeFailFirstMatchHandler((input) => input['activityID'] === activity.id),
+    ),
+  );
+
+  const clock = createFastClock();
+  const runtime = createWorkerRuntime({ client, now: clock.now });
+
+  onTestFinished(() => {
+    runtime.stop();
+  });
+
+  const connection = createConnection(runtime);
+
+  connection.post({ type: ClientMessageType.Initialize });
+
+  await connection.waitForMessages(1);
+
+  connection.post({ activity, type: ClientMessageType.SetActivity });
+
+  await waitFor(() => {
+    // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
+    // idle frame, so the wait just re-arms the next one until it lands on a live tick
+    clock.jump(65_000);
+
+    const minted = db.activityCollection.findFirst((q) =>
+      q.where({ avatarID: avatar.id, status: 'active' }),
+    );
+
+    invariant(minted !== undefined, 'expected the same-row CONFLICT resync to mint a fresh row');
+    expect(minted.id).not.toBe(activity.id);
+  });
+
+  const closed = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
+
+  invariant(closed !== undefined, 'expected the seeded activity to still exist');
+  expect(closed.status).toBe('stopped');
+});
+
+test('it resumes into a fresh row once a reconnect drains a held terminal append behind an offline continuation', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const token = await createTestAccessToken(user.id);
+
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({
+      headers: { authorization: `Bearer ${token}` },
+      url: `${resolveServiceURL('activity')}/rpc`,
+    }),
+  );
+
+  // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
+  // below collapses that wait into a single tick-loop frame
+  const activity = await db.activityCollection.create({
+    avatarID: avatar.id,
+    encounterNode: { difficulty: 1 },
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+  });
+
+  // both this activity's terminal append and its continuation's own startActivity call fail once,
+  // standing in for the device going offline right as the run completes
+  server.use(
+    http.post(
+      `${resolveServiceURL('activity')}/rpc/trackActivityProgress`,
+      makeFailFirstMatchHandler((input) => input['activityID'] === activity.id),
+    ),
+    http.post(
+      `${resolveServiceURL('activity')}/rpc/startActivity`,
+      makeFailFirstMatchHandler((input) => input['avatarID'] === avatar.id),
+    ),
+  );
+
+  const clock = createFastClock();
+  const runtime = createWorkerRuntime({ client, now: clock.now });
+
+  onTestFinished(() => {
+    runtime.stop();
+  });
+
+  const connection = createConnection(runtime);
+
+  connection.post({ type: ClientMessageType.Initialize });
+
+  await connection.waitForMessages(1);
+
+  connection.post({ activity, type: ClientMessageType.SetActivity });
+
+  await waitFor(() => {
+    // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
+    // idle frame, so the wait just re-arms the next one until it lands on a live tick
+    clock.jump(65_000);
+
+    expect(connection.received).toPartiallyContain({
+      online: false,
+      type: WorkerMessageType.ConnectionStatus,
+    });
+  });
+
+  globalThis.dispatchEvent(new Event('online'));
+
+  await waitFor(() => {
+    const minted = db.activityCollection.findFirst((q) =>
+      q.where({ avatarID: avatar.id, status: 'active' }),
+    );
+
+    invariant(minted !== undefined, 'expected the reconnect resync to mint a fresh row');
+    expect(minted.id).not.toBe(activity.id);
+  });
+
+  const closed = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
+
+  invariant(closed !== undefined, 'expected the seeded activity to still exist');
+  expect(closed.status).toBe('stopped');
+});
+
+test("it resumes the pending continuation's avatar on reconnect over an earlier avatar it resynced", async () => {
+  const user = await db.userCollection.create({});
+  const earlierAvatar = await db.avatarCollection.create({ userID: user.id });
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const token = await createTestAccessToken(user.id);
+
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({
+      headers: { authorization: `Bearer ${token}` },
+      url: `${resolveServiceURL('activity')}/rpc`,
+    }),
+  );
+
+  // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
+  // below collapses that wait into a single tick-loop frame
+  const activity = await db.activityCollection.create({
+    avatarID: avatar.id,
+    encounterNode: { difficulty: 1 },
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+  });
+
+  // both this activity's terminal append and its continuation's own startActivity call fail once,
+  // standing in for the device going offline right as the run completes
+  server.use(
+    http.post(
+      `${resolveServiceURL('activity')}/rpc/trackActivityProgress`,
+      makeFailFirstMatchHandler((input) => input['activityID'] === activity.id),
+    ),
+    http.post(
+      `${resolveServiceURL('activity')}/rpc/startActivity`,
+      makeFailFirstMatchHandler((input) => input['avatarID'] === avatar.id),
+    ),
+  );
+
+  const clock = createFastClock();
+  const runtime = createWorkerRuntime({ client, now: clock.now });
+
+  onTestFinished(() => {
+    runtime.stop();
+  });
+
+  const connection = createConnection(runtime);
+
+  connection.post({ type: ClientMessageType.Initialize });
+
+  await connection.waitForMessages(1);
+
+  // the worker remembers this history-free avatar as its last resync target; the boundary failure
+  // below must outrank that memory on reconnect or the pending continuation strands
+  connection.post({ avatarID: earlierAvatar.id, type: ClientMessageType.RequestResync });
+  connection.post({ activity, type: ClientMessageType.SetActivity });
+
+  await waitFor(() => {
+    // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
+    // idle frame, so the wait just re-arms the next one until it lands on a live tick
+    clock.jump(65_000);
+
+    expect(connection.received).toPartiallyContain({
+      online: false,
+      type: WorkerMessageType.ConnectionStatus,
+    });
+  });
+
+  globalThis.dispatchEvent(new Event('online'));
+
+  await waitFor(() => {
+    const minted = db.activityCollection.findFirst((q) =>
+      q.where({ avatarID: avatar.id, status: 'active' }),
+    );
+
+    invariant(minted !== undefined, 'expected the reconnect to resume the pending avatar');
+    expect(minted.id).not.toBe(activity.id);
+  });
 });

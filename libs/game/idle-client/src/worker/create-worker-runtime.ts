@@ -17,7 +17,7 @@ import { handleClientMessage } from './handle-client-message';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { reportWorkerFault } from './report-worker-fault';
 import { runSimulation } from './run-simulation';
-import type { WorkerContext } from './types';
+import type { PendingContinuation, WorkerContext } from './types';
 
 export interface WorkerRuntime {
   readonly connections: ReadonlySet<MessagePort>;
@@ -32,6 +32,12 @@ interface CreateWorkerRuntimeOptions {
    */
   readonly client?: ActivityServiceClient;
 
+  /**
+   * The tick loop's clock, defaulting to `performance.now` — a test injects its own to collapse
+   * the loop's real-time pacing instead of waiting out simulated durations in real time.
+   */
+  readonly now?: () => number;
+
   readonly timestep?: number;
 }
 
@@ -42,6 +48,7 @@ interface CreateWorkerRuntimeOptions {
  */
 export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): WorkerRuntime {
   const timestep = options.timestep ?? SIMULATION_TIMESTEP_MS;
+  const now = options.now ?? (() => performance.now());
 
   const connections = new Set<MessagePort>();
 
@@ -50,8 +57,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let activity: ActivityData | null = null;
   let running = false;
   let stopped = false;
-  let lastFrameTime = performance.now();
+  let lastFrameTime = now();
   let accumulator = 0;
+  let pendingContinuation: PendingContinuation | null = null;
   let resyncAvatarID: string | null = null;
   let resyncInFlight = false;
   let failureAction: ActivityFailureAction = ActivityFailureAction.Abort;
@@ -115,6 +123,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     getActivity: () => activity,
     getClient: () => client,
     getFailureAction: () => failureAction,
+    getPendingContinuation: () => pendingContinuation,
     getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
     getResyncAvatarID: () => resyncAvatarID,
     getRewardSlotLedger: () => ({
@@ -150,6 +159,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
+    },
+    setPendingContinuation: (pending) => {
+      pendingContinuation = pending;
     },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
@@ -204,8 +216,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       return;
     }
 
-    const now = performance.now();
-    const frameTime = now - lastFrameTime;
+    const frameNow = now();
+    const frameTime = frameNow - lastFrameTime;
 
     accumulator += frameTime;
 
@@ -219,7 +231,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       }
     }
 
-    lastFrameTime = now;
+    lastFrameTime = frameNow;
 
     await wait(1);
 
@@ -250,8 +262,12 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
         await submitter.flushHeld();
 
-        if (context.getSimulation() === null && resyncAvatarID !== null) {
-          await handleRequestResyncMessage(context, createRequestResyncMessage(resyncAvatarID));
+        // the pending continuation is always the fresher signal: it was recorded at the most
+        // recent boundary failure, while the remembered resync avatar can predate it
+        const avatarID = pendingContinuation?.avatarID ?? resyncAvatarID ?? null;
+
+        if (context.getSimulation() === null && avatarID !== null) {
+          await handleRequestResyncMessage(context, createRequestResyncMessage(avatarID));
         }
       } catch (error) {
         reportWorkerFault('reconnect', error);

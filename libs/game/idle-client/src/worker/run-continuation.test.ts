@@ -131,3 +131,89 @@ test('it stops the simulation and broadcasts offline on a transport failure', as
     { online: false, type: WorkerMessageType.ConnectionStatus },
   ]);
 });
+
+test('it records a pending continuation on a transport failure', async () => {
+  server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
+
+  const submitter = buildSpySubmitter();
+  const context = createStubWorkerContext({ submitter });
+  const simulation = createSimulation();
+  const previousActivity = createMockActivityData();
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  await runContinuation(context, simulation, previousActivity);
+
+  expect(context.getPendingContinuation()).toStrictEqual({
+    activityID: previousActivity.id,
+    avatarID: previousActivity.avatarID,
+    scopeID: previousActivity.scopeID,
+    scopeType: previousActivity.scopeType,
+  });
+});
+
+test('it stops the simulation and records a pending continuation on a same-row CONFLICT', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+  const activity = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+
+  const submitter = buildSpySubmitter();
+  const context = createStubWorkerContext({ client: ctx.client, submitter });
+  const simulation = createSimulation();
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  await runContinuation(context, simulation, activity);
+
+  expect(simulation.activity).toBeNull();
+
+  expect(context.getPendingContinuation()).toStrictEqual({
+    activityID: activity.id,
+    avatarID: activity.avatarID,
+    scopeID: activity.scopeID,
+    scopeType: activity.scopeType,
+  });
+});
+
+test('it records no pending continuation when the CONFLICT names a different, already-progressed row', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  await db.activityCollection.create({
+    appendedHead: 3,
+    avatarID: avatar.id,
+    status: 'active',
+  });
+
+  const submitter = buildSpySubmitter();
+  const context = createStubWorkerContext({ client: ctx.client, submitter });
+  const simulation = createSimulation();
+  const previousActivity = createMockActivityData({ avatarID: avatar.id });
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  await runContinuation(context, simulation, previousActivity);
+
+  expect(context.getPendingContinuation()).toBeNull();
+});
+
+test('it records no pending continuation on a defined error other than CONFLICT', async () => {
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.CHAIN_QUARANTINED({ data: {} });
+    }),
+  );
+
+  const submitter = buildSpySubmitter();
+  const context = createStubWorkerContext({ submitter });
+  const simulation = createSimulation();
+  const previousActivity = createMockActivityData();
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  await runContinuation(context, simulation, previousActivity);
+
+  expect(context.getPendingContinuation()).toBeNull();
+});
