@@ -43,7 +43,6 @@
           "down",
           "seed",
           "activeAvatarQueryOptions",
-          "avatarProgressionQueryOptions",
           "changePassword",
           "consumePendingTransaction",
           "consumeTransactionToken",

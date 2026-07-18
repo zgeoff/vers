@@ -6,7 +6,7 @@ import { orpc } from '../rpc/orpc';
  * modest interval: settlement lands server-side with no client signal, so polling is what lets a
  * pending delta quietly firm up into the settled row.
  */
-export function avatarProgressionQueryOptions(avatarID: string) {
+export function buildAvatarProgressionQueryOptions(avatarID: string) {
   return {
     ...orpc.activity.getAvatarProgression.queryOptions({ input: { avatarID } }),
     refetchInterval: 10_000,
