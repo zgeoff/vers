@@ -3,6 +3,7 @@ import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
 import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import * as db from '../db';
 import { os } from './os';
+import { resolveEncounterNode } from './resolve-encounter-node';
 
 /**
  * The sim-version stamp every mock-minted activity carries; arbitrary, but stable so tests can
@@ -44,6 +45,12 @@ export const startActivity = os.startActivity.handler(async (opts) => {
     throw opts.errors.CHAIN_QUARANTINED({ data: {} });
   }
 
+  const encounterNode = resolveEncounterNode(opts.input.scopeType, opts.input.scopeID);
+
+  if (encounterNode === undefined) {
+    throw opts.errors.NODE_UNKNOWN({ data: {} });
+  }
+
   const active = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: opts.input.avatarID, status: 'active' }),
   );
@@ -58,6 +65,7 @@ export const startActivity = os.startActivity.handler(async (opts) => {
   const startHash = buildStartHash({
     activityID: id,
     contentVersion: CURRENT_CONTENT_VERSION,
+    encounterNode,
     keyVersion: 1,
     seed,
     simVersion: MOCK_SIM_VERSION,
@@ -72,6 +80,7 @@ export const startActivity = os.startActivity.handler(async (opts) => {
     buildSnapshot: { level: avatar.level, xp: avatar.xp },
     contentVersion: CURRENT_CONTENT_VERSION,
     createdAt: now,
+    encounterNode,
     id,
     keyVersion: 1,
     lastHash: startHash,

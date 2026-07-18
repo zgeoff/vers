@@ -19,14 +19,21 @@ export function createMockActivity(
   const contentVersion = overrides.contentVersion ?? '0.0.0-dev';
   const keyVersion = overrides.keyVersion ?? 1;
 
+  const encounterNode =
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is this factory's own schema-shaped literal
+    (overrides.encounterNode as { difficulty: number } | undefined) ?? {
+      difficulty: faker.number.int({ max: 10, min: 1 }),
+    };
+
   const startHash =
     overrides.startHash ??
-    buildStartHash({ activityID: id, contentVersion, keyVersion, seed, simVersion });
+    buildStartHash({ activityID: id, contentVersion, encounterNode, keyVersion, seed, simVersion });
 
   return {
     avatarId: createId(),
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion,
+    encounterNode,
     id,
     keyVersion,
     lastHash: startHash,

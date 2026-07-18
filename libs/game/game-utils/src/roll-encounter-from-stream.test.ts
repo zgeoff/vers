@@ -196,3 +196,21 @@ test('it scales enemy life, xp, and attack damage by the node difficulty', () =>
     xp: 10,
   });
 });
+
+test('it floors a zero-difficulty node to the same stats as difficulty one', () => {
+  const seed = Uint8Array.from({ length: 32 }, () => 22);
+
+  const floored = rollEncounterFromStream(
+    encounterContentV1,
+    { difficulty: 0 },
+    buildRollStream(seed, 'test/domain'),
+  );
+
+  const unscaled = rollEncounterFromStream(
+    encounterContentV1,
+    { difficulty: 1 },
+    buildRollStream(seed, 'test/domain'),
+  );
+
+  expect(floored).toStrictEqual(unscaled);
+});

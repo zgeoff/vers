@@ -15,11 +15,13 @@
     "@orpc/server": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
     "@vers/contract-activity": "workspace:*",
+    "@vers/data": "workspace:*",
     "@vers/db": "workspace:*",
     "@vers/game-utils": "workspace:*",
     "@vers/idle-core": "workspace:*",
     "@vers/service-runtime": "workspace:*",
     "@vers/sim-registry": "workspace:*",
+    "@vers/worldmap-core": "workspace:*",
     "kysely": "catalog:",
     "tiny-invariant": "catalog:",
     "zod": "catalog:"

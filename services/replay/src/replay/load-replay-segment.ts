@@ -23,6 +23,7 @@ export async function loadReplaySegment(
       'avatarId',
       'buildSnapshot',
       'contentVersion',
+      'encounterNode',
       'id',
       'keyVersion',
       'scopeId',
@@ -72,6 +73,7 @@ export async function loadReplaySegment(
       avatarID: activity.avatarId,
       buildSnapshot: readBuildSnapshot(activity.buildSnapshot),
       contentVersion: activity.contentVersion,
+      encounterNode: readEncounterNode(activity.encounterNode),
       id: activity.id,
       keyVersion: activity.keyVersion,
       scopeID: activity.scopeId,
@@ -110,6 +112,18 @@ function readBuildSnapshot(value: unknown): { level: number; xp: number } {
   const snapshot = value as { level: number; xp: number };
 
   return { level: snapshot.level, xp: snapshot.xp };
+}
+
+/**
+ * The activities row's `encounter_node` column is untyped jsonb; every write is the activity
+ * service's own server-side node resolution, so this reads its one known field without
+ * re-validating.
+ */
+function readEncounterNode(value: unknown): { difficulty: number } {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is the activity service's own server-side node resolution
+  const node = value as { difficulty: number };
+
+  return { difficulty: node.difficulty };
 }
 
 function readPayloadNextSeed(payload: Readonly<CheckpointPayload>): string {

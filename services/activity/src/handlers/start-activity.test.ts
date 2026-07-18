@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
+import { buildStartHash } from '@vers/contract-activity';
 import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import {
   createAnonymousViewer,
@@ -41,7 +42,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -52,10 +53,11 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     buildSnapshot: { level: 5, xp: 42 },
     contentVersion: CURRENT_CONTENT_VERSION,
     createdAt: expect.toBeValidDate(),
+    encounterNode: { difficulty: 0 },
     id: expect.toBeString(),
     keyVersion: 1,
     lastHash: expect.toBeString(),
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
     seed: expect.toBeString(),
     simVersion: current.engineHash,
@@ -72,6 +74,79 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
   expect(activity.lastHash).toBe(activity.startHash);
 });
 
+test("it stamps the row's encounterNode from the static world map's node for the given scope id", async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'esaxrt',
+    scopeType: 'world_map_node',
+  });
+
+  expect(activity.encounterNode).toStrictEqual({ difficulty: 1 });
+
+  const row = await ctx.db
+    .selectFrom('activities')
+    .select('encounterNode')
+    .where('id', '=', activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.encounterNode).toStrictEqual({ difficulty: 1 });
+});
+
+test('it derives a startHash that folds in the resolved encounter node', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'esaxrt',
+    scopeType: 'world_map_node',
+  });
+
+  expect(activity.startHash).toBe(
+    buildStartHash({
+      activityID: activity.id,
+      contentVersion: activity.contentVersion,
+      encounterNode: activity.encounterNode,
+      keyVersion: activity.keyVersion,
+      seed: activity.seed,
+      simVersion: current.engineHash,
+    }),
+  );
+});
+
+test('it rejects starting an activity on an unregistered scope id with NODE_UNKNOWN', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.startActivity({
+      avatarID: avatar.id,
+      scopeID: 'not_a_real_node',
+      scopeType: 'world_map_node',
+    }),
+  ).rejects.toMatchObject({ code: 'NODE_UNKNOWN' });
+});
+
 test('it mints a chain row on a node visited for the first time, with the activity seeded from its genesis', async () => {
   await using ctx = await setupTest();
 
@@ -84,7 +159,7 @@ test('it mints a chain row on a node visited for the first time, with the activi
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -93,7 +168,7 @@ test('it mints a chain row on a node visited for the first time, with the activi
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
+    .where('scopeId', '=', 'a9lp75')
     .executeTakeFirstOrThrow();
 
   expect(activity.seed).toBe(chain.genesisSeed);
@@ -114,7 +189,7 @@ test('it mints independent genesis seeds for different nodes visited by the same
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -126,7 +201,7 @@ test('it mints independent genesis seeds for different nodes visited by the same
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_2',
+    scopeID: 'esaxrt',
     scopeType: 'world_map_node',
   });
 
@@ -147,7 +222,7 @@ test('it reads the existing chain anchor for a second activity on an already-cha
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -159,7 +234,7 @@ test('it reads the existing chain anchor for a second activity on an already-cha
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -180,12 +255,12 @@ test('it rejects a second start with CONFLICT carrying the already-active activi
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
   expect(
-    client.startActivity({ avatarID: avatar.id, scopeID: 'node_2', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: avatar.id, scopeID: 'esaxrt', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({
     code: 'CONFLICT',
     data: { activity: { id: first.id } },
@@ -202,7 +277,7 @@ test('it rejects starting an activity on a foreign avatar with NOT_FOUND', async
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
-    client.startActivity({ avatarID: avatar.id, scopeID: 'node_1', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: avatar.id, scopeID: 'a9lp75', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({
     code: 'NOT_FOUND',
   });
@@ -216,7 +291,7 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
-    client.startActivity({ avatarID: 'avatar_1', scopeID: 'node_1', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: 'avatar_1', scopeID: 'a9lp75', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({
     code: 'UNAUTHORIZED',
     data: { reason: 'missing-session' },
@@ -235,7 +310,7 @@ test('it blocks a new start while the chain is quarantined', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -246,7 +321,7 @@ test('it blocks a new start while the chain is quarantined', async () => {
     .execute();
 
   expect(
-    client.startActivity({ avatarID: avatar.id, scopeID: 'node_1', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: avatar.id, scopeID: 'a9lp75', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({ code: 'CHAIN_QUARANTINED' });
 });
 
@@ -267,7 +342,7 @@ test('it stamps the acting session as the new activity writer', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -293,7 +368,7 @@ test('it stamps a new activity with the registry current version when the client
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -309,7 +384,7 @@ test('it rejects a start with SIM_VERSION_UNKNOWN carrying a null current versio
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
-    client.startActivity({ avatarID: avatar.id, scopeID: 'node_1', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: avatar.id, scopeID: 'a9lp75', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({
     code: 'SIM_VERSION_UNKNOWN',
     data: { currentSimVersion: null },
@@ -331,7 +406,7 @@ test('it echoes the client-stamped sim version when its row is active and retain
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
     simVersion: stamped.engineHash,
   });
@@ -351,7 +426,7 @@ test('it rejects an unrecognized stamped version with SIM_VERSION_UNKNOWN carryi
   expect(
     client.startActivity({
       avatarID: avatar.id,
-      scopeID: 'node_1',
+      scopeID: 'a9lp75',
       scopeType: 'world_map_node',
       simVersion: 'hash_never_registered',
     }),
@@ -379,7 +454,7 @@ test('it rejects a pruned stamped version with SIM_VERSION_EXPIRED', async () =>
   expect(
     client.startActivity({
       avatarID: avatar.id,
-      scopeID: 'node_1',
+      scopeID: 'a9lp75',
       scopeType: 'world_map_node',
       simVersion: pruned.engineHash,
     }),
@@ -408,7 +483,7 @@ test('it rejects an active stamped version past its retention deadline with SIM_
   expect(
     client.startActivity({
       avatarID: avatar.id,
-      scopeID: 'node_1',
+      scopeID: 'a9lp75',
       scopeType: 'world_map_node',
       simVersion: stale.engineHash,
     }),
@@ -430,7 +505,7 @@ test('it roots a new activity at the anchor a concurrent forward exit commits', 
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -450,12 +525,12 @@ test('it roots a new activity at the anchor a concurrent forward exit commits', 
       .set({ appendedChainIndex: 7, appendedNextSeed: anchorSeed })
       .where('avatarId', '=', avatar.id)
       .where('scopeType', '=', 'world_map_node')
-      .where('scopeId', '=', 'node_1')
+      .where('scopeId', '=', 'a9lp75')
       .execute();
 
     const start = client.startActivity({
       avatarID: avatar.id,
-      scopeID: 'node_1',
+      scopeID: 'a9lp75',
       scopeType: 'world_map_node',
     });
 

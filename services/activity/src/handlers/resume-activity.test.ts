@@ -41,7 +41,7 @@ test('it stamps the acting session as the writer', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -84,7 +84,7 @@ test('it reports NOT_FOUND for a stopped activity', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -110,7 +110,7 @@ test("it reports NOT_FOUND for another user's activity", async () => {
 
   const started = await ownerClient.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -137,7 +137,7 @@ test('it rejects a session-less caller with UNAUTHORIZED', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 

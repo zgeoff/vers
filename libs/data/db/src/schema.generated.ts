@@ -34,6 +34,7 @@ export interface Activities {
   buildSnapshot: import('./types').Json;
   contentVersion: string;
   createdAt: Generated<Timestamp>;
+  encounterNode: import('./types').Json;
   id: string;
   keyVersion: Generated<number>;
   lastHash: string;

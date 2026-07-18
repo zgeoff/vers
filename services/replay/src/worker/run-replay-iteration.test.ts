@@ -696,6 +696,7 @@ test('it evicts and rebuilds from Started when the cached driver no longer match
         avatarID: fixture.activity.avatarId,
         buildSnapshot: { level: 1, xp: 0 },
         contentVersion: fixture.activity.contentVersion,
+        encounterNode: { difficulty: 1 },
         id: fixture.activity.id,
         seed: fixture.activity.seed,
       }).activity,
@@ -703,6 +704,7 @@ test('it evicts and rebuilds from Started when the cached driver no longer match
         avatarID: fixture.activity.avatarId,
         buildSnapshot: { level: 1, xp: 0 },
         contentVersion: fixture.activity.contentVersion,
+        encounterNode: { difficulty: 1 },
         id: fixture.activity.id,
         seed: fixture.activity.seed,
       }).avatar,
@@ -868,6 +870,7 @@ test('it does not reject a divergence that fails to reproduce on the fresh confi
     avatarID: fixture.activity.avatarId,
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: fixture.activity.contentVersion,
+    encounterNode: { difficulty: 1 },
     id: fixture.activity.id,
     seed: 'ff'.repeat(16),
   });

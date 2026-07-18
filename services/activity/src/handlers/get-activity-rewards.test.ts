@@ -31,7 +31,7 @@ test('it returns only the minted rows at or below the verified anchor', async ()
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -47,7 +47,7 @@ test('it returns only the minted rows at or below the verified anchor', async ()
         keyVersion: 1,
         ordinal: 0,
         rarityId: 'common',
-        scopeId: 'node_1',
+        scopeId: 'a9lp75',
         scopeType: 'world_map_node',
       },
       {
@@ -59,7 +59,7 @@ test('it returns only the minted rows at or below the verified anchor', async ()
         keyVersion: 1,
         ordinal: 0,
         rarityId: 'rare',
-        scopeId: 'node_1',
+        scopeId: 'a9lp75',
         scopeType: 'world_map_node',
       },
     ])
@@ -95,7 +95,7 @@ test('it orders multiple slots within a chain position by ordinal', async () => 
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -111,7 +111,7 @@ test('it orders multiple slots within a chain position by ordinal', async () => 
         keyVersion: 1,
         ordinal: 1,
         rarityId: 'common',
-        scopeId: 'node_1',
+        scopeId: 'a9lp75',
         scopeType: 'world_map_node',
       },
       {
@@ -123,7 +123,7 @@ test('it orders multiple slots within a chain position by ordinal', async () => 
         keyVersion: 1,
         ordinal: 0,
         rarityId: 'common',
-        scopeId: 'node_1',
+        scopeId: 'a9lp75',
         scopeType: 'world_map_node',
       },
     ])
@@ -150,7 +150,7 @@ test('it returns only rows above the afterChainIndex cursor', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -166,7 +166,7 @@ test('it returns only rows above the afterChainIndex cursor', async () => {
         keyVersion: 1,
         ordinal: 0,
         rarityId: 'common',
-        scopeId: 'node_1',
+        scopeId: 'a9lp75',
         scopeType: 'world_map_node',
       },
       {
@@ -178,7 +178,7 @@ test('it returns only rows above the afterChainIndex cursor', async () => {
         keyVersion: 1,
         ordinal: 0,
         rarityId: 'common',
-        scopeId: 'node_1',
+        scopeId: 'a9lp75',
         scopeType: 'world_map_node',
       },
     ])
@@ -208,7 +208,7 @@ test('it returns the identical response on a repeated call', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -223,7 +223,7 @@ test('it returns the identical response on a repeated call', async () => {
       keyVersion: 1,
       ordinal: 0,
       rarityId: 'common',
-      scopeId: 'node_1',
+      scopeId: 'a9lp75',
       scopeType: 'world_map_node',
     })
     .execute();
@@ -250,7 +250,7 @@ test('it rejects an activity owned by another caller with NOT_FOUND', async () =
 
   const started = await ownerClient.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -298,7 +298,7 @@ test('it omits an unverified tail row above the verified anchor', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -313,7 +313,7 @@ test('it omits an unverified tail row above the verified anchor', async () => {
       keyVersion: 1,
       ordinal: 0,
       rarityId: 'common',
-      scopeId: 'node_1',
+      scopeId: 'a9lp75',
       scopeType: 'world_map_node',
     })
     .execute();

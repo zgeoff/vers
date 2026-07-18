@@ -51,6 +51,8 @@ Status assignment follows the failure's nature:
 - **410 Gone** — a well-formed value the state no longer accepts (expired, already used).
 - **422 Unprocessable Content** — a value that was never acceptable.
 - **401 Unauthorized** — a failure of authentication state.
+- **403 Forbidden** — a caller authentication accepts but the resource's access rule refuses.
+- **404 Not Found** — a reference to a resource that doesn't exist.
 - **409 Conflict** — an operation whose precondition the resource's current state contradicts.
 
 | Domain       | Code                   | Status | Meaning                                                                                                                                                       | data                       |
@@ -59,6 +61,7 @@ Status assignment follows the failure's nature:
 | activity     | `ACTIVITY_TERMINAL`    | 409    | Append against a terminal activity status — fatal for the stream, the client discards                                                                         | `{ status, appendedHead }` |
 | activity     | `CHAIN_QUARANTINED`    | 409    | New start refused while the chain's replay frontier is quarantined                                                                                            | —                          |
 | activity     | `CHECKPOINT_INVALID`   | 422    | Checkpoint batch fails structural validation (contiguity, chainIndex, chain link, time monotonicity, or hash)                                                 | `{ reason }`               |
+| activity     | `NODE_UNKNOWN`         | 404    | Start's scope id doesn't resolve to a node on the current world map                                                                                           | —                          |
 | activity     | `SESSION_EVICTED`      | 403    | Append from a session that is no longer the activity's writer — fatal, the client discards                                                                    | —                          |
 | activity     | `SIM_VERSION_EXPIRED`  | 410    | Stamped or current sim version is past retention — the client must resync onto the current version                                                            | `{ currentSimVersion }`    |
 | activity     | `SIM_VERSION_UNKNOWN`  | 409    | Stamped or current sim version isn't registered — the client should refresh and retry                                                                         | `{ currentSimVersion }`    |

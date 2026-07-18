@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import { ActivityStatusSchema } from './activity-status-schema';
 import { BuildSnapshotSchema } from './build-snapshot-schema';
+import { EncounterNodeSchema } from './encounter-node-schema';
 
 /**
  * An activity stream's head row, as returned to callers.
@@ -12,6 +13,7 @@ export const ActivityDataSchema = z.object({
   buildSnapshot: BuildSnapshotSchema,
   contentVersion: z.string(),
   createdAt: z.date(),
+  encounterNode: EncounterNodeSchema,
   id: z.string(),
   keyVersion: z.int().min(1),
   lastHash: z.string(),

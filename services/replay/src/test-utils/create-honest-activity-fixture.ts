@@ -74,11 +74,13 @@ export async function createHonestActivityFixture(
 
   const startChainIndex = input.startChainIndex ?? chain.appendedChainIndex;
   const contentVersion = CURRENT_CONTENT_VERSION;
+  const encounterNode = { difficulty: 1 };
 
   const simulationInput = buildSimulationInput({
     avatarID: chain.avatarId,
     buildSnapshot,
     contentVersion,
+    encounterNode,
     id: activityID,
     seed,
   });
@@ -94,6 +96,7 @@ export async function createHonestActivityFixture(
   const startHash = buildStartHash({
     activityID,
     contentVersion,
+    encounterNode,
     keyVersion,
     seed,
     simVersion,
@@ -112,6 +115,7 @@ export async function createHonestActivityFixture(
     avatarId: chain.avatarId,
     buildSnapshot,
     contentVersion,
+    encounterNode,
     id: activityID,
     keyVersion,
     lastHash: checkpoints.at(-1)?.hash ?? startHash,

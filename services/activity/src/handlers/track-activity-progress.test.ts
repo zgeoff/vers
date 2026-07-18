@@ -42,7 +42,7 @@ test('it appends a single-entry batch and advances the head', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -71,7 +71,7 @@ test('it advances cursors and lastHash across multiple sequential batches', asyn
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -115,7 +115,7 @@ test('it rejects a stale expectedHead with CONFLICT carrying the current head', 
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -151,7 +151,7 @@ test('it succeeds on a resend of the tail after a stale-head CONFLICT', async ()
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -187,7 +187,7 @@ test('it rejects a non-contiguous batch with CHECKPOINT_INVALID', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -211,7 +211,7 @@ test('it rejects a broken chain link with CHECKPOINT_INVALID', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -242,7 +242,7 @@ test('it rejects a hash that does not match its payload with CHECKPOINT_INVALID'
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -268,7 +268,7 @@ test('it accepts a batch whose reward slots parse with contiguous ordinals', asy
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -302,7 +302,7 @@ test('it rejects a batch whose reward slots do not parse with CHECKPOINT_INVALID
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -330,7 +330,7 @@ test('it rejects a batch whose reward slot ordinals are not contiguous from 0 wi
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -363,7 +363,7 @@ test('it rejects appending to a stopped activity with ACTIVITY_TERMINAL', async 
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -410,7 +410,7 @@ test('it leaves the avatar xp and level untouched on a completed terminal checkp
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -459,7 +459,7 @@ test('it leaves the avatar xp and level untouched on a failed terminal checkpoin
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -498,7 +498,7 @@ test('it advances the chain anchor to the terminal checkpoint on a completed bat
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -521,7 +521,7 @@ test('it advances the chain anchor to the terminal checkpoint on a completed bat
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
+    .where('scopeId', '=', 'a9lp75')
     .executeTakeFirstOrThrow();
 
   expect(chain.appendedNextSeed).toBe(terminal.payload.nextSeed);
@@ -538,7 +538,7 @@ test('it advances the chain anchor to the terminal checkpoint on a failed batch'
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -561,7 +561,7 @@ test('it advances the chain anchor to the terminal checkpoint on a failed batch'
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
+    .where('scopeId', '=', 'a9lp75')
     .executeTakeFirstOrThrow();
 
   expect(chain.appendedNextSeed).toBe(terminal.payload.nextSeed);
@@ -578,7 +578,7 @@ test('it advances the chain anchor when the terminal segment consumed no entropy
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -611,7 +611,7 @@ test('it advances the chain anchor when the terminal segment consumed no entropy
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
+    .where('scopeId', '=', 'a9lp75')
     .executeTakeFirstOrThrow();
 
   expect(chain.appendedNextSeed).toBe(restingSeed);
@@ -628,7 +628,7 @@ test('it continues the next activity on the same node from the previous terminal
 
   const firstStarted = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -648,7 +648,7 @@ test('it continues the next activity on the same node from the previous terminal
 
   const secondStarted = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -666,7 +666,7 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
 
   const firstStarted = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -684,7 +684,7 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
 
   const secondStarted = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -706,7 +706,7 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
+    .where('scopeId', '=', 'a9lp75')
     .executeTakeFirstOrThrow();
 
   // replays the first activity's own compare-and-swap, which the chain has already moved past
@@ -715,7 +715,7 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
     .set({ appendedChainIndex: 999, appendedNextSeed: 'replayed-seed' })
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
+    .where('scopeId', '=', 'a9lp75')
     .where('appendedChainIndex', '=', firstStarted.startChainIndex)
     .execute();
 
@@ -724,7 +724,7 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
+    .where('scopeId', '=', 'a9lp75')
     .executeTakeFirstOrThrow();
 
   expect(anchorAfterReplay).toStrictEqual(anchorAfterSecond);
@@ -740,7 +740,7 @@ test('it rejects a chainIndex that is not startChainIndex plus version with CHEC
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -769,7 +769,7 @@ test('it returns the settled head when a terminal batch is resubmitted unchanged
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -792,7 +792,7 @@ test('it returns the settled head when a terminal batch is resubmitted unchanged
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
+    .where('scopeId', '=', 'a9lp75')
     .executeTakeFirstOrThrow();
 
   const resubmitResult = await client.trackActivityProgress({
@@ -808,7 +808,7 @@ test('it returns the settled head when a terminal batch is resubmitted unchanged
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
+    .where('scopeId', '=', 'a9lp75')
     .executeTakeFirstOrThrow();
 
   expect(chainAfterSecond).toStrictEqual(chainAfterFirst);
@@ -840,7 +840,7 @@ test('it rejects a non-matching batch against a settled activity as terminal', a
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -879,7 +879,7 @@ test('it returns the settled head when a landed batch is resubmitted after a use
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -917,7 +917,7 @@ test('it rejects an append from a displaced writer session with SESSION_EVICTED'
 
   const started = await clientA.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -960,7 +960,7 @@ test('it lets the first appending session claim an unstamped stream', async () =
 
   const started = await sessionlessClient.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1022,7 +1022,7 @@ test('it caps an append whose simulated time exceeds the accrued budget', async 
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1070,7 +1070,7 @@ test('it accepts a batch whose simulated time fits the wall-clock accrued budget
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1113,7 +1113,7 @@ test('it never accrues budget past the configured cap', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1143,7 +1143,7 @@ test('it accepts a batch at the cap after an hour of absence under a shrunken ca
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1177,7 +1177,7 @@ test('it meters simulated time across consecutive activities on one avatar', asy
 
   const firstStarted = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1196,7 +1196,7 @@ test('it meters simulated time across consecutive activities on one avatar', asy
 
   const secondStarted = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1243,7 +1243,7 @@ test('it sustains a live flush cadence on the default budget grant', async () =>
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1291,7 +1291,7 @@ test('it answers a resubmission after a cap with the terminal status and stop in
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1328,7 +1328,7 @@ test('it consumes no budget and leaves the meter anchor untouched on a cap trip'
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1367,7 +1367,7 @@ test('it leaves the anchor unchanged when a cap trips before anything appended',
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1376,7 +1376,7 @@ test('it leaves the anchor unchanged when a cap trips before anything appended',
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
+    .where('scopeId', '=', 'a9lp75')
     .executeTakeFirstOrThrow();
 
   const batch = createMockCheckpointBatch({
@@ -1394,7 +1394,7 @@ test('it leaves the anchor unchanged when a cap trips before anything appended',
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
+    .where('scopeId', '=', 'a9lp75')
     .executeTakeFirstOrThrow();
 
   expect(chainAfter).toStrictEqual(chainBefore);
@@ -1415,7 +1415,7 @@ test('it advances the chain anchor to the pre-batch tail on a cap trip', async (
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1452,7 +1452,7 @@ test('it advances the chain anchor to the pre-batch tail on a cap trip', async (
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'node_1')
+    .where('scopeId', '=', 'a9lp75')
     .executeTakeFirstOrThrow();
 
   expect(chainAfter.appendedNextSeed).toBe(tail.payload.nextSeed);
@@ -1469,7 +1469,7 @@ test('it rejects a batch whose time regresses within the batch with CHECKPOINT_I
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1500,7 +1500,7 @@ test('it rejects a batch whose time regresses below the already accounted time w
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1541,7 +1541,7 @@ test('it debits the meter on a terminal batch that leaves xp settlement to the v
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 
@@ -1582,7 +1582,7 @@ test('it leaves the meter untouched on an empty batch', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'node_1',
+    scopeID: 'a9lp75',
     scopeType: 'world_map_node',
   });
 

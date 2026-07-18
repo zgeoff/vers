@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import invariant from 'tiny-invariant';
 import { createAvatar } from '../entities/create-avatar';
 import { buildCompletionXP, buildLevelFromXP } from '../progression';
@@ -13,6 +14,7 @@ import {
   EquipmentSlot,
 } from '../types';
 import type { EquipmentWeapon } from '../types';
+import { buildSimulationInput } from './build-simulation-input';
 import { createActivity } from './create-activity';
 import { createCombatExecutor } from './create-combat-executor';
 import { runActivity } from './run-activity';
@@ -43,6 +45,66 @@ test('it immediately generates a started checkpoint', async () => {
     time: 0,
     type: ActivityCheckpointType.Started,
   });
+});
+
+test('it clears a wave from a difficulty-0 source node without crashing on the reward-slot tier', async () => {
+  const built = buildSimulationInput({
+    avatarID: 'avatar_1',
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: CURRENT_CONTENT_VERSION,
+    encounterNode: { difficulty: 0 },
+    id: 'act_1',
+    seed: 'ee'.repeat(16),
+  });
+
+  const [firstEnemy] = built.activity.encounter.waves[0] ?? [];
+
+  invariant(firstEnemy, 'the derived encounter must open with a populated wave');
+
+  const activityData = {
+    ...built.activity,
+    encounter: { waves: [[{ ...firstEnemy, life: 1 }]] },
+  };
+
+  const avatarData = {
+    ...built.avatar,
+    paperdoll: {
+      [EquipmentSlot.MainHand]: {
+        id: 'test-weapon',
+        maxDamage: 9999,
+        minDamage: 9999,
+        name: 'Test Weapon',
+        speed: 6,
+      },
+    },
+  };
+
+  const ctx = createMockSimulationContext();
+  const activity = createActivity(activityData, ctx);
+  const avatar = createAvatar(avatarData, ctx);
+  const executor = createCombatExecutor(activity, avatar, ctx);
+  const generator = runActivity(executor, activity, avatar, ctx);
+
+  // skip the started checkpoint
+  await generator.next(1000);
+
+  // clearing the activity's only wave computes its reward-slot tier from the floored difficulty —
+  // the crash site an unfloored difficulty-0 activity throws its invariant from
+  const waveClearResult = await generator.next(1000);
+
+  invariant(waveClearResult.value, 'the wave clear must produce a checkpoint');
+
+  expect(waveClearResult.value.rewardSlots).toStrictEqual([
+    { context: { nodeTier: 1 }, ordinal: 0 },
+  ]);
+
+  let result = await generator.next(1000);
+
+  while (result.done !== true) {
+    result = await generator.next(1000);
+  }
+
+  expect(result.value.type).toBe(ActivityCheckpointType.Completed);
 });
 
 test('it generates wave killed checkpoints', async () => {
