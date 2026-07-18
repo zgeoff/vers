@@ -59,6 +59,30 @@ test('it derives the activity difficulty and encounter from the source encounter
   expect(low.activity.encounter).not.toStrictEqual(high.activity.encounter);
 });
 
+test('it floors a difficulty-0 source node to the same difficulty and encounter as difficulty one', () => {
+  const source = {
+    avatarID: 'avatar_1',
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: CURRENT_CONTENT_VERSION,
+    seed: 'bb'.repeat(16),
+  };
+
+  const floored = buildSimulationInput({
+    ...source,
+    encounterNode: { difficulty: 0 },
+    id: 'act_1',
+  });
+
+  const unscaled = buildSimulationInput({
+    ...source,
+    encounterNode: { difficulty: 1 },
+    id: 'act_1',
+  });
+
+  expect(floored.activity.difficulty).toBe(1);
+  expect(floored.activity.encounter).toStrictEqual(unscaled.activity.encounter);
+});
+
 test('it returns a fresh encounter and weapon on every call, never a shared reference', () => {
   const source = {
     avatarID: 'avatar_1',

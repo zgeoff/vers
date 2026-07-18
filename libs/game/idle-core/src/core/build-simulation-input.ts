@@ -1,4 +1,4 @@
-import { buildEncounter, getEncounterContent } from '@vers/game-utils';
+import { MIN_DIFFICULTY, buildEncounter, getEncounterContent } from '@vers/game-utils';
 import type { ActivityInput, AvatarData } from '../types';
 import { ActivityFailureAction, ActivityType, EquipmentSlot } from '../types';
 
@@ -27,25 +27,28 @@ export interface BuildSimulationInputOptions {
  * Builds the engine's `ActivityInput`/`AvatarData` from an activity row's stamped seed, content
  * version, build snapshot, and resolved encounter node. The client and the verifier both call this
  * from the same activity row, so the resolved encounter — and the stream it drives — is
- * byte-identical on both sides. Returns a fresh placeholder weapon object on every call: the engine
- * mutates its input in place, so a caller running several simulations from one shared literal would
- * have them corrupt each other.
+ * byte-identical on both sides. Floors the node's difficulty at `MIN_DIFFICULTY` for both the
+ * encounter and `activity.difficulty`, so a difficulty-0 node (the world map's unscaled origin)
+ * still derives a valid encounter and reward-slot tier. Returns a fresh placeholder weapon object
+ * on every call: the engine mutates its input in place, so a caller running several simulations
+ * from one shared literal would have them corrupt each other.
  */
 export function buildSimulationInput(
   source: Readonly<SimulationInputSource>,
   options?: Readonly<BuildSimulationInputOptions>,
 ): { activity: ActivityInput; avatar: AvatarData } {
   const content = getEncounterContent(source.contentVersion);
+  const difficulty = Math.max(source.encounterNode.difficulty, MIN_DIFFICULTY);
 
   const encounter = buildEncounter({
     content,
-    node: source.encounterNode,
+    node: { difficulty },
     seed: source.seed,
   });
 
   return {
     activity: {
-      difficulty: source.encounterNode.difficulty,
+      difficulty,
       encounter,
       failureAction: options?.failureAction ?? ActivityFailureAction.Abort,
       id: source.id,

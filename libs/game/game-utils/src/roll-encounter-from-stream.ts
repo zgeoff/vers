@@ -9,10 +9,10 @@ import type {
 } from './types';
 
 /**
- * Floor applied to a node's difficulty before it scales enemy stats, so a difficulty-0 node (the
- * world map's unscaled origin) still produces a viable encounter instead of a zero multiplier.
+ * Floor for a node's difficulty, so a difficulty-0 node (the world map's unscaled origin) still
+ * produces a viable encounter multiplier instead of a zero one.
  */
-const MIN_DIFFICULTY = 1;
+export const MIN_DIFFICULTY = 1;
 
 /**
  * Resolves a full encounter — wave count, each wave's enemy count, archetype picks, and
