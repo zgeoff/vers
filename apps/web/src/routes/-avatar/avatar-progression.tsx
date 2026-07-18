@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Text } from '@vers/design-system';
 import { buildAvatarProgressionQueryOptions } from '../../lib/activity/build-avatar-progression-query-options';
 import { buildOptimisticProgression } from '../../lib/activity/build-optimistic-progression';
-import { activeAvatarQueryOptions } from '../../lib/avatar/active-avatar-query-options';
+import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 
 /**
@@ -12,7 +12,7 @@ import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
  */
 export function AvatarProgression() {
   const idleWorkerHandle = useIdleWorkerHandle();
-  const avatarQuery = useQuery(activeAvatarQueryOptions());
+  const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const avatar = avatarQuery.data;
 
   const progressionQuery = useQuery({
