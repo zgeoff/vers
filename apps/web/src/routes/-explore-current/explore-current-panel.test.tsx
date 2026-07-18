@@ -1,15 +1,17 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { ClientMessage } from '@vers/idle-client';
-import { ClientMessageType, isSetActivityMessage } from '@vers/idle-client';
+import { ClientMessageType, WorkerMessageType, isSetActivityMessage } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
+import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { setSelectedNode } from '@vers/worldmap-client';
 import { createMockWorldMapNode } from '@vers/worldmap-client/test-utils';
+import { http } from 'msw';
 import invariant from 'tiny-invariant';
 import { orpc } from '../../lib/rpc/orpc';
 import { server } from '../../mocks/node';
@@ -123,6 +125,78 @@ test('it requests a resync instead of starting when the same scope is already ac
 
     expect(calls.some((call) => isSetActivityMessage(call))).toBeFalse();
   });
+});
+
+test('it flushes the worker before stopping a conflicting activity from a different scope', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+
+  // a live row owns the avatar for a different scope, so the start conflicts with it and the
+  // recovery path must stop that row before starting the newly selected node
+  await db.activityCollection.create({
+    avatarID: avatar.id,
+    scopeID: 'a-different-node',
+    scopeType: 'world_map_node',
+    status: 'active',
+  });
+
+  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+
+  const stopActivityCalled = mock<() => void>();
+  const requestFlushCalled = mock<() => void>();
+
+  server.use(
+    http.post(`${resolveServiceURL('activity')}/rpc/stopActivity`, () => {
+      stopActivityCalled();
+    }),
+  );
+
+  const channel = new MessageChannel();
+
+  const calls: Array<ClientMessage> = [];
+
+  channel.port2.start();
+
+  channel.port2.addEventListener('message', (event: MessageEvent<ClientMessage>) => {
+    calls.push(event.data);
+
+    if (event.data.type !== ClientMessageType.RequestFlush) {
+      return;
+    }
+
+    requestFlushCalled();
+
+    channel.port2.postMessage({
+      activityID: event.data.activityID,
+      requestID: event.data.requestID,
+      type: WorkerMessageType.FlushCompleted,
+    });
+  });
+
+  const worker = { port: channel.port1 };
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    render(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(calls.some((call) => isSetActivityMessage(call))).toBeTrue();
+    });
+  });
+
+  expect(requestFlushCalled).toHaveBeenCalledBefore(stopActivityCalled);
+
+  const sent = calls.find((call) => isSetActivityMessage(call));
+
+  invariant(sent !== undefined, 'expected a set-activity message');
+  expect(sent.activity.avatarID).toBe(avatar.id);
+  expect(sent.activity.scopeID).toBe('a9lp75');
 });
 
 test('it renders the node and its codex fragment once the worker reports the sent activity', async () => {
