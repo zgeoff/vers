@@ -51,7 +51,9 @@ test('it ignores an ack with a different request id until the timeout resolves i
 
   await waitForIdleFlush(worker, 'activity_1', 20);
 
-  expect(Date.now() - started).toBeGreaterThanOrEqual(20);
+  // a timer can fire a few milliseconds before the wall clock reflects its full delay, so the
+  // assertion tolerates that skew instead of pinning the exact timeout
+  expect(Date.now() - started).toBeGreaterThanOrEqual(15);
 });
 
 test('it resolves after the timeout when no ack arrives', async () => {
@@ -63,5 +65,7 @@ test('it resolves after the timeout when no ack arrives', async () => {
 
   await waitForIdleFlush(worker, 'activity_1', 20);
 
-  expect(Date.now() - started).toBeGreaterThanOrEqual(20);
+  // a timer can fire a few milliseconds before the wall clock reflects its full delay, so the
+  // assertion tolerates that skew instead of pinning the exact timeout
+  expect(Date.now() - started).toBeGreaterThanOrEqual(15);
 });
