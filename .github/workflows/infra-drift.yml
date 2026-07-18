@@ -1,0 +1,78 @@
+name: infra-drift
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - '.github/workflows/infra-drift.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/infra-drift.yml'
+  schedule:
+    # weekly: console drift arrives with no commit, so no push can catch it
+    - cron: '17 19 * * 1'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# every trigger previews the same prod stack — one at a time
+concurrency:
+  group: infra-drift-prod
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    # fork PRs run without secrets, so the preview cannot authenticate — skip them
+    if:
+      github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name ==
+      github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24.18.0
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Load stack credentials
+        uses: 1password/load-secrets-action@3a12b0ab99d9cd590a3e9b5a90ea017210ed9556 # v4.0.1
+        with:
+          export-env: true
+          version: 2.34.1
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          CLOUDFLARE_API_TOKEN: op://vers/vers-infra/cloudflare-api-token
+          CLOUDFLARE_ACCOUNT_ID: op://vers/vers-infra/cloudflare-account-id
+          AWS_ACCESS_KEY_ID: op://vers/vers-infra/aws-access-key-id
+          AWS_SECRET_ACCESS_KEY: op://vers/vers-infra/aws-secret-access-key
+          AWS_REGION: op://vers/vers-infra/aws-region
+          R2_STATE_BUCKET: op://vers/vers-infra/r2-state-bucket
+          PULUMI_CONFIG_PASSPHRASE: op://vers/vers-infra/pulumi-passphrase
+          AXIOM_TOKEN: op://vers/axiom/iac-token
+          DISCORD_ALARMS_WEBHOOK: op://vers/discord-alarms-webhook/credential
+
+      - name: Preview
+        uses: pulumi/actions@8e5e406f4007fca908480587cb9893c07090f58d # v7.0.0
+        with:
+          command: preview
+          stack-name: prod
+          work-dir: infra
+          cloud-url:
+            s3://${{ env.R2_STATE_BUCKET }}?endpoint=${{ env.CLOUDFLARE_ACCOUNT_ID
+            }}.r2.cloudflarestorage.com&region=auto&s3ForcePathStyle=true
+          expect-no-changes: true
+          refresh: true
+          comment-on-pr: ${{ github.event_name == 'pull_request' }}
+          pulumi-version: 3.251.0
