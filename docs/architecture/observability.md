@@ -66,8 +66,11 @@ lands with the metrics that make it observable. The conventions:
 - Every instrument lands with its row in the registry below, in the same PR.
 
 Alerting is Axiom threshold monitors over these datasets, notifying the `vers alarms` notifier. The
-monitors and the notifier are managed as code in the `infra/` Pulumi program (`axiom.ts`) — a
-console edit to either is drift, reconciled by the next `pulumi up`.
+full Axiom resource set — the datasets and their retention, the ingest and query API tokens' scopes,
+the monitors, the notifier, and the dashboards — is managed as code in the `infra/` Pulumi program
+(`axiom.ts`); a console edit to any of them is drift, reconciled by the next `pulumi up`. Token
+secret values stay in 1Password and out of code; the sensitive outputs Pulumi records in stack state
+are encrypted by the stack passphrase.
 
 ## Instrument registry
 

@@ -1,14 +1,100 @@
 import * as axiom from '@pulumi/axiom';
 import * as pulumi from '@pulumi/pulumi';
 
-// The provider authenticates with the Axiom admin token; like the Cloudflare
-// credentials, it enters through the environment resolved by `op run`.
+/**
+ * The provider authenticates with the Axiom admin token; like the Cloudflare
+ * credentials, it enters through the environment resolved by `op run`.
+ */
 const axiomProvider = new axiom.Provider('axiom', {
   apiToken: requireEnv('AXIOM_TOKEN'),
 });
 
-// Alert destination: the vers alarms Discord channel. The webhook URL grants
-// post access to the channel, so it stays a secret end to end.
+/**
+ * Retention on every dataset is the org default (no per-dataset override),
+ * expressed as useRetentionPeriod: false with a zero day count.
+ * kind is immutable — changing it forces a replacement that destroys the
+ * stored events — and each dataset is protected, since deleting one destroys
+ * its stored telemetry.
+ */
+const tracesDataset = new axiom.Dataset(
+  'vers-traces',
+  {
+    name: 'vers-traces',
+    description: 'OTel traces from vers services and app-web',
+
+    // The dataset holds OTel traces but carries the generic events kind: it was
+    // created without a kind, and replacing it now would drop the trace
+    // history. Trace-aware querying works regardless — only OTLP metrics
+    // ingest demands a specific kind.
+    kind: 'axiom:events:v1',
+    useRetentionPeriod: false,
+    retentionDays: 0,
+  },
+  { provider: axiomProvider, protect: true },
+);
+
+const logsDataset = new axiom.Dataset(
+  'vers-logs',
+  {
+    name: 'vers-logs',
+    description: 'pino logs from vers services and app-web (OTLP)',
+    kind: 'axiom:events:v1',
+    useRetentionPeriod: false,
+    retentionDays: 0,
+  },
+  { provider: axiomProvider, protect: true },
+);
+
+/**
+ * An events dataset rejects OTLP metrics ingest, so the metrics kind is the
+ * one kind declaration that is functionally required.
+ */
+const metricsDataset = new axiom.Dataset(
+  'vers-metrics',
+  {
+    name: 'vers-metrics',
+    description: 'OTel metrics from vers services (OTLP)',
+    kind: 'otel:metrics:v1',
+    useRetentionPeriod: false,
+    retentionDays: 0,
+  },
+  { provider: axiomProvider, protect: true },
+);
+
+/**
+ * API tokens declare their scopes here; the secret values stay in the vers
+ * 1Password vault, entering neither code nor stack outputs. Any change to a
+ * token's arguments regenerates its secret (the old value stays valid for the
+ * rotation grace period, 48h by default) — a scope edit is a deliberate
+ * rotation, and the vault item plus the Fly secrets that carry the value must
+ * be updated inside that window.
+ */
+const ingestToken = new axiom.Token(
+  'vers-production',
+  {
+    name: 'vers-production',
+    datasetCapabilities: {
+      '*': { ingests: ['create'] },
+    },
+  },
+  { provider: axiomProvider, protect: true },
+);
+
+const mcpToken = new axiom.Token(
+  'vers-mcp',
+  {
+    name: 'vers-mcp',
+    datasetCapabilities: {
+      '*': { queries: ['read'] },
+    },
+  },
+  { provider: axiomProvider, protect: true },
+);
+
+/**
+ * Alert destination: the vers alarms Discord channel. The webhook URL grants
+ * post access to the channel, so it stays a secret end to end.
+ */
 const alarmsNotifier = new axiom.Notifier(
   'vers-alarms',
   {
@@ -40,9 +126,11 @@ const serverErrorsMonitor = new axiom.Monitor(
   { provider: axiomProvider },
 );
 
-// alertOnNoData is part of the contract: the lag gauge exports from
-// service-replay's always-warm machine, so a silent dataset means the exporter
-// or its process is down — never a healthy quiet system.
+/**
+ * alertOnNoData is part of the contract: the lag gauge exports from
+ * service-replay's always-warm machine, so a silent dataset means the exporter
+ * or its process is down — never a healthy quiet system.
+ */
 const verificationLagMonitor = new axiom.Monitor(
   'vers-verification-lag',
   {
@@ -62,9 +150,116 @@ const verificationLagMonitor = new axiom.Monitor(
   { provider: axiomProvider },
 );
 
+/**
+ * The dashboard document is the full source of truth: a console edit to any of
+ * these fields is drift, reverted by the next `pulumi up`. The provider
+ * normalizes state against the configured key set, so fields it manages or
+ * defaults (uid, owner, empty overrides, server timestamps) stay out — adding
+ * one would show a permanent phantom diff.
+ */
+const baselineDashboardDocument = {
+  name: 'vers services — baseline',
+  description:
+    'Request rate, error rate, p95 latency per service, and error log stream. Baseline from #309.',
+  charts: [
+    {
+      id: 'request-rate',
+      name: 'Request rate by service',
+      query: {
+        apl: "['vers-traces'] | where kind == 'server' | summarize count() by ['service.name'], bin_auto(_time)",
+      },
+      type: 'TimeSeries',
+    },
+    {
+      id: 'error-rate',
+      name: '5xx responses by service',
+      query: {
+        apl: "['vers-traces'] | where kind == 'server' and ['attributes.http.response.status_code'] >= 500 | summarize count() by ['service.name'], bin_auto(_time)",
+      },
+      type: 'TimeSeries',
+    },
+    {
+      id: 'p95-latency',
+      name: 'p95 latency by service',
+      query: {
+        apl: "['vers-traces'] | where kind == 'server' | summarize percentile(duration, 95) by ['service.name'], bin_auto(_time)",
+      },
+      type: 'TimeSeries',
+    },
+    {
+      id: 'error-logs',
+      name: 'Error logs',
+      query: {
+        apl: "['vers-logs'] | where severity_number >= 17 | project _time, ['service.name'], body",
+      },
+      type: 'LogStream',
+    },
+  ],
+  layout: [
+    { h: 8, i: 'request-rate', w: 6, x: 0, y: 0 },
+    { h: 8, i: 'error-rate', w: 6, x: 6, y: 0 },
+    { h: 8, i: 'p95-latency', w: 6, x: 0, y: 8 },
+    { h: 8, i: 'error-logs', w: 6, x: 6, y: 8 },
+  ],
+  refreshTime: 60,
+  schemaVersion: 2,
+  timeWindowStart: 'qr-now-24h',
+  timeWindowEnd: 'qr-now',
+};
+
+const baselineDashboard = new axiom.Dashboard(
+  'vers-services-baseline',
+  {
+    uid: 'bc4755c1-41e7-44d5-9b94-1aa30ec423eb',
+    dashboard: toSortedJSON(baselineDashboardDocument),
+  },
+  { provider: axiomProvider },
+);
+
+export const tracesDatasetName = tracesDataset.name;
+export const logsDatasetName = logsDataset.name;
+export const metricsDatasetName = metricsDataset.name;
+export const ingestTokenName = ingestToken.name;
+export const mcpTokenName = mcpToken.name;
 export const alarmsNotifierName = alarmsNotifier.name;
 export const serverErrorsMonitorName = serverErrorsMonitor.name;
 export const verificationLagMonitorName = verificationLagMonitor.name;
+export const baselineDashboardUID = baselineDashboard.uid;
+
+/**
+ * The provider stores the dashboard document re-marshalled by Go, which sorts
+ * object keys alphabetically and HTML-escapes <, >, and & inside strings;
+ * serializing the same way keeps the committed document byte-identical to
+ * state, so refresh previews stay empty.
+ */
+function toSortedJSON(value: unknown): string {
+  return JSON.stringify(sortKeysDeep(value))
+    .replaceAll('<', String.raw`\u003c`)
+    .replaceAll('>', String.raw`\u003e`)
+    .replaceAll('&', String.raw`\u0026`);
+}
+
+function sortKeysDeep(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sortKeysDeep(entry));
+  }
+
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .toSorted(([a], [b]) => {
+          if (a < b) {
+            return -1;
+          }
+
+          return a > b ? 1 : 0;
+        })
+        .map(([key, entry]) => [key, sortKeysDeep(entry)]),
+    );
+  }
+
+  return value;
+}
 
 function requireEnv(name: string): string {
   const value = process.env[name];
