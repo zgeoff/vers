@@ -8,7 +8,7 @@ import { renderWelcomeEmail } from './render-welcome-email';
 
 interface Preview {
   name: string;
-  render: () => Promise<{ html: string; plainText: string }>;
+  render: () => { html: string; plainText: string };
 }
 
 /**

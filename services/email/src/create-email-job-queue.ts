@@ -81,7 +81,7 @@ export function createEmailJobQueue(
     connectionString: config.connectionString,
     handlers: {
       'send-change-email-notification': async (payload, context) => {
-        const email = await renderChangeEmailNotificationEmail();
+        const email = renderChangeEmailNotificationEmail();
 
         await emailClient.sendEmail({
           ...email,
@@ -91,7 +91,7 @@ export function createEmailJobQueue(
         });
       },
       'send-change-email-verification': async (payload, context) => {
-        const email = await renderChangeEmailVerificationEmail({
+        const email = renderChangeEmailVerificationEmail({
           newEmail: payload.newEmail,
           verificationCode: payload.verificationCode,
           verificationURL: payload.verificationURL,
@@ -105,7 +105,7 @@ export function createEmailJobQueue(
         });
       },
       'send-existing-account': async (payload, context) => {
-        const email = await renderExistingAccountEmail({ email: payload.email });
+        const email = renderExistingAccountEmail({ email: payload.email });
 
         await emailClient.sendEmail({
           ...email,
@@ -115,7 +115,7 @@ export function createEmailJobQueue(
         });
       },
       'send-password-changed': async (payload, context) => {
-        const email = await renderPasswordChangedEmail({ email: payload.email });
+        const email = renderPasswordChangedEmail({ email: payload.email });
 
         await emailClient.sendEmail({
           ...email,
@@ -125,7 +125,7 @@ export function createEmailJobQueue(
         });
       },
       'send-reset-password': async (payload, context) => {
-        const email = await renderResetPasswordEmail({ resetURL: payload.resetURL });
+        const email = renderResetPasswordEmail({ resetURL: payload.resetURL });
 
         await emailClient.sendEmail({
           ...email,
@@ -135,7 +135,7 @@ export function createEmailJobQueue(
         });
       },
       'send-welcome': async (payload, context) => {
-        const email = await renderWelcomeEmail({
+        const email = renderWelcomeEmail({
           verificationCode: payload.verificationCode,
           verificationURL: payload.verificationURL,
         });

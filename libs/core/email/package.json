@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@react-email/components": "catalog:",
+    "html-to-text": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "resend": "catalog:"
@@ -22,8 +23,10 @@
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/bun": "catalog:",
+    "@types/html-to-text": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "msw": "catalog:",
