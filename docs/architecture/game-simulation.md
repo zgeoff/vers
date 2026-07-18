@@ -147,6 +147,11 @@ continues from) by replaying up to the confirmed head before the worker resumes 
 A larger gap fast-forwards through one or more attempts first, then attaches the same way to
 whichever continuation is still active when the budget runs out.
 
+A continuation the worker couldn't complete — a same-row race just after a terminal checkpoint, or a
+transport failure starting the next row — leaves a pending record that the next resync consults: a
+non-active row matching it starts fresh once its terminal append is acknowledged. A player stop
+leaves no such record, so a stopped activity is never resumed.
+
 Offline progress is bounded by a per-avatar simulated-time meter, enforced on the append path — the
 server never simulates. The avatar's budget refills at wall-clock rate since it was last banked,
 never past the cap (`OFFLINE_PROGRESS_CAP_MS`, 24h), and every accepted checkpoint batch debits its
