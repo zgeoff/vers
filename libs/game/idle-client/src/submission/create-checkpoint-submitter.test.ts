@@ -1033,6 +1033,67 @@ test('it sends a fresh traceparent with each flush and reports its trace id on r
   );
 });
 
+test('it delivers queued non-terminal checkpoints when flushNow is called', async () => {
+  let capturedFlush: (() => Promise<void>) | undefined;
+
+  const ctx = setupTest({
+    scheduleFlush: (flush) => {
+      capturedFlush = flush;
+    },
+  });
+
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'flush-now-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('flush-now-activity', createMockProgressCheckpoint());
+
+  expect(track).not.toHaveBeenCalled();
+
+  await ctx.submitter.flushNow('flush-now-activity');
+
+  expect(track).toHaveBeenCalledExactlyOnceWith({
+    activityID: 'flush-now-activity',
+    checkpoints: expect.toBeArrayOfSize(1),
+    expectedHead: 0,
+  });
+
+  // the superseded progress-window callback is now a no-op: firing it resends nothing
+  await capturedFlush?.();
+
+  expect(track).toHaveBeenCalledOnce();
+});
+
+test('it resolves flushNow for an unknown activity without a request', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.flushNow('never-registered');
+
+  expect(track).not.toHaveBeenCalled();
+});
+
 test('it sends no trace header for a call made without per-call context', async () => {
   const ctx = setupTest({ scheduleRetry: () => {} });
   const traceparents: Array<null | string> = [];

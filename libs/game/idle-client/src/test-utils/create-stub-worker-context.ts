@@ -26,6 +26,7 @@ export function createStubWorkerContext(
 
   const submitter: CheckpointSubmitter = options.submitter ?? {
     flushHeld: () => Promise.resolve(),
+    flushNow: () => Promise.resolve(),
     registerActivity: () => Promise.resolve(),
     submit: () => Promise.resolve(undefined),
   };

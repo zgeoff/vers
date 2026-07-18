@@ -20,6 +20,13 @@ interface ActivityState {
   consecutiveFlushFailures: number;
   expectedHead: number;
   flushPending: boolean;
+
+  /**
+   * The running flush attempt's promise, set when `flush` starts and cleared when it settles — so
+   * a caller that must observe that attempt's outcome (rather than start a fresh one) can await it
+   * instead of racing a concurrent request against the in-flight batch.
+   */
+  flushRunning: Promise<void> | undefined;
   flushScheduled: boolean;
   inFlight: boolean;
   invalid: boolean;
@@ -64,6 +71,16 @@ export interface CheckpointSubmitter {
    * independently, so one failure never blocks the rest of the drain.
    */
   flushHeld: () => Promise<void>;
+
+  /**
+   * Delivers an activity's queued checkpoints now, superseding its shared progress-window timer —
+   * the caller is about to stop the activity server-side and would otherwise lose whatever that
+   * window still holds unsent. Waits out an attempt already in flight, then makes exactly one
+   * flush attempt of its own; a batch the attempt holds for retry resolves as delivered as it's
+   * going to get, with no wait on the retry itself. Resolves immediately for an unregistered or
+   * invalid activity.
+   */
+  flushNow: (activityID: string) => Promise<void>;
 }
 
 interface CreateCheckpointSubmitterOptions {
@@ -202,6 +219,24 @@ export function createCheckpointSubmitter(
 
     state.inFlight = true;
 
+    // Retained so a caller that must observe this exact attempt settle — rather than start a
+    // fresh one or fold into a scheduled retry — can await it directly.
+    const attempt = runFlushAttempt(activityID, state);
+
+    state.flushRunning = attempt;
+
+    try {
+      await attempt;
+    } finally {
+      state.flushRunning = undefined;
+    }
+  };
+
+  const runFlushAttempt = async (
+    activityID: string,
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cursor this function bumps in place as the attempt settles
+    state: ActivityState,
+  ): Promise<void> => {
     try {
       const rows = await readQueuedCheckpoints(activityID);
 
@@ -327,6 +362,7 @@ export function createCheckpointSubmitter(
       consecutiveFlushFailures: 0,
       expectedHead: context.appendedHead,
       flushPending: false,
+      flushRunning: undefined,
       flushScheduled: false,
       inFlight: false,
       invalid: false,
@@ -443,7 +479,23 @@ export function createCheckpointSubmitter(
     );
   };
 
-  return { flushHeld, registerActivity, submit };
+  const flushNow = async (activityID: string): Promise<void> => {
+    const state = activityStates.get(activityID);
+
+    if (state === undefined || state.invalid) {
+      return;
+    }
+
+    state.flushScheduled = false;
+
+    if (state.flushRunning !== undefined) {
+      await state.flushRunning;
+    }
+
+    await flush(activityID);
+  };
+
+  return { flushHeld, flushNow, registerActivity, submit };
 }
 
 async function loadPendingCheckpoints(
