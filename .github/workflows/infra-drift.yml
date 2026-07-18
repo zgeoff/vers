@@ -53,15 +53,15 @@ jobs:
           version: 2.34.1
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          CLOUDFLARE_API_TOKEN: op://vers/vers-infra/cloudflare-api-token
-          CLOUDFLARE_ACCOUNT_ID: op://vers/vers-infra/cloudflare-account-id
-          AWS_ACCESS_KEY_ID: op://vers/vers-infra/aws-access-key-id
-          AWS_SECRET_ACCESS_KEY: op://vers/vers-infra/aws-secret-access-key
-          AWS_REGION: op://vers/vers-infra/aws-region
-          R2_STATE_BUCKET: op://vers/vers-infra/r2-state-bucket
-          PULUMI_CONFIG_PASSPHRASE: op://vers/vers-infra/pulumi-passphrase
-          AXIOM_TOKEN: op://vers/axiom/iac-token
-          DISCORD_ALARMS_WEBHOOK: op://vers/discord-alarms-webhook/credential
+          CLOUDFLARE_API_TOKEN: op://vers-ci/vers-infra/cloudflare-api-token
+          CLOUDFLARE_ACCOUNT_ID: op://vers-ci/vers-infra/cloudflare-account-id
+          AWS_ACCESS_KEY_ID: op://vers-ci/vers-infra/aws-access-key-id
+          AWS_SECRET_ACCESS_KEY: op://vers-ci/vers-infra/aws-secret-access-key
+          AWS_REGION: op://vers-ci/vers-infra/aws-region
+          R2_STATE_BUCKET: op://vers-ci/vers-infra/r2-state-bucket
+          PULUMI_CONFIG_PASSPHRASE: op://vers-ci/vers-infra/pulumi-passphrase
+          AXIOM_TOKEN: op://vers-ci/axiom/iac-token
+          DISCORD_ALARMS_WEBHOOK: op://vers-ci/discord-alarms-webhook/credential
 
       - name: Preview
         uses: pulumi/actions@8e5e406f4007fca908480587cb9893c07090f58d # v7.0.0

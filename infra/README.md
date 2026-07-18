@@ -20,7 +20,7 @@ disk.
 - `versidle.com` added to Cloudflare, with the registrar's nameservers pointed at the pair
   Cloudflare assigns. DNS records attach to a zone, so this comes first.
 - An R2 bucket named `vers-pulumi-state` for Pulumi state.
-- An Axiom API token (the `iac-token` field on the vault's `axiom` item) with org-level
+- An Axiom API token (the `iac-token` field on the `vers-ci` vault's `axiom` item) with org-level
   monitors/notifiers/dashboards create/read/update/delete and query permission on the `vers-*`
   datasets — Axiom rejects monitor writes unless the token can query every dataset the monitor's APL
   references.
