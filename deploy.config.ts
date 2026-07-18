@@ -104,6 +104,7 @@ export default defineDeployManifest({
     {
       app: 'vers-bugsink',
       configDir: 'apps/bugsink',
+      dockerfile: 'apps/bugsink/Dockerfile',
       trigger: { globs: ['apps/bugsink/**'], kind: 'paths' },
     },
     {

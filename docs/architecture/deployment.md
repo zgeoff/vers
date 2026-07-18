@@ -78,22 +78,28 @@ rolls out:
 
 1. Neon migrations apply once, in their own never-cancelled `migrate` job — several services share
    the one database, so migration never runs per service.
-2. A deploy matrix runs the deploy CLI (`bun run deploy -- deploy --app <name>`) per manifest app
-   through the `.github/actions/fly-deploy` composite action. The matrix itself is derived from
-   `deploy.config.ts` by a `manifest` job (the CLI's `list` command), so adding an app to the
-   manifest is the whole change. Each leg self-gates: the CLI compares HEAD against the `GIT_SHA`
-   stamped on the app's machines, so a rollout lost to an earlier failure ships on the next push.
-3. A stale leg rolls out in two phases. The build phase runs `flyctl deploy --build-only --push` on
-   Fly's remote builder — no image blob crosses from the GitHub runner — pushing the image as
+2. Two per-app matrix jobs run the deploy CLI through the `.github/actions/fly-deploy` composite
+   action: `build` (`bun run deploy -- build --app <name>`) as soon as checks are green, and
+   `deploy` (`bun run deploy -- cutover --app <name>`) after `migrate` and `build`. Both matrices
+   derive from `deploy.config.ts` via a `manifest` job (the CLI's `list` command), so adding an app
+   to the manifest is the whole change. Each leg self-gates: the CLI compares HEAD against the
+   `GIT_SHA` stamped on the app's machines, so a phase lost to an earlier failure ships on the next
+   push. The `build` job orders the cutovers without gating them — one app's failed build must not
+   abandon the others' rollouts, so its own cutover leg fails alone on the missing ref.
+3. A stale build leg runs `flyctl deploy --build-only --push` on Fly's remote builder — no image
+   blob crosses from the GitHub runner — pushing the image as
    `registry.fly.io/<app>:deployment-<sha>`; both phases derive the tag from the commit, so no ref
-   travels between them, and re-running a leg overwrites its own tag instead of minting a new
-   artifact. The cutover phase deploys that pushed ref (`flyctl deploy --image`), waits for the
+   travels between the jobs, and re-running a leg overwrites its own tag instead of minting a new
+   artifact. A stale cutover leg deploys that pushed ref (`flyctl deploy --image`), waits for the
    fleet to report the new SHA, then runs the app's post-deploy probes from `deploy.config.ts`. An
-   app with no Dockerfile (`vers-bugsink`) skips the build phase and cuts over to the image named in
-   its `fly.toml`.
+   app with no Dockerfile (`vers-umami`) has no build leg work and cuts over to the image named in
+   its `fly.toml`. The CLI's `deploy` command runs both phases in one invocation for a manual
+   rollout; `images` prints each buildable app's deployable ref for HEAD (the commit-derived tag
+   when stale, the newest recorded release otherwise, the fleet's resolved image for an app with no
+   recorded release yet) as JSON.
 4. A rollout whose probes pass is recorded in the `releases` table (app, commit SHA, image ref, the
    digest the fleet resolved it to) — the newest row per app is that app's rollback target. The
-   deploy legs require `DATABASE_URL` for this record.
+   cutover legs require `DATABASE_URL` for this record.
 5. A rollout whose probes fail rolls back: the CLI redeploys the app's newest recorded release,
    restamping that release's own `GIT_SHA` so the fleet reads stale against HEAD and the next push
    ships the fix. The leg still fails — rollback restores service, it never greens the run. A failed
@@ -124,10 +130,11 @@ image versions".
 A rollout can fail on transient `syd` host-capacity refusals ("could not reserve resource"); Fly
 rolls back cleanly, so re-run the failed job.
 
-`vers-bugsink` and `vers-umami` deploy pinned stock images with no build. Neither sits in the turbo
-task graph, so their staleness triggers in `deploy.config.ts` are path globs (`apps/bugsink/**`,
+`vers-bugsink` and `vers-umami` ship pinned upstream images. Neither sits in the turbo task graph,
+so their staleness triggers in `deploy.config.ts` are path globs (`apps/bugsink/**`,
 `apps/umami/**`) rather than turbo affectedness. Upgrading either is a tag bump — Bugsink on its
-`Dockerfile` `FROM` line, Umami on its `fly.toml` `[build]` image.
+`Dockerfile` `FROM` line (a thin config layer its build leg bakes like any other app's), Umami on
+its `fly.toml` `[build]` image, deployed with no build leg at all.
 
 ## Sim-version registry
 
