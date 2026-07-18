@@ -1,4 +1,4 @@
-import { isDefinedError, ORPCError, safe } from '@orpc/client';
+import { ORPCError, isDefinedError, safe } from '@orpc/client';
 import type {
   ActivityData,
   ActivityFailureAction as ContractFailureAction,
@@ -188,6 +188,10 @@ function pickLatestActivityID(result: Readonly<ResyncResult>): string | undefine
 
   if (result.plan.kind === 'none') {
     return undefined;
+  }
+
+  if (result.plan.kind === 'continue') {
+    return result.plan.activity.id;
   }
 
   return result.plan.context.activityID;
