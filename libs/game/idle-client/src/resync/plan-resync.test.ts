@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockLatestActivityProgress } from '../test-utils/factories/create-mock-latest-activity-progress';
 import { planResync } from './plan-resync';
 
@@ -24,6 +25,66 @@ test('it plans nothing for a stopped activity', () => {
 
   expect(planResync({ progress: createMockLatestActivityProgress({ activity }) })).toStrictEqual({
     kind: 'none',
+  });
+});
+
+test('it plans nothing for a stopped activity when the pending continuation names a different row', () => {
+  const activity = createMockActivityData({ status: 'stopped' });
+
+  const plan = planResync({
+    pendingContinuation: {
+      activityID: 'a-different-activity',
+      avatarID: activity.avatarID,
+      failureAction: ActivityFailureAction.Retry,
+      scopeID: activity.scopeID,
+      scopeType: activity.scopeType,
+    },
+    progress: createMockLatestActivityProgress({ activity }),
+  });
+
+  expect(plan).toStrictEqual({ kind: 'none' });
+});
+
+test('it continues a stopped activity matching the pending continuation', () => {
+  const activity = createMockActivityData({ status: 'stopped' });
+
+  const plan = planResync({
+    pendingContinuation: {
+      activityID: activity.id,
+      avatarID: activity.avatarID,
+      failureAction: ActivityFailureAction.Retry,
+      scopeID: activity.scopeID,
+      scopeType: activity.scopeType,
+    },
+    progress: createMockLatestActivityProgress({ activity }),
+  });
+
+  expect(plan).toStrictEqual({ activity, kind: 'continue' });
+});
+
+test('it rebases a capped activity over a matching pending continuation', () => {
+  const activity = createMockActivityData({ appendedHead: 7, status: 'capped' });
+  const progress = createMockLatestActivityProgress({ activity, appendedHead: 7 });
+
+  const plan = planResync({
+    pendingContinuation: {
+      activityID: activity.id,
+      avatarID: activity.avatarID,
+      failureAction: ActivityFailureAction.Retry,
+      scopeID: activity.scopeID,
+      scopeType: activity.scopeType,
+    },
+    progress,
+  });
+
+  expect(plan).toStrictEqual({
+    context: {
+      activityID: activity.id,
+      appendedHead: 7,
+      lastHash: activity.lastHash,
+      startChainIndex: activity.startChainIndex,
+    },
+    kind: 'rebase',
   });
 });
 
