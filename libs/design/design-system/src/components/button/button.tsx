@@ -136,8 +136,7 @@ const button = cva({
   },
 });
 
-type ButtonProps<C extends React.ElementType = 'button'> = RecipeVariantProps<typeof button> & {
-  as?: C;
+type ButtonProps = RecipeVariantProps<typeof button> & {
   children: React.ReactNode;
   css?: Styles;
 };
@@ -147,9 +146,9 @@ export type Props<C extends React.ElementType = 'button'> = PolymorphicComponent
   ButtonProps
 >;
 
-export function Button<C extends React.ElementType>(props: Readonly<Props<C>>) {
+export function Button<C extends React.ElementType = 'button'>(props: Readonly<Props<C>>) {
   const { as, className, fullWidth, size, variant, ...restProps } = props;
-  const Element = as ?? 'button';
+  const Element = (as ?? 'button') as React.ElementType<{ className?: string }>;
 
   return (
     <Element

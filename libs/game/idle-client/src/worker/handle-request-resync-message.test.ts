@@ -783,3 +783,50 @@ test('it reports a fault to the error backend and broadcasts a failed status whe
   expect(recorded[0]?.tags).toMatchObject({ site: 'resync' });
   expect(context.isResyncInFlight()).toBe(false);
 });
+
+test('it broadcasts session-expired without a fault report when the session is no longer valid', async () => {
+  const previousHandle = sentryHandle.current;
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler((opts) => {
+      throw opts.errors.UNAUTHORIZED({ data: { reason: 'expired-session' } });
+    }),
+  );
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    {
+      status: { avatarID: avatar.id, kind: 'session-expired' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+  ]);
+
+  expect(recorded).toStrictEqual([]);
+  expect(ctx.context.isResyncInFlight()).toBe(false);
+});
