@@ -9,6 +9,9 @@ import { waitForHoneypotWindow } from './wait-for-honeypot-window';
 test('it mounts a second canvas for the avatar satellite and drops it on navigation away', async ({
   page,
 }) => {
+  // two software-GL canvas mounts under CI's shared CPU run well past other specs' budget
+  test.slow();
+
   const consoleErrors: Array<string> = [];
 
   page.on('console', (message) => {
@@ -36,7 +39,9 @@ test('it mounts a second canvas for the avatar satellite and drops it on navigat
 
   const canvases = page.locator('canvas');
 
-  await expect(canvases).toHaveCount(2);
+  // software-GL canvas mounts on a loaded shared runner can far outlast the suite-wide expect
+  // timeout while staying sound — slow init is not a missing satellite
+  await expect(canvases).toHaveCount(2, { timeout: 30_000 });
 
   const worldCanvas = canvases.first();
 
