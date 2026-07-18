@@ -5,6 +5,8 @@
 
 import type { ColumnType } from 'kysely';
 
+export type ActivityFailureAction = 'abort' | 'retry';
+
 export type ActivityStatus =
   | 'active'
   | 'capped'
@@ -99,6 +101,7 @@ export interface AvatarItems {
 
 export interface Avatars {
   createdAt: Generated<Timestamp>;
+  failureAction: Generated<ActivityFailureAction>;
   id: string;
   level: Generated<number>;
   mode: Generated<AvatarMode>;

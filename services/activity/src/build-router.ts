@@ -11,6 +11,7 @@ import { resumeActivity } from './handlers/resume-activity';
 import { startActivity } from './handlers/start-activity';
 import { stopActivity } from './handlers/stop-activity';
 import { trackActivityProgress } from './handlers/track-activity-progress';
+import { updateFailureAction } from './handlers/update-failure-action';
 
 interface BuildActivityRouterDeps {
   readonly contentVersion: string;
@@ -41,6 +42,9 @@ export function buildActivityRouter(deps: BuildActivityRouterDeps) {
     stopActivity: os.stopActivity.handler((opts) => stopActivity(deps.db, opts)),
     trackActivityProgress: os.trackActivityProgress.handler((opts) =>
       trackActivityProgress({ db: deps.db, simTimeCapMs: deps.simTimeCapMs }, opts),
+    ),
+    updateFailureAction: os.updateFailureAction.handler((opts) =>
+      updateFailureAction(deps.db, opts),
     ),
   };
 }
