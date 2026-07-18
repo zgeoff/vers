@@ -56,7 +56,7 @@ test('it starts an activity for the selected node once initialized, sending the 
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'node_1' }));
+  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
@@ -85,14 +85,14 @@ test('it starts an activity for the selected node once initialized, sending the 
   invariant(sent !== undefined, 'expected a set-activity message');
   invariant(minted !== undefined, 'expected the start to mint an active row');
   expect(sent.activity.id).toBe(minted.id);
-  expect(sent.activity.scopeID).toBe('node_1');
+  expect(sent.activity.scopeID).toBe('a9lp75');
 });
 
 test('it requests a resync instead of starting when the same scope is already active', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  const node = createMockWorldMapNode({ id: 'node_1' });
+  const node = createMockWorldMapNode({ id: 'a9lp75' });
 
   // a live row already owns the avatar for this same scope, so the start conflicts with it
   await db.activityCollection.create({
@@ -130,7 +130,7 @@ test('it renders the node and its codex fragment once the worker reports the sen
 
   await db.avatarCollection.create({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'node_1' }));
+  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
@@ -172,7 +172,7 @@ test('it offers a retry instead of spinning forever when starting fails, and ret
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  const node = createMockWorldMapNode({ id: 'node_1' });
+  const node = createMockWorldMapNode({ id: 'a9lp75' });
   const started = createMockActivityData({ avatarID: avatar.id, scopeID: node.id });
   let startCalls = 0;
 
@@ -219,7 +219,7 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
 
   await db.avatarCollection.create({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'node_1' }));
+  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
