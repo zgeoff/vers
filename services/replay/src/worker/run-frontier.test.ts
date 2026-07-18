@@ -110,6 +110,13 @@ test('it settles the terminal checkpoint reward into the avatar xp and level on 
   invariant(terminal !== undefined, 'the fixture always ends on a checkpoint');
   expect(terminal.rewards.xp).toBeGreaterThan(0);
 
+  // a non-zero baseline distinguishes the delta add from an absolute overwrite
+  await ctx.db
+    .updateTable('avatars')
+    .set({ level: buildLevelFromXP(500), xp: 500 })
+    .where('id', '=', fixture.activity.avatarId)
+    .execute();
+
   const cache = createReplayCache();
 
   const deps = {
@@ -139,8 +146,8 @@ test('it settles the terminal checkpoint reward into the avatar xp and level on 
     .where('id', '=', fixture.activity.avatarId)
     .executeTakeFirstOrThrow();
 
-  expect(avatar.xp).toBe(terminal.rewards.xp);
-  expect(avatar.level).toBe(buildLevelFromXP(terminal.rewards.xp));
+  expect(avatar.xp).toBe(500 + terminal.rewards.xp);
+  expect(avatar.level).toBe(buildLevelFromXP(500 + terminal.rewards.xp));
 });
 
 test('it leaves the avatar xp and level untouched on a matched mid-run segment', async () => {

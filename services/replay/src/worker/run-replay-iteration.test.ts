@@ -3,7 +3,7 @@ import type { ErrorEvent } from '@sentry/bun';
 import { buildCheckpointHash } from '@vers/contract-activity';
 import type { Json } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
-import { buildSimulationInput } from '@vers/idle-core';
+import { buildLevelFromXP, buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
 import { resolveServiceURL } from '@vers/mock-services';
 import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
@@ -337,6 +337,14 @@ test('it settles no xp and drops the rejected activity from the pending anchor w
     .where('version', '=', targetVersion)
     .execute();
 
+  // a non-zero baseline proves rejection preserves legitimately settled progression rather than
+  // passing because there was nothing to lose
+  await ctx.db
+    .updateTable('avatars')
+    .set({ level: buildLevelFromXP(500), xp: 500 })
+    .where('id', '=', fixture.activity.avatarId)
+    .execute();
+
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
@@ -368,8 +376,8 @@ test('it settles no xp and drops the rejected activity from the pending anchor w
     .where('id', '=', fixture.activity.avatarId)
     .executeTakeFirstOrThrow();
 
-  expect(avatar.xp).toBe(0);
-  expect(avatar.level).toBe(1);
+  expect(avatar.xp).toBe(500);
+  expect(avatar.level).toBe(buildLevelFromXP(500));
 });
 
 test('it rejects a checkpoint with a forged chain position', async () => {

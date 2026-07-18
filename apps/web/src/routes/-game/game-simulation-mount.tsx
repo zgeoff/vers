@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { setCheckpointFlushStall, useResyncStatus } from '@vers/idle-client';
 import { useEffect, useRef } from 'react';
+import { avatarProgressionQueryOptions } from '../../lib/activity/avatar-progression-query-options';
 import { currentActivityQueryOptions } from '../../lib/activity/current-activity-query-options';
 import { activeAvatarQueryOptions } from '../../lib/avatar/active-avatar-query-options';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
@@ -156,6 +157,10 @@ export function GameSimulationMount() {
       void queryClient.invalidateQueries({
         queryKey: currentActivityQueryOptions(avatarID).queryKey,
       });
+
+      void queryClient.invalidateQueries({
+        queryKey: avatarProgressionQueryOptions(avatarID).queryKey,
+      });
     }
   }, [idleWorkerHandle.activity?.id, avatarID, queryClient]);
 
@@ -171,6 +176,10 @@ export function GameSimulationMount() {
     if (avatarID !== undefined) {
       void queryClient.invalidateQueries({
         queryKey: currentActivityQueryOptions(avatarID).queryKey,
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: avatarProgressionQueryOptions(avatarID).queryKey,
       });
     }
   }, [resyncStatus, avatarID, queryClient]);
