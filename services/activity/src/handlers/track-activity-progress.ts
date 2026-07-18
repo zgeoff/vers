@@ -6,6 +6,7 @@ import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import * as z from 'zod';
+import { recordTerminalTransition } from '../metrics/record-terminal-transition';
 import type {
   CappedPayload,
   CheckpointInvalidPayload,
@@ -192,6 +193,7 @@ export async function trackActivityProgress(
       return { appendedHead: capOutcome.appendedHead };
     }
 
+    recordTerminalTransition('capped');
     throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: capOutcome.appendedHead } });
   }
 
@@ -262,6 +264,8 @@ export async function trackActivityProgress(
         scopeType: head.scopeType,
         startChainIndex: head.startChainIndex,
       });
+
+      recordTerminalTransition('stopped');
     }
 
     if (timeDelta > 0) {

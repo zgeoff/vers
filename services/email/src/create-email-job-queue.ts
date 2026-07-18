@@ -17,6 +17,7 @@ import {
 } from '@vers/email';
 import type { JobFailureContext, JobQueue } from '@vers/jobs';
 import { createJobQueue, defineJobs } from '@vers/jobs';
+import { recordDeliveryFailure } from './metrics/record-delivery-failure';
 
 /**
  * Every job shares the same retry posture: five attempts on an exponential backoff off a 30 second
@@ -148,7 +149,10 @@ export function createEmailJobQueue(
         });
       },
     },
+    onJobFailed: (error, context) => {
+      recordDeliveryFailure();
+      config.onJobFailed?.(error, context);
+    },
     ...(config.onError !== undefined && { onError: config.onError }),
-    ...(config.onJobFailed !== undefined && { onJobFailed: config.onJobFailed }),
   });
 }

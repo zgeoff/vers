@@ -905,6 +905,7 @@
       "name": "@vers/service-activity",
       "version": "0.0.0",
       "dependencies": {
+        "@opentelemetry/api": "catalog:",
         "@orpc/server": "catalog:",
         "@paralleldrive/cuid2": "catalog:",
         "@vers/contract-activity": "workspace:*",
@@ -921,6 +922,7 @@
       },
       "devDependencies": {
         "@faker-js/faker": "catalog:",
+        "@opentelemetry/sdk-metrics": "catalog:",
         "@orpc/contract": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
@@ -958,6 +960,7 @@
       "name": "@vers/service-email",
       "version": "0.0.0",
       "dependencies": {
+        "@opentelemetry/api": "catalog:",
         "@orpc/server": "catalog:",
         "@vers/contract-email": "workspace:*",
         "@vers/email": "workspace:*",
@@ -969,6 +972,7 @@
         "zod": "catalog:",
       },
       "devDependencies": {
+        "@opentelemetry/sdk-metrics": "catalog:",
         "@orpc/contract": "catalog:",
         "@sentry/bun": "catalog:",
         "@types/bun": "catalog:",
@@ -985,6 +989,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@noble/hashes": "catalog:",
+        "@opentelemetry/api": "catalog:",
         "@orpc/server": "catalog:",
         "@vers/contract-keys": "workspace:*",
         "@vers/roll-crypto": "workspace:*",
@@ -992,6 +997,7 @@
         "zod": "catalog:",
       },
       "devDependencies": {
+        "@opentelemetry/sdk-metrics": "catalog:",
         "@orpc/contract": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
@@ -1049,6 +1055,7 @@
       "name": "@vers/service-session",
       "version": "0.0.0",
       "dependencies": {
+        "@opentelemetry/api": "catalog:",
         "@orpc/server": "catalog:",
         "@paralleldrive/cuid2": "catalog:",
         "@vers/contract-session": "workspace:*",
@@ -1060,6 +1067,7 @@
       },
       "devDependencies": {
         "@faker-js/faker": "catalog:",
+        "@opentelemetry/sdk-metrics": "catalog:",
         "@orpc/contract": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",

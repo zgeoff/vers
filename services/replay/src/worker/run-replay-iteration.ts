@@ -1,4 +1,5 @@
 import { reportUnexpectedError } from '@vers/service-runtime';
+import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { claimNextChain } from '../queue/claim-next-chain';
 import { findReplayFrontier } from '../queue/find-replay-frontier';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
@@ -43,7 +44,7 @@ export async function runReplayIteration(
 
     return applyPendingCacheEffect(cache, outcome);
   } catch (error) {
-    return recordIterationFailure(deps, cache, claimedFrontier, error);
+    return resolveIterationFailure(deps, cache, claimedFrontier, error);
   }
 }
 
@@ -74,7 +75,7 @@ function applyPendingCacheEffect(
   return { kind: 'matched' };
 }
 
-async function recordIterationFailure(
+async function resolveIterationFailure(
   deps: Readonly<ReplayWorkerDeps>,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
@@ -103,8 +104,12 @@ async function recordIterationFailure(
       'replay attempts exhausted; activity quarantined',
     );
 
+    recordIterationFailure('quarantined');
+
     return { kind: 'quarantined' };
   }
+
+  recordIterationFailure('errored');
 
   return { kind: 'errored' };
 }

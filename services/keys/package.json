@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@noble/hashes": "catalog:",
+    "@opentelemetry/api": "catalog:",
     "@orpc/server": "catalog:",
     "@vers/contract-keys": "workspace:*",
     "@vers/roll-crypto": "workspace:*",
@@ -20,6 +21,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@opentelemetry/sdk-metrics": "catalog:",
     "@orpc/contract": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",

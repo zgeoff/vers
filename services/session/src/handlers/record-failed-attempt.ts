@@ -2,6 +2,7 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 import { MAX_TRANSACTION_ATTEMPTS } from '../consts';
+import { recordFailedAttempt as recordFailedAttemptMetric } from '../metrics/record-failed-attempt';
 import type { EmptyErrorPayload } from '../types';
 
 /**
@@ -27,6 +28,8 @@ export async function recordFailedAttempt(
   db: Kysely<DB>,
   opts: RecordFailedAttemptOpts,
 ): Promise<{ attemptsRemaining: number }> {
+  recordFailedAttemptMetric();
+
   const removedAtCap = await removeIfAtCap(db, opts.input.id);
 
   if (removedAtCap) {
