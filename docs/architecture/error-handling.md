@@ -51,6 +51,8 @@ Status assignment follows the failure's nature:
 - **410 Gone** — a well-formed value the state no longer accepts (expired, already used).
 - **422 Unprocessable Content** — a value that was never acceptable.
 - **401 Unauthorized** — a failure of authentication state.
+- **403 Forbidden** — a caller authentication accepts but the resource's access rule refuses.
+- **404 Not Found** — a reference to a resource that doesn't exist.
 - **409 Conflict** — an operation whose precondition the resource's current state contradicts.
 
 | Domain       | Code                   | Status | Meaning                                                                                                                                                       | data                       |
