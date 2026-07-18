@@ -2,16 +2,29 @@ import { expect, mock, onTestFinished, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ErrorEvent } from '@sentry/browser';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
-import { SIMULATION_TIMESTEP_MS, buildSimulationInput, runAttempt } from '@vers/idle-core';
+import {
+  SIMULATION_TIMESTEP_MS,
+  buildSimulationInput,
+  createSimulation,
+  runAttempt,
+} from '@vers/idle-core';
 import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
+import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
+import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
+import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient } from '../submission/types';
+import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
+import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
+import { createMockStartedCheckpoint } from '../test-utils/factories/create-mock-started-checkpoint';
 import type { RequestResyncMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
@@ -105,6 +118,199 @@ test('it broadcasts capped and installs no simulation for a capped activity', as
   ]);
 
   expect(ctx.context.getSimulation()).toBeNull();
+});
+
+test('it delivers a queued row for the resync-determined latest activity rather than sweeping it, while sweeping every other activity', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: avatar.id,
+    startedAt: new Date(),
+  });
+
+  await writeQueuedCheckpoint(activity.id, createMockCheckpointBatchEntry({ version: 1 }));
+
+  await writeQueuedCheckpoint(
+    'stray-unrelated-activity',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  // the resync's own drain delivered the determined latest activity's queued row over the
+  // network rather than the sweep silently discarding it
+  const landed = db.checkpointCollection.findMany((q) => q.where({ activityID: activity.id }));
+
+  expect(landed).toHaveLength(1);
+
+  const remainingQueue = await readQueuedCheckpoints(activity.id);
+  const sweptQueue = await readQueuedCheckpoints('stray-unrelated-activity');
+
+  expect(remainingQueue).toStrictEqual([]);
+  expect(sweptQueue).toStrictEqual([]);
+});
+
+test('it sweeps every queued checkpoint when the avatar has no activity history', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  await writeQueuedCheckpoint(
+    'stray-no-activity-activity',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  const swept = await readQueuedCheckpoints('stray-no-activity-activity');
+
+  expect(swept).toStrictEqual([]);
+});
+
+test('it keeps the queued rows of an activity that went live while the resync was running', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+
+  await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: avatar.id,
+    startedAt: new Date(),
+  });
+
+  const token = await createTestAccessToken(user.id);
+
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({
+      headers: { authorization: `Bearer ${token}` },
+      url: `${resolveServiceURL('activity')}/rpc`,
+    }),
+  );
+
+  let releaseHeldFlush: (() => void) | undefined;
+
+  const heldFlush = new Promise<void>((resolve) => {
+    releaseHeldFlush = resolve;
+  });
+
+  const context = createStubWorkerContext({
+    client,
+    submitter: {
+      flushHeld: () => heldFlush,
+      flushNow: () => Promise.resolve(),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+    },
+  });
+
+  const freshActivity = createMockActivityData({ id: 'fresh-live-activity' });
+
+  await writeQueuedCheckpoint(freshActivity.id, createMockCheckpointBatchEntry({ version: 1 }));
+
+  await writeQueuedCheckpoint(
+    'stray-mid-resync-activity',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  const handled = handleRequestResyncMessage(context, message);
+
+  // a fresher activity goes live while the resync is parked on its held-batch flush, exactly as
+  // a set-activity request landing mid-resync would install it
+  const input = buildSimulationInput(freshActivity);
+  const simulation = createSimulation();
+
+  simulation.startActivity(input.avatar, input.activity);
+  context.setSimulation(simulation);
+  releaseHeldFlush?.();
+
+  await handled;
+
+  // the sweep kept the live activity's queued row — its running writer's own pipeline — while
+  // still removing the genuinely stranded activity's row
+  const kept = await readQueuedCheckpoints(freshActivity.id);
+  const swept = await readQueuedCheckpoints('stray-mid-resync-activity');
+
+  expect(kept).toHaveLength(1);
+  expect(swept).toStrictEqual([]);
+});
+
+test('it flushes a held checkpoint for a previously tracked, no-longer-latest activity before sweeping it', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  const staleActivity = await db.activityCollection.create({
+    avatarID: avatar.id,
+    startedAt: new Date(Date.now() - 60_000),
+  });
+
+  await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: avatar.id,
+    startedAt: new Date(),
+  });
+
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      if (track.mock.calls.length === 1) {
+        return HttpResponse.error();
+      }
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.context.getSubmitter().registerActivity({
+    activityID: staleActivity.id,
+    appendedHead: 0,
+    lastHash: staleActivity.lastHash,
+    startChainIndex: staleActivity.startChainIndex,
+  });
+
+  await ctx.context.getSubmitter().submit(staleActivity.id, createMockStartedCheckpoint());
+  await ctx.flush();
+
+  // the flush attempt failed and held the row for retry
+  const heldRows = await readQueuedCheckpoints(staleActivity.id);
+
+  expect(heldRows).toHaveLength(1);
+  expect(track).toHaveBeenCalledOnce();
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  // flushHeld ran before the sweep determined a fresher activity is latest, delivering the held
+  // row over the network rather than letting the sweep silently discard it
+  expect(track).toHaveBeenCalledTimes(2);
+
+  const remaining = await readQueuedCheckpoints(staleActivity.id);
+
+  expect(remaining).toStrictEqual([]);
 });
 
 test('it reconstructs and installs a live simulation mid-stream, registering from the recovered cursor', async () => {

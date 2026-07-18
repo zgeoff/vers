@@ -5,6 +5,7 @@ import invariant from 'tiny-invariant';
 import { runReconstruction } from '../resync/run-reconstruction';
 import { runResync } from '../resync/run-resync';
 import type { FastForwardReport, ResyncPlan, ResyncResult } from '../resync/types';
+import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
 import type { RequestResyncMessage, ResyncStatus } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
 import { createResyncStatusMessage } from './create-resync-status-message';
@@ -19,10 +20,15 @@ import type { WorkerContext } from './types';
  * progression, ending on `done` (or `capped`) so a connected tab's welcome-back UI always
  * resolves; a zero-gap outcome (live re-attach, no activity) stays silent, so a fresh login never
  * opens that UI. A live simulation this resync would install is skipped when a different activity
- * went live while it was running — a fresher `SetActivity` always wins. A resync that fails
- * outright forwards the fault to the error backend and broadcasts a `failed` `ResyncStatus` for
- * the requesting avatar, never a connection-status change — connectivity is the connection layer's
- * own signal, not a resync outcome — and never rejects; a tab's retry re-requests it.
+ * went live while it was running — a fresher `SetActivity` always wins. Once the plan settles, the
+ * durable checkpoint queue is swept down to the determined latest activity plus whichever activity
+ * is live at sweep time — a fresher activity installed mid-resync keeps its writer's queued rows —
+ * since a prior worker lifetime's stranded rows for any other activity have no delivery path and
+ * are worthless. A resync
+ * that fails outright forwards the fault to the error backend and broadcasts a `failed`
+ * `ResyncStatus` for the requesting avatar, never a connection-status change — connectivity is
+ * the connection layer's own signal, not a resync outcome — and never rejects; a tab's retry
+ * re-requests it.
  */
 export async function handleRequestResyncMessage(
   context: WorkerContext,
@@ -51,6 +57,7 @@ export async function handleRequestResyncMessage(
       submitter: context.getSubmitter(),
     });
 
+    await sweepStaleActivities(context, result);
     await applyResyncResult(context, result);
   } catch (error) {
     reportWorkerFault('resync', error);
@@ -58,6 +65,48 @@ export async function handleRequestResyncMessage(
   } finally {
     context.setResyncInFlight(false);
   }
+}
+
+/**
+ * Sweeps every queued checkpoint outside the resync's determined latest activity and the activity
+ * live at sweep time — a fresher activity can go live while the resync is still running, and its
+ * queued rows are its running writer's own pipeline, never stranded work. Outside those, a worker
+ * restart has no delivery path for a stranded row, and the server settles rewards authoritatively,
+ * so nothing else is ever worth keeping. Returns the swept activity ids. Failure never fails the
+ * resync: it only reports the fault and returns nothing swept, since a stranded row costs nothing
+ * but disk until the next sweep.
+ */
+async function sweepStaleActivities(
+  context: WorkerContext,
+  result: Readonly<ResyncResult>,
+): Promise<Array<string>> {
+  try {
+    const keepActivityIDs = [
+      ...new Set(
+        [pickLatestActivityID(result), context.getSimulation()?.activity?.id].filter(
+          (activityID): activityID is string => activityID !== undefined,
+        ),
+      ),
+    ];
+
+    return await sweepStaleCheckpoints(keepActivityIDs);
+  } catch (error) {
+    reportWorkerFault('resync', error);
+
+    return [];
+  }
+}
+
+function pickLatestActivityID(result: Readonly<ResyncResult>): string | undefined {
+  if (result.report !== undefined) {
+    return result.report.activity.id;
+  }
+
+  if (result.plan.kind === 'none') {
+    return undefined;
+  }
+
+  return result.plan.context.activityID;
 }
 
 async function applyResyncResult(

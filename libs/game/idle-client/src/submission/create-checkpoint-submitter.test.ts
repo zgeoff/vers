@@ -584,9 +584,13 @@ test('it doubles the retry delay on each consecutive failure up to the cap', asy
 
 test('it resets the backoff exponent on a successful flush', async () => {
   const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+  let capturedFlush: (() => Promise<void>) | undefined;
   let shouldFail = true;
 
   const ctx = setupTest({
+    scheduleFlush: (flush) => {
+      capturedFlush = flush;
+    },
     scheduleRetry: (delayMs, retry) => {
       retries.push({ delayMs, retry });
     },
@@ -609,7 +613,11 @@ test('it resets the backoff exponent on a successful flush', async () => {
     startChainIndex: 0,
   });
 
-  await ctx.submitter.submit('reset-backoff-activity', createMockCompletedCheckpoint());
+  // a non-terminal checkpoint keeps the activity's state alive across the successful flush, so
+  // the second failure backs off on the same state the first failure escalated
+  await ctx.submitter.submit('reset-backoff-activity', createMockProgressCheckpoint());
+
+  await capturedFlush?.();
 
   expect(retries).toHaveLength(1);
   expect(retries[0]?.delayMs).toBe(10_000);
@@ -624,7 +632,9 @@ test('it resets the backoff exponent on a successful flush', async () => {
 
   shouldFail = true;
 
-  await ctx.submitter.submit('reset-backoff-activity', createMockCompletedCheckpoint());
+  await ctx.submitter.submit('reset-backoff-activity', createMockProgressCheckpoint());
+
+  await capturedFlush?.();
 
   expect(retries).toHaveLength(2);
   expect(retries[1]?.delayMs).toBe(10_000);
@@ -793,9 +803,13 @@ test('it folds a retry firing while a flush is already in flight into the pendin
 
 test('it flushes every held activity immediately and resets their backoff', async () => {
   const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+  let capturedFlush: (() => Promise<void>) | undefined;
   let shouldFail = true;
 
   const ctx = setupTest({
+    scheduleFlush: (flush) => {
+      capturedFlush = flush;
+    },
     scheduleRetry: (delayMs, retry) => {
       retries.push({ delayMs, retry });
     },
@@ -818,7 +832,11 @@ test('it flushes every held activity immediately and resets their backoff', asyn
     startChainIndex: 0,
   });
 
-  await ctx.submitter.submit('flush-held-activity', createMockCompletedCheckpoint());
+  // a non-terminal checkpoint keeps the activity's state alive across the reconnect flush, so
+  // the next failure backs off on the same state the first failure escalated
+  await ctx.submitter.submit('flush-held-activity', createMockProgressCheckpoint());
+
+  await capturedFlush?.();
 
   expect(retries).toHaveLength(1);
 
@@ -832,7 +850,9 @@ test('it flushes every held activity immediately and resets their backoff', asyn
 
   shouldFail = true;
 
-  await ctx.submitter.submit('flush-held-activity', createMockCompletedCheckpoint());
+  await ctx.submitter.submit('flush-held-activity', createMockProgressCheckpoint());
+
+  await capturedFlush?.();
 
   expect(retries).toHaveLength(2);
   expect(retries[1]?.delayMs).toBe(10_000);
@@ -1120,4 +1140,374 @@ test('it sends no trace header for a call made without per-call context', async 
   });
 
   expect(traceparents).toStrictEqual([null]);
+});
+
+test('it evicts the activity after ACTIVITY_CAPPED so a later registration re-seeds an empty queue', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+      throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: 0 } });
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'capped-evict-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('capped-evict-activity', createMockCompletedCheckpoint());
+
+  expect(track).toHaveBeenCalledOnce();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  // a re-registration after eviction runs its own seed read and flush rather than resolving the
+  // capped registration, proving the tombstoned state is gone
+  await ctx.submitter.registerActivity({
+    activityID: 'capped-evict-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('capped-evict-activity', createMockCompletedCheckpoint());
+
+  expect(track).toHaveBeenCalledTimes(2);
+
+  expect(track).toHaveBeenLastCalledWith({
+    activityID: 'capped-evict-activity',
+    checkpoints: expect.toBeArrayOfSize(1),
+    expectedHead: 0,
+  });
+});
+
+test('it evicts the activity after ACTIVITY_TERMINAL so a later registration re-seeds an empty queue', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+      throw opts.errors.ACTIVITY_TERMINAL({ data: { appendedHead: 0, status: 'stopped' } });
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'terminal-status-evict-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('terminal-status-evict-activity', createMockCompletedCheckpoint());
+
+  expect(track).toHaveBeenCalledOnce();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'terminal-status-evict-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('terminal-status-evict-activity', createMockCompletedCheckpoint());
+
+  expect(track).toHaveBeenCalledTimes(2);
+});
+
+test('it evicts the activity after SESSION_EVICTED so a later registration re-seeds an empty queue', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+      throw opts.errors.SESSION_EVICTED({ data: {} });
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'session-evict-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('session-evict-activity', createMockCompletedCheckpoint());
+
+  expect(track).toHaveBeenCalledOnce();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'session-evict-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('session-evict-activity', createMockCompletedCheckpoint());
+
+  expect(track).toHaveBeenCalledTimes(2);
+});
+
+test('it evicts the activity after NOT_FOUND so a later registration re-seeds an empty queue', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'not-found-evict-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('not-found-evict-activity', createMockCompletedCheckpoint());
+
+  expect(track).toHaveBeenCalledOnce();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'not-found-evict-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('not-found-evict-activity', createMockCompletedCheckpoint());
+
+  expect(track).toHaveBeenCalledTimes(2);
+});
+
+test('it keeps the tombstoned registration on CHECKPOINT_INVALID so a later registration attempt does not reseed', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+      throw opts.errors.CHECKPOINT_INVALID({ data: { reason: 'broken-chain-link' } });
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'invalid-tombstone-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('invalid-tombstone-activity', createMockCompletedCheckpoint());
+
+  expect(track).toHaveBeenCalledOnce();
+
+  // a later registration attempt resolves the original tombstoned registration instead of
+  // re-seeding, so no second seed read or flush ever reaches the server
+  await ctx.submitter.registerActivity({
+    activityID: 'invalid-tombstone-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  expect(track).toHaveBeenCalledOnce();
+
+  const version = await ctx.submitter.submit(
+    'invalid-tombstone-activity',
+    createMockProgressCheckpoint(),
+  );
+
+  expect(version).toBeUndefined();
+  expect(track).toHaveBeenCalledOnce();
+});
+
+test('it evicts the activity once a terminal checkpoint drains fully confirmed', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      return { appendedHead: 2 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'terminal-drain-evict-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('terminal-drain-evict-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('terminal-drain-evict-activity', createMockCompletedCheckpoint());
+
+  expect(track).toHaveBeenCalledOnce();
+
+  // a later registration seeded from a deliberately different head re-seeds and re-flushes
+  // rather than resolving a stale registration, proving the fully confirmed terminal drain
+  // evicted it — retained state would keep the old cursor and submit version 3 at expectedHead 2
+  await ctx.submitter.registerActivity({
+    activityID: 'terminal-drain-evict-activity',
+    appendedHead: 7,
+    lastHash: 'fresh_hash',
+    startChainIndex: 0,
+  });
+
+  const version = await ctx.submitter.submit(
+    'terminal-drain-evict-activity',
+    createMockCompletedCheckpoint(),
+  );
+
+  expect(version).toBe(8);
+  expect(track).toHaveBeenCalledTimes(2);
+
+  expect(track).toHaveBeenLastCalledWith({
+    activityID: 'terminal-drain-evict-activity',
+    checkpoints: [expect.objectContaining({ prevHash: 'fresh_hash', version: 8 })],
+    expectedHead: 7,
+  });
+});
+
+test('it evicts a hydrated terminal row once its resend drains fully confirmed', async () => {
+  await writeQueuedCheckpoint(
+    'hydrated-terminal-activity',
+    createMockCheckpointBatchEntry({ payload: { type: 'completed' }, version: 1 }),
+  );
+
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  // the registration's own flush resends the queued terminal row and fully confirms it
+  await ctx.submitter.registerActivity({
+    activityID: 'hydrated-terminal-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  expect(track).toHaveBeenCalledOnce();
+
+  const drained = await readQueuedCheckpoints('hydrated-terminal-activity');
+
+  expect(drained).toStrictEqual([]);
+
+  // a later registration seeded from a deliberately different head re-seeds and re-flushes
+  // rather than resolving a stale registration, proving the confirmed hydrated terminal row
+  // evicted the activity even though no live submission ever queued it
+  await ctx.submitter.registerActivity({
+    activityID: 'hydrated-terminal-activity',
+    appendedHead: 5,
+    lastHash: 'fresh_hash',
+    startChainIndex: 0,
+  });
+
+  const version = await ctx.submitter.submit(
+    'hydrated-terminal-activity',
+    createMockCompletedCheckpoint(),
+  );
+
+  expect(version).toBe(6);
+  expect(track).toHaveBeenCalledTimes(2);
+
+  expect(track).toHaveBeenLastCalledWith({
+    activityID: 'hydrated-terminal-activity',
+    checkpoints: [expect.objectContaining({ prevHash: 'fresh_hash', version: 6 })],
+    expectedHead: 5,
+  });
+});
+
+test('it evicts safely when a concurrent flush call sets flushPending during a terminal drain', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+  let releaseFirstCall: (() => void) | undefined;
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(async (opts) => {
+      track(opts.input);
+
+      if (track.mock.calls.length === 1) {
+        await new Promise<void>((resolve) => {
+          releaseFirstCall = resolve;
+        });
+      }
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'concurrent-evict-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  const terminalSubmit = ctx.submitter.submit(
+    'concurrent-evict-activity',
+    createMockCompletedCheckpoint(),
+  );
+
+  await waitFor(() => {
+    expect(track).toHaveBeenCalledOnce();
+  });
+
+  // a flush call landing while the terminal drain is in flight marks flushPending, so the finally
+  // block's re-flush after eviction must find the state gone and return without throwing
+  const heldFlush = ctx.submitter.flushHeld();
+
+  releaseFirstCall?.();
+
+  await expect(terminalSubmit).toResolve();
+  await expect(heldFlush).toResolve();
+
+  expect(track).toHaveBeenCalledOnce();
 });
