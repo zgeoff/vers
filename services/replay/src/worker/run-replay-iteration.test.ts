@@ -3,7 +3,7 @@ import type { ErrorEvent } from '@sentry/bun';
 import { buildCheckpointHash } from '@vers/contract-activity';
 import type { Json } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
-import { buildSimulationInput } from '@vers/idle-core';
+import { buildLevelFromXP, buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
 import { resolveServiceURL } from '@vers/mock-services';
 import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
@@ -298,6 +298,86 @@ test('it rejects a checkpoint with a forged continuation seed, rewinds the chain
   });
 
   expect(updatedSuccessor.status).toBe('rejected');
+});
+
+test('it settles no xp and drops the rejected activity from the pending anchor when a checkpoint is forged', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const targetVersion = 1;
+  const target = fixture.checkpoints.find((checkpoint) => checkpoint.version === targetVersion);
+
+  expect(target).toBeDefined();
+
+  const tamperedPayload: Record<string, unknown> = { ...target?.payload, chainIndex: 999 };
+
+  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
+  const tamperedHash = buildCheckpointHash({
+    chainIndex: 999,
+    entropySource: 'server-key',
+    nextSeed: tamperedPayload['nextSeed'] as string,
+    prevHash: target?.prevHash ?? '',
+    seed: tamperedPayload['seed'] as string,
+    time: tamperedPayload['time'] as number,
+    type: tamperedPayload['type'] as string,
+    version: targetVersion,
+  });
+
+  // oxlint-enable typescript/no-unsafe-type-assertion
+
+  await ctx.db
+    .updateTable('activityCheckpoints')
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; the value is a hand-tampered, schema-shaped payload
+    .set({ hash: tamperedHash, payload: tamperedPayload as Json })
+    .where('activityId', '=', fixture.activity.id)
+    .where('version', '=', targetVersion)
+    .execute();
+
+  // a non-zero baseline proves rejection preserves legitimately settled progression rather than
+  // passing because there was nothing to lose
+  await ctx.db
+    .updateTable('avatars')
+    .set({ level: buildLevelFromXP(500), xp: 500 })
+    .where('id', '=', fixture.activity.avatarId)
+    .execute();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const cache = createReplayCache();
+
+  const outcome = await runReplayIteration(deps, cache);
+
+  expect(outcome).toStrictEqual({ kind: 'rejected' });
+
+  const updatedActivity = await ctx.db
+    .selectFrom('activities')
+    .select(['appendedHead', 'status', 'verifiedHead'])
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  // rejected excludes the activity from the pending predicate outright, regardless of its
+  // unsettled head gap
+  expect(updatedActivity.status).toBe('rejected');
+  expect(updatedActivity.verifiedHead).toBeLessThan(updatedActivity.appendedHead);
+
+  const avatar = await ctx.db
+    .selectFrom('avatars')
+    .select(['level', 'xp'])
+    .where('id', '=', fixture.activity.avatarId)
+    .executeTakeFirstOrThrow();
+
+  expect(avatar.xp).toBe(500);
+  expect(avatar.level).toBe(buildLevelFromXP(500));
 });
 
 test('it rejects a checkpoint with a forged chain position', async () => {

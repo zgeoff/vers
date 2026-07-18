@@ -1,0 +1,107 @@
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import * as z from 'zod';
+import type { MissingSessionPayload } from '../types';
+
+/**
+ * oRPC handler opts for the authed `getAvatarProgression` procedure.
+ */
+interface GetAvatarProgressionOpts {
+  readonly context: { readonly actingUserId: null | string };
+  readonly errors: {
+    readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
+  };
+  readonly input: { readonly avatarID: string };
+}
+
+interface PendingXPEntry {
+  readonly activityID: string;
+  readonly xpDelta: number;
+}
+
+interface AvatarProgression {
+  readonly level: number;
+  readonly pending: Array<PendingXPEntry>;
+  readonly xp: number;
+}
+
+/**
+ * Returns an avatar's settled xp/level plus one pending entry per terminal-but-unsettled activity
+ * — a stopped, capped, quarantined, or parked activity whose verified anchor hasn't caught up to
+ * its appended tail. The settled row and the pending set are read in one statement, so a single
+ * read always sees the same constant sum a verifier apply moves a delta across: settlement never
+ * visibly jumps. Returns null when the avatar doesn't exist or isn't owned by the acting user.
+ */
+export async function getAvatarProgression(
+  db: Kysely<DB>,
+  opts: GetAvatarProgressionOpts,
+): Promise<AvatarProgression | null> {
+  if (opts.context.actingUserId === null) {
+    throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+  }
+
+  const rows = await db
+    .selectFrom('avatars')
+    .leftJoin('activities', (join) =>
+      join
+        .onRef('activities.avatarId', '=', 'avatars.id')
+        .on('activities.status', '!=', 'active')
+        .on('activities.status', '!=', 'rejected')
+        .onRef('activities.verifiedHead', '<', 'activities.appendedHead'),
+    )
+    .leftJoin('activityCheckpoints', (join) =>
+      join
+        .onRef('activityCheckpoints.activityId', '=', 'activities.id')
+        .onRef('activityCheckpoints.version', '=', 'activities.appendedHead'),
+    )
+    .select(['avatars.level', 'avatars.xp', 'activities.id', 'activityCheckpoints.payload'])
+    .where('avatars.id', '=', opts.input.avatarID)
+    .where('avatars.userId', '=', opts.context.actingUserId)
+    .execute();
+
+  const [settled] = rows;
+
+  if (settled === undefined) {
+    return null;
+  }
+
+  const pending = rows.flatMap((row) => findPendingEntry(row));
+
+  return { level: settled.level, pending, xp: settled.xp };
+}
+
+/**
+ * Checkpoint types whose `rewards.xp` is a run's final earned total rather than one checkpoint's
+ * own delta — the shape a pending entry's `xpDelta` displays, matching what the verifier settles.
+ */
+const TERMINAL_CHECKPOINT_TYPES = new Set(['completed', 'failed']);
+
+const TerminalCheckpointPayloadSchema = z.object({
+  rewards: z.object({ xp: z.number() }),
+  type: z.string(),
+});
+
+interface PendingCandidateRow {
+  readonly id: null | string;
+  readonly payload: unknown;
+}
+
+/**
+ * Builds a pending entry from a candidate row, or nothing when the row carries no pending activity
+ * — a null activity id from the left join, a checkpoint that failed to append past `verifiedHead`
+ * at all, or a checkpoint whose payload doesn't parse or isn't a terminal type. Appended data is
+ * untrusted, so a malformed or non-terminal payload contributes nothing rather than throwing.
+ */
+function findPendingEntry(row: Readonly<PendingCandidateRow>): Array<PendingXPEntry> {
+  if (row.id === null) {
+    return [];
+  }
+
+  const parsed = TerminalCheckpointPayloadSchema.safeParse(row.payload);
+
+  if (!parsed.success || !TERMINAL_CHECKPOINT_TYPES.has(parsed.data.type)) {
+    return [];
+  }
+
+  return [{ activityID: row.id, xpDelta: parsed.data.rewards.xp }];
+}

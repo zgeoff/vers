@@ -2,8 +2,9 @@ import * as Sentry from '@sentry/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { setCheckpointFlushStall, useResyncStatus } from '@vers/idle-client';
 import { useEffect, useRef } from 'react';
-import { currentActivityQueryOptions } from '../../lib/activity/current-activity-query-options';
-import { activeAvatarQueryOptions } from '../../lib/avatar/active-avatar-query-options';
+import { buildAvatarProgressionQueryOptions } from '../../lib/activity/build-avatar-progression-query-options';
+import { buildCurrentActivityQueryOptions } from '../../lib/activity/build-current-activity-query-options';
+import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
 import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
@@ -22,7 +23,7 @@ let lastEmittedCompletionID: string | undefined;
 export function GameSimulationMount() {
   const idleWorkerHandle = useIdleWorkerHandle();
   const queryClient = useQueryClient();
-  const avatarQuery = useQuery(activeAvatarQueryOptions());
+  const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const resyncStatus = useResyncStatus();
   const avatarID = avatarQuery.data?.id;
   const hasSentResync = useRef(false);
@@ -150,11 +151,15 @@ export function GameSimulationMount() {
     }
 
     lastWorkerActivityID.current = workerActivityID;
-    void queryClient.invalidateQueries({ queryKey: activeAvatarQueryOptions().queryKey });
+    void queryClient.invalidateQueries({ queryKey: buildActiveAvatarQueryOptions().queryKey });
 
     if (avatarID !== undefined) {
       void queryClient.invalidateQueries({
-        queryKey: currentActivityQueryOptions(avatarID).queryKey,
+        queryKey: buildCurrentActivityQueryOptions(avatarID).queryKey,
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: buildAvatarProgressionQueryOptions(avatarID).queryKey,
       });
     }
   }, [idleWorkerHandle.activity?.id, avatarID, queryClient]);
@@ -166,11 +171,15 @@ export function GameSimulationMount() {
       return;
     }
 
-    void queryClient.invalidateQueries({ queryKey: activeAvatarQueryOptions().queryKey });
+    void queryClient.invalidateQueries({ queryKey: buildActiveAvatarQueryOptions().queryKey });
 
     if (avatarID !== undefined) {
       void queryClient.invalidateQueries({
-        queryKey: currentActivityQueryOptions(avatarID).queryKey,
+        queryKey: buildCurrentActivityQueryOptions(avatarID).queryKey,
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: buildAvatarProgressionQueryOptions(avatarID).queryKey,
       });
     }
   }, [resyncStatus, avatarID, queryClient]);

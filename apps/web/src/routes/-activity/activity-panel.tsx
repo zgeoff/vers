@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { Heading, Spinner, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
-import { currentActivityQueryOptions } from '../../lib/activity/current-activity-query-options';
+import { buildCurrentActivityQueryOptions } from '../../lib/activity/build-current-activity-query-options';
 import { useActivityRewards } from '../../lib/activity/use-activity-rewards';
-import { activeAvatarQueryOptions } from '../../lib/avatar/active-avatar-query-options';
+import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 
 const CHARACTER_FRAMES: ReadonlyArray<string> = ['Vanguard', 'Support', 'Striker'];
 
@@ -45,11 +45,11 @@ const characterFrame = css({
  * per-item cards — are a different screen's concern.
  */
 export function ActivityPanel() {
-  const avatarQuery = useQuery(activeAvatarQueryOptions());
+  const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const avatarID = avatarQuery.data?.id;
 
   const currentActivityQuery = useQuery({
-    ...currentActivityQueryOptions(avatarID ?? ''),
+    ...buildCurrentActivityQueryOptions(avatarID ?? ''),
     enabled: avatarID !== undefined,
   });
 

@@ -1,11 +1,14 @@
-interface OptimisticProgressionAvatar {
-  readonly level: number;
-  readonly xp: number;
+import { buildLevelFromXP } from '@vers/idle-core';
+
+interface PendingXPEntry {
+  readonly activityID: string;
+  readonly xpDelta: number;
 }
 
-interface OptimisticProgressionActivity {
-  readonly buildSnapshot: { readonly level: number; readonly xp: number };
-  readonly id: string;
+interface OptimisticProgressionRead {
+  readonly level: number;
+  readonly pending: ReadonlyArray<PendingXPEntry>;
+  readonly xp: number;
 }
 
 interface OptimisticProgressionSimActivity {
@@ -13,43 +16,47 @@ interface OptimisticProgressionSimActivity {
   readonly rewards: { readonly xp: number };
 }
 
-interface OptimisticProgressionSimAvatar {
-  readonly level: number;
+interface BuildOptimisticProgressionInput {
+  readonly progression: Readonly<OptimisticProgressionRead>;
+  readonly simActivity?: Readonly<OptimisticProgressionSimActivity> | undefined;
 }
 
-interface BuildOptimisticProgressionInput {
-  readonly avatar: Readonly<OptimisticProgressionAvatar>;
-  readonly currentActivity: Readonly<OptimisticProgressionActivity> | null;
-  readonly simActivity?: Readonly<OptimisticProgressionSimActivity> | undefined;
-  readonly simAvatar?: Readonly<OptimisticProgressionSimAvatar> | undefined;
+interface OptimisticProgression {
+  /**
+   * Whether the displayed total carries anything not yet on the settled row: a pending entry, a
+   * live sim overlay, or both. A screen renders its settling marker exactly when this is true.
+   */
+  readonly isSettling: boolean;
+  readonly level: number;
+  readonly xp: number;
 }
 
 /**
- * Derives the level/xp a screen renders while an activity is in flight. `buildSnapshot` is the
- * server-authored anchor pinned at the activity's start; the running simulation's level and
- * `rewards.xp` are an optimistic overlay on top of it, applied only while the live sim is still
- * driving that same activity — a stale sim left over from a different one contributes nothing.
- * With no current activity the settled avatar row is the truth: nothing is in flight to
- * optimistically project.
+ * Derives the level/xp a screen renders from the settled progression read: the settled total plus
+ * every pending entry's delta, plus the live sim's own running delta on top — deduped by activity
+ * id against the pending list so a just-terminal run's own entry, once its refetch lands, is never
+ * counted twice. The level is recomputed from the resulting total whenever anything is projected —
+ * a pending entry can carry xp from a run the live sim never drove, so only the aggregate total
+ * derives a trustworthy level; the settled row's own level is exact only once nothing projects on
+ * top of it.
  */
 export function buildOptimisticProgression(
   input: Readonly<BuildOptimisticProgressionInput>,
-): OptimisticProgressionAvatar {
-  if (input.currentActivity === null) {
-    return { level: input.avatar.level, xp: input.avatar.xp };
-  }
+): OptimisticProgression {
+  const pendingXP = input.progression.pending.reduce((total, entry) => total + entry.xpDelta, 0);
 
-  const simMatchesCurrentActivity = input.simActivity?.id === input.currentActivity.id;
+  const simIsPending = input.progression.pending.some(
+    (entry) => entry.activityID === input.simActivity?.id,
+  );
 
-  if (!simMatchesCurrentActivity) {
-    return {
-      level: input.currentActivity.buildSnapshot.level,
-      xp: input.currentActivity.buildSnapshot.xp,
-    };
-  }
+  const overlayApplies = input.simActivity !== undefined && !simIsPending;
+  const overlayXP = overlayApplies ? (input.simActivity?.rewards.xp ?? 0) : 0;
+  const displayXP = input.progression.xp + pendingXP + overlayXP;
+  const isSettling = input.progression.pending.length > 0 || overlayApplies;
 
   return {
-    level: input.simAvatar?.level ?? input.currentActivity.buildSnapshot.level,
-    xp: input.currentActivity.buildSnapshot.xp + (input.simActivity?.rewards.xp ?? 0),
+    isSettling,
+    level: isSettling ? buildLevelFromXP(displayXP) : input.progression.level,
+    xp: displayXP,
   };
 }

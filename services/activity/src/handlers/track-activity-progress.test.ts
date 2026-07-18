@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
-import { buildFailureXPLoss, buildLevelFromXP } from '@vers/idle-core';
+import { buildFailureXPLoss } from '@vers/idle-core';
 import {
   createAnonymousViewer,
   createServiceToken,
@@ -400,7 +400,7 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   ).rejects.toMatchObject({ code: 'UNAUTHORIZED', data: { reason: 'missing-session' } });
 });
 
-test('it settles avatar xp and level from a completed terminal checkpoint', async () => {
+test('it leaves the avatar xp and level untouched on a completed terminal checkpoint', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -414,10 +414,8 @@ test('it settles avatar xp and level from a completed terminal checkpoint', asyn
     scopeType: 'world_map_node',
   });
 
-  const rewardsXP = 150;
-
   const batch = createMockCheckpointBatch({
-    finalPayloadOverrides: { rewards: { xp: rewardsXP }, type: 'completed' },
+    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
     startPrevHash: started.startHash,
     startVersion: 1,
   });
@@ -434,8 +432,8 @@ test('it settles avatar xp and level from a completed terminal checkpoint', asyn
     .where('id', '=', avatar.id)
     .executeTakeFirstOrThrow();
 
-  expect(updated.xp).toBe(rewardsXP);
-  expect(updated.level).toBe(buildLevelFromXP(rewardsXP));
+  expect(updated.xp).toBe(0);
+  expect(updated.level).toBe(avatar.level);
 
   const updatedActivity = await ctx.db
     .selectFrom('activities')
@@ -447,12 +445,12 @@ test('it settles avatar xp and level from a completed terminal checkpoint', asyn
   expect(updatedActivity.stoppedAt).not.toBeNil();
 });
 
-test('it settles a clamped xp loss from a failed terminal checkpoint', async () => {
+test('it leaves the avatar xp and level untouched on a failed terminal checkpoint', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
 
-  // partway into a level, so the failure loss is nonzero but the ratchet still holds
+  // partway into a level, so a settled failure loss would be nonzero if the request path applied it
   const startingXP = 150;
 
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: startingXP });
@@ -466,10 +464,9 @@ test('it settles a clamped xp loss from a failed terminal checkpoint', async () 
   });
 
   const loss = buildFailureXPLoss(startingXP);
-  const rewardsXP = -loss;
 
   const batch = createMockCheckpointBatch({
-    finalPayloadOverrides: { rewards: { xp: rewardsXP }, type: 'failed' },
+    finalPayloadOverrides: { rewards: { xp: -loss }, type: 'failed' },
     startPrevHash: started.startHash,
     startVersion: 1,
   });
@@ -487,8 +484,8 @@ test('it settles a clamped xp loss from a failed terminal checkpoint', async () 
     .executeTakeFirstOrThrow();
 
   expect(loss).toBeGreaterThan(0);
-  expect(updated.xp).toBe(startingXP + rewardsXP);
-  expect(updated.level).toBe(buildLevelFromXP(startingXP + rewardsXP));
+  expect(updated.xp).toBe(startingXP);
+  expect(updated.level).toBe(avatar.level);
 });
 
 test('it advances the chain anchor to the terminal checkpoint on a completed batch', async () => {
@@ -822,7 +819,7 @@ test('it returns the settled head when a terminal batch is resubmitted unchanged
     .where('id', '=', avatar.id)
     .executeTakeFirstOrThrow();
 
-  expect(updatedAvatar.xp).toBe(150);
+  expect(updatedAvatar.xp).toBe(0);
 
   const checkpoints = await ctx.db
     .selectFrom('activityCheckpoints')
@@ -1534,7 +1531,7 @@ test('it rejects a batch whose time regresses below the already accounted time w
   ).rejects.toMatchObject({ code: 'CHECKPOINT_INVALID', data: { reason: 'time-regression' } });
 });
 
-test('it debits the meter alongside the xp settlement on a terminal batch', async () => {
+test('it debits the meter on a terminal batch that leaves xp settlement to the verifier', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -1567,7 +1564,7 @@ test('it debits the meter alongside the xp settlement on a terminal batch', asyn
     .where('id', '=', avatar.id)
     .executeTakeFirstOrThrow();
 
-  expect(updated.xp).toBe(150);
+  expect(updated.xp).toBe(0);
   expect(Number(updated.simBudgetMs)).toBeWithin(289_000, 291_000);
 });
 

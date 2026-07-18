@@ -149,7 +149,15 @@ async function runFrontierInProcess(
     : compareReplaySegment(unverified, replayed, compareContext);
 
   if (verdict?.kind === 'match') {
-    return applyMatch(trx, deps, segment, replayed, driver, verdict.rewardFacts);
+    return applyMatch(
+      trx,
+      deps,
+      segment,
+      replayed,
+      driver,
+      verdict.rewardFacts,
+      verdict.verifiedXPDelta,
+    );
   }
 
   const confirmDriver = buildFreshDriver(segment);
@@ -209,7 +217,15 @@ async function runFrontierCrossVersion(
       : compareReplaySegment(unverified, replayed, compareContext);
 
   if (verdict?.kind === 'match') {
-    return applyMatch(trx, deps, segment, replayed, undefined, verdict.rewardFacts);
+    return applyMatch(
+      trx,
+      deps,
+      segment,
+      replayed,
+      undefined,
+      verdict.rewardFacts,
+      verdict.verifiedXPDelta,
+    );
   }
 
   const confirmOutcome = await runReplaySegment(runDeps, job);
@@ -239,6 +255,7 @@ async function applyMatch(
   replayed: ReadonlyArray<ReplayedCheckpoint>,
   driver: SimulationDriver | undefined,
   rewardFacts: ReadonlyArray<RewardFact>,
+  verifiedXPDelta: number,
 ): Promise<ReplayIterationOutcome> {
   const lastReplayed = replayed.at(-1);
   const lastStored = segment.checkpoints.at(-1);
@@ -277,6 +294,7 @@ async function applyMatch(
         scopeType: segment.activity.scopeType,
       },
     }),
+    xpDelta: verifiedXPDelta,
   });
 
   const effect: PendingCacheEffect =

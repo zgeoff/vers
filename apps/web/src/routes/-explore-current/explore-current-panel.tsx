@@ -8,7 +8,7 @@ import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { SimulationUnsupportedNotice } from '../../components/simulation-unsupported-notice';
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
-import { activeAvatarQueryOptions } from '../../lib/avatar/active-avatar-query-options';
+import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
 import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
 import { sendIdleSetActivity } from '../../lib/idle/send-idle-set-activity';
@@ -39,7 +39,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   const isSharedWorkerSupported = useIsSharedWorkerSupported();
   const idleWorkerHandle = useIdleWorkerHandle();
   const selectedNode = useSelectedNode().node;
-  const avatarQuery = useQuery(activeAvatarQueryOptions());
+  const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const avatarID = avatarQuery.data?.id;
   const isAutoRetryChecked = idleWorkerHandle.failureAction === ActivityFailureAction.Retry;
 
