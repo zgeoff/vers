@@ -44,6 +44,24 @@ test('it offers a retry when the catch-up fails outright', () => {
   expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
 });
 
+test('it offers a sign-in link back to this page when the session expired mid catch-up', () => {
+  setResyncStatus({ avatarID: 'avatar_1', kind: 'session-expired' });
+  render(<WelcomeBackModal />);
+
+  expect(
+    screen.getByText('Your session expired while catching up. Your progress is safe.'),
+  ).toBeInTheDocument();
+
+  const redirectTo = `${globalThis.location.pathname}${globalThis.location.search}`;
+
+  const searchParams = new URLSearchParams({ redirect: redirectTo });
+
+  expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+    'href',
+    `/login?${searchParams.toString()}`,
+  );
+});
+
 test('it retries by requesting a fresh resync and clearing the failed status', async () => {
   const user = userEvent.setup();
   const calls: Array<ClientMessage> = [];

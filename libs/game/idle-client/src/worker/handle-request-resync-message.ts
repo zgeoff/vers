@@ -1,4 +1,4 @@
-import { safe } from '@orpc/client';
+import { ORPCError, safe } from '@orpc/client';
 import type {
   ActivityData,
   ActivityFailureAction as ContractFailureAction,
@@ -36,11 +36,13 @@ import type { WorkerContext } from './types';
  * durable checkpoint queue is swept down to the determined latest activity plus whichever activity
  * is live at sweep time — a fresher activity installed mid-resync keeps its writer's queued rows —
  * since a prior worker lifetime's stranded rows for any other activity have no delivery path and
- * are worthless. A resync
- * that fails outright forwards the fault to the error backend and broadcasts a `failed`
- * `ResyncStatus` for the requesting avatar, never a connection-status change — connectivity is
- * the connection layer's own signal, not a resync outcome — and never rejects; a tab's retry
- * re-requests it.
+ * are worthless. A resync that fails outright forwards the fault to the error backend and
+ * broadcasts a `failed` `ResyncStatus` for the requesting avatar, never a connection-status change
+ * — connectivity is the connection layer's own signal, not a resync outcome — and never rejects; a
+ * tab's retry re-requests it. One failure cause is routed apart: an `UNAUTHORIZED` rejection
+ * broadcasts `session-expired` instead, with no fault report — the session lapsing is expected
+ * behaviour whose only remedy is a fresh sign-in, so a tab renders a sign-in path rather than a
+ * retry that can never succeed.
  */
 export async function handleRequestResyncMessage(
   context: WorkerContext,
@@ -92,8 +94,12 @@ export async function handleRequestResyncMessage(
     await sweepStaleActivities(context, result);
     await applyResyncResult(context, result);
   } catch (error) {
-    reportWorkerFault('resync', error);
-    emitResyncStatus(context, { avatarID: message.avatarID, kind: 'failed' });
+    if (error instanceof ORPCError && error.code === 'UNAUTHORIZED') {
+      emitResyncStatus(context, { avatarID: message.avatarID, kind: 'session-expired' });
+    } else {
+      reportWorkerFault('resync', error);
+      emitResyncStatus(context, { avatarID: message.avatarID, kind: 'failed' });
+    }
   } finally {
     context.setResyncInFlight(false);
   }

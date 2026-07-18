@@ -1,7 +1,6 @@
 import type { RecipeVariantProps, Styles } from '@vers/styled-system/css';
 import { cva, cx } from '@vers/styled-system/css';
 import * as React from 'react';
-import type { PolymorphicComponentProps } from '../../types';
 
 const button = cva({
   base: {
@@ -136,32 +135,44 @@ const button = cva({
   },
 });
 
-type ButtonProps<C extends React.ElementType = 'button'> = RecipeVariantProps<typeof button> & {
-  as?: C;
+type ButtonProps = RecipeVariantProps<typeof button> & {
   children: React.ReactNode;
   css?: Styles;
 };
 
-export type Props<C extends React.ElementType = 'button'> = PolymorphicComponentProps<
-  C,
-  ButtonProps
->;
-
-export function Button<C extends React.ElementType>(props: Readonly<Props<C>>) {
-  const { as, className, fullWidth, size, variant, ...restProps } = props;
-  const Element = as ?? 'button';
-
-  return (
-    <Element
-      {...restProps}
-      className={cx(
-        button({
-          ...(fullWidth !== undefined && { fullWidth }),
-          ...(size !== undefined && { size }),
-          ...(variant !== undefined && { variant }),
-        }),
-        className,
-      )}
-    />
+/**
+ * A closed union over the elements the button renders as, not an open polymorphic generic: each
+ * arm carries its own element's full attribute set, so anchor-only attributes exist exactly when
+ * `as: 'a'` is passed and the compiler checks every prop with no casts.
+ */
+export type Props = ButtonProps &
+  (
+    | ({ as: 'a' } & Omit<React.ComponentPropsWithoutRef<'a'>, keyof ButtonProps>)
+    | ({ as?: never } & Omit<React.ComponentPropsWithoutRef<'button'>, keyof ButtonProps>)
   );
+
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- carries React's DOM attribute types (style, dangerouslySetInnerHTML), which have no readonly form
+export function Button(props: Readonly<Props>) {
+  const composedClassName = cx(
+    button({
+      ...(props.fullWidth !== undefined && { fullWidth: props.fullWidth }),
+      ...(props.size !== undefined && { size: props.size }),
+      ...(props.variant !== undefined && { variant: props.variant }),
+    }),
+    props.className,
+  );
+
+  if (props.as === 'a') {
+    const { as, children, className, fullWidth, size, variant, ...anchorProps } = props;
+
+    return (
+      <a {...anchorProps} className={composedClassName}>
+        {children}
+      </a>
+    );
+  }
+
+  const { as, className, fullWidth, size, variant, ...buttonProps } = props;
+
+  return <button {...buttonProps} className={composedClassName} />;
 }
