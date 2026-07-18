@@ -30,6 +30,7 @@ paths = [
   '''(^|/)services/replay/\.env\.test$''',
   '''(^|/)services/replay/\.env\.development$''',
   '''(^|/)services/session/\.env\.development$''',
+  '''(^|/)apps/web-e2e/stack\.env$''',
 ]
 regexes = [
   '''MC4CAQAwBQYDK2VwBCIEIBMom57erggdVdDCIdRWS\+NKMykK\+I5BUKpuHziAq\+0W''',
