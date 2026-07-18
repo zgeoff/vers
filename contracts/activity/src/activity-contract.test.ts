@@ -10,12 +10,13 @@ test('it declares UNAUTHORIZED and FORBIDDEN on every owner-scoped procedure', (
   ]);
 });
 
-test('it declares CONFLICT, NOT_FOUND, and CHAIN_QUARANTINED on startActivity', () => {
+test('it declares CONFLICT, NOT_FOUND, NODE_UNKNOWN, and CHAIN_QUARANTINED on startActivity', () => {
   expect(activityContract.startActivity['~orpc'].errorMap).toContainAllKeys([
     'UNAUTHORIZED',
     'FORBIDDEN',
     'CHAIN_QUARANTINED',
     'CONFLICT',
+    'NODE_UNKNOWN',
     'NOT_FOUND',
     'SIM_VERSION_EXPIRED',
     'SIM_VERSION_UNKNOWN',
@@ -27,6 +28,13 @@ test('it declares SIM_VERSION_EXPIRED and SIM_VERSION_UNKNOWN with explicit stat
 
   expect(errorMap.SIM_VERSION_EXPIRED?.status).toBe(410);
   expect(errorMap.SIM_VERSION_UNKNOWN?.status).toBe(409);
+});
+
+test('it declares a bespoke NODE_UNKNOWN with an explicit status on startActivity', () => {
+  const errorMap = activityContract.startActivity['~orpc'].errorMap;
+
+  expect(errorMap).toContainKey('NODE_UNKNOWN');
+  expect(errorMap.NODE_UNKNOWN?.status).toBe(404);
 });
 
 test('it declares a bespoke CHECKPOINT_INVALID with an explicit status on trackActivityProgress', () => {

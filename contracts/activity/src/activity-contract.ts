@@ -121,6 +121,11 @@ export const activityContract = {
           data: z.object({ activity: ActivityDataSchema }),
           message: 'An activity is already active for this avatar',
         },
+        NODE_UNKNOWN: {
+          data: z.object({}),
+          message: 'The scope node is not registered on the world map',
+          status: 404,
+        },
         NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
         SIM_VERSION_EXPIRED: {
           data: SimVersionProblemDataSchema,
