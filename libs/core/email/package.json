@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@opentelemetry/api": "catalog:",
     "@react-email/components": "catalog:",
     "html-to-text": "catalog:",
     "react": "catalog:",
@@ -20,6 +21,7 @@
     "resend": "catalog:"
   },
   "devDependencies": {
+    "@opentelemetry/sdk-trace-node": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/bun": "catalog:",

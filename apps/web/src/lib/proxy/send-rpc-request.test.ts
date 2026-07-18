@@ -2,6 +2,7 @@ import { expect, mock, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { createTestAccessToken } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
+import { withTraceContext } from '@vers/service-utils';
 import * as jose from 'jose';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, http } from 'msw';
@@ -124,6 +125,30 @@ test('it returns a response whose headers the server can still modify', async ()
   expect(() => {
     outcome.value.headers.delete('x-upstream');
   }).not.toThrow();
+});
+
+test("it re-injects the traceparent from the proxy's own trace scope instead of forwarding the browser's raw header", async () => {
+  const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
+
+  server.use(http.get('http://localhost:3003/rpc/getUser', resolver));
+
+  await withTraceContext(
+    { spanID: '00f067aa0ba902b7', traceID: '4bf92f3577b34da6a3ce929d0e0e4736' },
+    () =>
+      withRequestContext({}, () =>
+        sendRPCRequest(
+          new Request('http://app.test/api/rpc/user/getUser', {
+            headers: { traceparent: '00-11111111111111111111111111111111-2222222222222222-01' },
+            method: 'GET',
+          }),
+          'user',
+        ),
+      ),
+  );
+
+  expect(resolver.mock.calls[0]?.[0].request.headers.get('traceparent')).toBe(
+    '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+  );
 });
 
 test('it answers an aborted request whose body is unreadable with a client-closed status', async () => {

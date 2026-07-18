@@ -1,4 +1,6 @@
 import type { ServiceName } from '@vers/service-auth';
+import { findSpanTraceContext, findTraceContext } from '@vers/service-utils';
+import { buildTraceparent, createTraceContext } from '@vers/trace';
 import { createEdgeServiceToken } from '../rpc/create-edge-service-token';
 import { loadSessionActor } from '../rpc/load-session-actor';
 import { SERVICE_URLS } from '../rpc/service-urls';
@@ -50,6 +52,13 @@ export async function sendRPCRequest(request: Request, service: ServiceName): Pr
   });
 
   headers.set('authorization', `Bearer ${token}`);
+
+  // the browser's own traceparent names this hop's span id, not the service's — re-injecting from
+  // this proxy's active context (continued from that same trace by `withRequestTrace`) parents the
+  // service's span to app-web's server span instead of making it a sibling of the browser's
+  const trace = findSpanTraceContext() ?? findTraceContext() ?? createTraceContext();
+
+  headers.set('traceparent', buildTraceparent(trace));
 
   const response = await fetch(target, {
     headers,

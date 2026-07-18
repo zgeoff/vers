@@ -10,7 +10,11 @@
     "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "dependencies": {
+    "@opentelemetry/api": "catalog:"
+  },
   "devDependencies": {
+    "@opentelemetry/sdk-metrics": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/test-utils": "workspace:*",

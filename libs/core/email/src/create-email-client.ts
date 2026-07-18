@@ -1,3 +1,4 @@
+import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
 import { Resend } from 'resend';
 
 const DEFAULT_FROM = 'noreply@transactional.versidle.com';
@@ -39,26 +40,44 @@ export function createEmailClient(config: Readonly<CreateEmailClientConfig>): Em
   const from = config.from ?? DEFAULT_FROM;
 
   return {
-    sendEmail: async (input) => {
-      const sendOptions =
-        input.idempotencyKey === undefined ? undefined : { idempotencyKey: input.idempotencyKey };
+    sendEmail: (input) => {
+      const tracer = trace.getTracer('@vers/email');
 
-      const result = await resend.emails.send(
-        {
-          from,
-          html: input.html,
-          subject: input.subject,
-          text: input.plainText,
-          to: input.to,
-        },
-        sendOptions,
-      );
+      return tracer.startActiveSpan('resend.send', { kind: SpanKind.CLIENT }, async (span) => {
+        try {
+          const sendOptions =
+            input.idempotencyKey === undefined
+              ? undefined
+              : { idempotencyKey: input.idempotencyKey };
 
-      if (result.error) {
-        throw new Error(`failed to send email: ${result.error.message}`, { cause: result.error });
-      }
+          const result = await resend.emails.send(
+            {
+              from,
+              html: input.html,
+              subject: input.subject,
+              text: input.plainText,
+              to: input.to,
+            },
+            sendOptions,
+          );
 
-      return { id: result.data.id };
+          if (result.error) {
+            throw new Error(`failed to send email: ${result.error.message}`, {
+              cause: result.error,
+            });
+          }
+
+          return { id: result.data.id };
+        } catch (error) {
+          const exception = error instanceof Error ? error : String(error);
+
+          span.recordException(exception);
+          span.setStatus({ code: SpanStatusCode.ERROR });
+          throw error;
+        } finally {
+          span.end();
+        }
+      });
     },
   };
 }
