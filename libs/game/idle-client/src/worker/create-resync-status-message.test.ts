@@ -10,3 +10,12 @@ test('it creates a resync status message', () => {
     type: WorkerMessageType.ResyncStatus,
   });
 });
+
+test('it creates a resync status message for a failed catch-up', () => {
+  const message = createResyncStatusMessage({ avatarID: 'avatar-1', kind: 'failed' });
+
+  expect(message).toStrictEqual({
+    status: { avatarID: 'avatar-1', kind: 'failed' },
+    type: WorkerMessageType.ResyncStatus,
+  });
+});
