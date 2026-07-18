@@ -38,6 +38,13 @@ interface RunResyncOptions {
    */
   readonly onProgress?: (progress: FastForwardProgress) => void;
 
+  /**
+   * Runs once the confirmed snapshot is settled, before any plan is decided — the resync's one
+   * chance to reconcile the failure-action preference against the fetched progress before a
+   * fast-forward reads it.
+   */
+  readonly onProgressFetched?: (progress: LatestActivityProgress) => Promise<void>;
+
   readonly submitter: CheckpointSubmitter;
 }
 
@@ -75,6 +82,8 @@ export async function runResync(
   if (progress === null) {
     return { plan: { kind: 'none' }, progress: null };
   }
+
+  await options.onProgressFetched?.(progress);
 
   const plan = planResync({
     progress,

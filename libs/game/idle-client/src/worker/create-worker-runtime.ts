@@ -1,10 +1,12 @@
 import type { ActivityData } from '@vers/contract-activity';
 import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
-import { SIMULATION_TIMESTEP_MS } from '@vers/idle-core';
+import { ActivityFailureAction, SIMULATION_TIMESTEP_MS } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { readFailureActionCache } from '../submission/read-failure-action-cache';
+import type { ActivityServiceClient } from '../submission/types';
 import type { ClientMessage, RewardSlotLedgerEntry, WorkerMessage } from '../types';
 import { createCheckpointFlushStalledMessage } from './create-checkpoint-flush-stalled-message';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
@@ -24,6 +26,12 @@ export interface WorkerRuntime {
 }
 
 interface CreateWorkerRuntimeOptions {
+  /**
+   * Overrides the production same-origin proxy client — a test's only way to route the runtime's
+   * calls at a mocked backend, since the real client resolves its URL from `self.location.origin`.
+   */
+  readonly client?: ActivityServiceClient;
+
   readonly timestep?: number;
 }
 
@@ -37,7 +45,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
   const connections = new Set<MessagePort>();
 
-  const client = createActivityServiceClient();
+  const client = options.client ?? createActivityServiceClient();
   let simulation: null | Simulation = null;
   let activity: ActivityData | null = null;
   let running = false;
@@ -46,6 +54,26 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let accumulator = 0;
   let resyncAvatarID: string | null = null;
   let resyncInFlight = false;
+  let failureAction: ActivityFailureAction = ActivityFailureAction.Abort;
+  let failureActionDirty = false;
+  let failureActionPushInFlight = false;
+
+  // Every client message and the self-triggered reconnect resync await this before running, so a
+  // relaunch-while-offline never plans against the enum's Abort default while the real cached
+  // preference is still in flight. A failed read falls back to that default rather than rejecting
+  // forever, which would strand every handler that awaits this.
+  const failureActionSeeded = (async () => {
+    try {
+      const cached = await readFailureActionCache();
+
+      if (cached !== undefined) {
+        failureAction = cached.failureAction;
+        failureActionDirty = cached.dirty;
+      }
+    } catch (error) {
+      reportWorkerFault('preference-seed', error);
+    }
+  })();
 
   // A fresh worker starts fully funded and drains toward the cap until its first acknowledged
   // submission; every ack re-anchors the budget at the cap.
@@ -86,6 +114,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     connections,
     getActivity: () => activity,
     getClient: () => client,
+    getFailureAction: () => failureAction,
     getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
     getResyncAvatarID: () => resyncAvatarID,
     getRewardSlotLedger: () => ({
@@ -94,6 +123,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     }),
     getSimulation: () => simulation,
     getSubmitter: () => submitter,
+    isFailureActionDirty: () => failureActionDirty,
+    isFailureActionPushInFlight: () => failureActionPushInFlight,
     isResyncInFlight: () => resyncInFlight,
     recordRewardSlots: (activityID, entry) => {
       if (rewardSlotLedgerActivityID === activityID) {
@@ -110,6 +141,15 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     setActivity: (newActivity) => {
       activity = newActivity;
+    },
+    setFailureAction: (action) => {
+      failureAction = action;
+    },
+    setFailureActionDirty: (dirty) => {
+      failureActionDirty = dirty;
+    },
+    setFailureActionPushInFlight: (inFlight) => {
+      failureActionPushInFlight = inFlight;
     },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
@@ -134,6 +174,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     port.addEventListener('message', (messageEvent: MessageEvent<ClientMessage>) => {
       void (async () => {
         try {
+          await failureActionSeeded;
           await handleClientMessage(context, port, messageEvent);
         } catch (error) {
           reportWorkerFault('message-routing', error);
@@ -205,6 +246,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
     void (async () => {
       try {
+        await failureActionSeeded;
+
         await submitter.flushHeld();
 
         if (context.getSimulation() === null && resyncAvatarID !== null) {

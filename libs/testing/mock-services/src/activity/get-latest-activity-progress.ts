@@ -42,6 +42,7 @@ export const getLatestActivityProgress = os.getLatestActivityProgress.handler((o
     activity: latest,
     anchor: anchor ?? null,
     appendedHead: latest.appendedHead,
+    failureAction: avatar.failureAction,
     serverTime: new Date(),
     verifiedHead: latest.verifiedHead,
   };

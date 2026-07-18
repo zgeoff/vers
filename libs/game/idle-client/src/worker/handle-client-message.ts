@@ -27,7 +27,7 @@ export async function handleClientMessage(
   }
 
   if (isSetFailureActionMessage(event.data)) {
-    handleSetFailureActionMessage(context, event.data);
+    await handleSetFailureActionMessage(context, event.data);
   }
 
   if (isRequestResyncMessage(event.data)) {

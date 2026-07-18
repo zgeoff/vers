@@ -6,6 +6,7 @@ import { resumeActivity } from './resume-activity';
 import { startActivity } from './start-activity';
 import { stopActivity } from './stop-activity';
 import { trackActivityProgress } from './track-activity-progress';
+import { updateFailureAction } from './update-failure-action';
 
 export const activityRouter = {
   getActivityRewards,
@@ -16,4 +17,5 @@ export const activityRouter = {
   startActivity,
   stopActivity,
   trackActivityProgress,
+  updateFailureAction,
 };

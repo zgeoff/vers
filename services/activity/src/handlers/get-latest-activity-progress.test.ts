@@ -42,9 +42,33 @@ test('it returns a fresh activity with a null anchor at verifiedHead 0', async (
     activity: started,
     anchor: null,
     appendedHead: 0,
+    failureAction: 'abort',
     serverTime: expect.toBeValidDate(),
     verifiedHead: 0,
   });
+});
+
+test("it returns the avatar's persisted failure action", async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    failureAction: 'retry',
+    userId: viewer.user.id,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
+
+  expect(progress.failureAction).toBe('retry');
 });
 
 test('it returns the server clock beside the resume cursors', async () => {

@@ -69,6 +69,7 @@ test('it applies the sent failure action to the live simulation', async () => {
   context.setSimulation(simulation);
 
   const message: SetFailureActionMessage = {
+    avatarID: 'avatar-1',
     failureAction: ActivityFailureAction.Retry,
     type: ClientMessageType.SetFailureAction,
   };

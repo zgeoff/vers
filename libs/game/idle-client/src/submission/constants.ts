@@ -23,5 +23,14 @@ export const RETRY_BACKOFF_CAP_MS = 300_000;
  */
 export const FLUSH_STALL_THRESHOLD = 3;
 export const CHECKPOINT_QUEUE_DB_NAME = 'vers-idle-checkpoint-queue';
-export const CHECKPOINT_QUEUE_DB_VERSION = 1;
+export const CHECKPOINT_QUEUE_DB_VERSION = 2;
 export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
+
+/**
+ * The `preferences` object store's one record key. A worker drives one avatar's simulation at a
+ * time, so a single record holds the failure-action preference: the last set wins, and the
+ * record's own `avatarID` decides whether a resync may flush a dirty value — a dirty value reaches
+ * the server only for the avatar it was set for.
+ */
+export const FAILURE_ACTION_PREFERENCE_KEY = 'failure-action';
+export const PREFERENCES_STORE_NAME = 'preferences';

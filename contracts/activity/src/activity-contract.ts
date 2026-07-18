@@ -1,6 +1,7 @@
 import { authedRoute, defineErrors } from '@vers/contract-base';
 import * as z from 'zod';
 import { ActivityDataSchema } from './activity-data-schema';
+import { ActivityFailureActionSchema } from './activity-failure-action-schema';
 import { ActivityStatusSchema } from './activity-status-schema';
 import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
@@ -88,6 +89,7 @@ export const activityContract = {
         activity: ActivityDataSchema,
         anchor: CheckpointSchema.nullable(),
         appendedHead: z.int(),
+        failureAction: ActivityFailureActionSchema,
         serverTime: z.date(),
         verifiedHead: z.int(),
       }),
@@ -212,6 +214,20 @@ export const activityContract = {
           message: "The submitting session is no longer the activity's writer",
           status: 403,
         },
+      }),
+    ),
+
+  updateFailureAction: authedRoute
+    .route({
+      method: 'PUT',
+      path: '/avatars/{avatarID}/activity/failure-action',
+      summary: "Persist an avatar's failure-action preference",
+    })
+    .input(z.object({ avatarID: z.string(), failureAction: ActivityFailureActionSchema }))
+    .output(z.object({ failureAction: ActivityFailureActionSchema }))
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
       }),
     ),
 };

@@ -26,6 +26,7 @@ export interface SetActivityMessage extends IClientMessage {
 }
 
 export interface SetFailureActionMessage extends IClientMessage {
+  readonly avatarID: string;
   readonly failureAction: ActivityFailureAction;
   readonly type: ClientMessageType.SetFailureAction;
 }
@@ -72,6 +73,7 @@ export enum WorkerMessageType {
   CheckpointFlushStalled = 'checkpoint_flush_stalled',
   CheckpointStreamInvalid = 'checkpoint_stream_invalid',
   ConnectionStatus = 'connection_status',
+  FailureActionStatus = 'failure_action_status',
   FlushCompleted = 'flush_completed',
   InitialState = 'initial_state',
   OfflineCapStatus = 'offline_cap_status',
@@ -124,6 +126,17 @@ export interface ResyncStatusMessage extends IWorkerMessage {
 export interface ConnectionStatusMessage extends IWorkerMessage {
   readonly online: boolean;
   readonly type: WorkerMessageType.ConnectionStatus;
+}
+
+/**
+ * Reports the avatar's effective failure-action preference — the worker's in-session source of
+ * truth, sent on every change (a tab's own set, a resync reconcile's adoption of the server's
+ * value) and in a connecting tab's initial state, so every tab reflects it even with no
+ * simulation running.
+ */
+export interface FailureActionStatusMessage extends IWorkerMessage {
+  readonly failureAction: ActivityFailureAction;
+  readonly type: WorkerMessageType.FailureActionStatus;
 }
 
 /**
@@ -192,6 +205,7 @@ export type WorkerMessage =
   | CheckpointFlushStalledMessage
   | CheckpointStreamInvalidMessage
   | ConnectionStatusMessage
+  | FailureActionStatusMessage
   | FlushCompletedMessage
   | InitialStateMessage
   | OfflineCapStatusMessage

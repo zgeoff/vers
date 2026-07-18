@@ -299,8 +299,7 @@ test('it offers a retry instead of spinning forever when starting fails, and ret
 
 test('it renders the auto-retry checkbox unchecked by default and dispatches the toggle', async () => {
   const signedIn = await createSignedInUser();
-
-  await db.avatarCollection.create({ userID: signedIn.userID });
+  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
@@ -340,6 +339,7 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
     await user.click(checkbox);
 
     expect(calls).toContainEqual({
+      avatarID: avatar.id,
       failureAction: ActivityFailureAction.Retry,
       type: ClientMessageType.SetFailureAction,
     });

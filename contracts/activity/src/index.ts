@@ -2,6 +2,8 @@ export type { ActivityContract } from './activity-contract';
 export { activityContract } from './activity-contract';
 export type { ActivityData } from './activity-data-schema';
 export { ActivityDataSchema } from './activity-data-schema';
+export type { ActivityFailureAction } from './activity-failure-action-schema';
+export { ActivityFailureActionSchema } from './activity-failure-action-schema';
 export type { ActivityStatus } from './activity-status-schema';
 export { ActivityStatusSchema } from './activity-status-schema';
 export { buildCheckpointHash } from './build-checkpoint-hash';

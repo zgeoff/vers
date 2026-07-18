@@ -5,7 +5,7 @@ import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
 import { registerZustandReset } from '@vers/client-test-utils';
 import { registerMSWLifecycle } from '@vers/test-utils/bun';
 import { server } from './src/mocks/node';
-import { CHECKPOINT_QUEUE_STORE_NAME } from './src/submission/constants';
+import { CHECKPOINT_QUEUE_STORE_NAME, PREFERENCES_STORE_NAME } from './src/submission/constants';
 import { resolveCheckpointQueueDB } from './src/submission/resolve-checkpoint-queue-db';
 
 // a throwaway dev-only Ed25519 PKCS8 key, so tests can mint the access tokens the stateful
@@ -30,9 +30,10 @@ afterEach(async () => {
   reactTestingLibrary.cleanup();
   mock.restore();
 
-  // fake-indexeddb persists for the whole one-process run; sweep the durable checkpoint queue so
-  // no test depends on unique activity ids for isolation
+  // fake-indexeddb persists for the whole one-process run; sweep both durable stores so no test
+  // depends on unique activity ids, or a clean preferences cache, for isolation
   const queueDB = await resolveCheckpointQueueDB();
 
   await queueDB.clear(CHECKPOINT_QUEUE_STORE_NAME);
+  await queueDB.clear(PREFERENCES_STORE_NAME);
 });

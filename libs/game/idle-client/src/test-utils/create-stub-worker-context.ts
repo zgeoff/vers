@@ -2,6 +2,7 @@ import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
+import { ActivityFailureAction } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
@@ -11,6 +12,7 @@ import type { WorkerContext } from '../worker/types';
 interface CreateStubWorkerContextOptions {
   readonly client?: ActivityServiceClient;
   readonly connections?: ReadonlyArray<MessagePort>;
+  readonly failureAction?: ActivityFailureAction;
   readonly remainingBudgetMs?: number;
   readonly submitter?: Readonly<CheckpointSubmitter>;
 }
@@ -37,11 +39,15 @@ export function createStubWorkerContext(
   let resyncInFlight = false;
   let rewardSlotLedgerActivityID: null | string = null;
   let rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry> = [];
+  let failureAction: ActivityFailureAction = options.failureAction ?? ActivityFailureAction.Abort;
+  let failureActionDirty = false;
+  let failureActionPushInFlight = false;
 
   return {
     connections,
     getActivity: () => activity,
     getClient: () => client,
+    getFailureAction: () => failureAction,
     getRemainingBudgetMs: () => options.remainingBudgetMs ?? Number.MAX_SAFE_INTEGER,
     getResyncAvatarID: () => resyncAvatarID,
     getRewardSlotLedger: () => ({
@@ -50,6 +56,8 @@ export function createStubWorkerContext(
     }),
     getSimulation: () => simulation,
     getSubmitter: () => submitter,
+    isFailureActionDirty: () => failureActionDirty,
+    isFailureActionPushInFlight: () => failureActionPushInFlight,
     isResyncInFlight: () => resyncInFlight,
     recordRewardSlots: (activityID, entry) => {
       if (rewardSlotLedgerActivityID === activityID) {
@@ -66,6 +74,15 @@ export function createStubWorkerContext(
     },
     setActivity: (newActivity) => {
       activity = newActivity;
+    },
+    setFailureAction: (action) => {
+      failureAction = action;
+    },
+    setFailureActionDirty: (dirty) => {
+      failureActionDirty = dirty;
+    },
+    setFailureActionPushInFlight: (inFlight) => {
+      failureActionPushInFlight = inFlight;
     },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;

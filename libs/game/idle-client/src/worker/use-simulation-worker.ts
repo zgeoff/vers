@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { setCheckpointFlushStall } from '../state/set-checkpoint-flush-stall';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setConnectionStatus } from '../state/set-connection-status';
+import { setFailureAction } from '../state/set-failure-action';
 import { setLastCompletedActivityID } from '../state/set-last-completed-activity-id';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
 import { setResyncStatus } from '../state/set-resync-status';
@@ -16,6 +17,7 @@ import type {
   CheckpointFlushStalledMessage,
   CheckpointStreamInvalidMessage,
   ConnectionStatusMessage,
+  FailureActionStatusMessage,
   InitialStateMessage,
   OfflineCapStatusMessage,
   ResyncStatusMessage,
@@ -116,6 +118,10 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
     setConnectionStatus(event.data.online);
   }
 
+  if (isFailureActionStatusMessage(event.data)) {
+    setFailureAction(event.data.failureAction);
+  }
+
   if (isRewardSlotsRecordedMessage(event.data)) {
     updateRewardSlotLedger({
       activityID: event.data.activityID,
@@ -159,6 +165,12 @@ function isResyncStatusMessage(message: WorkerMessage): message is ResyncStatusM
 
 function isConnectionStatusMessage(message: WorkerMessage): message is ConnectionStatusMessage {
   return message.type === WorkerMessageType.ConnectionStatus;
+}
+
+function isFailureActionStatusMessage(
+  message: WorkerMessage,
+): message is FailureActionStatusMessage {
+  return message.type === WorkerMessageType.FailureActionStatus;
 }
 
 function isRewardSlotsRecordedMessage(

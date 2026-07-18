@@ -10,6 +10,7 @@ import {
 import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
+import { waitFor } from '@vers/test-utils';
 import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
@@ -18,6 +19,7 @@ import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
 import { runResync } from './run-resync';
+import type { LatestActivityProgress } from './types';
 
 interface SetupTestConfig {
   readonly scheduleRetry?: (delayMs: number, retry: () => Promise<void>) => void;
@@ -217,6 +219,69 @@ test('it fast-forwards a real offline gap and reports the outcome', async () => 
   });
 
   expect(result.report).toMatchObject({ attempts: 1, reason: 'aborted-on-failure' });
+});
+
+test('it awaits onProgressFetched with the settled progress before planning a fast-forward', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedAt: new Date(Date.now() - 60_000),
+    appendedHead: 0,
+    avatarID: avatar.id,
+    status: 'active',
+    verifiedHead: 0,
+  });
+
+  // a promise the test controls: while it stays pending, a dropped await on the reconcile would let
+  // the fast-forward's progress fire before the reconcile settled
+  const reconcileGate = Promise.withResolvers<void>();
+  const onProgress = mock(() => {});
+
+  const onProgressFetched = mock((progress: LatestActivityProgress) => {
+    expect(progress.activity.id).toBe(activity.id);
+
+    return reconcileGate.promise;
+  });
+
+  const resync = runResync({
+    avatarID: avatar.id,
+    buildSimulationInput: (started) => ({
+      activity: createMockActivityInput({
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
+
+      // life 1 fails the first attempt fast, and the abort policy ends the fast-forward there
+      avatar: createMockAvatarData({ life: 1 }),
+    }),
+    client: ctx.client,
+    onProgress,
+    onProgressFetched,
+    submitter: ctx.submitter,
+  });
+
+  await waitFor(() => {
+    expect(onProgressFetched).toHaveBeenCalledOnce();
+  });
+
+  expect(onProgress).not.toHaveBeenCalled();
+
+  reconcileGate.resolve();
+
+  await resync;
+
+  expect(onProgress).toHaveBeenCalled();
 });
 
 test('it delivers checkpoints a previous worker left queued and plans against the head they advanced', async () => {

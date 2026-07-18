@@ -14,6 +14,7 @@ export type {
 
 export { setCheckpointFlushStall } from './state/set-checkpoint-flush-stall';
 export { setConnectionStatus } from './state/set-connection-status';
+export { setFailureAction } from './state/set-failure-action';
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
 export { setRewardSlotLedger } from './state/set-reward-slot-ledger';

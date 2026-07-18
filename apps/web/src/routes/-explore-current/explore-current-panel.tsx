@@ -167,7 +167,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
           checked: isAutoRetryChecked,
           id: 'auto-retry-on-failure',
           onClick: () => {
-            if (idleWorkerHandle.worker === undefined) {
+            if (idleWorkerHandle.worker === undefined || avatarID === undefined) {
               return;
             }
 
@@ -175,7 +175,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
               ? ActivityFailureAction.Abort
               : ActivityFailureAction.Retry;
 
-            sendIdleSetFailureAction(idleWorkerHandle.worker, nextFailureAction);
+            sendIdleSetFailureAction(idleWorkerHandle.worker, avatarID, nextFailureAction);
           },
         }}
         errors={[]}
