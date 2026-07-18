@@ -58,6 +58,13 @@ export interface WorkerContext {
   readonly isFailureActionDirty: () => boolean;
 
   /**
+   * Whether a push of the failure action to the server is running. Overlapping tab changes coalesce
+   * onto the running push rather than racing their own — a later change is picked up by the running
+   * loop, so a stale acknowledgement never clears the dirty flag for a value already superseded.
+   */
+  readonly isFailureActionPushInFlight: () => boolean;
+
+  /**
    * Whether a resync is currently running — the orchestrator's single-flight guard; a request
    * that arrives while one is in flight is dropped rather than queued.
    */
@@ -72,6 +79,7 @@ export interface WorkerContext {
   readonly setActivity: (activity: ActivityData | null) => void;
   readonly setFailureAction: (action: ActivityFailureAction) => void;
   readonly setFailureActionDirty: (dirty: boolean) => void;
+  readonly setFailureActionPushInFlight: (inFlight: boolean) => void;
   readonly setResyncAvatarID: (avatarID: string) => void;
   readonly setResyncInFlight: (inFlight: boolean) => void;
   readonly setSimulation: (simulation: null | Simulation) => void;

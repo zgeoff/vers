@@ -6,6 +6,7 @@ import { isSetFailureActionMessage } from './is-set-failure-action-message';
 
 test('it returns true if it is a set failure action message', () => {
   const message: SetFailureActionMessage = {
+    avatarID: 'avatar-1',
     failureAction: ActivityFailureAction.Retry,
     type: ClientMessageType.SetFailureAction,
   };

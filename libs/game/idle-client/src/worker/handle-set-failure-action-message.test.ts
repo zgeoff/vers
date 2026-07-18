@@ -13,10 +13,16 @@ import type { SetFailureActionMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleSetFailureActionMessage } from './handle-set-failure-action-message';
 
-async function setupTest() {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const token = await createTestAccessToken(user.id);
+interface SetupTestConfig {
+  readonly userID: string;
+}
+
+/**
+ * Builds an authed client acting as the given user, so the handler's push hits the same state
+ * transitions the real service applies to the avatar rows the test seeds in the mock db.
+ */
+async function setupTest(config: Readonly<SetupTestConfig>) {
+  const token = await createTestAccessToken(config.userID);
 
   const client: ActivityServiceClient = createORPCClient(
     new RPCLink({
@@ -25,19 +31,21 @@ async function setupTest() {
     }),
   );
 
-  return { avatar, client };
+  return { client };
 }
 
 test('it forwards the change to a live simulation instead of dropping it', async () => {
-  const ctx = await setupTest();
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
 
   const simulation = createSimulation();
   const context = createStubWorkerContext({ client: ctx.client });
 
   context.setSimulation(simulation);
-  context.setResyncAvatarID(ctx.avatar.id);
 
   const message: SetFailureActionMessage = {
+    avatarID: avatar.id,
     failureAction: ActivityFailureAction.Retry,
     type: ClientMessageType.SetFailureAction,
   };
@@ -48,13 +56,14 @@ test('it forwards the change to a live simulation instead of dropping it', async
 });
 
 test('it applies the change with no live simulation instead of warning and dropping it', async () => {
-  const ctx = await setupTest();
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
 
   const context = createStubWorkerContext({ client: ctx.client });
 
-  context.setResyncAvatarID(ctx.avatar.id);
-
   const message: SetFailureActionMessage = {
+    avatarID: avatar.id,
     failureAction: ActivityFailureAction.Retry,
     type: ClientMessageType.SetFailureAction,
   };
@@ -65,13 +74,14 @@ test('it applies the change with no live simulation instead of warning and dropp
 });
 
 test('it clears the dirty flag once the server push succeeds', async () => {
-  const ctx = await setupTest();
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
 
   const context = createStubWorkerContext({ client: ctx.client });
 
-  context.setResyncAvatarID(ctx.avatar.id);
-
   const message: SetFailureActionMessage = {
+    avatarID: avatar.id,
     failureAction: ActivityFailureAction.Retry,
     type: ClientMessageType.SetFailureAction,
   };
@@ -82,11 +92,17 @@ test('it clears the dirty flag once the server push succeeds', async () => {
 
   const cached = await readFailureActionCache();
 
-  expect(cached).toStrictEqual({ dirty: false, failureAction: ActivityFailureAction.Retry });
+  expect(cached).toStrictEqual({
+    avatarID: avatar.id,
+    dirty: false,
+    failureAction: ActivityFailureAction.Retry,
+  });
 });
 
 test('it keeps the dirty flag when the server push fails', async () => {
-  const ctx = await setupTest();
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
 
   server.use(
     mockActivityService.updateFailureAction.handler(() => {
@@ -96,9 +112,8 @@ test('it keeps the dirty flag when the server push fails', async () => {
 
   const context = createStubWorkerContext({ client: ctx.client });
 
-  context.setResyncAvatarID(ctx.avatar.id);
-
   const message: SetFailureActionMessage = {
+    avatarID: avatar.id,
     failureAction: ActivityFailureAction.Retry,
     type: ClientMessageType.SetFailureAction,
   };
@@ -109,17 +124,22 @@ test('it keeps the dirty flag when the server push fails', async () => {
 
   const cached = await readFailureActionCache();
 
-  expect(cached).toStrictEqual({ dirty: true, failureAction: ActivityFailureAction.Retry });
+  expect(cached).toStrictEqual({
+    avatarID: avatar.id,
+    dirty: true,
+    failureAction: ActivityFailureAction.Retry,
+  });
 });
 
 test('it broadcasts the effective failure action to every connection', async () => {
-  const ctx = await setupTest();
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
 
   const channel = new MessageChannel();
 
   const context = createStubWorkerContext({ client: ctx.client, connections: [channel.port2] });
 
-  context.setResyncAvatarID(ctx.avatar.id);
   channel.port1.start();
 
   const received = new Promise<MessageEvent>((resolve) => {
@@ -127,6 +147,7 @@ test('it broadcasts the effective failure action to every connection', async () 
   });
 
   const message: SetFailureActionMessage = {
+    avatarID: avatar.id,
     failureAction: ActivityFailureAction.Retry,
     type: ClientMessageType.SetFailureAction,
   };

@@ -14,9 +14,11 @@ export interface QueuedCheckpoint extends CheckpointBatchEntry {
 /**
  * The failure-action preference as the device-local cache holds it: `dirty` marks a locally set
  * value the server hasn't acknowledged yet, so a resync knows to push it rather than adopt the
- * server's.
+ * server's. `avatarID` scopes that value to the avatar it was set for, so a resync flushes a dirty
+ * value only when it belongs to the avatar being resynced.
  */
 export interface FailureActionPreference {
+  readonly avatarID: string;
   readonly dirty: boolean;
   readonly failureAction: ActivityFailureAction;
 }

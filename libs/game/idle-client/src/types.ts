@@ -26,6 +26,7 @@ export interface SetActivityMessage extends IClientMessage {
 }
 
 export interface SetFailureActionMessage extends IClientMessage {
+  readonly avatarID: string;
   readonly failureAction: ActivityFailureAction;
   readonly type: ClientMessageType.SetFailureAction;
 }

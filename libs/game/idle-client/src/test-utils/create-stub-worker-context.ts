@@ -41,6 +41,7 @@ export function createStubWorkerContext(
   let rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry> = [];
   let failureAction: ActivityFailureAction = options.failureAction ?? ActivityFailureAction.Abort;
   let failureActionDirty = false;
+  let failureActionPushInFlight = false;
 
   return {
     connections,
@@ -56,6 +57,7 @@ export function createStubWorkerContext(
     getSimulation: () => simulation,
     getSubmitter: () => submitter,
     isFailureActionDirty: () => failureActionDirty,
+    isFailureActionPushInFlight: () => failureActionPushInFlight,
     isResyncInFlight: () => resyncInFlight,
     recordRewardSlots: (activityID, entry) => {
       if (rewardSlotLedgerActivityID === activityID) {
@@ -78,6 +80,9 @@ export function createStubWorkerContext(
     },
     setFailureActionDirty: (dirty) => {
       failureActionDirty = dirty;
+    },
+    setFailureActionPushInFlight: (inFlight) => {
+      failureActionPushInFlight = inFlight;
     },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;

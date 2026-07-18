@@ -14,6 +14,7 @@ import invariant from 'tiny-invariant';
 import { runReconstruction } from '../resync/run-reconstruction';
 import { runResync } from '../resync/run-resync';
 import type { FastForwardReport, ResyncPlan, ResyncResult } from '../resync/types';
+import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import type { RequestResyncMessage, ResyncStatus } from '../types';
@@ -66,10 +67,25 @@ export async function handleRequestResyncMessage(
       onProgress: (progress) => {
         emitResyncStatus(context, { ...progress, kind: 'fast-forwarding' });
       },
-      onProgressFetched: (progress) =>
-        context.isFailureActionDirty()
-          ? flushFailureAction(context, message.avatarID)
-          : updateFailureAction(context, toActivityFailureAction(progress.failureAction)),
+      onProgressFetched: async (progress) => {
+        // The dirty local value is flushed only when the cached record was set for this avatar;
+        // otherwise the server's value wins, and the cache is rewritten clean for this avatar so a
+        // dirty value left over from a different avatar this worker drove earlier is discarded
+        // rather than delivered to the wrong row.
+        const cached = await readFailureActionCache();
+
+        if (context.isFailureActionDirty() && cached?.avatarID === message.avatarID) {
+          await flushFailureAction(context, message.avatarID);
+
+          return;
+        }
+
+        await updateFailureActionFromServer(
+          context,
+          message.avatarID,
+          toActivityFailureAction(progress.failureAction),
+        );
+      },
       submitter: context.getSubmitter(),
     });
 
@@ -88,7 +104,7 @@ function toActivityFailureAction(failureAction: ContractFailureAction): Activity
 }
 
 /**
- * Pushes a dirty local failure-action value to the server as the offline outbox's one entry:
+ * Delivers a dirty local failure-action value to the server as the offline outbox's one entry:
  * best-effort, so a delivery failure leaves it dirty for the next resync's reconcile to retry.
  */
 async function flushFailureAction(context: WorkerContext, avatarID: string): Promise<void> {
@@ -102,26 +118,28 @@ async function flushFailureAction(context: WorkerContext, avatarID: string): Pro
 
   context.setFailureActionDirty(false);
 
-  await writeFailureActionCache({ dirty: false, failureAction });
+  await writeFailureActionCache({ avatarID, dirty: false, failureAction });
 }
 
 /**
- * Adopts the server's failure action as the in-session and cached truth, broadcasting only when
- * it actually changed.
+ * Adopts the server's failure action as the in-session and cached truth for the resyncing avatar,
+ * clearing any dirty flag and broadcasting only when the effective value actually changed.
  */
-async function updateFailureAction(
+async function updateFailureActionFromServer(
   context: WorkerContext,
+  avatarID: string,
   failureAction: ActivityFailureAction,
 ): Promise<void> {
-  if (failureAction === context.getFailureAction()) {
-    return;
-  }
+  const changed = failureAction !== context.getFailureAction();
 
   context.setFailureAction(failureAction);
+  context.setFailureActionDirty(false);
 
-  await writeFailureActionCache({ dirty: false, failureAction });
+  await writeFailureActionCache({ avatarID, dirty: false, failureAction });
 
-  emitFailureActionStatus(context, failureAction);
+  if (changed) {
+    emitFailureActionStatus(context, failureAction);
+  }
 }
 
 /**

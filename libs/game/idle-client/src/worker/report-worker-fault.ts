@@ -1,6 +1,11 @@
 import { sentryHandle } from './sentry-handle';
 
-export type WorkerFaultSite = 'message-routing' | 'reconnect' | 'resync' | 'tick-loop';
+export type WorkerFaultSite =
+  | 'message-routing'
+  | 'preference-seed'
+  | 'reconnect'
+  | 'resync'
+  | 'tick-loop';
 
 /**
  * Forwards a worker fault to the error backend, tagged with the capture site that caught it —

@@ -44,7 +44,11 @@ test('it replies with the initial state to an initialize message', async () => {
 });
 
 test('it seeds the boot state from the device-local failure-action cache before the first message runs', async () => {
-  await writeFailureActionCache({ dirty: true, failureAction: ActivityFailureAction.Retry });
+  await writeFailureActionCache({
+    avatarID: 'seeded-avatar',
+    dirty: true,
+    failureAction: ActivityFailureAction.Retry,
+  });
 
   const runtime = createWorkerRuntime();
 
@@ -74,7 +78,11 @@ test('it retains the cached dirty flag across boot so the next resync flushes it
     startedAt: new Date(),
   });
 
-  await writeFailureActionCache({ dirty: true, failureAction: ActivityFailureAction.Retry });
+  await writeFailureActionCache({
+    avatarID: avatar.id,
+    dirty: true,
+    failureAction: ActivityFailureAction.Retry,
+  });
 
   const token = await createTestAccessToken(user.id);
 

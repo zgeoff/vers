@@ -56,16 +56,22 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let resyncInFlight = false;
   let failureAction: ActivityFailureAction = ActivityFailureAction.Abort;
   let failureActionDirty = false;
+  let failureActionPushInFlight = false;
 
   // Every client message and the self-triggered reconnect resync await this before running, so a
   // relaunch-while-offline never plans against the enum's Abort default while the real cached
-  // preference is still in flight.
+  // preference is still in flight. A failed read falls back to that default rather than rejecting
+  // forever, which would strand every handler that awaits this.
   const failureActionSeeded = (async () => {
-    const cached = await readFailureActionCache();
+    try {
+      const cached = await readFailureActionCache();
 
-    if (cached !== undefined) {
-      failureAction = cached.failureAction;
-      failureActionDirty = cached.dirty;
+      if (cached !== undefined) {
+        failureAction = cached.failureAction;
+        failureActionDirty = cached.dirty;
+      }
+    } catch (error) {
+      reportWorkerFault('preference-seed', error);
     }
   })();
 
@@ -118,6 +124,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     getSimulation: () => simulation,
     getSubmitter: () => submitter,
     isFailureActionDirty: () => failureActionDirty,
+    isFailureActionPushInFlight: () => failureActionPushInFlight,
     isResyncInFlight: () => resyncInFlight,
     recordRewardSlots: (activityID, entry) => {
       if (rewardSlotLedgerActivityID === activityID) {
@@ -140,6 +147,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     setFailureActionDirty: (dirty) => {
       failureActionDirty = dirty;
+    },
+    setFailureActionPushInFlight: (inFlight) => {
+      failureActionPushInFlight = inFlight;
     },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;

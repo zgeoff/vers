@@ -15,8 +15,9 @@ import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
+import { createMockLatestActivityProgress } from '../test-utils/factories/create-mock-latest-activity-progress';
 import { runFastForward } from './run-fast-forward';
-import type { FastForwardProgress, LatestActivityProgress } from './types';
+import type { FastForwardProgress } from './types';
 
 interface TrackedBatch {
   readonly checkpoints: ReadonlyArray<CheckpointBatchEntry>;
@@ -58,15 +59,7 @@ function setupTest() {
 
 test('it discards a partial attempt and submits nothing when the budget is too small', async () => {
   const ctx = setupTest();
-
-  const progress: LatestActivityProgress = {
-    activity: createMockActivityData(),
-    anchor: null,
-    appendedHead: 0,
-    failureAction: 'abort',
-    serverTime: new Date(),
-    verifiedHead: 0,
-  };
+  const progress = createMockLatestActivityProgress();
 
   const report = await runFastForward({
     budgetMs: 3000,
@@ -105,15 +98,7 @@ test('it discards a partial attempt and submits nothing when the budget is too s
 
 test('it reports the final row terminal when a reconstructed tail lands exactly on the budget', async () => {
   const ctx = setupTest();
-
-  const progress: LatestActivityProgress = {
-    activity: createMockActivityData(),
-    anchor: null,
-    appendedHead: 1,
-    failureAction: 'abort',
-    serverTime: new Date(),
-    verifiedHead: 0,
-  };
+  const progress = createMockLatestActivityProgress({ appendedHead: 1 });
 
   // One fixed input template, deep-copied per call: the probe attempt below and the
   // fast-forward's reconstruction must simulate byte-identically for the budget to land exactly.
@@ -165,15 +150,7 @@ test('it reports the final row terminal when a reconstructed tail lands exactly 
 test('it stops after the first failed attempt under the abort policy', async () => {
   const ctx = setupTest();
   const onProgress = mock<(progress: FastForwardProgress) => void>();
-
-  const progress: LatestActivityProgress = {
-    activity: createMockActivityData(),
-    anchor: null,
-    appendedHead: 0,
-    failureAction: 'abort',
-    serverTime: new Date(),
-    verifiedHead: 0,
-  };
+  const progress = createMockLatestActivityProgress();
 
   const report = await runFastForward({
     budgetMs: 60_000,
@@ -215,15 +192,7 @@ test('it stops after the first failed attempt under the abort policy', async () 
 
 test('it chains fresh server-started attempts through failures under the retry policy', async () => {
   const ctx = setupTest();
-
-  const progress: LatestActivityProgress = {
-    activity: createMockActivityData(),
-    anchor: null,
-    appendedHead: 0,
-    failureAction: 'abort',
-    serverTime: new Date(),
-    verifiedHead: 0,
-  };
+  const progress = createMockLatestActivityProgress();
 
   const report = await runFastForward({
     budgetMs: 30_000,
@@ -261,14 +230,10 @@ test('it chains fresh server-started attempts through failures under the retry p
 test('it resumes a mid-stream activity submitting only the tail past the appended head', async () => {
   const ctx = setupTest();
 
-  const progress: LatestActivityProgress = {
+  const progress = createMockLatestActivityProgress({
     activity: createMockActivityData({ appendedHead: 1 }),
-    anchor: null,
     appendedHead: 1,
-    failureAction: 'abort',
-    serverTime: new Date(),
-    verifiedHead: 0,
-  };
+  });
 
   const report = await runFastForward({
     budgetMs: 60_000,
@@ -301,15 +266,7 @@ test('it resumes a mid-stream activity submitting only the tail past the appende
 
 test('it reports the final row it left off at, for a caller to attach directly', async () => {
   const ctx = setupTest();
-
-  const progress: LatestActivityProgress = {
-    activity: createMockActivityData(),
-    anchor: null,
-    appendedHead: 0,
-    failureAction: 'abort',
-    serverTime: new Date(),
-    verifiedHead: 0,
-  };
+  const progress = createMockLatestActivityProgress();
 
   const report = await runFastForward({
     budgetMs: 30_000,

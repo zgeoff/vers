@@ -22,6 +22,7 @@ import { createCheckpointSubmitter } from '../submission/create-checkpoint-submi
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient } from '../submission/types';
+import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
@@ -627,7 +628,11 @@ test('it adopts a server-persisted retry preference during resync, caching and b
 
   const cached = await readFailureActionCache();
 
-  expect(cached).toStrictEqual({ dirty: false, failureAction: ActivityFailureAction.Retry });
+  expect(cached).toStrictEqual({
+    avatarID: avatar.id,
+    dirty: false,
+    failureAction: ActivityFailureAction.Retry,
+  });
 });
 
 test('it flushes a dirty local failure action to the server during resync, clearing dirty on success', async () => {
@@ -636,6 +641,14 @@ test('it flushes a dirty local failure action to the server during resync, clear
   const ctx = await setupTest({ failureAction: ActivityFailureAction.Retry, userID: user.id });
 
   ctx.context.setFailureActionDirty(true);
+
+  // the dirty value lives in the persisted outbox, scoped to this avatar — the record's avatar is
+  // what lets the resync flush it rather than adopt the server's
+  await writeFailureActionCache({
+    avatarID: avatar.id,
+    dirty: true,
+    failureAction: ActivityFailureAction.Retry,
+  });
 
   await db.activityCollection.create({
     appendedHead: 0,
@@ -654,7 +667,11 @@ test('it flushes a dirty local failure action to the server during resync, clear
 
   const cached = await readFailureActionCache();
 
-  expect(cached).toStrictEqual({ dirty: false, failureAction: ActivityFailureAction.Retry });
+  expect(cached).toStrictEqual({
+    avatarID: avatar.id,
+    dirty: false,
+    failureAction: ActivityFailureAction.Retry,
+  });
 
   const updatedAvatar = db.avatarCollection.findFirst((q) => q.where({ id: avatar.id }));
 
@@ -668,6 +685,14 @@ test('it keeps the dirty flag when the resync push to the server fails', async (
   const ctx = await setupTest({ failureAction: ActivityFailureAction.Retry, userID: user.id });
 
   ctx.context.setFailureActionDirty(true);
+
+  // the dirty value lives in the persisted outbox, scoped to this avatar — a failed push must leave
+  // that record intact for the next resync to retry
+  await writeFailureActionCache({
+    avatarID: avatar.id,
+    dirty: true,
+    failureAction: ActivityFailureAction.Retry,
+  });
 
   server.use(
     mockActivityService.updateFailureAction.handler(() => {
@@ -693,7 +718,11 @@ test('it keeps the dirty flag when the resync push to the server fails', async (
 
   const cached = await readFailureActionCache();
 
-  expect(cached).toBeUndefined();
+  expect(cached).toStrictEqual({
+    avatarID: avatar.id,
+    dirty: true,
+    failureAction: ActivityFailureAction.Retry,
+  });
 });
 
 test('it reports a fault to the error backend and broadcasts a failed status when the resync fails outright', async () => {
