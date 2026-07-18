@@ -132,7 +132,14 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
     const avatarData = createMockAvatarData();
 
     const activity = createMockActivityInput({
-      enemies: [createMockEnemyData()],
+      encounter: {
+        waves: [
+          Array.from({ length: 6 }, () => createMockEnemyData()),
+          Array.from({ length: 6 }, () => createMockEnemyData()),
+          Array.from({ length: 3 }, () => createMockEnemyData()),
+          Array.from({ length: 4 }, () => createMockEnemyData()),
+        ],
+      },
       failureAction,
       id: sourceRow.id,
     });
@@ -361,7 +368,17 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
   const context = createStubWorkerContext({ connections: [channel.port1], submitter });
   const simulation = createSimulation();
   const avatar = createMockAvatarData();
-  const activity = createMockActivityInput({ enemies: [createMockEnemyData()] });
+
+  const activity = createMockActivityInput({
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
+  });
 
   simulation.startActivity(avatar, activity);
 
@@ -404,7 +421,17 @@ test('it never broadcasts a ledger message for a checkpoint the submitter droppe
   const context = createStubWorkerContext({ connections: [channel.port1] });
   const simulation = createSimulation();
   const avatar = createMockAvatarData();
-  const activity = createMockActivityInput({ enemies: [createMockEnemyData()] });
+
+  const activity = createMockActivityInput({
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
+  });
 
   simulation.startActivity(avatar, activity);
 
@@ -435,7 +462,17 @@ test('it broadcasts an activity completed message when an activity completes', a
 
   const simulation = createSimulation();
   const avatar = createMockAvatarData();
-  const activity = createMockActivityInput({ enemies: [createMockEnemyData()] });
+
+  const activity = createMockActivityInput({
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
+  });
 
   simulation.startActivity(avatar, activity);
 

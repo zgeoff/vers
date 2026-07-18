@@ -1,3 +1,4 @@
+import { buildEncounter, getEncounterContent } from '@vers/game-utils';
 import type { ActivityInput, AvatarData } from '../types';
 import { ActivityFailureAction, ActivityType, EquipmentSlot } from '../types';
 
@@ -9,34 +10,48 @@ import { ActivityFailureAction, ActivityType, EquipmentSlot } from '../types';
 export interface SimulationInputSource {
   readonly avatarID: string;
   readonly buildSnapshot: { readonly level: number; readonly xp: number };
+  readonly contentVersion: string;
   readonly id: string;
   readonly seed: string;
 }
 
 /**
- * Overrides for {@link buildSimulationInput}'s otherwise-fixed derivation.
+ * Overrides for this module's otherwise-fixed derivation.
  */
 export interface BuildSimulationInputOptions {
   readonly failureAction?: ActivityFailureAction;
 }
 
 /**
- * Builds the engine's `ActivityInput`/`AvatarData` from an activity row's stamped seed and build
- * snapshot — the only simulation inputs the current schema persists. The client and the verifier
- * both call this from the same activity row, so a stream simulates byte-identically on both sides;
- * every activity drives the same placeholder encounter and weapon until a node-content service and
- * avatar equipment persistence exist to author real ones. Returns fresh placeholder enemy/weapon
- * objects on every call: the engine mutates its input in place, so a caller running several
+ * The node an encounter derives against; constant until a node-content service exists to author
+ * real per-node difficulty and pool selection.
+ */
+const PLACEHOLDER_ENCOUNTER_NODE = { difficulty: 1 };
+
+/**
+ * Builds the engine's `ActivityInput`/`AvatarData` from an activity row's stamped seed, content
+ * version, and build snapshot. The client and the verifier both call this from the same activity
+ * row, and both derive against the identical placeholder node descriptor, so the resolved encounter
+ * — and the stream it drives — is byte-identical on both sides. Returns a fresh placeholder weapon
+ * object on every call: the engine mutates its input in place, so a caller running several
  * simulations from one shared literal would have them corrupt each other.
  */
 export function buildSimulationInput(
   source: Readonly<SimulationInputSource>,
   options?: Readonly<BuildSimulationInputOptions>,
 ): { activity: ActivityInput; avatar: AvatarData } {
+  const content = getEncounterContent(source.contentVersion);
+
+  const encounter = buildEncounter({
+    content,
+    node: PLACEHOLDER_ENCOUNTER_NODE,
+    seed: source.seed,
+  });
+
   return {
     activity: {
-      difficulty: 1,
-      enemies: [buildPlaceholderEnemy()],
+      difficulty: PLACEHOLDER_ENCOUNTER_NODE.difficulty,
+      encounter,
       failureAction: options?.failureAction ?? ActivityFailureAction.Abort,
       id: source.id,
       name: 'World Map Encounter',
@@ -51,16 +66,6 @@ export function buildSimulationInput(
       paperdoll: { [EquipmentSlot.MainHand]: buildPlaceholderWeapon() },
       xp: source.buildSnapshot.xp,
     },
-  };
-}
-
-function buildPlaceholderEnemy() {
-  return {
-    level: 1,
-    life: 30,
-    name: 'World Map Enemy',
-    primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-    xp: 10,
   };
 }
 

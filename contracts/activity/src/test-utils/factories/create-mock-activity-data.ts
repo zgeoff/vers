@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker';
+import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import type { ActivityData } from '../../activity-data-schema';
 
 export function createMockActivityData(overrides: Partial<ActivityData> = {}): ActivityData {
@@ -9,7 +10,7 @@ export function createMockActivityData(overrides: Partial<ActivityData> = {}): A
     appendedHead: 0,
     avatarID: faker.string.alphanumeric({ casing: 'lower', length: 24 }),
     buildSnapshot: { level: 1, xp: 0 },
-    contentVersion: '0.0.0-dev',
+    contentVersion: CURRENT_CONTENT_VERSION,
     createdAt: startedAt,
     id: faker.string.alphanumeric({ casing: 'lower', length: 24 }),
     keyVersion: 1,

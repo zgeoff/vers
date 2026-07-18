@@ -1,14 +1,17 @@
-import { createId } from '@paralleldrive/cuid2';
-import type { ActivityInput, SimulationContext, Wave, WaveSnapshot } from '../../types';
-import { getRandomEnemies } from './get-random-enemies';
+import { createEnemy } from '../../entities/create-enemy';
+import type { EnemyData, SimulationContext, Wave, WaveSnapshot } from '../../types';
 
+/**
+ * Builds a wave from its already-resolved enemy data verbatim — `index` names this wave's position
+ * within its encounter's ordered wave list, giving each wave a stable, deterministic id.
+ */
 export function createWave(
-  activity: ActivityInput,
+  index: number,
+  enemyData: ReadonlyArray<EnemyData>,
   ctx: SimulationContext,
-  enemyCount: number,
 ): Wave {
-  const id = createId();
-  const enemies = getRandomEnemies(activity, enemyCount, ctx);
+  const id = `wave-${index}`;
+  const enemies = enemyData.map((data) => createEnemy(data, ctx));
   const getRemainingEnemies = () => enemies.filter((enemy) => enemy.isAlive);
 
   const getSnapshot = (): WaveSnapshot => ({

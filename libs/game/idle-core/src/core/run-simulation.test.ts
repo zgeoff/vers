@@ -10,7 +10,14 @@ test('it runs a simulation to completion with the default configuration', async 
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -27,17 +34,17 @@ test('it runs a simulation to completion with the default configuration', async 
     {
       "checkpoints": [
         {
-          "nextSeed": "63298078c2177576c07e0321584c2a05",
+          "nextSeed": "ffffffff4a5a72e5b5a58d1a00000000",
           "rewardSlots": [],
           "rewards": {
             "xp": 0,
           },
-          "seed": "63298078c2177576c07e0321584c2a05",
+          "seed": "ffffffff4a5a72e5b5a58d1a00000000",
           "time": 0,
           "type": "started",
         },
         {
-          "nextSeed": "20c0dac3c8da96ee1a82332c38c2e8ae",
+          "nextSeed": "5468a77edf984ec079995dfd698938b2",
           "rewardSlots": [
             {
               "context": {
@@ -79,7 +86,7 @@ test('it runs a simulation to completion with the default configuration', async 
           "rewards": {
             "xp": 60,
           },
-          "time": 16250,
+          "time": 21250,
           "type": "progress",
         },
         {
@@ -87,7 +94,7 @@ test('it runs a simulation to completion with the default configuration', async 
             "from": 1,
             "to": 2,
           },
-          "nextSeed": "651b7bac24e8282ac2345557ee733dc5",
+          "nextSeed": "86c008c1cb5d97968d4554750eefc5d4",
           "rewardSlots": [
             {
               "context": {
@@ -129,11 +136,11 @@ test('it runs a simulation to completion with the default configuration', async 
           "rewards": {
             "xp": 60,
           },
-          "time": 33750,
+          "time": 38750,
           "type": "progress",
         },
         {
-          "nextSeed": "183a8b662f0c22f40b637a9f83c410ca",
+          "nextSeed": "f8e88eca342f7fe8bd8ab666f4b8bb62",
           "rewardSlots": [
             {
               "context": {
@@ -157,11 +164,11 @@ test('it runs a simulation to completion with the default configuration', async 
           "rewards": {
             "xp": 30,
           },
-          "time": 43750,
+          "time": 48750,
           "type": "progress",
         },
         {
-          "nextSeed": "0d1c5f2ed8a45260129c426ab502cbb3",
+          "nextSeed": "664be6d955fc249bfe89a1dbcdfd99cc",
           "rewardSlots": [
             {
               "context": {
@@ -191,16 +198,16 @@ test('it runs a simulation to completion with the default configuration', async 
           "rewards": {
             "xp": 40,
           },
-          "time": 56250,
+          "time": 61250,
           "type": "progress",
         },
         {
-          "nextSeed": "0d1c5f2ed8a45260129c426ab502cbb3",
+          "nextSeed": "664be6d955fc249bfe89a1dbcdfd99cc",
           "rewardSlots": [],
           "rewards": {
             "xp": 215,
           },
-          "time": 56250,
+          "time": 61250,
           "type": "completed",
         },
         {
@@ -213,40 +220,6 @@ test('it runs a simulation to completion with the default configuration', async 
           "time": 0,
           "type": "started",
         },
-        {
-          "nextSeed": "dd5a3353a7f6c0c6afcb296684176982",
-          "rewardSlots": [
-            {
-              "context": {
-                "nodeTier": 1,
-              },
-              "ordinal": 0,
-            },
-            {
-              "context": {
-                "nodeTier": 1,
-              },
-              "ordinal": 1,
-            },
-            {
-              "context": {
-                "nodeTier": 1,
-              },
-              "ordinal": 2,
-            },
-            {
-              "context": {
-                "nodeTier": 1,
-              },
-              "ordinal": 3,
-            },
-          ],
-          "rewards": {
-            "xp": 40,
-          },
-          "time": 13750,
-          "type": "progress",
-        },
       ],
       "elapsed": 80000,
     }
@@ -257,7 +230,14 @@ test('it respects duration limit and stops the simulation accordingly', async ()
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -281,7 +261,14 @@ test('it stops at the specified rng state if provided', async () => {
   const enemy = createMockEnemyData();
 
   const activity = createMockActivityInput({
-    enemies: [enemy],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => enemy),
+        Array.from({ length: 6 }, () => enemy),
+        Array.from({ length: 3 }, () => enemy),
+        Array.from({ length: 4 }, () => enemy),
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -294,7 +281,7 @@ test('it stops at the specified rng state if provided', async () => {
 
     // when our algo changes, can just pull this state to something valid from our
     // happy path snapshot test ouput
-    stopAtState: '20c0dac3c8da96ee1a82332c38c2e8ae',
+    stopAtState: '5468a77edf984ec079995dfd698938b2',
   };
 
   const result = await runSimulation(activity, avatar, config);
@@ -316,7 +303,14 @@ test('it aborts on failure if failure action is set to abort', async () => {
   const enemy = createMockEnemyData();
 
   const activity = createMockActivityInput({
-    enemies: [enemy],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => enemy),
+        Array.from({ length: 6 }, () => enemy),
+        Array.from({ length: 3 }, () => enemy),
+        Array.from({ length: 4 }, () => enemy),
+      ],
+    },
     failureAction: ActivityFailureAction.Abort,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -352,7 +346,14 @@ test('it retries when failure action is set to retry', async () => {
   const enemy = createMockEnemyData();
 
   const activity = createMockActivityInput({
-    enemies: [enemy],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => enemy),
+        Array.from({ length: 6 }, () => enemy),
+        Array.from({ length: 3 }, () => enemy),
+        Array.from({ length: 4 }, () => enemy),
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),

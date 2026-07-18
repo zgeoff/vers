@@ -35,17 +35,12 @@ test('it processes events', () => {
   });
 
   const activityData = createMockActivityInput({
-    enemies: [enemyData],
+    encounter: { waves: [[enemyData, enemyData]] },
   });
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-
-  const activity = createActivity(activityData, ctx, {
-    waveCount: 1,
-    waveSize: 2,
-  });
-
+  const activity = createActivity(activityData, ctx);
   const wave = activity.currentWave;
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
 

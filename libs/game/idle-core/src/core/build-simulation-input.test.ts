@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import { ActivityFailureAction, EquipmentSlot } from '../types';
 import { buildSimulationInput } from './build-simulation-input';
 
@@ -6,6 +7,7 @@ test('it derives the activity id, avatar id, seed, and build snapshot from the s
   const result = buildSimulationInput({
     avatarID: 'avatar_1',
     buildSnapshot: { level: 3, xp: 450 },
+    contentVersion: CURRENT_CONTENT_VERSION,
     id: 'act_1',
     seed: 'aa'.repeat(16),
   });
@@ -22,6 +24,7 @@ test('it builds the same input for the same source row', () => {
   const source = {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: CURRENT_CONTENT_VERSION,
     id: 'act_1',
     seed: 'bb'.repeat(16),
   };
@@ -29,10 +32,11 @@ test('it builds the same input for the same source row', () => {
   expect(buildSimulationInput(source)).toStrictEqual(buildSimulationInput(source));
 });
 
-test('it returns fresh enemy and weapon objects on every call, never a shared reference', () => {
+test('it returns a fresh encounter and weapon on every call, never a shared reference', () => {
   const source = {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: CURRENT_CONTENT_VERSION,
     id: 'act_1',
     seed: 'bb'.repeat(16),
   };
@@ -40,11 +44,23 @@ test('it returns fresh enemy and weapon objects on every call, never a shared re
   const first = buildSimulationInput(source);
   const second = buildSimulationInput(source);
 
-  expect(first.activity.enemies[0]).not.toBe(second.activity.enemies[0]);
+  expect(first.activity.encounter.waves[0]?.[0]).not.toBe(second.activity.encounter.waves[0]?.[0]);
 
   expect(first.avatar.paperdoll[EquipmentSlot.MainHand]).not.toBe(
     second.avatar.paperdoll[EquipmentSlot.MainHand],
   );
+});
+
+test('it rejects an unknown content version', () => {
+  expect(() =>
+    buildSimulationInput({
+      avatarID: 'avatar_1',
+      buildSnapshot: { level: 1, xp: 0 },
+      contentVersion: 'nope',
+      id: 'act_1',
+      seed: 'dd'.repeat(16),
+    }),
+  ).toThrowWithMessage(Error, /unknown content version: nope/);
 });
 
 test('it honors a failureAction override', () => {
@@ -52,6 +68,7 @@ test('it honors a failureAction override', () => {
     {
       avatarID: 'avatar_1',
       buildSnapshot: { level: 1, xp: 0 },
+      contentVersion: CURRENT_CONTENT_VERSION,
       id: 'act_1',
       seed: 'cc'.repeat(16),
     },

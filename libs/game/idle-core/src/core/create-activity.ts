@@ -9,21 +9,12 @@ import type {
 } from '../types';
 import { getWaves } from './utils/get-waves';
 
-interface ActivityConfig {
-  readonly waveCount?: number;
-  readonly waveSize?: number;
-}
-
-export function createActivity(
-  data: ActivityInput,
-  ctx: SimulationContext,
-  config: ActivityConfig = {},
-): Activity {
+export function createActivity(data: ActivityInput, ctx: SimulationContext): Activity {
   let elapsed = 0;
   let currentWaveIdx = 0;
   let rewards: ActivityRewards = { xp: 0 };
   let levelUp: ActivityLevelUp | null = null;
-  const waves: Array<Wave> = getWaves(data, ctx, config);
+  const waves: Array<Wave> = getWaves(data, ctx);
   const isWavesRemaining = () => waves.some((wave) => wave.remaining > 0);
 
   const advanceWave = () => {

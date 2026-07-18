@@ -30,17 +30,12 @@ test('it applies damage to the first living enemy', () => {
   });
 
   const activityData = createMockActivityInput({
-    enemies: [enemyData],
+    encounter: { waves: [[enemyData, enemyData]] },
   });
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-
-  const activity = createActivity(activityData, ctx, {
-    waveCount: 1,
-    waveSize: 2,
-  });
-
+  const activity = createActivity(activityData, ctx);
   const wave = activity.currentWave;
   const firstEnemy = wave?.nextLivingEnemy;
 

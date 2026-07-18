@@ -21,9 +21,9 @@ test('it schedules attacks on the tick event', () => {
   });
 
   const avatarData = createMockAvatarData({ life: 10 });
-  const activityData = createMockActivityInput({ enemies: [enemyData] });
+  const activityData = createMockActivityInput({ encounter: { waves: [[enemyData]] } });
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { waveSize: 1 });
+  const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const wave = activity.currentWave;
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
@@ -56,9 +56,9 @@ test('it schedules multiple attacks for high APS weapons', () => {
   });
 
   const avatarData = createMockAvatarData({ life: 50 });
-  const activityData = createMockActivityInput({ enemies: [enemyData] });
+  const activityData = createMockActivityInput({ encounter: { waves: [[enemyData]] } });
   const ctx = createMockSimulationContext();
-  const activity = createActivity(activityData, ctx, { waveSize: 1 });
+  const activity = createActivity(activityData, ctx);
   const avatar = createAvatar(avatarData, ctx);
   const wave = activity.currentWave;
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
