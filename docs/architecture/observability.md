@@ -11,8 +11,16 @@ All three OpenTelemetry signals export over OTLP (protobuf) to Axiom, one datase
 (`createService`, `@vers/service-runtime`) wires every signal when `OTEL_EXPORTER_OTLP_ENDPOINT` is
 set — traces through `@elysiajs/opentelemetry`, logs through a pino → OTLP stream, metrics through a
 process-global meter provider behind a periodic exporter (`startMetricsExport`,
-`@vers/service-utils/otel`). A process with the endpoint unset emits nothing, and every instrument
-stays the OpenTelemetry API's no-op.
+`@vers/service-utils/otel`). app-web carries no Elysia plugin; `server.ts` boots the same trace and
+metrics export itself through `startTraceExport`/`startMetricsExport`. A process with the endpoint
+unset emits nothing, and every instrument stays the OpenTelemetry API's no-op.
+
+`createService` boots the Elysia OTel plugin before the Sentry SDK: the OpenTelemetry API keeps only
+the first global tracer, context manager, and propagator registration per process, and Sentry's own
+OpenTelemetry bootstrap registers unconditionally — going second, its registration silently no-ops
+and the plugin's W3C propagation and OTLP export stay in effect. Reversed, Sentry's `sentry-trace`-
+only propagator would shadow `traceparent` and no service span would ever reach the OTLP exporter.
+app-web's `server.ts` awaits its own trace/metrics boot before starting Sentry for the same reason.
 
 Each exporter configures itself from the standard `OTEL_EXPORTER_OTLP_*` environment variables; the
 per-signal headers carry the ingest token and dataset routing. Metrics route by the
@@ -21,6 +29,47 @@ per-signal headers carry the ingest token and dataset routing. Metrics route by 
 `Service.stopTelemetry` flushes pending exports and releases the metric reader's periodic timer,
 which otherwise keeps the event loop alive. An entrypoint that traps SIGTERM for a graceful drain
 calls it before closing its database pool, since a final gauge collection may still query.
+
+## Traces
+
+Every service's Elysia app carries the `@elysiajs/opentelemetry` plugin, which opens one SERVER span
+per request from the inbound `traceparent` and keeps it active across every await inside the handler
+— a Kysely query, an RPC client call, a manual span all read it through `context.active()`. app-web
+carries no such plugin; `withRequestTrace` (`apps/web/src/server/with-request-trace.ts`) opens the
+same SERVER span itself, skipping a served static asset or the `/health` probe. Every `Kysely`
+client (`createDB`, `@vers/db`) emits a retroactively timed CLIENT span per compiled query from its
+`log` callback, named `db.<operation>` from the compiled query's root node kind and carrying the
+compiled SQL (never its parameters). Every service-to-service `RPCLink` carries
+`buildTracingInterceptor` (`@vers/service-utils/orpc`) in its `clientInterceptors`, minting a CLIENT
+span per call named by the procedure path. A worker iteration, a boot drain, a scheduled sweep, or a
+queued job — anything with no inbound request to continue — opens its own root span through
+`withRootSpan` (`@vers/service-utils`).
+
+Every span-opening site injects or extracts `traceparent` through the OpenTelemetry API's global
+propagator, never `@vers/trace` directly: outbound calls carry `traceparent` from the active span,
+continuing the caller's trace across every hop. app-web's RPC proxy re-injects `traceparent` from
+its own active context rather than forwarding the browser's raw header, so the service span parents
+to app-web's server span instead of becoming its sibling. `@vers/trace`'s
+`parseTraceparent`/`buildTraceparent` stay the wire-format utilities and the fallback path: a
+process with no tracer provider registered, or a request outside any span (a served asset,
+`/health`), derives its trace id by parsing the inbound header directly and minting a fresh one when
+none arrives — the same trace-continuation guarantee a request normally gets from its active span.
+
+Wherever a span is active, it is the source of truth for the request's identity:
+`findSpanTraceContext` (`@vers/service-utils`) reads the active span's own trace and span ids, and
+every reader of the ambient `TraceContext` — the pino mixin that stamps log lines, the `x-trace-id`
+response header, an outbound `traceparent` — derives from it. A request's exported span trace id,
+its `x-trace-id` response header, and every log line's `traceID` field always agree.
+
+A span carries semantic-convention attributes for its kind: `http.method`/`http.route`/
+`http.status_code` on a SERVER span, `db.system`/`db.statement` on a Kysely CLIENT span. A span
+never carries a raw per-entity id or secret material as an attribute — the same cardinality and
+leakage discipline metric attributes follow.
+
+Once OTel is wired, every app in the fleet emits: one server span per request, with the DB, s2s, and
+external-HTTP calls a request makes recorded as its children; one structured request-completion log
+line; unexpected errors reported to Sentry through the central `onError`/error-boundary hook, never
+a bespoke `captureException` call; and the registry-listed metrics for the failure paths it owns.
 
 ## Log lines
 
@@ -74,13 +123,19 @@ are encrypted by the stack passphrase.
 
 ## Instrument registry
 
-| Instrument                         | Type    | Unit           | Attributes    | Meaning                                                           |
-| ---------------------------------- | ------- | -------------- | ------------- | ----------------------------------------------------------------- |
-| `vers.verification.lag`            | gauge   | `s`            | —             | age of the oldest unverified append across activity streams       |
-| `vers.verification.head_delta.p95` | gauge   | `{checkpoint}` | —             | p95 of appended-head minus verified-head over unverified streams  |
-| `vers.verification.quarantined`    | gauge   | `{activity}`   | —             | activities quarantined after exhausting replay attempts           |
-| `vers.verification.parked`         | gauge   | `{activity}`   | `sim_version` | activities parked for operator resolution, by stamped sim version |
-| `vers.verification.rejections`     | counter | `{rejection}`  | `reason`      | adjudications that rejected or parked an activity, by reason      |
+| Instrument                           | Type    | Unit           | Attributes    | Meaning                                                                 |
+| ------------------------------------ | ------- | -------------- | ------------- | ----------------------------------------------------------------------- |
+| `vers.verification.lag`              | gauge   | `s`            | —             | age of the oldest unverified append across activity streams             |
+| `vers.verification.head_delta.p95`   | gauge   | `{checkpoint}` | —             | p95 of appended-head minus verified-head over unverified streams        |
+| `vers.verification.quarantined`      | gauge   | `{activity}`   | —             | activities quarantined after exhausting replay attempts                 |
+| `vers.verification.parked`           | gauge   | `{activity}`   | `sim_version` | activities parked for operator resolution, by stamped sim version       |
+| `vers.verification.rejections`       | counter | `{rejection}`  | `reason`      | adjudications that rejected or parked an activity, by reason            |
+| `vers.replay.iteration_failures`     | counter | `{iteration}`  | `outcome`     | worker iterations that failed to replay a claimed chain, by outcome     |
+| `vers.keys.derive_rejections`        | counter | `{rejection}`  | `reason`      | deriveAvatarKey calls that refused to derive a key, by reason           |
+| `vers.activity.terminal_transitions` | counter | `{activity}`   | `status`      | activities that claimed a terminal transition, by status                |
+| `vers.email.delivery_failures`       | counter | `{email}`      | —             | emails that failed to deliver                                           |
+| `vers.session.failed_attempts`       | counter | `{attempt}`    | —             | failed step-up verification attempts                                    |
+| `vers.analytics.delivery_failures`   | counter | `{event}`      | `reason`      | product events that never landed in the Tinybird data source, by reason |
 
 The verification gauges observe from one snapshot query in `service-replay`
 (`loadVerificationSnapshot`). A stream counts as unverified while appends sit past its verified
@@ -92,6 +147,16 @@ failure by design, so this gauge is the signal that verification has stalled.
 seed validation), `version-park` (unknown or retention-expired sim version — version-registry
 problems needing fleet action), `elapsed-time` (replay duration cap tripped — a per-stream anomaly).
 Each recording's log line carries the raw numbers behind it (heads, checkpoint counts, sim version).
+
+`vers.replay.iteration_failures` splits by `outcome`: `quarantined` covers an activity that
+exhausted its replay attempts, `errored` covers every other failed iteration.
+`vers.keys.derive_rejections` splits by `reason`, currently `unknown-key-version` alone.
+`vers.activity.terminal_transitions` splits by `status`: `stopped` covers a completed or failed last
+checkpoint, `capped` covers a batch rejected whole because it exceeded the avatar's accrued
+simulated-time budget. `vers.analytics.delivery_failures` splits by `reason`: `rejected` covers a
+non-2xx response from the Tinybird Events API, `quarantined` covers a row the API accepted but
+failed schema validation on, `unreachable` covers a network failure or the upstream deadline
+tripping.
 
 The `vers verification lag` threshold monitor watches `vers.verification.lag` and notifies
 `vers alarms`, alerting on no data as well as on the threshold: the gauge exports from
