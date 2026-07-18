@@ -71,7 +71,14 @@ test('it discards a partial attempt and submits nothing when the budget is too s
     budgetMs: 3000,
     buildSimulationInput: (activity) => ({
       activity: createMockActivityInput({
-        enemies: [createMockEnemyData()],
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
         failureAction: ActivityFailureAction.Retry,
         id: activity.id,
         seed: activity.seed,
@@ -110,7 +117,14 @@ test('it reports the final row terminal when a reconstructed tail lands exactly 
   // fast-forward's reconstruction must simulate byte-identically for the budget to land exactly.
   const template = {
     activity: createMockActivityInput({
-      enemies: [createMockEnemyData()],
+      encounter: {
+        waves: [
+          Array.from({ length: 6 }, () => createMockEnemyData()),
+          Array.from({ length: 6 }, () => createMockEnemyData()),
+          Array.from({ length: 3 }, () => createMockEnemyData()),
+          Array.from({ length: 4 }, () => createMockEnemyData()),
+        ],
+      },
       failureAction: ActivityFailureAction.Retry,
       id: progress.activity.id,
       seed: progress.activity.seed,
@@ -162,7 +176,14 @@ test('it stops after the first failed attempt under the abort policy', async () 
     budgetMs: 60_000,
     buildSimulationInput: (activity) => ({
       activity: createMockActivityInput({
-        enemies: [createMockEnemyData()],
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
         failureAction: ActivityFailureAction.Abort,
         id: activity.id,
         seed: activity.seed,
@@ -204,7 +225,14 @@ test('it chains fresh server-started attempts through failures under the retry p
     budgetMs: 30_000,
     buildSimulationInput: (activity) => ({
       activity: createMockActivityInput({
-        enemies: [createMockEnemyData()],
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
         failureAction: ActivityFailureAction.Retry,
         id: activity.id,
         seed: activity.seed,
@@ -241,7 +269,14 @@ test('it resumes a mid-stream activity submitting only the tail past the appende
     budgetMs: 60_000,
     buildSimulationInput: (activity) => ({
       activity: createMockActivityInput({
-        enemies: [createMockEnemyData()],
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
         failureAction: ActivityFailureAction.Abort,
         id: activity.id,
         seed: activity.seed,
@@ -274,7 +309,14 @@ test('it reports the final row it left off at, for a caller to attach directly',
     budgetMs: 30_000,
     buildSimulationInput: (activity) => ({
       activity: createMockActivityInput({
-        enemies: [createMockEnemyData()],
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
         failureAction: ActivityFailureAction.Retry,
         id: activity.id,
         seed: activity.seed,

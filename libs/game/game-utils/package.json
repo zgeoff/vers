@@ -11,6 +11,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@noble/hashes": "catalog:",
+    "@vers/roll-crypto": "workspace:*",
     "pure-rand": "catalog:",
     "tiny-invariant": "catalog:"
   },

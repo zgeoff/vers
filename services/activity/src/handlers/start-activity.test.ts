@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
+import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import {
   createAnonymousViewer,
   createTestDB,
@@ -49,7 +50,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     appendedHead: 0,
     avatarID: avatar.id,
     buildSnapshot: { level: 5, xp: 42 },
-    contentVersion: '0.0.0-dev',
+    contentVersion: CURRENT_CONTENT_VERSION,
     createdAt: expect.toBeValidDate(),
     id: expect.toBeString(),
     keyVersion: 1,

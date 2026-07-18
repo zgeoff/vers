@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
 import { buildCheckpointHash, buildStartHash } from '@vers/contract-activity';
 import type { Activities, ActivityChains, DB, Json } from '@vers/db';
-import { buildStateFromSeed } from '@vers/game-utils';
+import { CURRENT_CONTENT_VERSION, buildStateFromSeed } from '@vers/game-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { runSimulation } from '@vers/idle-core/replay';
@@ -73,10 +73,12 @@ export async function createHonestActivityFixture(
   });
 
   const startChainIndex = input.startChainIndex ?? chain.appendedChainIndex;
+  const contentVersion = CURRENT_CONTENT_VERSION;
 
   const simulationInput = buildSimulationInput({
     avatarID: chain.avatarId,
     buildSnapshot,
+    contentVersion,
     id: activityID,
     seed,
   });
@@ -86,10 +88,6 @@ export async function createHonestActivityFixture(
   });
 
   const engineCheckpoints = buildTerminalPrefix(simulationResult.checkpoints);
-
-  // The only content version `@vers/item-gen` has tables registered for — the mint step this
-  // fixture's checkpoints now carry reward slots into needs a real, loadable version.
-  const contentVersion = '1';
   const keyVersion = 1;
   const simVersion = 'test-engine-hash';
 

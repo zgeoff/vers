@@ -10,7 +10,14 @@ test('it emits the same checkpoint sequence in one advance as split across sever
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -35,11 +42,21 @@ test('it emits the same checkpoint sequence in one advance as split across sever
   expect(split.rngState).toBe(oneShot.rngState);
 });
 
+// This probes every checkpoint boundary by re-running the full 80s simulation from scratch for
+// each one; the encounter's four waves make each run heavy enough to clear the default 5s test
+// budget on slower CI hardware even though it always terminates deterministically.
 test('it does not lose a checkpoint whose tick lands exactly on the duration boundary', async () => {
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -63,13 +80,20 @@ test('it does not lose a checkpoint whose tick lands exactly on the duration bou
 
     expect([...first.checkpoints, ...second.checkpoints]).toStrictEqual(oneShotResult.checkpoints);
   }
-});
+}, 20_000);
 
 test('it advances an idle batch with no boundary-crossing checkpoints', async () => {
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -93,7 +117,14 @@ test('it stops at the specified rng state within a later advance', async () => {
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -104,10 +135,10 @@ test('it stops at the specified rng state within a later advance', async () => {
 
   await driver.advanceToDuration(5000);
 
-  const result = await driver.advanceToDuration(200_000, '20c0dac3c8da96ee1a82332c38c2e8ae');
+  const result = await driver.advanceToDuration(200_000, '5468a77edf984ec079995dfd698938b2');
 
   expect(result.checkpoints.at(-1)).toStrictEqual({
-    nextSeed: '20c0dac3c8da96ee1a82332c38c2e8ae',
+    nextSeed: '5468a77edf984ec079995dfd698938b2',
     rewards: expect.toBeObject(),
     rewardSlots: expect.toBeArray(),
     time: expect.toBeNumber(),
@@ -119,7 +150,14 @@ test('it emits a zero-consumption checkpoint rather than halting on it before th
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
     failureAction: ActivityFailureAction.Abort,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -140,7 +178,14 @@ test('it does not halt a resumed advance immediately when the resume state alrea
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -162,7 +207,14 @@ test('it reports the duration cap tripped when it stops short of the expected co
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -181,7 +233,14 @@ test('it does not report the duration cap tripped when the expected count is rea
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -201,7 +260,14 @@ test('it returns immediately without hanging on a later advance after an aborted
   const enemy = createMockEnemyData();
 
   const activity = createMockActivityInput({
-    enemies: [enemy],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => enemy),
+        Array.from({ length: 6 }, () => enemy),
+        Array.from({ length: 3 }, () => enemy),
+        Array.from({ length: 4 }, () => enemy),
+      ],
+    },
     failureAction: ActivityFailureAction.Abort,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),

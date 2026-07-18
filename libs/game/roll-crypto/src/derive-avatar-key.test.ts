@@ -7,7 +7,9 @@ const root = new Uint8Array(32).fill(0x0b);
 test('it derives a frozen golden key from fixed inputs', () => {
   const key = deriveAvatarKey({ root, population: 'trade', avatarID: 'avatar_1', keyVersion: 1 });
 
-  expect(bytesToHex(key)).toBe('a5e94c424e91834d096c382cb780ee2ae307920c0096766a3eee9ef1e2d33944');
+  expect(bytesToHex(key)).toMatchInlineSnapshot(
+    `"a5e94c424e91834d096c382cb780ee2ae307920c0096766a3eee9ef1e2d33944"`,
+  );
 });
 
 test('it derives bit-identical keys for identical input', () => {

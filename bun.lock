@@ -139,6 +139,7 @@
         "@noble/hashes": "catalog:",
         "@orpc/contract": "catalog:",
         "@vers/contract-base": "workspace:*",
+        "@vers/game-utils": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -146,7 +147,6 @@
         "@orpc/zod": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
-        "@vers/game-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "typescript": "catalog:",
       },
@@ -509,6 +509,8 @@
       "name": "@vers/game-utils",
       "version": "0.0.0",
       "dependencies": {
+        "@noble/hashes": "catalog:",
+        "@vers/roll-crypto": "workspace:*",
         "pure-rand": "catalog:",
         "tiny-invariant": "catalog:",
       },
@@ -593,6 +595,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@noble/hashes": "catalog:",
+        "tiny-invariant": "catalog:",
       },
       "devDependencies": {
         "@types/bun": "catalog:",
@@ -791,6 +794,7 @@
         "@vers/contract-session": "workspace:*",
         "@vers/contract-user": "workspace:*",
         "@vers/contract-verification": "workspace:*",
+        "@vers/game-utils": "workspace:*",
         "@vers/roll-crypto": "workspace:*",
         "@vers/service-auth": "workspace:*",
         "jose": "catalog:",
@@ -883,6 +887,7 @@
         "@paralleldrive/cuid2": "catalog:",
         "@vers/contract-activity": "workspace:*",
         "@vers/db": "workspace:*",
+        "@vers/game-utils": "workspace:*",
         "@vers/idle-core": "workspace:*",
         "@vers/service-runtime": "workspace:*",
         "@vers/sim-registry": "workspace:*",
@@ -895,6 +900,7 @@
         "@orpc/contract": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
+        "@vers/item-gen": "workspace:*",
         "@vers/service-test-utils": "workspace:*",
         "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",

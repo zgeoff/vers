@@ -224,15 +224,15 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
   const avatar = await db.avatarCollection.create({ userID: user.id });
   const ctx = await setupTest({ userID: user.id });
 
-  // this seed's placeholder encounter completes in exactly 45s of simulated time; a 50s gap
-  // leaves just under 5s of budget for the next continuation, too little for any encounter to
+  // this seed's placeholder encounter completes in exactly 60s of simulated time; a 63s gap
+  // leaves just under 3s of budget for the next continuation, too little for any encounter to
   // reach a terminal checkpoint, so that continuation is guaranteed to be the fast-forward's
   // unregistered final row regardless of its own random seed
   const activity = await db.activityCollection.create({
     appendedHead: 0,
     avatarID: avatar.id,
     seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
-    startedAt: new Date(Date.now() - 50_000),
+    startedAt: new Date(Date.now() - 63_000),
   });
 
   const message: RequestResyncMessage = {
@@ -294,9 +294,9 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
   const avatar = await db.avatarCollection.create({ userID: user.id });
   const ctx = await setupTest({ userID: user.id });
 
-  // this seed's placeholder encounter completes in exactly 45s of simulated time with one
+  // this seed's placeholder encounter completes in exactly 60s of simulated time with one
   // confirmed ("started") checkpoint at its head; a 20s gap is enough to pick the fast-forward
-  // plan but far short of the 45s tail, so the budget check bails before any continuation is
+  // plan but far short of the 60s tail, so the budget check bails before any continuation is
   // attempted, reporting back the very row the resync started from
   const activity = await db.activityCollection.create({
     appendedHead: 1,
@@ -338,11 +338,16 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
   await ctx.context.getSubmitter().submit(activity.id, checkpoint);
   await ctx.flush();
 
-  // the started checkpoint's own nextSeed, not the activity row's start seed — proves the
-  // registered cursor chains onto the reconstruction, not a fresh checkpoint-0 sim
+  // the running seed the reconstructed cursor carries forward from the confirmed started
+  // checkpoint — proves the registered cursor chains onto the reconstruction, not a fresh
+  // checkpoint-0 sim
   const landed = db.checkpointCollection.findMany((q) => q.where({ activityID: activity.id }));
 
-  expect(landed.map((row) => row.payload.seed)).toStrictEqual(['525ac5e6a97591b0a1877a6606b22d9c']);
+  expect(landed.map((row) => row.payload.seed)).toMatchInlineSnapshot(`
+    [
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072",
+    ]
+  `);
 });
 
 test('it attaches a fresh login live without broadcasting any catch-up status', async () => {

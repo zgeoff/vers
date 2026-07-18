@@ -10,15 +10,38 @@ const DETERMINISTIC_INPUT = createMockReplaySegmentInput({
   simVersion: 'test-engine-hash',
   activity: {
     difficulty: 1,
-    enemies: [
-      {
-        level: 1,
-        life: 30,
-        name: 'Test Enemy',
-        primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-        xp: 10,
-      },
-    ],
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => ({
+          level: 1,
+          life: 30,
+          name: 'Test Enemy',
+          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+          xp: 10,
+        })),
+        Array.from({ length: 6 }, () => ({
+          level: 1,
+          life: 30,
+          name: 'Test Enemy',
+          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+          xp: 10,
+        })),
+        Array.from({ length: 3 }, () => ({
+          level: 1,
+          life: 30,
+          name: 'Test Enemy',
+          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+          xp: 10,
+        })),
+        Array.from({ length: 4 }, () => ({
+          level: 1,
+          life: 30,
+          name: 'Test Enemy',
+          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+          xp: 10,
+        })),
+      ],
+    },
     failureAction: 'retry',
     id: 'world_map_encounter_1',
     name: 'World Map Encounter',
@@ -51,15 +74,15 @@ const DETERMINISTIC_INPUT = createMockReplaySegmentInput({
  */
 const EXPECTED_CHECKPOINTS: Array<ActivityCheckpoint> = [
   {
-    nextSeed: '63298078c2177576c07e0321584c2a05',
+    nextSeed: 'ffffffff4a5a72e5b5a58d1a00000000',
     rewards: { xp: 0 },
     rewardSlots: [],
-    seed: '63298078c2177576c07e0321584c2a05',
+    seed: 'ffffffff4a5a72e5b5a58d1a00000000',
     time: 0,
     type: 'started',
   },
   {
-    nextSeed: '20c0dac3c8da96ee1a82332c38c2e8ae',
+    nextSeed: '5468a77edf984ec079995dfd698938b2',
     rewards: { xp: 60 },
     rewardSlots: [
       { context: { nodeTier: 1 }, ordinal: 0 },
@@ -69,12 +92,12 @@ const EXPECTED_CHECKPOINTS: Array<ActivityCheckpoint> = [
       { context: { nodeTier: 1 }, ordinal: 4 },
       { context: { nodeTier: 1 }, ordinal: 5 },
     ],
-    time: 16_250,
+    time: 21_250,
     type: 'progress',
   },
   {
     levelUp: { from: 1, to: 2 },
-    nextSeed: '651b7bac24e8282ac2345557ee733dc5',
+    nextSeed: '86c008c1cb5d97968d4554750eefc5d4',
     rewards: { xp: 60 },
     rewardSlots: [
       { context: { nodeTier: 1 }, ordinal: 0 },
@@ -84,22 +107,22 @@ const EXPECTED_CHECKPOINTS: Array<ActivityCheckpoint> = [
       { context: { nodeTier: 1 }, ordinal: 4 },
       { context: { nodeTier: 1 }, ordinal: 5 },
     ],
-    time: 33_750,
+    time: 38_750,
     type: 'progress',
   },
   {
-    nextSeed: '183a8b662f0c22f40b637a9f83c410ca',
+    nextSeed: 'f8e88eca342f7fe8bd8ab666f4b8bb62',
     rewards: { xp: 30 },
     rewardSlots: [
       { context: { nodeTier: 1 }, ordinal: 0 },
       { context: { nodeTier: 1 }, ordinal: 1 },
       { context: { nodeTier: 1 }, ordinal: 2 },
     ],
-    time: 43_750,
+    time: 48_750,
     type: 'progress',
   },
   {
-    nextSeed: '0d1c5f2ed8a45260129c426ab502cbb3',
+    nextSeed: '664be6d955fc249bfe89a1dbcdfd99cc',
     rewards: { xp: 40 },
     rewardSlots: [
       { context: { nodeTier: 1 }, ordinal: 0 },
@@ -107,14 +130,14 @@ const EXPECTED_CHECKPOINTS: Array<ActivityCheckpoint> = [
       { context: { nodeTier: 1 }, ordinal: 2 },
       { context: { nodeTier: 1 }, ordinal: 3 },
     ],
-    time: 56_250,
+    time: 61_250,
     type: 'progress',
   },
   {
-    nextSeed: '0d1c5f2ed8a45260129c426ab502cbb3',
+    nextSeed: '664be6d955fc249bfe89a1dbcdfd99cc',
     rewards: { xp: 215 },
     rewardSlots: [],
-    time: 56_250,
+    time: 61_250,
     type: 'completed',
   },
   {
@@ -124,18 +147,6 @@ const EXPECTED_CHECKPOINTS: Array<ActivityCheckpoint> = [
     seed: '664be6d955fc249bfe89a1dbcdfd99cc',
     time: 0,
     type: 'started',
-  },
-  {
-    nextSeed: 'dd5a3353a7f6c0c6afcb296684176982',
-    rewards: { xp: 40 },
-    rewardSlots: [
-      { context: { nodeTier: 1 }, ordinal: 0 },
-      { context: { nodeTier: 1 }, ordinal: 1 },
-      { context: { nodeTier: 1 }, ordinal: 2 },
-      { context: { nodeTier: 1 }, ordinal: 3 },
-    ],
-    time: 13_750,
-    type: 'progress',
   },
 ];
 

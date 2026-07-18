@@ -9,7 +9,18 @@ test('it reproduces the frozen golden byte sequence for a fixed seed and domain'
 
   const draws = Array.from({ length: 8 }, () => stream.rollRange(0, 255));
 
-  expect(draws).toStrictEqual([195, 28, 221, 36, 227, 214, 183, 60]);
+  expect(draws).toMatchInlineSnapshot(`
+    [
+      195,
+      28,
+      221,
+      36,
+      227,
+      214,
+      183,
+      60,
+    ]
+  `);
 });
 
 test('it reproduces the frozen golden dice sequence for a narrow range', () => {
@@ -20,7 +31,16 @@ test('it reproduces the frozen golden dice sequence for a narrow range', () => {
 
   const draws = Array.from({ length: 6 }, () => stream.rollRange(1, 6));
 
-  expect(draws).toStrictEqual([4, 5, 6, 1, 6, 5]);
+  expect(draws).toMatchInlineSnapshot(`
+    [
+      4,
+      5,
+      6,
+      1,
+      6,
+      5,
+    ]
+  `);
 });
 
 test('it reproduces the frozen golden sequence for a two-byte span', () => {
@@ -31,7 +51,14 @@ test('it reproduces the frozen golden sequence for a two-byte span', () => {
 
   const draws = Array.from({ length: 4 }, () => stream.rollRange(0, 9999));
 
-  expect(draws).toStrictEqual([9948, 6612, 8326, 6908]);
+  expect(draws).toMatchInlineSnapshot(`
+    [
+      9948,
+      6612,
+      8326,
+      6908,
+    ]
+  `);
 });
 
 test('it yields identical draws for equal seed and domain', () => {
@@ -54,23 +81,33 @@ test('it keeps drawing from the seed as constructed when the caller mutates it',
   const seed = Uint8Array.from({ length: 32 }, (_, i) => i);
   const stream = buildRollStream(seed, 'test/domain');
 
+  const reference = buildRollStream(
+    Uint8Array.from({ length: 32 }, (_, i) => i),
+    'test/domain',
+  );
+
   seed.fill(0);
 
   const draws = Array.from({ length: 8 }, () => stream.rollRange(0, 255));
+  const referenceDraws = Array.from({ length: 8 }, () => reference.rollRange(0, 255));
 
-  expect(draws).toStrictEqual([195, 28, 221, 36, 227, 214, 183, 60]);
+  expect(draws).toStrictEqual(referenceDraws);
 });
 
 test('it diverges across domains for the same seed', () => {
-  const stream = buildRollStream(
+  const first = buildRollStream(
+    Uint8Array.from({ length: 32 }, (_, i) => i),
+    'test/domain',
+  );
+
+  const second = buildRollStream(
     Uint8Array.from({ length: 32 }, (_, i) => i),
     'other/domain',
   );
 
-  const draws = Array.from({ length: 4 }, () => stream.rollRange(0, 255));
-
-  expect(draws).toStrictEqual([200, 5, 175, 147]);
-  expect(draws).not.toStrictEqual([195, 28, 221, 36]);
+  expect(Array.from({ length: 4 }, () => second.rollRange(0, 255))).not.toStrictEqual(
+    Array.from({ length: 4 }, () => first.rollRange(0, 255)),
+  );
 });
 
 test('it keeps every draw inside the requested range', () => {
@@ -90,8 +127,13 @@ test('it consumes no bytes for a degenerate range', () => {
     'test/domain',
   );
 
+  const reference = buildRollStream(
+    Uint8Array.from({ length: 32 }, (_, i) => i),
+    'test/domain',
+  );
+
   expect(stream.rollRange(5, 5)).toBe(5);
-  expect(stream.rollRange(0, 255)).toBe(195);
+  expect(stream.rollRange(0, 255)).toBe(reference.rollRange(0, 255));
 });
 
 test('it reproduces the frozen golden weighted picks for even weights', () => {
@@ -107,7 +149,18 @@ test('it reproduces the frozen golden weighted picks for even weights', () => {
     ]),
   );
 
-  expect(picks).toStrictEqual(['b', 'a', 'b', 'a', 'b', 'a', 'b', 'a']);
+  expect(picks).toMatchInlineSnapshot(`
+    [
+      "b",
+      "a",
+      "b",
+      "a",
+      "b",
+      "a",
+      "b",
+      "a",
+    ]
+  `);
 });
 
 test('it lands weighted picks proportionally to skewed weights', () => {

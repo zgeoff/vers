@@ -10,7 +10,7 @@ test('it commits a stream that starts and ends on a terminal checkpoint', async 
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: { waves: [[createMockEnemyData()]] },
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,
@@ -26,7 +26,7 @@ test('it commits a stream that starts and ends on a terminal checkpoint', async 
 
 test('it is deterministic for a fixed seed', async () => {
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: { waves: [[createMockEnemyData()]] },
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,
@@ -43,7 +43,7 @@ test('it stops at the first failure and never restarts within the attempt', asyn
   const avatar = createMockAvatarData({ life: 1 });
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: { waves: [[createMockEnemyData()]] },
     failureAction: ActivityFailureAction.Retry,
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
@@ -65,7 +65,7 @@ test('it discards the whole attempt when no terminal lands inside the budget', a
   const avatar = createMockAvatarData();
 
   const activity = createMockActivityInput({
-    enemies: [createMockEnemyData()],
+    encounter: { waves: [[createMockEnemyData()]] },
     id: 'world_map_encounter_1',
     seed: buildStateFromSeed(3_047_525_658),
     type: ActivityType.WorldMapEncounter,

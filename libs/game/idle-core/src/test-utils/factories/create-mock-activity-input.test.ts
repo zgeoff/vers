@@ -9,19 +9,23 @@ test('it creates activity data with expected properties', () => {
 
   expect(activity).toStrictEqual({
     difficulty: 1,
-    enemies: [
-      {
-        level: 1,
-        life: 30,
-        name: 'Test Enemy',
-        primaryAttack: {
-          maxDamage: 3,
-          minDamage: 1,
-          speed: 0.5,
-        },
-        xp: 10,
-      },
-    ],
+    encounter: {
+      waves: [
+        [
+          {
+            level: 1,
+            life: 30,
+            name: 'Test Enemy',
+            primaryAttack: {
+              maxDamage: 3,
+              minDamage: 1,
+              speed: 0.5,
+            },
+            xp: 10,
+          },
+        ],
+      ],
+    },
     failureAction: ActivityFailureAction.Retry,
     id: expect.toBeString(),
     name: 'World Map Encounter',
@@ -34,7 +38,7 @@ test('it creates activity data with custom properties', () => {
   const enemy = createMockEnemyData();
 
   const activity = createMockActivityInput({
-    enemies: [enemy],
+    encounter: { waves: [[enemy]] },
     failureAction: ActivityFailureAction.Abort,
     id: 'custom-activity',
     name: 'Custom Activity',
@@ -44,7 +48,7 @@ test('it creates activity data with custom properties', () => {
 
   expect(activity).toStrictEqual({
     difficulty: 1,
-    enemies: [enemy],
+    encounter: { waves: [[enemy]] },
     failureAction: ActivityFailureAction.Abort,
     id: 'custom-activity',
     name: 'Custom Activity',

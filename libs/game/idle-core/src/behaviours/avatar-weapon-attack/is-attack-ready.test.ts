@@ -105,7 +105,7 @@ test('it returns false when the avatar is dead', () => {
     },
   });
 
-  const activityData = createMockActivityInput({ enemies: [enemyData] });
+  const activityData = createMockActivityInput({ encounter: { waves: [[enemyData]] } });
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
   const activity = createActivity(activityData, ctx);

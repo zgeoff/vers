@@ -20,10 +20,10 @@ test('it returns true when elapsed time is equal or greater than the next attack
     },
   });
 
-  const activityData = createMockActivityInput({ enemies: [enemyData] });
+  const activityData = createMockActivityInput({ encounter: { waves: [[enemyData]] } });
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-  const activity = createActivity(activityData, ctx, { waveSize: 1 });
+  const activity = createActivity(activityData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const enemy = activity.currentWave?.enemies[0];
 
@@ -51,10 +51,10 @@ test('it returns false when elapsed time is less than next attack time', () => {
     },
   });
 
-  const activityData = createMockActivityInput({ enemies: [enemyData] });
+  const activityData = createMockActivityInput({ encounter: { waves: [[enemyData]] } });
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-  const activity = createActivity(activityData, ctx, { waveSize: 1 });
+  const activity = createActivity(activityData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const enemy = activity.currentWave?.enemies[0];
 
@@ -76,10 +76,10 @@ test('it uses the last attacked time to calculate the next attack time', () => {
     },
   });
 
-  const activityData = createMockActivityInput({ enemies: [enemyData] });
+  const activityData = createMockActivityInput({ encounter: { waves: [[enemyData]] } });
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-  const activity = createActivity(activityData, ctx, { waveSize: 1 });
+  const activity = createActivity(activityData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const enemy = activity.currentWave?.enemies[0];
 
@@ -110,10 +110,10 @@ test('it returns false when the enemy is dead', () => {
     },
   });
 
-  const activityData = createMockActivityInput({ enemies: [enemyData] });
+  const activityData = createMockActivityInput({ encounter: { waves: [[enemyData]] } });
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-  const activity = createActivity(activityData, ctx, { waveSize: 1 });
+  const activity = createActivity(activityData, ctx);
   const executor = createCombatExecutor(activity, avatar, ctx);
   const enemy = activity.currentWave?.enemies[0];
 

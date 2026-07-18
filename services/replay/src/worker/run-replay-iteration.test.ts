@@ -615,12 +615,14 @@ test('it evicts and rebuilds from Started when the cached driver no longer match
       buildSimulationInput({
         avatarID: fixture.activity.avatarId,
         buildSnapshot: { level: 1, xp: 0 },
+        contentVersion: fixture.activity.contentVersion,
         id: fixture.activity.id,
         seed: fixture.activity.seed,
       }).activity,
       buildSimulationInput({
         avatarID: fixture.activity.avatarId,
         buildSnapshot: { level: 1, xp: 0 },
+        contentVersion: fixture.activity.contentVersion,
         id: fixture.activity.id,
         seed: fixture.activity.seed,
       }).avatar,
@@ -785,6 +787,7 @@ test('it does not reject a divergence that fails to reproduce on the fresh confi
   const corruptInput = buildSimulationInput({
     avatarID: fixture.activity.avatarId,
     buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: fixture.activity.contentVersion,
     id: fixture.activity.id,
     seed: 'ff'.repeat(16),
   });
@@ -1033,8 +1036,11 @@ test('a stream fully verified while still active reconciles the anchor once a su
 
   // oxlint-enable typescript/no-unsafe-type-assertion
 
+  // This reconciled seed's authored encounter resolves to a terminal checkpoint at 66,250ms of
+  // simulated time; a 60s duration keeps the successor mid-run so its own match never advances
+  // the chain, leaving the reconciliation above as the only write to assert against.
   const successor = await createHonestActivityFixture(ctx.db, {
-    duration: 80_000,
+    duration: 60_000,
     rootChain: predecessor.chain,
     seed: expectedAnchor.verifiedNextSeed,
     startChainIndex: expectedAnchor.verifiedChainIndex,

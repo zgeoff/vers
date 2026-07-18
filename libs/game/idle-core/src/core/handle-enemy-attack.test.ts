@@ -22,17 +22,12 @@ test('it applies damage from the enemy to the avatar', () => {
   const avatarData = createMockAvatarData({ life: 100 });
 
   const activityData = createMockActivityInput({
-    enemies: [enemyData],
+    encounter: { waves: [[enemyData]] },
   });
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-
-  const activity = createActivity(activityData, ctx, {
-    waveCount: 1,
-    waveSize: 1,
-  });
-
+  const activity = createActivity(activityData, ctx);
   const enemy = activity.currentWave!.nextLivingEnemy!;
 
   const event: EnemyAttackEvent = {
@@ -59,17 +54,12 @@ test('it does nothing if the enemy is dead', () => {
   const avatarData = createMockAvatarData({ life: 100 });
 
   const activityData = createMockActivityInput({
-    enemies: [enemyData],
+    encounter: { waves: [[enemyData]] },
   });
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-
-  const activity = createActivity(activityData, ctx, {
-    waveCount: 1,
-    waveSize: 1,
-  });
-
+  const activity = createActivity(activityData, ctx);
   const enemy = activity.currentWave!.nextLivingEnemy!;
 
   // kill the enemy
@@ -102,20 +92,14 @@ test('it correctly resolves the correct event source', () => {
   const avatarData = createMockAvatarData({ life: 100 });
 
   const activityData = createMockActivityInput({
-    enemies: [enemyData],
+    // it's important we have more than 1 enemy so we can ensure event source
+    // resolution works
+    encounter: { waves: [[enemyData, enemyData]] },
   });
 
   const ctx = createMockSimulationContext();
   const avatar = createAvatar(avatarData, ctx);
-
-  const activity = createActivity(activityData, ctx, {
-    waveCount: 1,
-
-    // it's important we have more than 1 enemy so we can ensure event source
-    // resolution works
-    waveSize: 2,
-  });
-
+  const activity = createActivity(activityData, ctx);
   const firstEnemy = activity.currentWave!.nextLivingEnemy!;
 
   const event: EnemyAttackEvent = {

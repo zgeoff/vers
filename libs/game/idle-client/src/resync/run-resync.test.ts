@@ -59,7 +59,14 @@ test('it resolves to none for an avatar with no activity history', async () => {
     avatarID: avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
-        enemies: [createMockEnemyData()],
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
         failureAction: ActivityFailureAction.Abort,
         id: started.id,
         seed: started.seed,
@@ -89,7 +96,14 @@ test('it rebases from the stop index without simulating when the activity is cap
     avatarID: avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
-        enemies: [createMockEnemyData()],
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
         failureAction: ActivityFailureAction.Abort,
         id: started.id,
         seed: started.seed,
@@ -130,7 +144,14 @@ test('it attaches live when the gap is negligible, leaving the submitter untouch
     avatarID: avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
-        enemies: [createMockEnemyData()],
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
         failureAction: ActivityFailureAction.Abort,
         id: started.id,
         seed: started.seed,
@@ -170,7 +191,14 @@ test('it fast-forwards a real offline gap and reports the outcome', async () => 
     avatarID: avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
-        enemies: [createMockEnemyData()],
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
         failureAction: ActivityFailureAction.Abort,
         id: started.id,
         seed: started.seed,
@@ -218,7 +246,14 @@ test('it delivers checkpoints a previous worker left queued and plans against th
     avatarID: avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
-        enemies: [createMockEnemyData()],
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
         failureAction: ActivityFailureAction.Abort,
         id: started.id,
         seed: started.seed,
@@ -270,7 +305,14 @@ test('it refuses to plan while stranded checkpoints cannot be delivered', async 
       avatarID: avatar.id,
       buildSimulationInput: (started) => ({
         activity: createMockActivityInput({
-          enemies: [createMockEnemyData()],
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
           failureAction: ActivityFailureAction.Abort,
           id: started.id,
           seed: started.seed,
@@ -300,7 +342,14 @@ test('it downgrades a fast-forward to attach-live when the activity is already s
     avatarID: avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
-        enemies: [createMockEnemyData()],
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
         failureAction: ActivityFailureAction.Abort,
         id: started.id,
         seed: started.seed,
@@ -339,7 +388,14 @@ test('it leaves a live activity queue untouched instead of draining it', async (
     avatarID: avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
-        enemies: [createMockEnemyData()],
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
         failureAction: ActivityFailureAction.Abort,
         id: started.id,
         seed: started.seed,

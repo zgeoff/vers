@@ -33,7 +33,7 @@ export async function* runActivity(
     executor.run(timestep);
 
     if (activity.currentWave?.remaining === 0) {
-      const rewards = buildWaveClearRewards(activity.currentWave, activity.difficulty);
+      const rewards = buildWaveClearRewards(activity.currentWave);
 
       const rewardSlotContexts = buildWaveClearRewardSlots(
         activity.currentWave,

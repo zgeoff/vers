@@ -18,7 +18,5 @@ export type {
   RolledAffixes,
   RolledItem,
   RollPosition,
-  RollStream,
   SlotContext,
-  WeightedEntry,
 } from './types';

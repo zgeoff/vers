@@ -20,11 +20,11 @@ export interface AvatarData {
 }
 
 export interface EnemyData {
-  level: number;
-  life: number;
-  name: string;
-  primaryAttack: AttackData;
-  xp: number;
+  readonly level: number;
+  readonly life: number;
+  readonly name: string;
+  readonly primaryAttack: AttackData;
+  readonly xp: number;
 }
 
 export type HandleTickFn = (combatExecutor: CombatExecutor) => void;

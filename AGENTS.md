@@ -182,6 +182,16 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 | `submit`   | accept a payload into a durable outbound queue and schedule its delivery               | `submit`                |
 | `sweep`    | bulk-remove stale or orphaned resources found by a scan, returning the set removed     | `sweepDevDBs`           |
 
+## Golden values in tests
+
+- A golden value — transcribed machine output no human derives by reading the code: a stream's draw
+  sequence, a rolled encounter or item, a derived key, an RNG state — is asserted with
+  `toMatchInlineSnapshot()`. `bun test -u` regenerates it after an intentional behavior change, and
+  the regenerated diff is reviewed like any code change.
+- Human-authored expectations keep explicit matchers: spec test vectors from an external authority,
+  wire forms readable against their encoding, and property assertions. A snapshot there would bless
+  a broken implementation's own output.
+
 ## Review bots
 
 CodeRabbit and cubic review every PR, configured by `.coderabbit.yaml` and `cubic.yaml` at the repo

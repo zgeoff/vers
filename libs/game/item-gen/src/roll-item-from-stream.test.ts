@@ -14,12 +14,20 @@ test('it reproduces the frozen golden item for a fixed key and coordinate', () =
     ordinal: 0,
   });
 
-  expect(rollItemFromStream(tablesV1, { nodeTier: 0 }, stream)).toStrictEqual({
-    affixes: [{ affixID: 'flat-guard', groupID: 'guard', value: 1 }],
-    baseID: 'placeholder-focus',
-    contentVersion: '1',
-    rarityID: 'magic',
-  });
+  expect(rollItemFromStream(tablesV1, { nodeTier: 0 }, stream)).toMatchInlineSnapshot(`
+    {
+      "affixes": [
+        {
+          "affixID": "flat-guard",
+          "groupID": "guard",
+          "value": 1,
+        },
+      ],
+      "baseID": "placeholder-focus",
+      "contentVersion": "1",
+      "rarityID": "magic",
+    }
+  `);
 });
 
 test('it reproduces the frozen golden rare item with both affix groups', () => {
@@ -32,15 +40,25 @@ test('it reproduces the frozen golden rare item with both affix groups', () => {
     ordinal: 41,
   });
 
-  expect(rollItemFromStream(tablesV1, { nodeTier: 0 }, stream)).toStrictEqual({
-    affixes: [
-      { affixID: 'pct-guard', groupID: 'guard', value: 4 },
-      { affixID: 'pct-power', groupID: 'power', value: 1 },
-    ],
-    baseID: 'placeholder-blade',
-    contentVersion: '1',
-    rarityID: 'rare',
-  });
+  expect(rollItemFromStream(tablesV1, { nodeTier: 0 }, stream)).toMatchInlineSnapshot(`
+    {
+      "affixes": [
+        {
+          "affixID": "pct-guard",
+          "groupID": "guard",
+          "value": 4,
+        },
+        {
+          "affixID": "pct-power",
+          "groupID": "power",
+          "value": 1,
+        },
+      ],
+      "baseID": "placeholder-blade",
+      "contentVersion": "1",
+      "rarityID": "rare",
+    }
+  `);
 });
 
 test('it rolls zero affixes for a common item', () => {

@@ -1,6 +1,7 @@
+import type { RollStream } from '@vers/roll-crypto';
 import invariant from 'tiny-invariant';
 import { rollAffixesFromStream } from './roll-affixes-from-stream';
-import type { LootTables, RollStream, RolledItem, SlotContext } from './types';
+import type { LootTables, RolledItem, SlotContext } from './types';
 
 /**
  * Rolls a complete item in the canonical draw order — rarity pick, base pick, affix-count range

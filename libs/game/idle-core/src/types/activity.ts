@@ -1,4 +1,5 @@
-import type { EnemyData, Wave, WaveSnapshot } from './entities';
+import type { EncounterDefinition } from '@vers/game-utils';
+import type { Wave, WaveSnapshot } from './entities';
 
 interface IActivityInput {
   difficulty: number;
@@ -18,7 +19,7 @@ export enum ActivityFailureAction {
 }
 
 export interface WorldMapEncounterActivityInput extends IActivityInput {
-  enemies: Array<EnemyData>;
+  encounter: EncounterDefinition;
   seed: string;
   type: ActivityType.WorldMapEncounter;
 }

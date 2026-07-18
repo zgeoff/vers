@@ -1,17 +1,13 @@
 import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
+import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
 import * as z from 'zod';
 import { buildActivityRouter } from './build-router';
 
-/**
- * Placeholder content version every new activity is minted against; real content dispatch is out
- * of scope. Factory-injectable so tests can exercise specific versions.
- */
-const CONTENT_VERSION = '0.0.0-dev';
 const KEY_VERSION = 1;
 
 interface CreateActivityServiceConfig {
@@ -38,7 +34,7 @@ export function createActivityService(
   return createService({
     buildRouter: (runtime) =>
       buildActivityRouter({
-        contentVersion: config.contentVersion ?? CONTENT_VERSION,
+        contentVersion: config.contentVersion ?? CURRENT_CONTENT_VERSION,
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
         keyVersion: config.keyVersion ?? KEY_VERSION,
         simTimeCapMs: config.simTimeCapMs ?? OFFLINE_PROGRESS_CAP_MS,

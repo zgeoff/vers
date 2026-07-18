@@ -6,6 +6,8 @@ export type { AttackData } from './attack-data-schema';
 export { AttackDataSchema } from './attack-data-schema';
 export type { AvatarData } from './avatar-data-schema';
 export { AvatarDataSchema } from './avatar-data-schema';
+export type { EncounterDefinition } from './encounter-definition-schema';
+export { EncounterDefinitionSchema } from './encounter-definition-schema';
 export type { EnemyData } from './enemy-data-schema';
 export { EnemyDataSchema } from './enemy-data-schema';
 export type { EquipmentWeapon } from './equipment-weapon-schema';

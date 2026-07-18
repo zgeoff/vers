@@ -1,6 +1,6 @@
+import { buildRollStream } from '@vers/roll-crypto';
+import type { RollStream } from '@vers/roll-crypto';
 import invariant from 'tiny-invariant';
-import { buildRollStream } from './build-roll-stream';
-import type { RollStream } from './types';
 
 const SALT_STREAM_DOMAIN = 'vers/roll-stream/salt/v1';
 

@@ -67,7 +67,7 @@ test('it calls all registered handlers when handling a tick', () => {
   const avatar = createAvatar(avatarData, ctx);
   const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
-  const wave = createWave(activityData, ctx, 1);
+  const wave = createWave(0, [createMockEnemyData()], ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
   const handlerSpy = mock<CombatLifecycleHandler<Enemy>>();
 
@@ -98,7 +98,7 @@ test('it allows removing behaviours', () => {
   const avatar = createAvatar(avatarData, ctx);
   const activityData = createMockActivityInput();
   const activity = createActivity(activityData, ctx);
-  const wave = createWave(activityData, ctx, 1);
+  const wave = createWave(0, [createMockEnemyData()], ctx);
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
   const handlerSpy = mock<CombatLifecycleHandler<Enemy>>();
 

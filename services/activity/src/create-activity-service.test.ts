@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
+import { CURRENT_CONTENT_VERSION, getEncounterContent } from '@vers/game-utils';
+import { getTables } from '@vers/item-gen';
 import { createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
@@ -51,7 +53,28 @@ test('it defaults the content and key versions when none are injected', async ()
     scopeType: 'world_map_node',
   });
 
-  expect(activity).toMatchObject({ contentVersion: '0.0.0-dev', keyVersion: 1 });
+  expect(activity).toMatchObject({ contentVersion: CURRENT_CONTENT_VERSION, keyVersion: 1 });
+});
+
+test('it stamps a default content version both the item and encounter content dispatches can load', async () => {
+  await using db = await createTestDB({ isolation: 'schema' });
+
+  await createSimVersionRow(db.db);
+
+  const service = await createActivityService({ db: db.db });
+  const viewer = await createViewer({ audience: 'service-activity', db: db.db });
+  const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+  });
+
+  expect(() => getTables(activity.contentVersion)).not.toThrow();
+  expect(() => getEncounterContent(activity.contentVersion)).not.toThrow();
 });
 
 test('it uses an injected content version when given', async () => {
