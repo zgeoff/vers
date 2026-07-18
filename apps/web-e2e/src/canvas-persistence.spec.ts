@@ -38,7 +38,9 @@ test('it keeps the same canvas element across client-side game navigation', asyn
 
   const canvas = page.locator('canvas');
 
-  await expect(canvas).toBeVisible();
+  // software-GL canvas mounts on a loaded shared runner can far outlast the suite-wide expect
+  // timeout while staying sound — slow init is not a missing canvas
+  await expect(canvas).toBeVisible({ timeout: 30_000 });
 
   await canvas.evaluate((element) => {
     element.dataset['canvasPersistenceTag'] = 'original';
