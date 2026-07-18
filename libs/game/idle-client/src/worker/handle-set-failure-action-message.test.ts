@@ -1,8 +1,6 @@
 import { expect, test } from 'bun:test';
-import { createORPCClient } from '@orpc/client';
-import { RPCLink } from '@orpc/client/fetch';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
-import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
+import { createAuthedServiceClient } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { server } from '../mocks/node';
@@ -22,14 +20,7 @@ interface SetupTestConfig {
  * transitions the real service applies to the avatar rows the test seeds in the mock db.
  */
 async function setupTest(config: Readonly<SetupTestConfig>) {
-  const token = await createTestAccessToken(config.userID);
-
-  const client: ActivityServiceClient = createORPCClient(
-    new RPCLink({
-      headers: { authorization: `Bearer ${token}` },
-      url: `${resolveServiceURL('activity')}/rpc`,
-    }),
-  );
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', config.userID);
 
   return { client };
 }

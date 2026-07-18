@@ -1,10 +1,8 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { createORPCClient } from '@orpc/client';
-import { RPCLink } from '@orpc/client/fetch';
 import type { ErrorEvent } from '@sentry/browser';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction } from '@vers/idle-core';
-import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
+import { createAuthedServiceClient, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
@@ -88,14 +86,7 @@ test('it retains the cached dirty flag across boot so the next resync flushes it
     failureAction: ActivityFailureAction.Retry,
   });
 
-  const token = await createTestAccessToken(user.id);
-
-  const client: ActivityServiceClient = createORPCClient(
-    new RPCLink({
-      headers: { authorization: `Bearer ${token}` },
-      url: `${resolveServiceURL('activity')}/rpc`,
-    }),
-  );
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
 
   const runtime = createWorkerRuntime({ client });
 
@@ -220,14 +211,7 @@ test('it reports a fault to the error backend when a message makes its handler t
 test('it resumes into a fresh row once a same-row CONFLICT resync drains a held terminal append', async () => {
   const user = await db.userCollection.create({});
   const avatar = await db.avatarCollection.create({ userID: user.id });
-  const token = await createTestAccessToken(user.id);
-
-  const client: ActivityServiceClient = createORPCClient(
-    new RPCLink({
-      headers: { authorization: `Bearer ${token}` },
-      url: `${resolveServiceURL('activity')}/rpc`,
-    }),
-  );
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
   // below collapses that wait into a single tick-loop frame
@@ -283,14 +267,7 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
 test('it resumes into a fresh row once a reconnect drains a held terminal append behind an offline continuation', async () => {
   const user = await db.userCollection.create({});
   const avatar = await db.avatarCollection.create({ userID: user.id });
-  const token = await createTestAccessToken(user.id);
-
-  const client: ActivityServiceClient = createORPCClient(
-    new RPCLink({
-      headers: { authorization: `Bearer ${token}` },
-      url: `${resolveServiceURL('activity')}/rpc`,
-    }),
-  );
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
   // below collapses that wait into a single tick-loop frame
@@ -360,14 +337,7 @@ test("it resumes the pending continuation's avatar on reconnect over an earlier 
   const user = await db.userCollection.create({});
   const earlierAvatar = await db.avatarCollection.create({ userID: user.id });
   const avatar = await db.avatarCollection.create({ userID: user.id });
-  const token = await createTestAccessToken(user.id);
-
-  const client: ActivityServiceClient = createORPCClient(
-    new RPCLink({
-      headers: { authorization: `Bearer ${token}` },
-      url: `${resolveServiceURL('activity')}/rpc`,
-    }),
-  );
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
   // below collapses that wait into a single tick-loop frame

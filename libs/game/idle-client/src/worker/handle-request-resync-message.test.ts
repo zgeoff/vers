@@ -1,6 +1,4 @@
 import { expect, mock, onTestFinished, test } from 'bun:test';
-import { createORPCClient } from '@orpc/client';
-import { RPCLink } from '@orpc/client/fetch';
 import type { ErrorEvent } from '@sentry/browser';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
@@ -11,7 +9,7 @@ import {
   createSimulation,
   runAttempt,
 } from '@vers/idle-core';
-import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
+import { createAuthedServiceClient } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
@@ -49,14 +47,7 @@ interface SetupTestConfig {
  * returned flush delivers whatever the submitter has scheduled since the last call.
  */
 async function setupTest(config: Readonly<SetupTestConfig>) {
-  const token = await createTestAccessToken(config.userID);
-
-  const client: ActivityServiceClient = createORPCClient(
-    new RPCLink({
-      headers: { authorization: `Bearer ${token}` },
-      url: `${resolveServiceURL('activity')}/rpc`,
-    }),
-  );
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', config.userID);
 
   let capturedFlush: (() => Promise<void>) | undefined;
 
@@ -207,14 +198,7 @@ test('it keeps the queued rows of an activity that went live while the resync wa
     startedAt: new Date(),
   });
 
-  const token = await createTestAccessToken(user.id);
-
-  const client: ActivityServiceClient = createORPCClient(
-    new RPCLink({
-      headers: { authorization: `Bearer ${token}` },
-      url: `${resolveServiceURL('activity')}/rpc`,
-    }),
-  );
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
 
   let releaseHeldFlush: (() => void) | undefined;
 
