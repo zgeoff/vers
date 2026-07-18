@@ -508,6 +508,8 @@
       "name": "@vers/game-utils",
       "version": "0.0.0",
       "dependencies": {
+        "@noble/hashes": "catalog:",
+        "@vers/roll-crypto": "workspace:*",
         "pure-rand": "catalog:",
         "tiny-invariant": "catalog:",
       },
