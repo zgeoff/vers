@@ -63,6 +63,7 @@ test('it discards a partial attempt and submits nothing when the budget is too s
     activity: createMockActivityData(),
     anchor: null,
     appendedHead: 0,
+    failureAction: 'abort',
     serverTime: new Date(),
     verifiedHead: 0,
   };
@@ -109,6 +110,7 @@ test('it reports the final row terminal when a reconstructed tail lands exactly 
     activity: createMockActivityData(),
     anchor: null,
     appendedHead: 1,
+    failureAction: 'abort',
     serverTime: new Date(),
     verifiedHead: 0,
   };
@@ -168,6 +170,7 @@ test('it stops after the first failed attempt under the abort policy', async () 
     activity: createMockActivityData(),
     anchor: null,
     appendedHead: 0,
+    failureAction: 'abort',
     serverTime: new Date(),
     verifiedHead: 0,
   };
@@ -217,6 +220,7 @@ test('it chains fresh server-started attempts through failures under the retry p
     activity: createMockActivityData(),
     anchor: null,
     appendedHead: 0,
+    failureAction: 'abort',
     serverTime: new Date(),
     verifiedHead: 0,
   };
@@ -261,6 +265,7 @@ test('it resumes a mid-stream activity submitting only the tail past the appende
     activity: createMockActivityData({ appendedHead: 1 }),
     anchor: null,
     appendedHead: 1,
+    failureAction: 'abort',
     serverTime: new Date(),
     verifiedHead: 0,
   };
@@ -301,6 +306,7 @@ test('it reports the final row it left off at, for a caller to attach directly',
     activity: createMockActivityData(),
     anchor: null,
     appendedHead: 0,
+    failureAction: 'abort',
     serverTime: new Date(),
     verifiedHead: 0,
   };

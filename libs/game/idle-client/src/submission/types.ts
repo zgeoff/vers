@@ -1,5 +1,6 @@
 import type { ContractRouterClient } from '@orpc/contract';
 import type { CheckpointBatchEntry, activityContract } from '@vers/contract-activity';
+import type { ActivityFailureAction } from '@vers/idle-core';
 import type { DBSchema } from 'idb';
 
 /**
@@ -10,10 +11,24 @@ export interface QueuedCheckpoint extends CheckpointBatchEntry {
   readonly activityID: string;
 }
 
+/**
+ * The failure-action preference as the device-local cache holds it: `dirty` marks a locally set
+ * value the server hasn't acknowledged yet, so a resync knows to push it rather than adopt the
+ * server's.
+ */
+export interface FailureActionPreference {
+  readonly dirty: boolean;
+  readonly failureAction: ActivityFailureAction;
+}
+
 export interface CheckpointQueueSchema extends DBSchema {
   'pending-checkpoints': {
     key: [string, number];
     value: QueuedCheckpoint;
+  };
+  preferences: {
+    key: string;
+    value: FailureActionPreference;
   };
 }
 

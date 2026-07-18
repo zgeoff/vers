@@ -9,6 +9,7 @@ export function createMockLatestActivityProgress(
     activity: createMockActivityData(),
     anchor: null,
     appendedHead: 0,
+    failureAction: 'abort',
     serverTime: faker.date.recent(),
     verifiedHead: 0,
     ...overrides,

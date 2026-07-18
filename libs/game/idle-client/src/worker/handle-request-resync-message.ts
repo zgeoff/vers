@@ -1,13 +1,16 @@
+import { safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
-import type { ActivityCheckpoint, Simulation } from '@vers/idle-core';
+import type { ActivityCheckpoint, ActivityFailureAction, Simulation } from '@vers/idle-core';
 import { ActivityCheckpointType, buildSimulationInput, createSimulation } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { runReconstruction } from '../resync/run-reconstruction';
 import { runResync } from '../resync/run-resync';
 import type { FastForwardReport, ResyncPlan, ResyncResult } from '../resync/types';
 import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
+import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import type { RequestResyncMessage, ResyncStatus } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
+import { createFailureActionStatusMessage } from './create-failure-action-status-message';
 import { createResyncStatusMessage } from './create-resync-status-message';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
@@ -48,12 +51,17 @@ export async function handleRequestResyncMessage(
 
     const result = await runResync({
       avatarID: message.avatarID,
-      buildSimulationInput,
+      buildSimulationInput: (activity) =>
+        buildSimulationInput(activity, { failureAction: context.getFailureAction() }),
       client: context.getClient(),
       isActivityLive: (activityID) => context.getSimulation()?.activity?.id === activityID,
       onProgress: (progress) => {
         emitResyncStatus(context, { ...progress, kind: 'fast-forwarding' });
       },
+      onProgressFetched: (progress) =>
+        context.isFailureActionDirty()
+          ? flushFailureAction(context, message.avatarID)
+          : updateFailureAction(context, progress.failureAction as ActivityFailureAction),
       submitter: context.getSubmitter(),
     });
 
@@ -65,6 +73,43 @@ export async function handleRequestResyncMessage(
   } finally {
     context.setResyncInFlight(false);
   }
+}
+
+/**
+ * Pushes a dirty local failure-action value to the server as the offline outbox's one entry:
+ * best-effort, so a delivery failure leaves it dirty for the next resync's reconcile to retry.
+ */
+async function flushFailureAction(context: WorkerContext, avatarID: string): Promise<void> {
+  const failureAction = context.getFailureAction();
+
+  const [error] = await safe(context.getClient().updateFailureAction({ avatarID, failureAction }));
+
+  if (error !== null) {
+    return;
+  }
+
+  context.setFailureActionDirty(false);
+
+  await writeFailureActionCache({ dirty: false, failureAction });
+}
+
+/**
+ * Adopts the server's failure action as the in-session and cached truth, broadcasting only when
+ * it actually changed.
+ */
+async function updateFailureAction(
+  context: WorkerContext,
+  failureAction: ActivityFailureAction,
+): Promise<void> {
+  if (failureAction === context.getFailureAction()) {
+    return;
+  }
+
+  context.setFailureAction(failureAction);
+
+  await writeFailureActionCache({ dirty: false, failureAction });
+
+  emitFailureActionStatus(context, failureAction);
 }
 
 /**
@@ -144,7 +189,9 @@ async function applyAttachLive(
     'an attach-live plan always carries the progress it was decided from',
   );
 
-  const input = buildSimulationInput(progress.activity);
+  const input = buildSimulationInput(progress.activity, {
+    failureAction: context.getFailureAction(),
+  });
 
   if (plan.context.appendedHead === 0) {
     await context.getSubmitter().registerActivity(plan.context);
@@ -204,7 +251,9 @@ async function applyFastForwardAttach(
   context: WorkerContext,
   report: FastForwardReport,
 ): Promise<void> {
-  const input = buildSimulationInput(report.activity);
+  const input = buildSimulationInput(report.activity, {
+    failureAction: context.getFailureAction(),
+  });
 
   if (report.appendedHead === 0) {
     await context.getSubmitter().registerActivity({
@@ -284,6 +333,17 @@ function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>
 
 function emitDivergence(context: WorkerContext, activityID: string): void {
   const message = createCheckpointStreamInvalidMessage(activityID, 'reconstruction-divergence');
+
+  for (const connection of context.connections) {
+    connection.postMessage(message);
+  }
+}
+
+function emitFailureActionStatus(
+  context: WorkerContext,
+  failureAction: ActivityFailureAction,
+): void {
+  const message = createFailureActionStatusMessage(failureAction);
 
   for (const connection of context.connections) {
     connection.postMessage(message);

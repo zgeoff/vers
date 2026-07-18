@@ -49,16 +49,16 @@ test('it broadcasts a simulation update once an activity is set', async () => {
 
   connection.post({ type: ClientMessageType.Initialize });
 
-  await connection.waitForMessages(1);
+  await connection.waitForMessages(2);
 
   connection.post({
     activity: createMockActivityData(),
     type: ClientMessageType.SetActivity,
   });
 
-  await connection.waitForMessages(2);
+  await connection.waitForMessages(3);
 
-  expect(connection.received[1]?.type).toBe(WorkerMessageType.SimulationUpdate);
+  expect(connection.received[2]?.type).toBe(WorkerMessageType.SimulationUpdate);
 });
 
 test('it stops broadcasting to a connection after it disconnects', async () => {
@@ -75,7 +75,7 @@ test('it stops broadcasting to a connection after it disconnects', async () => {
 
   survivor.post({ type: ClientMessageType.Initialize });
 
-  await survivor.waitForMessages(1);
+  await survivor.waitForMessages(2);
 
   expect(runtime.connections.size).toBe(2);
 
@@ -90,9 +90,9 @@ test('it stops broadcasting to a connection after it disconnects', async () => {
     type: ClientMessageType.SetActivity,
   });
 
-  await survivor.waitForMessages(2);
+  await survivor.waitForMessages(3);
 
-  expect(survivor.received[1]?.type).toBe(WorkerMessageType.SimulationUpdate);
+  expect(survivor.received[2]?.type).toBe(WorkerMessageType.SimulationUpdate);
 });
 
 test('it reports a fault to the error backend when a message makes its handler throw', async () => {

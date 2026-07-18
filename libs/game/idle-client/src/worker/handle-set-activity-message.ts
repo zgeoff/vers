@@ -14,7 +14,9 @@ export async function handleSetActivityMessage(
     return;
   }
 
-  const input = buildSimulationInput(message.activity, { failureAction: simulation.failureAction });
+  const input = buildSimulationInput(message.activity, {
+    failureAction: context.getFailureAction(),
+  });
 
   // The registration starts before the activity installs but is awaited only after: installing
   // synchronously means a resync finishing during the seed read finds this fresher activity live

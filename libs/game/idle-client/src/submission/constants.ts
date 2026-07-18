@@ -23,5 +23,12 @@ export const RETRY_BACKOFF_CAP_MS = 300_000;
  */
 export const FLUSH_STALL_THRESHOLD = 3;
 export const CHECKPOINT_QUEUE_DB_NAME = 'vers-idle-checkpoint-queue';
-export const CHECKPOINT_QUEUE_DB_VERSION = 1;
+export const CHECKPOINT_QUEUE_DB_VERSION = 2;
 export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
+
+/**
+ * The `preferences` object store's one record key: a SharedWorker serves a single browser
+ * profile, so its cached failure-action preference never needs more than one row.
+ */
+export const FAILURE_ACTION_PREFERENCE_KEY = 'failure-action';
+export const PREFERENCES_STORE_NAME = 'preferences';
