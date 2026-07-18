@@ -32,6 +32,12 @@ interface CreateWorkerRuntimeOptions {
    */
   readonly client?: ActivityServiceClient;
 
+  /**
+   * The tick loop's clock, defaulting to `performance.now` — a test injects its own to collapse
+   * the loop's real-time pacing instead of waiting out simulated durations in real time.
+   */
+  readonly now?: () => number;
+
   readonly timestep?: number;
 }
 
@@ -42,6 +48,7 @@ interface CreateWorkerRuntimeOptions {
  */
 export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): WorkerRuntime {
   const timestep = options.timestep ?? SIMULATION_TIMESTEP_MS;
+  const now = options.now ?? (() => performance.now());
 
   const connections = new Set<MessagePort>();
 
@@ -50,7 +57,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let activity: ActivityData | null = null;
   let running = false;
   let stopped = false;
-  let lastFrameTime = performance.now();
+  let lastFrameTime = now();
   let accumulator = 0;
   let pendingContinuation: PendingContinuation | null = null;
   let resyncAvatarID: string | null = null;
@@ -209,8 +216,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       return;
     }
 
-    const now = performance.now();
-    const frameTime = now - lastFrameTime;
+    const frameNow = now();
+    const frameTime = frameNow - lastFrameTime;
 
     accumulator += frameTime;
 
@@ -224,7 +231,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       }
     }
 
-    lastFrameTime = now;
+    lastFrameTime = frameNow;
 
     await wait(1);
 

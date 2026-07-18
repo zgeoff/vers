@@ -8,14 +8,15 @@ import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
-import { HttpResponse, http } from 'msw';
+import { http } from 'msw';
 import invariant from 'tiny-invariant';
-import * as z from 'zod';
 import { server } from '../mocks/node';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
+import { createFastClock } from '../test-utils/create-fast-clock';
 import type { TestConnection } from '../test-utils/create-test-connection';
 import { createTestConnection } from '../test-utils/create-test-connection';
+import { makeFailFirstMatchHandler } from '../test-utils/make-fail-first-match-handler';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
@@ -28,93 +29,6 @@ function createConnection(runtime: WorkerRuntime): TestConnection {
   runtime.handleConnect(new MessageEvent('connect', { ports: [connection.port] }));
 
   return connection;
-}
-
-interface FastClock {
-  /**
-   * Arms the clock's very next `performance.now()` read to jump forward by `deltaMs` instead of
-   * the real interval since the last read — one call through the runtime's tick loop then
-   * processes a whole `deltaMs` of simulated time. Every other read returns the same frozen value,
-   * so a jump armed before the tick loop has installed a simulation costs nothing (an idle tick
-   * with nowhere to apply it) rather than cascading through however many continuations the frame
-   * would otherwise cover.
-   */
-  readonly jump: (deltaMs: number) => void;
-  readonly restore: () => void;
-}
-
-/**
- * Replaces the runtime's tick loop clock — its own `performance.now()` calls are the only ones
- * anywhere in this call chain, so patching the global is safe. Lets a test collapse the loop's
- * real-time pacing into a single frame on demand, rather than waiting out an encounter's actual
- * simulated duration in real time.
- */
-function createFastClock(): FastClock {
-  const original = performance.now.bind(performance);
-  let value = 0;
-  let pendingJumpMs = 0;
-
-  performance.now = () => {
-    value += pendingJumpMs;
-    pendingJumpMs = 0;
-
-    return value;
-  };
-
-  return {
-    jump: (deltaMs) => {
-      pendingJumpMs = deltaMs;
-    },
-    restore: () => {
-      performance.now = original;
-    },
-  };
-}
-
-interface RequestInfo {
-  readonly request: Request;
-}
-
-const RequestEnvelopeSchema = z.object({ json: z.record(z.string(), z.unknown()).optional() });
-
-/**
- * Fails transport-wise the first request whose JSON body satisfies `matches`, then lets every
- * other request — including a retry of the same call and any other test's concurrent traffic on
- * the shared mock server — fall through to the stateful backend registered underneath.
- */
-function makeFailFirstMatchHandler(
-  matches: (input: Readonly<Record<string, unknown>>) => boolean,
-): (info: Readonly<RequestInfo>) => Promise<Response | undefined> {
-  let failed = false;
-
-  return async (info): Promise<Response | undefined> => {
-    if (failed) {
-      return undefined;
-    }
-
-    const parsed: unknown = await info.request.clone().json();
-
-    const body = RequestEnvelopeSchema.parse(parsed);
-
-    if (!matches(body.json ?? {})) {
-      return undefined;
-    }
-
-    failed = true;
-
-    return HttpResponse.error();
-  };
-}
-
-async function buildAuthedClient(userID: string): Promise<ActivityServiceClient> {
-  const token = await createTestAccessToken(userID);
-
-  return createORPCClient(
-    new RPCLink({
-      headers: { authorization: `Bearer ${token}` },
-      url: `${resolveServiceURL('activity')}/rpc`,
-    }),
-  );
 }
 
 test('it replies with the initial state to an initialize message', async () => {
@@ -309,7 +223,16 @@ test('it reports a fault to the error backend when a message makes its handler t
 test('it resumes into a fresh row once a same-row CONFLICT resync drains a held terminal append', async () => {
   const user = await db.userCollection.create({});
   const avatar = await db.avatarCollection.create({ userID: user.id });
-  const client = await buildAuthedClient(user.id);
+  const token = await createTestAccessToken(user.id);
+
+  // the runtime's production client resolves its URL from `self.location.origin`, unreachable in
+  // this test env — an authed client wired at the mocked backend is the only way to route its calls
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({
+      headers: { authorization: `Bearer ${token}` },
+      url: `${resolveServiceURL('activity')}/rpc`,
+    }),
+  );
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
   // below collapses that wait into a single tick-loop frame
@@ -329,13 +252,10 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
   );
 
   const clock = createFastClock();
-  const runtime = createWorkerRuntime({ client });
+  const runtime = createWorkerRuntime({ client, now: clock.now });
 
-  // stop the tick loop before restoring the real clock — a still-scheduled tick reading the real
-  // clock against the fake clock's small `lastFrameTime` would read a bogus, enormous frame
   onTestFinished(() => {
     runtime.stop();
-    clock.restore();
   });
 
   const connection = createConnection(runtime);
@@ -368,7 +288,16 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
 test('it resumes into a fresh row once a reconnect drains a held terminal append behind an offline continuation', async () => {
   const user = await db.userCollection.create({});
   const avatar = await db.avatarCollection.create({ userID: user.id });
-  const client = await buildAuthedClient(user.id);
+  const token = await createTestAccessToken(user.id);
+
+  // the runtime's production client resolves its URL from `self.location.origin`, unreachable in
+  // this test env — an authed client wired at the mocked backend is the only way to route its calls
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({
+      headers: { authorization: `Bearer ${token}` },
+      url: `${resolveServiceURL('activity')}/rpc`,
+    }),
+  );
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
   // below collapses that wait into a single tick-loop frame
@@ -392,13 +321,10 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
   );
 
   const clock = createFastClock();
-  const runtime = createWorkerRuntime({ client });
+  const runtime = createWorkerRuntime({ client, now: clock.now });
 
-  // stop the tick loop before restoring the real clock — a still-scheduled tick reading the real
-  // clock against the fake clock's small `lastFrameTime` would read a bogus, enormous frame
   onTestFinished(() => {
     runtime.stop();
-    clock.restore();
   });
 
   const connection = createConnection(runtime);
@@ -441,7 +367,16 @@ test("it resumes the pending continuation's avatar on reconnect over an earlier 
   const user = await db.userCollection.create({});
   const earlierAvatar = await db.avatarCollection.create({ userID: user.id });
   const avatar = await db.avatarCollection.create({ userID: user.id });
-  const client = await buildAuthedClient(user.id);
+  const token = await createTestAccessToken(user.id);
+
+  // the runtime's production client resolves its URL from `self.location.origin`, unreachable in
+  // this test env — an authed client wired at the mocked backend is the only way to route its calls
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({
+      headers: { authorization: `Bearer ${token}` },
+      url: `${resolveServiceURL('activity')}/rpc`,
+    }),
+  );
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
   // below collapses that wait into a single tick-loop frame
@@ -465,13 +400,10 @@ test("it resumes the pending continuation's avatar on reconnect over an earlier 
   );
 
   const clock = createFastClock();
-  const runtime = createWorkerRuntime({ client });
+  const runtime = createWorkerRuntime({ client, now: clock.now });
 
-  // stop the tick loop before restoring the real clock — a still-scheduled tick reading the real
-  // clock against the fake clock's small `lastFrameTime` would read a bogus, enormous frame
   onTestFinished(() => {
     runtime.stop();
-    clock.restore();
   });
 
   const connection = createConnection(runtime);
