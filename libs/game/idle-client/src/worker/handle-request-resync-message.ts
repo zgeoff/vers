@@ -7,7 +7,6 @@ import { runResync } from '../resync/run-resync';
 import type { FastForwardReport, ResyncPlan, ResyncResult } from '../resync/types';
 import type { RequestResyncMessage, ResyncStatus } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
-import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createResyncStatusMessage } from './create-resync-status-message';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
@@ -21,8 +20,9 @@ import type { WorkerContext } from './types';
  * resolves; a zero-gap outcome (live re-attach, no activity) stays silent, so a fresh login never
  * opens that UI. A live simulation this resync would install is skipped when a different activity
  * went live while it was running — a fresher `SetActivity` always wins. A resync that fails
- * outright forwards the fault to the error backend and reports the worker offline — the signal
- * tabs use to explain a stalled catch-up — and never rejects; the next reconnect retries it.
+ * outright forwards the fault to the error backend and broadcasts a `failed` `ResyncStatus` for
+ * the requesting avatar, never a connection-status change — connectivity is the connection layer's
+ * own signal, not a resync outcome — and never rejects; a tab's retry re-requests it.
  */
 export async function handleRequestResyncMessage(
   context: WorkerContext,
@@ -54,7 +54,7 @@ export async function handleRequestResyncMessage(
     await applyResyncResult(context, result);
   } catch (error) {
     reportWorkerFault('resync', error);
-    emitConnectionStatus(context, false);
+    emitResyncStatus(context, { avatarID: message.avatarID, kind: 'failed' });
   } finally {
     context.setResyncInFlight(false);
   }
@@ -227,14 +227,6 @@ function setLiveSimulation(
 
 function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>): void {
   const message = createResyncStatusMessage(status);
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
-  }
-}
-
-function emitConnectionStatus(context: WorkerContext, online: boolean): void {
-  const message = createConnectionStatusMessage(online);
 
   for (const connection of context.connections) {
     connection.postMessage(message);

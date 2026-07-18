@@ -214,10 +214,12 @@ export interface RewardSlotLedgerSnapshot {
 
 /**
  * The catch-up flow's lifecycle as tabs observe it: fast-forwarding with running attempt and
- * level-up counts, done with the final tallies, or capped when the server stopped the stream at
- * the offline-progress bound. A resync with no real away period broadcasts nothing.
+ * level-up counts, done with the final tallies, capped when the server stopped the stream at the
+ * offline-progress bound, or failed when the catch-up couldn't complete. A resync with no real
+ * away period broadcasts nothing.
  */
 export type ResyncStatus =
   | { readonly attempts: number; readonly kind: 'done'; readonly levelUps: number }
   | { readonly attempts: number; readonly kind: 'fast-forwarding'; readonly levelUps: number }
+  | { readonly avatarID: string; readonly kind: 'failed' }
   | { readonly kind: 'capped' };
