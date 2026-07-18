@@ -1,19 +1,21 @@
 import * as axiom from '@pulumi/axiom';
 import * as pulumi from '@pulumi/pulumi';
 
-// The provider authenticates with the Axiom admin token; like the Cloudflare
-// credentials, it enters through the environment resolved by `op run`.
+/**
+ * The provider authenticates with the Axiom admin token; like the Cloudflare
+ * credentials, it enters through the environment resolved by `op run`.
+ */
 const axiomProvider = new axiom.Provider('axiom', {
   apiToken: requireEnv('AXIOM_TOKEN'),
 });
 
-// Retention is the org default (no per-dataset override), expressed as
-// useRetentionPeriod: false with a zero day count. The datasets are protected:
-// deleting one destroys its stored telemetry, so removal demands an explicit
-// unprotect first.
-//
-// kind is immutable — changing it forces a replacement, which destroys the
-// stored events.
+/**
+ * Retention on every dataset is the org default (no per-dataset override),
+ * expressed as useRetentionPeriod: false with a zero day count.
+ * kind is immutable — changing it forces a replacement that destroys the
+ * stored events — and each dataset is protected, since deleting one destroys
+ * its stored telemetry.
+ */
 const tracesDataset = new axiom.Dataset(
   'vers-traces',
   {
@@ -43,8 +45,10 @@ const logsDataset = new axiom.Dataset(
   { provider: axiomProvider, protect: true },
 );
 
-// An events dataset rejects OTLP metrics ingest, so the metrics kind is the
-// one kind declaration that is functionally required.
+/**
+ * An events dataset rejects OTLP metrics ingest, so the metrics kind is the
+ * one kind declaration that is functionally required.
+ */
 const metricsDataset = new axiom.Dataset(
   'vers-metrics',
   {
@@ -57,12 +61,14 @@ const metricsDataset = new axiom.Dataset(
   { provider: axiomProvider, protect: true },
 );
 
-// API tokens declare their scopes here; the secret values stay in the vers
-// 1Password vault and never enter code, config, or stack outputs. Any change
-// to a token's arguments regenerates its secret (the old value stays valid for
-// the rotation grace period, 48h by default) — a scope edit is a deliberate
-// rotation, and the vault item plus the Fly secrets that carry the value must
-// be updated inside that window.
+/**
+ * API tokens declare their scopes here; the secret values stay in the vers
+ * 1Password vault, entering neither code nor stack outputs. Any change to a
+ * token's arguments regenerates its secret (the old value stays valid for the
+ * rotation grace period, 48h by default) — a scope edit is a deliberate
+ * rotation, and the vault item plus the Fly secrets that carry the value must
+ * be updated inside that window.
+ */
 const ingestToken = new axiom.Token(
   'vers-production',
   {
@@ -85,8 +91,10 @@ const mcpToken = new axiom.Token(
   { provider: axiomProvider, protect: true },
 );
 
-// Alert destination: the vers alarms Discord channel. The webhook URL grants
-// post access to the channel, so it stays a secret end to end.
+/**
+ * Alert destination: the vers alarms Discord channel. The webhook URL grants
+ * post access to the channel, so it stays a secret end to end.
+ */
 const alarmsNotifier = new axiom.Notifier(
   'vers-alarms',
   {
@@ -118,9 +126,11 @@ const serverErrorsMonitor = new axiom.Monitor(
   { provider: axiomProvider },
 );
 
-// alertOnNoData is part of the contract: the lag gauge exports from
-// service-replay's always-warm machine, so a silent dataset means the exporter
-// or its process is down — never a healthy quiet system.
+/**
+ * alertOnNoData is part of the contract: the lag gauge exports from
+ * service-replay's always-warm machine, so a silent dataset means the exporter
+ * or its process is down — never a healthy quiet system.
+ */
 const verificationLagMonitor = new axiom.Monitor(
   'vers-verification-lag',
   {
@@ -140,11 +150,13 @@ const verificationLagMonitor = new axiom.Monitor(
   { provider: axiomProvider },
 );
 
-// The dashboard document is the full source of truth: a console edit to any of
-// these fields is drift, reverted by the next `pulumi up`. The provider
-// normalizes state against the configured key set, so fields it manages or
-// defaults (uid, owner, empty overrides, server timestamps) stay out — adding
-// one would show a permanent phantom diff.
+/**
+ * The dashboard document is the full source of truth: a console edit to any of
+ * these fields is drift, reverted by the next `pulumi up`. The provider
+ * normalizes state against the configured key set, so fields it manages or
+ * defaults (uid, owner, empty overrides, server timestamps) stay out — adding
+ * one would show a permanent phantom diff.
+ */
 const baselineDashboardDocument = {
   name: 'vers services — baseline',
   description:
@@ -214,10 +226,12 @@ export const serverErrorsMonitorName = serverErrorsMonitor.name;
 export const verificationLagMonitorName = verificationLagMonitor.name;
 export const baselineDashboardUID = baselineDashboard.uid;
 
-// The provider stores the dashboard document re-marshalled by Go, which sorts
-// object keys alphabetically and HTML-escapes <, >, and & inside strings;
-// serializing the same way keeps the committed document byte-identical to
-// state, so refresh previews stay empty.
+/**
+ * The provider stores the dashboard document re-marshalled by Go, which sorts
+ * object keys alphabetically and HTML-escapes <, >, and & inside strings;
+ * serializing the same way keeps the committed document byte-identical to
+ * state, so refresh previews stay empty.
+ */
 function toSortedJSON(value: unknown): string {
   return JSON.stringify(sortKeysDeep(value))
     .replaceAll('<', String.raw`\u003c`)
