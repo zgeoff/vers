@@ -149,14 +149,14 @@ its `fly.toml` `[build]` image, deployed with no build leg at all.
 ## Infra drift
 
 `.github/workflows/infra-drift.yml` runs `pulumi preview --refresh --expect-no-changes` over the
-`infra/` program's `prod` stack and fails on any diff. It runs on pull requests touching `infra/`
-(posting the preview as a PR comment), on pushes to `main` touching `infra/`, and on a weekly
-schedule — console drift arrives with no commit, so only the schedule can catch it. The job
-authenticates through the `OP_SERVICE_ACCOUNT_TOKEN` repo secret, a non-expiring 1Password service
-account scoped to read the `vers` vault, and resolves the stack's credentials from their `op://`
-references at run time. Fork pull requests are skipped: GitHub withholds secrets from them, so the
-preview cannot authenticate. The job only ever previews — reconciling a reported drift is a human
-decision, applied with `pulumi up` from a checkout.
+`infra/` program's `prod` stack and fails on any diff. It runs on pull requests and `main` pushes
+touching `infra/` or the workflow file itself (a pull request gets the preview as a PR comment), and
+on a weekly schedule — console drift arrives with no commit, so only the schedule can catch it. The
+job authenticates through the `OP_SERVICE_ACCOUNT_TOKEN` repo secret, a non-expiring 1Password
+service account scoped to read the `vers` vault, and resolves the stack's credentials from their
+`op://` references at run time. Fork pull requests are skipped: GitHub withholds secrets from them,
+so the preview cannot authenticate. The job only ever previews — reconciling a reported drift is a
+human decision, applied with `pulumi up` from a checkout.
 
 ## Sim-version registry
 
