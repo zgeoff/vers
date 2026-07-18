@@ -128,6 +128,7 @@
         "@vers/mock-services": "workspace:*",
         "@vers/service-auth": "workspace:*",
         "typescript": "catalog:",
+        "zod": "catalog:",
       },
     },
     "contracts/activity": {
