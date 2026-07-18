@@ -90,9 +90,6 @@ test('it retains the cached dirty flag across boot so the next resync flushes it
 
   const token = await createTestAccessToken(user.id);
 
-  // the runtime's production client resolves its URL from `self.location.origin`, unreachable in
-  // this test env — an authed client wired at the mocked backend is the only way to route its
-  // calls, standing in for it here the way `timestep` already stands in for the tick rate
   const client: ActivityServiceClient = createORPCClient(
     new RPCLink({
       headers: { authorization: `Bearer ${token}` },
@@ -225,8 +222,6 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
   const avatar = await db.avatarCollection.create({ userID: user.id });
   const token = await createTestAccessToken(user.id);
 
-  // the runtime's production client resolves its URL from `self.location.origin`, unreachable in
-  // this test env — an authed client wired at the mocked backend is the only way to route its calls
   const client: ActivityServiceClient = createORPCClient(
     new RPCLink({
       headers: { authorization: `Bearer ${token}` },
@@ -290,8 +285,6 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
   const avatar = await db.avatarCollection.create({ userID: user.id });
   const token = await createTestAccessToken(user.id);
 
-  // the runtime's production client resolves its URL from `self.location.origin`, unreachable in
-  // this test env — an authed client wired at the mocked backend is the only way to route its calls
   const client: ActivityServiceClient = createORPCClient(
     new RPCLink({
       headers: { authorization: `Bearer ${token}` },
@@ -369,8 +362,6 @@ test("it resumes the pending continuation's avatar on reconnect over an earlier 
   const avatar = await db.avatarCollection.create({ userID: user.id });
   const token = await createTestAccessToken(user.id);
 
-  // the runtime's production client resolves its URL from `self.location.origin`, unreachable in
-  // this test env — an authed client wired at the mocked backend is the only way to route its calls
   const client: ActivityServiceClient = createORPCClient(
     new RPCLink({
       headers: { authorization: `Bearer ${token}` },
