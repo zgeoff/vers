@@ -1,7 +1,10 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { setResyncStatus } from '@vers/idle-client';
+import type { ClientMessage } from '@vers/idle-client';
+import { ClientMessageType, setResyncStatus } from '@vers/idle-client';
+import { ActivityFailureAction } from '@vers/idle-core';
+import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { WelcomeBackModal } from './welcome-back-modal';
 
 test('it renders nothing while no resync is underway', () => {
@@ -52,6 +55,44 @@ test('it explains a capped catch-up', () => {
 
   render(<WelcomeBackModal />);
   expect(screen.getByText(/reached its cap/)).toBeInTheDocument();
+});
+
+test('it offers a retry when the catch-up fails outright', () => {
+  setResyncStatus({ avatarID: 'avatar_1', kind: 'failed' });
+
+  onTestFinished(() => {
+    setResyncStatus(null);
+  });
+
+  render(<WelcomeBackModal />);
+  expect(screen.getByText('Catching up didn’t finish. Your progress is safe.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+});
+
+test('it retries by requesting a fresh resync and clearing the failed status', async () => {
+  const user = userEvent.setup();
+  const calls: Array<ClientMessage> = [];
+  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
+
+  setResyncStatus({ avatarID: 'avatar_1', kind: 'failed' });
+
+  onTestFinished(() => {
+    setResyncStatus(null);
+  });
+
+  render(<WelcomeBackModal />);
+
+  await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+  expect(calls).toStrictEqual([{ avatarID: 'avatar_1', type: ClientMessageType.RequestResync }]);
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
 test('it dismisses by clearing the resync status', async () => {
