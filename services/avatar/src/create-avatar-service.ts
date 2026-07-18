@@ -3,7 +3,7 @@ import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
-import * as z from 'zod';
+import { AVATAR_ENV_SHAPE } from './avatar-env-shape';
 import { buildAvatarRouter } from './build-router';
 
 interface CreateAvatarServiceConfig {
@@ -18,11 +18,11 @@ interface CreateAvatarServiceConfig {
  */
 export function createAvatarService(
   config: CreateAvatarServiceConfig = {},
-): Promise<Service<{ DATABASE_URL: z.ZodString }>> {
+): Promise<Service<typeof AVATAR_ENV_SHAPE>> {
   return createService({
     buildRouter: (runtime) =>
       buildAvatarRouter({ db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }) }),
-    envShape: { DATABASE_URL: z.string() },
+    envShape: AVATAR_ENV_SHAPE,
     name: 'service-avatar',
   });
 }

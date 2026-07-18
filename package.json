@@ -164,6 +164,8 @@
     "pg:test-container:start": "bun scripts/src/bin/pg-test-container-start.ts",
     "pg:test-container:stop": "bun scripts/src/bin/pg-test-container-stop.ts",
     "pg:test-container:sweep": "bun scripts/src/bin/pg-test-template-sweep.ts",
+    "readme:check": "bun scripts/src/bin/readme.ts --check",
+    "readme:sync": "bun scripts/src/bin/readme.ts",
     "ladle:dev": "cd libs/design/design-system && ./node_modules/.bin/ladle dev",
     "stack": "bun scripts/src/bin/stack.ts",
     "---PROJECT-SPECIFIC": "",

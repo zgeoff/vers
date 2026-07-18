@@ -3,8 +3,8 @@ import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
-import * as z from 'zod';
 import { buildVerificationRouter } from './build-router';
+import { VERIFICATION_ENV_SHAPE } from './verification-env-shape';
 
 interface CreateVerificationServiceConfig {
   /**
@@ -18,13 +18,13 @@ interface CreateVerificationServiceConfig {
  */
 export function createVerificationService(
   config: CreateVerificationServiceConfig = {},
-): Promise<Service<{ DATABASE_URL: z.ZodString }>> {
+): Promise<Service<typeof VERIFICATION_ENV_SHAPE>> {
   return createService({
     buildRouter: (runtime) =>
       buildVerificationRouter({
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
       }),
-    envShape: { DATABASE_URL: z.string() },
+    envShape: VERIFICATION_ENV_SHAPE,
     name: 'service-verification',
   });
 }

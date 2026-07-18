@@ -5,7 +5,7 @@ import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
-import * as z from 'zod';
+import { ACTIVITY_ENV_SHAPE } from './activity-env-shape';
 import { buildActivityRouter } from './build-router';
 
 const KEY_VERSION = 1;
@@ -30,7 +30,7 @@ interface CreateActivityServiceConfig {
  */
 export function createActivityService(
   config: CreateActivityServiceConfig = {},
-): Promise<Service<{ DATABASE_URL: z.ZodString }>> {
+): Promise<Service<typeof ACTIVITY_ENV_SHAPE>> {
   return createService({
     buildRouter: (runtime) =>
       buildActivityRouter({
@@ -39,7 +39,7 @@ export function createActivityService(
         keyVersion: config.keyVersion ?? KEY_VERSION,
         simTimeCapMs: config.simTimeCapMs ?? OFFLINE_PROGRESS_CAP_MS,
       }),
-    envShape: { DATABASE_URL: z.string() },
+    envShape: ACTIVITY_ENV_SHAPE,
     name: 'service-activity',
   });
 }

@@ -3,8 +3,8 @@ import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
-import * as z from 'zod';
 import { buildUserRouter } from './build-router';
+import { USER_ENV_SHAPE } from './user-env-shape';
 
 interface CreateUserServiceConfig {
   /**
@@ -18,13 +18,13 @@ interface CreateUserServiceConfig {
  */
 export function createUserService(
   config: CreateUserServiceConfig = {},
-): Promise<Service<{ DATABASE_URL: z.ZodString }>> {
+): Promise<Service<typeof USER_ENV_SHAPE>> {
   return createService({
     buildRouter: (runtime) =>
       buildUserRouter({
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
       }),
-    envShape: { DATABASE_URL: z.string() },
+    envShape: USER_ENV_SHAPE,
     name: 'service-user',
   });
 }

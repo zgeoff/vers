@@ -41,13 +41,15 @@ Mesh traffic is already encrypted, so services set `force_https = false`.
 ## Secrets
 
 Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.toml` or Dockerfile.
-Secrets are set with `fly secrets set` and never committed. Which secrets an app needs is its env
-contract's to declare — [provision from nothing](#provision-from-nothing) sets the current values:
+Secrets are set with `fly secrets set` and never committed. Which variables an app needs is its env
+contract's to declare, and each project's README renders that contract as a generated table
+(`bun run readme:sync`, checked in CI) — [provision from nothing](#provision-from-nothing) sets the
+current values:
 
-- A service requires the base schema (`BASE_ENV_SCHEMA`, `@vers/service-runtime`) plus whatever the
-  `envShape` in its factory declares — `services/<name>/src/create-<name>-service.ts`.
-- `app-web`'s keys are the schema in `apps/web/src/server/env.ts` plus the cookie config's
-  `SESSION_SECRET` and `COOKIE_DOMAIN` reads (`apps/web/src/lib/auth/`).
+- A service requires the base schema (`BASE_ENV_SCHEMA`, `@vers/service-runtime`) plus its own shape
+  — `services/<name>/src/<name>-env-shape.ts`.
+- `app-web`'s keys are the schema in `apps/web/src/server/web-env-schema.ts` plus the cookie
+  config's `SESSION_SECRET` and `COOKIE_DOMAIN` reads (`apps/web/src/lib/auth/`).
 - `vers-bugsink` and `vers-umami` read their upstream images' documented env. Bugsink additionally
   reads the `R2_*` keys in `apps/bugsink/r2_storage.py`, which back its uploaded-file storage.
 
@@ -267,9 +269,12 @@ to a single executable:
   the binary alone, run as `nobody`. No `node_modules`, no source; the busybox shell keeps
   `fly ssh console` usable.
 
-Two Dockerfiles deviate from the shape. `service-email`'s builder compiles a second `sweep` binary,
-the command its hourly scheduled machine runs ([queues](./queues.md)). `service-replay`'s builder
-takes the `SIM_ENGINE_HASH` build arg and bakes it into the compiled binary.
+Two Dockerfiles deviate from the shape:
+
+- `service-email`'s builder compiles a second `sweep` binary, the command its hourly scheduled
+  machine runs ([queues](./queues.md)).
+- `service-replay`'s builder takes the `SIM_ENGINE_HASH` build arg and bakes it into the compiled
+  binary.
 
 ### app-web
 

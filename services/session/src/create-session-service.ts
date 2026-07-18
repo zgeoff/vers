@@ -4,8 +4,8 @@ import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import * as jose from 'jose';
 import type { Kysely } from 'kysely';
-import * as z from 'zod';
 import { buildSessionRouter } from './build-router';
+import { SESSION_ENV_SHAPE } from './session-env-shape';
 
 interface CreateSessionServiceConfig {
   /**
@@ -13,12 +13,6 @@ interface CreateSessionServiceConfig {
    */
   readonly db?: Kysely<DB>;
 }
-
-const SESSION_ENV_SHAPE = {
-  API_IDENTIFIER: z.string(),
-  DATABASE_URL: z.string(),
-  JWT_SIGNING_PRIVKEY: z.string(),
-};
 
 /**
  * Boots the session service; the production entrypoint and tests both call this as the one shared config.

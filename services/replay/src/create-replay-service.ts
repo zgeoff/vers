@@ -6,8 +6,8 @@ import type { Service } from '@vers/service-runtime';
 import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
-import * as z from 'zod';
 import { buildReplayRouter } from './build-router';
+import { REPLAY_SERVICE_ENV_SHAPE } from './replay-env-shape';
 
 interface CreateReplayServiceConfig {
   /**
@@ -15,13 +15,6 @@ interface CreateReplayServiceConfig {
    */
   readonly db?: Kysely<DB>;
 }
-
-const REPLAY_SERVICE_ENV_SHAPE = {
-  DATABASE_URL: z.string(),
-  KEYS_SERVICE_URL: z.url(),
-  SERVICE_AUTH_PRIVATE_KEY: z.string().min(1),
-  SIM_ENGINE_HASH: z.string().min(1),
-};
 
 /**
  * The booted replay service, plus the `db` and s2s signing key its RPC router resolved at boot —
