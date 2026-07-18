@@ -1,0 +1,26 @@
+{
+  "name": "@pulumi/axiom",
+  "version": "1.6.2",
+  "description": "A Pulumi provider dynamically bridged from axiom.",
+  "repository": "https://github.com/axiomhq/terraform-provider-axiom",
+  "main": "bin/index.js",
+  "scripts": {
+    "build": "tsc",
+    "postinstall": "node ./scripts/postinstall.js"
+  },
+  "dependencies": {
+    "@pulumi/pulumi": "^3.238.0",
+    "@types/node": "^20",
+    "typescript": "^4.7.0"
+  },
+  "pulumi": {
+    "resource": true,
+    "name": "terraform-provider",
+    "version": "1.2.0",
+    "parameterization": {
+      "name": "axiom",
+      "version": "1.6.2",
+      "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL2F4aW9taHEvYXhpb20iLCJ2ZXJzaW9uIjoiMS42LjIifX0="
+    }
+  }
+}

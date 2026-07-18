@@ -463,6 +463,7 @@
     "**/*timestamp*.mjs",
     "**/mockServiceWorker.js",
     "**/.react-router/**",
+    "**/infra/sdks/**",
     "**/apps/web/src/styled-system/**",
     "**/libs/design/design-system/src/styled-system/**",
     "**/libs/design/styled-system/styled-system/**",
