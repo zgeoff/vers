@@ -5,6 +5,7 @@ import {
   NodeTracerProvider,
   SimpleSpanProcessor,
 } from '@opentelemetry/sdk-trace-node';
+import invariant from 'tiny-invariant';
 import { createTestDB } from './test-support/create-test-db';
 
 function setupSpanCapture() {
@@ -52,20 +53,22 @@ test('it round-trips a row through camelCase-mapped columns', async () => {
   expect(user.createdAt).toBeInstanceOf(Date);
 });
 
-test('it emits a db.select client span carrying the compiled sql with no parameters', async () => {
+test('it emits a db.select client span carrying the compiled sql with placeholders in place of bind values', async () => {
   const ctx = setupSpanCapture();
 
   await using handle = await createTestDB();
 
-  await handle.db.selectFrom('users').selectAll().execute();
+  await handle.db.selectFrom('users').selectAll().where('email', '=', 'redaction-probe').execute();
 
   const [span] = ctx.exporter.getFinishedSpans();
 
-  expect(span?.name).toBe('db.select');
-  expect(span?.kind).toBe(SpanKind.CLIENT);
-  expect(span?.attributes['db.system']).toBe('postgresql');
-  expect(span?.attributes['db.statement']).toInclude('select');
-  expect(span?.attributes['db.statement']).not.toInclude('$1');
+  invariant(span, 'expected the query span to be exported');
+  expect(span.name).toBe('db.select');
+  expect(span.kind).toBe(SpanKind.CLIENT);
+  expect(span.attributes['db.system']).toBe('postgresql');
+  expect(span.attributes['db.statement']).toInclude('select');
+  expect(span.attributes['db.statement']).toInclude('$1');
+  expect(span.attributes['db.statement']).not.toInclude('redaction-probe');
 });
 
 test('it names the span from the compiled query kind', async () => {
@@ -121,7 +124,9 @@ test('it parents the query span to the active context', async () => {
 
   const [querySpan, parentSpan] = ctx.exporter.getFinishedSpans();
 
-  expect(querySpan?.parentSpanContext?.spanId).toBe(parentSpan?.spanContext().spanId);
+  invariant(querySpan, 'expected the query span to be exported');
+  invariant(parentSpan, 'expected the parent span to be exported');
+  expect(querySpan.parentSpanContext?.spanId).toBe(parentSpan.spanContext().spanId);
 });
 
 test('it stays inert without a registered tracer provider', async () => {

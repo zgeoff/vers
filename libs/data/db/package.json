@@ -32,6 +32,7 @@
     "kysely-codegen": "catalog:",
     "kysely-ctl": "catalog:",
     "pg": "catalog:",
+    "tiny-invariant": "catalog:",
     "typescript": "catalog:"
   }
 }

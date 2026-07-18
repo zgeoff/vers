@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { sessionContract } from '@vers/contract-session';
 import { server } from '../../../mocks/node';
+import { createMockSessionData } from '../../../test-utils/factories/create-mock-session-data';
 import { SERVICE_URLS } from '../service-urls';
 import { sessionExistenceClient } from './session-existence-client';
 
@@ -23,7 +24,7 @@ test('it attaches a traceparent header to the outbound getSession call', async (
     ctx.mockSession.getSession.handler((args) => {
       observedTraceparents.push(args.request.headers.get('traceparent'));
 
-      return null;
+      return createMockSessionData({ id: 'session_1' });
     }),
   );
 

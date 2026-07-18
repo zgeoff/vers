@@ -50,7 +50,7 @@ function recordQuerySpan(event: LogEvent): void {
   const tracer = trace.getTracer('@vers/db');
 
   const span = tracer.startSpan(
-    `db.${pickOperationName(event.query.query.kind)}`,
+    `db.${toOperationName(event.query.query.kind)}`,
     {
       attributes: { 'db.statement': event.query.sql, 'db.system': 'postgresql' },
       kind: SpanKind.CLIENT,
@@ -73,6 +73,6 @@ function recordQuerySpan(event: LogEvent): void {
  * Derives a short span-name suffix from a compiled query's root operation-node kind
  * (`SelectQueryNode` → `select`, `CreateTableNode` → `createtable`).
  */
-function pickOperationName(kind: string): string {
+function toOperationName(kind: string): string {
   return kind.replace(/(?:Query)?Node$/, '').toLowerCase();
 }

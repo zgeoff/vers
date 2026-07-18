@@ -104,7 +104,8 @@ test('it opens a SERVER span for a request once a tracer provider is registered,
 
   const [span] = ctx.exporter.getFinishedSpans();
 
-  expect(span?.name).toBe('GET /nexus');
+  expect(span?.name).toBe('HTTP GET');
+  expect(span?.attributes['url.path']).toBe('/nexus');
   expect(span?.spanContext().traceId).toBe('0af7651916cd43dd8448eb211c80319c');
   expect(response.headers.get('x-trace-id')).toBe('0af7651916cd43dd8448eb211c80319c');
 });

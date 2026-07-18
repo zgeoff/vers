@@ -197,7 +197,7 @@ export async function trackActivityProgress(
     throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: capOutcome.appendedHead } });
   }
 
-  const appendedHead = await db.transaction().execute(async (trx) => {
+  const appendOutcome = await db.transaction().execute(async (trx) => {
     // Only a terminal batch advances the chain anchor; a batch that never touches the chain row
     // takes part in no lock ordering. When both rows are taken, the chain row comes first.
     if (terminalRewardsXP !== undefined) {
@@ -236,7 +236,7 @@ export async function trackActivityProgress(
     if (updated === undefined) {
       const resolved = await checkAppendRace(trx, opts);
 
-      return resolved.appendedHead;
+      return { appendedHead: resolved.appendedHead, kind: 'resolved' } as const;
     }
 
     if (opts.input.checkpoints.length > 0) {
@@ -264,8 +264,6 @@ export async function trackActivityProgress(
         scopeType: head.scopeType,
         startChainIndex: head.startChainIndex,
       });
-
-      recordTerminalTransition('stopped');
     }
 
     if (timeDelta > 0) {
@@ -289,10 +287,21 @@ export async function trackActivityProgress(
       invariant(consumed.numUpdatedRows > 0n, 'meter debit must apply once the append is won');
     }
 
-    return updated.appendedHead;
+    return {
+      appendedHead: updated.appendedHead,
+      kind:
+        terminalRewardsXP !== undefined && lastCheckpoint !== undefined ? 'stopped' : 'appended',
+    } as const;
   });
 
-  return { appendedHead };
+  // Recorded only after the transaction commits: a statement failure after the guarded update
+  // rolls the transition back, and a counter incremented inside the transaction would still count
+  // it.
+  if (appendOutcome.kind === 'stopped') {
+    recordTerminalTransition('stopped');
+  }
+
+  return { appendedHead: appendOutcome.appendedHead };
 }
 
 /**

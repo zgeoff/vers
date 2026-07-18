@@ -1,7 +1,6 @@
 import { reportUnexpectedError } from '@vers/service-runtime';
 import { withRootSpan } from '@vers/service-utils';
 import { createEmailService } from './create-email-service';
-import { recordDeliveryFailure } from './metrics/record-delivery-failure';
 
 const emailService = await createEmailService();
 
@@ -18,7 +17,6 @@ void withRootSpan('email.boot-drain', async () => {
     emailService.service.logger.error({ err: error }, 'boot drain failed');
 
     reportUnexpectedError(error);
-    recordDeliveryFailure();
   }
 });
 

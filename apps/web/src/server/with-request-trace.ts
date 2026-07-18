@@ -41,10 +41,12 @@ function runWithServerSpan(
   const carrier = Object.fromEntries(request.headers.entries());
   const parentContext = propagation.extract(context.active(), carrier);
 
+  // The middleware sees no matched-route template, so the span keeps the low-cardinality
+  // `HTTP <method>` fallback name and carries the concrete path only as the `url.path` attribute.
   return tracer.startActiveSpan(
-    `${request.method} ${pathname}`,
+    `HTTP ${request.method}`,
     {
-      attributes: { 'http.method': request.method, 'http.route': pathname },
+      attributes: { 'http.method': request.method, 'url.path': pathname },
       kind: SpanKind.SERVER,
     },
     parentContext,

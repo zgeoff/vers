@@ -67,12 +67,21 @@ test('it exports a recorded span to the OTLP traces endpoint with the env-config
 });
 
 test('it marks a span active across an await once registered', async () => {
-  onTestFinished(() => {
-    trace.disable();
-  });
+  const server = Bun.serve({ fetch: () => Response.json({}), port: 0 });
 
-  updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://127.0.0.1:1');
-  startTraceExport({ serviceName: 'test-service' });
+  updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', `http://127.0.0.1:${server.port}`);
+
+  const traceExport = startTraceExport({ serviceName: 'test-service' });
+
+  onTestFinished(async () => {
+    // stopping flushes the ended span and releases the batch processor's periodic timer, which
+    // would otherwise leak past the test
+    await traceExport.stop();
+
+    trace.disable();
+
+    await server.stop();
+  });
 
   await trace.getTracer('test-service').startActiveSpan('test-span', async (span) => {
     await Promise.resolve();

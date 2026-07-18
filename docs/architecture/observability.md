@@ -45,9 +45,11 @@ span per call named by the procedure path. A worker iteration, a boot drain, a s
 queued job — anything with no inbound request to continue — opens its own root span through
 `withRootSpan` (`@vers/service-utils`).
 
-Every span-opening site injects or extracts `traceparent` through the OpenTelemetry API's global
-propagator, never `@vers/trace` directly: outbound calls carry `traceparent` from the active span,
-continuing the caller's trace across every hop. app-web's RPC proxy re-injects `traceparent` from
+Boundary span sites — the server plugins and outbound clients — inject or extract `traceparent`
+through the OpenTelemetry API's global propagator, never `@vers/trace` directly: outbound calls
+carry `traceparent` from the active span, continuing the caller's trace across every hop. A root
+span opened through `withRootSpan` starts a fresh trace with no inbound context — a worker iteration
+or queued job has no caller's trace to continue. app-web's RPC proxy re-injects `traceparent` from
 its own active context rather than forwarding the browser's raw header, so the service span parents
 to app-web's server span instead of becoming its sibling. `@vers/trace`'s
 `parseTraceparent`/`buildTraceparent` stay the wire-format utilities and the fallback path: a
@@ -66,10 +68,11 @@ A span carries semantic-convention attributes for its kind: `http.method`/`http.
 never carries a raw per-entity id or secret material as an attribute — the same cardinality and
 leakage discipline metric attributes follow.
 
-Once OTel is wired, every app in the fleet emits: one server span per request, with the DB, s2s, and
-external-HTTP calls a request makes recorded as its children; one structured request-completion log
-line; unexpected errors reported to Sentry through the central `onError`/error-boundary hook, never
-a bespoke `captureException` call; and the registry-listed metrics for the failure paths it owns.
+Once OTel is wired, every app in the fleet emits: one server span per request (app-web skips served
+static assets and `/health`), with the DB, s2s, and external-HTTP calls a request makes recorded as
+its children; one structured request-completion log line; unexpected errors reported to Sentry
+through the central `onError`/error-boundary hook, never a bespoke `captureException` call; and the
+registry-listed metrics for the failure paths it owns.
 
 ## Log lines
 

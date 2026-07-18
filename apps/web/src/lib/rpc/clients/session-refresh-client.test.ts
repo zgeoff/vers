@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { sessionContract } from '@vers/contract-session';
 import { server } from '../../../mocks/node';
+import { createMockSessionTokens } from '../../../test-utils/factories/create-mock-session-tokens';
 import { SERVICE_URLS } from '../service-urls';
 import { sessionRefreshClient } from './session-refresh-client';
 
@@ -23,7 +24,7 @@ test('it attaches a traceparent header to the outbound refreshTokens call', asyn
     ctx.mockSession.refreshTokens.handler((args) => {
       observedTraceparents.push(args.request.headers.get('traceparent'));
 
-      return { accessToken: 'access-token', refreshToken: 'refresh-token' };
+      return createMockSessionTokens();
     }),
   );
 
