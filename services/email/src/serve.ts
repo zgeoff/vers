@@ -1,6 +1,5 @@
 import { reportUnexpectedError } from '@vers/service-runtime';
-import { withTraceContext } from '@vers/service-utils';
-import { createTraceContext } from '@vers/trace';
+import { withRootSpan } from '@vers/service-utils';
 import { createEmailService } from './create-email-service';
 
 const emailService = await createEmailService();
@@ -11,7 +10,7 @@ emailService.service.logger.info('email job queue started');
 
 // Delivers anything enqueued while the process was down; failures are pg-boss's retry/dead-letter
 // problem, not boot's, so this never blocks `listen`.
-void withTraceContext(createTraceContext(), async () => {
+void withRootSpan('email.boot-drain', async () => {
   try {
     await emailService.queue.drain();
   } catch (error) {

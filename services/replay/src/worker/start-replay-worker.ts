@@ -1,6 +1,5 @@
 import { reportUnexpectedError } from '@vers/service-runtime';
-import { withTraceContext } from '@vers/service-utils';
-import { createTraceContext } from '@vers/trace';
+import { withRootSpan } from '@vers/service-utils';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { runReplayIteration } from './run-replay-iteration';
 import type { ReplayWorkerDeps, ReplayWorkerHandle } from './types';
@@ -31,7 +30,7 @@ export function startReplayWorker(deps: Readonly<ReplayWorkerDeps>): ReplayWorke
 
   const loop = (async () => {
     while (!controller.signal.aborted) {
-      const outcome = await withTraceContext(createTraceContext(), () =>
+      const outcome = await withRootSpan('replay.iteration', () =>
         runReplayIteration(deps, cache).catch((error: unknown) => {
           deps.logger.error({ err: error }, 'replay worker iteration threw unexpectedly');
 
