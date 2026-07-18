@@ -2,7 +2,6 @@ import { ORPCError, isDefinedError, safe } from '@orpc/client';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
-import invariant from 'tiny-invariant';
 import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
 import {
   ENTROPY_SOURCE_SERVER_KEY,
@@ -39,8 +38,9 @@ interface ActivityState {
   startChainIndex: number;
 
   /**
-   * Set once `submit` enqueues a `Completed`/`Failed` checkpoint — a fully confirmed flush after
-   * this point drains the activity for good, so its state is safe to evict.
+   * Set once a `Completed`/`Failed` checkpoint sits at the queue's tail — enqueued by a live
+   * submission or hydrated from a previous worker lifetime's durable rows — a fully confirmed
+   * flush after this point drains the activity for good, so its state is safe to evict.
    */
   terminalQueued: boolean;
 }
@@ -217,9 +217,11 @@ export function createCheckpointSubmitter(
     });
   };
 
-  // Discards an activity's tracked state entirely, both the cursor and its memoized registration
-  // — the server accepts nothing further for it, so a later re-registration harmlessly re-seeds
-  // an empty queue instead of resolving a stale registration or reusing a stale cursor.
+  /**
+   * Discards an activity's tracked state entirely, both the cursor and its memoized registration
+   * — the server accepts nothing further for it, so a later re-registration harmlessly re-seeds
+   * an empty queue instead of resolving a stale registration or reusing a stale cursor.
+   */
   const removeActivityState = (activityID: string): void => {
     activityStates.delete(activityID);
     registrations.delete(activityID);
@@ -446,11 +448,12 @@ export function createCheckpointSubmitter(
 
     await registration;
 
+    // a concurrent flush can drain a terminal checkpoint and evict the activity while this
+    // submission awaits its registration — the checkpoint is dropped exactly like one for a
+    // never-attached activity
     const state = activityStates.get(activityID);
 
-    invariant(state !== undefined, 'a registered activity has no submission state');
-
-    if (state.invalid) {
+    if (state === undefined || state.invalid) {
       return undefined;
     }
 
@@ -532,6 +535,11 @@ export function createCheckpointSubmitter(
   return { flushHeld, flushNow, registerActivity, submit };
 }
 
+const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set([
+  ActivityCheckpointType.Completed,
+  ActivityCheckpointType.Failed,
+]);
+
 async function loadPendingCheckpoints(
   activityID: string,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cursor this function seeds in place from the durable queue
@@ -545,5 +553,6 @@ async function loadPendingCheckpoints(
     state.nextVersion = lastRow.version + 1;
     state.prevHash = lastRow.hash;
     state.previousNextSeed = lastRow.payload.nextSeed;
+    state.terminalQueued = TERMINAL_CHECKPOINT_TYPES.has(lastRow.payload.type);
   }
 }

@@ -584,9 +584,13 @@ test('it doubles the retry delay on each consecutive failure up to the cap', asy
 
 test('it resets the backoff exponent on a successful flush', async () => {
   const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+  let capturedFlush: (() => Promise<void>) | undefined;
   let shouldFail = true;
 
   const ctx = setupTest({
+    scheduleFlush: (flush) => {
+      capturedFlush = flush;
+    },
     scheduleRetry: (delayMs, retry) => {
       retries.push({ delayMs, retry });
     },
@@ -609,7 +613,11 @@ test('it resets the backoff exponent on a successful flush', async () => {
     startChainIndex: 0,
   });
 
-  await ctx.submitter.submit('reset-backoff-activity', createMockCompletedCheckpoint());
+  // a non-terminal checkpoint keeps the activity's state alive across the successful flush, so
+  // the second failure backs off on the same state the first failure escalated
+  await ctx.submitter.submit('reset-backoff-activity', createMockProgressCheckpoint());
+
+  await capturedFlush?.();
 
   expect(retries).toHaveLength(1);
   expect(retries[0]?.delayMs).toBe(10_000);
@@ -624,16 +632,9 @@ test('it resets the backoff exponent on a successful flush', async () => {
 
   shouldFail = true;
 
-  // the fully confirmed terminal drain evicted the activity, so a fresh registration re-seeds it
-  // before the next submission can hold and retry again
-  await ctx.submitter.registerActivity({
-    activityID: 'reset-backoff-activity',
-    appendedHead: 1,
-    lastHash: 'confirmed_hash',
-    startChainIndex: 0,
-  });
+  await ctx.submitter.submit('reset-backoff-activity', createMockProgressCheckpoint());
 
-  await ctx.submitter.submit('reset-backoff-activity', createMockCompletedCheckpoint());
+  await capturedFlush?.();
 
   expect(retries).toHaveLength(2);
   expect(retries[1]?.delayMs).toBe(10_000);
@@ -802,9 +803,13 @@ test('it folds a retry firing while a flush is already in flight into the pendin
 
 test('it flushes every held activity immediately and resets their backoff', async () => {
   const retries: Array<{ delayMs: number; retry: () => Promise<void> }> = [];
+  let capturedFlush: (() => Promise<void>) | undefined;
   let shouldFail = true;
 
   const ctx = setupTest({
+    scheduleFlush: (flush) => {
+      capturedFlush = flush;
+    },
     scheduleRetry: (delayMs, retry) => {
       retries.push({ delayMs, retry });
     },
@@ -827,7 +832,11 @@ test('it flushes every held activity immediately and resets their backoff', asyn
     startChainIndex: 0,
   });
 
-  await ctx.submitter.submit('flush-held-activity', createMockCompletedCheckpoint());
+  // a non-terminal checkpoint keeps the activity's state alive across the reconnect flush, so
+  // the next failure backs off on the same state the first failure escalated
+  await ctx.submitter.submit('flush-held-activity', createMockProgressCheckpoint());
+
+  await capturedFlush?.();
 
   expect(retries).toHaveLength(1);
 
@@ -841,16 +850,9 @@ test('it flushes every held activity immediately and resets their backoff', asyn
 
   shouldFail = true;
 
-  // the fully confirmed terminal drain evicted the activity, so a fresh registration re-seeds it
-  // before the next submission can hold and retry again
-  await ctx.submitter.registerActivity({
-    activityID: 'flush-held-activity',
-    appendedHead: 1,
-    lastHash: 'confirmed_hash',
-    startChainIndex: 0,
-  });
+  await ctx.submitter.submit('flush-held-activity', createMockProgressCheckpoint());
 
-  await ctx.submitter.submit('flush-held-activity', createMockCompletedCheckpoint());
+  await capturedFlush?.();
 
   expect(retries).toHaveLength(2);
   expect(retries[1]?.delayMs).toBe(10_000);
@@ -1382,12 +1384,13 @@ test('it evicts the activity once a terminal checkpoint drains fully confirmed',
 
   expect(track).toHaveBeenCalledOnce();
 
-  // a later registration on the same activity id re-seeds and re-flushes rather than resolving a
-  // stale registration, proving the fully confirmed terminal drain evicted it
+  // a later registration seeded from a deliberately different head re-seeds and re-flushes
+  // rather than resolving a stale registration, proving the fully confirmed terminal drain
+  // evicted it — retained state would keep the old cursor and submit version 3 at expectedHead 2
   await ctx.submitter.registerActivity({
     activityID: 'terminal-drain-evict-activity',
-    appendedHead: 2,
-    lastHash: 'completed_hash',
+    appendedHead: 7,
+    lastHash: 'fresh_hash',
     startChainIndex: 0,
   });
 
@@ -1396,8 +1399,70 @@ test('it evicts the activity once a terminal checkpoint drains fully confirmed',
     createMockCompletedCheckpoint(),
   );
 
-  expect(version).toBe(3);
+  expect(version).toBe(8);
   expect(track).toHaveBeenCalledTimes(2);
+
+  expect(track).toHaveBeenLastCalledWith({
+    activityID: 'terminal-drain-evict-activity',
+    checkpoints: [expect.objectContaining({ prevHash: 'fresh_hash', version: 8 })],
+    expectedHead: 7,
+  });
+});
+
+test('it evicts a hydrated terminal row once its resend drains fully confirmed', async () => {
+  await writeQueuedCheckpoint(
+    'hydrated-terminal-activity',
+    createMockCheckpointBatchEntry({ payload: { type: 'completed' }, version: 1 }),
+  );
+
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  // the registration's own flush resends the queued terminal row and fully confirms it
+  await ctx.submitter.registerActivity({
+    activityID: 'hydrated-terminal-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  expect(track).toHaveBeenCalledOnce();
+
+  const drained = await readQueuedCheckpoints('hydrated-terminal-activity');
+
+  expect(drained).toStrictEqual([]);
+
+  // a later registration seeded from a deliberately different head re-seeds and re-flushes
+  // rather than resolving a stale registration, proving the confirmed hydrated terminal row
+  // evicted the activity even though no live submission ever queued it
+  await ctx.submitter.registerActivity({
+    activityID: 'hydrated-terminal-activity',
+    appendedHead: 5,
+    lastHash: 'fresh_hash',
+    startChainIndex: 0,
+  });
+
+  const version = await ctx.submitter.submit(
+    'hydrated-terminal-activity',
+    createMockCompletedCheckpoint(),
+  );
+
+  expect(version).toBe(6);
+  expect(track).toHaveBeenCalledTimes(2);
+
+  expect(track).toHaveBeenLastCalledWith({
+    activityID: 'hydrated-terminal-activity',
+    checkpoints: [expect.objectContaining({ prevHash: 'fresh_hash', version: 6 })],
+    expectedHead: 5,
+  });
 });
 
 test('it evicts safely when a concurrent flush call sets flushPending during a terminal drain', async () => {
