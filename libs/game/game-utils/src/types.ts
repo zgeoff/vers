@@ -44,7 +44,7 @@ export interface EncounterPoolEntry {
 
 export interface EncounterPool {
   readonly id: string;
-  readonly entries: ReadonlyArray<EncounterPoolEntry>;
+  readonly entries: readonly [EncounterPoolEntry, ...ReadonlyArray<EncounterPoolEntry>];
 }
 
 export interface EncounterTuning {
@@ -62,7 +62,7 @@ export interface EncounterTuning {
 export interface EncounterContent {
   readonly contentVersion: string;
   readonly archetypes: ReadonlyArray<EncounterArchetype>;
-  readonly pools: ReadonlyArray<EncounterPool>;
+  readonly pools: readonly [EncounterPool, ...ReadonlyArray<EncounterPool>];
   readonly tuning: EncounterTuning;
 }
 

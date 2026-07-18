@@ -2,7 +2,6 @@ import { expect, test } from 'bun:test';
 import { createMockActivityInput } from '../test-utils/factories/create-mock-activity-input';
 import { createMockEnemyData } from '../test-utils/factories/create-mock-enemy-data';
 import { createMockSimulationContext } from '../test-utils/factories/create-mock-simulation-context';
-import type { Wave } from '../types';
 import { createActivity } from './create-activity';
 
 test('it creates an activity with the waves its encounter defines', () => {
@@ -25,7 +24,7 @@ test('it creates each wave with the enemies its encounter wave defines', () => {
   const activityData = createMockActivityInput({ encounter: { waves: [wave, wave] } });
   const activity = createActivity(activityData, ctx);
 
-  expect(activity.waves).toSatisfyAll((candidate: Wave) => candidate.enemies.length === 3);
+  expect(activity.waves.map((candidate) => candidate.enemies.length)).toStrictEqual([3, 3]);
 });
 
 test('it returns the expected activity state for a client app', () => {

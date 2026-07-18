@@ -153,17 +153,3 @@ test('it scales enemy life, xp, and attack damage by the node difficulty', () =>
     xp: 10,
   });
 });
-
-test('it rejects content with no pools', () => {
-  const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
-    'test/domain',
-  );
-
-  const emptyContent = { ...encounterContentV1, pools: [] };
-
-  expect(() => rollEncounterFromStream(emptyContent, { difficulty: 1 }, stream)).toThrowWithMessage(
-    Error,
-    /encounter content must define at least one pool/,
-  );
-});

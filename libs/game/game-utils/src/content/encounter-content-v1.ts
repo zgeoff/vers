@@ -1,9 +1,9 @@
 import type { EncounterContent } from '../types';
 
 /**
- * Machinery-exercising placeholder content: two archetypes in one pool, and tuning matching the
- * prior runtime-random wave shape (3-6 waves of 3-6 enemies each, no stat scaling). Frozen — a
- * content change is a new version module, never an edit here.
+ * Machinery-exercising placeholder content: two archetypes in one pool, 3-6 waves of 3-6 enemies
+ * each, and a 1x content multiplier so stats scale by node difficulty alone. Frozen — a content
+ * change is a new version module, never an edit here.
  */
 export const encounterContentV1: EncounterContent = {
   contentVersion: '1',

@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
+import invariant from 'tiny-invariant';
 import { ActivityFailureAction, EquipmentSlot } from '../types';
 import { buildSimulationInput } from './build-simulation-input';
 
@@ -43,8 +44,11 @@ test('it returns a fresh encounter and weapon on every call, never a shared refe
 
   const first = buildSimulationInput(source);
   const second = buildSimulationInput(source);
+  const firstEnemy = first.activity.encounter.waves[0]?.[0];
+  const secondEnemy = second.activity.encounter.waves[0]?.[0];
 
-  expect(first.activity.encounter.waves[0]?.[0]).not.toBe(second.activity.encounter.waves[0]?.[0]);
+  invariant(firstEnemy && secondEnemy, 'derived encounters must open with a populated wave');
+  expect(firstEnemy).not.toBe(secondEnemy);
 
   expect(first.avatar.paperdoll[EquipmentSlot.MainHand]).not.toBe(
     second.avatar.paperdoll[EquipmentSlot.MainHand],

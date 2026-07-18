@@ -22,8 +22,6 @@ export function rollEncounterFromStream(
 ): EncounterDefinition {
   const [pool] = content.pools;
 
-  invariant(pool, 'encounter content must define at least one pool');
-
   const weightedArchetypes = pool.entries.map((entry) => {
     const archetype = content.archetypes.find((candidate) => candidate.id === entry.archetypeID);
 
