@@ -1,7 +1,15 @@
 import { safe } from '@orpc/client';
-import type { ActivityData } from '@vers/contract-activity';
-import type { ActivityCheckpoint, ActivityFailureAction, Simulation } from '@vers/idle-core';
-import { ActivityCheckpointType, buildSimulationInput, createSimulation } from '@vers/idle-core';
+import type {
+  ActivityData,
+  ActivityFailureAction as ContractFailureAction,
+} from '@vers/contract-activity';
+import type { ActivityCheckpoint, Simulation } from '@vers/idle-core';
+import {
+  ActivityCheckpointType,
+  ActivityFailureAction,
+  buildSimulationInput,
+  createSimulation,
+} from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { runReconstruction } from '../resync/run-reconstruction';
 import { runResync } from '../resync/run-resync';
@@ -61,7 +69,7 @@ export async function handleRequestResyncMessage(
       onProgressFetched: (progress) =>
         context.isFailureActionDirty()
           ? flushFailureAction(context, message.avatarID)
-          : updateFailureAction(context, progress.failureAction as ActivityFailureAction),
+          : updateFailureAction(context, toActivityFailureAction(progress.failureAction)),
       submitter: context.getSubmitter(),
     });
 
@@ -73,6 +81,10 @@ export async function handleRequestResyncMessage(
   } finally {
     context.setResyncInFlight(false);
   }
+}
+
+function toActivityFailureAction(failureAction: ContractFailureAction): ActivityFailureAction {
+  return failureAction === 'retry' ? ActivityFailureAction.Retry : ActivityFailureAction.Abort;
 }
 
 /**
