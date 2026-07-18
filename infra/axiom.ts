@@ -27,8 +27,7 @@ const serverErrorsMonitor = new axiom.Monitor(
   {
     name: 'vers 5xx responses',
     type: 'Threshold',
-    description:
-      'Fires when any vers service or app-web returns 5xx responses. Baseline alert route from #309.',
+    description: 'Fires when any vers service or app-web returns 5xx responses.',
     aplQuery:
       "['vers-traces'] | where kind == 'server' and ['attributes.http.response.status_code'] >= 500 | summarize count() by bin(_time, 5m)",
     intervalMinutes: 5,
