@@ -1,4 +1,6 @@
+import { SpanKind, SpanStatusCode, context, trace } from '@opentelemetry/api';
 import { CamelCasePlugin, Kysely } from 'kysely';
+import type { LogEvent } from 'kysely';
 import { PostgresJSDialect } from 'kysely-postgres-js';
 import postgres from 'postgres';
 import type { DB } from './schema.generated';
@@ -29,6 +31,48 @@ export function createDB(config: CreateDBConfig): Kysely<DB> {
         },
       }),
     }),
+    log: recordQuerySpan,
     plugins: [new CamelCasePlugin()],
   });
+}
+
+/**
+ * Emits one retroactive CLIENT span per compiled query from Kysely's `log` callback, timed from
+ * `queryDurationMillis` so the span covers the statement's real duration rather than the instant
+ * this callback runs. Created against `context.active()` so it parents to whatever request or
+ * worker span is active; a no-op (the OpenTelemetry API's own no-op span) without a registered
+ * tracer provider. Query parameters never ride in the span — only the compiled SQL, already in its
+ * placeholder form (`$1`, `$2`, …).
+ */
+function recordQuerySpan(event: LogEvent): void {
+  const endTime = new Date();
+
+  const tracer = trace.getTracer('@vers/db');
+
+  const span = tracer.startSpan(
+    `db.${pickOperationName(event.query.query.kind)}`,
+    {
+      attributes: { 'db.statement': event.query.sql, 'db.system': 'postgresql' },
+      kind: SpanKind.CLIENT,
+      startTime: new Date(endTime.getTime() - event.queryDurationMillis),
+    },
+    context.active(),
+  );
+
+  if (event.level === 'error') {
+    const exception = event.error instanceof Error ? event.error : String(event.error);
+
+    span.recordException(exception);
+    span.setStatus({ code: SpanStatusCode.ERROR });
+  }
+
+  span.end(endTime);
+}
+
+/**
+ * Derives a short span-name suffix from a compiled query's root operation-node kind
+ * (`SelectQueryNode` → `select`, `CreateTableNode` → `createtable`).
+ */
+function pickOperationName(kind: string): string {
+  return kind.replace(/(?:Query)?Node$/, '').toLowerCase();
 }
