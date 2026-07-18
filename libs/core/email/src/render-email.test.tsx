@@ -9,8 +9,8 @@ function TestEmail() {
   );
 }
 
-test('it renders both HTML and plain text versions of the email', async () => {
-  const email = await renderEmail({
+test('it renders both HTML and plain text versions of the email', () => {
+  const email = renderEmail({
     component: <TestEmail />,
   });
 

@@ -1,14 +1,14 @@
 import { expect, test } from 'bun:test';
 import { renderChangeEmailVerificationEmail } from './render-change-email-verification-email';
 
-test('it renders a verification email with the provided configuration', async () => {
+test('it renders a verification email with the provided configuration', () => {
   const config = {
     newEmail: 'new-email@example.com',
     verificationCode: '123456',
     verificationURL: 'https://example.com/verify?code=123456',
   };
 
-  const email = await renderChangeEmailVerificationEmail(config);
+  const email = renderChangeEmailVerificationEmail(config);
 
   expect(email.html).toContain('Verify your new email address');
   expect(email.html).toContain(config.newEmail);

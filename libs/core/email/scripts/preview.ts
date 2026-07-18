@@ -20,7 +20,7 @@ async function writePreviews(outDir: string): Promise<void> {
 
   await Promise.all(
     previews.map(async (preview) => {
-      const rendered = await preview.render();
+      const rendered = preview.render();
 
       await Promise.all([
         writeFile(path.join(outDir, `${preview.name}.html`), rendered.html),
