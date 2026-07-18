@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./orpc": "./src/orpc/index.ts",
     "./otel": "./src/otel/index.ts"
   },
   "scripts": {
@@ -16,9 +17,14 @@
     "@opentelemetry/api-logs": "catalog:",
     "@opentelemetry/exporter-logs-otlp-proto": "catalog:",
     "@opentelemetry/exporter-metrics-otlp-proto": "catalog:",
+    "@opentelemetry/exporter-trace-otlp-proto": "catalog:",
     "@opentelemetry/resources": "catalog:",
     "@opentelemetry/sdk-logs": "catalog:",
     "@opentelemetry/sdk-metrics": "catalog:",
+    "@opentelemetry/sdk-trace-node": "catalog:",
+    "@orpc/client": "catalog:",
+    "@orpc/shared": "catalog:",
+    "@orpc/standard-server": "catalog:",
     "@vers/trace": "workspace:*",
     "jose": "catalog:",
     "pino": "catalog:",

@@ -3,7 +3,7 @@ import { ORPCError, onError } from '@orpc/server';
 import type { FetchHandler } from '@orpc/server/fetch';
 import { RPCHandler } from '@orpc/server/fetch';
 import { TOKEN_ALGORITHM, parseServiceToken } from '@vers/service-auth';
-import { withTraceContext } from '@vers/service-utils';
+import { findSpanTraceContext, withTraceContext } from '@vers/service-utils';
 import type { MetricsExport, OTLPLogStream } from '@vers/service-utils/otel';
 import type { TraceContext } from '@vers/trace';
 import { createTraceContext, parseTraceparent } from '@vers/trace';
@@ -66,28 +66,38 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
 
   const publicKey = await jose.importSPKI(env.SERVICE_AUTH_PUBLIC_KEY, TOKEN_ALGORITHM);
 
-  await startErrorReporting(env.SENTRY_DSN);
-
-  const router = await config.buildRouter({ env, logger });
-
   const app = new Elysia();
 
   if (env.OTEL_EXPORTER_OTLP_ENDPOINT !== undefined) {
-    const [{ opentelemetry }, { OTLPTraceExporter }] = await Promise.all([
-      import('@elysiajs/opentelemetry'),
-      import('@opentelemetry/exporter-trace-otlp-proto'),
-    ]);
+    const [{ opentelemetry }, { OTLPTraceExporter }, { buildTelemetryResource }] =
+      await Promise.all([
+        import('@elysiajs/opentelemetry'),
+        import('@opentelemetry/exporter-trace-otlp-proto'),
+        import('@vers/service-utils/otel'),
+      ]);
 
     // constructed bare so the exporter derives its full configuration from the standard
     // `OTEL_EXPORTER_OTLP_*` environment variables: the base endpoint gains the per-signal path,
     // and shared plus per-signal headers (backend auth, dataset routing) merge from env
     app.use(
       opentelemetry({
+        resource: buildTelemetryResource({ serviceName: config.name }),
         serviceName: config.name,
         traceExporter: new OTLPTraceExporter(),
       }),
     );
   }
+
+  // registered after the OTel plugin above: the Sentry SDK's own OpenTelemetry bootstrap
+  // (client-side tracing, off here — `startErrorReporting` pins `tracesSampleRate: 0`) tries to
+  // register its own global tracer provider, context manager, and propagator, and the
+  // OpenTelemetry API keeps only the first registration per process — going second means Sentry's
+  // registration silently no-ops and the plugin's W3C propagation and OTLP export stay in effect;
+  // reversed, Sentry's `sentry-trace`-only propagator would shadow `traceparent` and no service
+  // span would ever reach the OTLP exporter
+  await startErrorReporting(env.SENTRY_DSN);
+
+  const router = await config.buildRouter({ env, logger });
 
   app.get('/health', (context) => {
     const trace = createTrace(context.request);
@@ -175,11 +185,17 @@ async function createLogShipper(serviceName: string): Promise<OTLPLogStream> {
 }
 
 /**
- * Continues the caller's W3C trace when a valid `traceparent` came in, or starts a fresh trace for
- * this hop otherwise.
+ * Resolves the request's trace context: from the active OTel span when the Elysia plugin already
+ * opened one (its root span already continued or started the trace from the inbound
+ * `traceparent`), so log `traceID`, `x-trace-id`, and outbound `traceparent` always match the
+ * exported spans; otherwise continues a valid inbound `traceparent` directly, or starts a fresh
+ * trace for this hop.
  */
 function createTrace(request: Request): TraceContext {
-  return createTraceContext(parseTraceparent(request.headers.get('traceparent')) ?? undefined);
+  return (
+    findSpanTraceContext() ??
+    createTraceContext(parseTraceparent(request.headers.get('traceparent')) ?? undefined)
+  );
 }
 
 interface RegisterORPCHandlerDeps {

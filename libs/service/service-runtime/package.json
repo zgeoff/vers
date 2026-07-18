@@ -25,6 +25,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@opentelemetry/api": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/contract-base": "workspace:*",
