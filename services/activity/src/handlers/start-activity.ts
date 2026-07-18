@@ -4,6 +4,7 @@ import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import { findCurrentSimVersion, findSimVersion } from '@vers/sim-registry';
 import type { Kysely } from 'kysely';
+import { resolveEncounterNode } from '../resolve-encounter-node';
 import type {
   ActiveActivityConflictPayload,
   EmptyErrorPayload,
@@ -33,6 +34,7 @@ interface StartActivityOpts {
   readonly errors: {
     readonly CHAIN_QUARANTINED: (payload: EmptyErrorPayload) => Error;
     readonly CONFLICT: (payload: ActiveActivityConflictPayload) => Error;
+    readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly SIM_VERSION_EXPIRED: (payload: SimVersionProblemPayload) => Error;
     readonly SIM_VERSION_UNKNOWN: (payload: SimVersionProblemPayload) => Error;
@@ -49,9 +51,11 @@ interface StartActivityOpts {
 /**
  * Starts an activity for an avatar owned by the acting user, snapshotting the avatar's current
  * progression as the build the stream plays against, and stamping the acting session as the
- * stream's writer. Throws CONFLICT with the avatar's existing activity when one is already active
- * — the partial unique index is the serialization point, this handler just reports what it caught.
- * A chain whose replay frontier is quarantined admits no new starts until it is adjudicated.
+ * stream's writer. Resolves the scope node's encounter params server-side and freezes them on the
+ * new row, throwing NODE_UNKNOWN when the scope doesn't resolve to a known node. Throws CONFLICT
+ * with the avatar's existing activity when one is already active — the partial unique index is the
+ * serialization point, this handler just reports what it caught. A chain whose replay frontier is
+ * quarantined admits no new starts until it is adjudicated.
  */
 export async function startActivity(
   deps: StartActivityDeps,
@@ -85,6 +89,12 @@ export async function startActivity(
 
   if (quarantined !== undefined) {
     throw opts.errors.CHAIN_QUARANTINED({ data: {} });
+  }
+
+  const encounterNode = resolveEncounterNode(opts.input.scopeType, opts.input.scopeID);
+
+  if (encounterNode === undefined) {
+    throw opts.errors.NODE_UNKNOWN({ data: {} });
   }
 
   const simVersion = await resolveSimVersionStamp(deps.db, opts.input.simVersion, opts.errors);
@@ -123,6 +133,7 @@ export async function startActivity(
       const startHash = buildStartHash({
         activityID: id,
         contentVersion: deps.contentVersion,
+        encounterNode,
         keyVersion: deps.keyVersion,
         seed,
         simVersion,
@@ -134,6 +145,7 @@ export async function startActivity(
           avatarId: opts.input.avatarID,
           buildSnapshot,
           contentVersion: deps.contentVersion,
+          encounterNode,
           id,
           keyVersion: deps.keyVersion,
           lastHash: startHash,

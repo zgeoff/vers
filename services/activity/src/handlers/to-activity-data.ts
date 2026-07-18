@@ -1,4 +1,4 @@
-import type { ActivityData, BuildSnapshot } from '@vers/contract-activity';
+import type { ActivityData, BuildSnapshot, EncounterNode } from '@vers/contract-activity';
 import type { Activities } from '@vers/db';
 import type { Selectable } from 'kysely';
 
@@ -18,6 +18,8 @@ export function toActivityData(row: Readonly<Selectable<Activities>>): ActivityD
     buildSnapshot: row.buildSnapshot as BuildSnapshot,
     contentVersion: row.contentVersion,
     createdAt: row.createdAt,
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is this service's own encounter-node resolution, and oRPC's output validation rejects a drifted shape at the boundary
+    encounterNode: row.encounterNode as EncounterNode,
     id: row.id,
     keyVersion: row.keyVersion,
     lastHash: row.lastHash,

@@ -8,6 +8,7 @@ test('it builds a default activity row', () => {
     avatarId: expect.toBeString(),
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: '0.0.0-dev',
+    encounterNode: { difficulty: expect.toBeNumber() },
     id: expect.toBeString(),
     keyVersion: 1,
     lastHash: expect.toBeString(),
