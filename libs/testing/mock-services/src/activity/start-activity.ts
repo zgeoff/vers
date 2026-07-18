@@ -1,14 +1,15 @@
 import { createId } from '@paralleldrive/cuid2';
 import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
+import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import * as db from '../db';
 import { os } from './os';
 
 /**
- * Version stamps every mock-minted activity carries; arbitrary, but stable so tests can assert
- * on rows the mock created.
+ * The sim-version stamp every mock-minted activity carries; arbitrary, but stable so tests can
+ * assert on rows the mock created. The content version instead tracks the real current version so
+ * MSW-backed client tests can resolve content through the real dispatch.
  */
 const MOCK_SIM_VERSION = '0.0.0-mock';
-const MOCK_CONTENT_VERSION = '0.0.0-mock';
 
 /**
  * Starts an activity for an avatar owned by the acting user, snapshotting the avatar's current
@@ -56,7 +57,7 @@ export const startActivity = os.startActivity.handler(async (opts) => {
 
   const startHash = buildStartHash({
     activityID: id,
-    contentVersion: MOCK_CONTENT_VERSION,
+    contentVersion: CURRENT_CONTENT_VERSION,
     keyVersion: 1,
     seed,
     simVersion: MOCK_SIM_VERSION,
@@ -69,7 +70,7 @@ export const startActivity = os.startActivity.handler(async (opts) => {
     appendedHead: 0,
     avatarID: opts.input.avatarID,
     buildSnapshot: { level: avatar.level, xp: avatar.xp },
-    contentVersion: MOCK_CONTENT_VERSION,
+    contentVersion: CURRENT_CONTENT_VERSION,
     createdAt: now,
     id,
     keyVersion: 1,

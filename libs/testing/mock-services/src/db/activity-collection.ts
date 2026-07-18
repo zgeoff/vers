@@ -2,6 +2,7 @@ import { faker } from '@faker-js/faker';
 import { Collection } from '@msw/data';
 import { createId } from '@paralleldrive/cuid2';
 import { ActivityDataSchema } from '@vers/contract-activity';
+import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import * as z from 'zod';
 
 /**
@@ -14,7 +15,7 @@ const ActivityRowSchema = ActivityDataSchema.extend({
   appendedHead: z.int().default(0),
   avatarID: z.string().default(() => createId()),
   buildSnapshot: z.object({ level: z.int(), xp: z.int() }).default({ level: 1, xp: 0 }),
-  contentVersion: z.string().default('0.0.0-mock'),
+  contentVersion: z.string().default(CURRENT_CONTENT_VERSION),
   createdAt: z.date().default(() => new Date()),
   id: z.string().default(() => `act_${createId()}`),
   keyVersion: z.int().min(1).default(1),
