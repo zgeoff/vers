@@ -156,11 +156,11 @@ job authenticates through the `OP_SERVICE_ACCOUNT_TOKEN` repo secret, a non-expi
 service account scoped to read only the `vers-ci` vault, and resolves the stack's credentials from
 their `op://` references at run time. `vers-ci` holds exactly the items the job reads — the
 `vers-infra` credentials, the Axiom `iac-token`, and the Discord alarms webhook — so a compromised
-job step cannot reach the signing keys, database URLs, and other credentials in the `vers` vault. A
-credential CI needs lives in `vers-ci` and nowhere else; a credential CI does not need stays in
-`vers`. Fork pull requests are skipped: GitHub withholds secrets from them, so the preview cannot
-authenticate. The job only ever previews — reconciling a reported drift is a human decision, applied
-with `pulumi up` from a checkout.
+job step cannot reach the signing keys, database URLs, and other credentials in the `vers` vault.
+When the job gains a new credential, its item moves into `vers-ci` — never a copy, which rots on
+rotation — and everything the job does not read stays in `vers`. Fork pull requests are skipped:
+GitHub withholds secrets from them, so the preview cannot authenticate. The job only ever previews —
+reconciling a reported drift is a human decision, applied with `pulumi up` from a checkout.
 
 ## Sim-version registry
 
