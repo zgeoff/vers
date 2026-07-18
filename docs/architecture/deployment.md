@@ -84,9 +84,9 @@ rolls out:
    suite. Both matrices derive from `deploy.config.ts` via a `manifest` job (the CLI's `list`
    command), so adding an app to the manifest is the whole change. Each leg self-gates: the CLI
    compares HEAD against the `GIT_SHA` stamped on the app's machines, so a phase lost to an earlier
-   failure ships on the next push. The `build` job orders the cutovers without gating them — one
-   app's failed build must not abandon the others' rollouts, so its own cutover leg fails alone on
-   the missing ref.
+   failure ships on the next push. The `build` job orders the later phases without gating them
+   directly; an app's failed build leaves its ref unavailable to `stack-e2e`, whose fleet-wide
+   failure holds every cutover.
 3. Between build and cutover, the `stack-e2e` job boots every deployable image in a compose stack
    (`apps/web-e2e/docker-compose.stack.yml`) — the eight services, app-web's production image,
    postgres, and a capture-only Resend stub — resolving refs with the CLI's `images` command,

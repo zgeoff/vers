@@ -264,13 +264,17 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: flyctl auth docker
 
-      - name: Boot the stack
-        run: docker compose -f apps/web-e2e/docker-compose.stack.yml up -d --quiet-pull --wait
-
-      - name: Migrate the stack database
+      # postgres first, migrated before any service boots — a service must
+      # never observe the unmigrated schema, even transiently
+      - name: Boot and migrate the stack database
         env:
           DATABASE_URL: postgresql://admin:password@localhost:5533/vers
-        run: bun run --cwd libs/data/db db:migrate
+        run: |
+          docker compose -f apps/web-e2e/docker-compose.stack.yml up -d --quiet-pull --wait postgres resend-stub
+          bun run --cwd libs/data/db db:migrate
+
+      - name: Boot the stack
+        run: docker compose -f apps/web-e2e/docker-compose.stack.yml up -d --quiet-pull --wait
 
       - name: Install E2E browsers
         run: bun run playwright install --with-deps --only-shell chromium
@@ -297,12 +301,11 @@ jobs:
     needs: [checks, migrate, manifest, build, stack-e2e]
     # cut over after the shared schema is current and the full-stack suite
     # has passed against the images being promoted. The build job is an
-    # ordering edge, not a gate: its matrix result is the worst leg across
-    # all apps, and one app's failed build must not abandon the others'
-    # rollouts — an app whose own build failed cuts over to a missing ref and
-    # its leg fails alone. The e2e gate is deliberate and fleet-wide: a
-    # combined state that fails its journeys ships for no app. Legs self-gate
-    # on staleness exactly as the build phase does.
+    # ordering edge only — its matrix result never gates this job directly —
+    # but any missing image surfaces as a stack-e2e failure, and that gate is
+    # deliberately fleet-wide: a combined state that fails its journeys, or
+    # can't even boot, ships for no app. Legs self-gate on staleness exactly
+    # as the build phase does.
     if:
       ${{ !cancelled() && needs.checks.result == 'success' && needs.migrate.result == 'success' &&
       needs.manifest.result == 'success' && needs.stack-e2e.result == 'success' }}

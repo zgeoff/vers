@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 import { z } from 'zod';
 import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
@@ -34,20 +35,25 @@ async function waitForVerificationCode(email: string): Promise<string> {
   return code ?? '';
 }
 
-test('it signs up, verifies the emailed code, onboards, and lands in the game signed in', async ({
-  page,
-}) => {
-  const runID = Date.now();
-  const email = `e2e-signup-${runID}@vers.test`;
-  const password = `e2e-password-${runID}`;
+interface SignupAccount {
+  readonly email: string;
+  readonly password: string;
+  readonly username: string;
+}
 
+/**
+ * Drives the whole account-creation journey — signup, emailed-code verification, onboarding —
+ * and lands at `/respite` signed in. Every form submit paces past the artifact's real honeypot
+ * window first.
+ */
+async function runSignupJourney(page: Page, account: SignupAccount): Promise<void> {
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/signup');
 
   // hydration gate: the form's submit handler attaches only once React commits; an earlier click
   // falls back to the browser's native GET submit
   await page.locator('html[data-hydrated]').waitFor();
-  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Email').fill(account.email);
 
   await waitForHoneypotWindow(page);
 
@@ -55,7 +61,7 @@ test('it signs up, verifies the emailed code, onboards, and lands in the game si
 
   await expect(page).toHaveURL(/\/verify-otp/);
 
-  const code = await waitForVerificationCode(email);
+  const code = await waitForVerificationCode(account.email);
 
   // the TOTP window is ~30-90s from generation, so the code goes in promptly after capture
   await page.getByTestId('otp-input').pressSequentially(code);
@@ -66,10 +72,10 @@ test('it signs up, verifies the emailed code, onboards, and lands in the game si
 
   await expect(page).toHaveURL(/\/onboarding/);
 
-  await page.getByLabel('Username').fill(`e2e${runID}`);
+  await page.getByLabel('Username').fill(account.username);
   await page.getByLabel('Name', { exact: true }).fill('Stack Journey');
-  await page.getByLabel('Password', { exact: true }).fill(password);
-  await page.getByLabel('Confirm Password').fill(password);
+  await page.getByLabel('Password', { exact: true }).fill(account.password);
+  await page.getByLabel('Confirm Password').fill(account.password);
   await page.getByText('Agree to terms').click();
 
   await waitForHoneypotWindow(page);
@@ -77,6 +83,19 @@ test('it signs up, verifies the emailed code, onboards, and lands in the game si
   await page.getByRole('button', { name: 'Create an Account' }).click();
 
   await expect(page).toHaveURL(/\/respite$/, { timeout: 20_000 });
+}
+
+test('it signs up, verifies the emailed code, onboards, and lands in the game signed in', async ({
+  page,
+}) => {
+  const runID = Date.now();
+
+  await runSignupJourney(page, {
+    email: `e2e-signup-${runID}@vers.test`,
+    password: `e2e-password-${runID}`,
+    username: `e2e${runID}`,
+  });
+
   await expect(page.locator('canvas')).toBeVisible();
 });
 
@@ -87,38 +106,7 @@ test('it logs a fresh account out and back in through the real session service',
   const email = `e2e-login-${runID}@vers.test`;
   const password = `e2e-password-${runID}`;
 
-  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
-  await page.goto('/signup');
-  await page.locator('html[data-hydrated]').waitFor();
-  await page.getByLabel('Email').fill(email);
-
-  await waitForHoneypotWindow(page);
-
-  await page.getByRole('button', { exact: true, name: 'Signup' }).click();
-
-  await expect(page).toHaveURL(/\/verify-otp/);
-
-  const code = await waitForVerificationCode(email);
-
-  await page.getByTestId('otp-input').pressSequentially(code);
-
-  await waitForHoneypotWindow(page);
-
-  await page.getByRole('button', { exact: true, name: 'Verify' }).click();
-
-  await expect(page).toHaveURL(/\/onboarding/);
-
-  await page.getByLabel('Username').fill(`e2el${runID}`);
-  await page.getByLabel('Name', { exact: true }).fill('Stack Login');
-  await page.getByLabel('Password', { exact: true }).fill(password);
-  await page.getByLabel('Confirm Password').fill(password);
-  await page.getByText('Agree to terms').click();
-
-  await waitForHoneypotWindow(page);
-
-  await page.getByRole('button', { name: 'Create an Account' }).click();
-
-  await expect(page).toHaveURL(/\/respite$/, { timeout: 20_000 });
+  await runSignupJourney(page, { email, password, username: `e2el${runID}` });
 
   // the game canvas's initial scene setup blocks the main thread for a variable stretch, long
   // enough that a click fired mid-block is silently dropped — retry until the nav visibly opens

@@ -1,12 +1,5 @@
 import { z } from 'zod';
 
-/**
- * A capture-only stand-in for the Resend HTTP API, for suites running the real service-email
- * against a stack that must send no real mail. `POST /emails` accepts a send exactly like the
- * Resend endpoint resend-node targets via `RESEND_BASE_URL` and records it in memory; specs pull
- * captured sends back with `GET /emails?to=<address>` to read verification codes out of the
- * bodies. State lives for the process lifetime — one stack boot, one mailbox.
- */
 interface CapturedEmail {
   readonly html: string;
   readonly id: string;
@@ -17,17 +10,25 @@ interface CapturedEmail {
 
 const ToSchema = z.union([z.string(), z.array(z.string())]);
 
+// `from`, `subject`, and `to` are required exactly as the real Resend endpoint requires them, so
+// a payload production would reject can't quietly pass this gate
 const SendPayloadSchema = z.object({
+  from: z.string().min(1),
   html: z.string().optional(),
-  subject: z.string().optional(),
+  subject: z.string().min(1),
   text: z.string().optional(),
-  to: ToSchema.optional(),
+  to: ToSchema,
 });
 
 const emails: Array<CapturedEmail> = [];
 let nextID = 1;
 const port = Number(process.env['RESEND_STUB_PORT'] ?? 3020);
 
+// A capture-only stand-in for the Resend HTTP API, for suites running the real service-email
+// against a stack that must send no real mail. `POST /emails` accepts a send exactly like the
+// Resend endpoint resend-node targets via `RESEND_BASE_URL` and records it in memory; specs pull
+// captured sends back with `GET /emails?to=<address>` to read verification codes out of the
+// bodies. State lives for the process lifetime — one stack boot, one mailbox.
 Bun.serve({
   fetch: async (request) => {
     const url = new URL(request.url);
@@ -44,9 +45,9 @@ Bun.serve({
       const email: CapturedEmail = {
         html: body.html ?? '',
         id: `stub-${nextID++}`,
-        subject: body.subject ?? '',
+        subject: body.subject,
         text: body.text ?? '',
-        to: Array.isArray(body.to) ? body.to : [body.to ?? ''],
+        to: Array.isArray(body.to) ? body.to : [body.to],
       };
 
       emails.push(email);
