@@ -4,6 +4,7 @@ dist
 tmp
 /out-tsc
 .test-results
+.stack-test-results
 
 # git worktrees
 .worktrees
@@ -40,6 +41,7 @@ testem.log
 # Test Output
 /coverage
 **/.test-results
+**/.stack-test-results
 
 # System Files
 .DS_Store
