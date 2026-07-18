@@ -94,9 +94,9 @@ test('it marks the span failed for a query that errors', async () => {
   await using handle = await createTestDB();
 
   await expect(
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- deliberately invalid column name, exercised for its error path
     handle.db
       .selectFrom('users')
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- deliberately invalid column name, exercised for its error path
       .select('not_a_real_column' as 'id')
       .execute(),
   ).toReject();

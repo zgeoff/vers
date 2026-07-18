@@ -12,7 +12,6 @@ import { buildTracingInterceptor } from './build-tracing-interceptor';
 
 function buildOptions(
   next: () => Promise<StandardLazyResponse>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a hand-built stub shaped like oRPC's interceptor options; the framework type has no readonly form
 ): StandardLinkClientInterceptorOptions<Record<never, never>> & { next: typeof next } {
   return {
     context: {},
