@@ -384,7 +384,7 @@ test('it attaches a fresh login live without broadcasting any catch-up status', 
   expect(simulation.activity?.id).toBe(activity.id);
 });
 
-test('it reports a fault to the error backend and folds to offline when the resync fails outright', async () => {
+test('it reports a fault to the error backend and broadcasts a failed status when the resync fails outright', async () => {
   const previousHandle = sentryHandle.current;
   const recorded: Array<Readonly<ErrorEvent>> = [];
 
@@ -419,10 +419,19 @@ test('it reports a fault to the error backend and folds to offline when the resy
 
   await handleRequestResyncMessage(context, message);
 
-  await connection.waitForMessages(1);
+  // posted on the worker's own port after the handler settles, this arrives after anything the
+  // handler broadcast on the same channel — a single failed status proves no connection-status
+  // change rode along with it
+  connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
+
+  await connection.waitForMessages(2);
 
   expect(connection.received).toStrictEqual([
-    { online: false, type: WorkerMessageType.ConnectionStatus },
+    {
+      status: { avatarID: 'avatar-with-held-tail', kind: 'failed' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+    { online: true, type: WorkerMessageType.ConnectionStatus },
   ]);
 
   await waitFor(() => {
