@@ -4,6 +4,7 @@ import type { DB } from '@vers/db';
 import type { ServiceContext } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
 import { getActivityRewards } from './handlers/get-activity-rewards';
+import { getAvatarProgression } from './handlers/get-avatar-progression';
 import { getCurrentActivity } from './handlers/get-current-activity';
 import { getLatestActivityProgress } from './handlers/get-latest-activity-progress';
 import { resumeActivity } from './handlers/resume-activity';
@@ -28,6 +29,9 @@ export function buildActivityRouter(deps: BuildActivityRouterDeps) {
 
   return {
     getActivityRewards: os.getActivityRewards.handler((opts) => getActivityRewards(deps.db, opts)),
+    getAvatarProgression: os.getAvatarProgression.handler((opts) =>
+      getAvatarProgression(deps.db, opts),
+    ),
     getCurrentActivity: os.getCurrentActivity.handler((opts) => getCurrentActivity(deps.db, opts)),
     getLatestActivityProgress: os.getLatestActivityProgress.handler((opts) =>
       getLatestActivityProgress(deps.db, opts),

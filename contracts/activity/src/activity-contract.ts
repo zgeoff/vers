@@ -31,6 +31,14 @@ const RevealedRewardSchema = z.object({
   ordinal: z.int().min(0),
 });
 
+const PendingXPEntrySchema = z.object({ activityID: z.string(), xpDelta: z.number() });
+
+const AvatarProgressionSchema = z.object({
+  level: z.int(),
+  pending: z.array(PendingXPEntrySchema),
+  xp: z.int(),
+});
+
 /**
  * The activities service's API: every procedure is authed and owner-scoped through the caller's
  * avatars.
@@ -49,6 +57,15 @@ export const activityContract = {
         NOT_FOUND: { data: z.object({}), message: 'No activity with that id' },
       }),
     ),
+
+  getAvatarProgression: authedRoute
+    .route({
+      method: 'GET',
+      path: '/avatars/{avatarID}/progression',
+      summary: "Get an avatar's settled xp/level plus pending unsettled xp deltas",
+    })
+    .input(z.object({ avatarID: z.string() }))
+    .output(AvatarProgressionSchema.nullable()),
 
   getCurrentActivity: authedRoute
     .route({
