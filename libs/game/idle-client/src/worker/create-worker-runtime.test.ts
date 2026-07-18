@@ -32,11 +32,7 @@ function createConnection(runtime: WorkerRuntime): TestConnection {
 }
 
 test('it replies with the initial state to an initialize message', async () => {
-  const runtime = createWorkerRuntime();
-
-  onTestFinished(() => {
-    runtime.stop();
-  });
+  using runtime = createWorkerRuntime();
 
   const connection = createConnection(runtime);
 
@@ -54,11 +50,7 @@ test('it seeds the boot state from the device-local failure-action cache before 
     failureAction: ActivityFailureAction.Retry,
   });
 
-  const runtime = createWorkerRuntime();
-
-  onTestFinished(() => {
-    runtime.stop();
-  });
+  using runtime = createWorkerRuntime();
 
   const connection = createConnection(runtime);
 
@@ -97,11 +89,7 @@ test('it retains the cached dirty flag across boot so the next resync flushes it
     }),
   );
 
-  const runtime = createWorkerRuntime({ client });
-
-  onTestFinished(() => {
-    runtime.stop();
-  });
+  using runtime = createWorkerRuntime({ client });
 
   const connection = createConnection(runtime);
 
@@ -117,11 +105,7 @@ test('it retains the cached dirty flag across boot so the next resync flushes it
 test('it broadcasts a simulation update once an activity is set', async () => {
   server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 0 })));
 
-  const runtime = createWorkerRuntime();
-
-  onTestFinished(() => {
-    runtime.stop();
-  });
+  using runtime = createWorkerRuntime();
 
   const connection = createConnection(runtime);
 
@@ -142,11 +126,7 @@ test('it broadcasts a simulation update once an activity is set', async () => {
 test('it stops broadcasting to a connection after it disconnects', async () => {
   server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 0 })));
 
-  const runtime = createWorkerRuntime();
-
-  onTestFinished(() => {
-    runtime.stop();
-  });
+  using runtime = createWorkerRuntime();
 
   const survivor = createConnection(runtime);
   const leaving = createConnection(runtime);
@@ -190,11 +170,7 @@ test('it reports a fault to the error backend when a message makes its handler t
     disableDefaultIntegrations: true,
   });
 
-  const runtime = createWorkerRuntime();
-
-  onTestFinished(() => {
-    runtime.stop();
-  });
+  using runtime = createWorkerRuntime();
 
   const connection = createConnection(runtime);
 
@@ -247,11 +223,8 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
   );
 
   const clock = createFastClock();
-  const runtime = createWorkerRuntime({ client, now: clock.now });
 
-  onTestFinished(() => {
-    runtime.stop();
-  });
+  using runtime = createWorkerRuntime({ client, now: clock.now });
 
   const connection = createConnection(runtime);
 
@@ -314,11 +287,8 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
   );
 
   const clock = createFastClock();
-  const runtime = createWorkerRuntime({ client, now: clock.now });
 
-  onTestFinished(() => {
-    runtime.stop();
-  });
+  using runtime = createWorkerRuntime({ client, now: clock.now });
 
   const connection = createConnection(runtime);
 
@@ -391,11 +361,8 @@ test("it resumes the pending continuation's avatar on reconnect over an earlier 
   );
 
   const clock = createFastClock();
-  const runtime = createWorkerRuntime({ client, now: clock.now });
 
-  onTestFinished(() => {
-    runtime.stop();
-  });
+  using runtime = createWorkerRuntime({ client, now: clock.now });
 
   const connection = createConnection(runtime);
 

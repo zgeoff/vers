@@ -23,6 +23,13 @@ export interface WorkerRuntime {
   readonly connections: ReadonlySet<MessagePort>;
   readonly handleConnect: (event: MessageEvent) => void;
   readonly stop: () => void;
+
+  /**
+   * Delegates to `stop`, so a test can acquire the runtime with `using` and have teardown run on
+   * scope exit; declared as a readonly member rather than `extends Disposable` to keep the type
+   * readonly-parameter-safe.
+   */
+  readonly [Symbol.dispose]: () => void;
 }
 
 interface CreateWorkerRuntimeOptions {
@@ -289,7 +296,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     self.removeEventListener('offline', handleOffline);
   };
 
-  return { connections, handleConnect, stop };
+  return { [Symbol.dispose]: stop, connections, handleConnect, stop };
 }
 
 function wait(ms: number) {
