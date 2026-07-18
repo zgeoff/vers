@@ -1,7 +1,6 @@
 import type { CheckpointBatchEntry, CheckpointPayload } from '@vers/contract-activity';
 import { RewardSlotSchema, buildCheckpointHash } from '@vers/contract-activity';
 import type { ActivityStatus, DB, Json } from '@vers/db';
-import { buildLevelFromXP } from '@vers/idle-core';
 import type { ServiceContext } from '@vers/service-runtime';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
@@ -61,9 +60,10 @@ interface TrackActivityProgressOpts {
  * Only the stamped writer session may append; an unstamped activity is claimed by the first
  * appending session.
  *
- * A terminal last checkpoint (completed or failed) claims the activity's terminal transition in
- * the same transaction and settles the avatar's xp/level from its final rewards total — the claim
- * guards a duplicate resubmission against double-applying.
+ * A terminal last checkpoint (completed or failed) claims the activity's terminal transition and
+ * advances the chain's appended anchor in the same transaction — the claim guards a duplicate
+ * resubmission against double-applying. Settlement of the avatar's xp/level lives behind the
+ * verifier, not here: this path only records what was appended.
  *
  * Every accepted batch debits the avatar's simulated-time meter: the budget refills at wall-clock
  * rate up to the cap, and the batch's delta — the last checkpoint's cumulative `time` minus the
@@ -99,7 +99,6 @@ export async function trackActivityProgress(
       'activities.writerSessionId',
       'avatars.simBudgetMs',
       'avatars.simMeteredAt',
-      'avatars.xp',
     ])
 
     // Cast to the meter columns' timestamp type so the driver parses both sides of the elapsed
@@ -263,17 +262,6 @@ export async function trackActivityProgress(
         scopeType: head.scopeType,
         startChainIndex: head.startChainIndex,
       });
-
-      const newXP = Math.max(0, Math.round(head.xp + terminalRewardsXP));
-
-      const settled = await trx
-        .updateTable('avatars')
-        .set({ level: buildLevelFromXP(newXP), xp: newXP })
-        .where('id', '=', head.avatarId)
-        .where('xp', '=', head.xp)
-        .executeTakeFirst();
-
-      invariant(settled.numUpdatedRows > 0n, 'avatar settlement must apply exactly once');
     }
 
     if (timeDelta > 0) {

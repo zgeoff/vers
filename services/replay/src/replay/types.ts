@@ -95,8 +95,8 @@ type DivergenceReason =
 
 /**
  * The outcome of comparing a segment's stored checkpoints against a fresh replay. `match` carries
- * the segment's verified xp delta (the terminal checkpoint's reward, when the segment ends on one)
- * for a future settlement consumer to apply — this worker never writes it.
+ * the segment's verified xp delta (the terminal checkpoint's reward, when the segment ends on one,
+ * else zero) for the caller to fold into its `applyVerifiedSegment` call.
  */
 export type CompareVerdict =
   | {
