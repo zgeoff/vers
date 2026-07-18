@@ -6,6 +6,7 @@ import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
+import type { ActivityServiceClient } from '../submission/types';
 import type { ClientMessage, RewardSlotLedgerEntry, WorkerMessage } from '../types';
 import { createCheckpointFlushStalledMessage } from './create-checkpoint-flush-stalled-message';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
@@ -25,6 +26,12 @@ export interface WorkerRuntime {
 }
 
 interface CreateWorkerRuntimeOptions {
+  /**
+   * Overrides the production same-origin proxy client — a test's only way to route the runtime's
+   * calls at a mocked backend, since the real client resolves its URL from `self.location.origin`.
+   */
+  readonly client?: ActivityServiceClient;
+
   readonly timestep?: number;
 }
 
@@ -38,7 +45,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
   const connections = new Set<MessagePort>();
 
-  const client = createActivityServiceClient();
+  const client = options.client ?? createActivityServiceClient();
   let simulation: null | Simulation = null;
   let activity: ActivityData | null = null;
   let running = false;

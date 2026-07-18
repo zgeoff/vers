@@ -5,6 +5,7 @@ import type { ErrorEvent } from '@sentry/browser';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import {
+  ActivityFailureAction,
   SIMULATION_TIMESTEP_MS,
   buildSimulationInput,
   createSimulation,
@@ -18,6 +19,7 @@ import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
@@ -32,6 +34,7 @@ import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
 
 interface SetupTestConfig {
+  readonly failureAction?: ActivityFailureAction;
   readonly userID: string;
 }
 
@@ -62,7 +65,13 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
   });
 
   const connection = createTestConnection();
-  const context = createStubWorkerContext({ client, connections: [connection.port], submitter });
+
+  const context = createStubWorkerContext({
+    client,
+    connections: [connection.port],
+    submitter,
+    ...(config.failureAction === undefined ? {} : { failureAction: config.failureAction }),
+  });
 
   return { client, connection, context, flush: () => capturedFlush?.() ?? Promise.resolve() };
 }
@@ -588,6 +597,103 @@ test('it attaches a fresh login live without broadcasting any catch-up status', 
 
   invariant(simulation !== null, 'expected the resync to install a live simulation');
   expect(simulation.activity?.id).toBe(activity.id);
+});
+
+test('it adopts a server-persisted retry preference during resync, caching and broadcasting the change', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ failureAction: 'retry', userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: avatar.id,
+    startedAt: new Date(),
+  });
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    { failureAction: ActivityFailureAction.Retry, type: WorkerMessageType.FailureActionStatus },
+  ]);
+
+  expect(ctx.context.getFailureAction()).toBe(ActivityFailureAction.Retry);
+
+  const cached = await readFailureActionCache();
+
+  expect(cached).toStrictEqual({ dirty: false, failureAction: ActivityFailureAction.Retry });
+});
+
+test('it flushes a dirty local failure action to the server during resync, clearing dirty on success', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ failureAction: ActivityFailureAction.Retry, userID: user.id });
+
+  ctx.context.setFailureActionDirty(true);
+
+  await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: avatar.id,
+    startedAt: new Date(),
+  });
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  expect(ctx.context.isFailureActionDirty()).toBeFalse();
+
+  const cached = await readFailureActionCache();
+
+  expect(cached).toStrictEqual({ dirty: false, failureAction: ActivityFailureAction.Retry });
+
+  const updatedAvatar = db.avatarCollection.findFirst((q) => q.where({ id: avatar.id }));
+
+  invariant(updatedAvatar !== undefined, 'expected the seeded avatar to still exist');
+  expect(updatedAvatar.failureAction).toBe('retry');
+});
+
+test('it keeps the dirty flag when the resync push to the server fails', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ failureAction: ActivityFailureAction.Retry, userID: user.id });
+
+  ctx.context.setFailureActionDirty(true);
+
+  server.use(
+    mockActivityService.updateFailureAction.handler(() => {
+      throw new Error('unreachable service');
+    }),
+  );
+
+  await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: avatar.id,
+    startedAt: new Date(),
+  });
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  expect(ctx.context.isFailureActionDirty()).toBeTrue();
+  expect(ctx.context.getFailureAction()).toBe(ActivityFailureAction.Retry);
+
+  const cached = await readFailureActionCache();
+
+  expect(cached).toBeUndefined();
 });
 
 test('it reports a fault to the error backend and broadcasts a failed status when the resync fails outright', async () => {
