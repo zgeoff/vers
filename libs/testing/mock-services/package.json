@@ -24,6 +24,7 @@
     "@faker-js/faker": "catalog:",
     "@msw/data": "catalog:",
     "@noble/hashes": "catalog:",
+    "@orpc/client": "catalog:",
     "@orpc/server": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
     "@vers/client-test-utils": "workspace:*",
@@ -45,10 +46,12 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@orpc/contract": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "tiny-invariant": "catalog:",
     "typescript": "catalog:"
   }
 }
