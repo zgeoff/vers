@@ -5,6 +5,7 @@ import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { waitFor } from '@vers/test-utils';
 import { HttpResponse, http } from 'msw';
+import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
@@ -1044,6 +1045,8 @@ test('it delivers queued non-terminal checkpoints when flushNow is called', asyn
 
   const track = mock<(input: unknown) => void>();
 
+  // the partial ack leaves the second checkpoint queued, so a progress-window callback that
+  // still believed itself scheduled would re-send it — the no-op assertion below depends on it
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
@@ -1060,6 +1063,7 @@ test('it delivers queued non-terminal checkpoints when flushNow is called', asyn
   });
 
   await ctx.submitter.submit('flush-now-activity', createMockProgressCheckpoint());
+  await ctx.submitter.submit('flush-now-activity', createMockProgressCheckpoint());
 
   expect(track).not.toHaveBeenCalled();
 
@@ -1067,12 +1071,15 @@ test('it delivers queued non-terminal checkpoints when flushNow is called', asyn
 
   expect(track).toHaveBeenCalledExactlyOnceWith({
     activityID: 'flush-now-activity',
-    checkpoints: expect.toBeArrayOfSize(1),
+    checkpoints: expect.toBeArrayOfSize(2),
     expectedHead: 0,
   });
 
-  // the superseded progress-window callback is now a no-op: firing it resends nothing
-  await capturedFlush?.();
+  // the superseded progress-window callback is a no-op: firing it re-sends nothing even though
+  // the queue still holds the unconfirmed checkpoint
+  invariant(capturedFlush !== undefined, 'expected the progress window to have been scheduled');
+
+  await capturedFlush();
 
   expect(track).toHaveBeenCalledOnce();
 });

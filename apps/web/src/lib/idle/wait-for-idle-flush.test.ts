@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { ClientMessage } from '@vers/idle-client';
 import { ClientMessageType, WorkerMessageType } from '@vers/idle-client';
+import invariant from 'tiny-invariant';
 import { waitForIdleFlush } from './wait-for-idle-flush';
 
 test('it resolves when the matching flush-completed ack arrives', async () => {
@@ -14,9 +15,7 @@ test('it resolves when the matching flush-completed ack arrives', async () => {
   channel.port2.addEventListener('message', (event: MessageEvent<ClientMessage>) => {
     const message = event.data;
 
-    if (message.type !== ClientMessageType.RequestFlush) {
-      return;
-    }
+    invariant(message.type === ClientMessageType.RequestFlush, 'expected only flush requests');
 
     channel.port2.postMessage({
       activityID: message.activityID,
@@ -39,9 +38,7 @@ test('it ignores an ack with a different request id until the timeout resolves i
   channel.port2.addEventListener('message', (event: MessageEvent<ClientMessage>) => {
     const message = event.data;
 
-    if (message.type !== ClientMessageType.RequestFlush) {
-      return;
-    }
+    invariant(message.type === ClientMessageType.RequestFlush, 'expected only flush requests');
 
     channel.port2.postMessage({
       activityID: message.activityID,

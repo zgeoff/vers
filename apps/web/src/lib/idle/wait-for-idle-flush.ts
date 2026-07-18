@@ -47,6 +47,10 @@ export function waitForIdleFlush(
     const timer = setTimeout(resolveFlush, timeoutMs);
 
     worker.port.addEventListener('message', handleMessage);
+
+    // a port whose delivery never began queues messages instead of dispatching them to
+    // addEventListener listeners; start() is idempotent when delivery is already running
+    worker.port.start();
     worker.port.postMessage(createRequestFlushMessage(activityID, requestID));
   });
 }

@@ -3,7 +3,12 @@ import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { ClientMessage } from '@vers/idle-client';
-import { ClientMessageType, WorkerMessageType, isSetActivityMessage } from '@vers/idle-client';
+import {
+  ClientMessageType,
+  WorkerMessageType,
+  isRequestFlushMessage,
+  isSetActivityMessage,
+} from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import { resolveServiceURL } from '@vers/mock-services';
@@ -143,7 +148,6 @@ test('it flushes the worker before stopping a conflicting activity from a differ
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
   const stopActivityCalled = mock<() => void>();
-  const requestFlushCalled = mock<() => void>();
 
   server.use(
     http.post(`${resolveServiceURL('activity')}/rpc/stopActivity`, () => {
@@ -159,18 +163,6 @@ test('it flushes the worker before stopping a conflicting activity from a differ
 
   channel.port2.addEventListener('message', (event: MessageEvent<ClientMessage>) => {
     calls.push(event.data);
-
-    if (event.data.type !== ClientMessageType.RequestFlush) {
-      return;
-    }
-
-    requestFlushCalled();
-
-    channel.port2.postMessage({
-      activityID: event.data.activityID,
-      requestID: event.data.requestID,
-      type: WorkerMessageType.FlushCompleted,
-    });
   });
 
   const worker = { port: channel.port1 };
@@ -186,11 +178,28 @@ test('it flushes the worker before stopping a conflicting activity from a differ
     render(<ExploreCurrentPanel orpc={orpc} />);
 
     await waitFor(() => {
+      expect(calls.some((call) => isRequestFlushMessage(call))).toBeTrue();
+    });
+
+    // the stop is gated on the flush ack this test hasn't sent yet
+    expect(stopActivityCalled).not.toHaveBeenCalled();
+
+    const request = calls.find((call) => isRequestFlushMessage(call));
+
+    invariant(request !== undefined, 'expected a request-flush message');
+
+    channel.port2.postMessage({
+      activityID: request.activityID,
+      requestID: request.requestID,
+      type: WorkerMessageType.FlushCompleted,
+    });
+
+    await waitFor(() => {
       expect(calls.some((call) => isSetActivityMessage(call))).toBeTrue();
     });
   });
 
-  expect(requestFlushCalled).toHaveBeenCalledBefore(stopActivityCalled);
+  expect(stopActivityCalled).toHaveBeenCalledOnce();
 
   const sent = calls.find((call) => isSetActivityMessage(call));
 
