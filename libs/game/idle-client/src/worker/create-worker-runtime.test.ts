@@ -436,3 +436,74 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
   invariant(closed !== undefined, 'expected the seeded activity to still exist');
   expect(closed.status).toBe('stopped');
 });
+
+test("it resumes the pending continuation's avatar on reconnect over an earlier avatar it resynced", async () => {
+  const user = await db.userCollection.create({});
+  const earlierAvatar = await db.avatarCollection.create({ userID: user.id });
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const client = await buildAuthedClient(user.id);
+
+  // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
+  // below collapses that wait into a single tick-loop frame
+  const activity = await db.activityCollection.create({
+    avatarID: avatar.id,
+    encounterNode: { difficulty: 1 },
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+  });
+
+  // both this activity's terminal append and its continuation's own startActivity call fail once,
+  // standing in for the device going offline right as the run completes
+  server.use(
+    http.post(
+      `${resolveServiceURL('activity')}/rpc/trackActivityProgress`,
+      makeFailFirstMatchHandler((input) => input['activityID'] === activity.id),
+    ),
+    http.post(
+      `${resolveServiceURL('activity')}/rpc/startActivity`,
+      makeFailFirstMatchHandler((input) => input['avatarID'] === avatar.id),
+    ),
+  );
+
+  const clock = createFastClock();
+  const runtime = createWorkerRuntime({ client });
+
+  // stop the tick loop before restoring the real clock — a still-scheduled tick reading the real
+  // clock against the fake clock's small `lastFrameTime` would read a bogus, enormous frame
+  onTestFinished(() => {
+    runtime.stop();
+    clock.restore();
+  });
+
+  const connection = createConnection(runtime);
+
+  connection.post({ type: ClientMessageType.Initialize });
+
+  await connection.waitForMessages(1);
+
+  // the worker remembers this history-free avatar as its last resync target; the boundary failure
+  // below must outrank that memory on reconnect or the pending continuation strands
+  connection.post({ avatarID: earlierAvatar.id, type: ClientMessageType.RequestResync });
+  connection.post({ activity, type: ClientMessageType.SetActivity });
+
+  await waitFor(() => {
+    // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
+    // idle frame, so the wait just re-arms the next one until it lands on a live tick
+    clock.jump(65_000);
+
+    expect(connection.received).toPartiallyContain({
+      online: false,
+      type: WorkerMessageType.ConnectionStatus,
+    });
+  });
+
+  globalThis.dispatchEvent(new Event('online'));
+
+  await waitFor(() => {
+    const minted = db.activityCollection.findFirst((q) =>
+      q.where({ avatarID: avatar.id, status: 'active' }),
+    );
+
+    invariant(minted !== undefined, 'expected the reconnect to resume the pending avatar');
+    expect(minted.id).not.toBe(activity.id);
+  });
+});

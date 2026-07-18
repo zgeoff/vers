@@ -255,7 +255,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
         await submitter.flushHeld();
 
-        const avatarID = resyncAvatarID ?? pendingContinuation?.avatarID ?? null;
+        // the pending continuation is always the fresher signal: it was recorded at the most
+        // recent boundary failure, while the remembered resync avatar can predate it
+        const avatarID = pendingContinuation?.avatarID ?? resyncAvatarID ?? null;
 
         if (context.getSimulation() === null && avatarID !== null) {
           await handleRequestResyncMessage(context, createRequestResyncMessage(avatarID));
