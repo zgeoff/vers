@@ -34,6 +34,7 @@ export interface ReplaySegment {
     readonly avatarID: string;
     readonly buildSnapshot: { readonly level: number; readonly xp: number };
     readonly contentVersion: string;
+    readonly encounterNode: { readonly difficulty: number };
     readonly id: string;
     readonly keyVersion: number;
     readonly scopeID: string;

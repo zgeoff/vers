@@ -28,6 +28,7 @@ export function createMockReplaySegment(
     avatarID: createId(),
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: '0.0.0-dev',
+    encounterNode: { difficulty: 1 },
     id: `act_${createId()}`,
     keyVersion: 1,
     scopeID: faker.string.alphanumeric({ casing: 'lower', length: 8 }),
