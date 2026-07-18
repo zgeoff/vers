@@ -14,6 +14,7 @@ import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
 import { sendIdleSetActivity } from '../../lib/idle/send-idle-set-activity';
 import { sendIdleSetFailureAction } from '../../lib/idle/send-idle-set-failure-action';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
+import { waitForIdleFlush } from '../../lib/idle/wait-for-idle-flush';
 import { useIsSharedWorkerSupported } from '../../lib/platform/use-is-shared-worker-supported';
 import { emitProductEvent } from '../../lib/product-events/emit-product-event';
 import { activityClient } from '../../lib/rpc/clients/activity-client';
@@ -80,6 +81,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
         input.avatarID,
         input.scopeID,
         () => selectedScopeIDRef.current === input.scopeID,
+        idleWorkerHandle.worker,
       ),
     onSuccess: (outcome) => {
       const scopeID = outcome.kind === 'attach' ? outcome.scopeID : outcome.activity.scopeID;
@@ -192,7 +194,9 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
 /**
  * Starting the same world-map-node scope the caller already has active isn't a failure — the
  * CONFLICT payload's row is exactly the stream to attach to instead. Any other active scope stops
- * that one first: an avatar has one active activity at a time.
+ * that one first: an avatar has one active activity at a time — but first asks the worker to flush
+ * that activity's queued checkpoints, so the stop never races the shared progress window's held
+ * tail.
  */
 type StartOutcome =
   | { readonly activity: ActivityData; readonly kind: 'started' }
@@ -207,6 +211,7 @@ async function startActivityForNode(
   avatarID: string,
   scopeID: string,
   isScopeStillSelected: () => boolean,
+  worker: SharedWorker | undefined,
 ): Promise<StartOutcome> {
   const [error, started] = await safe(
     activityClient.startActivity({ avatarID, scopeID, scopeType: 'world_map_node' }),
@@ -236,6 +241,10 @@ async function startActivityForNode(
   // while this request's node is still the one on screen
   if (!isScopeStillSelected()) {
     throw error;
+  }
+
+  if (worker !== undefined) {
+    await waitForIdleFlush(worker, error.data.activity.id);
   }
 
   await activityClient.stopActivity({ avatarID });

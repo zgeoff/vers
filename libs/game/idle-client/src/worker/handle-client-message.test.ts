@@ -7,14 +7,16 @@ import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createTestConnection } from '../test-utils/create-test-connection';
 import type {
   DisconnectMessage,
   InitializeMessage,
+  RequestFlushMessage,
   RequestResyncMessage,
   SetActivityMessage,
   SetFailureActionMessage,
 } from '../types';
-import { ClientMessageType } from '../types';
+import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleClientMessage } from './handle-client-message';
 
 test('it installs a simulation on an initialize message', async () => {
@@ -103,6 +105,27 @@ test('it records the resync request for the requested avatar', async () => {
   await handleClientMessage(context, channel.port2, event);
 
   expect(context.getResyncAvatarID()).toBe(avatar.id);
+});
+
+test('it acks a request flush message back to the sending port', async () => {
+  const connection = createTestConnection();
+  const context = createStubWorkerContext({ connections: [connection.port] });
+
+  const message: RequestFlushMessage = {
+    activityID: 'activity_1',
+    requestID: 'request_1',
+    type: ClientMessageType.RequestFlush,
+  };
+
+  const event = new MessageEvent('message', { data: message });
+
+  await handleClientMessage(context, connection.port, event);
+
+  await connection.waitForMessages(1);
+
+  expect(connection.received).toStrictEqual([
+    { activityID: 'activity_1', requestID: 'request_1', type: WorkerMessageType.FlushCompleted },
+  ]);
 });
 
 test('it drops the connection on a disconnect message', async () => {

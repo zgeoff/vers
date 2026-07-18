@@ -5,6 +5,7 @@ import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { waitFor } from '@vers/test-utils';
 import { HttpResponse, http } from 'msw';
+import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
@@ -1031,6 +1032,73 @@ test('it sends a fresh traceparent with each flush and reports its trace id on r
     'broken-chain-link',
     traceID,
   );
+});
+
+test('it delivers queued non-terminal checkpoints when flushNow is called', async () => {
+  let capturedFlush: (() => Promise<void>) | undefined;
+
+  const ctx = setupTest({
+    scheduleFlush: (flush) => {
+      capturedFlush = flush;
+    },
+  });
+
+  const track = mock<(input: unknown) => void>();
+
+  // the partial ack leaves the second checkpoint queued, so a progress-window callback that
+  // still believed itself scheduled would re-send it — the no-op assertion below depends on it
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'flush-now-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('flush-now-activity', createMockProgressCheckpoint());
+  await ctx.submitter.submit('flush-now-activity', createMockProgressCheckpoint());
+
+  expect(track).not.toHaveBeenCalled();
+
+  await ctx.submitter.flushNow('flush-now-activity');
+
+  expect(track).toHaveBeenCalledExactlyOnceWith({
+    activityID: 'flush-now-activity',
+    checkpoints: expect.toBeArrayOfSize(2),
+    expectedHead: 0,
+  });
+
+  // the superseded progress-window callback is a no-op: firing it re-sends nothing even though
+  // the queue still holds the unconfirmed checkpoint
+  invariant(capturedFlush !== undefined, 'expected the progress window to have been scheduled');
+
+  await capturedFlush();
+
+  expect(track).toHaveBeenCalledOnce();
+});
+
+test('it resolves flushNow for an unknown activity without a request', async () => {
+  const ctx = setupTest();
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.flushNow('never-registered');
+
+  expect(track).not.toHaveBeenCalled();
 });
 
 test('it sends no trace header for a call made without per-call context', async () => {

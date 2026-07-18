@@ -42,6 +42,7 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
 function buildSpySubmitter(): CheckpointSubmitter {
   return {
     flushHeld: mock(() => Promise.resolve()),
+    flushNow: mock(() => Promise.resolve()),
     registerActivity: mock(() => Promise.resolve()),
     submit: mock(() => Promise.resolve<number | undefined>(undefined)),
   };

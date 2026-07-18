@@ -230,6 +230,7 @@ test('it rebuilds through a resync when the conflict row already has confirmed c
 
   const submitter: CheckpointSubmitter = {
     flushHeld: () => Promise.resolve(),
+    flushNow: () => Promise.resolve(),
     registerActivity,
     submit: () => Promise.resolve<number | undefined>(undefined),
   };
@@ -355,6 +356,7 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
 
   const submitter: CheckpointSubmitter = {
     flushHeld: () => Promise.resolve(),
+    flushNow: () => Promise.resolve(),
     registerActivity: () => Promise.resolve(),
     submit: () => {
       const version = nextVersion;

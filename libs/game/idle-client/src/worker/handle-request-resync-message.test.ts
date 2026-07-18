@@ -407,6 +407,7 @@ test('it reports a fault to the error backend and broadcasts a failed status whe
     connections: [connection.port],
     submitter: {
       flushHeld: () => Promise.reject(new Error('held flush exploded')),
+      flushNow: () => Promise.resolve(),
       registerActivity: () => Promise.resolve(),
       submit: () => Promise.resolve(undefined),
     },
