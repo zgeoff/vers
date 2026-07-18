@@ -89,4 +89,6 @@ problems needing fleet action), `elapsed-time` (replay duration cap tripped — 
 Each recording's log line carries the raw numbers behind it (heads, checkpoint counts, sim version).
 
 The `vers verification lag` threshold monitor watches `vers.verification.lag` and notifies
-`vers alarms`.
+`vers alarms`, alerting on no data as well as on the threshold: the gauge exports from
+`service-replay`'s always-warm machine (see [deployment](./deployment.md)), so a silent dataset
+means the exporter or the process around it is down — never a healthy quiet system.
