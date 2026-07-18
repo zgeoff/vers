@@ -343,7 +343,11 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
   // checkpoint-0 sim
   const landed = db.checkpointCollection.findMany((q) => q.where({ activityID: activity.id }));
 
-  expect(landed.map((row) => row.payload.seed)).toStrictEqual(['aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072']);
+  expect(landed.map((row) => row.payload.seed)).toMatchInlineSnapshot(`
+    [
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072",
+    ]
+  `);
 });
 
 test('it attaches a fresh login live without broadcasting any catch-up status', async () => {

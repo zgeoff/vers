@@ -9,15 +9,29 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
     seed: 'a'.repeat(32),
   });
 
-  expect(encounter.waves.map((wave) => wave.length)).toStrictEqual([5, 5, 5, 6, 6]);
+  expect(encounter.waves.map((wave) => wave.length)).toMatchInlineSnapshot(`
+    [
+      5,
+      5,
+      5,
+      6,
+      6,
+    ]
+  `);
 
-  expect(encounter.waves[0]?.[0]).toStrictEqual({
-    level: 1,
-    life: 20,
-    name: 'World Map Skirmisher',
-    primaryAttack: { maxDamage: 4, minDamage: 1, speed: 0.7 },
-    xp: 8,
-  });
+  expect(encounter.waves[0]?.[0]).toMatchInlineSnapshot(`
+    {
+      "level": 1,
+      "life": 20,
+      "name": "World Map Skirmisher",
+      "primaryAttack": {
+        "maxDamage": 4,
+        "minDamage": 1,
+        "speed": 0.7,
+      },
+      "xp": 8,
+    }
+  `);
 });
 
 test('it builds identical encounters from equal content, node, and seed', () => {

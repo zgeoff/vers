@@ -7,86 +7,129 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
   const seed = Uint8Array.from({ length: 32 }, () => 22);
   const stream = buildRollStream(seed, 'test/domain');
 
-  expect(rollEncounterFromStream(encounterContentV1, { difficulty: 1 }, stream)).toStrictEqual({
-    waves: [
-      [
-        {
-          level: 1,
-          life: 30,
-          name: 'World Map Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        },
-        {
-          level: 1,
-          life: 20,
-          name: 'World Map Skirmisher',
-          primaryAttack: { maxDamage: 4, minDamage: 1, speed: 0.7 },
-          xp: 8,
-        },
-        {
-          level: 1,
-          life: 30,
-          name: 'World Map Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        },
+  expect(rollEncounterFromStream(encounterContentV1, { difficulty: 1 }, stream))
+    .toMatchInlineSnapshot(`
+    {
+      "waves": [
+        [
+          {
+            "level": 1,
+            "life": 30,
+            "name": "World Map Enemy",
+            "primaryAttack": {
+              "maxDamage": 3,
+              "minDamage": 1,
+              "speed": 0.5,
+            },
+            "xp": 10,
+          },
+          {
+            "level": 1,
+            "life": 20,
+            "name": "World Map Skirmisher",
+            "primaryAttack": {
+              "maxDamage": 4,
+              "minDamage": 1,
+              "speed": 0.7,
+            },
+            "xp": 8,
+          },
+          {
+            "level": 1,
+            "life": 30,
+            "name": "World Map Enemy",
+            "primaryAttack": {
+              "maxDamage": 3,
+              "minDamage": 1,
+              "speed": 0.5,
+            },
+            "xp": 10,
+          },
+        ],
+        [
+          {
+            "level": 1,
+            "life": 20,
+            "name": "World Map Skirmisher",
+            "primaryAttack": {
+              "maxDamage": 4,
+              "minDamage": 1,
+              "speed": 0.7,
+            },
+            "xp": 8,
+          },
+          {
+            "level": 1,
+            "life": 20,
+            "name": "World Map Skirmisher",
+            "primaryAttack": {
+              "maxDamage": 4,
+              "minDamage": 1,
+              "speed": 0.7,
+            },
+            "xp": 8,
+          },
+          {
+            "level": 1,
+            "life": 30,
+            "name": "World Map Enemy",
+            "primaryAttack": {
+              "maxDamage": 3,
+              "minDamage": 1,
+              "speed": 0.5,
+            },
+            "xp": 10,
+          },
+        ],
+        [
+          {
+            "level": 1,
+            "life": 30,
+            "name": "World Map Enemy",
+            "primaryAttack": {
+              "maxDamage": 3,
+              "minDamage": 1,
+              "speed": 0.5,
+            },
+            "xp": 10,
+          },
+          {
+            "level": 1,
+            "life": 30,
+            "name": "World Map Enemy",
+            "primaryAttack": {
+              "maxDamage": 3,
+              "minDamage": 1,
+              "speed": 0.5,
+            },
+            "xp": 10,
+          },
+          {
+            "level": 1,
+            "life": 30,
+            "name": "World Map Enemy",
+            "primaryAttack": {
+              "maxDamage": 3,
+              "minDamage": 1,
+              "speed": 0.5,
+            },
+            "xp": 10,
+          },
+          {
+            "level": 1,
+            "life": 20,
+            "name": "World Map Skirmisher",
+            "primaryAttack": {
+              "maxDamage": 4,
+              "minDamage": 1,
+              "speed": 0.7,
+            },
+            "xp": 8,
+          },
+        ],
       ],
-      [
-        {
-          level: 1,
-          life: 20,
-          name: 'World Map Skirmisher',
-          primaryAttack: { maxDamage: 4, minDamage: 1, speed: 0.7 },
-          xp: 8,
-        },
-        {
-          level: 1,
-          life: 20,
-          name: 'World Map Skirmisher',
-          primaryAttack: { maxDamage: 4, minDamage: 1, speed: 0.7 },
-          xp: 8,
-        },
-        {
-          level: 1,
-          life: 30,
-          name: 'World Map Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        },
-      ],
-      [
-        {
-          level: 1,
-          life: 30,
-          name: 'World Map Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        },
-        {
-          level: 1,
-          life: 30,
-          name: 'World Map Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        },
-        {
-          level: 1,
-          life: 30,
-          name: 'World Map Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        },
-        {
-          level: 1,
-          life: 20,
-          name: 'World Map Skirmisher',
-          primaryAttack: { maxDamage: 4, minDamage: 1, speed: 0.7 },
-          xp: 8,
-        },
-      ],
-    ],
-  });
+    }
+  `);
 });
 
 test('it rolls identical encounters from equal content, node, and stream inputs', () => {

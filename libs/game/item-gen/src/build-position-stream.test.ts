@@ -14,7 +14,14 @@ test('it reproduces the frozen golden draws for a reward coordinate', () => {
 
   const draws = Array.from({ length: 4 }, () => stream.rollRange(0, 9999));
 
-  expect(draws).toStrictEqual([9644, 2641, 3318, 1744]);
+  expect(draws).toMatchInlineSnapshot(`
+    [
+      9644,
+      2641,
+      3318,
+      1744,
+    ]
+  `);
 });
 
 test('it reproduces the frozen golden draws for a craft position', () => {
@@ -26,7 +33,14 @@ test('it reproduces the frozen golden draws for a craft position', () => {
 
   const draws = Array.from({ length: 4 }, () => stream.rollRange(0, 9999));
 
-  expect(draws).toStrictEqual([4500, 4851, 6330, 8490]);
+  expect(draws).toMatchInlineSnapshot(`
+    [
+      4500,
+      4851,
+      6330,
+      8490,
+    ]
+  `);
 });
 
 test('it reproduces identical draws when rebuilt from equal inputs', () => {
@@ -54,14 +68,19 @@ test('it rejects an empty key', () => {
 });
 
 test('it diverges under a different key', () => {
-  const stream = buildPositionStream(hexToBytes('22'.repeat(32)), {
+  const position = {
     kind: 'reward',
     avatarID: 'avatar-1',
     scopeType: 'world_map_node',
     scopeID: 'node-1',
     chainIndex: 3,
     ordinal: 0,
-  });
+  } as const;
 
-  expect(stream.rollRange(0, 9999)).toBe(8747);
+  const first = buildPositionStream(hexToBytes('11'.repeat(32)), position);
+  const second = buildPositionStream(hexToBytes('22'.repeat(32)), position);
+
+  expect(Array.from({ length: 4 }, () => second.rollRange(0, 9999))).not.toStrictEqual(
+    Array.from({ length: 4 }, () => first.rollRange(0, 9999)),
+  );
 });
