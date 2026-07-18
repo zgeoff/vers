@@ -1,6 +1,6 @@
 import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
-import type { ActivityFailureAction, Simulation } from '@vers/idle-core';
+import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createRequestResyncMessage } from './create-request-resync-message';
@@ -55,7 +55,7 @@ export async function runContinuation(
     }
 
     if (row.id === activity.id) {
-      setPendingContinuation(context, activity, simulation.failureAction);
+      setPendingContinuation(context, activity);
     }
 
     await simulation.stopActivity();
@@ -72,7 +72,7 @@ export async function runContinuation(
   context.setSimulation(null);
 
   if (!isDefinedError(error)) {
-    setPendingContinuation(context, activity, simulation.failureAction);
+    setPendingContinuation(context, activity);
     emitConnectionStatus(context, false);
   }
 }
@@ -95,15 +95,10 @@ async function startContinuationFrom(
   });
 }
 
-function setPendingContinuation(
-  context: WorkerContext,
-  activity: Readonly<ActivityData>,
-  failureAction: ActivityFailureAction,
-): void {
+function setPendingContinuation(context: WorkerContext, activity: Readonly<ActivityData>): void {
   context.setPendingContinuation({
     activityID: activity.id,
     avatarID: activity.avatarID,
-    failureAction,
     scopeID: activity.scopeID,
     scopeType: activity.scopeType,
   });

@@ -2,7 +2,7 @@ import { expect, mock, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
-import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
+import { createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { createTestAccessToken, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
@@ -147,7 +147,6 @@ test('it records a pending continuation on a transport failure', async () => {
   expect(context.getPendingContinuation()).toStrictEqual({
     activityID: previousActivity.id,
     avatarID: previousActivity.avatarID,
-    failureAction: ActivityFailureAction.Retry,
     scopeID: previousActivity.scopeID,
     scopeType: previousActivity.scopeType,
   });
@@ -172,7 +171,6 @@ test('it stops the simulation and records a pending continuation on a same-row C
   expect(context.getPendingContinuation()).toStrictEqual({
     activityID: activity.id,
     avatarID: activity.avatarID,
-    failureAction: ActivityFailureAction.Retry,
     scopeID: activity.scopeID,
     scopeType: activity.scopeType,
   });

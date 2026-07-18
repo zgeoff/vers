@@ -732,16 +732,15 @@ test('it keeps the dirty flag when the resync push to the server fails', async (
   });
 });
 
-test('it starts a fresh row, installs a live simulation with the pending failure action, and clears the pending continuation', async () => {
+test("it starts a fresh row, installs a live simulation with the worker's failure action, and clears the pending continuation", async () => {
   const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const avatar = await db.avatarCollection.create({ failureAction: 'retry', userID: user.id });
   const stopped = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
 
   const ctx = await setupTest({
     pendingContinuation: {
       activityID: stopped.id,
       avatarID: avatar.id,
-      failureAction: ActivityFailureAction.Retry,
       scopeID: stopped.scopeID,
       scopeType: stopped.scopeType,
     },
@@ -770,6 +769,57 @@ test('it starts a fresh row, installs a live simulation with the pending failure
   expect(ctx.context.getPendingContinuation()).toBeNull();
 });
 
+test('it adopts a fresh row another session raced in ahead of the continuation and clears the pending continuation', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const stopped = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+
+  // the racing row lands between the resync's progress fetch and its start call, so it must not
+  // exist when the plan is computed — the scripted handler mints it at start time and answers
+  // CONFLICT with it, exactly as the real service would
+  server.use(
+    mockActivityService.startActivity.handler(async (opts) => {
+      const racing = await db.activityCollection.create({
+        appendedHead: 0,
+        avatarID: avatar.id,
+        status: 'active',
+      });
+
+      throw opts.errors.CONFLICT({ data: { activity: racing } });
+    }),
+  );
+
+  const ctx = await setupTest({
+    pendingContinuation: {
+      activityID: stopped.id,
+      avatarID: avatar.id,
+      scopeID: stopped.scopeID,
+      scopeType: stopped.scopeType,
+    },
+    userID: user.id,
+  });
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  const racing = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: avatar.id, status: 'active' }),
+  );
+
+  invariant(racing !== undefined, 'expected the scripted handler to mint the racing row');
+
+  const simulation = ctx.context.getSimulation();
+
+  invariant(simulation !== null, 'expected the racing row to be adopted into a live simulation');
+  expect(simulation.activity?.id).toBe(racing.id);
+  expect(ctx.context.getActivity()).toStrictEqual(racing);
+  expect(ctx.context.getPendingContinuation()).toBeNull();
+});
+
 test('it halts at the boundary and keeps the pending continuation when the offline budget is spent', async () => {
   const user = await db.userCollection.create({});
   const avatar = await db.avatarCollection.create({ userID: user.id });
@@ -778,7 +828,6 @@ test('it halts at the boundary and keeps the pending continuation when the offli
   const pending: PendingContinuation = {
     activityID: stopped.id,
     avatarID: avatar.id,
-    failureAction: ActivityFailureAction.Retry,
     scopeID: stopped.scopeID,
     scopeType: stopped.scopeType,
   };
@@ -820,7 +869,6 @@ test('it keeps the pending continuation and reports offline when starting the co
   const pending: PendingContinuation = {
     activityID: stopped.id,
     avatarID: avatar.id,
-    failureAction: ActivityFailureAction.Retry,
     scopeID: stopped.scopeID,
     scopeType: stopped.scopeType,
   };
@@ -854,7 +902,6 @@ test('it clears the pending continuation and reports the resync failure status o
   const pending: PendingContinuation = {
     activityID: stopped.id,
     avatarID: avatar.id,
-    failureAction: ActivityFailureAction.Retry,
     scopeID: stopped.scopeID,
     scopeType: stopped.scopeType,
   };

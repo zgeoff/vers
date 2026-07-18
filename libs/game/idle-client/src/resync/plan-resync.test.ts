@@ -1,7 +1,6 @@
 import { expect, test } from 'bun:test';
 import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
-import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockLatestActivityProgress } from '../test-utils/factories/create-mock-latest-activity-progress';
 import { planResync } from './plan-resync';
 
@@ -35,7 +34,6 @@ test('it plans nothing for a stopped activity when the pending continuation name
     pendingContinuation: {
       activityID: 'a-different-activity',
       avatarID: activity.avatarID,
-      failureAction: ActivityFailureAction.Retry,
       scopeID: activity.scopeID,
       scopeType: activity.scopeType,
     },
@@ -52,7 +50,6 @@ test('it continues a stopped activity matching the pending continuation', () => 
     pendingContinuation: {
       activityID: activity.id,
       avatarID: activity.avatarID,
-      failureAction: ActivityFailureAction.Retry,
       scopeID: activity.scopeID,
       scopeType: activity.scopeType,
     },
@@ -70,7 +67,6 @@ test('it rebases a capped activity over a matching pending continuation', () => 
     pendingContinuation: {
       activityID: activity.id,
       avatarID: activity.avatarID,
-      failureAction: ActivityFailureAction.Retry,
       scopeID: activity.scopeID,
       scopeType: activity.scopeType,
     },

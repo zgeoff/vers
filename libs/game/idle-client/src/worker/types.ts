@@ -8,14 +8,13 @@ import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
  * A continuation `runContinuation` wanted to start but couldn't complete — a same-row `CONFLICT`
  * (the terminal append that closes the row is still unacknowledged) or a transport failure on its
  * own `startActivity` call. `activityID` names the row the pending intent was raised against, so a
- * resync plans `continue` only once that exact row reads closed, never a different one;
- * `failureAction` carries the dying simulation's setting forward, since it lives nowhere durable
- * once the simulation is gone.
+ * resync plans `continue` only once that exact row reads closed, never a different one. The row
+ * it eventually starts takes the worker's current failure action, not a snapshot from raise time,
+ * so a preference changed while the intent waited still applies.
  */
 export interface PendingContinuation {
   readonly activityID: string;
   readonly avatarID: string;
-  readonly failureAction: ActivityFailureAction;
   readonly scopeID: string;
   readonly scopeType: string;
 }

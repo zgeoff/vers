@@ -287,9 +287,10 @@ async function applyContinue(
   context: WorkerContext,
   plan: Extract<ResyncPlan, { kind: 'continue' }>,
 ): Promise<void> {
-  const pending = context.getPendingContinuation();
-
-  invariant(pending !== null, 'a continue plan is only reached with a pending continuation');
+  invariant(
+    context.getPendingContinuation() !== null,
+    'a continue plan is only reached with a pending continuation',
+  );
 
   if (context.getRemainingBudgetMs() <= 0) {
     emitCapStatus(context, 0, true);
@@ -306,7 +307,7 @@ async function applyContinue(
   );
 
   if (error === null) {
-    await startContinuedActivity(context, started, pending.failureAction);
+    await startContinuedActivity(context, started);
 
     context.setPendingContinuation(null);
 
@@ -317,7 +318,7 @@ async function applyContinue(
     const row = error.data.activity;
 
     if (row.appendedHead === 0 && row.id !== plan.activity.id) {
-      await startContinuedActivity(context, row, pending.failureAction);
+      await startContinuedActivity(context, row);
 
       context.setPendingContinuation(null);
 
@@ -338,9 +339,8 @@ async function applyContinue(
 async function startContinuedActivity(
   context: WorkerContext,
   row: Readonly<ActivityData>,
-  failureAction: ActivityFailureAction,
 ): Promise<void> {
-  const input = buildSimulationInput(row, { failureAction });
+  const input = buildSimulationInput(row, { failureAction: context.getFailureAction() });
 
   await context.getSubmitter().registerActivity({
     activityID: row.id,
