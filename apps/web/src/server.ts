@@ -17,6 +17,16 @@ import { withRequestTrace } from './server/with-request-trace';
 // from different working directories
 const CLIENT_ASSETS_DIRECTORY = fileURLToPath(new URL('../client', import.meta.url));
 
+// awaited so registration completes before the Sentry init below runs: the OpenTelemetry API
+// keeps only the first global tracer/context/propagator registration per process, and Sentry's own
+// OpenTelemetry bootstrap would otherwise win the race and shadow standard traceparent propagation
+if (env.OTEL_EXPORTER_OTLP_ENDPOINT !== undefined) {
+  const otelModule = await import('@vers/service-utils/otel');
+
+  otelModule.startTraceExport({ serviceName: 'app-web' });
+  otelModule.startMetricsExport({ serviceName: 'app-web' });
+}
+
 if (env.isProduction && env.SENTRY_DSN !== undefined) {
   // oxlint-disable-next-line unicorn/prefer-top-level-await -- sentry init is deliberately fire-and-forget so it never delays server startup
   void (async () => {
