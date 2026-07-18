@@ -1,9 +1,9 @@
 import { hexToBytes } from '@noble/hashes/utils.js';
-import { buildRollDigest } from '@vers/roll-crypto';
+import { buildRollDigest, buildRollStream } from '@vers/roll-crypto';
+import type { RollStream } from '@vers/roll-crypto';
 import invariant from 'tiny-invariant';
-import { buildRollStream } from './build-roll-stream';
 import { encodePositionBytes } from './encode-position-bytes';
-import type { RollPosition, RollStream } from './types';
+import type { RollPosition } from './types';
 
 const POSITION_STREAM_DOMAIN = 'vers/roll-stream/position/v1';
 

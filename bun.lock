@@ -592,6 +592,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@noble/hashes": "catalog:",
+        "tiny-invariant": "catalog:",
       },
       "devDependencies": {
         "@types/bun": "catalog:",

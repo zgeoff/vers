@@ -1,3 +1,4 @@
+import type { RollStream } from '@vers/roll-crypto';
 import invariant from 'tiny-invariant';
 import { buildAffixPool } from './build-affix-pool';
 import type {
@@ -5,7 +6,6 @@ import type {
   AffixDef,
   ItemState,
   LootTables,
-  RollStream,
   RolledAffix,
   RolledAffixes,
 } from './types';

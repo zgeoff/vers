@@ -1,18 +1,3 @@
-export interface WeightedEntry<T> {
-  readonly value: T;
-  readonly weight: number;
-}
-
-/**
- * A deterministic sequence of typed draws expanded from a single digest: equal inputs produce
- * identical draws, and a draw's byte consumption is part of the frozen contract — a degenerate
- * range (`min === max`) consumes no bytes.
- */
-export interface RollStream {
-  readonly pickWeighted: <T>(entries: ReadonlyArray<WeightedEntry<T>>) => T;
-  readonly rollRange: (min: number, max: number) => number;
-}
-
 export interface RewardCoordinate {
   readonly avatarID: string;
   readonly scopeType: string;

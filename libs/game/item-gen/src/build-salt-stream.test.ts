@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { hexToBytes } from '@noble/hashes/utils.js';
-import { buildRollStream } from './build-roll-stream';
+import { buildRollStream } from '@vers/roll-crypto';
 import { buildSaltStream } from './build-salt-stream';
 
 test('it reproduces the frozen golden draws for a fixed salt', () => {
