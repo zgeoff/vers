@@ -13,9 +13,12 @@ private, reachable only across the organization's 6PN WireGuard mesh. Postgres i
 (see [database](./database.md)); no app runs its own database, Bugsink included. `service-keys`
 holds no database connection — its state is the `ROLL_KEY_ROOTS` secret alone.
 
-Every app scales to zero. `auto_stop_machines = 'suspend'` parks an idle machine with its memory
-snapshot for sub-second wake. `app-web` keeps one machine warm (`min_machines_running = 1`) so a
-visitor never waits on a cold start; a service wakes on its first request.
+Every app scales to zero except where a warm machine is required. `auto_stop_machines = 'suspend'`
+parks an idle machine with its memory snapshot for sub-second wake, and a service wakes on its first
+request. Two apps keep one machine warm (`min_machines_running = 1`, enforced by `deploy verify`
+through the manifest's `minStartedMachines`): `app-web`, so a visitor never waits on a cold start,
+and `service-replay`, whose poll-driven worker receives no inbound requests and would otherwise stop
+claiming chains the moment its machines suspend.
 
 ## Networking
 
