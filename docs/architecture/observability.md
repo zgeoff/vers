@@ -65,7 +65,9 @@ lands with the metrics that make it observable. The conventions:
   observes.
 - Every instrument lands with its row in the registry below, in the same PR.
 
-Alerting is Axiom threshold monitors over these datasets, notifying the `vers alarms` notifier.
+Alerting is Axiom threshold monitors over these datasets, notifying the `vers alarms` notifier. The
+monitors and the notifier are managed as code in the `infra/` Pulumi program (`axiom.ts`) — a
+console edit to either is drift, reconciled by the next `pulumi up`.
 
 ## Instrument registry
 

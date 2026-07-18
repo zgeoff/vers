@@ -1,6 +1,12 @@
 import * as cloudflare from '@pulumi/cloudflare';
 import * as pulumi from '@pulumi/pulumi';
 
+export {
+  alarmsNotifierName,
+  serverErrorsMonitorName,
+  verificationLagMonitorName,
+} from './axiom.ts';
+
 const config = new pulumi.Config();
 
 const zoneId = config.require('zoneId');

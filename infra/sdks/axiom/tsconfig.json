@@ -1,0 +1,45 @@
+{
+  "compilerOptions": {
+    // Output
+    "outDir": "bin",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "stripInternal": true,
+    // Environment
+    "target": "ES2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "moduleDetection": "force",
+    "types": ["node"],
+    // Type Checking
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true
+  },
+  "files": [
+    "config/index.ts",
+    "config/vars.ts",
+    "dashboard.ts",
+    "dataset.ts",
+    "getDashboard.ts",
+    "getDataset.ts",
+    "getMonitor.ts",
+    "getNotifier.ts",
+    "getToken.ts",
+    "getUser.ts",
+    "getVirtualField.ts",
+    "index.ts",
+    "monitor.ts",
+    "notifier.ts",
+    "provider.ts",
+    "token.ts",
+    "types/index.ts",
+    "types/input.ts",
+    "types/output.ts",
+    "user.ts",
+    "utilities.ts",
+    "virtualField.ts"
+  ]
+}

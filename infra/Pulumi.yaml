@@ -3,4 +3,12 @@ runtime:
   name: nodejs
   options:
     typescript: false
-description: Cloudflare DNS for versidle.com, with Pulumi state held in Cloudflare R2.
+description:
+  Cloudflare DNS for versidle.com and Axiom alerting, with Pulumi state held in Cloudflare R2.
+packages:
+  axiom:
+    source: terraform-provider
+    version: 1.2.0
+    parameters:
+      - axiomhq/axiom
+      - 1.6.2

@@ -10,10 +10,14 @@
     "destroy": "op run --env-file=.env -- pulumi destroy"
   },
   "dependencies": {
+    "@pulumi/axiom": "file:sdks/axiom",
     "@pulumi/cloudflare": "catalog:",
     "@pulumi/pulumi": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:"
-  }
+  },
+  "trustedDependencies": [
+    "@pulumi/axiom"
+  ]
 }
