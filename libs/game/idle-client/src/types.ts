@@ -10,6 +10,7 @@ import type { ActivityFailureAction, SimulationSnapshot } from '@vers/idle-core'
 export enum ClientMessageType {
   Disconnect = 'disconnect',
   Initialize = 'initialize',
+  RequestFlush = 'request_flush',
   RequestResync = 'request_resync',
   SetActivity = 'set_activity',
   SetFailureAction = 'set_failure_action',
@@ -47,9 +48,21 @@ export interface RequestResyncMessage extends IClientMessage {
   readonly type: ClientMessageType.RequestResync;
 }
 
+/**
+ * Asks the worker to deliver an activity's queued checkpoints now — the tab is about to stop the
+ * activity server-side and would otherwise lose whatever the shared progress window still holds
+ * unsent.
+ */
+export interface RequestFlushMessage extends IClientMessage {
+  readonly activityID: string;
+  readonly requestID: string;
+  readonly type: ClientMessageType.RequestFlush;
+}
+
 export type ClientMessage =
   | DisconnectMessage
   | InitializeMessage
+  | RequestFlushMessage
   | RequestResyncMessage
   | SetActivityMessage
   | SetFailureActionMessage;
@@ -59,6 +72,7 @@ export enum WorkerMessageType {
   CheckpointFlushStalled = 'checkpoint_flush_stalled',
   CheckpointStreamInvalid = 'checkpoint_stream_invalid',
   ConnectionStatus = 'connection_status',
+  FlushCompleted = 'flush_completed',
   InitialState = 'initial_state',
   OfflineCapStatus = 'offline_cap_status',
   ResyncStatus = 'resync_status',
@@ -162,11 +176,23 @@ export interface RewardSlotsRecordedMessage extends IWorkerMessage {
   readonly version: number;
 }
 
+/**
+ * Acks one `RequestFlush` by `requestID`, sent only to the requesting port — never broadcast.
+ * Delivery doesn't guarantee the queue drained: the flush attempt it triggered is best-effort, the
+ * same as any other flush.
+ */
+export interface FlushCompletedMessage extends IWorkerMessage {
+  readonly activityID: string;
+  readonly requestID: string;
+  readonly type: WorkerMessageType.FlushCompleted;
+}
+
 export type WorkerMessage =
   | ActivityCompletedMessage
   | CheckpointFlushStalledMessage
   | CheckpointStreamInvalidMessage
   | ConnectionStatusMessage
+  | FlushCompletedMessage
   | InitialStateMessage
   | OfflineCapStatusMessage
   | ResyncStatusMessage
