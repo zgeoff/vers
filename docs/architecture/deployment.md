@@ -80,13 +80,20 @@ rolls out:
    the one database, so migration never runs per service.
 2. Two per-app matrix jobs run the deploy CLI through the `.github/actions/fly-deploy` composite
    action: `build` (`bun run deploy -- build --app <name>`) as soon as checks are green, and
-   `deploy` (`bun run deploy -- cutover --app <name>`) after `migrate` and `build`. Both matrices
-   derive from `deploy.config.ts` via a `manifest` job (the CLI's `list` command), so adding an app
-   to the manifest is the whole change. Each leg self-gates: the CLI compares HEAD against the
-   `GIT_SHA` stamped on the app's machines, so a phase lost to an earlier failure ships on the next
-   push. The `build` job orders the cutovers without gating them — one app's failed build must not
-   abandon the others' rollouts, so its own cutover leg fails alone on the missing ref.
-3. A stale build leg runs `flyctl deploy --build-only --push` on Fly's remote builder — no image
+   `deploy` (`bun run deploy -- cutover --app <name>`) after `migrate`, `build`, and the full-stack
+   suite. Both matrices derive from `deploy.config.ts` via a `manifest` job (the CLI's `list`
+   command), so adding an app to the manifest is the whole change. Each leg self-gates: the CLI
+   compares HEAD against the `GIT_SHA` stamped on the app's machines, so a phase lost to an earlier
+   failure ships on the next push. The `build` job orders the later phases without gating them
+   directly; an app's failed build leaves its ref unavailable to `stack-e2e`, whose fleet-wide
+   failure holds every cutover.
+3. Between build and cutover, the `stack-e2e` job boots every deployable image in a compose stack
+   (`apps/web-e2e/docker-compose.stack.yml`) — the eight services, app-web's production image,
+   postgres, and a capture-only Resend stub — resolving refs with the CLI's `images` command,
+   migrating the stack's own database, and driving the signup, verification, onboarding, and login
+   journeys (`apps/web-e2e/stack/`) against it. This gate is fleet-wide by design: a combined state
+   that fails its journeys ships for no app.
+4. A stale build leg runs `flyctl deploy --build-only --push` on Fly's remote builder — no image
    blob crosses from the GitHub runner — pushing the image as
    `registry.fly.io/<app>:deployment-<sha>`; both phases derive the tag from the commit, so no ref
    travels between the jobs, and re-running a leg overwrites its own tag instead of minting a new
@@ -97,16 +104,16 @@ rolls out:
    rollout; `images` prints each buildable app's deployable ref for HEAD (the commit-derived tag
    when stale, the newest recorded release otherwise, the fleet's resolved image for an app with no
    recorded release yet) as JSON.
-4. A rollout whose probes pass is recorded in the `releases` table (app, commit SHA, image ref, the
+5. A rollout whose probes pass is recorded in the `releases` table (app, commit SHA, image ref, the
    digest the fleet resolved it to) — the newest row per app is that app's rollback target. The
    cutover legs require `DATABASE_URL` for this record.
-5. A rollout whose probes fail rolls back: the CLI redeploys the app's newest recorded release,
+6. A rollout whose probes fail rolls back: the CLI redeploys the app's newest recorded release,
    restamping that release's own `GIT_SHA` so the fleet reads stale against HEAD and the next push
    ships the fix. The leg still fails — rollback restores service, it never greens the run. A failed
    rollout is never recorded, and an app with no recorded release yet is left serving the broken
    release, reported in the leg's log. Probes that fail on the restored release too mean the fault
    predates the rollout; the leg reports that and leaves the fleet on the restored release.
-6. `verify-fleet` runs on every green push — even when every deploy leg skipped — and asserts every
+7. `verify-fleet` runs on every green push — even when every deploy leg skipped — and asserts every
    manifest app is online and current, catching an app at zero machines or a fleet behind HEAD. A
    rolled-back app reads stale there by design.
 

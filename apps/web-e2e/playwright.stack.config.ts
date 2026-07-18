@@ -1,0 +1,31 @@
+import { defineConfig, devices } from '@playwright/test';
+
+const baseURL = process.env['STACK_BASE_URL'] ?? 'http://localhost:3200';
+
+/**
+ * The full-stack suite: journeys against the real service images the deploy pipeline is about to
+ * promote, booted by `docker-compose.stack.yml` before playwright runs — no webServer entries,
+ * the harness owns the stack lifecycle. Specs create their own unique accounts, so a retry never
+ * replays against state a failed attempt mutated.
+ */
+export default defineConfig({
+  expect: {
+    timeout: 10 * 1000,
+  },
+  fullyParallel: true,
+  outputDir: '.stack-test-results',
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+  retries: process.env['CI'] === undefined ? 0 : 1,
+  testDir: './stack',
+  timeout: 60 * 1000,
+  use: {
+    baseURL,
+    screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
+  },
+});

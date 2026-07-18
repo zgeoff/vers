@@ -216,18 +216,99 @@ jobs:
           args: build --app ${{ matrix.app }}
           fly-api-token: ${{ secrets.FLY_API_TOKEN }}
 
+  stack-e2e:
+    name: Full-stack E2E
+    needs: [checks, manifest, build]
+    # the pre-cutover gate: journeys run against the exact images the cutover
+    # is about to promote — every app's ref resolves to this commit's build
+    # when stale or the newest recorded release otherwise, so the suite always
+    # exercises the fleet main is about to become. A failed build leg fails
+    # this job on the missing image instead of skipping it.
+    if:
+      ${{ !cancelled() && needs.checks.result == 'success' && needs.manifest.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment: production
+    # image pulls plus stack boot plus journeys is ~6 minutes at worst
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # ref resolution runs turbo/git against each app's deployed SHA,
+          # which can be many pushes old — the CLI needs full history
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Resolve deployable image refs
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          bun scripts/src/bin/deploy.ts images | jq -r \
+            'to_entries[] | "IMAGE_\(.key | ascii_upcase | gsub("-";"_"))=\(.value)"' \
+            >> "$GITHUB_ENV"
+
+      - name: Authenticate Docker to the Fly registry
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl auth docker
+
+      # postgres first, migrated before any service boots — a service must
+      # never observe the unmigrated schema, even transiently
+      - name: Boot and migrate the stack database
+        env:
+          DATABASE_URL: postgresql://admin:password@localhost:5533/vers
+        run: |
+          docker compose -f apps/web-e2e/docker-compose.stack.yml up -d --quiet-pull --wait postgres resend-stub
+          bun run --cwd libs/data/db db:migrate
+
+      - name: Boot the stack
+        run: docker compose -f apps/web-e2e/docker-compose.stack.yml up -d --quiet-pull --wait
+
+      - name: Install E2E browsers
+        run: bun run playwright install --with-deps --only-shell chromium
+
+      - name: Full-stack journeys
+        id: journeys
+        run: bun run --cwd apps/web-e2e e2e:stack
+
+      - name: Dump stack logs on failure
+        if: ${{ failure() }}
+        run: docker compose -f apps/web-e2e/docker-compose.stack.yml logs --tail 100
+
+      - name: Upload results of failed journeys
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        # gate on the journeys step so an earlier failure doesn't upload an empty artifact
+        if: ${{ failure() && steps.journeys.outcome == 'failure' }}
+        with:
+          name: stack-playwright-results
+          include-hidden-files: true
+          path: apps/web-e2e/.stack-test-results
+
   deploy:
     name: Deploy
-    needs: [checks, migrate, manifest, build]
-    # cut over after the build phase completes and the shared schema is
-    # current. The build job is an ordering edge, not a gate: its matrix
-    # result is the worst leg across all apps, and one app's failed build must
-    # not abandon the others' rollouts — an app whose own build failed cuts
-    # over to a missing ref and its leg fails alone. Legs self-gate on
-    # staleness exactly as the build phase does.
+    needs: [checks, migrate, manifest, build, stack-e2e]
+    # cut over after the shared schema is current and the full-stack suite
+    # has passed against the images being promoted. The build job is an
+    # ordering edge only — its matrix result never gates this job directly —
+    # but any missing image surfaces as a stack-e2e failure, and that gate is
+    # deliberately fleet-wide: a combined state that fails its journeys, or
+    # can't even boot, ships for no app. Legs self-gate on staleness exactly
+    # as the build phase does.
     if:
       ${{ !cancelled() && needs.checks.result == 'success' && needs.migrate.result == 'success' &&
-      needs.manifest.result == 'success' }}
+      needs.manifest.result == 'success' && needs.stack-e2e.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
     # bluegreen cutover plus probes is ~3 minutes at worst; headroom without
@@ -297,7 +378,7 @@ jobs:
 
   alert:
     name: Alert on failure
-    needs: [checks, migrate, manifest, build, deploy, verify-fleet]
+    needs: [checks, migrate, manifest, build, stack-e2e, deploy, verify-fleet]
     # a red main pipeline pages the team channel: agent-driven pushes mean
     # nobody is necessarily watching the Actions tab, and a failed deploy or
     # fleet verification left unnoticed is exactly how version skew lingers
@@ -313,8 +394,9 @@ jobs:
             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           FAILED: >-
             checks=${{ needs.checks.result }}, migrate=${{ needs.migrate.result }}, manifest=${{
-            needs.manifest.result }}, build=${{ needs.build.result }}, deploy=${{
-            needs.deploy.result }}, verify-fleet=${{ needs.verify-fleet.result }}
+            needs.manifest.result }}, build=${{ needs.build.result }}, stack-e2e=${{
+            needs.stack-e2e.result }}, deploy=${{ needs.deploy.result }}, verify-fleet=${{
+            needs.verify-fleet.result }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           if [ -z "${WEBHOOK_URL}" ]; then

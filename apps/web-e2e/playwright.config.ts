@@ -26,6 +26,10 @@ export default defineConfig({
   },
   fullyParallel: true,
   outputDir: '.test-results',
+
+  // the full-stack suite under ./stack runs on its own config against real services — this
+  // config's mock-backed webServers must never pick those specs up
+  testDir: './src',
   projects: [
     {
       name: 'chromium',
