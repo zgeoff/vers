@@ -9,6 +9,7 @@ test('it derives the activity id, avatar id, seed, and build snapshot from the s
     avatarID: 'avatar_1',
     buildSnapshot: { level: 3, xp: 450 },
     contentVersion: CURRENT_CONTENT_VERSION,
+    encounterNode: { difficulty: 1 },
     id: 'act_1',
     seed: 'aa'.repeat(16),
   });
@@ -26,6 +27,7 @@ test('it builds the same input for the same source row', () => {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: CURRENT_CONTENT_VERSION,
+    encounterNode: { difficulty: 1 },
     id: 'act_1',
     seed: 'bb'.repeat(16),
   };
@@ -33,11 +35,36 @@ test('it builds the same input for the same source row', () => {
   expect(buildSimulationInput(source)).toStrictEqual(buildSimulationInput(source));
 });
 
+test('it derives the activity difficulty and encounter from the source encounter node', () => {
+  const low = buildSimulationInput({
+    avatarID: 'avatar_1',
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: CURRENT_CONTENT_VERSION,
+    encounterNode: { difficulty: 1 },
+    id: 'act_1',
+    seed: 'bb'.repeat(16),
+  });
+
+  const high = buildSimulationInput({
+    avatarID: 'avatar_1',
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: CURRENT_CONTENT_VERSION,
+    encounterNode: { difficulty: 5 },
+    id: 'act_1',
+    seed: 'bb'.repeat(16),
+  });
+
+  expect(low.activity.difficulty).toBe(1);
+  expect(high.activity.difficulty).toBe(5);
+  expect(low.activity.encounter).not.toStrictEqual(high.activity.encounter);
+});
+
 test('it returns a fresh encounter and weapon on every call, never a shared reference', () => {
   const source = {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: CURRENT_CONTENT_VERSION,
+    encounterNode: { difficulty: 1 },
     id: 'act_1',
     seed: 'bb'.repeat(16),
   };
@@ -61,6 +88,7 @@ test('it rejects an unknown content version', () => {
       avatarID: 'avatar_1',
       buildSnapshot: { level: 1, xp: 0 },
       contentVersion: 'nope',
+      encounterNode: { difficulty: 1 },
       id: 'act_1',
       seed: 'dd'.repeat(16),
     }),
@@ -73,6 +101,7 @@ test('it honors a failureAction override', () => {
       avatarID: 'avatar_1',
       buildSnapshot: { level: 1, xp: 0 },
       contentVersion: CURRENT_CONTENT_VERSION,
+      encounterNode: { difficulty: 1 },
       id: 'act_1',
       seed: 'cc'.repeat(16),
     },

@@ -11,6 +11,7 @@ export interface SimulationInputSource {
   readonly avatarID: string;
   readonly buildSnapshot: { readonly level: number; readonly xp: number };
   readonly contentVersion: string;
+  readonly encounterNode: { readonly difficulty: number };
   readonly id: string;
   readonly seed: string;
 }
@@ -23,18 +24,12 @@ export interface BuildSimulationInputOptions {
 }
 
 /**
- * The node an encounter derives against; constant until a node-content service exists to author
- * real per-node difficulty and pool selection.
- */
-const PLACEHOLDER_ENCOUNTER_NODE = { difficulty: 1 };
-
-/**
  * Builds the engine's `ActivityInput`/`AvatarData` from an activity row's stamped seed, content
- * version, and build snapshot. The client and the verifier both call this from the same activity
- * row, and both derive against the identical placeholder node descriptor, so the resolved encounter
- * — and the stream it drives — is byte-identical on both sides. Returns a fresh placeholder weapon
- * object on every call: the engine mutates its input in place, so a caller running several
- * simulations from one shared literal would have them corrupt each other.
+ * version, build snapshot, and resolved encounter node. The client and the verifier both call this
+ * from the same activity row, so the resolved encounter — and the stream it drives — is
+ * byte-identical on both sides. Returns a fresh placeholder weapon object on every call: the engine
+ * mutates its input in place, so a caller running several simulations from one shared literal would
+ * have them corrupt each other.
  */
 export function buildSimulationInput(
   source: Readonly<SimulationInputSource>,
@@ -44,13 +39,13 @@ export function buildSimulationInput(
 
   const encounter = buildEncounter({
     content,
-    node: PLACEHOLDER_ENCOUNTER_NODE,
+    node: source.encounterNode,
     seed: source.seed,
   });
 
   return {
     activity: {
-      difficulty: PLACEHOLDER_ENCOUNTER_NODE.difficulty,
+      difficulty: source.encounterNode.difficulty,
       encounter,
       failureAction: options?.failureAction ?? ActivityFailureAction.Abort,
       id: source.id,
