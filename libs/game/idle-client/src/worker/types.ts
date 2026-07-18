@@ -5,6 +5,22 @@ import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
 
 /**
+ * A continuation `runContinuation` wanted to start but couldn't complete — a same-row `CONFLICT`
+ * (the terminal append that closes the row is still unacknowledged) or a transport failure on its
+ * own `startActivity` call. `activityID` names the row the pending intent was raised against, so a
+ * resync plans `continue` only once that exact row reads closed, never a different one;
+ * `failureAction` carries the dying simulation's setting forward, since it lives nowhere durable
+ * once the simulation is gone.
+ */
+export interface PendingContinuation {
+  readonly activityID: string;
+  readonly avatarID: string;
+  readonly failureAction: ActivityFailureAction;
+  readonly scopeID: string;
+  readonly scopeType: string;
+}
+
+/**
  * Accessors over the runtime's closure state, threaded to every message and simulation event
  * handler. `connections` is exposed read-only — `removeConnection` is the one mutation a handler
  * needs. `getSubmitter` and `getClient` always return the same instance: both exist for the
@@ -28,6 +44,12 @@ export interface WorkerContext {
    * the worker's lifetime — a live simulation mirrors it, it never reads back from one.
    */
   readonly getFailureAction: () => ActivityFailureAction;
+
+  /**
+   * The continuation intent a resync should honor once its target row reads closed — `null` when
+   * no continuation is outstanding.
+   */
+  readonly getPendingContinuation: () => PendingContinuation | null;
 
   /**
    * The worker's conservative view of the avatar's offline-progress budget: the cap minus the
@@ -80,6 +102,7 @@ export interface WorkerContext {
   readonly setFailureAction: (action: ActivityFailureAction) => void;
   readonly setFailureActionDirty: (dirty: boolean) => void;
   readonly setFailureActionPushInFlight: (inFlight: boolean) => void;
+  readonly setPendingContinuation: (pending: PendingContinuation | null) => void;
   readonly setResyncAvatarID: (avatarID: string) => void;
   readonly setResyncInFlight: (inFlight: boolean) => void;
   readonly setSimulation: (simulation: null | Simulation) => void;

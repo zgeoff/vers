@@ -17,7 +17,7 @@ import { handleClientMessage } from './handle-client-message';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { reportWorkerFault } from './report-worker-fault';
 import { runSimulation } from './run-simulation';
-import type { WorkerContext } from './types';
+import type { PendingContinuation, WorkerContext } from './types';
 
 export interface WorkerRuntime {
   readonly connections: ReadonlySet<MessagePort>;
@@ -52,6 +52,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let stopped = false;
   let lastFrameTime = performance.now();
   let accumulator = 0;
+  let pendingContinuation: PendingContinuation | null = null;
   let resyncAvatarID: string | null = null;
   let resyncInFlight = false;
   let failureAction: ActivityFailureAction = ActivityFailureAction.Abort;
@@ -115,6 +116,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     getActivity: () => activity,
     getClient: () => client,
     getFailureAction: () => failureAction,
+    getPendingContinuation: () => pendingContinuation,
     getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
     getResyncAvatarID: () => resyncAvatarID,
     getRewardSlotLedger: () => ({
@@ -150,6 +152,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
+    },
+    setPendingContinuation: (pending) => {
+      pendingContinuation = pending;
     },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
@@ -250,8 +255,10 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
         await submitter.flushHeld();
 
-        if (context.getSimulation() === null && resyncAvatarID !== null) {
-          await handleRequestResyncMessage(context, createRequestResyncMessage(resyncAvatarID));
+        const avatarID = resyncAvatarID ?? pendingContinuation?.avatarID ?? null;
+
+        if (context.getSimulation() === null && avatarID !== null) {
+          await handleRequestResyncMessage(context, createRequestResyncMessage(avatarID));
         }
       } catch (error) {
         reportWorkerFault('reconnect', error);

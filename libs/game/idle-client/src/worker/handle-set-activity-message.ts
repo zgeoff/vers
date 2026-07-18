@@ -29,6 +29,7 @@ export async function handleSetActivityMessage(
   });
 
   context.setActivity(message.activity);
+  context.setPendingContinuation(null);
   simulation.startActivity(input.avatar, input.activity);
 
   await registration;
