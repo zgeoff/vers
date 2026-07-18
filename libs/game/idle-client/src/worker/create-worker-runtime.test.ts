@@ -218,18 +218,24 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
 
   connection.post({ activity, type: ClientMessageType.SetActivity });
 
-  await waitFor(() => {
-    // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
-    // idle frame, so the wait just re-arms the next one until it lands on a live tick
-    clock.jump(65_000);
+  await waitFor(
+    () => {
+      // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
+      // idle frame, so the wait just re-arms the next one until it lands on a live tick
+      clock.jump(65_000);
 
-    const minted = db.activityCollection.findFirst((q) =>
-      q.where({ avatarID: avatar.id, status: 'active' }),
-    );
+      const minted = db.activityCollection.findFirst((q) =>
+        q.where({ avatarID: avatar.id, status: 'active' }),
+      );
 
-    invariant(minted !== undefined, 'expected the same-row CONFLICT resync to mint a fresh row');
-    expect(minted.id).not.toBe(activity.id);
-  });
+      invariant(minted !== undefined, 'expected the same-row CONFLICT resync to mint a fresh row');
+      expect(minted.id).not.toBe(activity.id);
+    },
+
+    // the tick loop paces itself on real timers between each of the many timesteps this jump
+    // spans, so a loaded runner can need several times the default budget to land a live tick
+    { timeoutMs: 5000 },
+  );
 
   const closed = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
 
@@ -275,16 +281,22 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
 
   connection.post({ activity, type: ClientMessageType.SetActivity });
 
-  await waitFor(() => {
-    // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
-    // idle frame, so the wait just re-arms the next one until it lands on a live tick
-    clock.jump(65_000);
+  await waitFor(
+    () => {
+      // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
+      // idle frame, so the wait just re-arms the next one until it lands on a live tick
+      clock.jump(65_000);
 
-    expect(connection.received).toPartiallyContain({
-      online: false,
-      type: WorkerMessageType.ConnectionStatus,
-    });
-  });
+      expect(connection.received).toPartiallyContain({
+        online: false,
+        type: WorkerMessageType.ConnectionStatus,
+      });
+    },
+
+    // the tick loop paces itself on real timers between each of the many timesteps this jump
+    // spans, so a loaded runner can need several times the default budget to land a live tick
+    { timeoutMs: 5000 },
+  );
 
   globalThis.dispatchEvent(new Event('online'));
 
@@ -345,16 +357,22 @@ test("it resumes the pending continuation's avatar on reconnect over an earlier 
   connection.post({ avatarID: earlierAvatar.id, type: ClientMessageType.RequestResync });
   connection.post({ activity, type: ClientMessageType.SetActivity });
 
-  await waitFor(() => {
-    // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
-    // idle frame, so the wait just re-arms the next one until it lands on a live tick
-    clock.jump(65_000);
+  await waitFor(
+    () => {
+      // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
+      // idle frame, so the wait just re-arms the next one until it lands on a live tick
+      clock.jump(65_000);
 
-    expect(connection.received).toPartiallyContain({
-      online: false,
-      type: WorkerMessageType.ConnectionStatus,
-    });
-  });
+      expect(connection.received).toPartiallyContain({
+        online: false,
+        type: WorkerMessageType.ConnectionStatus,
+      });
+    },
+
+    // the tick loop paces itself on real timers between each of the many timesteps this jump
+    // spans, so a loaded runner can need several times the default budget to land a live tick
+    { timeoutMs: 5000 },
+  );
 
   globalThis.dispatchEvent(new Event('online'));
 
