@@ -50,6 +50,29 @@ test('it reads a different key for a different key version of the same avatar', 
   expect(bytesToHex(second)).not.toBe(bytesToHex(first));
 });
 
+test('it attaches a traceparent header to the outbound request', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  const observedTraceparents: Array<string | null> = [];
+
+  server.use(
+    mockKeysService.deriveAvatarKey.handler((args) => {
+      observedTraceparents.push(args.request.headers.get('traceparent'));
+
+      return { key: 'a'.repeat(64) };
+    }),
+  );
+
+  await readAvatarRollKey(
+    { keysServiceURL: resolveServiceURL('keys'), privateKey: keyPair.privateKey },
+    { avatarID: 'avatar_1', keyVersion: 1 },
+  );
+
+  const [observedTraceparent] = observedTraceparents;
+
+  expect(observedTraceparent).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/u);
+});
+
 test('it rejects when the keys service never responds', async () => {
   const keyPair = await getTestServiceKeyPair();
 

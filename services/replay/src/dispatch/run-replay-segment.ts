@@ -8,6 +8,7 @@ import type {
 } from '@vers/contract-replay';
 import type { DB } from '@vers/db';
 import { createServiceToken } from '@vers/service-auth';
+import { buildTracingInterceptor } from '@vers/service-utils/orpc';
 import { findSimVersion } from '@vers/sim-registry';
 import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
@@ -76,7 +77,11 @@ async function sendProviderReplaySegment(
   const token = await createServiceToken({ audience: 'replay', privateKey: deps.privateKey });
 
   const client: ContractRouterClient<typeof replayContract> = createORPCClient(
-    new RPCLink({ headers: { authorization: `Bearer ${token}` }, url: `${providerURL}/rpc` }),
+    new RPCLink({
+      clientInterceptors: [buildTracingInterceptor()],
+      headers: { authorization: `Bearer ${token}` },
+      url: `${providerURL}/rpc`,
+    }),
   );
 
   return client.replaySegment(job);

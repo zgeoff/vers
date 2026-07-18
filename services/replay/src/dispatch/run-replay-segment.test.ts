@@ -5,7 +5,10 @@ import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { updateEnv } from '@vers/test-utils/bun';
+import { http, passthrough } from 'msw';
 import { createReplayService } from '../create-replay-service';
+import type { ReplayService } from '../create-replay-service';
+import { server } from '../mocks/server';
 import { runReplaySegment } from './run-replay-segment';
 
 const DETERMINISTIC_INPUT = createMockReplaySegmentInput({
@@ -166,7 +169,9 @@ async function setupTest() {
  * Boots a second replay instance baked with a different engine hash, listening on an ephemeral
  * port, so a remote dispatch has a real provider to round-trip against.
  */
-async function setupRemoteProvider(engineHash: string) {
+async function setupRemoteProvider(
+  engineHash: string,
+): Promise<{ provider: ReplayService; url: string }> {
   updateEnv('SIM_ENGINE_HASH', engineHash);
 
   const provider = await createReplayService();
@@ -181,7 +186,7 @@ async function setupRemoteProvider(engineHash: string) {
     throw new Error('provider service did not bind a port');
   }
 
-  return `http://localhost:${port}`;
+  return { provider, url: `http://localhost:${port}` };
 }
 
 test('it replays in-process when the job matches this deploy’s baked hash', async () => {
@@ -248,11 +253,11 @@ test('it reports expired for a registry row past its retention deadline', async 
 test('it round-trips a remote dispatch over real HTTP with real s2s auth', async () => {
   await using ctx = await setupTest();
 
-  const providerURL = await setupRemoteProvider(DETERMINISTIC_INPUT.simVersion);
+  const remote = await setupRemoteProvider(DETERMINISTIC_INPUT.simVersion);
 
   await createSimVersionRow(ctx.db, {
     engineHash: DETERMINISTIC_INPUT.simVersion,
-    providerUrl: providerURL,
+    providerUrl: remote.url,
     status: 'active',
   });
 
@@ -267,16 +272,52 @@ test('it round-trips a remote dispatch over real HTTP with real s2s auth', async
   });
 });
 
+test('it attaches a traceparent to a remote dispatch', async () => {
+  await using ctx = await setupTest();
+
+  const remote = await setupRemoteProvider(DETERMINISTIC_INPUT.simVersion);
+
+  await createSimVersionRow(ctx.db, {
+    engineHash: DETERMINISTIC_INPUT.simVersion,
+    providerUrl: remote.url,
+    status: 'active',
+  });
+
+  const observedTraceparents: Array<string | null> = [];
+
+  server.use(
+    http.post(`${remote.url}/rpc/replaySegment`, (info) => {
+      observedTraceparents.push(info.request.headers.get('traceparent'));
+
+      return passthrough();
+    }),
+  );
+
+  const response = await runReplaySegment(
+    { db: ctx.db, privateKey: ctx.privateKey, simVersion: 'this-dispatcher-hash' },
+    DETERMINISTIC_INPUT,
+  );
+
+  expect(response).toStrictEqual({
+    kind: 'replayed',
+    output: { checkpoints: EXPECTED_CHECKPOINTS, elapsed: 80_000 },
+  });
+
+  const [observedTraceparent] = observedTraceparents;
+
+  expect(observedTraceparent).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/u);
+});
+
 test('it lets a SIM_VERSION_MISMATCH from a resolved provider throw as a misroute', async () => {
   await using ctx = await setupTest();
 
-  const providerURL = await setupRemoteProvider('providers-actual-hash');
+  const remote = await setupRemoteProvider('providers-actual-hash');
 
   const job = createMockReplaySegmentInput({ simVersion: 'stamped-hash-the-provider-disowns' });
 
   await createSimVersionRow(ctx.db, {
     engineHash: job.simVersion,
-    providerUrl: providerURL,
+    providerUrl: remote.url,
     status: 'active',
   });
 

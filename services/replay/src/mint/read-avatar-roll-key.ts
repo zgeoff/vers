@@ -4,6 +4,7 @@ import { RPCLink } from '@orpc/client/fetch';
 import type { ContractRouterClient } from '@orpc/contract';
 import type { keysContract } from '@vers/contract-keys';
 import { createServiceToken } from '@vers/service-auth';
+import { buildTracingInterceptor } from '@vers/service-utils/orpc';
 import type { CryptoKey } from 'jose';
 
 const DEFAULT_KEYS_DISPATCH_TIMEOUT_MS = 10_000;
@@ -36,6 +37,7 @@ export async function readAvatarRollKey(
 
   const client: ContractRouterClient<typeof keysContract> = createORPCClient(
     new RPCLink({
+      clientInterceptors: [buildTracingInterceptor()],
       headers: { authorization: `Bearer ${token}` },
       url: `${deps.keysServiceURL}/rpc`,
     }),
