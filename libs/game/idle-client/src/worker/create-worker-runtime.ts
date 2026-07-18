@@ -26,8 +26,9 @@ export interface WorkerRuntime {
 
   /**
    * Delegates to `stop`, so a test can acquire the runtime with `using` and have teardown run on
-   * scope exit; declared as a readonly member rather than `extends Disposable` to keep the type
-   * readonly-parameter-safe.
+   * scope exit. Declared as a readonly function-valued member rather than `extends Disposable`:
+   * the built-in interface declares a mutable method, which would make every parameter typed with
+   * this interface fail the readonly-parameter lint requirement.
    */
   readonly [Symbol.dispose]: () => void;
 }
