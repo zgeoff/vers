@@ -7,8 +7,7 @@ import { waitForIdleFlush } from './wait-for-idle-flush';
 test('it resolves when the matching flush-completed ack arrives', async () => {
   const channel = new MessageChannel();
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a MessageChannel port pair stands in for a SharedWorker's port, the only member the function under test reads
-  const worker = { port: channel.port1 } as unknown as SharedWorker;
+  const worker = { port: channel.port1 };
 
   channel.port2.start();
 
@@ -30,8 +29,7 @@ test('it resolves when the matching flush-completed ack arrives', async () => {
 test('it ignores an ack with a different request id until the timeout resolves it', async () => {
   const channel = new MessageChannel();
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a MessageChannel port pair stands in for a SharedWorker's port, the only member the function under test reads
-  const worker = { port: channel.port1 } as unknown as SharedWorker;
+  const worker = { port: channel.port1 };
 
   channel.port2.start();
 
@@ -59,8 +57,7 @@ test('it ignores an ack with a different request id until the timeout resolves i
 test('it resolves after the timeout when no ack arrives', async () => {
   const channel = new MessageChannel();
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a MessageChannel port pair stands in for a SharedWorker's port, the only member the function under test reads
-  const worker = { port: channel.port1 } as unknown as SharedWorker;
+  const worker = { port: channel.port1 };
   const started = Date.now();
 
   await waitForIdleFlush(worker, 'activity_1', 20);

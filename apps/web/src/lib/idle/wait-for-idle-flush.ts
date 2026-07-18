@@ -11,7 +11,7 @@ const FLUSH_ACK_TIMEOUT_MS = 5000;
  * timer.
  */
 export function waitForIdleFlush(
-  worker: SharedWorker,
+  worker: Pick<SharedWorker, 'port'>,
   activityID: string,
   timeoutMs: number = FLUSH_ACK_TIMEOUT_MS,
 ): Promise<void> {
