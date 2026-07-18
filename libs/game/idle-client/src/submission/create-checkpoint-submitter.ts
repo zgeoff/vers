@@ -37,6 +37,12 @@ interface ActivityState {
   retryGeneration: number;
   retryScheduled: boolean;
   startChainIndex: number;
+
+  /**
+   * Set once `submit` enqueues a `Completed`/`Failed` checkpoint — a fully confirmed flush after
+   * this point drains the activity for good, so its state is safe to evict.
+   */
+  terminalQueued: boolean;
 }
 
 export interface CheckpointSubmitter {
@@ -146,6 +152,13 @@ interface CreateCheckpointSubmitterOptions {
  * a transport failure — holds the queue untouched for the next flush tick. Each flush rides a
  * freshly minted trace, and a streak of non-defined flush failures reports a stall without
  * stopping the stream.
+ *
+ * An activity whose stream stops with its rows discarded — `ACTIVITY_CAPPED`, `ACTIVITY_TERMINAL`,
+ * `SESSION_EVICTED`, `NOT_FOUND` — has its cursor and registration evicted from both tracking maps,
+ * so a later registration re-seeds fresh rather than resolving stale state; a fully confirmed
+ * terminal checkpoint evicts the same way once its flush lands. `CHECKPOINT_INVALID` keeps its rows
+ * and its tombstoned state for the worker's lifetime, so a later registration attempt never resends
+ * what the server already rejected.
  */
 export function createCheckpointSubmitter(
   options: Readonly<CreateCheckpointSubmitterOptions>,
@@ -202,6 +215,14 @@ export function createCheckpointSubmitter(
 
       await flush(activityID);
     });
+  };
+
+  // Discards an activity's tracked state entirely, both the cursor and its memoized registration
+  // — the server accepts nothing further for it, so a later re-registration harmlessly re-seeds
+  // an empty queue instead of resolving a stale registration or reusing a stale cursor.
+  const removeActivityState = (activityID: string): void => {
+    activityStates.delete(activityID);
+    registrations.delete(activityID);
   };
 
   const flush = async (activityID: string): Promise<void> => {
@@ -266,6 +287,10 @@ export function createCheckpointSubmitter(
         state.retryAttempt = 0;
         options.onAcked?.(activityID, result.appendedHead);
 
+        if (state.terminalQueued && result.appendedHead >= state.nextVersion - 1) {
+          removeActivityState(activityID);
+        }
+
         return;
       }
 
@@ -292,6 +317,7 @@ export function createCheckpointSubmitter(
 
         await removeQueuedCheckpoints(activityID);
 
+        removeActivityState(activityID);
         options.onCapped?.(activityID, error.data.appendedHead);
 
         return;
@@ -301,6 +327,8 @@ export function createCheckpointSubmitter(
         state.invalid = true;
 
         await removeQueuedCheckpoints(activityID);
+
+        removeActivityState(activityID);
 
         if (error.data.status === 'capped') {
           options.onCapped?.(activityID, error.data.appendedHead);
@@ -313,6 +341,8 @@ export function createCheckpointSubmitter(
         state.invalid = true;
 
         await removeQueuedCheckpoints(activityID);
+
+        removeActivityState(activityID);
 
         return;
       }
@@ -339,6 +369,8 @@ export function createCheckpointSubmitter(
         state.invalid = true;
 
         await removeQueuedCheckpoints(activityID);
+
+        removeActivityState(activityID);
 
         return;
       }
@@ -373,6 +405,7 @@ export function createCheckpointSubmitter(
       retryGeneration: 0,
       retryScheduled: false,
       startChainIndex: context.startChainIndex,
+      terminalQueued: false,
     };
 
     activityStates.set(context.activityID, state);
@@ -442,6 +475,7 @@ export function createCheckpointSubmitter(
 
     if (isTerminal) {
       state.flushScheduled = false;
+      state.terminalQueued = true;
 
       await flush(activityID);
 
