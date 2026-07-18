@@ -9,6 +9,12 @@ import type {
 } from './types';
 
 /**
+ * Floor applied to a node's difficulty before it scales enemy stats, so a difficulty-0 node (the
+ * world map's unscaled origin) still produces a viable encounter instead of a zero multiplier.
+ */
+const MIN_DIFFICULTY = 1;
+
+/**
  * Resolves a full encounter — wave count, each wave's enemy count, archetype picks, and
  * difficulty-scaled stats — from a stream of typed draws, in that draw order, so identical
  * content, node, and stream always produce identical waves. The node selects only the stat
@@ -30,7 +36,9 @@ export function rollEncounterFromStream(
     return { value: archetype, weight: entry.weight };
   });
 
-  const multiplier = node.difficulty * content.tuning.difficultyScalingFactor;
+  const multiplier =
+    Math.max(node.difficulty, MIN_DIFFICULTY) * content.tuning.difficultyScalingFactor;
+
   const waveCount = stream.rollRange(content.tuning.waveCountMin, content.tuning.waveCountMax);
 
   const waves = Array.from({ length: waveCount }, () => {
