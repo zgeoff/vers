@@ -396,26 +396,21 @@ In the Umami UI, create the `vers` website and set its ID as the `VITE_UMAMI_WEB
 Actions variable, then assemble the acquisition funnel report over the tracked events
 ([analytics](./analytics.md)).
 
-Stand up the telemetry backend. The Axiom account is created in its UI; its standing tokens live on
-the `axiom` item in the `vers` 1Password vault: `ingest-token` (ingest on all datasets — the fleet's
-export credential), `mcp-token` (query, for read-only investigation), and `admin-token` (an advanced
-API token with create/read/update — never delete — on datasets, monitors, notifiers, and dashboards,
-for agent-driven administration). Destructive administration (deleting any of those) uses a
-short-lived token minted in the UI with the needed scopes and revoked when the work is done. Create
-one dataset per signal and point the fleet at them — the metrics dataset needs the `otel:metrics:v1`
-kind, since an events dataset rejects OTLP metrics ingest:
+Stand up the telemetry backend. The Axiom account is created in its UI, along with one
+console-minted credential that bootstraps the rest: the `iac-token` field on the `vers-ci` vault's
+`axiom` item, the Pulumi provider's API token, with the scopes listed in `infra/README.md`. Every
+other Axiom resource — the `vers-traces`/`vers-logs`/`vers-metrics` datasets, the `vers-production`
+ingest and `vers-mcp` query tokens, the alarms notifier, the threshold monitors, and the dashboards
+— is provisioned by the `infra/` Pulumi program (`bun run up` in `infra/`); the resource registry
+and drift stance live in [observability](./observability.md). Token secret values sit on the `axiom`
+item in the `vers` 1Password vault (`ingest-token`, `mcp-token`); a scope change in the program
+regenerates a token's value, and the vault field plus the Fly secrets below must be updated within
+the 48-hour rotation grace window. Destructive administration outside the program uses a short-lived
+token minted in the UI with the needed scopes and revoked when the work is done.
+
+Point the fleet at the datasets:
 
 ```sh
-ADMIN="$(op read 'op://vers/axiom/admin-token')"
-for ds in vers-traces vers-logs; do
-  curl -sS --fail -X POST https://api.axiom.co/v1/datasets \
-    -H "Authorization: Bearer $ADMIN" -H "Content-Type: application/json" \
-    -d "{\"name\":\"$ds\"}"
-done
-curl -sS --fail -X POST https://api.axiom.co/v2/datasets \
-  -H "Authorization: Bearer $ADMIN" -H "Content-Type: application/json" \
-  -d '{"name":"vers-metrics","kind":"otel:metrics:v1"}'
-
 INGEST="$(op read 'op://vers/axiom/ingest-token')"
 for app in vers-app-web vers-service-activity vers-service-avatar vers-service-email vers-service-keys vers-service-replay vers-service-session vers-service-user vers-service-verification; do
   fly secrets set -a "$app" --stage \
@@ -426,11 +421,7 @@ for app in vers-app-web vers-service-activity vers-service-avatar vers-service-e
 done
 ```
 
-The `vers services — baseline` dashboard (request rate, 5xx responses, and p95 latency per service,
-plus an error-log stream) and the `vers 5xx responses` and `vers verification lag`
-(`vers.verification.lag` over its threshold — `docs/architecture/observability.md`) threshold
-monitors are created through the same API; the monitors notify the `vers alarms` notifier. Agent
-access goes through the hosted MCP server (`https://mcp.axiom.co/mcp`, OAuth) declared in
+Agent access goes through the hosted MCP server (`https://mcp.axiom.co/mcp`, OAuth) declared in
 `.mcp.json`.
 
 The next push to `main` fills the machines.

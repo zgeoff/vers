@@ -1,13 +1,18 @@
 # infra
 
-Cloudflare DNS for `versidle.com` and Axiom alerting (monitors, notifiers), with Pulumi state held
-in Cloudflare R2. Credentials resolve from 1Password at run time, so nothing sensitive lives on
-disk.
+Cloudflare DNS for `versidle.com` and the Axiom observability backend (datasets, API tokens,
+monitors, notifiers, dashboards), with Pulumi state held in Cloudflare R2. Credentials resolve from
+1Password at run time, so nothing sensitive lives on disk.
 
 - `index.ts` — apex and `www` records pointing `versidle.com` at the Fly web app, DNS-only so Fly
   serves TLS.
-- `axiom.ts` — the Axiom threshold monitors and the Discord alarms notifier; the monitor registry in
-  `docs/architecture/observability.md` describes what each one watches.
+- `axiom.ts` — the Axiom resource set: the `vers-*` datasets, the ingest and query API tokens, the
+  threshold monitors, the Discord alarms notifier, and the dashboards; the registries in
+  `docs/architecture/observability.md` describe what the monitors and instruments watch. Token
+  secret values live only in 1Password — any change to a token's arguments regenerates its secret,
+  so a scope edit means updating the vault item and dependent Fly secrets within the 48-hour
+  rotation grace window. The provider's own credential is console-managed: a token cannot rotate
+  itself without invalidating the session doing the rotating.
 - `sdks/axiom/` — committed TypeScript SDK generated from the bridged Terraform provider
   (`pulumi package add terraform-provider axiomhq/axiom 1.6.2` regenerates it; the version is pinned
   in `Pulumi.yaml`).
@@ -21,9 +26,9 @@ disk.
   Cloudflare assigns. DNS records attach to a zone, so this comes first.
 - An R2 bucket named `vers-pulumi-state` for Pulumi state.
 - An Axiom API token (the `iac-token` field on the `vers-ci` vault's `axiom` item) with org-level
-  monitors/notifiers/dashboards create/read/update/delete and query permission on the `vers-*`
-  datasets — Axiom rejects monitor writes unless the token can query every dataset the monitor's APL
-  references.
+  create/read/update/delete on monitors, notifiers, dashboards, datasets, and API tokens, plus query
+  permission on all datasets — Axiom rejects monitor writes unless the token can query every dataset
+  the monitor's APL references.
 
 ## One-time setup
 

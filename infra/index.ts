@@ -3,7 +3,13 @@ import * as pulumi from '@pulumi/pulumi';
 
 export {
   alarmsNotifierName,
+  baselineDashboardUID,
+  ingestTokenName,
+  logsDatasetName,
+  mcpTokenName,
+  metricsDatasetName,
   serverErrorsMonitorName,
+  tracesDatasetName,
   verificationLagMonitorName,
 } from './axiom.ts';
 
