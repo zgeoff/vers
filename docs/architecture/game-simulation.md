@@ -43,7 +43,9 @@ first activity and derives each continuation's seed from the previous activity's
 build (equipment, passives, level) from server truth, and stamps the engine and content versions.
 Client-submitted activity and avatar payloads are display hints, and a continuation's seed is a
 client computation the verifier reproduces from the appended chain — online and offline alike, never
-a round-tripped value taken on trust.
+a round-tripped value taken on trust. The scope node's encounter params resolve server-side and
+freeze onto the activity row at start, folded into the start hash so a later content change can't
+retroactively alter an activity already in flight.
 
 Build mutations are gated while an activity is active: level-ups render optimistically and apply
 between activities. A snapshot that cannot change mid-activity is what makes replay exact.
