@@ -31,7 +31,6 @@ export function AvatarProgression() {
   const progression = buildOptimisticProgression({
     progression: settled,
     simActivity: idleWorkerHandle.activity,
-    simAvatar: idleWorkerHandle.avatar,
   });
 
   return (

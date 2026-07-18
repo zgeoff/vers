@@ -16,14 +16,9 @@ interface OptimisticProgressionSimActivity {
   readonly rewards: { readonly xp: number };
 }
 
-interface OptimisticProgressionSimAvatar {
-  readonly level: number;
-}
-
 interface BuildOptimisticProgressionInput {
   readonly progression: Readonly<OptimisticProgressionRead>;
   readonly simActivity?: Readonly<OptimisticProgressionSimActivity> | undefined;
-  readonly simAvatar?: Readonly<OptimisticProgressionSimAvatar> | undefined;
 }
 
 interface OptimisticProgression {

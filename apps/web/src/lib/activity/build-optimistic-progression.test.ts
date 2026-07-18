@@ -29,7 +29,6 @@ test('it overlays the live sim delta onto the settled xp when nothing is pending
   const result = buildOptimisticProgression({
     progression: { level: 3, pending: [], xp: 400 },
     simActivity: { id: 'activity_1', rewards: { xp: 25 } },
-    simAvatar: { level: 4 },
   });
 
   expect(result).toStrictEqual({ isSettling: true, level: buildLevelFromXP(425), xp: 425 });
@@ -43,7 +42,6 @@ test('it dedupes the sim overlay against a matching pending entry, counting its 
       xp: 0,
     },
     simActivity: { id: 'activity_1', rewards: { xp: 150 } },
-    simAvatar: { level: 2 },
   });
 
   expect(result).toStrictEqual({ isSettling: true, level: buildLevelFromXP(150), xp: 150 });
@@ -57,7 +55,6 @@ test('it sums a pending entry and a differently-id sim overlay together', () => 
       xp: 0,
     },
     simActivity: { id: 'activity_2', rewards: { xp: 25 } },
-    simAvatar: { level: 1 },
   });
 
   expect(result).toStrictEqual({ isSettling: true, level: buildLevelFromXP(175), xp: 175 });
