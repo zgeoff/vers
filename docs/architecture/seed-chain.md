@@ -87,6 +87,17 @@ Identity settlement and rolled-reward reveal gate on the verified anchor, never 
 head, so a suspect tail that later rejects settles nothing to claw back. A synced but unverified
 reward holds as a pending item on the client until the verifier settles it.
 
+A consequential read — a new activity's `buildSnapshot`, a future point spend, anything feeding a
+new run — anchors on the settled avatar row, never on an appended-but-unverified total. Chains are
+scoped per `(avatar, scope)` and a rejection voids only its own chain's successors, but identity is
+avatar-global: a consequential read of unverified xp would let a rejected run on one chain
+contaminate every other chain the same avatar plays. `getAvatarProgression` reads the settled row
+and its pending projection — one entry per terminal-but-unsettled activity, sourced from that
+activity's own stored checkpoint — in a single statement, so a client display is never torn between
+the two. The settlement apply moves a delta from the pending set into the settled row atomically, so
+any single read of the pair sees the same total before and after. The pending projection is
+display-only.
+
 ## Concurrency
 
 - The verifier serializes a chain's activities on the chain row, adjudicating one at a time in
