@@ -42,6 +42,9 @@ test('it emits the same checkpoint sequence in one advance as split across sever
   expect(split.rngState).toBe(oneShot.rngState);
 });
 
+// This probes every checkpoint boundary by re-running the full 80s simulation from scratch for
+// each one; the encounter's four waves make each run heavy enough to clear the default 5s test
+// budget on slower CI hardware even though it always terminates deterministically.
 test('it does not lose a checkpoint whose tick lands exactly on the duration boundary', async () => {
   const avatar = createMockAvatarData();
 
@@ -77,7 +80,7 @@ test('it does not lose a checkpoint whose tick lands exactly on the duration bou
 
     expect([...first.checkpoints, ...second.checkpoints]).toStrictEqual(oneShotResult.checkpoints);
   }
-});
+}, 20_000);
 
 test('it advances an idle batch with no boundary-crossing checkpoints', async () => {
   const avatar = createMockAvatarData();
