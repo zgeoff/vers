@@ -1,31 +1,41 @@
 # Observability
 
-How the fleet emits and consumes telemetry — traces, logs, and metrics. Error reporting is a
-separate path (Sentry SDK → Bugsink) covered by `docs/architecture/error-handling.md`; provisioning
-and secrets live in `docs/architecture/deployment.md`.
+The fleet emits three OpenTelemetry signals — traces, logs, and metrics — and consumes them from
+Axiom. This doc serves the engineer instrumenting a feature or querying its telemetry: the export
+path, the line and metric conventions a change follows, the instrument registry, and the alerting
+over these datasets. Error reporting is a separate path (Sentry SDK → Bugsink), covered by
+[error-handling](./error-handling.md). Provisioning and secrets live in
+[deployment](./deployment.md).
 
 ## Export path
 
-All three OpenTelemetry signals export over OTLP (protobuf) to Axiom, one dataset per signal:
-`vers-traces` and `vers-logs` (Events type), `vers-metrics` (Metrics type). The service scaffold
-(`createService`, `@vers/service-runtime`) wires every signal when `OTEL_EXPORTER_OTLP_ENDPOINT` is
-set — traces through `@elysiajs/opentelemetry`, logs through a pino → OTLP stream, metrics through a
-process-global meter provider behind a periodic exporter (`startMetricsExport`,
-`@vers/service-utils/otel`). A process with the endpoint unset emits nothing, and every instrument
-stays the OpenTelemetry API's no-op.
+All three signals export over OTLP (protobuf) to Axiom, one dataset per signal: `vers-traces` and
+`vers-logs` (Events type), `vers-metrics` (Metrics type).
 
-Each exporter configures itself from the standard `OTEL_EXPORTER_OTLP_*` environment variables; the
+The service scaffold (`createService`, `@vers/service-runtime`) wires every signal when
+`OTEL_EXPORTER_OTLP_ENDPOINT` is set, one transport per signal:
+
+- traces through `@elysiajs/opentelemetry`
+- logs through a pino → OTLP stream
+- metrics through a process-global meter provider behind a periodic exporter (`startMetricsExport`,
+  `@vers/service-utils/otel`)
+
+A process with the endpoint unset emits nothing — every instrument stays the OpenTelemetry API's
+no-op.
+
+Each exporter configures itself from the standard `OTEL_EXPORTER_OTLP_*` environment variables. The
 per-signal headers carry the ingest token and dataset routing. Metrics route by the
-`X-Axiom-Metrics-Dataset` header — the `X-Axiom-Dataset` header covers only traces and logs.
+`X-Axiom-Metrics-Dataset` header. The `X-Axiom-Dataset` header covers only traces and logs.
 
-`Service.stopTelemetry` flushes pending exports and releases the metric reader's periodic timer,
-which otherwise keeps the event loop alive. An entrypoint that traps SIGTERM for a graceful drain
-calls it before closing its database pool, since a final gauge collection may still query.
+`Service.stopTelemetry` flushes pending exports and releases the metric reader's periodic timer. The
+timer otherwise keeps the event loop alive. An entrypoint that traps SIGTERM for a graceful drain
+calls `stopTelemetry` before closing its database pool, since a final gauge collection may still
+query.
 
 ## Log lines
 
 Every pino logger stamps the active request's trace id onto each entry through an AsyncLocalStorage
-mixin, and HTTP responses report the same id in `x-trace-id`, so one trace id names a request's log
+mixin. HTTP responses report the same id in `x-trace-id`, so one trace id names a request's log
 lines across app-web and the services it called. A response built with immutable headers (a
 `Response.redirect`) passes through unstamped and correlates through its request line instead. The
 line-level conventions:
@@ -36,12 +46,12 @@ line-level conventions:
 - Severity follows outcome: a 5xx response or a thrown handler logs at `error`, a 4xx at `warn`,
   everything else at `info`.
 - A failure always emits a line at the site that decides the outcome — an error folded into a result
-  value, a rejected token, a failed job — carrying the reason in a field (`err`, `failure`, the
-  validation issues).
+  value, a rejected token, a failed job. The line carries the reason in a field (`err`, `failure`,
+  the validation issues).
 - Each request logs one line on completion with `method`, `path`, `status`, and `durationMs`. The
-  query string never reaches a log line — query params carry emailed tokens, auth codes, and
+  query string never reaches a log line: query params carry emailed tokens, auth codes, and
   GET-mapped procedure inputs. The service scaffold emits the line for every `/rpc` request and
-  leaves `/health` unlogged so platform probes don't dominate volume; app-web's middleware emits it
+  leaves `/health` unlogged, so platform probes don't dominate volume. app-web's middleware emits it
   for every request, at `debug` for a served static asset (a pathname with a file extension).
 - Presentation is the transport's job: dev consoles pretty-print through `pino-pretty`, and call
   sites never embed color codes or decoration in the message.
@@ -52,25 +62,25 @@ Instrumentation is part of a feature: work that adds a pipeline, queue, worker, 
 lands with the metrics that make it observable. The conventions:
 
 - Instruments are defined in the owning package through the global metrics API
-  (`metrics.getMeter('@vers/<package>')` from `@opentelemetry/api`). Domain code never constructs,
-  receives, or stops a meter provider — the scaffold owns that lifecycle, and instruments resolved
-  through the API bind to whatever provider the process registered at boot.
-- Names are dot-namespaced `vers.<domain>.<measure>`. Attributes are snake_case with closed value
-  sets — never unbounded values like per-entity IDs, which explode cardinality and cost.
+  (`metrics.getMeter('@vers/<package>')` from `@opentelemetry/api`).
+- Domain code never constructs, receives, or stops a meter provider — the scaffold owns that
+  lifecycle. Instruments resolved through the API bind to whatever provider the process registered
+  at boot.
+- Names are dot-namespaced `vers.<domain>.<measure>`.
+- Attributes are snake_case with closed value sets, never unbounded values like per-entity IDs —
+  those explode cardinality and cost.
 - Units use UCUM annotations (`s`, `{activity}`, `{rejection}`).
 - A rare, meaningful event is a counter, recorded at the site that decides the event (a
-  `record-*.ts` module). State that lives in the database is not counted in application code — it
-  observes through observable gauges: one batch callback per package, one snapshot query per
-  collection, with failures caught and logged so a bad query never takes down the process it
-  observes.
-- Every instrument lands with its row in the registry below, in the same PR.
+  `record-*.ts` module).
+- Database-resident state is never counted in application code; it observes through observable
+  gauges — one batch callback per package, one snapshot query per collection, failures caught and
+  logged so a bad query never takes down the process it observes.
+- Every instrument lands with its row in the instrument registry, in the same PR.
 
-Alerting is Axiom threshold monitors over these datasets, notifying the `vers alarms` notifier. The
-full Axiom resource set — the datasets and their retention, the ingest and query API tokens' scopes,
-the monitors, the notifier, and the dashboards — is managed as code in the `infra/` Pulumi program
-(`axiom.ts`); a console edit to any of them is drift, reconciled by the next `pulumi up`. Token
-secret values stay in 1Password and out of code; the sensitive outputs Pulumi records in stack state
-are encrypted by the stack passphrase.
+Alerting is Axiom threshold monitors over these datasets, notifying the `vers alarms` notifier.
+Every Axiom resource is managed as code in the `infra/` Pulumi program (`axiom.ts`). A console edit
+to any resource is drift, reconciled by the next `pulumi up`. The sensitive outputs Pulumi records
+in stack state are encrypted by the stack passphrase.
 
 ## Instrument registry
 
@@ -84,16 +94,20 @@ are encrypted by the stack passphrase.
 
 The verification gauges observe from one snapshot query in `service-replay`
 (`loadVerificationSnapshot`). A stream counts as unverified while appends sit past its verified
-cursor and it hasn't been rejected — parked and quarantined streams stay in, because an operator
-hold is exactly the staleness the lag gauge exists to show; the optimistic client hides verifier
-failure by design, so this gauge is the signal that verification has stalled.
+cursor and it hasn't been rejected. Parked and quarantined streams stay in, because an operator hold
+is exactly the staleness the lag gauge exists to show. The optimistic client hides verifier failure
+by design, so this gauge is the signal that verification has stalled.
 
-`vers.verification.rejections` splits by `reason`: `integrity-mismatch` (confirmed divergence or
-seed validation), `version-park` (unknown or retention-expired sim version — version-registry
-problems needing fleet action), `elapsed-time` (replay duration cap tripped — a per-stream anomaly).
+`vers.verification.rejections` splits by `reason`:
+
+- `integrity-mismatch` — confirmed divergence or seed validation.
+- `version-park` — unknown or retention-expired sim version, a version-registry problem needing
+  fleet action.
+- `elapsed-time` — replay duration cap tripped, a per-stream anomaly.
+
 Each recording's log line carries the raw numbers behind it (heads, checkpoint counts, sim version).
 
 The `vers verification lag` threshold monitor watches `vers.verification.lag` and notifies
-`vers alarms`, alerting on no data as well as on the threshold: the gauge exports from
-`service-replay`'s always-warm machine (see [deployment](./deployment.md)), so a silent dataset
-means the exporter or the process around it is down — never a healthy quiet system.
+`vers alarms`. It alerts on no data as well as on the threshold. The gauge exports from
+`service-replay`'s always-warm machine ([deployment](./deployment.md)), so a silent dataset means
+the exporter or the process around it is down, never a healthy quiet system.
