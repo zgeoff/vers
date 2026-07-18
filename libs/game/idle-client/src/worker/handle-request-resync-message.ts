@@ -1,4 +1,4 @@
-import { ORPCError, safe } from '@orpc/client';
+import { isDefinedError, ORPCError, safe } from '@orpc/client';
 import type {
   ActivityData,
   ActivityFailureAction as ContractFailureAction,
@@ -19,7 +19,9 @@ import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import type { RequestResyncMessage, ResyncStatus } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
+import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createFailureActionStatusMessage } from './create-failure-action-status-message';
+import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { createResyncStatusMessage } from './create-resync-status-message';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
@@ -88,6 +90,7 @@ export async function handleRequestResyncMessage(
           toActivityFailureAction(progress.failureAction),
         );
       },
+      pendingContinuation: context.getPendingContinuation(),
       submitter: context.getSubmitter(),
     });
 
@@ -208,6 +211,12 @@ async function applyResyncResult(
 
   if (result.plan.kind === 'attach-live') {
     await applyAttachLive(context, result.plan, result.progress);
+
+    return;
+  }
+
+  if (result.plan.kind === 'continue') {
+    await applyContinue(context, result.plan);
   }
 }
 
@@ -259,6 +268,88 @@ async function applyAttachLive(
   });
 
   setLiveSimulation(context, progress.activity, reconstruction.simulation);
+}
+
+/**
+ * Starts the row a pending continuation wanted, now that its target has read closed. A budget
+ * already spent halts at the boundary exactly like a live continuation would, keeping the pending
+ * record for the next reconnect. `startActivity` answering with a fresh, never-appended row is
+ * adopted directly, mirroring `runContinuation`'s own same-scope race handling; any other defined
+ * error clears the pending record and rethrows, reported through the caller's own resync-failure
+ * handling; a transport failure keeps the pending record and reports the worker offline, leaving
+ * the next reconnect to retry.
+ */
+async function applyContinue(
+  context: WorkerContext,
+  plan: Extract<ResyncPlan, { kind: 'continue' }>,
+): Promise<void> {
+  const pending = context.getPendingContinuation();
+
+  invariant(pending !== null, 'a continue plan is only reached with a pending continuation');
+
+  if (context.getRemainingBudgetMs() <= 0) {
+    emitCapStatus(context, 0, true);
+
+    return;
+  }
+
+  const [error, started] = await safe(
+    context.getClient().startActivity({
+      avatarID: plan.activity.avatarID,
+      scopeID: plan.activity.scopeID,
+      scopeType: plan.activity.scopeType,
+    }),
+  );
+
+  if (error === null) {
+    await startContinuedActivity(context, started, pending.failureAction);
+
+    context.setPendingContinuation(null);
+
+    return;
+  }
+
+  if (isDefinedError(error) && error.code === 'CONFLICT') {
+    const row = error.data.activity;
+
+    if (row.appendedHead === 0 && row.id !== plan.activity.id) {
+      await startContinuedActivity(context, row, pending.failureAction);
+
+      context.setPendingContinuation(null);
+
+      return;
+    }
+  }
+
+  if (!isDefinedError(error)) {
+    emitConnectionStatus(context, false);
+
+    return;
+  }
+
+  context.setPendingContinuation(null);
+  throw error;
+}
+
+async function startContinuedActivity(
+  context: WorkerContext,
+  row: Readonly<ActivityData>,
+  failureAction: ActivityFailureAction,
+): Promise<void> {
+  const input = buildSimulationInput(row, { failureAction });
+
+  await context.getSubmitter().registerActivity({
+    activityID: row.id,
+    appendedHead: 0,
+    lastHash: row.startHash,
+    startChainIndex: row.startChainIndex,
+  });
+
+  const simulation = createSimulation();
+
+  simulation.startActivity(input.avatar, input.activity);
+
+  setLiveSimulation(context, row, simulation);
 }
 
 async function applyFastForward(context: WorkerContext, report: FastForwardReport): Promise<void> {
@@ -380,6 +471,22 @@ function emitFailureActionStatus(
   failureAction: ActivityFailureAction,
 ): void {
   const message = createFailureActionStatusMessage(failureAction);
+
+  for (const connection of context.connections) {
+    connection.postMessage(message);
+  }
+}
+
+function emitCapStatus(context: WorkerContext, remainingMs: number, halted: boolean): void {
+  const message = createOfflineCapStatusMessage(remainingMs, halted);
+
+  for (const connection of context.connections) {
+    connection.postMessage(message);
+  }
+}
+
+function emitConnectionStatus(context: WorkerContext, online: boolean): void {
+  const message = createConnectionStatusMessage(online);
 
   for (const connection of context.connections) {
     connection.postMessage(message);

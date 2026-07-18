@@ -39,6 +39,7 @@
     "happy-dom": "catalog:",
     "msw": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "zod": "catalog:"
   }
 }

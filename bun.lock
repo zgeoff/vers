@@ -555,6 +555,7 @@
         "msw": "catalog:",
         "typescript": "catalog:",
         "vite": "catalog:",
+        "zod": "catalog:",
       },
     },
     "libs/game/idle-core": {
