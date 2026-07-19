@@ -8,7 +8,7 @@ import {
 import invariant from 'tiny-invariant';
 import { createTestDB } from './test-support/create-test-db';
 
-function setupSpanCapture() {
+function setupTest() {
   const exporter = new InMemorySpanExporter();
   const provider = new NodeTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
 
@@ -54,7 +54,7 @@ test('it round-trips a row through camelCase-mapped columns', async () => {
 });
 
 test('it emits a db.select client span carrying the compiled sql with placeholders in place of bind values', async () => {
-  const ctx = setupSpanCapture();
+  const ctx = setupTest();
 
   await using handle = await createTestDB();
 
@@ -72,7 +72,7 @@ test('it emits a db.select client span carrying the compiled sql with placeholde
 });
 
 test('it names the span from the compiled query kind', async () => {
-  const ctx = setupSpanCapture();
+  const ctx = setupTest();
 
   await using handle = await createTestDB();
 
@@ -92,7 +92,7 @@ test('it names the span from the compiled query kind', async () => {
 });
 
 test('it marks the span failed for a query that errors', async () => {
-  const ctx = setupSpanCapture();
+  const ctx = setupTest();
 
   await using handle = await createTestDB();
 
@@ -110,7 +110,7 @@ test('it marks the span failed for a query that errors', async () => {
 });
 
 test('it parents the query span to the active context', async () => {
-  const ctx = setupSpanCapture();
+  const ctx = setupTest();
 
   await using handle = await createTestDB();
 

@@ -9,7 +9,7 @@ import { HttpResponse, http } from 'msw';
 import { createEmailClient } from './create-email-client';
 import { RESEND_ENDPOINT_URL, sentEmails, server } from './mocks/node';
 
-function setupSpanCapture() {
+function setupTest() {
   const exporter = new InMemorySpanExporter();
   const provider = new NodeTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
 
@@ -102,7 +102,7 @@ test('it throws when resend reports an error', () => {
 });
 
 test('it emits a resend.send client span for a successful send', async () => {
-  const ctx = setupSpanCapture();
+  const ctx = setupTest();
   const client = createEmailClient({ apiKey: 'test-api-key' });
 
   await client.sendEmail({
@@ -120,7 +120,7 @@ test('it emits a resend.send client span for a successful send', async () => {
 });
 
 test('it marks the span failed when resend reports an error', async () => {
-  const ctx = setupSpanCapture();
+  const ctx = setupTest();
 
   server.use(http.post(RESEND_ENDPOINT_URL, () => HttpResponse.error()));
 

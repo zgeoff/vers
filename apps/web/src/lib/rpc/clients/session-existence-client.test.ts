@@ -6,22 +6,17 @@ import { createMockSessionData } from '../../../test-utils/factories/create-mock
 import { SERVICE_URLS } from '../service-urls';
 import { sessionExistenceClient } from './session-existence-client';
 
-function setupTest() {
-  return {
-    mockSession: buildContractMock({
-      baseUrl: SERVICE_URLS.session,
-      contract: sessionContract,
-      resolveContext: () => ({}),
-    }),
-  };
-}
-
 test('it attaches a traceparent header to the outbound getSession call', async () => {
-  const ctx = setupTest();
+  const mockSession = buildContractMock({
+    baseUrl: SERVICE_URLS.session,
+    contract: sessionContract,
+    resolveContext: () => ({}),
+  });
+
   const observedTraceparents: Array<string | null> = [];
 
   server.use(
-    ctx.mockSession.getSession.handler((args) => {
+    mockSession.getSession.handler((args) => {
       observedTraceparents.push(args.request.headers.get('traceparent'));
 
       return createMockSessionData({ id: 'session_1' });

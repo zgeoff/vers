@@ -8,7 +8,7 @@ import {
 import { findTraceContext } from '@vers/service-utils';
 import { withRequestTrace } from './with-request-trace';
 
-function setupSpanCapture() {
+function setupTest() {
   const exporter = new InMemorySpanExporter();
   const provider = new NodeTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
 
@@ -94,7 +94,7 @@ test('it relays a redirect response even when its headers refuse the stamp', asy
 });
 
 test('it opens a SERVER span for a request once a tracer provider is registered, reporting x-trace-id as the span trace id', async () => {
-  const ctx = setupSpanCapture();
+  const ctx = setupTest();
 
   const request = new Request('https://example.test/nexus', {
     headers: { traceparent: '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01' },
@@ -111,7 +111,7 @@ test('it opens a SERVER span for a request once a tracer provider is registered,
 });
 
 test('it marks the span failed for a 5xx response', async () => {
-  const ctx = setupSpanCapture();
+  const ctx = setupTest();
 
   await withRequestTrace(new Request('https://example.test/nexus'), () =>
     Promise.resolve(new Response('boom', { status: 500 })),
@@ -123,7 +123,7 @@ test('it marks the span failed for a 5xx response', async () => {
 });
 
 test('it marks the span failed and rethrows when the handler throws', async () => {
-  const ctx = setupSpanCapture();
+  const ctx = setupTest();
 
   const pending = withRequestTrace(new Request('https://example.test/nexus'), () => {
     throw new Error('handler exploded');
@@ -139,7 +139,7 @@ test('it marks the span failed and rethrows when the handler throws', async () =
 });
 
 test('it skips opening a span for a served static asset', async () => {
-  const ctx = setupSpanCapture();
+  const ctx = setupTest();
 
   await withRequestTrace(new Request('https://example.test/app.js'), () =>
     Promise.resolve(new Response('ok')),
@@ -149,7 +149,7 @@ test('it skips opening a span for a served static asset', async () => {
 });
 
 test('it skips opening a span for the /health probe', async () => {
-  const ctx = setupSpanCapture();
+  const ctx = setupTest();
 
   await withRequestTrace(new Request('https://example.test/health'), () =>
     Promise.resolve(new Response('ok')),
