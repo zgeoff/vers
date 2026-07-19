@@ -9,10 +9,6 @@ interface SettingsScreenProps {
   readonly has2FA: boolean;
 }
 
-/**
- * Settings screen: the account body under its own tab, with placeholder tabs for the game, audio,
- * and interface preferences yet to be wired.
- */
 export function SettingsScreen(props: Readonly<SettingsScreenProps>) {
   return (
     <ScreenLayout title="Settings">

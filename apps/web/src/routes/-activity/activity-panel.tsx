@@ -27,9 +27,8 @@ const plate = css({
 const twoColumns = css({ display: 'grid', gap: '4', gridTemplateColumns: 'repeat(2, 1fr)' });
 
 /**
- * Engagement screen: the mission header, the encounter's enemy plates, the avatar plate, and the
- * loot to collect. An ambient notice shows while the activity's appended progress is still ahead of
- * its verified head — the stretch whose rewards are not yet settled.
+ * Shows an ambient notice while the activity's appended progress is ahead of its verified head —
+ * the stretch whose rewards are not yet settled.
  */
 export function ActivityPanel() {
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());

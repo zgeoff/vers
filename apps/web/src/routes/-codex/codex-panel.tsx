@@ -3,10 +3,6 @@ import { css } from '@vers/styled-system/css';
 import { ScreenLayout } from '../../components/screen-layout';
 import { ScreenPanel } from '../../components/screen-panel';
 
-/**
- * Codex screen: a reference compendium and an enemy compendium, each a list beside a detail pane —
- * placeholder until the entries are wired.
- */
 export function CodexPanel() {
   return (
     <ScreenLayout title="Codex">

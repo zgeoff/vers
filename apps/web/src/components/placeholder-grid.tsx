@@ -11,7 +11,7 @@ const cell = css({
 });
 
 /**
- * A fixed grid of empty cells standing in for an item or slot layout until its contents are wired.
+ * A fixed grid of empty cells standing in for an item or slot layout.
  */
 export function PlaceholderGrid(props: Readonly<{ columns: number; count: number }>) {
   return (

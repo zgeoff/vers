@@ -7,10 +7,6 @@ const section = css({ display: 'flex', flexDirection: 'column', gap: '3' });
 const triple = css({ display: 'grid', gap: '4', gridTemplateColumns: 'repeat(3, 1fr)' });
 const pair = css({ display: 'grid', gap: '4', gridTemplateColumns: 'repeat(2, 1fr)' });
 
-/**
- * The landing page's marketing scaffold below the hero: the sections a visitor scrolls before
- * signing up, each a labelled placeholder until its copy and art land.
- */
 export function LandingSections() {
   return (
     <div className={sections}>

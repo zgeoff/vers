@@ -20,8 +20,7 @@ const panelLabel = css({
 });
 
 /**
- * A labelled section within a screen: the label names the area, children carry real content where a
- * screen has it and are absent where the area is still stubbed.
+ * A labelled section within a screen: the label names the area and children carry its content.
  */
 export function ScreenPanel(props: Readonly<{ children?: ReactNode; label: string }>) {
   return (

@@ -15,10 +15,6 @@ const MARKET_LISTINGS: ReadonlyArray<MarketListing> = [
   { listingID: 'listing-3', title: 'Ember-Touched Charm' },
 ];
 
-/**
- * Market screen: search, listings, and sell tabs. Listing rows link to their detail; the search and
- * sell areas are placeholder until trade is wired.
- */
 export function MarketPanel() {
   return (
     <ScreenLayout title="Market">

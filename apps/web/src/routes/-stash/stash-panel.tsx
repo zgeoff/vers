@@ -3,10 +3,6 @@ import { PlaceholderGrid } from '../../components/placeholder-grid';
 import { ScreenLayout } from '../../components/screen-layout';
 import { ScreenPanel } from '../../components/screen-panel';
 
-/**
- * Stash screen: two item tabs over a fixed grid and a currency tab, all placeholder until inventory
- * data is wired.
- */
 export function StashPanel() {
   return (
     <ScreenLayout title="Stash">
