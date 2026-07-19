@@ -411,9 +411,12 @@ jobs:
             exit 0
           fi
           subject="$(printf '%s' "${COMMIT_MSG}" | head -n 1)"
+          # Canonical alarms embed: [source] severity — what fired, one link to
+          # the run, and the critical hue shared with the Axiom notifiers.
           payload="$(jq -n \
-            --arg title "main pipeline failed: ${subject}" \
+            --arg title "[CI] critical — main pipeline failed" \
             --arg url "${RUN_URL}" \
-            --arg desc "${FAILED}" \
-            '{embeds: [{title: $title, url: $url, description: $desc, color: 15548997}]}')"
+            --arg desc "${subject}" \
+            --arg failed "${FAILED}" \
+            '{embeds: [{title: $title, url: $url, description: $desc, color: 15026253, fields: [{name: "Failed jobs", value: $failed}]}]}')"
           curl -fsS -H 'content-type: application/json' -d "${payload}" "${WEBHOOK_URL}"

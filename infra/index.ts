@@ -2,8 +2,8 @@ import * as cloudflare from '@pulumi/cloudflare';
 import * as pulumi from '@pulumi/pulumi';
 
 export {
-  alarmsNotifierName,
   baselineDashboardUID,
+  criticalAlarmsNotifierName,
   ingestTokenName,
   logsDatasetName,
   mcpTokenName,
@@ -11,6 +11,7 @@ export {
   serverErrorsMonitorName,
   tracesDatasetName,
   verificationLagMonitorName,
+  warningAlarmsNotifierName,
 } from './axiom.ts';
 
 const config = new pulumi.Config();

@@ -441,12 +441,13 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
    console-minted credential that bootstraps the rest: the `iac-token` field on the `vers-ci`
    vault's `axiom` item, the Pulumi provider's API token, with the scopes listed in
    `infra/README.md`. Every other Axiom resource is provisioned by the `infra/` Pulumi program
-   (`bun run up` in `infra/`); the resource registry and drift stance live in
-   [observability](./observability.md). Token secret values sit on the `axiom` item in the `vers`
-   1Password vault (`ingest-token`, `mcp-token`). A scope change in the program regenerates a
-   token's value, and the vault field plus the fleet's staged OTel secrets must be updated within
-   the 48-hour rotation grace window. Destructive administration outside the program uses a
-   short-lived token minted in the UI with the needed scopes and revoked when the work is done.
+   (`bun run up` in `infra/`); the resource registry, drift stance, and the canonical alarms embed
+   its notifiers post live in [observability](./observability.md). Token secret values sit on the
+   `axiom` item in the `vers` 1Password vault (`ingest-token`, `mcp-token`). A scope change in the
+   program regenerates a token's value, and the vault field plus the fleet's staged OTel secrets
+   must be updated within the 48-hour rotation grace window. Destructive administration outside the
+   program uses a short-lived token minted in the UI with the needed scopes and revoked when the
+   work is done.
 
    Point the fleet at the datasets:
 
