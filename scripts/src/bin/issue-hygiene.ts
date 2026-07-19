@@ -77,9 +77,9 @@ async function resolveFinding(finding: Finding): Promise<ResolvedFinding> {
     : { rule: finding.rule, stub, task: finding.task };
 }
 
-const commentSchema = z.array(z.object({ body: z.string(), id: z.number() }));
-
 async function findStickyCommentID(repository: string, issueNum: number): Promise<number | null> {
+  const commentSchema = z.array(z.object({ body: z.string(), id: z.number() }));
+
   const raw: unknown =
     await $`gh api repos/${repository}/issues/${issueNum}/comments --paginate`.json();
 
