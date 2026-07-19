@@ -1,11 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { readAvatars } from '../lib/avatar/read-avatars';
-import { AvatarRoster } from './-avatars/avatar-roster';
+import { AvatarRoster } from '../-avatars/avatar-roster';
+import { readAvatars } from '../../lib/avatar/read-avatars';
 
-export const Route = createFileRoute('/avatars')({
+export const Route = createFileRoute('/_game/avatars')({
   component: AvatarsPage,
   head: () => ({ meta: [{ title: 'vers | Avatars' }] }),
   loader: async () => ({ avatars: await readAvatars() }),
+  staticData: { presentation: 'ambient' },
 });
 
 function AvatarsPage() {

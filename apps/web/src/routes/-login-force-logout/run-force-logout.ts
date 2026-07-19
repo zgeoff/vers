@@ -58,5 +58,5 @@ export async function runForceLogout(formData: FormData): Promise<never> {
     updateOptions,
   );
 
-  throw redirect({ href: toSafeRedirectPath(redirectTo, '/avatars') });
+  throw redirect({ href: toSafeRedirectPath(redirectTo, '/respite') });
 }

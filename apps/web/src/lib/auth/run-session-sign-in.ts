@@ -47,5 +47,5 @@ export async function runSessionSignIn(opts: Readonly<RunSessionSignInOptions>):
     { expiresAt: opts.session.expiresAt },
   );
 
-  throw redirect({ href: toSafeRedirectPath(opts.redirectTo, '/avatars') });
+  throw redirect({ href: toSafeRedirectPath(opts.redirectTo, '/respite') });
 }

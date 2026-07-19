@@ -9,16 +9,17 @@ interface AccountScreenProps {
   readonly has2FA: boolean;
 }
 
-const screen = css({ display: 'flex', flexDirection: 'column', gap: '4', padding: '6' });
+const body = css({ display: 'flex', flexDirection: 'column', gap: '4' });
 const actions = css({ display: 'flex', flexDirection: 'column', gap: '2', marginTop: '4' });
 
 /**
- * The account settings view, shared by the standalone `/account` route and the in-shell settings
- * sheet. Sub-flows still link out to their own top-level routes.
+ * The account settings body — profile content plus the sub-flow actions — shared by the standalone
+ * account page and the in-shell settings tab, each of which supplies its own frame. Sub-flows link
+ * out to their own top-level routes.
  */
 export function AccountScreen(props: Readonly<AccountScreenProps>) {
   return (
-    <main className={screen}>
+    <div className={body}>
       {props.Content}
       <section className={actions}>
         <Link to="/account/change-email">Change email</Link>
@@ -34,6 +35,6 @@ export function AccountScreen(props: Readonly<AccountScreenProps>) {
           </Button>
         </form>
       </section>
-    </main>
+    </div>
   );
 }

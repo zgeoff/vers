@@ -1,6 +1,8 @@
 import { Link } from '@tanstack/react-router';
-import { Heading, Text } from '@vers/design-system';
+import { Tabs, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
+import { ScreenLayout } from '../../components/screen-layout';
+import { ScreenPanel } from '../../components/screen-panel';
 
 interface MarketListing {
   readonly listingID: string;
@@ -13,36 +15,26 @@ const MARKET_LISTINGS: ReadonlyArray<MarketListing> = [
   { listingID: 'listing-3', title: 'Ember-Touched Charm' },
 ];
 
-const panel = css({
-  backgroundColor: 'bg.panel',
-  borderColor: 'border',
-  borderWidth: '[1px]',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '4',
-  margin: '6',
-  padding: '6',
-});
-
-const list = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '2',
-});
-
-const listing = css({
-  backgroundColor: 'bg.panelElevated',
-  display: 'block',
-  padding: '3',
-});
-
-/**
- * Renders a static placeholder market screen with a fixed listing list.
- */
 export function MarketPanel() {
   return (
-    <main className={panel}>
-      <Heading level={1}>Market</Heading>
+    <ScreenLayout title="Market">
+      <Tabs
+        items={[
+          { content: <SearchTab />, label: 'Search', value: 'search' },
+          { content: <ListingsTab />, label: 'Listings', value: 'listings' },
+          { content: <SellTab />, label: 'Sell', value: 'sell' },
+        ]}
+      />
+    </ScreenLayout>
+  );
+}
+
+const list = css({ display: 'flex', flexDirection: 'column', gap: '2' });
+const listing = css({ backgroundColor: 'bg.panelElevated', display: 'block', padding: '3' });
+
+function ListingsTab() {
+  return (
+    <ScreenPanel label="Listings">
       <ul className={list}>
         {MARKET_LISTINGS.map((entry) => (
           <li key={entry.listingID}>
@@ -56,6 +48,24 @@ export function MarketPanel() {
           </li>
         ))}
       </ul>
-    </main>
+    </ScreenPanel>
+  );
+}
+
+function SearchTab() {
+  return (
+    <>
+      <ScreenPanel label="Filter builder" />
+      <ScreenPanel label="Stat search" />
+    </>
+  );
+}
+
+function SellTab() {
+  return (
+    <>
+      <ScreenPanel label="Your items" />
+      <ScreenPanel label="Price & list" />
+    </>
   );
 }

@@ -1,20 +1,11 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { ExploreCurrentPanel } from '../-explore-current/explore-current-panel';
-import { findActiveAvatar } from '../../lib/avatar/find-active-avatar';
-import { avatarClient } from '../../lib/rpc/clients/avatar-client';
+import { requireActiveAvatar } from '../../lib/avatar/require-active-avatar';
 
 export const Route = createFileRoute('/_game/explore_/current')({
   component: ExploreCurrentPage,
   head: () => ({ meta: [{ title: 'vers | World Map Encounter' }] }),
-  loader: async () => {
-    const avatars = await avatarClient.getAvatars({});
-
-    const avatar = findActiveAvatar(avatars);
-
-    if (avatar === null) {
-      throw redirect({ href: '/avatar/create' });
-    }
-  },
+  loader: () => requireActiveAvatar(),
   staticData: { presentation: 'focus', scene: 'worldmap' },
 });
 

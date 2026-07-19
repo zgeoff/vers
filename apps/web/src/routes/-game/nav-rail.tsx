@@ -2,6 +2,7 @@ import { Link, useRouteContext, useRouterState } from '@tanstack/react-router';
 import { Icon } from '@vers/design-system';
 import type { FlagKey } from '@vers/flags';
 import { css, cx } from '@vers/styled-system/css';
+import { AvatarChip } from './avatar-chip';
 
 type RailTarget =
   | '/activity'
@@ -96,6 +97,8 @@ export function NavRail() {
 
   return (
     <nav aria-label="Game navigation" className={rail}>
+      <AvatarChip />
+      <span aria-hidden className={divider} />
       {RAIL_GROUPS.map((group, index) => (
         <RailGroup
           key={group[0]?.to ?? index}

@@ -5,7 +5,7 @@ import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { requireActiveAvatar } from './require-active-avatar';
 
-test('it redirects to the roster when the caller has no avatar', async () => {
+test('it redirects to the create sheet when the caller has no avatar', async () => {
   const signedIn = await createSignedInUser();
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
@@ -14,7 +14,7 @@ test('it redirects to the roster when the caller has no avatar', async () => {
       .catch((error: unknown) => (isRedirect(error) ? error.options.href : null)),
   );
 
-  expect(outcome.value).toBe('/avatars');
+  expect(outcome.value).toBe('/avatars/create');
 });
 
 test('it does not redirect when the caller has an avatar', async () => {

@@ -17,7 +17,7 @@ test('it invites an anonymous visitor to log in or sign up', async () => {
   });
 });
 
-test('it welcomes a signed-in visitor with links into the game and account', async () => {
+test('it welcomes a signed-in visitor with a link into the game', async () => {
   const signedIn = await createSignedInUser({ name: 'Demo Account' });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -26,7 +26,6 @@ test('it welcomes a signed-in visitor with links into the game and account', asy
     const welcome = await screen.findByText('Welcome back, Demo Account.');
 
     expect(welcome).toBeVisible();
-    expect(screen.getByText('Enter game').closest('a')).toHaveAttribute('href', '/avatars');
-    expect(screen.getByText('Account').closest('a')).toHaveAttribute('href', '/account');
+    expect(screen.getByText('Enter game').closest('a')).toHaveAttribute('href', '/respite');
   });
 });

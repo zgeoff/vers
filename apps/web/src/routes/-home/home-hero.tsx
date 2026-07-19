@@ -31,8 +31,7 @@ export function HomeHero(props: HomeHeroProps) {
           <>
             <Heading level={2}>Welcome back, {query.data.name}.</Heading>
             <nav className={linkRowStyles}>
-              <Link to="/avatars">Enter game</Link>
-              <Link to="/account">Account</Link>
+              <Link to="/respite">Enter game</Link>
             </nav>
           </>
         ))}

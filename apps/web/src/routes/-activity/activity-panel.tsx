@@ -1,22 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { Heading, Spinner, Text } from '@vers/design-system';
+import { Spinner, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
+import { ScreenLayout } from '../../components/screen-layout';
+import { ScreenPanel } from '../../components/screen-panel';
 import { buildCurrentActivityQueryOptions } from '../../lib/activity/build-current-activity-query-options';
 import { useActivityRewards } from '../../lib/activity/use-activity-rewards';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
-
-const CHARACTER_FRAMES: ReadonlyArray<string> = ['Vanguard', 'Support', 'Striker'];
-
-const panel = css({
-  backgroundColor: 'bg.panel',
-  borderColor: 'border',
-  borderWidth: '[1px]',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '4',
-  margin: '6',
-  padding: '6',
-});
 
 const catchingUpPanel = css({
   alignItems: 'center',
@@ -26,23 +15,20 @@ const catchingUpPanel = css({
   padding: '4',
 });
 
-const characterFrameRow = css({
-  display: 'flex',
-  gap: '3',
+const plateRow = css({ display: 'grid', gap: '3', gridTemplateColumns: 'repeat(5, 1fr)' });
+
+const plate = css({
+  borderColor: 'border',
+  borderRadius: 'md',
+  borderWidth: '[1px]',
+  minHeight: '[6rem]',
 });
 
-const characterFrame = css({
-  backgroundColor: 'bg.panelElevated',
-  flex: '1',
-  padding: '3',
-  textAlign: 'center',
-});
+const twoColumns = css({ display: 'grid', gap: '4', gridTemplateColumns: 'repeat(2, 1fr)' });
 
 /**
- * The activity screen: an ambient notice while the activity's appended progress is still ahead of
- * its verified head — the stretch whose rewards are not yet settled — and placeholder
- * character-frame blocks standing in for party state. Reward items themselves — batches,
- * per-item cards — are a different screen's concern.
+ * Shows an ambient notice while the activity's appended progress is ahead of its verified head —
+ * the stretch whose rewards are not yet settled.
  */
 export function ActivityPanel() {
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
@@ -66,9 +52,8 @@ export function ActivityPanel() {
       : Math.max(0, activity.appendedHead - verifiedHead);
 
   return (
-    <main className={panel}>
-      <Heading level={1}>Activity</Heading>
-      {pendingCount > 0 && (
+    <ScreenLayout title="Engagement">
+      {pendingCount > 0 ? (
         <output className={catchingUpPanel} data-testid="catching-up-indicator">
           <span aria-hidden="true">
             <Spinner />
@@ -77,14 +62,19 @@ export function ActivityPanel() {
             Catching up — {pendingCount} {pendingCount === 1 ? 'reward' : 'rewards'} settling
           </Text>
         </output>
-      )}
-      <div className={characterFrameRow}>
-        {CHARACTER_FRAMES.map((label) => (
-          <div key={label} className={characterFrame} data-testid="character-frame">
-            <Text>{label}</Text>
-          </div>
-        ))}
+      ) : null}
+      <ScreenPanel label="Mission — depth · auto · end run" />
+      <ScreenPanel label="Encounter — up to 5 enemy plates">
+        <div className={plateRow}>
+          {['plate-1', 'plate-2', 'plate-3', 'plate-4', 'plate-5'].map((key) => (
+            <span key={key} className={plate} data-testid="enemy-plate" />
+          ))}
+        </div>
+      </ScreenPanel>
+      <div className={twoColumns}>
+        <ScreenPanel label="Avatar — life / barrier / aether · abilities" />
+        <ScreenPanel label="Loot — rewards to collect" />
       </div>
-    </main>
+    </ScreenLayout>
   );
 }
