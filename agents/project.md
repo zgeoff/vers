@@ -94,8 +94,9 @@ trigger is ordinary control flow, not an invariant.
 
 ## Error handling
 
-The full conventions — taxonomy, code registry, trace context, reporting split — live in
-`docs/architecture/services/error-handling.md`. The rules a PR must satisfy:
+Read `docs/architecture/services/error-handling.md` before adding or changing a failure path — it
+owns the full taxonomy, code registry, trace context, and reporting split. The rules a PR must
+satisfy:
 
 - A procedure handler throws only its typed `opts.errors.*` constructors or `invariant()`. No
   try/catch for logging or reporting in handlers — the central `onError` interceptor in
@@ -117,9 +118,9 @@ The full conventions — taxonomy, code registry, trace context, reporting split
 ## Metrics
 
 Instrumentation is part of a feature, not a follow-up: work that adds a pipeline, queue, worker, or
-failure path lands with the OpenTelemetry metrics that make it observable. Mechanics, conventions in
-full, and the instrument registry live in `docs/architecture/platform/observability.md`; the rules a
-PR must satisfy:
+failure path lands with the OpenTelemetry metrics that make it observable. Read
+`docs/architecture/platform/observability.md` before adding an instrument — it owns the mechanics,
+conventions, and instrument registry. The rules a PR must satisfy:
 
 - Instruments are defined in the owning package through the global metrics API (`metrics.getMeter`,
   `@opentelemetry/api`) — domain code never constructs, receives, or stops a meter provider; the
@@ -202,8 +203,9 @@ A service's env contract is the `envShape` it passes to `createService`, merged 
 ## Deploys
 
 `bun run deploy` drives every Fly rollout from the `deploy.config.ts` manifest at the repo root;
-`deploy verify` asserts the fleet is online and current. Mechanics, staleness detection, CI wiring,
-container builds, and secrets: `docs/architecture/platform/deployment.md`.
+`deploy verify` asserts the fleet is online and current. Read
+`docs/architecture/platform/deployment.md` before changing a rollout, container build, or secret —
+it owns the mechanics, staleness detection, and CI wiring.
 
 - Database migrations run once per green push in their own never-cancelled `migrate` job — never per
   service.
@@ -222,8 +224,8 @@ belongs in the product-analytics stream instead. Boundaries and privacy stance:
 Tinybird carries the behavioural product-event stream. A game flow whose outcome feeds funnels,
 retention, or progression analysis fires a curated event through `emitProductEvent`
 (`apps/web/src/lib/product-events/emit-product-event.ts`) — weigh this when building or reshaping
-game flows. Mechanics and the event registry live in `docs/architecture/analytics.md`; the rules a
-PR must satisfy:
+game flows. Read `docs/architecture/analytics.md` before adding or reshaping an analytics event — it
+owns the mechanics and the event registry. The rules a PR must satisfy:
 
 - Event names are snake_case `noun_pastparticiple` (`activity_started`); properties are ids of the
   entities the event is about. Identity is stamped server-side from the caller's session — a client
@@ -237,8 +239,9 @@ PR must satisfy:
 
 ## Postgres access (MCP)
 
-The `postgres` MCP server exposes production and dev sources; mechanics and provisioning live in
-`docs/architecture/platform/database.md`.
+The `postgres` MCP server exposes production and dev sources. Read
+`docs/architecture/platform/database.md` before connecting to or provisioning the database — it owns
+the mechanics and provisioning.
 
 - `execute_sql_prod` / `search_objects_prod` query production read-only — writes are refused at both
   the tool and role layer.
