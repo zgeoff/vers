@@ -87,7 +87,6 @@
         "three": "catalog:",
         "tiny-invariant": "catalog:",
         "zod": "catalog:",
-        "zustand": "catalog:",
       },
       "devDependencies": {
         "@babel/core": "catalog:",

@@ -31,10 +31,10 @@ const ambient = css({ opacity: '[0.4]' });
  * visibly recedes behind the HTML panel in front of it.
  */
 export function GameCanvasMount() {
-  const presentation = useSceneState().presentation;
+  const isAmbient = useSceneState((state) => state.presentation === 'ambient');
 
   return (
-    <div className={cx(container, presentation === 'ambient' && ambient)}>
+    <div className={cx(container, isAmbient && ambient)}>
       <Suspense fallback={null}>
         <MemoizedGameWorld />
       </Suspense>

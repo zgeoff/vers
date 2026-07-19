@@ -1,11 +1,12 @@
-import { Outlet, createFileRoute } from '@tanstack/react-router';
+import { Outlet, createFileRoute, useMatches } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { resolveFlags } from '@vers/flags';
 import { requireAuth } from '../lib/auth/require-auth';
 import { ActivityProgressNotice } from './-game/activity-progress-notice';
+import { AmbientSheet } from './-game/ambient-sheet';
 import { GameCanvasMount } from './-game/game-canvas-mount';
-import { GameNav } from './-game/game-nav';
 import { GameSimulationMount } from './-game/game-simulation-mount';
+import { NavRail } from './-game/nav-rail';
 import { SatelliteStack } from './-game/satellite-stack';
 import { SceneStateSync } from './-game/scene-state-sync';
 import { WelcomeBackModal } from './-game/welcome-back-modal';
@@ -20,6 +21,13 @@ export const Route = createFileRoute('/_game')({
 });
 
 function GameLayout() {
+  const matches = useMatches();
+
+  // Deepest declaration wins, matching the route-to-store fold; read straight from matches so the
+  // wrapper never trails the store's effect-driven update across an ambient↔focus navigation.
+  const presentation = matches.findLast((match) => match.staticData.presentation !== undefined)
+    ?.staticData.presentation;
+
   return (
     <>
       <GameCanvasMount />
@@ -27,9 +35,15 @@ function GameLayout() {
       <SceneStateSync />
       <GameSimulationMount />
       <WelcomeBackModal />
-      <GameNav />
+      <NavRail />
       <ActivityProgressNotice />
-      <Outlet />
+      {presentation === 'ambient' ? (
+        <AmbientSheet>
+          <Outlet />
+        </AmbientSheet>
+      ) : (
+        <Outlet />
+      )}
     </>
   );
 }
