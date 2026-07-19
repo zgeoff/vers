@@ -18,7 +18,8 @@ const page = css({
   gap: '6',
   marginX: 'auto',
   maxWidth: '5xl',
-  padding: '6',
+  paddingX: '6',
+  paddingY: '10',
   width: 'full',
 });
 

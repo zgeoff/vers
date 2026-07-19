@@ -17,6 +17,9 @@
   "dependencies": {
     "@conform-to/react": "catalog:",
     "@conform-to/zod": "catalog:",
+    "@fontsource/chakra-petch": "catalog:",
+    "@fontsource/ibm-plex-mono": "catalog:",
+    "@fontsource/manrope": "catalog:",
     "@opentelemetry/api": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",

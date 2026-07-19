@@ -16,14 +16,15 @@ interface Props {
 }
 
 const scrim = css({
-  animationDuration: 'normal',
-  animationName: '[fadeIn]',
-  animationTimingFunction: 'default',
+  backdropFilter: '[blur(8px)]',
   backgroundColor: '[rgba(2, 4, 10, 0.6)]',
   border: '[none]',
   cursor: '[pointer]',
   inset: '0',
   position: 'fixed',
+  // its own transition group so it fades with the route transition instead of the frozen keyframe
+  // snapping in at the end
+  viewTransitionName: 'sheet-scrim',
   zIndex: '[8]',
 });
 
@@ -52,8 +53,18 @@ const sheet = css({
   position: 'fixed',
   right: '[max(4%,6rem)]',
   top: '[7%]',
+  // the opaque frame is its own transition group so a swap can hold it steady while only the inner
+  // content crossfades, keeping a solid panel in front of the live canvas throughout
+  viewTransitionName: 'sheet',
   width: 'auto',
   zIndex: '[9]',
+});
+
+const sheetContent = css({
+  display: 'flex',
+  flexDirection: 'column',
+  // crossfades on its own while the frame behind it holds opaque
+  viewTransitionName: 'sheet-content',
 });
 
 const closeTrigger = css({
@@ -127,7 +138,7 @@ export function Sheet(props: Readonly<Props>) {
         >
           <Icon.Close />
         </button>
-        {props.children}
+        <div className={sheetContent}>{props.children}</div>
       </dialog>
     </>
   );

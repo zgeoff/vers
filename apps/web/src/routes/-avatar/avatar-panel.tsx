@@ -16,7 +16,7 @@ const container = css({
   flexDirection: 'column',
   gap: '5',
   marginX: 'auto',
-  maxWidth: '[120rem]',
+  maxWidth: 'contentMax',
   padding: '6',
   width: 'full',
 });

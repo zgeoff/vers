@@ -7,9 +7,9 @@ import { NavRail } from './nav-rail';
 test('it links every rail destination to its route', async () => {
   renderWithRouter(<NavRail />, { flags: { 'game-renderer': true, market: true } });
 
-  await screen.findByRole('link', { name: /Engagement/ });
+  await screen.findByRole('link', { name: /Engage/ });
 
-  expect(screen.getByRole('link', { name: /Engagement/ })).toHaveAttribute('href', '/activity');
+  expect(screen.getByRole('link', { name: /Engage/ })).toHaveAttribute('href', '/activity');
   expect(screen.getByRole('link', { name: /Respite/ })).toHaveAttribute('href', '/respite');
   expect(screen.getByRole('link', { name: /Explore/ })).toHaveAttribute('href', '/explore');
   expect(screen.getByRole('link', { name: /Avatar/ })).toHaveAttribute('href', '/avatar');

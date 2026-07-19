@@ -10,6 +10,7 @@ interface Props {
 const heading = cva({
   base: {
     color: 'text.heading',
+    fontFamily: 'display',
     fontWeight: 'semibold',
   },
   variants: {

@@ -14,11 +14,11 @@ const chip = css({
   display: 'flex',
   fontSize: 'lg',
   fontWeight: 'semibold',
-  height: '[3.5rem]',
+  height: 'rail',
   justifyContent: 'center',
   transitionDuration: 'fast',
   transitionProperty: '[color, border-color]',
-  width: '[3.5rem]',
+  width: 'rail',
   _hover: { borderColor: 'text.primary' },
 });
 
