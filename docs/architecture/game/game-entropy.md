@@ -4,18 +4,18 @@ Every random outcome in the game comes from a small set of entropy sources, and 
 security properties decide whether the rewards it rolls may carry tradeable value. You are here to
 build or review a mechanism that consumes randomness and to learn which source feeds it and whether
 its outputs may be traded. The client is untrusted and holds the entire simulation, so the design
-prices look-ahead rather than trying to prevent it. Tradeability keys on one property: entropy
-unpredictable at the moment the outcome was committed and provably tied to the party that minted it.
-The [seed chain](./seed-chain.md) owns the chain data model, [item generation](./item-generation.md)
-turns a committed entropy source into concrete item content, and the
-[economy modes note](../../game-design/economy-modes.md) owns the reward-content rules.
+makes look-ahead unprofitable rather than trying to prevent it. Tradeability keys on one security
+property that only some entropy sources have. The [seed chain](./seed-chain.md) owns the chain data
+model, [item generation](./item-generation.md) turns a committed entropy source into concrete item
+content, and the [economy modes note](../../game-design/economy-modes.md) owns the reward-content
+rules.
 
 ## Threat model
 
 The client is untrusted and holds the complete simulation. Any entropy the client can compute, the
 player can peek: simulate the future, inspect the outcome, and choose whether and where to play it.
 Look-ahead cannot be prevented in a deterministic client-simulated game: anything the client can
-describe, it can pre-compute. The design prices look-ahead instead of chasing it.
+describe, it can pre-compute. The design denies look-ahead its payoff instead of chasing it.
 
 A scanner does not play the average future. It simulates the future on every reachable node, across
 the whole offline window, and plays only the best one. Out of twenty thousand simulated futures the
@@ -55,15 +55,18 @@ of re-attempts.
 
 Where a metric is open enough that near-free abandoned attempts can churn the chain forward, cost
 stops gating and detection takes over: an avatar whose results ride the favorable tail of its
-verified history is a behavioural cheat signal, scored offline. Bounded margins keep any single
-attempt's edge small throughout. The residual is a wealthy, motivated actor with a purpose-built
-tool: defended in layers, never zero, the ceiling of anti-cheat in any game.
+verified history is a behavioural cheat signal, scored offline
+([game simulation](./game-simulation.md#replay)). Bounded margins keep any single attempt's edge
+small throughout. The residual is a wealthy, motivated actor with a purpose-built tool: defended in
+layers, never zero, the ceiling of anti-cheat in any game.
 
 ## Rolled rewards and the avatar key
 
 A rolled reward is a reward whose value lives in its roll; an item drop is the concrete case. The
 commitment comes first, the reveal second: a kill that produces one commits it at a deterministic
 coordinate, and its content is rolled from that coordinate later, under a key.
+
+### The reward coordinate
 
 The coordinate is `(avatarID, scopeType, scopeID, chainIndex, ordinal)`. `chainIndex` counts
 checkpoints along the chain and is monotonic across activities, so a failed attempt's indices are
@@ -72,13 +75,15 @@ within a checkpoint under the simulation's canonical ordering, independent of ho
 batched. The coordinate derives only from the hashed checkpoint subset, so replaying the chain
 reproduces every coordinate exactly.
 
+### Reveal safety
+
 A failed or abandoned attempt advances the chain past its spent indices, so the next attempt rolls
 at fresh coordinates rather than re-reaching the old ones. The reveal needs no replay-identity to
 stay safe. Content resolves at equal expected value regardless of position, and under server custody
-a coordinate cannot be read until its checkpoint is appended. So re-reaching a position trades one
-blind roll for an independent roll of equal worth. Device custody lets a self-found avatar read its
-own rolls before committing, but its loot never reaches a market, and any standing it earns rides
-the same appended, verifiable record.
+a coordinate's content is not revealed until the verifier settles its checkpoint. So re-reaching a
+position trades one blind roll for an independent roll of equal worth. Device custody lets a
+self-found avatar read its own rolls before committing, but its loot never reaches a market, and any
+standing it earns rides the same appended, verifiable record.
 
 Rolled content is `f(key, coordinate)`, where `f` is a keyed PRF: a pseudorandom function whose
 revealed outputs carry no predictive power over unrevealed coordinates. The property matters because
@@ -87,19 +92,23 @@ minting is idempotent and re-verification can neither duplicate nor re-roll a re
 that turns a digest into item content — the shared interpreter, draw-order versioning, and craft
 positions — is [item generation](./item-generation.md).
 
+### Key custody
+
 Key custody is the economy boundary:
 
-- **Server-held key** (trade avatars): the key never leaves the server. Content resolves only for
-  coordinates whose producing checkpoint is durably appended; no protocol path returns content
-  earlier. The append is the commitment, the roll is the reveal. Connected play reveals a kill's
-  rewards within a batch cadence; a return from offline reveals the window's rewards at once. No
-  connectivity state changes what a committed reward is worth.
+- **Server-held key** (trade avatars): the key never leaves the server, and a coordinate's content
+  is revealed only once the verifier settles its checkpoint, never at bare append
+  ([seed chain](./seed-chain.md)). A synced-but-unverified roll holds client-side as pending until
+  then. Connected play settles a kill's rewards within a batch cadence; a return from offline
+  settles the window's at once. No connectivity state changes what a committed reward is worth.
 - **Device-held key** (self-found avatars): the avatar rolls its own rewards locally, offline, in
   real time. A disclosed key makes every future roll computable, so the key ships only to avatars
   whose earnings can never reach the market. Disclosure is the mode's normal operation, not a
   compromise. The server derives the same key, which is what lets it verify self-found streams and
   restore the key to a new device. So self-found custody is an economic wall, not a privacy
   guarantee.
+
+### Key derivation
 
 Key derivation obeys these rules:
 
@@ -118,6 +127,8 @@ Key derivation obeys these rules:
 A leaked trade root makes every future trade drop computable. That is the one unrecoverable failure
 this design has.
 
+### Version pinning
+
 Every roll is pinned by its activity's `Started` snapshot. `keyVersion` is stamped there beside the
 engine and content versions, and `f` resolves content under the pinned versions rather than the live
 deploy. So reveal, replay, and mint agree across deploys and root rotations.
@@ -126,6 +137,8 @@ deploy. So reveal, replay, and mint agree across deploys and root rotations.
 
 Some outcomes carry a tail worth selecting; item affix rolls are the concrete case. Their entropy
 stays sealed while the decision is open and reveals in two committing moves, commit then release.
+
+### Commit and release
 
 **Commit.** The player locks in the spend. The server mints the salt from a server-held secret key
 and stores it sealed. The player sees only a lossy projection derived from it — modifier families,
@@ -139,6 +152,8 @@ custody the salt itself never reaches the client. Release is commitment: a relea
 client never resolves is force-resolved as forfeited — the bundle is lost — at a server-side
 deadline inside the replay-retention window.
 
+### Keeping the seal honest
+
 Three rules keep the seal honest, independent of what consumes it:
 
 - The salt's keying material is a server-held secret. Domain-separation labels alone are
@@ -148,6 +163,8 @@ Three rules keep the seal honest, independent of what consumes it:
   retries and receives the same salt, so a lost packet cannot fork the timeline; until the release
   arrives, nothing resolves.
 - Every input the outcome depends on pins at mint, so deferring resolution cannot improve it.
+
+### What the seal admits
 
 The mechanism admits any tail-bearing outcome; each consumer defines its own position, resolution,
 and pinned inputs. Item crafting is the worked case: the position is the craft action in the
@@ -159,6 +176,8 @@ instead, and the two mechanisms never compose within one outcome.
 
 Sealed salt requires a live round trip, so tail-bearing content is online content wherever it
 appears.
+
+### What must be sealed
 
 Only a rolled tail needs the seal. A chosen tier at a published scalar carries no tail worth
 selecting and rides client-computable entropy anywhere, interactive selection included. A rolled

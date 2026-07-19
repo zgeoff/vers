@@ -81,11 +81,10 @@ scanning thousands of futures to find. Density outliers belong in invested conte
 cost.
 
 What a roll contains is never client-computable for a trade avatar: content resolves under the
-server-held key, revealed only once its checkpoint is durably appended. A revealed roll can be
-observed before it verifies but cannot leave the account until it does, and re-reaching its
-coordinate means re-appending the path — so early observation yields no tradeable edge. Loot
-therefore drops everywhere — base activities, invested activities, the offline loop — with full
-ordinary variance.
+server-held key, revealed only once the verifier settles its checkpoint. A synced roll shows as
+pending before it settles but cannot leave the account until then, and re-reaching its coordinate
+means re-appending the path — so early observation yields no tradeable edge. Loot therefore drops
+everywhere — base activities, invested activities, the offline loop — with full ordinary variance.
 
 The wider economy design inherits two obligations. First, offline accrual is wall-clock metered and
 non-resettable: an hour of absence yields an hour of progress, capped, and a window cannot be banked

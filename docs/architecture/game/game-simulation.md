@@ -22,9 +22,9 @@ advances the avatar and the current wave's enemies and dispatches their attack e
 enemies, and timing from `(node, seed, content)` as a pure function.
 
 Activities at the same target chain together: each `(avatar, chain scope)` pair owns one append-only
-[seed chain](./seed-chain.md). A **chain scope** is a `(scope_type, scope_id)` pair naming a stable,
-returnable target. A world map encounter's chain scope is its map node (`world_map_node`). The
-activity type says what the avatar does; the scope type says where it returns to.
+[seed chain](./seed-chain.md). A **chain scope** is a stable, returnable target — a world map
+encounter's is its map node (`world_map_node`) — and the seed chain owns its model. The activity
+type says what the avatar does; the scope type says where it returns to.
 
 ## The deterministic core
 
@@ -51,6 +51,11 @@ the request path. It replays asynchronously to decide whether to trust what the 
 - resolves the node's enemy content
 - snapshots the avatar's build (equipment, passives, level) from server truth
 - stamps the engine and content versions
+
+The `Started` snapshot pins every version a replay needs — the engine and content versions, the roll
+`keyVersion` ([game entropy](./game-entropy.md#version-pinning)), and `start_chain_index`
+([seed chain](./seed-chain.md#seeds-and-chainindex)) — so replay resolves each under the code that
+produced it.
 
 Client-submitted activity and avatar payloads are display hints. A continuation's seed is a client
 computation the verifier reproduces from the appended chain — online and offline alike, never a
@@ -128,9 +133,10 @@ one local transaction. A crashed worker retries idempotently.
 - Item instances mint at settlement: identity is the reward coordinate, and content is rolled from
   the avatar's key under the activity's pinned versions (see [game entropy](./game-entropy.md)).
   Re-verification never duplicates or re-rolls an item.
-- Rolled content is revealed only for coordinates whose producing checkpoint is durably appended.
-  The reveal is a pure function of the coordinate, so append retries and bulk offline resends return
-  identical reveals.
+- The reveal read path returns a coordinate's content only at or below the verified anchor, never
+  the appended head ([seed chain](./seed-chain.md)); a synced-but-unverified roll holds client-side
+  as pending until settlement. The reveal is a pure function of the coordinate, so append retries
+  and bulk offline resends return identical reveals.
 - A rejected claim rolls back by forward compensating events, never by snapshot restore: settlement
   resets to the node's verified prefix, and revealed-but-unsettled rewards past it are cleared from
   optimistic display.
@@ -152,6 +158,8 @@ Four processes move simulation results around, each with one name:
   longer holds. Determinism makes the result identical to the lost original, and the
   already-accepted prefix costs nothing against the budget.
 
+### Resync and reconstruction
+
 A resync executes in the SharedWorker, since only the worker holds the one live simulation a plan
 might attach to. A tab triggers it with the avatar id alone, and the worker derives everything else
 from the confirmed activity row. A negligible gap attaches to the live simulation directly.
@@ -165,14 +173,16 @@ transport failure starting the next row — leaves a pending record that the nex
 non-active row matching that record starts fresh once its terminal append is acknowledged. A player
 stop leaves no such record, so a stopped activity is never resumed.
 
+### The offline budget
+
 Offline progress is bounded by a per-avatar simulated-time meter, enforced on the append path. The
-server never simulates. The budget refills at wall-clock rate since it was last banked, never past
-the cap (`OFFLINE_PROGRESS_CAP_MS`, 24h). Every accepted checkpoint batch debits its simulated-time
-delta: the last checkpoint's cumulative `time` minus the head row's accounted time, never a sum of
-the batch's per-checkpoint times. Because the only credit source is elapsed wall clock, no path
-earns simulated time faster than real time — not activity cycling, stop/start, or avatar rotation.
-Live play self-funds: each flush banks roughly the wall clock it consumes. A small initial grant on
-the meter absorbs tick-boundary and network jitter.
+budget refills at wall-clock rate since it was last banked, never past the cap
+(`OFFLINE_PROGRESS_CAP_MS`, 24h). Every accepted checkpoint batch debits its simulated-time delta:
+the last checkpoint's cumulative `time` minus the head row's accounted time, never a sum of the
+batch's per-checkpoint times. Because the only credit source is elapsed wall clock, no path earns
+simulated time faster than real time — not activity cycling, stop/start, or avatar rotation. Live
+play self-funds: each flush banks roughly the wall clock it consumes. A small initial grant on the
+meter absorbs tick-boundary and network jitter.
 
 A batch whose delta exceeds the accrued budget is rejected whole, and the activity claims the
 terminal `capped` transition at its current head. The `ACTIVITY_CAPPED` error carries that head as
