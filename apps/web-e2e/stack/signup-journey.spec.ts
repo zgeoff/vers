@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 import { z } from 'zod';
@@ -103,7 +104,7 @@ test('it signs up, verifies the emailed code, onboards, creates an avatar, and l
   const runID = Date.now();
 
   await runSignupJourney(page, {
-    avatarName: buildAvatarName(runID),
+    avatarName: buildAvatarName(),
     email: `e2e-signup-${runID}@vers.test`,
     password: `e2e-password-${runID}`,
     username: `e2e${runID}`,
@@ -118,7 +119,7 @@ test('it logs a fresh account out and back in through the real session service',
   const runID = Date.now();
   const email = `e2e-login-${runID}@vers.test`;
   const password = `e2e-password-${runID}`;
-  const avatarName = buildAvatarName(runID);
+  const avatarName = buildAvatarName();
 
   await runSignupJourney(page, { avatarName, email, password, username: `e2el${runID}` });
 
@@ -152,9 +153,12 @@ test('it logs a fresh account out and back in through the real session service',
 });
 
 /**
- * A per-run avatar name meeting the letters-only name schema: the numeric run id mapped
- * digit-by-digit onto `a`–`j`, so each run's avatar stays globally unique.
+ * A per-run avatar name meeting the letters-only name schema: random bytes mapped onto `a`–`z`, so
+ * two workers or CI jobs starting in the same millisecond can't collide on the global name
+ * constraint the way a clock-derived name could.
  */
-function buildAvatarName(runID: number): string {
-  return String(runID).replaceAll(/\d/g, (digit) => 'abcdefghij'[Number(digit)] ?? 'a');
+function buildAvatarName(): string {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+
+  return Array.from(randomBytes(12), (byte) => alphabet.charAt(byte % alphabet.length)).join('');
 }
