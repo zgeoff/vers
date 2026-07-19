@@ -98,7 +98,7 @@ const mcpToken = new axiom.Token(
  * hue; both post the shared canonical embed to the same channel.
  */
 const alarmsWebhookURL = pulumi.secret(requireEnv('DISCORD_ALARMS_WEBHOOK'));
-const alarmsWebhookHeaders = { 'Content-Type': 'application/json' };
+const alarmsWebhookHeaders = { 'Content-Type': 'application/json' } as const;
 
 const criticalAlarmsNotifier = new axiom.Notifier(
   'vers-alarms-critical',
