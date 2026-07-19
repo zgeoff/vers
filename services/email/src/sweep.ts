@@ -5,8 +5,7 @@ import {
   reportUnexpectedError,
   startErrorReporting,
 } from '@vers/service-runtime';
-import { withTraceContext } from '@vers/service-utils';
-import { createTraceContext } from '@vers/trace';
+import { withRootSpan } from '@vers/service-utils';
 import * as z from 'zod';
 import { createEmailJobQueue } from './create-email-job-queue';
 import { envShape } from './env-shape';
@@ -26,8 +25,8 @@ const logger = createLogger({ level: env.LOG_LEVEL, name: 'service-email-sweep' 
 // no later request nudged it) still lands within the hour
 await startErrorReporting(env.SENTRY_DSN);
 
-// the try/catch lives inside the trace scope so a failure report still carries the run's trace id
-await withTraceContext(createTraceContext(), async () => {
+// the try/catch lives inside the span so a failure report still carries the run's trace id
+await withRootSpan('email.sweep', async () => {
   try {
     const queue = createEmailJobQueue({
       connectionString: env.DATABASE_URL,

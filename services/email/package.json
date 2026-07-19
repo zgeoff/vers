@@ -12,6 +12,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@opentelemetry/api": "catalog:",
     "@orpc/server": "catalog:",
     "@vers/contract-email": "workspace:*",
     "@vers/email": "workspace:*",
@@ -23,6 +24,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@opentelemetry/sdk-metrics": "catalog:",
     "@orpc/contract": "catalog:",
     "@sentry/bun": "catalog:",
     "@types/bun": "catalog:",

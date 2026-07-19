@@ -137,6 +137,9 @@
         "ignoreInferredTypes": true,
         "allow": [
           { "from": "package", "name": "Kysely", "package": "kysely" },
+          // a query-log event: its `query` field is Kysely's internal operation-node AST, built
+          // and read by Kysely itself with no readonly form
+          { "from": "package", "name": "LogEvent", "package": "kysely" },
           // a live playwright page handle: driver connection and event state, no readonly form
           { "from": "package", "name": "Page", "package": "playwright-core" },
           // a live kysely transaction handle: same mutable connection state as Kysely above

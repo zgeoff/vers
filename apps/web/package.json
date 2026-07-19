@@ -17,6 +17,7 @@
   "dependencies": {
     "@conform-to/react": "catalog:",
     "@conform-to/zod": "catalog:",
+    "@opentelemetry/api": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
     "@orpc/tanstack-query": "catalog:",
@@ -66,6 +67,7 @@
   "devDependencies": {
     "@babel/core": "catalog:",
     "@faker-js/faker": "catalog:",
+    "@opentelemetry/sdk-trace-node": "catalog:",
     "@pandacss/dev": "catalog:",
     "@rolldown/plugin-babel": "catalog:",
     "@sentry/vite-plugin": "catalog:",

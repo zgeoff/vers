@@ -1,5 +1,4 @@
-import { withTraceContext } from '@vers/service-utils';
-import { createTraceContext } from '@vers/trace';
+import { withRootSpan } from '@vers/service-utils';
 import { PgBoss, fromKysely } from 'pg-boss';
 import type { KyselyTransactionLike } from 'pg-boss';
 import invariant from 'tiny-invariant';
@@ -226,7 +225,7 @@ async function drainJobs(
 type JobOutcome = 'completed' | 'failed';
 
 /**
- * Runs one job's parse/handle/complete/fail cycle inside its own fresh trace context, so a report
+ * Runs one job's parse/handle/complete/fail cycle inside its own root span, so a report
  * `onJobFailed` makes and the log line around it correlate by trace id. A payload that no longer
  * parses against its job's schema is failed without ever reaching the handler, since pg-boss
  * stores payloads as untyped jsonb.
@@ -239,7 +238,7 @@ function runJob(
   onJobFailed: OnJobFailed,
   job: Readonly<FetchedJob>,
 ): Promise<JobOutcome> {
-  return withTraceContext(createTraceContext(), async () => {
+  return withRootSpan(`job.${queueName}`, async () => {
     const parsed = def.schema.safeParse(job.data);
 
     if (!parsed.success) {
