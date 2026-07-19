@@ -6,7 +6,7 @@ import invariant from 'tiny-invariant';
 import { buildEmailRouter } from './build-router';
 import { createEmailJobQueue } from './create-email-job-queue';
 import type { EmailJobDefs } from './create-email-job-queue';
-import { EMAIL_ENV_SHAPE } from './email-env-shape';
+import { envShape } from './env-shape';
 
 interface CreateEmailServiceConfig {
   /**
@@ -20,7 +20,7 @@ interface CreateEmailServiceConfig {
 
 export interface EmailService {
   readonly queue: JobQueue<EmailJobDefs>;
-  readonly service: Service<typeof EMAIL_ENV_SHAPE>;
+  readonly service: Service<typeof envShape>;
 }
 
 /**
@@ -57,7 +57,7 @@ export async function createEmailService(
 
       return buildEmailRouter({ logger: runtime.logger, queue });
     },
-    envShape: EMAIL_ENV_SHAPE,
+    envShape,
     name: 'service-email',
   });
 

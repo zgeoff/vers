@@ -12,13 +12,13 @@ import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
 import type pino from 'pino';
 import * as z from 'zod';
-import { BASE_ENV_SCHEMA } from './base-env-schema';
+import { baseEnvSchema } from './base-env-schema';
 import { createLogger } from './create-logger';
 import { reportUnexpectedError } from './report-unexpected-error';
 import { startErrorReporting } from './start-error-reporting';
 import type { ServiceContext } from './types';
 
-type ServiceEnv<TEnvShape extends z.ZodRawShape> = z.infer<typeof BASE_ENV_SCHEMA> &
+type ServiceEnv<TEnvShape extends z.ZodRawShape> = z.infer<typeof baseEnvSchema> &
   z.infer<z.ZodObject<TEnvShape>>;
 
 interface ServiceRuntime<TEnvShape extends z.ZodRawShape> {
@@ -139,7 +139,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
 function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
   envShape: TEnvShape,
 ): ServiceEnv<TEnvShape> {
-  const base = BASE_ENV_SCHEMA.safeParse(process.env);
+  const base = baseEnvSchema.safeParse(process.env);
   const extra = z.object(envShape).safeParse(process.env);
 
   if (!base.success || !extra.success) {

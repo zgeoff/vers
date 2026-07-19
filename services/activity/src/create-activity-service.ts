@@ -5,7 +5,7 @@ import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
-import { ACTIVITY_ENV_SHAPE } from './activity-env-shape';
+import * as z from 'zod';
 import { buildActivityRouter } from './build-router';
 
 const KEY_VERSION = 1;
@@ -25,12 +25,16 @@ interface CreateActivityServiceConfig {
   readonly simTimeCapMs?: number;
 }
 
+const envShape = {
+  DATABASE_URL: z.string().describe('Postgres connection string for the activity checkpoint store'),
+};
+
 /**
  * Boots the activities service; the production entrypoint and tests both call this as the one shared config.
  */
 export function createActivityService(
   config: CreateActivityServiceConfig = {},
-): Promise<Service<typeof ACTIVITY_ENV_SHAPE>> {
+): Promise<Service<typeof envShape>> {
   return createService({
     buildRouter: (runtime) =>
       buildActivityRouter({
@@ -39,7 +43,7 @@ export function createActivityService(
         keyVersion: config.keyVersion ?? KEY_VERSION,
         simTimeCapMs: config.simTimeCapMs ?? OFFLINE_PROGRESS_CAP_MS,
       }),
-    envShape: ACTIVITY_ENV_SHAPE,
+    envShape,
     name: 'service-activity',
   });
 }

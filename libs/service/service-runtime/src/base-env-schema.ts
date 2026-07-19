@@ -3,7 +3,7 @@ import * as z from 'zod';
 /**
  * Environment variables every service validates at boot, before any service-specific ones.
  */
-export const BASE_ENV_SCHEMA = z.object({
+export const baseEnvSchema = z.object({
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
     .default('info')

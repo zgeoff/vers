@@ -9,10 +9,10 @@ import { withTraceContext } from '@vers/service-utils';
 import { createTraceContext } from '@vers/trace';
 import * as z from 'zod';
 import { createEmailJobQueue } from './create-email-job-queue';
-import { EMAIL_ENV_SHAPE } from './email-env-shape';
+import { envShape } from './env-shape';
 
 const SWEEP_ENV_SCHEMA = z.object({
-  ...EMAIL_ENV_SHAPE,
+  ...envShape,
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   SENTRY_DSN: z.url().optional(),
 });
