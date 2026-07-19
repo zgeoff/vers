@@ -1,10 +1,10 @@
 # Queues
 
 Durable background work runs on Postgres-backed job queues: pg-boss under the hood, consumed only
-through `@vers/jobs`. Read this when deciding whether work belongs on a queue, or building a
-consumer. A queue buys three things a request path can't: delivery that survives a failed downstream
-call or a dead process, retries with backoff, and a dead-letter trail. Work that needs none of those
-doesn't belong on a queue. The email service (`services/email`) is the reference consumer.
+through `@vers/jobs`. A queue buys three things a request path can't: delivery that survives a
+failed downstream call or a dead process, retries with backoff, and a dead-letter trail. Work that
+needs none of those doesn't belong on a queue. The email service (`services/email`) is the reference
+consumer.
 
 ## The wrapper
 

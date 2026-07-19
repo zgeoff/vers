@@ -1,12 +1,11 @@
 # Feature flags
 
-Feature flags gate incomplete or gradually-rolled-out functionality behind a boolean — read this
-when adding, gating, or removing a flag. Every flag is a temporary code path: once a feature is
-fully rolled out, the flag and every call site that checks it are deleted.
-[OpenFeature](https://openfeature.dev) is the evaluation interface every flag check goes through.
-`@vers/flags` registers an in-house provider that serves values from environment variables, so
-swapping the evaluation backend stays behind that interface rather than a rewrite of every call
-site.
+Feature flags gate incomplete or gradually-rolled-out functionality behind a boolean. Every flag is
+a temporary code path: once a feature is fully rolled out, the flag and every call site that checks
+it are deleted. [OpenFeature](https://openfeature.dev) is the evaluation interface every flag check
+goes through. `@vers/flags` registers an in-house provider that serves values from environment
+variables, so swapping the evaluation backend stays behind that interface rather than a rewrite of
+every call site.
 
 ## The registry
 

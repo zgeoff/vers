@@ -3,9 +3,7 @@
 The game world renders through one persistent three.js canvas. Every other UI element — panels,
 tooltips, stash, market, character sheets — is HTML from the design system. 3D is reserved for
 genuinely spatial content. List-and-filter UI, forms, and text stay in the DOM lane, where the
-design system, accessibility, and testing already work. This doc serves the reader building or
-changing that rendering shell: adding a scene, setting a route's presentation, mounting a satellite
-widget, or writing scene code.
+design system, accessibility, and testing already work.
 
 ## The persistent canvas
 

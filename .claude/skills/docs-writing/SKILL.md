@@ -48,11 +48,12 @@ surviving point. When a draft feels long, return to Selection — Rendering is n
   - a derivable set keying a table whose other columns carry facts the tree does not hold — the
     roster is then the key, not the payload
 
-- **Facts follow the reader's task.** A doc serves one reader task, named in its opening. A fact
-  earns its place only if the doc's reader acts on it mid-task; a fact serving a different task
-  lives in that task's doc, linked from this one. A pass-through system (a deploy pipeline, config
-  plumbing) documents its mechanism once and never the semantics of each value it carries — those
-  belong to the owning feature's doc.
+- **Facts follow the reader's task.** A doc serves one reader task. A fact earns its place only if
+  that reader acts on it mid-task; a fact serving a different task lives in that task's doc, linked
+  from this one. The opening describes the subject, never who should read the doc or when to — no
+  "read this when…", no "this doc is for…", no naming of the reader. A pass-through system (a deploy
+  pipeline, config plumbing) documents its mechanism once and never the semantics of each value it
+  carries — those belong to the owning feature's doc.
 
 ## Sentences — how a surviving point reads
 

@@ -1,7 +1,7 @@
 # Game simulation & verification
 
 How gameplay is computed on the client, recorded as checkpoint streams, and trusted through server
-replay. Read this before changing the simulation engine, the checkpoint protocol, or the verifier.
+replay.
 
 The client runs all real-time simulation as a pure function of server-authored inputs and a seed
 stream, writing each step to an append-only checkpoint stream. The server never simulates on the

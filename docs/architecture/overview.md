@@ -3,9 +3,8 @@
 Vers is a browser idle game on a microservice backend. A deterministic simulation runs on the
 client, the server verifies its results by replay, and the whole repo
 [deploys](./platform/deployment.md) as one atomic release from a single SHA. This document is the
-system map: it names each subsystem, states the one distinction that orients a reader, and links to
-the doc that owns each part's detail. Read it to place a change or a question in the right
-subsystem, then follow the link to that subsystem's own doc.
+system map: it names each subsystem, states the distinction that orients it, and links to the doc
+that owns each part's detail.
 
 ## Request path
 

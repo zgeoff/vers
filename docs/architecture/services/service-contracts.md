@@ -1,8 +1,7 @@
 # Service Contracts
 
 Every service exposes its API through a contract package: a standalone declaration of the service's
-operations that holds no implementation. This doc is for building a service or writing a client that
-calls one — both start from the same contract. The service implements the contract; every caller
+operations that holds no implementation. The service implements the contract; every caller
 constructs a typed client from it, and neither imports the other. The one distinction to carry
 throughout: a contract describes what a caller can receive, never what the service emits internally.
 

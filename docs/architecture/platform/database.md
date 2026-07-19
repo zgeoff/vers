@@ -1,10 +1,9 @@
 # Database
 
-Vers runs on one Neon-hosted Postgres. This doc is for connecting to that database, provisioning
-agent access to it, and re-provisioning the whole setup from nothing. One Neon project holds the
-identity database, and every service and migration points at it. A second Neon branch backs
-disposable per-worktree databases that agent MCP sessions clone on demand. The compute scales to
-zero when idle, so the first connection after a suspend pays a resume cost.
+Vers runs on one Neon-hosted Postgres. One Neon project holds the identity database, and every
+service and migration points at it. A second Neon branch backs disposable per-worktree databases
+that agent MCP sessions clone on demand. The compute scales to zero when idle, so the first
+connection after a suspend pays a resume cost.
 
 ## The Neon project
 

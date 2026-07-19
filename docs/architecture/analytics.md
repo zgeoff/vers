@@ -2,10 +2,8 @@
 
 vers runs two analytics pipelines, each with one job. Umami answers questions about the site: who
 visits, from where, which pages, and whether acquisition converts. Tinybird carries the behavioural
-product-event stream — what players do once they're in the game. This doc serves the developer
-instrumenting a flow, choosing which pipeline a new event belongs to and wiring it. The dividing
-test: data that would ever be joined to a user or avatar is a product event, and data about the site
-is web analytics.
+product-event stream — what players do once they're in the game. The dividing test: data that would
+ever be joined to a user or avatar is a product event, and data about the site is web analytics.
 
 ## Web analytics (Umami)
 

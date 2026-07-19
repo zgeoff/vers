@@ -1,10 +1,10 @@
 # Deployment
 
-Where the stack runs, how a merge reaches production, and how to re-provision it from nothing — read
-this when shipping a release, provisioning the stack, or diagnosing a rollout. The stack is a Fly.io
-fleet, deployed by the repo's deploy CLI from the `deploy.config.ts` manifest. Every rollout
-decision keys off one marker: the `GIT_SHA` stamped into each app's machine env, compared against
-HEAD. A leg that a failure skipped therefore reads stale and ships on the next push.
+Where the stack runs, how a merge reaches production, and how to re-provision it from nothing. The
+stack is a Fly.io fleet, deployed by the repo's deploy CLI from the `deploy.config.ts` manifest.
+Every rollout decision keys off one marker: the `GIT_SHA` stamped into each app's machine env,
+compared against HEAD. A leg that a failure skipped therefore reads stale and ships on the next
+push.
 
 ## Topology
 

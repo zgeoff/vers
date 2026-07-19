@@ -1,13 +1,12 @@
 # Auth
 
 How a login becomes a session, how a sensitive mutation earns a fresh code check, and how services
-trust each other — read this when building or changing an authenticated or step-up-gated flow.
-Authentication and step-up authorization split across three domain services and the app-web edge.
-The edge (`apps/web`) runs the credential and code flows, holds the session cookie, and signs the
-service-to-service token for its own outbound calls. Durable state lives in the services: sessions
-and step-up transactions in `service-session`, password credentials and reset tokens in
-`service-user`, TOTP verifications in `service-verification`. Services never see cookies. The edge
-validates the session and passes each service a short-lived token naming the acting user
+trust each other. Authentication and step-up authorization split across three domain services and
+the app-web edge. The edge (`apps/web`) runs the credential and code flows, holds the session
+cookie, and signs the service-to-service token for its own outbound calls. Durable state lives in
+the services: sessions and step-up transactions in `service-session`, password credentials and reset
+tokens in `service-user`, TOTP verifications in `service-verification`. Services never see cookies.
+The edge validates the session and passes each service a short-lived token naming the acting user
 ([service contracts](./service-contracts.md)).
 
 ## Session lifecycle

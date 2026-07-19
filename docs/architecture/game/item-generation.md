@@ -3,9 +3,7 @@
 This is the machinery that turns an entropy source into a concrete item — one interpreter shared by
 every consumer, under every key custody. The [entropy model](./game-entropy.md) fixes where
 randomness comes from and who may compute it; this document picks up once a source exists and
-produces item content from it. Read it when adding or changing a site that turns entropy into an
-item — a settlement mint, a craft resolution, a client roll, a replay check — or a new entropy
-source feeding one.
+produces item content from it.
 
 ## The roll stream
 
