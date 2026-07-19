@@ -1,12 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { AuthLayout } from '../components/auth-layout';
 import { requireAnonymous } from '../lib/auth/require-anonymous';
 import { ForgotPasswordForm } from './-forgot-password/forgot-password-form';
 
 const requireAnonymousFn = createServerFn({ method: 'GET' }).handler(() => requireAnonymous());
 
 export const Route = createFileRoute('/forgot-password')({
-  component: ForgotPasswordForm,
+  component: ForgotPasswordPage,
   head: () => ({ meta: [{ title: 'vers | Forgot Password' }] }),
   loader: () => requireAnonymousFn(),
 });
+
+function ForgotPasswordPage() {
+  return (
+    <AuthLayout>
+      <ForgotPasswordForm />
+    </AuthLayout>
+  );
+}

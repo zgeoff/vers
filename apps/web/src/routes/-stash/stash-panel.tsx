@@ -8,16 +8,8 @@ export function StashPanel() {
     <ScreenLayout title="Stash">
       <Tabs
         items={[
-          {
-            content: <PlaceholderGrid columns={12} count={96} />,
-            label: 'Tab 01',
-            value: 'tab-01',
-          },
-          {
-            content: <PlaceholderGrid columns={12} count={96} />,
-            label: 'Tab 02',
-            value: 'tab-02',
-          },
+          { content: <PlaceholderGrid count={96} />, label: 'Tab 01', value: 'tab-01' },
+          { content: <PlaceholderGrid count={96} />, label: 'Tab 02', value: 'tab-02' },
           { content: <CurrencyTab />, label: 'Currency', value: 'currency' },
         ]}
       />
@@ -29,7 +21,7 @@ function CurrencyTab() {
   return (
     <>
       <ScreenPanel label="Currency">
-        <PlaceholderGrid columns={8} count={24} />
+        <PlaceholderGrid count={24} />
       </ScreenPanel>
       <ScreenPanel label="Stacks" />
     </>

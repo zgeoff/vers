@@ -1,5 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { VerificationTypeSchema } from '@vers/contract-verification';
+import { AuthLayout } from '../components/auth-layout';
 import { VerifyOTPForm } from './-verify-otp/verify-otp-form';
 import { VerifyOTPSearchSchema } from './-verify-otp/verify-otp-search-schema';
 
@@ -21,11 +22,13 @@ function VerifyOTPPage() {
   const type = VerificationTypeSchema.parse(search.type);
 
   return (
-    <VerifyOTPForm
-      code={search.code}
-      redirectTo={search.redirect}
-      target={search.target ?? ''}
-      type={type}
-    />
+    <AuthLayout>
+      <VerifyOTPForm
+        code={search.code}
+        redirectTo={search.redirect}
+        target={search.target ?? ''}
+        type={type}
+      />
+    </AuthLayout>
   );
 }

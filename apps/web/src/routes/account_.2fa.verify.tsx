@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { AuthLayout } from '../components/auth-layout';
 import { loadTwoFactorSetup } from './-account-2fa-verify/load-two-factor-setup';
 import { TwoFactorSetupForm } from './-account-2fa-verify/two-factor-setup-form';
 
@@ -16,5 +17,9 @@ export const Route = createFileRoute('/account_/2fa/verify')({
 function TwoFactorSetupPage() {
   const data = Route.useLoaderData();
 
-  return <TwoFactorSetupForm {...data} />;
+  return (
+    <AuthLayout>
+      <TwoFactorSetupForm {...data} />
+    </AuthLayout>
+  );
 }

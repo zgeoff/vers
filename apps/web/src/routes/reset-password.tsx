@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import * as z from 'zod';
+import { AuthLayout } from '../components/auth-layout';
 import { requireResetPasswordAccess } from './-reset-password/require-reset-password-access';
 import { ResetPasswordForm } from './-reset-password/reset-password-form';
 
@@ -23,5 +24,9 @@ export const Route = createFileRoute('/reset-password')({
 function ResetPasswordPage() {
   const loaderData = Route.useLoaderData();
 
-  return <ResetPasswordForm email={loaderData.email} resetToken={loaderData.resetToken} />;
+  return (
+    <AuthLayout>
+      <ResetPasswordForm email={loaderData.email} resetToken={loaderData.resetToken} />
+    </AuthLayout>
+  );
 }
