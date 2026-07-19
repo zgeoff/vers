@@ -6,7 +6,7 @@ import { useServerFn } from '@tanstack/react-start';
 import type { VerificationType } from '@vers/contract-verification';
 import { Brand, Heading, OTPField, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { HoneypotInputs } from '../../lib/auth/honeypot-inputs';
 import type { FormAction } from '../../lib/forms/types';
 import { useFormSubmit } from '../../lib/forms/use-form-submit';
@@ -15,6 +15,7 @@ import { VerifyOTPFormSchema } from './verify-otp-form-schema';
 
 interface VerifyOTPFormProps {
   readonly action?: FormAction;
+  readonly code?: string | undefined;
   readonly lastResult?: SubmissionResult;
   readonly redirectTo?: string | undefined;
   readonly target: string;
@@ -63,9 +64,12 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
   const router = useRouter();
   const verifyOTPFn = useServerFn(verifyOTP);
   const submission = useFormSubmit(props.action ?? verifyOTPFn, props.lastResult);
+  const formRef = useRef<HTMLFormElement>(null);
+  const hasAutoSubmitted = useRef(false);
 
   const [form, fields] = useForm({
     constraint: getZodConstraint(VerifyOTPFormSchema),
+    defaultValue: { code: props.code },
     id: 'verify-otp-form',
     lastResult: submission.lastResult,
     onSubmit: submission.onSubmit,
@@ -89,6 +93,20 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
     void runAccountNavigation();
   }, [props.type, router, submission.lastResult]);
 
+  useEffect(() => {
+    // a code carried by the emailed link submits at most once — a rejected code must land on the
+    // error state and wait for the user to retype rather than resubmit itself in a loop
+    if (hasAutoSubmitted.current || props.code === undefined || props.code.length !== 6) {
+      return;
+    }
+
+    hasAutoSubmitted.current = true;
+
+    const submitButton = formRef.current?.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+    formRef.current?.requestSubmit(submitButton);
+  }, [props.code]);
+
   const { key: _codeKey, ...codeProps } = getInputProps(fields.code, { type: 'text' });
   const codeErrors = [...(fields.code.errors ?? []), ...(form.errors ?? [])];
 
@@ -101,7 +119,7 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
         <Heading level={2}>{HEADING_BY_TYPE[props.type]}</Heading>
         <Text>{INSTRUCTION_BY_TYPE[props.type]}</Text>
       </section>
-      <form {...getFormProps(form)} className={formStyles} method="post">
+      <form {...getFormProps(form)} className={formStyles} method="post" ref={formRef}>
         <HoneypotInputs />
         <OTPField
           className={otpField}
