@@ -2,7 +2,6 @@ import { isDefinedError, safe } from '@orpc/client';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { ActivityData } from '@vers/contract-activity';
 import { Button, CheckboxField, Spinner } from '@vers/design-system';
-import { WorldMapEncounterActivity } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -182,7 +181,6 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
         labelProps={{ children: 'Auto-retry on failure', htmlFor: 'auto-retry-on-failure' }}
       />
       <ApproachingCapWarning />
-      <WorldMapEncounterActivity />
       <ActivityRewardsPanel activityID={idleWorkerHandle.activity?.id} orpc={props.orpc} />
       <Suspense fallback={<p data-testid="world-map-node-codex-loading">Loading codex…</p>}>
         <WorldMapNodeCodexSlot difficulty={selectedNode?.difficulty ?? 1} />

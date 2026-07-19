@@ -6,11 +6,10 @@ import { render } from '../../test-utils/render';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ActivityPanel } from './activity-panel';
 
-test('it renders the engagement title and enemy plates with no catching-up indicator by default', () => {
+test('it renders the engagement title with no catching-up indicator by default', () => {
   const rendered = render(<ActivityPanel />);
 
   expect(rendered.getByRole('heading', { name: 'Engagement' })).toBeVisible();
-  expect(rendered.getAllByTestId('enemy-plate')).toHaveLength(5);
   expect(rendered.queryByTestId('catching-up-indicator')).not.toBeInTheDocument();
 });
 
@@ -75,7 +74,7 @@ test('it shows no catching-up indicator once the appended progress is fully veri
     const rendered = render(<ActivityPanel />);
 
     await waitFor(() => {
-      expect(rendered.getAllByTestId('enemy-plate')).toHaveLength(5);
+      expect(rendered.getByRole('heading', { name: 'Engagement' })).toBeVisible();
     });
 
     expect(rendered.queryByTestId('catching-up-indicator')).not.toBeInTheDocument();

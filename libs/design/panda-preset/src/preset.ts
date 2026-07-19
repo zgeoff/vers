@@ -57,6 +57,8 @@ export const preset = definePreset({
       semanticTokens: {
         colors: {
           accent: {
+            aether: { value: '#a78bfa' },
+            barrier: { value: '#7dd3fc' },
             damage: {
               cognitive: { value: '#e879f9' },
               cold: { value: '#60a5fa' },
