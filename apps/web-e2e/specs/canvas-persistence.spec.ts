@@ -7,10 +7,6 @@ import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
  * carrying whatever GPU state it already uploaded.
  */
 test('it keeps the same canvas element across client-side game navigation', async ({ page }) => {
-  // five client-side game navigations, each holding a mounted Three.js canvas, run well past other
-  // specs' budget under CI's shared dev server and CPU contention
-  test.slow();
-
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/login');
 
@@ -41,7 +37,7 @@ test('it keeps the same canvas element across client-side game navigation', asyn
   // satellite canvas, so an unscoped locator would break strict mode on that leg of the walk
   const canvas = page.locator('canvas').first();
 
-  await expect(canvas).toBeVisible({ timeout: 30_000 });
+  await expect(canvas).toBeVisible();
 
   await canvas.evaluate((element) => {
     element.dataset['canvasPersistenceTag'] = 'original';
