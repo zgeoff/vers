@@ -36,15 +36,16 @@ async function waitForVerificationCode(email: string): Promise<string> {
 }
 
 interface SignupAccount {
+  readonly avatarName: string;
   readonly email: string;
   readonly password: string;
   readonly username: string;
 }
 
 /**
- * Drives the whole account-creation journey — signup, emailed-code verification, onboarding —
- * and lands at `/respite` signed in. Every form submit paces past the artifact's real honeypot
- * window first.
+ * Drives the whole account-creation journey — signup, emailed-code verification, onboarding, then
+ * the roster's create-avatar step — and lands in the game at `/explore` signed in. Every form
+ * submit paces past the artifact's real honeypot window first.
  */
 async function runSignupJourney(page: Page, account: SignupAccount): Promise<void> {
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
@@ -82,21 +83,33 @@ async function runSignupJourney(page: Page, account: SignupAccount): Promise<voi
 
   await page.getByRole('button', { name: 'Create an Account' }).click();
 
-  await expect(page).toHaveURL(/\/respite$/, { timeout: 20_000 });
+  // a fresh account onboards onto the empty roster and must create an avatar before the shell's
+  // active-avatar gate admits it to the game
+  await expect(page).toHaveURL(/\/avatars$/, { timeout: 20_000 });
+
+  await page.getByRole('link', { name: '+ Create avatar' }).click();
+
+  await expect(page).toHaveURL(/\/avatars\/create$/);
+
+  await page.getByLabel('Name', { exact: true }).fill(account.avatarName);
+  await page.getByRole('button', { name: 'Create Avatar' }).click();
+
+  await expect(page).toHaveURL(/\/explore$/, { timeout: 20_000 });
 }
 
-test('it signs up, verifies the emailed code, onboards, and lands in the game signed in', async ({
+test('it signs up, verifies the emailed code, onboards, creates an avatar, and lands in the game', async ({
   page,
 }) => {
   const runID = Date.now();
 
   await runSignupJourney(page, {
+    avatarName: buildAvatarName(runID),
     email: `e2e-signup-${runID}@vers.test`,
     password: `e2e-password-${runID}`,
     username: `e2e${runID}`,
   });
 
-  await expect(page.locator('canvas')).toBeVisible();
+  await expect(page.locator('canvas')).toBeVisible({ timeout: 30_000 });
 });
 
 test('it logs a fresh account out and back in through the real session service', async ({
@@ -105,22 +118,17 @@ test('it logs a fresh account out and back in through the real session service',
   const runID = Date.now();
   const email = `e2e-login-${runID}@vers.test`;
   const password = `e2e-password-${runID}`;
+  const avatarName = buildAvatarName(runID);
 
-  await runSignupJourney(page, { email, password, username: `e2el${runID}` });
+  await runSignupJourney(page, { avatarName, email, password, username: `e2el${runID}` });
 
   // the game canvas's initial scene setup blocks the main thread for a variable stretch, long
-  // enough that a click fired mid-block is silently dropped — retry until the nav visibly opens
-  const accountLink = page.getByRole('link', { exact: true, name: 'Account' });
-
+  // enough that a click fired mid-block is silently dropped — retry until the nav lands
   await expect(async () => {
-    await page.getByRole('button', { name: 'Menu' }).click();
+    await page.getByRole('link', { exact: true, name: 'Settings' }).click();
 
-    await expect(accountLink).toBeVisible({ timeout: 1000 });
-  }).toPass({ timeout: 15_000 });
-
-  await accountLink.click();
-
-  await expect(page).toHaveURL(/\/account$/);
+    await expect(page).toHaveURL(/\/settings$/, { timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
 
   await page.getByRole('button', { name: 'Logout' }).click();
 
@@ -135,5 +143,18 @@ test('it logs a fresh account out and back in through the real session service',
 
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  await expect(page).toHaveURL(/\/respite$/, { timeout: 20_000 });
+  // login lands on the roster; the account's one avatar leads back into the game
+  await expect(page).toHaveURL(/\/avatars$/, { timeout: 20_000 });
+
+  await page.getByRole('link', { name: avatarName }).click();
+
+  await expect(page).toHaveURL(/\/explore$/, { timeout: 20_000 });
 });
+
+/**
+ * A per-run avatar name meeting the letters-only name schema: the numeric run id mapped
+ * digit-by-digit onto `a`–`j`, so each run's avatar stays globally unique.
+ */
+function buildAvatarName(runID: number): string {
+  return String(runID).replaceAll(/\d/g, (digit) => 'abcdefghij'[Number(digit)] ?? 'a');
+}
