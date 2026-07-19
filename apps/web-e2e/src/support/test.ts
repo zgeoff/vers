@@ -4,18 +4,18 @@ import { z } from 'zod';
 import type { JourneyOptions } from './types';
 
 interface JourneyFixtures {
-  readonly getVerificationCode: (email: string) => Promise<string>;
+  readonly waitForVerificationCode: (email: string) => Promise<string>;
 }
 
 /**
  * The converged spec set's shared `test`: `codeSource` and its origin options are project-level
- * (set in each config's `use`), so a spec's call to `getVerificationCode` runs unmodified against
- * the mock backend's HTTP lookup and the stack's captured-email poll.
+ * (set in each config's `use`), so a spec's call to `waitForVerificationCode` runs unmodified
+ * against the mock backend's HTTP lookup and the stack's captured-email poll.
  */
 export const test = base.extend<JourneyOptions & JourneyFixtures>({
   codeSource: ['mock', { option: true }],
 
-  getVerificationCode: async ({ codeSource, mockVerificationURL, resendStubURL }, provide) => {
+  waitForVerificationCode: async ({ codeSource, mockVerificationURL, resendStubURL }, provide) => {
     await provide((email) =>
       codeSource === 'mock'
         ? waitForMockVerificationCode(email, mockVerificationURL)

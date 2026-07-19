@@ -1,5 +1,5 @@
+import { runLogin } from '../src/support/run-login';
 import { expect, test } from '../src/support/test';
-import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 
 /**
  * The `_game` layout mounts its canvas once and never remounts it across child-route navigation:
@@ -22,20 +22,9 @@ test(
       }
     });
 
-    await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
+    await runLogin(page, { email: 'e2e-canvas@vers.test', password: 'password123' });
+
     await page.goto('/explore');
-
-    await expect(page).toHaveURL(/\/login/);
-
-    // hydration gate: the login form's submit handler attaches only once React commits; an
-    // earlier click falls back to the browser's native GET submit and never leaves /login
-    await page.locator('html[data-hydrated]').waitFor();
-    await page.getByLabel('Email').fill('e2e-canvas@vers.test');
-    await page.getByLabel('Password').fill('password123');
-
-    await waitForHoneypotWindow(page);
-
-    await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
     await expect(page).toHaveURL(/\/explore$/);
 

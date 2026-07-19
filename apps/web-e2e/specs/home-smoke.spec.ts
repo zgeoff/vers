@@ -1,14 +1,16 @@
-import { runLogin, runSettingsLogout } from '../src/support/journey';
+import { runLogin } from '../src/support/run-login';
+import { runSettingsLogout } from '../src/support/run-settings-logout';
 import { expect, test } from '../src/support/test';
 
 /**
- * Exercises the home route's server render against a live dev server booted against the mock
- * backend: `getRequestHeaders` and the session-aware `getCurrentUser` loader query both run for
- * real here, none of which `bun test` can drive (it resolves package exports without the
- * `react-server` condition, and there's no live request's `AsyncLocalStorage` context).
+ * Exercises the home route against a live dev server booted against the mock backend, past what
+ * `bun test` can drive (it resolves package exports without the `react-server` condition, and
+ * there's no live request's `AsyncLocalStorage` context). The hero renders its content
+ * client-side behind `!query.isPending`, so this checks the served HTML response (200,
+ * `text/html`) and the client-rendered signed-out actions, not server-rendered content.
  */
 test(
-  'it serves the anonymous home page server-rendered',
+  'it serves the home page and renders the signed-out actions',
   { tag: '@mock' },
   async ({ page, request }) => {
     const rawResponse = await request.get('/');
@@ -31,6 +33,7 @@ test(
     // the demo account carries a seeded avatar, so a fresh login lands straight in the game
     // rather than the create-avatar sheet
     await runLogin(page, { email: 'demo@vers.test', password: 'password123' });
+    await expect(page).toHaveURL(/\/respite$/);
 
     await page.goto('/');
 

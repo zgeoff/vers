@@ -2,7 +2,7 @@ type CodeSource = 'mock' | 'stack';
 
 /**
  * The two backends the converged spec set can run against: which project option each config sets
- * in its `use` block, so `getVerificationCode` knows where to poll for the onboarding code.
+ * in its `use` block, so `waitForVerificationCode` knows where to poll for the onboarding code.
  */
 export interface JourneyOptions {
   readonly codeSource: CodeSource;

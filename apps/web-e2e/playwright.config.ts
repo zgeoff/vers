@@ -49,7 +49,7 @@ export default defineConfig<JourneyOptions>({
     baseURL,
     codeSource: 'mock',
 
-    // the same origin serve-mock-services.ts binds the verification listener to
+    // serve-mock-services.ts binds the verification listener to this origin
     mockVerificationURL: process.env['VERIFICATION_SERVICE_URL'] ?? 'http://localhost:3004',
 
     screenshot: 'only-on-failure',

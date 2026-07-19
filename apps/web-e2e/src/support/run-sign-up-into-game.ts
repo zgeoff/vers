@@ -1,18 +1,7 @@
-import { randomBytes } from 'node:crypto';
 import type { Page } from '@playwright/test';
 import { waitForHoneypotWindow } from '../wait-for-honeypot-window';
 import { expect } from './test';
 import type { JourneyAccount } from './types';
-
-/**
- * A globally-unique avatar name: `AvatarNameSchema` accepts letters only, and the real stack's
- * database persists across runs and enforces the same uniqueness the mock backend does.
- */
-export function buildAvatarName(): string {
-  const alphabet = 'abcdefghijklmnopqrstuvwxyz';
-
-  return Array.from(randomBytes(12), (byte) => alphabet[byte % alphabet.length]).join('');
-}
 
 /**
  * Drives the whole account-creation journey — signup, emailed-code verification, onboarding, and
@@ -21,58 +10,17 @@ export function buildAvatarName(): string {
 export async function runSignUpIntoGame(
   page: Page,
   account: JourneyAccount,
-  getVerificationCode: (email: string) => Promise<string>,
+  waitForVerificationCode: (email: string) => Promise<string>,
 ): Promise<void> {
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
 
   await runSignUp(page, account.email);
 
-  const code = await getVerificationCode(account.email);
+  const code = await waitForVerificationCode(account.email);
 
   await runVerifyOTP(page, code);
   await runOnboarding(page, account);
   await runAvatarCreate(page, account.avatarName);
-}
-
-/**
- * Fills and submits the login form and waits for the caller to land signed in at `/respite` — the
- * default `runSessionSignIn` target for an account with neither 2FA nor a competing live session.
- */
-export async function runLogin(
-  page: Page,
-  account: Pick<JourneyAccount, 'email' | 'password'>,
-): Promise<void> {
-  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
-  await page.goto('/login');
-
-  // hydration gate: the login form's submit handler attaches only once React commits; an earlier
-  // click falls back to the browser's native GET submit and never leaves /login
-  await page.locator('html[data-hydrated]').waitFor();
-  await page.getByLabel('Email').fill(account.email);
-  await page.getByLabel('Password').fill(account.password);
-
-  await waitForHoneypotWindow(page);
-
-  await page.getByRole('button', { exact: true, name: 'Login' }).click();
-
-  await expect(page).toHaveURL(/\/respite$/, { timeout: 20_000 });
-}
-
-/**
- * Opens the in-shell settings screen and logs out back to the anonymous home page.
- */
-export async function runSettingsLogout(page: Page): Promise<void> {
-  // the game canvas's initial scene setup blocks the main thread for a variable stretch, long
-  // enough that a click fired mid-block is silently dropped — retry until the nav visibly opens
-  await expect(async () => {
-    await page.getByRole('link', { exact: true, name: 'Settings' }).click();
-
-    await expect(page).toHaveURL(/\/settings$/, { timeout: 1000 });
-  }).toPass({ timeout: 15_000 });
-
-  await page.getByRole('button', { name: 'Logout' }).click();
-
-  await expect(page).toHaveURL('/');
 }
 
 /**
