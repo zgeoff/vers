@@ -1,6 +1,9 @@
 import { $ } from 'bun';
 import { z } from 'zod';
 import { checkIssue } from '../issue-hygiene/check-issue';
+import { findSectionStub } from '../issue-hygiene/find-section-stub';
+import { HYGIENE_MARKER, renderHygieneComment } from '../issue-hygiene/render-hygiene-comment';
+import type { Finding, ResolvedFinding } from '../issue-hygiene/types';
 
 const issueNumber = Number(process.argv[2]);
 
@@ -27,23 +30,77 @@ const findings = checkIssue({
   milestone: issue.milestone?.title ?? null,
 });
 
-if (findings.length === 0) {
+const resolved = await Promise.all(findings.map((finding) => resolveFinding(finding)));
+
+const body = renderHygieneComment(resolved);
+
+const repoResult = await $`gh repo view --json nameWithOwner -q .nameWithOwner`.text();
+
+const repo = process.env['GITHUB_REPOSITORY'] ?? repoResult.trim();
+
+const existingCommentID = await findStickyCommentID(repo, issueNumber);
+
+/**
+ * A clean issue that never earned a sticky comment needs none — only issues the bot has already
+ * commented on get their comment flipped to the all-clear rendering.
+ */
+if (findings.length === 0 && existingCommentID === null) {
   console.log(`#${issueNumber} is clean`);
   process.exit(0);
 }
 
-const comment = [
-  'Issue hygiene check found defects:',
-  '',
-  ...findings.map((finding) => `- ${finding}`),
-  '',
-  'Templates live in `.github/ISSUE_TEMPLATE`; the rules are the Issue hygiene section of AGENTS.md.',
-].join('\n');
-
-await $`gh issue comment ${issueNumber} --body ${comment}`;
+await upsertStickyComment(repo, issueNumber, existingCommentID, body);
 
 for (const finding of findings) {
-  console.log(`#${issueNumber}: ${finding}`);
+  console.log(`#${issueNumber}: ${finding.task}`);
 }
 
-process.exit(1);
+/**
+ * Resolves a finding's stub descriptor to paste-ready markdown: a section stub is read from its
+ * template file, a literal stub is passed through, and a finding without a stub stays without one.
+ */
+async function resolveFinding(finding: Finding): Promise<ResolvedFinding> {
+  if (finding.stub === undefined) {
+    return { rule: finding.rule, task: finding.task };
+  }
+
+  if (finding.stub.kind === 'literal') {
+    return { rule: finding.rule, stub: finding.stub.markdown, task: finding.task };
+  }
+
+  const template = await Bun.file(finding.stub.templatePath).text();
+
+  const stub = findSectionStub(template, finding.stub.title);
+
+  return stub === null
+    ? { rule: finding.rule, task: finding.task }
+    : { rule: finding.rule, stub, task: finding.task };
+}
+
+const commentSchema = z.array(z.object({ body: z.string(), id: z.number() }));
+
+async function findStickyCommentID(repository: string, issueNum: number): Promise<number | null> {
+  const raw: unknown =
+    await $`gh api repos/${repository}/issues/${issueNum}/comments --paginate`.json();
+
+  const sticky = commentSchema
+    .parse(raw)
+    .find((comment) => comment.body.startsWith(HYGIENE_MARKER));
+
+  return sticky?.id ?? null;
+}
+
+async function upsertStickyComment(
+  repository: string,
+  issueNum: number,
+  commentID: number | null,
+  commentBody: string,
+): Promise<void> {
+  if (commentID === null) {
+    await $`gh api --method POST repos/${repository}/issues/${issueNum}/comments -f body=${commentBody}`.quiet();
+
+    return;
+  }
+
+  await $`gh api --method PATCH repos/${repository}/issues/comments/${commentID} -f body=${commentBody}`.quiet();
+}

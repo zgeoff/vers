@@ -1,5 +1,5 @@
 import { parseTrigger } from '../upkeep/parse-trigger';
-import type { IssueShape } from './types';
+import type { Finding, IssueShape } from './types';
 
 /**
  * Labels for issues the dep-health sweep creates and manages itself; their bodies are generated
@@ -20,63 +20,99 @@ const TYPE_LABELS = new Set([
   'spike',
 ]);
 
+const TEMPLATE_DIR = '.github/ISSUE_TEMPLATE';
+const BUG_TEMPLATE = `${TEMPLATE_DIR}/bug.md`;
+const FEATURE_TEMPLATE = `${TEMPLATE_DIR}/feature.md`;
+
 /**
- * Evaluates an issue against the repository's issue-shape rules, returning one human-readable
- * finding per violation and an empty array when the issue is clean. Requirements vary by type — an
- * upkeep issue carries a trigger line and no milestone, where other types require area, type, and
- * priority labels, a delivery milestone, and their template's body sections.
+ * Evaluates an issue against the repository's issue-shape rules, returning one actionable finding
+ * per violation and an empty array when the issue is clean. Requirements vary by type — an upkeep
+ * issue carries a trigger line and no milestone, where other types require area, type, and priority
+ * labels, a delivery milestone, and their template's body sections.
  */
-export function checkIssue(issue: IssueShape): Array<string> {
+export function checkIssue(issue: IssueShape): Array<Finding> {
   if (issue.labels.some((label) => EXEMPT_LABELS.has(label))) {
     return [];
   }
 
-  const findings: Array<string> = [];
+  const findings: Array<Finding> = [];
 
   if (!issue.labels.some((label) => label.startsWith('area/'))) {
-    findings.push('missing an `area/*` label');
+    findings.push({
+      rule: 'every issue carries an `area/*` label',
+      task: 'Add an `area/*` label for the subsystem it touches (e.g. `area/platform`, `area/game`)',
+    });
   }
 
   if (issue.labels.includes('upkeep')) {
     if (issue.milestone !== null) {
-      findings.push('upkeep issues carry no milestone — remove it');
+      findings.push({
+        rule: 'upkeep issues carry no milestone and stay off the delivery board',
+        task: 'Remove the milestone',
+      });
     }
 
     if (parseTrigger(issue.body) === null) {
-      findings.push(
-        'body carries no parseable trigger line (`trigger: date <YYYY-MM-DD>` or `trigger: release <pkg> ><version>`)',
-      );
+      findings.push({
+        rule: 'an upkeep issue opens with a machine-readable trigger line the dep-health sweep evaluates',
+        stub: {
+          kind: 'literal',
+          markdown: '```\ntrigger: date <YYYY-MM-DD>\n```',
+        },
+        task: 'Add a trigger line (`trigger: date <YYYY-MM-DD>` or `trigger: release <pkg> ><version>`)',
+      });
     }
 
     return findings;
   }
 
   if (!issue.labels.some((label) => TYPE_LABELS.has(label))) {
-    findings.push('missing a type label (feature, bug, chore, …)');
+    findings.push({
+      rule: 'every issue carries a type label',
+      task: 'Add a type label (`feature`, `bug`, `chore`, …)',
+    });
   }
 
   if (!issue.labels.some((label) => PRIORITY_LABELS.has(label))) {
-    findings.push('missing a priority label (`p0-critical`, `p1-high`, `p2-medium`)');
+    findings.push({
+      rule: 'every issue carries a priority label',
+      task: 'Add a priority label (`p0-critical`, `p1-high`, `p2-medium`)',
+    });
   }
 
   if (issue.milestone === null) {
-    findings.push('missing the delivery-phase milestone');
+    findings.push({
+      rule: 'every issue has a delivery-phase milestone',
+      task: 'Assign the delivery-phase milestone',
+    });
   }
 
   if (issue.labels.includes('feature')) {
     if (!hasSection(issue.body, 'Scope')) {
-      findings.push('missing a `## Scope` section');
+      findings.push({
+        rule: 'a feature issue follows its template',
+        stub: { kind: 'section', templatePath: FEATURE_TEMPLATE, title: 'Scope' },
+        task: 'Add a `## Scope` section listing the behaviors this delivers',
+      });
     }
 
     if (issue.labels.includes('area/game') && !hasSection(issue.body, 'Player story')) {
-      findings.push('missing a `## Player story` section (required for area/game features)');
+      findings.push({
+        rule: 'every area/game feature carries a `## Player story` section',
+        stub: { kind: 'section', templatePath: FEATURE_TEMPLATE, title: 'Player story' },
+        task: 'Add a `## Player story` section describing what the player perceives once this ships',
+      });
     }
   }
 
   if (issue.labels.includes('bug')) {
-    for (const section of ['Observed', 'Expected', 'Repro']) {
-      if (!hasSection(issue.body, section)) {
-        findings.push(`missing a \`## ${section}\` section`);
+    for (const title of ['Observed', 'Expected', 'Repro']) {
+      if (!hasSection(issue.body, title)) {
+        findings.push({
+          rule: 'a bug issue follows its template',
+          stub: { kind: 'section', templatePath: BUG_TEMPLATE, title },
+          task: `Add a \`## ${title}\` section`,
+        });
       }
     }
   }

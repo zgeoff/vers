@@ -18,7 +18,13 @@ test('it flags a feature issue without a Scope section', () => {
     milestone: 'P2 · Game backend spine',
   });
 
-  expect(findings).toStrictEqual(['missing a `## Scope` section']);
+  expect(findings).toStrictEqual([
+    {
+      rule: 'a feature issue follows its template',
+      stub: { kind: 'section', templatePath: '.github/ISSUE_TEMPLATE/feature.md', title: 'Scope' },
+      task: 'Add a `## Scope` section listing the behaviors this delivers',
+    },
+  ]);
 });
 
 test('it requires a player story on an area/game feature', () => {
@@ -28,8 +34,8 @@ test('it requires a player story on an area/game feature', () => {
     milestone: 'P3 · World map',
   });
 
-  expect(findings).toStrictEqual([
-    'missing a `## Player story` section (required for area/game features)',
+  expect(findings.map((finding) => finding.task)).toStrictEqual([
+    'Add a `## Player story` section describing what the player perceives once this ships',
   ]);
 });
 
@@ -56,11 +62,11 @@ test('it does not require a player story on a non-game feature', () => {
 test('it flags an untriaged issue once per missing triage field', () => {
   const findings = checkIssue({ body: 'prose', labels: [], milestone: null });
 
-  expect(findings).toIncludeSameMembers([
-    'missing an `area/*` label',
-    'missing a type label (feature, bug, chore, …)',
-    'missing a priority label (`p0-critical`, `p1-high`, `p2-medium`)',
-    'missing the delivery-phase milestone',
+  expect(findings.map((finding) => finding.task)).toIncludeSameMembers([
+    'Add an `area/*` label for the subsystem it touches (e.g. `area/platform`, `area/game`)',
+    'Add a type label (`feature`, `bug`, `chore`, …)',
+    'Add a priority label (`p0-critical`, `p1-high`, `p2-medium`)',
+    'Assign the delivery-phase milestone',
   ]);
 });
 
@@ -71,8 +77,8 @@ test('it rejects a priority label outside the supported set', () => {
     milestone: 'P0 · Tooling',
   });
 
-  expect(findings).toStrictEqual([
-    'missing a priority label (`p0-critical`, `p1-high`, `p2-medium`)',
+  expect(findings.map((finding) => finding.task)).toStrictEqual([
+    'Add a priority label (`p0-critical`, `p1-high`, `p2-medium`)',
   ]);
 });
 
@@ -83,9 +89,9 @@ test('it requires observed, expected, and repro sections on a bug', () => {
     milestone: 'P3 · World map',
   });
 
-  expect(findings).toStrictEqual([
-    'missing a `## Expected` section',
-    'missing a `## Repro` section',
+  expect(findings.map((finding) => finding.task)).toStrictEqual([
+    'Add a `## Expected` section',
+    'Add a `## Repro` section',
   ]);
 });
 
@@ -116,10 +122,10 @@ test('it flags an upkeep issue with a milestone', () => {
     milestone: 'P0 · Tooling',
   });
 
-  expect(findings).toStrictEqual(['upkeep issues carry no milestone — remove it']);
+  expect(findings.map((finding) => finding.task)).toStrictEqual(['Remove the milestone']);
 });
 
-test('it flags an upkeep issue without a parseable trigger line', () => {
+test('it flags an upkeep issue without a parseable trigger line, offering a stub', () => {
   const findings = checkIssue({
     body: 'no trigger here',
     labels: ['upkeep', 'area/platform'],
@@ -127,7 +133,11 @@ test('it flags an upkeep issue without a parseable trigger line', () => {
   });
 
   expect(findings).toStrictEqual([
-    'body carries no parseable trigger line (`trigger: date <YYYY-MM-DD>` or `trigger: release <pkg> ><version>`)',
+    {
+      rule: 'an upkeep issue opens with a machine-readable trigger line the dep-health sweep evaluates',
+      stub: { kind: 'literal', markdown: '```\ntrigger: date <YYYY-MM-DD>\n```' },
+      task: 'Add a trigger line (`trigger: date <YYYY-MM-DD>` or `trigger: release <pkg> ><version>`)',
+    },
   ]);
 });
 
