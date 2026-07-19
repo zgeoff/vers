@@ -68,7 +68,7 @@ test('it signs out every other live session and completes sign-in on confirm', a
     },
   );
 
-  expect(outcome.value).toBe('/avatars');
+  expect(outcome.value).toBe('/respite');
   expect(outcome.cookies['en_verification']).toStrictEqual({});
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
   expect(db.sessionCollection.findFirst((q) => q.where({ id: otherSessionID }))).toBeUndefined();

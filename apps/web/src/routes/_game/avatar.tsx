@@ -1,11 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { AvatarPanel } from '../-avatar/avatar-panel';
 import { getAvatarContent } from '../../lib/avatar/get-avatar-content';
+import { requireActiveAvatar } from '../../lib/avatar/require-active-avatar';
 
 export const Route = createFileRoute('/_game/avatar')({
   component: AvatarPage,
   head: () => ({ meta: [{ title: 'vers | Avatar' }] }),
   loader: async () => {
+    await requireActiveAvatar();
+
     const avatarContent = await getAvatarContent();
 
     return { Content: avatarContent.Renderable };

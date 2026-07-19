@@ -179,5 +179,5 @@ test('it lands a caller with no redirect target on the avatar roster', async () 
     return redirectHref;
   });
 
-  expect(outcome.value).toBe('/avatars');
+  expect(outcome.value).toBe('/respite');
 });

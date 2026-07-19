@@ -4,8 +4,8 @@ import { avatarClient } from '../rpc/clients/avatar-client';
 import { findActiveAvatar } from './find-active-avatar';
 
 /**
- * The game shell's gate: redirects to the avatar roster when the caller has no avatar to play, so
- * every shell route can assume an active avatar exists.
+ * The per-screen gate for avatar-dependent routes: redirects a caller with no avatar to the create
+ * sheet, so the screen can assume an active avatar exists.
  */
 export const requireActiveAvatar = createServerFn({ method: 'GET' }).handler(async () => {
   const avatars = await avatarClient.getAvatars({});
@@ -13,7 +13,7 @@ export const requireActiveAvatar = createServerFn({ method: 'GET' }).handler(asy
   const avatar = findActiveAvatar(avatars);
 
   if (avatar === null) {
-    throw redirect({ href: '/avatars' });
+    throw redirect({ href: '/avatars/create' });
   }
 
   return { avatar };

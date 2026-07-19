@@ -87,7 +87,7 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
 
     const runAccountNavigation = async (): Promise<void> => {
       await router.invalidate();
-      await router.navigate({ to: '/account' });
+      await router.navigate({ to: '/settings' });
     };
 
     void runAccountNavigation();
