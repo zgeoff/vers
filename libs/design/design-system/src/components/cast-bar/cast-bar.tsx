@@ -44,7 +44,6 @@ const track = css({
 const fill = cva({
   base: {
     height: 'full',
-    transition: '[width 120ms linear]',
   },
   variants: {
     tint: {

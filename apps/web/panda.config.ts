@@ -51,7 +51,11 @@ export default defineConfig({
       },
     },
   },
-  include: ['../../libs/design/design-system/src/**/*.{ts,tsx}', './src/**/*.{ts,tsx}'],
+  include: [
+    '../../libs/design/design-system/src/**/*.{ts,tsx}',
+    '../../libs/game/idle-client/src/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
+  ],
   jsxFramework: 'react',
   outdir: 'src/styled-system',
   preflight: true,

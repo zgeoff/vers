@@ -15,9 +15,10 @@ const view = css({
 });
 
 const encounterRow = css({
-  display: 'grid',
+  '& > *': { flex: '1', minWidth: '0' },
+  alignItems: 'stretch',
+  display: 'flex',
   gap: '3',
-  gridTemplateColumns: '[repeat(5, minmax(0, 1fr))]',
 });
 
 const avatarArea = css({

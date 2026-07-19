@@ -12,13 +12,15 @@ interface SwingBarProps {
 }
 
 /**
- * The live swing/cast fill for one actor. Subscribes to combat elapsed on its own so only this leaf
- * re-renders each tick, then derives the fill from the actor's last attack and swing interval.
+ * The live swing timer for one actor, drawn as a cooldown: full the instant after an attack lands,
+ * draining to empty as the next swing charges. Subscribes to combat elapsed on its own so only this
+ * leaf re-renders each tick.
  */
 export function SwingBar(props: Readonly<SwingBarProps>) {
   const elapsed = useCombatElapsed();
+  const active = props.isAlive && props.attackSpeed > 0;
 
-  const progress = buildSwingProgress({
+  const charge = buildSwingProgress({
     attackSpeed: props.attackSpeed,
     elapsed,
     isAlive: props.isAlive,
@@ -28,7 +30,7 @@ export function SwingBar(props: Readonly<SwingBarProps>) {
   return (
     <CastBar
       label={props.label}
-      progress={progress}
+      progress={active ? 100 - charge : 0}
       tint={props.tint}
       {...(props.attackSpeed > 0 && { time: `${(1 / props.attackSpeed).toFixed(1)}s` })}
     />
