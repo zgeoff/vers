@@ -1,14 +1,13 @@
 # Game entropy & provenance
 
 Every random outcome in the game comes from a small set of entropy sources, and each source's
-security properties decide whether the rewards it rolls may carry tradeable value. You are here to
-build or review a mechanism that consumes randomness and to learn which source feeds it and whether
-its outputs may be traded. The client is untrusted and holds the entire simulation, so the design
-makes look-ahead unprofitable rather than trying to prevent it. Tradeability keys on one security
-property that only some entropy sources have. The [seed chain](./seed-chain.md) owns the chain data
-model, [item generation](./item-generation.md) turns a committed entropy source into concrete item
-content, and the [economy modes note](../../game-design/economy-modes.md) owns the reward-content
-rules.
+security properties decide whether the rewards it rolls may carry tradeable value. Read this when
+building or reviewing a mechanism that consumes randomness — which source feeds it, and whether its
+outputs may be traded. The client is untrusted and holds the entire simulation, so the design makes
+look-ahead unprofitable rather than trying to prevent it. Tradeability keys on one security property
+that only some entropy sources have. The [seed chain](./seed-chain.md) owns the chain data model,
+[item generation](./item-generation.md) turns a committed entropy source into concrete item content,
+and the [economy modes note](../../game-design/economy-modes.md) owns the reward-content rules.
 
 ## Threat model
 
