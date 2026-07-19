@@ -66,3 +66,28 @@ test('it prioritizes avatar events when time is equal', () => {
 
   expect(events).toStrictEqual([avatarEvent, enemyEvent2, enemyEvent3]);
 });
+
+test('it breaks same-source ties by id, independent of scheduling order', () => {
+  const ctx = createMockSimulationContext();
+  const data = createMockAvatarData();
+  const avatar = createAvatar(data, ctx);
+
+  const enemyA: EnemyAttackEvent = {
+    id: 'event-a',
+    source: 'enemy-1',
+    time: 100,
+    type: CombatEventType.EnemyAttack,
+  };
+
+  const enemyB: EnemyAttackEvent = {
+    id: 'event-b',
+    source: 'enemy-2',
+    time: 100,
+    type: CombatEventType.EnemyAttack,
+  };
+
+  const sorter = createEventSorter(avatar);
+
+  expect([enemyA, enemyB].toSorted(sorter)).toStrictEqual([enemyA, enemyB]);
+  expect([enemyB, enemyA].toSorted(sorter)).toStrictEqual([enemyA, enemyB]);
+});
