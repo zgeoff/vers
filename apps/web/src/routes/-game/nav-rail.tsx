@@ -49,6 +49,9 @@ const rail = css({
   right: '4',
   top: '[50%]',
   transform: 'translateY(-50%)',
+  // its own transition group so it stays live and on top through a route transition instead of
+  // being flattened into the root snapshot and painted under the sheet's scrim
+  viewTransitionName: 'nav-rail',
   zIndex: '[10]',
 });
 

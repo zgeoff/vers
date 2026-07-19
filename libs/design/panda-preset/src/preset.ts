@@ -49,6 +49,10 @@ export const preset = definePreset({
           from: { transform: 'translateY(100%)' },
           to: { transform: 'translateY(0)' },
         },
+        slideOutToBottom: {
+          from: { transform: 'translateY(0)' },
+          to: { transform: 'translateY(100vh)' },
+        },
       },
       semanticTokens: {
         colors: {
