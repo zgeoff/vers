@@ -5,7 +5,7 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { NavRail } from './nav-rail';
 
 test('it links every rail destination to its route', async () => {
-  renderWithRouter(<NavRail />, { flags: { market: true } });
+  renderWithRouter(<NavRail />, { flags: { 'game-renderer': true, market: true } });
 
   await screen.findByRole('link', { name: /Engagement/ });
 
@@ -20,7 +20,7 @@ test('it links every rail destination to its route', async () => {
 });
 
 test('it hides the Market destination when the market flag is off', async () => {
-  renderWithRouter(<NavRail />, { flags: { market: false } });
+  renderWithRouter(<NavRail />, { flags: { 'game-renderer': true, market: false } });
 
   await screen.findByRole('link', { name: /Respite/ });
 
@@ -30,7 +30,7 @@ test('it hides the Market destination when the market flag is off', async () => 
 test('it marks the followed destination as the current page', async () => {
   const user = userEvent.setup();
 
-  renderWithRouter(<NavRail />, { flags: { market: true } });
+  renderWithRouter(<NavRail />, { flags: { 'game-renderer': true, market: true } });
 
   const stashLink = await screen.findByRole('link', { name: /Stash/ });
 

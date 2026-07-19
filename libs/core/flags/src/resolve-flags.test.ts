@@ -5,7 +5,7 @@ import { resolveFlags } from './resolve-flags';
 test('it resolves every registered flag to its default when no env vars are set', async () => {
   const flags = await resolveFlags();
 
-  expect(flags).toStrictEqual({ market: false });
+  expect(flags).toStrictEqual({ 'game-renderer': true, market: false });
 });
 
 test('it resolves a flag to true when its env var is set to "true"', async () => {
@@ -13,5 +13,13 @@ test('it resolves a flag to true when its env var is set to "true"', async () =>
 
   const flags = await resolveFlags();
 
-  expect(flags).toStrictEqual({ market: true });
+  expect(flags).toStrictEqual({ 'game-renderer': true, market: true });
+});
+
+test('it resolves a default-on flag to false when its env var is set to "false"', async () => {
+  updateEnv('FEATURE_GAME_RENDERER', 'false');
+
+  const flags = await resolveFlags();
+
+  expect(flags).toStrictEqual({ 'game-renderer': false, market: false });
 });
