@@ -21,9 +21,11 @@ test(
       }
     });
 
-    await runLogin(page, { email: 'e2e-avatar-satellite@vers.test', password: 'password123' });
-
-    await page.goto('/avatar');
+    await runLogin(
+      page,
+      { email: 'e2e-avatar-satellite@vers.test', password: 'password123' },
+      { from: '/avatar' },
+    );
 
     await expect(page).toHaveURL(/\/avatar$/);
 

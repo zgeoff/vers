@@ -22,9 +22,11 @@ test(
       }
     });
 
-    await runLogin(page, { email: 'e2e-canvas@vers.test', password: 'password123' });
-
-    await page.goto('/explore');
+    await runLogin(
+      page,
+      { email: 'e2e-canvas@vers.test', password: 'password123' },
+      { from: '/explore' },
+    );
 
     await expect(page).toHaveURL(/\/explore$/);
 
