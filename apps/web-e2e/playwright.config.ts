@@ -27,10 +27,6 @@ export default defineConfig<JourneyOptions>({
     timeout: 10 * 1000,
   },
   fullyParallel: true,
-
-  // the converged spec set: @journey runs identically here and against the stack in
-  // playwright.stack.config.ts; @mock is this config's own client-only coverage
-  grep: /@journey|@mock/,
   outputDir: '.test-results',
   testDir: './specs',
   projects: [

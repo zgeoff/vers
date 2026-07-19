@@ -1,52 +1,64 @@
-import { runLogin } from '../src/support/run-login';
+import { buildAvatarName } from '../src/support/build-avatar-name';
+import { runSignUpIntoGame } from '../src/support/run-sign-up-into-game';
 import { expect, test } from '../src/support/test';
+import type { JourneyAccount } from '../src/support/types';
 
 /**
  * `/avatar` mounts its own satellite canvas alongside the persistent world canvas: two `<canvas>`
  * elements are attached while the panel is up, and navigating away drops back to one as the
  * satellite dies with the route (`keepAlive: false`) while the tagged world canvas survives.
  */
-test(
-  'it mounts a second canvas for the avatar satellite and drops it on navigation away',
-  { tag: '@mock' },
-  async ({ page }) => {
-    // two software-GL canvas mounts under CI's shared CPU run well past other specs' budget
-    test.slow();
+test('it mounts a second canvas for the avatar satellite and drops it on navigation away', async ({
+  page,
+  waitForVerificationCode,
+}) => {
+  // a full account-creation journey plus two software-GL canvas mounts under CI's shared CPU run
+  // well past other specs' budget
+  test.slow();
 
-    const consoleErrors: Array<string> = [];
+  const runID = Date.now();
 
-    page.on('console', (message) => {
-      if (message.type() === 'error') {
-        consoleErrors.push(message.text());
-      }
-    });
+  const account: JourneyAccount = {
+    avatarName: buildAvatarName(),
+    email: `e2e-avatar-satellite-${runID}@vers.test`,
+    password: `e2e-password-${runID}`,
+    username: `e2eavatarsat${runID}`,
+  };
 
-    await runLogin(
-      page,
-      { email: 'e2e-avatar-satellite@vers.test', password: 'password123' },
-      { from: '/avatar' },
-    );
+  await runSignUpIntoGame(page, account, waitForVerificationCode);
+  await expect(page).toHaveURL(/\/explore$/);
 
-    await expect(page).toHaveURL(/\/avatar$/);
+  // scope the no-console-errors assertion to the satellite-canvas walk this spec is about; the
+  // account-creation journey has its own coverage
+  const consoleErrors: Array<string> = [];
 
-    const canvases = page.locator('canvas');
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      consoleErrors.push(message.text());
+    }
+  });
 
-    // software-GL canvas mounts on a loaded shared runner can far outlast the suite-wide expect
-    // timeout while staying sound — slow init is not a missing satellite
-    await expect(canvases).toHaveCount(2, { timeout: 30_000 });
+  await page.getByRole('link', { exact: true, name: 'Avatar' }).click();
 
-    const worldCanvas = canvases.first();
+  await expect(page).toHaveURL(/\/avatar$/);
 
-    await worldCanvas.evaluate((element) => {
-      element.dataset['canvasPersistenceTag'] = 'world';
-    });
+  const canvases = page.locator('canvas');
 
-    await page.getByRole('link', { exact: true, name: 'Respite' }).click();
+  // software-GL canvas mounts on a loaded shared runner can far outlast the suite-wide expect
+  // timeout while staying sound — slow init is not a missing satellite
+  await expect(canvases).toHaveCount(2, { timeout: 30_000 });
 
-    await expect(page).toHaveURL(/\/respite$/);
-    await expect(canvases).toHaveCount(1);
-    await expect(canvases.first()).toHaveAttribute('data-canvas-persistence-tag', 'world');
+  const worldCanvas = canvases.first();
 
-    expect(consoleErrors).toStrictEqual([]);
-  },
-);
+  await worldCanvas.evaluate((element) => {
+    element.dataset['canvasPersistenceTag'] = 'world';
+  });
+
+  await page.getByRole('link', { exact: true, name: 'Respite' }).click();
+
+  await expect(page).toHaveURL(/\/respite$/);
+  await expect(canvases).toHaveCount(1);
+  await expect(canvases.first()).toHaveAttribute('data-canvas-persistence-tag', 'world');
+
+  expect(consoleErrors).toStrictEqual([]);
+});

@@ -19,36 +19,31 @@ const CANONICAL_JSON = JSON.stringify([
  * byte-identical digests. This asserts the Node-context contract call and a real browser's
  * WebCrypto both derive the frozen digest from the same canonical bytes.
  */
-test(
-  'it derives the same frozen digest from the contract call and from browser WebCrypto',
-  { tag: '@mock' },
-  async ({ page }) => {
-    expect(
-      buildCheckpointHash({
-        chainIndex: 1,
-        entropySource: 'server-key',
-        nextSeed: 'seed_1',
-        prevHash: 'hash_0',
-        seed: 'seed_0',
-        time: 12,
-        type: 'tick',
-        version: 1,
-      }),
-    ).toBe(FROZEN_DIGEST);
+test('it derives the same frozen digest from the contract call and from browser WebCrypto', async ({
+  page,
+}) => {
+  expect(
+    buildCheckpointHash({
+      chainIndex: 1,
+      entropySource: 'server-key',
+      nextSeed: 'seed_1',
+      prevHash: 'hash_0',
+      seed: 'seed_0',
+      time: 12,
+      type: 'tick',
+      version: 1,
+    }),
+  ).toBe(FROZEN_DIGEST);
 
-    await page.goto('/');
+  await page.goto('/');
 
-    const browserDigest = await page.evaluate(async (canonical) => {
-      const digestBuffer = await crypto.subtle.digest(
-        'SHA-256',
-        new TextEncoder().encode(canonical),
-      );
+  const browserDigest = await page.evaluate(async (canonical) => {
+    const digestBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonical));
 
-      return [...new Uint8Array(digestBuffer)]
-        .map((byte) => byte.toString(16).padStart(2, '0'))
-        .join('');
-    }, CANONICAL_JSON);
+    return [...new Uint8Array(digestBuffer)]
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('');
+  }, CANONICAL_JSON);
 
-    expect(browserDigest).toBe(FROZEN_DIGEST);
-  },
-);
+  expect(browserDigest).toBe(FROZEN_DIGEST);
+});
