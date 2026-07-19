@@ -2,7 +2,7 @@ name: Issue Hygiene
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited, labeled, unlabeled, milestoned, demilestoned]
   workflow_dispatch:
     inputs:
       issue:
