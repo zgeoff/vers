@@ -81,7 +81,7 @@ test('it breaks same-source ties by id, independent of scheduling order', () => 
 
   const enemyB: EnemyAttackEvent = {
     id: 'event-b',
-    source: 'enemy-2',
+    source: 'enemy-1',
     time: 100,
     type: CombatEventType.EnemyAttack,
   };
