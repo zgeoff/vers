@@ -8,7 +8,7 @@ prices look-ahead rather than trying to prevent it. Tradeability keys on one pro
 unpredictable at the moment the outcome was committed and provably tied to the party that minted it.
 The [seed chain](./seed-chain.md) owns the chain data model, [item generation](./item-generation.md)
 turns a committed entropy source into concrete item content, and the
-[economy modes note](../game-design/economy-modes.md) owns the reward-content rules.
+[economy modes note](../../game-design/economy-modes.md) owns the reward-content rules.
 
 ## Threat model
 
@@ -22,7 +22,7 @@ the whole offline window, and plays only the best one. Out of twenty thousand si
 one that matters is the single best, so a reward distribution's danger lives in its tail, not its
 variance. Modest per-run variance with a rare outlier still hands the scanner a jackpot. That
 best-of-N selection value is the quantity these entropy rules price, and the
-[economy modes note](../game-design/economy-modes.md) turns it into the reward-design rules.
+[economy modes note](../../game-design/economy-modes.md) turns it into the reward-design rules.
 
 ## The seed chain
 
@@ -165,7 +165,7 @@ selecting and rides client-computable entropy anywhere, interactive selection in
 magnitude does carry a tail: bounded is not flat, and best-of-N selects the maximum of a bounded
 spread as readily as an unbounded one. So any modifier that rolls a market-grade quantity (yield,
 roll or pack count, density) is a rolled reward under the tail rule and must be sealed or forbidden.
-The [economy modes note](../game-design/economy-modes.md) owns the content rule.
+The [economy modes note](../../game-design/economy-modes.md) owns the content rule.
 
 For self-found avatars no entropy is sealable at all, because the player holds the key. That is
 consistent with their earnings never reaching the market.
@@ -186,6 +186,6 @@ the property; device-custody rolls do not. The delivery channel is irrelevant.
 
 ## Mode enforcement
 
-An avatar's economy mode (the [economy modes note](../game-design/economy-modes.md) owns the choice)
-fixes its key custody at creation, permanently. No path converts one custody into the other, and a
-device-held key is never repatriated into market eligibility.
+An avatar's economy mode (the [economy modes note](../../game-design/economy-modes.md) owns the
+choice) fixes its key custody at creation, permanently. No path converts one custody into the other,
+and a device-held key is never repatriated into market eligibility.

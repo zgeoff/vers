@@ -38,7 +38,7 @@ performs no I/O.
   under a constraint set — the crafting entry point.
 
 Context is client-computable, so it obeys the
-[tail rule](../game-design/economy-modes.md#perfect-foresight): a context field that scales a
+[tail rule](../../game-design/economy-modes.md#perfect-foresight): a context field that scales a
 market-grade quantity is a published scalar chosen by the player, never a rolled value.
 
 ## Draw order is contract

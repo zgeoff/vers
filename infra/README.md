@@ -8,10 +8,10 @@ monitors, notifiers, dashboards), with Pulumi state held in Cloudflare R2. Crede
   serves TLS.
 - `axiom.ts` — the Axiom resource set: the `vers-*` datasets, the ingest and query API tokens, the
   threshold monitors, the Discord alarms notifier, and the dashboards; the registries in
-  `docs/architecture/observability.md` describe what the monitors and instruments watch. Token
-  secret values live in 1Password, out of code (stack state holds sensitive outputs encrypted) — any
-  change to a token's arguments regenerates its secret, so a scope edit means updating the vault
-  item and dependent Fly secrets within the 48-hour rotation grace window. The provider's own
+  `docs/architecture/platform/observability.md` describe what the monitors and instruments watch.
+  Token secret values live in 1Password, out of code (stack state holds sensitive outputs encrypted)
+  — any change to a token's arguments regenerates its secret, so a scope edit means updating the
+  vault item and dependent Fly secrets within the 48-hour rotation grace window. The provider's own
   credential is console-managed: a token cannot rotate itself without invalidating the session doing
   the rotating.
 - `sdks/axiom/` — committed TypeScript SDK generated from the bridged Terraform provider

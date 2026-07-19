@@ -4,7 +4,7 @@ The fleet emits three OpenTelemetry signals — traces, logs, and metrics — an
 Axiom. This doc serves the engineer instrumenting a feature or querying its telemetry: the export
 path, the line and metric conventions a change follows, the instrument registry, and the alerting
 over these datasets. Error reporting is a separate path (Sentry SDK → Bugsink), covered by
-[error-handling](./error-handling.md). Provisioning and secrets live in
+[error-handling](../services/error-handling.md). Provisioning and secrets live in
 [deployment](./deployment.md).
 
 ## Export path

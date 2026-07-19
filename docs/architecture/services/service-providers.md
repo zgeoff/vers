@@ -9,9 +9,9 @@ platform: the app owns the pipe, the provider owns one job.
 ## Platform
 
 - **Fly.io** — compute. Every service and the web app runs as its own scale-to-zero deployment; the
-  private mesh, rollout, and secrets live in [deployment](./deployment.md).
+  private mesh, rollout, and secrets live in [deployment](../platform/deployment.md).
 - **Neon** — Postgres. One scale-to-zero database holds both the relational identity data and the
-  event store ([database](./database.md)).
+  event store ([database](../platform/database.md)).
 - **Cloudflare** — DNS, plus the R2 bucket backing the Pulumi state.
 
 ## Communication
@@ -23,7 +23,7 @@ platform: the app owns the pipe, the provider owns one job.
 - **Bugsink** — error tracking, self-hosted on Fly (`apps/bugsink`). Browser and server exceptions
   ingest over the Sentry protocol ([error handling](./error-handling.md)).
 - **Axiom** — traces, logs, and metrics. Every service and the web server exports to it over
-  OpenTelemetry ([observability](./observability.md)).
+  OpenTelemetry ([observability](../platform/observability.md)).
 
 ## Analytics
 
@@ -32,7 +32,7 @@ platform: the app owns the pipe, the provider owns one job.
 - **Tinybird** — product analytics. Behavioural events land in managed ClickHouse and are served as
   SQL query endpoints.
 
-The split between web and product analytics lives in [analytics](./analytics.md).
+The split between web and product analytics lives in [analytics](../analytics.md).
 
 ## Feature flags
 

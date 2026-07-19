@@ -1,11 +1,11 @@
 # Overview
 
 Vers is a browser idle game on a microservice backend. A deterministic simulation runs on the
-client, the server verifies its results by replay, and the whole repo [deploys](./deployment.md) as
-one atomic release from a single SHA. This document is the system map: it names each subsystem,
-states the one distinction that orients a reader, and links to the doc that owns each part's detail.
-Read it to place a change or a question in the right subsystem, then follow the link to that
-subsystem's own doc.
+client, the server verifies its results by replay, and the whole repo
+[deploys](./platform/deployment.md) as one atomic release from a single SHA. This document is the
+system map: it names each subsystem, states the one distinction that orients a reader, and links to
+the doc that owns each part's detail. Read it to place a change or a question in the right
+subsystem, then follow the link to that subsystem's own doc.
 
 ## Request path
 
@@ -25,66 +25,68 @@ flowchart LR
 The oRPC link is isomorphic: during SSR the Start server calls services directly, and in the browser
 calls route through the app's `/api/rpc` proxy since services are not reachable from the public
 internet. Either way the client is typed by the service's contract package alone
-([service contracts](./service-contracts.md)).
+([service contracts](./services/service-contracts.md)).
 
 A user has at most one verified session at a time, so completing a 2FA-gated login evicts every
-other session on the account server-side ([auth](./auth.md)). A minted service token can outlive its
-session by up to its own short lifetime, so the trust edge re-confirms the session still exists on
-every request before trusting the token. An evicted device is then signed out on its next request
-rather than when its cached token expires.
+other session on the account server-side ([auth](./services/auth.md)). A minted service token can
+outlive its session by up to its own short lifetime, so the trust edge re-confirms the session still
+exists on every request before trusting the token. An evicted device is then signed out on its next
+request rather than when its cached token expires.
 
 ## Topology
 
 Each domain service is its own Fly deployment, reachable only on the private mesh, and scales to
-zero when idle ([deployment](./deployment.md)). The replay worker is the exception: replaying a
-simulation is CPU-bound, so it runs off the request path with its own scaling profile and keeps a
-warm machine.
+zero when idle ([deployment](./platform/deployment.md)). The replay worker is the exception:
+replaying a simulation is CPU-bound, so it runs off the request path with its own scaling profile
+and keeps a warm machine.
 
 ## Data
 
 One Postgres database on Neon holds two shapes of data, and it scales to zero when nobody is playing
-([database](./database.md)).
+([database](./platform/database.md)).
 
 - **Relational identity data** — users, sessions, verifications, and avatars — is accessed through
   Kysely and migrated by kysely-ctl in `@vers/db`.
 - **Activity checkpoints** — an append-only log plus a per-activity head row — carry the
-  simulation's progress and the cursors its verification advances ([database](./database.md)).
+  simulation's progress and the cursors its verification advances
+  ([database](./platform/database.md)).
 - **Seed chain state** — one row per `(avatar, chain scope)` pair — hands each activity at a scope
-  the seed it draws from ([the seed chain](./seed-chain.md)).
+  the seed it draws from ([the seed chain](./game/seed-chain.md)).
 
 ## Game layer
 
 The simulation is deterministic. A seeded tick engine (`@vers/idle-core`) runs combat in a
 SharedWorker on the client and emits a stream of hash-chained checkpoints
-([game simulation](./game-simulation.md)). Encounter derivation is a pure function of node seed and
-difficulty that lives in shared libraries rather than a service, so the client and the verifier
+([game simulation](./game/game-simulation.md)). Encounter derivation is a pure function of node seed
+and difficulty that lives in shared libraries rather than a service, so the client and the verifier
 compute identical encounters from the same inputs.
 
 The server trusts progress only through replay. The client submits checkpoint batches to the
 activities service, and the verifier replays the same seeds server-side and compares results before
-progress settles ([game simulation](./game-simulation.md)). The checkpoint hashes chain the stream
-together but do not attest combat outcomes. Replay is the proof, and the same replay path generates
-offline progress by simulating forward from the last verified checkpoint.
+progress settles ([game simulation](./game/game-simulation.md)). The checkpoint hashes chain the
+stream together but do not attest combat outcomes. Replay is the proof, and the same replay path
+generates offline progress by simulating forward from the last verified checkpoint.
 
 The world map (`@vers/worldmap-*`) generates the world graph as concentric difficulty rings of baked
 nodes. It renders that graph with three.js through react-three-fiber
-([game rendering](./game-rendering.md)).
+([game rendering](./game/game-rendering.md)).
 
 ## Cross-cutting
 
 - **Service-to-service auth** — services trust no caller, the private mesh included. Every request
   carries a short-lived signed service token minted at the edge with the acting user's ID, and the
-  runtime plugin in `@vers/service-runtime` verifies it before any handler runs ([auth](./auth.md)).
+  runtime plugin in `@vers/service-runtime` verifies it before any handler runs
+  ([auth](./services/auth.md)).
 - **Contracts** — each service's API is declared in its own `@vers/contract-*` package, oRPC
   contract-first with Zod schemas owned by the declaring contract
-  ([service contracts](./service-contracts.md)).
+  ([service contracts](./services/service-contracts.md)).
 - **Atomic release** — contracts are unversioned workspace source packages, and the repo deploys as
   one unit from one SHA. Turborepo re-typechecks every consumer on any contract change, so
   divergence cannot land on `main`. There is no version matrix; the monorepo is the compatibility
-  mechanism ([deployment](./deployment.md)).
+  mechanism ([deployment](./platform/deployment.md)).
 - **Observability** — OpenTelemetry sends traces and logs to Axiom; the Sentry SDK sends errors to
   Bugsink. Both are wired into every service by `@vers/service-runtime`, and request IDs propagate
-  from edge to service ([observability](./observability.md)).
+  from edge to service ([observability](./platform/observability.md)).
 
 ## Core technology
 

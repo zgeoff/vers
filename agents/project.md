@@ -95,15 +95,15 @@ trigger is ordinary control flow, not an invariant.
 ## Error handling
 
 The full conventions — taxonomy, code registry, trace context, reporting split — live in
-`docs/architecture/error-handling.md`. The rules a PR must satisfy:
+`docs/architecture/services/error-handling.md`. The rules a PR must satisfy:
 
 - A procedure handler throws only its typed `opts.errors.*` constructors or `invariant()`. No
   try/catch for logging or reporting in handlers — the central `onError` interceptor in
   `createService` owns that.
 - Every contract `.errors({…})` map is built with `defineErrors` (`@vers/contract-base`). A bespoke
   code (any code outside oRPC's canonical set) declares an explicit `status` and lands with its row
-  in the `docs/architecture/error-handling.md` registry table in the same PR; bespoke codes are
-  named `NOUN_PROBLEM`.
+  in the `docs/architecture/services/error-handling.md` registry table in the same PR; bespoke codes
+  are named `NOUN_PROBLEM`.
 - Clients narrow on `code` via `isDefinedError`/`safe` and act on `data` fields — never on `message`
   strings.
 - The Sentry SDK is the only path to the error backend; pino is a log-only sink. Never wire a log
@@ -118,8 +118,8 @@ The full conventions — taxonomy, code registry, trace context, reporting split
 
 Instrumentation is part of a feature, not a follow-up: work that adds a pipeline, queue, worker, or
 failure path lands with the OpenTelemetry metrics that make it observable. Mechanics, conventions in
-full, and the instrument registry live in `docs/architecture/observability.md`; the rules a PR must
-satisfy:
+full, and the instrument registry live in `docs/architecture/platform/observability.md`; the rules a
+PR must satisfy:
 
 - Instruments are defined in the owning package through the global metrics API (`metrics.getMeter`,
   `@opentelemetry/api`) — domain code never constructs, receives, or stops a meter provider; the
@@ -129,8 +129,8 @@ satisfy:
 - A rare, meaningful event is a counter recorded at the site that decides it (a `record-*.ts`
   module). State that lives in the database observes through observable gauges — one batch callback
   per package, one snapshot query per collection, failures caught and logged, never thrown.
-- Every new instrument lands with its row in the `docs/architecture/observability.md` registry table
-  in the same PR.
+- Every new instrument lands with its row in the `docs/architecture/platform/observability.md`
+  registry table in the same PR.
 
 ## Banned words
 
@@ -201,7 +201,7 @@ CLI. `.env` files themselves are never committed.
 
 `bun run deploy` drives every Fly rollout from the `deploy.config.ts` manifest at the repo root;
 `deploy verify` asserts the fleet is online and current. Mechanics, staleness detection, CI wiring,
-container builds, and secrets: `docs/architecture/deployment.md`.
+container builds, and secrets: `docs/architecture/platform/deployment.md`.
 
 - Database migrations run once per green push in their own never-cancelled `migrate` job — never per
   service.
@@ -236,7 +236,7 @@ PR must satisfy:
 ## Postgres access (MCP)
 
 The `postgres` MCP server exposes production and dev sources; mechanics and provisioning live in
-`docs/architecture/database.md`.
+`docs/architecture/platform/database.md`.
 
 - `execute_sql_prod` / `search_objects_prod` query production read-only — writes are refused at both
   the tool and role layer.
@@ -288,7 +288,7 @@ Zustand holds client state; server cache lives in TanStack Query.
   primitive or a single stored reference goes bare.
 - Middleware wraps only the combined store, never an individual slice.
 - Inside the R3F frame loop, reads are imperative `getState()` calls
-  (`docs/architecture/game-rendering.md`); DOM components subscribe through selector hooks.
+  (`docs/architecture/game/game-rendering.md`); DOM components subscribe through selector hooks.
 
 ## Running things
 

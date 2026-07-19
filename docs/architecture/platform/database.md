@@ -29,8 +29,8 @@ Set Fly's idle-stop meaningfully longer or shorter when provisioning apps.
 
 The activities service owns two tables in this database: `activities` (the per-stream head row) and
 the append-only `activity_checkpoints`. Their cursors and concurrency contract belong to the feature
-— the [checkpoint streams](./game-simulation.md#checkpoint-streams) and the
-[overview](./overview.md). The head row timestamps each cursor's last advance in an `appended_at`
+— the [checkpoint streams](../game/game-simulation.md#checkpoint-streams) and the
+[overview](../overview.md). The head row timestamps each cursor's last advance in an `appended_at`
 and a `verified_at` column. A partial unique index on `activities` permits one `active` row per
 avatar at a time. An append's checkpoint rows insert only within the transaction whose head-row
 update wins the compare-and-swap, so a losing append inserts nothing.

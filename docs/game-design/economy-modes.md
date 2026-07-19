@@ -3,8 +3,8 @@
 This note defines how Vers keeps a fair player economy when the simulation runs on the player's
 machine: the mode chosen at avatar creation, the rules for which outcomes may be predictable, and
 the economic role of juice — spending that modifies an activity. The
-[entropy architecture doc](../architecture/game-entropy.md) owns the mechanisms; this note owns the
-design they enforce.
+[entropy architecture doc](../architecture/game/game-entropy.md) owns the mechanisms; this note owns
+the design they enforce.
 
 ## Perfect Foresight
 

@@ -41,4 +41,4 @@ bun run e2e                       # playwright; first run: bun playwright instal
 - [AGENTS.md](./AGENTS.md) holds the engineering conventions. It is generated from
   `agents/shared.md` and `agents/project.md` — edit the partials, never the file itself.
 - Deploys run through `bun run deploy` — see
-  [docs/architecture/deployment.md](./docs/architecture/deployment.md).
+  [docs/architecture/platform/deployment.md](./docs/architecture/platform/deployment.md).

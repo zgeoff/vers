@@ -110,11 +110,11 @@ a session boundary. Honest grinders swing too, and a false accusation costs more
 denies.
 
 Operating the verifier is an observability task: replay lag and rejection rates split by cause are
-the verification metrics ([observability](./observability.md)). An integrity-mismatch spike there is
-almost always a bad deploy, not a cheating wave.
+the verification metrics ([observability](../platform/observability.md)). An integrity-mismatch
+spike there is almost always a bad deploy, not a cheating wave.
 
 An old sim version stays a valid replay target for a retention window (~30 days,
-[deployment](./deployment.md#retention-sweep)) before the sweep tombstones it.
+[deployment](../platform/deployment.md#retention-sweep)) before the sweep tombstones it.
 
 ## Applying verified progress
 
@@ -184,4 +184,4 @@ The fast-forward simulates from the last verified anchor. Re-simulating a few al
 minutes is harmless: the results are deterministic and resubmission dedupes.
 
 Which rewards offline simulation may produce is an economy rule, not a protocol one: the
-[economy modes note](../game-design/economy-modes.md) owns it.
+[economy modes note](../../game-design/economy-modes.md) owns it.

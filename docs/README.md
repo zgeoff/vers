@@ -18,30 +18,45 @@ How the platform is built — system design, data flows, and operational wiring.
 
 - [Overview](./architecture/overview.md) — system architecture, request path, and the full project
   map
-- [Auth](./architecture/auth.md) — sessions, step-up 2FA, OTP/TOTP verification, and
-  service-to-service tokens
-- [Service contracts](./architecture/service-contracts.md) — contract-first oRPC mechanics and
-  change discipline
-- [Error handling](./architecture/error-handling.md) — error taxonomy, bespoke-code registry, and
-  the reporting split
-- [Database](./architecture/database.md) — Neon postgres topology, connection rules, and
-  re-provisioning
-- [Queues](./architecture/queues.md) — pg-boss behind `@vers/jobs`, the drain delivery model, and
-  retry/idempotency rules
-- [Deployment](./architecture/deployment.md) — Fly rollouts, container builds, CI wiring, and
-  secrets
-- [Service providers](./architecture/service-providers.md) — the external services and what each one
-  owns
 - [Analytics](./architecture/analytics.md) — the web/product analytics split, funnel events, and the
   privacy stance
-- [Feature flags](./architecture/feature-flags.md) — OpenFeature registry, resolution, and route
-  gating
-- [Game rendering](./architecture/game-rendering.md) — the persistent three.js canvas and scene
-  state
-- [Game simulation](./architecture/game-simulation.md) — the deterministic client sim, checkpoint
-  streams, and replay verification
-- [Game entropy](./architecture/game-entropy.md) — entropy sources, sealed salt, and reward
+
+### Services
+
+- [Auth](./architecture/services/auth.md) — sessions, step-up 2FA, OTP/TOTP verification, and
+  service-to-service tokens
+- [Service contracts](./architecture/services/service-contracts.md) — contract-first oRPC mechanics
+  and change discipline
+- [Error handling](./architecture/services/error-handling.md) — error taxonomy, bespoke-code
+  registry, and the reporting split
+- [Feature flags](./architecture/services/feature-flags.md) — OpenFeature registry, resolution, and
+  route gating
+- [Service providers](./architecture/services/service-providers.md) — the external services and what
+  each one owns
+
+### Platform
+
+- [Database](./architecture/platform/database.md) — Neon postgres topology, connection rules, and
+  re-provisioning
+- [Queues](./architecture/platform/queues.md) — pg-boss behind `@vers/jobs`, the drain delivery
+  model, and retry/idempotency rules
+- [Deployment](./architecture/platform/deployment.md) — Fly rollouts, container builds, CI wiring,
+  and secrets
+- [Observability](./architecture/platform/observability.md) — OpenTelemetry metrics and traces, the
+  instrument registry, and what the monitors watch
+
+### Game
+
+- [Game simulation](./architecture/game/game-simulation.md) — the deterministic client sim,
+  checkpoint streams, and replay verification
+- [Seed chain](./architecture/game/seed-chain.md) — the per-`(avatar, scope)` append-only chain: its
+  row model, seed derivation, and advance/rewind lifecycle
+- [Game entropy](./architecture/game/game-entropy.md) — entropy sources, sealed salt, and reward
   provenance
+- [Item generation](./architecture/game/item-generation.md) — the entropy-agnostic interpreter that
+  turns a digest into item content: roll streams, versioned tables, craft constraints
+- [Game rendering](./architecture/game/game-rendering.md) — the persistent three.js canvas and scene
+  state
 
 ## Game design
 

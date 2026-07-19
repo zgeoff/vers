@@ -112,7 +112,7 @@ In app-web the link is isomorphic (`buildServiceLink`). On the server it mints a
 service-to-service token for the target service and attaches it
 ([auth](./auth.md#service-to-service-tokens)). In the browser it routes through the app's
 same-origin `/api/rpc/$service` proxy, so the session cookie rides along, since services are not
-reachable outside the private mesh ([overview](./overview.md)).
+reachable outside the private mesh ([overview](../overview.md)).
 
 ## Errors and the trust boundary
 

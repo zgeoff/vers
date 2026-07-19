@@ -15,7 +15,7 @@ The stack runs on Fly.io in the `syd` region. Three apps hold public addresses; 
 - `vers-bugsink` (`apps/bugsink`) — the error tracker; public because browsers post error envelopes
   directly to it.
 - `vers-umami` (`apps/umami`) — the web-analytics dashboard; tracker traffic instead arrives through
-  `app-web`'s same-origin proxy ([analytics](./analytics.md)).
+  `app-web`'s same-origin proxy ([analytics](../analytics.md)).
 
 Postgres is a Neon project ([database](./database.md)); no app runs its own database, Bugsink
 included. `service-keys` holds no database connection — its state is the `ROLL_KEY_ROOTS` secret
@@ -55,12 +55,12 @@ current values:
 
 `SERVICE_AUTH_PUBLIC_KEY` and `SERVICE_AUTH_PRIVATE_KEY` are one Ed25519 keypair: the SPKI public
 key every service verifies inbound calls with, and the PKCS8 private half that signs outbound s2s
-tokens ([auth](./auth.md)). Two callers hold the private half: `app-web` toward the domain services,
-and `service-replay`'s worker toward version-pinned replay providers. Each token's `aud` is the
-target's registered service name (`service-user`). Both signers hold the same key deliberately.
-Verification checks signature, `iss`, and `aud` only, so any holder can mint a token for any service
-— the private half is confined to first-party callers, and a per-caller key split buys nothing until
-a caller with narrower trust exists.
+tokens ([auth](../services/auth.md)). Two callers hold the private half: `app-web` toward the domain
+services, and `service-replay`'s worker toward version-pinned replay providers. Each token's `aud`
+is the target's registered service name (`service-user`). Both signers hold the same key
+deliberately. Verification checks signature, `iss`, and `aud` only, so any holder can mint a token
+for any service — the private half is confined to first-party callers, and a per-caller key split
+buys nothing until a caller with narrower trust exists.
 
 The remaining keys with cross-service meaning:
 
@@ -68,9 +68,9 @@ The remaining keys with cross-service meaning:
   under issuer and audience `API_IDENTIFIER`.
 - `ROLL_KEY_ROOTS` — `service-keys`' root-secret payload: JSON, one entry per population, each
   holding its current key version and every hex-encoded root version still derived against
-  ([game-entropy](./game-entropy.md)).
+  ([game-entropy](../game/game-entropy.md)).
 - `SENTRY_DSN` — optional on any app, naming its Bugsink project; reporting behavior is
-  [error-handling](./error-handling.md)'s.
+  [error-handling](../services/error-handling.md)'s.
 - `OTEL_EXPORTER_OTLP_*` — the standard OTel export vars, optional on any app and set fleet-wide in
   practice ([provision from nothing](#provision-from-nothing)); the export path and per-signal
   header routing are [observability](./observability.md)'s.
@@ -80,7 +80,7 @@ The browser-side values ride GitHub Actions configuration. The deploy workflow b
 `vers-app-web` secret so the runtime can allow the ingest origin in its CSP. Source-map uploads
 authenticate with the `SENTRY_AUTH_TOKEN` GitHub secret, a Bugsink API token; when it's unset the
 build skips source maps entirely. The workflow bakes the `VITE_UMAMI_WEBSITE_ID` Actions variable
-the same way; a bundle without it ships no analytics tracker ([analytics](./analytics.md)).
+the same way; a bundle without it ships no analytics tracker ([analytics](../analytics.md)).
 
 ## Release
 
@@ -325,7 +325,7 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
    1Password vault (`s2s-auth` item, `public-key` field): provisioning a single service later reads
    it with `op read 'op://vers/s2s-auth/public-key'`. The generated key files are deleted once the
    secrets are set, so the deployed value lives only in Fly's secret store. The Tinybird pair — the
-   Events API origin and the `product_events` append token ([analytics](./analytics.md)) — comes
+   Events API origin and the `product_events` append token ([analytics](../analytics.md)) — comes
    from the `tinybird` item in the `vers` 1Password vault.
 
    ```sh
@@ -437,7 +437,7 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
 
 8. In the Umami UI, create the `vers` website and set its ID as the `VITE_UMAMI_WEBSITE_ID` GitHub
    Actions variable, then assemble the acquisition funnel report over the tracked events
-   ([analytics](./analytics.md)).
+   ([analytics](../analytics.md)).
 
 9. Stand up the telemetry backend. The Axiom account is created in its UI, along with one
    console-minted credential that bootstraps the rest: the `iac-token` field on the `vers-ci`
