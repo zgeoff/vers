@@ -39,29 +39,35 @@ async function runDrain(deps: Readonly<ReplayWorkerDeps>): Promise<number> {
   const startedAt = performance.now();
   let drained = 0;
 
-  for (;;) {
-    // the failure conversion is chained inside the span callback, not around it, so
-    // `reportUnexpectedError` still runs while the root span it tags the report with is active
-    const outcome = await withRootSpan('replay.iteration', () =>
-      runReplayIteration(deps, cache).catch((error: unknown) => {
-        deps.logger.error({ err: error }, 'replay drain iteration threw unexpectedly');
+  try {
+    for (;;) {
+      // the failure conversion is chained inside the span callback, not around it, so
+      // `reportUnexpectedError` still runs while the root span it tags the report with is active
+      const outcome = await withRootSpan('replay.iteration', () =>
+        runReplayIteration(deps, cache).catch((error: unknown) => {
+          deps.logger.error({ err: error }, 'replay drain iteration threw unexpectedly');
 
-        reportUnexpectedError(error);
-        recordIterationFailure('errored');
+          reportUnexpectedError(error);
+          recordIterationFailure('errored');
 
-        return { kind: 'claimFailed' } as const;
-      }),
-    );
+          return { kind: 'claimFailed' } as const;
+        }),
+      );
 
-    if (outcome.kind === 'idle' || outcome.kind === 'claimFailed') {
-      break;
+      if (outcome.kind === 'idle' || outcome.kind === 'claimFailed') {
+        break;
+      }
+
+      drained += 1;
     }
 
-    drained += 1;
+    recordDrainDuration((performance.now() - startedAt) / 1000);
+    recordBacklogClaimed(drained);
+
+    return drained;
+  } finally {
+    // the last claimed driver stays live past the loop; stopping every held entry keeps a driver
+    // from outliving the drain that built it
+    cache.stopAll();
   }
-
-  recordDrainDuration((performance.now() - startedAt) / 1000);
-  recordBacklogClaimed(drained);
-
-  return drained;
 }

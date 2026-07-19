@@ -6,9 +6,9 @@ import type { ActivityStatus } from '@vers/db';
  */
 export interface StoredCheckpoint {
   /**
-   * When this checkpoint landed — absent from a hand-built fixture that never queried the
-   * `activity_checkpoints` row; `loadReplaySegment` always populates it from the stored row's own
-   * `appendedAt`.
+   * When this checkpoint landed. Present whenever the checkpoint was read from its stored
+   * `activity_checkpoints` row; absent only when the checkpoint was constructed without that row,
+   * which never carries a landing time.
    */
   readonly appendedAt?: Date;
   readonly hash: string;

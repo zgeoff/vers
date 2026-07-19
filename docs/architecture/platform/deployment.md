@@ -60,10 +60,10 @@ key every service verifies inbound calls with, and the PKCS8 private half that s
 tokens ([auth](../services/auth.md)). Three callers hold the private half: `app-web` toward the
 domain services, `service-replay` toward version-pinned replay providers, and `service-activity`
 toward `service-replay`'s `/wake` endpoint. Each token's `aud` is the target's registered service
-name (`service-user`). Every signer holds the same key deliberately. Verification checks signature,
-`iss`, and `aud` only, so any holder can mint a token for any service — the private half is confined
-to first-party callers, and a per-caller key split buys nothing until a caller with narrower trust
-exists.
+name (`service-replay`). Every signer holds the same key deliberately. Verification checks
+signature, `iss`, and `aud` only, so any holder can mint a token for any service — the private half
+is confined to first-party callers, and a per-caller key split buys nothing until a caller with
+narrower trust exists.
 
 The remaining keys with cross-service meaning:
 

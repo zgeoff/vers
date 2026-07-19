@@ -21,7 +21,7 @@ test('it declares no bespoke error codes on wake', () => {
   const wakeDef = replayContract.wake['~orpc'];
 
   expect(wakeDef.outputSchema).toBeDefined();
-  expect(wakeDef.errorMap).toContainAllKeys(['UNAUTHORIZED', 'FORBIDDEN']);
+  expect(Object.keys(wakeDef.errorMap).toSorted()).toStrictEqual(['FORBIDDEN', 'UNAUTHORIZED']);
 });
 
 test('it generates a valid OpenAPI document from the replay contract', async () => {
