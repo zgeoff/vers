@@ -12,11 +12,21 @@ export const Route = createFileRoute('/')({
   },
 });
 
+const page = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6',
+  marginX: 'auto',
+  maxWidth: '5xl',
+  padding: '6',
+  width: 'full',
+});
+
 function HomePage() {
   const ctx = Route.useRouteContext();
 
   return (
-    <main className={css({ display: 'flex', flexDirection: 'column', gap: '4', padding: '6' })}>
+    <main className={page}>
       <HomeHero orpc={ctx.orpc} />
       <LandingSections />
     </main>

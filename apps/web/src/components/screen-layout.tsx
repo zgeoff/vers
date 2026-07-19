@@ -6,8 +6,11 @@ const layout = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '5',
+  marginX: 'auto',
+  maxWidth: '[120rem]',
   minHeight: '0',
   padding: '6',
+  width: 'full',
 });
 
 /**

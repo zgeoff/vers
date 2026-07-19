@@ -2,6 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { Brand, Heading, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
+import { AuthLayout } from '../components/auth-layout';
 import { requireAnonymous } from '../lib/auth/require-anonymous';
 
 const requireAnonymousFn = createServerFn({ method: 'GET' }).handler(() => requireAnonymous());
@@ -19,7 +20,7 @@ const pageInfo = css({ marginBottom: '8', textAlign: 'center' });
  */
 function ResetPasswordStarted() {
   return (
-    <>
+    <AuthLayout>
       <section className={pageInfo}>
         <Link to="/">
           <Brand size="xl" />
@@ -34,6 +35,6 @@ function ResetPasswordStarted() {
         Can&apos;t find the email? Check your spam folder or{' '}
         <Link to="/forgot-password">try requesting another one</Link>.
       </Text>
-    </>
+    </AuthLayout>
   );
 }

@@ -8,8 +8,15 @@ interface HomeHeroProps {
   readonly orpc: OrpcQueryUtils;
 }
 
-const heroStyles = css({ display: 'flex', flexDirection: 'column', gap: '2' });
-const linkRowStyles = css({ display: 'flex', gap: '4' });
+const heroStyles = css({
+  alignItems: 'center',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2',
+  textAlign: 'center',
+});
+
+const linkRowStyles = css({ display: 'flex', gap: '4', justifyContent: 'center' });
 
 export function HomeHero(props: HomeHeroProps) {
   const query = useQuery(props.orpc.user.getCurrentUser.queryOptions({ input: {} }));

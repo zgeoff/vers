@@ -11,7 +11,15 @@ interface AvatarPanelProps {
   readonly placeholder?: boolean;
 }
 
-const container = css({ display: 'flex', flexDirection: 'column', gap: '5', padding: '6' });
+const container = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '5',
+  marginX: 'auto',
+  maxWidth: '[120rem]',
+  padding: '6',
+  width: 'full',
+});
 
 const threeColumns = css({
   display: 'grid',

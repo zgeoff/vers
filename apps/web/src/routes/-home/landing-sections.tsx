@@ -4,8 +4,18 @@ import { ScreenPanel } from '../../components/screen-panel';
 
 const sections = css({ display: 'flex', flexDirection: 'column', gap: '8', marginTop: '8' });
 const section = css({ display: 'flex', flexDirection: 'column', gap: '3' });
-const triple = css({ display: 'grid', gap: '4', gridTemplateColumns: 'repeat(3, 1fr)' });
-const pair = css({ display: 'grid', gap: '4', gridTemplateColumns: 'repeat(2, 1fr)' });
+
+const triple = css({
+  display: 'grid',
+  gap: '4',
+  gridTemplateColumns: { base: '1fr', md: 'repeat(3, 1fr)' },
+});
+
+const pair = css({
+  display: 'grid',
+  gap: '4',
+  gridTemplateColumns: { base: '1fr', sm: 'repeat(2, 1fr)' },
+});
 
 export function LandingSections() {
   return (
