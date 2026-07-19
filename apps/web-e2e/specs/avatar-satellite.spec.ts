@@ -1,7 +1,5 @@
-import { buildAvatarName } from '../src/support/build-avatar-name';
-import { runSignUpIntoGame } from '../src/support/run-sign-up-into-game';
-import { expect, test } from '../src/support/test';
-import type { JourneyAccount } from '../src/support/types';
+import { expect, test } from '../src/test';
+import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 
 /**
  * `/avatar` mounts its own satellite canvas alongside the persistent world canvas: two `<canvas>`
@@ -10,26 +8,28 @@ import type { JourneyAccount } from '../src/support/types';
  */
 test('it mounts a second canvas for the avatar satellite and drops it on navigation away', async ({
   page,
-  waitForVerificationCode,
 }) => {
-  // a full account-creation journey plus two software-GL canvas mounts under CI's shared CPU run
-  // well past other specs' budget
+  // two software-GL canvas mounts under CI's shared CPU run well past other specs' budget
   test.slow();
 
-  const runID = Date.now();
+  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
+  await page.goto('/login');
 
-  const account: JourneyAccount = {
-    avatarName: buildAvatarName(),
-    email: `e2e-avatar-satellite-${runID}@vers.test`,
-    password: `e2e-password-${runID}`,
-    username: `e2eavatarsat${runID}`,
-  };
+  // hydration gate: the login form's submit handler attaches only once React commits; an earlier
+  // click falls back to the browser's native GET submit and never leaves /login
+  await page.locator('html[data-hydrated]').waitFor();
+  await page.getByLabel('Email').fill('e2e-avatar-satellite@vers.test');
+  await page.getByLabel('Password').fill('password123');
 
-  await runSignUpIntoGame(page, account, waitForVerificationCode);
-  await expect(page).toHaveURL(/\/explore$/);
+  await waitForHoneypotWindow(page);
+
+  await page.getByRole('button', { exact: true, name: 'Login' }).click();
+
+  // the seeded account carries an avatar, so the active-avatar gate lands it in-game at respite
+  await expect(page).toHaveURL(/\/respite$/);
 
   // scope the no-console-errors assertion to the satellite-canvas walk this spec is about; the
-  // account-creation journey has its own coverage
+  // login that arranges the session is setup
   const consoleErrors: Array<string> = [];
 
   page.on('console', (message) => {

@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import type { JourneyOptions } from './src/support/types';
+import type { E2EOptions } from './src/test';
 
 const baseURL = process.env['STACK_BASE_URL'] ?? 'http://localhost:3200';
 
@@ -9,7 +9,7 @@ const baseURL = process.env['STACK_BASE_URL'] ?? 'http://localhost:3200';
  * webServer entries, the harness owns the stack lifecycle. Specs create their own unique accounts,
  * so a retry never replays against state a failed attempt mutated.
  */
-export default defineConfig<JourneyOptions>({
+export default defineConfig<E2EOptions>({
   expect: {
     timeout: 10 * 1000,
   },

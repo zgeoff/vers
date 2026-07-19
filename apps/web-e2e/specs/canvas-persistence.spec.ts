@@ -1,36 +1,34 @@
-import { buildAvatarName } from '../src/support/build-avatar-name';
-import { runSignUpIntoGame } from '../src/support/run-sign-up-into-game';
-import { expect, test } from '../src/support/test';
-import type { JourneyAccount } from '../src/support/types';
+import { expect, test } from '../src/test';
+import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 
 /**
  * The `_game` layout mounts its canvas once and never remounts it across child-route navigation:
  * a client-side nav to another game route must leave the same `<canvas>` element in the DOM,
  * carrying whatever GPU state it already uploaded.
  */
-test('it keeps the same canvas element across client-side game navigation', async ({
-  page,
-  waitForVerificationCode,
-}) => {
-  // a full account-creation journey plus five client-side game navigations, each holding a mounted
-  // Three.js canvas, runs well past other specs' budget under CI's shared dev server and CPU
-  // contention
+test('it keeps the same canvas element across client-side game navigation', async ({ page }) => {
+  // five client-side game navigations, each holding a mounted Three.js canvas, run well past other
+  // specs' budget under CI's shared dev server and CPU contention
   test.slow();
 
-  const runID = Date.now();
+  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
+  await page.goto('/login');
 
-  const account: JourneyAccount = {
-    avatarName: buildAvatarName(),
-    email: `e2e-canvas-${runID}@vers.test`,
-    password: `e2e-password-${runID}`,
-    username: `e2ecanvas${runID}`,
-  };
+  // hydration gate: the login form's submit handler attaches only once React commits; an earlier
+  // click falls back to the browser's native GET submit and never leaves /login
+  await page.locator('html[data-hydrated]').waitFor();
+  await page.getByLabel('Email').fill('e2e-canvas@vers.test');
+  await page.getByLabel('Password').fill('password123');
 
-  await runSignUpIntoGame(page, account, waitForVerificationCode);
-  await expect(page).toHaveURL(/\/explore$/);
+  await waitForHoneypotWindow(page);
 
-  // scope the no-console-errors assertion to the canvas walk this spec is about; the
-  // account-creation journey has its own coverage
+  await page.getByRole('button', { exact: true, name: 'Login' }).click();
+
+  // the seeded account carries an avatar, so the active-avatar gate lands it in-game at respite
+  await expect(page).toHaveURL(/\/respite$/);
+
+  // scope the no-console-errors assertion to the canvas walk this spec is about; the login that
+  // arranges the session is setup
   const consoleErrors: Array<string> = [];
 
   page.on('console', (message) => {

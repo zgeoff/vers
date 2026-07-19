@@ -273,6 +273,13 @@ jobs:
           docker compose -f apps/web-e2e/docker-compose.stack.yml up -d --quiet-pull --wait postgres resend-stub
           bun run --cwd libs/data/db db:migrate
 
+      # the demo accounts every seeded-login spec signs in as, written straight to the migrated
+      # schema before any service reads it
+      - name: Seed the stack database
+        env:
+          DATABASE_URL: postgresql://admin:password@localhost:5533/vers
+        run: bun run --cwd apps/web-e2e stack:seed
+
       - name: Boot the stack
         run: docker compose -f apps/web-e2e/docker-compose.stack.yml up -d --quiet-pull --wait
 

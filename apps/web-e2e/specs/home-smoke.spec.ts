@@ -1,7 +1,5 @@
-import { buildAvatarName } from '../src/support/build-avatar-name';
-import { runSignUpIntoGame } from '../src/support/run-sign-up-into-game';
-import { expect, test } from '../src/support/test';
-import type { JourneyAccount } from '../src/support/types';
+import { expect, test } from '../src/test';
+import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 
 /**
  * Exercises the home route against a live server, past what `bun test` can drive (it resolves
@@ -23,24 +21,22 @@ test('it serves the home page and renders the signed-out actions', async ({ page
   await expect(page.getByRole('link', { name: 'Sign up' })).toBeVisible();
 });
 
-test('it renders the signed-in home page for a fresh account', async ({
-  page,
-  waitForVerificationCode,
-}) => {
-  const runID = Date.now();
+test('it renders the signed-in home page for a seeded account', async ({ page }) => {
+  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
+  await page.goto('/login');
 
-  const account: JourneyAccount = {
-    avatarName: buildAvatarName(),
-    email: `e2e-home-${runID}@vers.test`,
-    password: `e2e-password-${runID}`,
-    username: `e2ehome${runID}`,
-  };
+  // hydration gate: the login form's submit handler attaches only once React commits; an earlier
+  // click falls back to the browser's native GET submit and never leaves /login
+  await page.locator('html[data-hydrated]').waitFor();
+  await page.getByLabel('Email').fill('demo@vers.test');
+  await page.getByLabel('Password').fill('password123');
 
-  // the onboarding step sets the display name to 'Journey Account'
-  await runSignUpIntoGame(page, account, waitForVerificationCode);
+  await waitForHoneypotWindow(page);
 
+  await page.getByRole('button', { exact: true, name: 'Login' }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'));
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'Welcome back, Journey Account.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome back, Demo Account.' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Log in' })).toBeHidden();
 });

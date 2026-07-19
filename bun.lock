@@ -127,6 +127,7 @@
         "@types/node": "catalog:",
         "@vers/contract-activity": "workspace:*",
         "@vers/contract-verification": "workspace:*",
+        "@vers/db": "workspace:*",
         "@vers/mock-services": "workspace:*",
         "@vers/service-auth": "workspace:*",
         "tiny-invariant": "catalog:",

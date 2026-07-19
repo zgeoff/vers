@@ -6,6 +6,7 @@
   "scripts": {
     "e2e": "playwright test",
     "e2e:stack": "playwright test --config playwright.stack.config.ts",
+    "stack:seed": "bun src/create-stack-seed.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
@@ -15,6 +16,7 @@
     "@types/node": "catalog:",
     "@vers/contract-activity": "workspace:*",
     "@vers/contract-verification": "workspace:*",
+    "@vers/db": "workspace:*",
     "@vers/mock-services": "workspace:*",
     "@vers/service-auth": "workspace:*",
     "tiny-invariant": "catalog:",

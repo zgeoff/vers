@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
-import type { JourneyOptions } from './src/support/types';
+import type { E2EOptions } from './src/test';
 
 const baseURL = process.env['BASE_URL'] ?? 'http://localhost:3000';
 
@@ -22,7 +22,7 @@ try {
   // needs no secrets
 }
 
-export default defineConfig<JourneyOptions>({
+export default defineConfig<E2EOptions>({
   expect: {
     timeout: 10 * 1000,
   },
