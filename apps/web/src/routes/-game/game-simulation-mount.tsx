@@ -17,8 +17,7 @@ let hasSentSessionStart = false;
 let lastEmittedCompletionID: string | undefined;
 
 /**
- * Renders nothing: a side-effect-only sibling to the game layout's outlet, so it returns null by
- * design.
+ * A side-effect-only sibling to the game layout's outlet; renders nothing.
  */
 export function GameSimulationMount() {
   const idleWorkerHandle = useIdleWorkerHandle();

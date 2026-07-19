@@ -30,8 +30,9 @@ interface EmulateSubmitConfig {
   readonly success: boolean;
 }
 
-// hacky hook to give us a simulatedish submit flow that cycles the
-// status button states from idle -> pending -> success.
+/**
+ * Drives a simulated submit flow that cycles the status button through idle -> pending -> success or error.
+ */
 function useEmulateSubmit(config: EmulateSubmitConfig) {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState(StatusButton.Status.Idle);

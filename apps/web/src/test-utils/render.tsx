@@ -15,7 +15,7 @@ type RenderResult = ReturnType<typeof renderRTL> & {
 /**
  * The project render util for component tests: wraps the tree in the app's providers (a fresh
  * `buildQueryClient` per render) and returns RTL's queries bound to it. Trees that need
- * router-aware primitives render through `renderWithRouter` instead.
+ * router-aware primitives use the router-aware render util instead.
  */
 export function render(ui: Readonly<ReactElement>): RenderResult {
   const queryClient = buildQueryClient();

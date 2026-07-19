@@ -112,7 +112,6 @@ export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
       return;
     }
 
-    // TODO(#119): limit node navigation to nodes connected to any completed node
     setSelectedNode(node);
   };
 

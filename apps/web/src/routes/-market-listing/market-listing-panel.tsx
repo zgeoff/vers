@@ -18,7 +18,7 @@ const panel = css({
 });
 
 /**
- * Placeholder listing detail: stands in until the market has real listing data to load.
+ * Renders a static placeholder for a market listing's detail view.
  */
 export function MarketListingPanel(props: MarketListingPanelProps) {
   return (

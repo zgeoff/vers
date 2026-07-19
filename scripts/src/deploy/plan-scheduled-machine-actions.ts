@@ -2,9 +2,7 @@ import type { ScheduledMachine, ScheduledMachineAction, ScheduledMachineState } 
 
 /**
  * Diffs a target's declared scheduled machines against its existing ones,
- * matched by name. A declaration absent from `existing` needs creating; one
- * present on a different image needs its image updated; a current match
- * needs nothing.
+ * matched by name.
  */
 export function planScheduledMachineActions(
   declarations: ReadonlyArray<ScheduledMachine>,

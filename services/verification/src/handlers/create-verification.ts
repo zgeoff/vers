@@ -5,10 +5,14 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { toVerificationData } from './to-verification-data';
 
-// alphanumeric excluding 0, O, and I on purpose to avoid confusing users
+/**
+ * Alphanumeric excluding 0, O, and I to avoid confusing users.
+ */
 const TOTP_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789';
 
-// standard charset used by 2FA apps
+/**
+ * The digit charset standard 2FA apps expect.
+ */
 const TWO_FACTOR_CHARSET = '0123456789';
 
 const VERIFICATION_TYPE_TO_CHARSET: Record<VerificationType, string> = {

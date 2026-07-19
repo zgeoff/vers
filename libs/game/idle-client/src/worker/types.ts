@@ -5,9 +5,9 @@ import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
 
 /**
- * A continuation `runContinuation` wanted to start but couldn't complete — a same-row `CONFLICT`
+ * A continuation the worker wanted to start but couldn't complete — a same-row `CONFLICT`
  * (the terminal append that closes the row is still unacknowledged) or a transport failure on its
- * own `startActivity` call. `activityID` names the row the pending intent was raised against, so a
+ * own start-activity call. `activityID` names the row the pending intent was raised against, so a
  * resync plans `continue` only once that exact row reads closed, never a different one. The row
  * it eventually starts takes the worker's current failure action, not a snapshot from raise time,
  * so a preference changed while the intent waited still applies.

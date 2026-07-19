@@ -56,7 +56,7 @@ export function AvatarCreateForm() {
 
     try {
       // a successful create ends in a redirect that useServerFn already navigated to, resolving
-      // this call with no value — there's no further UI to show
+      // this call with no value
       const result: AvatarCreateResult | undefined = await avatarCreateFn({ data: formData });
 
       if (result === undefined) {

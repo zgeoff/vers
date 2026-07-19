@@ -2,7 +2,7 @@ import type { ActivityCheckpoint, ActivityInput, AvatarData } from '../types';
 import { createSimulationDriver } from './create-simulation-driver';
 
 /**
- * @property duration - how long to run the simulation for. derive from the checkpoint data submitted by the
+ * @property duration - derive from the checkpoint data submitted by the
  * cient, or if simulating offline progress the duration since the last checkpoint (if any)
  * @property expectedCheckpointCount - when the caller knows exactly how many checkpoints the run should
  * produce (a replay), the primary halt condition; `duration` is only the safety cap behind it.
@@ -24,7 +24,7 @@ interface SimulationOutput {
 /**
  * Runs one activity from `Started` to `config.duration` in a single call, stopping the underlying
  * simulation once any tick crosses `duration` — the one-shot path's own termination, never shared
- * with a caller advancing the same simulation across several calls (`createSimulationDriver`).
+ * with a caller that advances the same simulation across several calls.
  */
 export async function runSimulation(
   activity: ActivityInput,

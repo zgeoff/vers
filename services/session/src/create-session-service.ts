@@ -23,7 +23,7 @@ const envShape = {
 };
 
 /**
- * Boots the session service; the production entrypoint and tests both call this as the one shared config.
+ * The production entrypoint and tests both boot through this one shared config.
  */
 export function createSessionService(
   config: CreateSessionServiceConfig = {},

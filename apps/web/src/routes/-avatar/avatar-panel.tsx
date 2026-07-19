@@ -11,8 +11,8 @@ interface AvatarPanelProps {
 const container = css({ display: 'flex', flexDirection: 'column', gap: '4', padding: '6' });
 
 /**
- * Registers the avatar satellite viewer for the panel's lifetime: `useSatellite` defaults to
- * `keepAlive: false`, so the viewer's canvas dies with the route on navigation away.
+ * Registers the avatar satellite viewer for the panel's lifetime. The viewer is not kept alive, so
+ * its canvas dies with the route on navigation away.
  */
 export function AvatarPanel(props: Readonly<AvatarPanelProps>) {
   useSatellite('avatar-viewer', <AvatarViewer />);

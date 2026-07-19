@@ -1,4 +1,3 @@
-// TODO(#109): resolve this travesty
 const isDebugEnabled = false;
 
 export const logger = {

@@ -29,7 +29,6 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
   let state = getInitialState(data);
   let currentLevel = data.level;
 
-  // TODO: pull this out into a util
   const getSnapshot = (): AvatarSnapshot => {
     const behaviourState: AvatarBehaviourSnapshot = {};
 
@@ -157,7 +156,10 @@ function getInitialState(data: AvatarData): AvatarState {
   };
 }
 
-// type safe util for adding our behaviour state to our serializable state
+/**
+ * Writes a behaviour's state into the serializable snapshot under its id, keeping the id and value
+ * types aligned.
+ */
 function updateBehaviourSnapshot<K extends BehaviourID>(
   state: AvatarBehaviourSnapshot,
   id: K,

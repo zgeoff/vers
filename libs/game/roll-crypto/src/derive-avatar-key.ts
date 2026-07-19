@@ -11,8 +11,8 @@ export interface DeriveAvatarKeyInput {
 }
 
 /**
- * Derives a 32-byte avatar roll key via HKDF-SHA256 from a population root secret. Pure and
- * bit-for-bit reproducible: identical input always yields an identical key.
+ * Derives a 32-byte avatar roll key via HKDF-SHA256 from a population root secret. Pure:
+ * identical input always yields an identical key.
  *
  * The info-string layout (`vers/avatar-key/v1|${population}|${avatarID}|${keyVersion}`) is frozen.
  * Its `v1` segment is scheme versioning — it changes only when the derivation algorithm or field

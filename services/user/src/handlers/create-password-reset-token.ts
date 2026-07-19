@@ -17,7 +17,7 @@ interface CreatePasswordResetTokenOpts {
 }
 
 /**
- * Mints a password-reset token, storing only its sha256 hash (#152) and returning the plaintext to
+ * Mints a password-reset token, storing only its sha256 hash and returning the plaintext to
  * present to the reset flow.
  */
 export async function createPasswordResetToken(

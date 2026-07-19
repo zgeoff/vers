@@ -9,7 +9,6 @@ import type { RNG } from './types';
  * most of it
  *
  * @param state - the 128-bit xoroshiro128+ state to rehydrate, as a 32-character hex string
- * @returns a thin wrapper around pure-rand
  */
 export function createRNG(state: string): RNG {
   const gen = xoroshiro128plusFromState(decodeState(state));

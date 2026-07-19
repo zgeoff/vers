@@ -8,8 +8,6 @@ import { resolveTestDBTarget } from './resolve-test-db-target';
  * database and returns a `@vers/db` client bound to it.
  *
  * Implements `Symbol.asyncDispose` to close the client's connection.
- *
- * @returns - The test database client.
  */
 export async function createTestDB() {
   const target = resolveTestDBTarget();

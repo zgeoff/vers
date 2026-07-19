@@ -37,8 +37,7 @@ const listing = css({
 });
 
 /**
- * Placeholder market screen: a static listing list stands in until the market has real listings
- * to load.
+ * Renders a static placeholder market screen with a fixed listing list.
  */
 export function MarketPanel() {
   return (

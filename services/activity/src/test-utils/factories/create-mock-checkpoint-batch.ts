@@ -10,7 +10,7 @@ interface CreateMockCheckpointBatchConfig {
 
   /**
    * Extra fields merged into the last entry's payload — `type`/`rewards` for a batch ending in a
-   * terminal checkpoint. Ignored by `buildCheckpointHash`, so the chain stays valid.
+   * terminal checkpoint. Merged before that entry's hash is computed, so the chain stays valid.
    */
   readonly finalPayloadOverrides?: Readonly<Record<string, unknown>>;
 
@@ -39,8 +39,8 @@ interface CreateMockCheckpointBatchConfig {
 }
 
 /**
- * Builds a chain-valid checkpoint batch: real hashes computed via `buildCheckpointHash`, each
- * entry linking onto the previous one, starting from a given version and previous hash.
+ * Builds a chain-valid checkpoint batch: real hashes computed the same way the service validates
+ * them, each entry linking onto the previous one, starting from a given version and previous hash.
  */
 export function createMockCheckpointBatch(
   config: Readonly<CreateMockCheckpointBatchConfig>,

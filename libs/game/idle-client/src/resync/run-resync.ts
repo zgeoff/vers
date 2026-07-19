@@ -47,8 +47,8 @@ interface RunResyncOptions {
   readonly onProgressFetched?: (progress: LatestActivityProgress) => Promise<void>;
 
   /**
-   * A continuation `runContinuation` couldn't complete, honored as a `continue` plan once its
-   * target row reads closed.
+   * A continuation a previous worker started but couldn't complete, honored as a `continue` plan
+   * once its target row reads closed.
    */
   readonly pendingContinuation?: PendingContinuation | null;
 

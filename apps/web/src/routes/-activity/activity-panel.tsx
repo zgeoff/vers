@@ -41,7 +41,7 @@ const characterFrame = css({
 /**
  * The activity screen: an ambient notice while the activity's appended progress is still ahead of
  * its verified head — the stretch whose rewards are not yet settled — and placeholder
- * character-frame blocks until party state is wired up. Reward items themselves — batches,
+ * character-frame blocks standing in for party state. Reward items themselves — batches,
  * per-item cards — are a different screen's concern.
  */
 export function ActivityPanel() {

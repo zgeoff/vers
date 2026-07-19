@@ -2,8 +2,7 @@ import type { ServiceName } from '@vers/service-auth';
 
 /**
  * Each service's origin for the SSR direct-to-service path, defaulting to the real services' dev
- * ports. Every call is currently intercepted by the mock backend regardless of which origin it
- * names.
+ * ports.
  */
 export const SERVICE_URLS: Readonly<Record<ServiceName, string>> = {
   activity: process.env['ACTIVITY_SERVICE_URL'] ?? 'http://localhost:3006',

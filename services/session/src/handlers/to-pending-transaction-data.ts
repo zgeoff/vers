@@ -4,8 +4,7 @@ import type { Selectable } from 'kysely';
 
 /**
  * Maps a kysely `pending_transactions` row onto the contract's `PendingTransactionData` shape,
- * stripping the row's own timestamps. `action` is cast to `SecureAction`: the column is untyped
- * text, but every write goes through `SecureActionSchema`-validated contract input.
+ * stripping the row's own timestamps.
  */
 export function toPendingTransactionData(
   row: Readonly<Selectable<PendingTransactions>>,

@@ -26,9 +26,13 @@ export interface ConformanceCaseApp {
  */
 export interface ConformanceCase {
   /**
-   * Behavioural title, e.g. "it rejects malformed input on users.getCurrentUser".
+   * Runs the case against a real app via its `handle` function.
    */
   run: (app: ConformanceCaseApp) => Promise<void>;
+
+  /**
+   * Behavioural title, e.g. "it rejects malformed input on users.getCurrentUser".
+   */
   title: string;
 }
 

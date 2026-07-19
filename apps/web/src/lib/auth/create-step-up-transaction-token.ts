@@ -116,7 +116,7 @@ let keyPairPromise: Promise<{ privateKey: jose.CryptoKey; publicKey: jose.Crypto
 /**
  * Lazily generates this process's step-up signing keypair. Minting and verifying always happen in
  * the same edge process a token was issued from, so a fresh in-memory keypair per process is
- * enough — no durable key storage needed.
+ * enough.
  */
 function getStepUpTransactionKeyPair(): Promise<{
   privateKey: jose.CryptoKey;

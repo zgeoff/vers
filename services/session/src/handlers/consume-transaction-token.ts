@@ -9,7 +9,7 @@ interface ConsumeTransactionTokenOpts {
 }
 
 /**
- * Marks a step-up transaction token's jti as used in a durable blocklist (#148): the row's own
+ * Marks a step-up transaction token's jti as used in a durable blocklist: the row's own
  * `expiresAt` — not a TTL cache's lifetime — is what a replay is checked against, so the blocklist
  * outlives any mismatch between the token's validity window and a cache's eviction policy. The
  * insert's `ON CONFLICT DO NOTHING` is the single statement that both claims and detects a replay;

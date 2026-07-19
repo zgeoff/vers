@@ -9,7 +9,7 @@ import { VerifyTwoFactorSetupFormSchema } from './verify-two-factor-setup-form-s
 /**
  * Runs the 2FA-setup verify form's submission: a code check against the pending `2fa-setup`
  * verification, then flipping that same row's type to `2fa` on success — enabling it for the
- * account without ever deleting and recreating the row.
+ * account.
  */
 export async function verifyTwoFactorSetupHandler(
   formData: FormData,

@@ -126,7 +126,10 @@ function getInitialState(data: EnemyData): EnemyState {
   };
 }
 
-// type safe util for adding our behaviour state to our serializable state
+/**
+ * Writes a behaviour's state into the serializable snapshot under its id, keeping the id and value
+ * types aligned.
+ */
 function updateBehaviourSnapshot<K extends BehaviourID>(
   state: EnemyBehaviourSnapshot,
   id: K,

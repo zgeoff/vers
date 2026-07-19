@@ -44,7 +44,7 @@ export const avatarContract = {
 
   /**
    * `name` is the only user-editable field by design: `level`/`xp` are server-owned progression.
-   * The input shape is frozen with #255 — do not widen it.
+   * The input shape is intentionally minimal — do not widen it.
    */
   updateAvatar: authedRoute
     .route({

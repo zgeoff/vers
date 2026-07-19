@@ -2,11 +2,6 @@ import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { Wait } from 'testcontainers';
 
-/**
- * Creates a postgres container for testing.
- *
- * @returns - The started postgres container.
- */
 export function createPostgresContainer(): Promise<StartedPostgreSqlContainer> {
   return (
     new PostgreSqlContainer('postgres:16.2-alpine3.19')

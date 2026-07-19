@@ -2,8 +2,8 @@ import * as axiom from '@pulumi/axiom';
 import * as pulumi from '@pulumi/pulumi';
 
 /**
- * The provider authenticates with the Axiom admin token; like the Cloudflare
- * credentials, it enters through the environment resolved by `op run`.
+ * The provider authenticates with the Axiom admin token; it enters through the
+ * environment resolved by `op run`.
  */
 const axiomProvider = new axiom.Provider('axiom', {
   apiToken: requireEnv('AXIOM_TOKEN'),
