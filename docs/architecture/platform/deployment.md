@@ -42,9 +42,8 @@ Mesh traffic is already encrypted, so services set `force_https = false`.
 
 Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.toml` or Dockerfile.
 Secrets are set with `fly secrets set` and never committed. Which variables an app needs is its env
-contract's to declare, and each project's README renders that contract as a generated table
-(`bun run readme:sync`, checked in CI) — [provision from nothing](#provision-from-nothing) sets the
-current values:
+contract's to declare, documented in the project's committed `.env.example` —
+[provision from nothing](#provision-from-nothing) sets the current values:
 
 - A service requires the base schema (`BASE_ENV_SCHEMA`, `@vers/service-runtime`) plus its own shape
   — `services/<name>/src/<name>-env-shape.ts`.

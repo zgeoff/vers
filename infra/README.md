@@ -67,24 +67,3 @@ Once the records exist, let Fly serve TLS for the hostnames:
 fly certs add versidle.com -a vers-app-web
 fly certs add www.versidle.com -a vers-app-web
 ```
-
-## Environment
-
-Every value in `.env` is an `op://` reference resolved by `op run`; the referenced items live in the
-`vers-ci` vault.
-
-<!-- env:begin -->
-
-| Variable                   | Description                                                   |
-| -------------------------- | ------------------------------------------------------------- |
-| `AWS_ACCESS_KEY_ID`        | —                                                             |
-| `AWS_REGION`               | —                                                             |
-| `AWS_SECRET_ACCESS_KEY`    | —                                                             |
-| `AXIOM_TOKEN`              | axiom monitors/notifiers management token                     |
-| `CLOUDFLARE_ACCOUNT_ID`    | —                                                             |
-| `CLOUDFLARE_API_TOKEN`     | cloudflare zone access and the R2 bucket holding pulumi state |
-| `DISCORD_ALARMS_WEBHOOK`   | discord webhook the axiom alarms notifier posts to            |
-| `PULUMI_CONFIG_PASSPHRASE` | encrypts pulumi stack secrets at rest                         |
-| `R2_STATE_BUCKET`          | —                                                             |
-
-<!-- env:end -->
