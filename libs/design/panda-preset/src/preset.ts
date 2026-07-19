@@ -7,6 +7,10 @@ export const preset = definePreset({
     invalid: '&:is([aria-invalid=true])',
   },
   globalCss: {
+    body: {
+      backgroundColor: 'token(colors.bg.canvas)',
+      color: 'token(colors.text.primary)',
+    },
     html: {
       '--global-color-border': 'colors.border.subtle',
       '--global-color-placeholder': 'colors.ink.500',
@@ -24,6 +28,16 @@ export const preset = definePreset({
   ],
   theme: {
     extend: {
+      keyframes: {
+        fadeIn: {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+        slideInFromBottom: {
+          from: { transform: 'translateY(100%)' },
+          to: { transform: 'translateY(0)' },
+        },
+      },
       semanticTokens: {
         colors: {
           accent: {
@@ -36,6 +50,7 @@ export const preset = definePreset({
             worldBright: { value: '{colors.ink.300}' },
           },
           bg: {
+            canvas: { value: '#0A0A0A' },
             panel: { value: '{colors.ink.950}' },
             panelElevated: { value: '{colors.ink.900}' },
           },

@@ -1,11 +1,13 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { resolveFlags } from '@vers/flags';
+import { useSceneState } from '@vers/game-rendering';
 import { requireAuth } from '../lib/auth/require-auth';
 import { ActivityProgressNotice } from './-game/activity-progress-notice';
+import { AmbientSheet } from './-game/ambient-sheet';
 import { GameCanvasMount } from './-game/game-canvas-mount';
-import { GameNav } from './-game/game-nav';
 import { GameSimulationMount } from './-game/game-simulation-mount';
+import { NavRail } from './-game/nav-rail';
 import { SatelliteStack } from './-game/satellite-stack';
 import { SceneStateSync } from './-game/scene-state-sync';
 import { WelcomeBackModal } from './-game/welcome-back-modal';
@@ -20,6 +22,8 @@ export const Route = createFileRoute('/_game')({
 });
 
 function GameLayout() {
+  const sceneState = useSceneState();
+
   return (
     <>
       <GameCanvasMount />
@@ -27,9 +31,15 @@ function GameLayout() {
       <SceneStateSync />
       <GameSimulationMount />
       <WelcomeBackModal />
-      <GameNav />
+      <NavRail />
       <ActivityProgressNotice />
-      <Outlet />
+      {sceneState.presentation === 'ambient' ? (
+        <AmbientSheet>
+          <Outlet />
+        </AmbientSheet>
+      ) : (
+        <Outlet />
+      )}
     </>
   );
 }

@@ -12,12 +12,13 @@ import {
   GiSpikedDragonHead,
   GiStarSwirl,
 } from 'react-icons/gi';
-import { TbAlertSmall, TbCheck, TbCopy, TbMenu2 } from 'react-icons/tb';
+import { TbAlertSmall, TbCheck, TbCopy, TbMenu2, TbX } from 'react-icons/tb';
 
 export const Icon = {
   Alert: TbAlertSmall,
   Checkmark: TbCheck,
   Clipboard: TbCopy,
+  Close: TbX,
   Menu: TbMenu2,
 
   // feature specific

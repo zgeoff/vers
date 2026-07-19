@@ -61,8 +61,7 @@
     "srvx": "catalog:",
     "three": "catalog:",
     "tiny-invariant": "catalog:",
-    "zod": "catalog:",
-    "zustand": "catalog:"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@babel/core": "catalog:",
