@@ -69,20 +69,9 @@ test('it serves the signed-in home page server-rendered, lands at respite, and l
 
   await expect(page).toHaveURL(/\/respite$/);
 
-  // the game canvas's initial scene setup blocks the main thread for a variable stretch (worse
-  // under parallel worker load), long enough that a click fired mid-block is silently dropped —
-  // retry the click until the nav visibly opens rather than trusting a single one
-  const accountLink = page.getByRole('link', { exact: true, name: 'Account' });
+  await page.getByRole('link', { exact: true, name: 'Settings' }).click();
 
-  await expect(async () => {
-    await page.getByRole('button', { name: 'Menu' }).click();
-
-    await expect(accountLink).toBeVisible({ timeout: 1000 });
-  }).toPass({ timeout: 15_000 });
-
-  await accountLink.click();
-
-  await expect(page).toHaveURL(/\/account$/);
+  await expect(page).toHaveURL(/\/settings$/);
 
   await page.getByRole('button', { name: 'Logout' }).click();
 

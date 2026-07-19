@@ -53,7 +53,6 @@ test('it keeps the same canvas element across client-side game navigation', asyn
     ['Avatar', /\/avatar(?<create>\/create)?$/],
     ['Explore', /\/explore$/],
   ] as const) {
-    await page.getByRole('button', { name: 'Menu' }).click();
     await page.getByRole('link', { exact: true, name: linkName }).click();
 
     await expect(page).toHaveURL(urlPattern);

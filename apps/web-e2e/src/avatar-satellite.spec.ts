@@ -49,7 +49,6 @@ test('it mounts a second canvas for the avatar satellite and drops it on navigat
     element.dataset['canvasPersistenceTag'] = 'world';
   });
 
-  await page.getByRole('button', { name: 'Menu' }).click();
   await page.getByRole('link', { exact: true, name: 'Respite' }).click();
 
   await expect(page).toHaveURL(/\/respite$/);

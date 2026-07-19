@@ -15,13 +15,19 @@ const AVATAR_SATELLITE_DEMO_PASSWORD = 'password123';
 
 /**
  * Seeds the demo accounts with no pre-existing session: every signed-in spec establishes its own
- * session through a real login round trip.
+ * session through a real login round trip. Each game-flow account carries one avatar so the
+ * shell's active-avatar gate admits it straight to the game rather than the roster.
  */
 export async function createDemoSeed(): Promise<void> {
+  const demoUserID = createId();
+  const gameDemoUserID = createId();
+  const canvasDemoUserID = createId();
+  const avatarSatelliteDemoUserID = createId();
+
   await userCollection.create({
     createdAt: new Date(),
     email: 'demo@vers.test',
-    id: createId(),
+    id: demoUserID,
     name: 'Demo Account',
     password: 'password123',
     seed: 0,
@@ -32,7 +38,7 @@ export async function createDemoSeed(): Promise<void> {
   await userCollection.create({
     createdAt: new Date(),
     email: GAME_DEMO_EMAIL,
-    id: createId(),
+    id: gameDemoUserID,
     name: 'Game Demo Account',
     password: GAME_DEMO_PASSWORD,
     seed: 0,
@@ -43,15 +49,13 @@ export async function createDemoSeed(): Promise<void> {
   await userCollection.create({
     createdAt: new Date(),
     email: CANVAS_DEMO_EMAIL,
-    id: createId(),
+    id: canvasDemoUserID,
     name: 'Canvas Demo Account',
     password: CANVAS_DEMO_PASSWORD,
     seed: 0,
     updatedAt: new Date(),
     username: 'e2e-canvas',
   });
-
-  const avatarSatelliteDemoUserID = createId();
 
   await userCollection.create({
     createdAt: new Date(),
@@ -64,12 +68,18 @@ export async function createDemoSeed(): Promise<void> {
     username: 'e2e-avatar-satellite',
   });
 
-  // pre-seeded so /avatar renders the panel directly instead of redirecting to /avatar/create
+  await createDemoAvatar(demoUserID, 'Demo Test Avatar');
+  await createDemoAvatar(gameDemoUserID, 'Game Test Avatar');
+  await createDemoAvatar(canvasDemoUserID, 'Canvas Test Avatar');
+  await createDemoAvatar(avatarSatelliteDemoUserID, 'Satellite Test Avatar');
+}
+
+async function createDemoAvatar(userID: string, name: string): Promise<void> {
   await avatarCollection.create({
     createdAt: new Date(),
     id: createId(),
-    name: 'Satellite Test Avatar',
+    name,
     updatedAt: new Date(),
-    userID: avatarSatelliteDemoUserID,
+    userID,
   });
 }
