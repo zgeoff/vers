@@ -102,11 +102,13 @@ test('it pre-fills the OTP field from the code prop', async () => {
   await withRequestContext({}, async () => {
     const action = mock<FormAction>(() => Promise.resolve(undefined));
 
-    renderWithRouter(<VerifyOTPForm action={action} code="TMMPD7" target="user_1" type="2fa" />);
+    renderWithRouter(
+      <VerifyOTPForm action={action} code="TMMPD7" target="new-user@vers.test" type="onboarding" />,
+    );
 
     await screen.findByTestId('otp-input');
 
-    expect(document.querySelector('input[name="code"]')).toHaveValue('TMMPD7');
+    expect(screen.getByDisplayValue('TMMPD7')).toBeInTheDocument();
   });
 });
 
@@ -114,7 +116,9 @@ test('it auto-submits once when a valid code arrives with the emailed link', asy
   await withRequestContext({}, async () => {
     const action = mock<FormAction>(() => Promise.resolve(undefined));
 
-    renderWithRouter(<VerifyOTPForm action={action} code="TMMPD7" target="user_1" type="2fa" />);
+    renderWithRouter(
+      <VerifyOTPForm action={action} code="TMMPD7" target="new-user@vers.test" type="onboarding" />,
+    );
 
     await waitFor(() => {
       expect(action).toHaveBeenCalledOnce();
@@ -124,6 +128,22 @@ test('it auto-submits once when a valid code arrives with the emailed link', asy
 
     invariant(call !== undefined, 'expected the auto-submit to dispatch the action');
     expect(call.data.get('code')).toBe('TMMPD7');
+  });
+});
+
+test('it auto-submits a rejected code only once instead of looping', async () => {
+  await withRequestContext({}, async () => {
+    const action = mock<FormAction>(() => Promise.resolve(new Response(null, { status: 400 })));
+
+    renderWithRouter(
+      <VerifyOTPForm action={action} code="TMMPD7" target="new-user@vers.test" type="onboarding" />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Something went wrong. Please try again.')).toBeVisible();
+    });
+
+    expect(action).toHaveBeenCalledOnce();
   });
 });
 
@@ -143,11 +163,13 @@ test('it pre-fills without auto-submitting when the code is the wrong length', a
   await withRequestContext({}, async () => {
     const action = mock<FormAction>(() => Promise.resolve(undefined));
 
-    renderWithRouter(<VerifyOTPForm action={action} code="ABC" target="user_1" type="2fa" />);
+    renderWithRouter(
+      <VerifyOTPForm action={action} code="ABC" target="new-user@vers.test" type="onboarding" />,
+    );
 
     await screen.findByTestId('otp-input');
 
-    expect(document.querySelector('input[name="code"]')).toHaveValue('ABC');
+    expect(screen.getByDisplayValue('ABC')).toBeInTheDocument();
     expect(action).not.toHaveBeenCalled();
   });
 });
