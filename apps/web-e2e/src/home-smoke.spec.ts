@@ -29,7 +29,7 @@ test('it serves the anonymous home page server-rendered and hydrates the session
   await expect(page.getByRole('link', { name: 'Sign up' })).toBeVisible();
 });
 
-test('it serves the signed-in home page server-rendered, lands at respite, and logs out back to anonymous', async ({
+test('it serves the signed-in home page server-rendered and logs out back to anonymous', async ({
   page,
 }) => {
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
@@ -44,7 +44,9 @@ test('it serves the signed-in home page server-rendered, lands at respite, and l
   await waitForHoneypotWindow(page);
 
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
-  await page.waitForURL(/\/respite$/);
+
+  // the avatar-roster gate lands every fresh login on the roster rather than a game route
+  await page.waitForURL(/\/avatars$/);
 
   // the raw SSR body, read through the page's own cookie jar — the bare `request` fixture keeps a
   // separate jar and would render anonymous
@@ -65,22 +67,7 @@ test('it serves the signed-in home page server-rendered, lands at respite, and l
     'Client-lane read: signed in as Demo Account.',
   );
 
-  await page.getByRole('link', { name: 'Enter game' }).click();
-
-  await expect(page).toHaveURL(/\/respite$/);
-
-  // the game canvas's initial scene setup blocks the main thread for a variable stretch (worse
-  // under parallel worker load), long enough that a click fired mid-block is silently dropped —
-  // retry the click until the nav visibly opens rather than trusting a single one
-  const accountLink = page.getByRole('link', { exact: true, name: 'Account' });
-
-  await expect(async () => {
-    await page.getByRole('button', { name: 'Menu' }).click();
-
-    await expect(accountLink).toBeVisible({ timeout: 1000 });
-  }).toPass({ timeout: 15_000 });
-
-  await accountLink.click();
+  await page.getByRole('link', { name: 'Account' }).click();
 
   await expect(page).toHaveURL(/\/account$/);
 

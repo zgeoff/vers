@@ -26,6 +26,7 @@ export const Route = createFileRoute('/_game')({
 
 function GameLayout() {
   const matches = useMatches();
+  const routeContext = Route.useRouteContext();
 
   // Deepest declaration wins, matching the route-to-store fold; read straight from matches so the
   // wrapper never trails the store's effect-driven update across an ambient↔focus navigation.
@@ -34,7 +35,7 @@ function GameLayout() {
 
   return (
     <>
-      <GameCanvasMount />
+      <GameCanvasMount gameRenderer={routeContext.flags['game-renderer']} />
       <SatelliteStack />
       <SceneStateSync />
       <GameSimulationMount />

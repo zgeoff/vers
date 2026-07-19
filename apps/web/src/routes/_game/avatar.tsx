@@ -15,6 +15,7 @@ export const Route = createFileRoute('/_game/avatar')({
 
 function AvatarPage() {
   const data = Route.useLoaderData();
+  const routeContext = Route.useRouteContext();
 
-  return <AvatarPanel Content={data.Content} />;
+  return <AvatarPanel Content={data.Content} placeholder={!routeContext.flags['game-renderer']} />;
 }

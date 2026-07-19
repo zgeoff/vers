@@ -36,10 +36,10 @@ test('it keeps the same canvas element across client-side game navigation', asyn
 
   await expect(page).toHaveURL(/\/explore$/);
 
-  const canvas = page.locator('canvas');
+  // the persistent world canvas is the first in the DOM; the avatar route mounts a second
+  // satellite canvas, so an unscoped locator would break strict mode on that leg of the walk
+  const canvas = page.locator('canvas').first();
 
-  // software-GL canvas mounts on a loaded shared runner can far outlast the suite-wide expect
-  // timeout while staying sound — slow init is not a missing canvas
   await expect(canvas).toBeVisible({ timeout: 30_000 });
 
   await canvas.evaluate((element) => {
@@ -53,7 +53,6 @@ test('it keeps the same canvas element across client-side game navigation', asyn
     ['Avatar', /\/avatar(?<create>\/create)?$/],
     ['Explore', /\/explore$/],
   ] as const) {
-    await page.getByRole('button', { name: 'Menu' }).click();
     await page.getByRole('link', { exact: true, name: linkName }).click();
 
     await expect(page).toHaveURL(urlPattern);

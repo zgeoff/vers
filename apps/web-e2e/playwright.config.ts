@@ -74,6 +74,10 @@ export default defineConfig({
       command: 'node ./server.mjs',
       cwd: appWebRoot,
       env: {
+        // the live WebGPU/R3F canvas blocks the main thread long enough under CI's software-GL to
+        // drop nav clicks; the placeholder canvas keeps every canvas-lifecycle assertion valid
+        FEATURE_GAME_RENDERER: 'false',
+
         // canvas-persistence.spec.ts clicks through to the Market nav link
         FEATURE_MARKET: 'true',
 

@@ -4,6 +4,10 @@ import { css } from '@vers/styled-system/css';
 import { useRef } from 'react';
 import type { Mesh } from 'three';
 
+interface AvatarViewerProps {
+  readonly placeholder?: boolean;
+}
+
 const card = css({
   backgroundColor: 'bg.panel',
   borderColor: 'border',
@@ -13,19 +17,27 @@ const card = css({
   width: '64',
 });
 
+const placeholderCanvas = css({ display: '[block]', height: '[100%]', width: '[100%]' });
+
 /**
  * A self-contained satellite widget: its own plain R3F `Canvas` with the default WebGL
  * renderer, isolated from the persistent world canvas and its `WebGPURenderer`/game-loop
- * scheduler. No assets — a single rotating primitive stands in for avatar rendering.
+ * scheduler. No assets — a single rotating primitive stands in for avatar rendering. With
+ * `placeholder`, the same card holds an inert `<canvas>` so the satellite's mount and teardown
+ * still register without a live WebGL context.
  */
-export function AvatarViewer() {
+export function AvatarViewer(props: Readonly<AvatarViewerProps>) {
   return (
     <div className={card} data-testid="avatar-viewer">
-      <Canvas camera={{ position: [0, 0, 4] }}>
-        <ambientLight intensity={0.6} />
-        <directionalLight intensity={0.8} position={[3, 3, 3]} />
-        <PlaceholderAvatar />
-      </Canvas>
+      {(props.placeholder ?? false) ? (
+        <canvas className={placeholderCanvas} />
+      ) : (
+        <Canvas camera={{ position: [0, 0, 4] }}>
+          <ambientLight intensity={0.6} />
+          <directionalLight intensity={0.8} position={[3, 3, 3]} />
+          <PlaceholderAvatar />
+        </Canvas>
+      )}
     </div>
   );
 }
