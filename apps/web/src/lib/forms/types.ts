@@ -17,7 +17,7 @@ export type FormAction = (
 
 /**
  * The subset of Conform's submit context the shared submit handler reads — the assembled
- * `FormData`. Conform passes a wider object; only this field is consumed.
+ * `FormData`.
  */
 export interface FormSubmitContext {
   readonly formData: FormData;

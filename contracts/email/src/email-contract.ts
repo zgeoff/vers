@@ -59,7 +59,7 @@ export const emailContract = {
 
   /**
    * Despite the name, this template carries the signup onboarding OTP: `verificationCode` and
-   * `verificationURL` are the props it renders, not a distinct "welcome" payload.
+   * `verificationURL` are the props it renders.
    */
   sendWelcome: publicRoute
     .route({
