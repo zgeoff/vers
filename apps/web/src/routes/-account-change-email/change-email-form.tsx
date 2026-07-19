@@ -31,7 +31,7 @@ export function ChangeEmailForm() {
 
     try {
       // a cleared step-up gate ends in a redirect to verify-otp that useServerFn already
-      // navigated to, resolving this call with no value — there's no further UI to show
+      // navigated to, resolving this call with no value
       const result: ChangeEmailResult | undefined = await changeEmailFn({ data: formData });
 
       if (result === undefined) {

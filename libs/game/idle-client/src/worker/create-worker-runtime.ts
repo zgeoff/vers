@@ -182,7 +182,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
   };
 
-  // standard shared worker setup - cache our listeners so we can message them later
+  // cache our listeners so we can message them later
   const handleConnect = (event: MessageEvent) => {
     const [port] = event.ports;
 
@@ -217,8 +217,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     }
   };
 
-  // our main loop function uses a fixed timestep to ensure consistent updates as
-  // we're not directly tied to UI updates nor do we have access to requestAnimationFrame
+  // a fixed timestep keeps updates consistent: the worker isn't tied to UI updates and has no requestAnimationFrame
   const runTickLoop = async () => {
     if (stopped) {
       return;

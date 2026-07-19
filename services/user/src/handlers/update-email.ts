@@ -19,9 +19,9 @@ interface UpdateEmailOpts {
  * Changes the acting user's email, repointing any in-progress 2FA verification at the old email
  * to the new one in the same statement; throws CONFLICT when the email is taken. The users update
  * only applies while the row still holds the old email read just before it, and the verifications
- * repoint targets that same old email — pinning both edits to the row this call observed. In the
- * exotic case of a concurrent email change racing this one, the guarded update matches zero rows
- * and the call retries once against the row's current email before giving up.
+ * repoint targets that same old email. In the exotic case of a concurrent email change racing this
+ * one, the guarded update matches zero rows and the call retries once against the row's current
+ * email before giving up.
  */
 export async function updateEmail(
   db: Kysely<DB>,

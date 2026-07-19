@@ -3,11 +3,8 @@ import type { SceneContribution, SceneState } from './types';
 /**
  * Folds a matched route branch's `staticData` contributions into the next scene state.
  * `contributions` is root-first (index 0 is the outermost matched route, the last element the
- * leaf); both axes resolve independently and are sticky:
- * - `scene` takes the deepest contribution that declares it; a branch with no declared scene
- *   keeps `previous.scene`.
- * - `presentation` takes the deepest contribution that declares it; a branch with no declared
- *   presentation keeps `previous.presentation`.
+ * leaf). The `scene` and `presentation` axes resolve independently: each takes the deepest
+ * contribution that declares it, otherwise keeping its value from `previous`.
  */
 export function resolveSceneState(
   contributions: ReadonlyArray<SceneContribution | undefined>,

@@ -40,7 +40,7 @@ interface GetActivityRewardsResult {
  * ordinal. Mint and anchor-advance commit in the same transaction, so every coordinate this range
  * covers is already minted — an unverified tail simply isn't in range yet, never a partial read.
  * `afterChainIndex` is a keyset cursor: a client that already holds rows through some chain index
- * passes it to read only what advanced since, never refetching the full history.
+ * passes it to read only what advanced since.
  */
 export async function getActivityRewards(
   db: Kysely<DB>,

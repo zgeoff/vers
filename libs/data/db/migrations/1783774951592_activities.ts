@@ -4,8 +4,7 @@ import { sql } from 'kysely';
 /**
  * Creates the `activity_status` enum, the `activities` head-row table (one row per activity
  * stream, carrying both the appended and verified cursors), and the append-only
- * `activity_checkpoints` table. `activity_checkpoints` is a plain table by design — time
- * partitioning is a later, separate change.
+ * `activity_checkpoints` table.
  */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema

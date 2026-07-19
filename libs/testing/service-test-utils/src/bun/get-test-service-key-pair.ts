@@ -8,8 +8,7 @@ interface TestServiceKeyPair {
 
 /**
  * One s2s keypair per test process: a package's preload publishes the public key as env, and
- * viewer composites mint tokens from the private key. Bridges preload and test setup through
- * shared module state so both sides agree on the same keypair.
+ * viewer composites mint tokens from the private key.
  */
 export function getTestServiceKeyPair(): Promise<TestServiceKeyPair> {
   cached ??= createServiceKeyPair();

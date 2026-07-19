@@ -72,9 +72,8 @@ function pickBackoffMs(idleStreak: number): number {
 
 /**
  * Resolves after `ms`, or immediately once `signal` aborts — an idle worker's sleep never
- * outlives a requested stop. The loser of the race leaves no timer or listener behind: both are
- * explicitly cleared once the race settles either way, so a pending timeout never holds up an
- * otherwise-finished shutdown.
+ * outlives a requested stop. Both the timer and the listener are cleared once the race settles
+ * either way, so a pending timeout never holds up an otherwise-finished shutdown.
  */
 function wait(ms: number, signal: AbortSignal): Promise<void> {
   let onAbort: (() => void) | undefined;

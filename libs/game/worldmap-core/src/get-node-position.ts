@@ -13,7 +13,7 @@ export function getNodePosition(i: number, difficulty: number): [number, number]
   const segments = difficulty * 4;
   const segmentRadians = (2 * Math.PI) / segments;
 
-  // add 0 to ensure -0 becomes 0. probably doesn't matter but apparently this is a thing.
+  // add 0 to ensure -0 becomes 0.
   const x = Number((difficulty * Math.cos(segmentRadians * i)).toFixed(3)) + 0;
   const y = Number((difficulty * Math.sin(segmentRadians * i)).toFixed(3)) + 0;
 

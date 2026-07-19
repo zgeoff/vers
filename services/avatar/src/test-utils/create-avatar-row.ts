@@ -7,8 +7,8 @@ interface CreateAvatarRowData extends Partial<Insertable<Avatars>> {
 }
 
 /**
- * Inserts an avatar row for a given owner via kysely — needed to seed avatars owned by *another*
- * user for cross-tenant ownership tests, which can't go through the owner-scoped RPC client.
+ * Seeds an avatar owned by *another* user for cross-tenant ownership tests, which can't go through
+ * the owner-scoped RPC client.
  */
 export function createAvatarRow(
   db: Kysely<DB>,

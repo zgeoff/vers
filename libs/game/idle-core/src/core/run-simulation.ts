@@ -2,7 +2,7 @@ import type { ActivityCheckpoint, ActivityInput, AvatarData } from '../types';
 import { createSimulationDriver } from './create-simulation-driver';
 
 /**
- * @property duration - how long to run the simulation for. derive from the checkpoint data submitted by the
+ * @property duration - derive from the checkpoint data submitted by the
  * cient, or if simulating offline progress the duration since the last checkpoint (if any)
  * @property expectedCheckpointCount - when the caller knows exactly how many checkpoints the run should
  * produce (a replay), the primary halt condition; `duration` is only the safety cap behind it.
