@@ -141,8 +141,6 @@ const replayPokeFailedMonitor = new axiom.Monitor(
     type: 'Threshold',
     description:
       'A wake poke to service-replay exhausted its retries without delivering. The optimistic client hides verifier failure, so this counter is the explicit signal that the replay queue may go undrained despite an activity appending unverified work.',
-
-    // TODO(#689): validate MPL at pulumi up
     mplQuery: 'increase({__name__="vers.activity.replay_poke_failed"}[5m])',
     intervalMinutes: 5,
     rangeMinutes: 10,
