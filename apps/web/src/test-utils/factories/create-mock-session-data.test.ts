@@ -4,24 +4,27 @@ import { createMockSessionData } from './create-mock-session-data';
 test('it builds a verified session with the full wire shape by default', () => {
   const session = createMockSessionData();
 
-  expect(session).toContainAllKeys([
-    'createdAt',
-    'expiresAt',
-    'id',
-    'ipAddress',
-    'updatedAt',
-    'userID',
-    'verified',
-  ]);
-
-  expect(session.createdAt).toBeValidDate();
-  expect(session.expiresAt).toBeValidDate();
-  expect(session.verified).toBe(true);
+  expect(session).toStrictEqual({
+    createdAt: expect.toBeDate(),
+    expiresAt: expect.toBeDate(),
+    id: expect.toBeString(),
+    ipAddress: expect.toBeString(),
+    updatedAt: expect.toBeDate(),
+    userID: expect.toBeString(),
+    verified: true,
+  });
 });
 
-test('it applies overrides over the defaults', () => {
+test('it applies overrides on top of the defaults', () => {
   const session = createMockSessionData({ id: 'session_1', verified: false });
 
-  expect(session.id).toBe('session_1');
-  expect(session.verified).toBe(false);
+  expect(session).toStrictEqual({
+    createdAt: expect.toBeDate(),
+    expiresAt: expect.toBeDate(),
+    id: 'session_1',
+    ipAddress: expect.toBeString(),
+    updatedAt: expect.toBeDate(),
+    userID: expect.toBeString(),
+    verified: false,
+  });
 });

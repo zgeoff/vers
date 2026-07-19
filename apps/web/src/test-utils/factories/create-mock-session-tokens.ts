@@ -1,16 +1,7 @@
 import { faker } from '@faker-js/faker';
+import type { SessionTokens } from '@vers/contract-session';
 
-/**
- * The token pair a session refresh returns over the wire.
- */
-interface SessionTokensData {
-  accessToken: string;
-  refreshToken: string;
-}
-
-export function createMockSessionTokens(
-  overrides: Partial<SessionTokensData> = {},
-): SessionTokensData {
+export function createMockSessionTokens(overrides: Partial<SessionTokens> = {}): SessionTokens {
   return {
     accessToken: faker.string.alphanumeric(32),
     refreshToken: faker.string.alphanumeric(32),

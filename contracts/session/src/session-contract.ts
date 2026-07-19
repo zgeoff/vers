@@ -3,11 +3,7 @@ import * as z from 'zod';
 import { PendingTransactionDataSchema } from './pending-transaction-data-schema';
 import { SecureActionSchema } from './secure-action-schema';
 import { SessionDataSchema } from './session-data-schema';
-
-const SessionTokensSchema = z.object({
-  accessToken: z.string(),
-  refreshToken: z.string(),
-});
+import { SessionTokensSchema } from './session-tokens-schema';
 
 const TransactionMismatchDataSchema = z.object({
   field: z.enum(['action', 'ipAddress', 'sessionID', 'target']),
