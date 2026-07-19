@@ -14,10 +14,12 @@ interface CreateSessionServiceConfig {
   readonly db?: Kysely<DB>;
 }
 
-const SESSION_ENV_SHAPE = {
-  API_IDENTIFIER: z.string(),
-  DATABASE_URL: z.string(),
-  JWT_SIGNING_PRIVKEY: z.string(),
+const envShape = {
+  API_IDENTIFIER: z.string().describe('Issuer and audience stamped into signed user tokens'),
+  DATABASE_URL: z
+    .string()
+    .describe('Postgres connection string for the session and step-up tables'),
+  JWT_SIGNING_PRIVKEY: z.string().describe('RS256 PKCS8 private key user tokens are signed with'),
 };
 
 /**
@@ -25,7 +27,7 @@ const SESSION_ENV_SHAPE = {
  */
 export function createSessionService(
   config: CreateSessionServiceConfig = {},
-): Promise<Service<typeof SESSION_ENV_SHAPE>> {
+): Promise<Service<typeof envShape>> {
   return createService({
     buildRouter: async (runtime) =>
       buildSessionRouter({
@@ -35,7 +37,7 @@ export function createSessionService(
         // imported once at boot, not per request: every handler reuses this same resolved key
         signingKey: await jose.importPKCS8(runtime.env.JWT_SIGNING_PRIVKEY, 'RS256'),
       }),
-    envShape: SESSION_ENV_SHAPE,
+    envShape,
     name: 'service-session',
   });
 }

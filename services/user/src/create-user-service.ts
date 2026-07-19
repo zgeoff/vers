@@ -13,18 +13,24 @@ interface CreateUserServiceConfig {
   readonly db?: Kysely<DB>;
 }
 
+const envShape = {
+  DATABASE_URL: z
+    .string()
+    .describe('Postgres connection string for the account and credential tables'),
+};
+
 /**
  * Boots the user service; the production entrypoint and tests both call this as the one shared config.
  */
 export function createUserService(
   config: CreateUserServiceConfig = {},
-): Promise<Service<{ DATABASE_URL: z.ZodString }>> {
+): Promise<Service<typeof envShape>> {
   return createService({
     buildRouter: (runtime) =>
       buildUserRouter({
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
       }),
-    envShape: { DATABASE_URL: z.string() },
+    envShape,
     name: 'service-user',
   });
 }

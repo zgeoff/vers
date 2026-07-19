@@ -25,12 +25,16 @@ interface CreateActivityServiceConfig {
   readonly simTimeCapMs?: number;
 }
 
+const envShape = {
+  DATABASE_URL: z.string().describe('Postgres connection string for the activity checkpoint store'),
+};
+
 /**
  * Boots the activities service; the production entrypoint and tests both call this as the one shared config.
  */
 export function createActivityService(
   config: CreateActivityServiceConfig = {},
-): Promise<Service<{ DATABASE_URL: z.ZodString }>> {
+): Promise<Service<typeof envShape>> {
   return createService({
     buildRouter: (runtime) =>
       buildActivityRouter({
@@ -39,7 +43,7 @@ export function createActivityService(
         keyVersion: config.keyVersion ?? KEY_VERSION,
         simTimeCapMs: config.simTimeCapMs ?? OFFLINE_PROGRESS_CAP_MS,
       }),
-    envShape: { DATABASE_URL: z.string() },
+    envShape,
     name: 'service-activity',
   });
 }

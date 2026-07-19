@@ -2,34 +2,32 @@
 
 Feature flags gate incomplete or gradually-rolled-out functionality behind a boolean. Every flag is
 a temporary code path: once a feature is fully rolled out, the flag and every call site that checks
-it are deleted.
-
-[OpenFeature](https://openfeature.dev) is the evaluation interface every flag check goes through.
-`@vers/flags` registers an in-house provider that serves values from environment variables, so the
-evaluation backend is a swap behind that interface, not a rewrite of every call site.
+it are deleted. [OpenFeature](https://openfeature.dev) is the evaluation interface every flag check
+goes through. `@vers/flags` registers an in-house provider that serves values from environment
+variables, so swapping the evaluation backend stays behind that interface rather than a rewrite of
+every call site.
 
 ## The registry
 
-`@vers/flags`'s `FLAGS` constant is the single source of truth for every flag; each entry declares a
+`@vers/flags`'s `FLAGS` constant is the single source of truth for every flag. Each entry declares a
 `defaultValue` and a `description` of what it gates.
 
 - A flag's key derives its environment variable name mechanically: `FEATURE_` plus the key
-  upper-cased and dash-joined, so `market` becomes `FEATURE_MARKET`.
+  upper-cased with dashes replaced by underscores, so `market` becomes `FEATURE_MARKET`.
 - Setting that variable to `"true"` or `"false"` overrides the default for the process that reads
-  it; any other value, or an unset variable, falls back to `defaultValue`.
+  it. Any other value, or an unset variable, falls back to `defaultValue`.
 - Flags are boolean-only — no percentage rollouts, no variants, no targeting rules.
 - A flag is named for the state it turns on (`market`), never the state it turns off
   (`disable-market`).
 
-Every flag's default is its safe state. An unset environment variable resolves to `defaultValue`, so
-a flag defaults to off unless a feature is meant to ship enabled everywhere until explicitly turned
-off.
+Each flag's `defaultValue` is its safe state: off for a feature still rolling out, on only for a
+feature meant to ship enabled everywhere until explicitly turned off.
 
 ## Server-side evaluation
 
 Flags evaluate server-side only — inside server functions and oRPC handlers — never in a browser
 bundle. `resolveFlags()` evaluates every registered flag and returns a plain
-`Record<FlagKey, boolean>`; a client that needs flag state receives that resolved payload rather
+`Record<FlagKey, boolean>`. A client that needs flag state receives that resolved payload rather
 than the evaluation machinery itself.
 
 `app-web`'s `/_game` layout route resolves flags once, in its `beforeLoad`, through a server
@@ -44,11 +42,12 @@ export const Route = createFileRoute('/_game')({
 });
 ```
 
-Every route and component nested under `/_game` reads the resolved booleans from router context —
+Every route and component nested under `/_game` reads the resolved booleans from router context:
 `useRouteContext({ from: '/_game' })` in a component, `context.flags` in a descendant route's own
-`beforeLoad`. A route gated by a flag throws `notFound()` when it's off, so the route looks absent
-rather than forbidden; a nav entry gated by a flag is filtered out of the list it would otherwise
-appear in.
+`beforeLoad`. Gating hides the feature rather than forbidding it:
+
+- A route gated by a flag throws `notFound()` when it's off, so the route looks absent.
+- A nav entry gated by a flag is filtered out of the list it would otherwise appear in.
 
 ## Gating an oRPC procedure
 
@@ -67,7 +66,7 @@ it's on — the same absent-not-forbidden behavior as a gated route.
 Each process reads its own environment: `app-web` and each Fly service resolve flags from the
 environment variables set on that process, independently of every other process. Flipping a flag
 that gates behavior in more than one process means setting its environment variable on every process
-that checks it — a flag flipped in `app-web` alone has no effect on a service that also gates on it.
+that checks it. A flag flipped in `app-web` alone has no effect on a service that also gates on it.
 
 ## Adding a flag
 

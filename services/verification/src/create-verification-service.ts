@@ -13,18 +13,22 @@ interface CreateVerificationServiceConfig {
   readonly db?: Kysely<DB>;
 }
 
+const envShape = {
+  DATABASE_URL: z.string().describe('Postgres connection string for the verification rows'),
+};
+
 /**
  * Boots the verification service; the production entrypoint and tests both call this as the one shared config.
  */
 export function createVerificationService(
   config: CreateVerificationServiceConfig = {},
-): Promise<Service<{ DATABASE_URL: z.ZodString }>> {
+): Promise<Service<typeof envShape>> {
   return createService({
     buildRouter: (runtime) =>
       buildVerificationRouter({
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
       }),
-    envShape: { DATABASE_URL: z.string() },
+    envShape,
     name: 'service-verification',
   });
 }

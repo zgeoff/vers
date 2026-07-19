@@ -1,22 +1,18 @@
 # Overview
 
-Vers is a browser idle game on a microservice backend: a deterministic simulation runs on the
-client, the server verifies its results by replay (in build), and everything
-[deploys](./deployment.md) from one repo as a single atomic release.
+Vers is a browser idle game on a microservice backend. A deterministic simulation runs on the
+client, the server verifies its results by replay, and the whole repo
+[deploys](./platform/deployment.md) as one atomic release from a single SHA. This document is the
+system map: it names each subsystem, states the distinction that orients it, and links to the doc
+that owns each part's detail.
 
 ## Request path
 
-The web app is the only public-facing deployment. Its TanStack Start server renders the UI and is
-the trust edge: it terminates the user's session, mints a short-lived signed service token carrying
-the acting user's ID, and calls domain services through typed oRPC contract clients over Fly's
-private mesh. Services verify that token on every call, do their work against Postgres on Neon, and
-return typed results.
-
-A user has at most one verified session at a time: completing a 2FA-gated login evicts every other
-session on the account, server-side. Because a request's minted service token can outlive its
-session by up to the token's own short lifetime, the trust edge also re-confirms the session still
-exists on every request before trusting it, so an evicted device is signed out on its next request
-rather than waiting for its cached token to expire.
+The web app (`apps/web`) is the only public-facing deployment. Its TanStack Start server renders the
+UI and is the trust edge. It terminates the user's session, mints a short-lived signed service token
+carrying the acting user's ID, and calls domain services through typed oRPC contract clients over
+Fly's private mesh. Services verify that token on every call, do their work against Postgres on
+Neon, and return typed results.
 
 ```mermaid
 flowchart LR
@@ -25,76 +21,71 @@ flowchart LR
     S -->|Kysely| P[("Postgres<br>(Neon)")]
 ```
 
-The oRPC link is isomorphic: during SSR the Start server calls services directly; in the browser,
-calls go through the app's `/api/rpc` proxy route, since services are not reachable from the public
-internet. Either way the client is typed by the service's contract package alone — see
-[service contracts](./service-contracts.md).
+The oRPC link is isomorphic: during SSR the Start server calls services directly, and in the browser
+calls route through the app's `/api/rpc` proxy since services are not reachable from the public
+internet. Either way the client is typed by the service's contract package alone
+([service contracts](./services/service-contracts.md)).
+
+A user has at most one verified session at a time, so completing a 2FA-gated login evicts every
+other session on the account server-side ([auth](./services/auth.md)). A minted service token can
+outlive its session by up to its own short lifetime, so the trust edge re-confirms the session still
+exists on every request before trusting the token. An evicted device is then signed out on its next
+request rather than when its cached token expires.
 
 ## Topology
 
-Each service is its own Fly deployment, scale-to-zero, reachable only on the private mesh:
-
-- `service-user`, `service-session`, `service-verification` — the identity platform: accounts,
-  sessions (RS256 JWTs signed by the session service), and the OTP/TOTP verification flows. The auth
-  design is specified in [auth](./auth.md).
-- `service-avatar` — the game-domain service: avatars and their progression.
-- `service-email` — queues and delivers transactional email through Resend. Each procedure enqueues
-  a pg-boss job and nudges an immediate drain attempt; an hourly scheduled machine sweeps the queue
-  for anything that nudge missed, and a failed delivery retries on a backoff before dead-lettering.
-- `service-activity` — owns the game's event store: activity streams of simulation checkpoint
-  batches, and the "current activity" / "latest progress" reads the client resumes from.
-- `service-replay` (in build) — queue-fed checkpoint-replay worker. Replaying a simulation is
-  CPU-bound, so replay runs off the request path with its own scaling profile.
+Each domain service is its own Fly deployment, reachable only on the private mesh, and scales to
+zero when idle ([deployment](./platform/deployment.md)). The replay worker is the exception:
+replaying a simulation is CPU-bound, so it runs off the request path with its own scaling profile
+and keeps a warm machine.
 
 ## Data
 
-One database, two shapes. Both live in the same Postgres on Neon, which scales to zero when nobody
-is playing. Provisioning, connection rules, and where the secrets live: [database](./database.md).
+One Postgres database on Neon holds two shapes of data, and it scales to zero when nobody is playing
+([database](./platform/database.md)).
 
-- **Relational identity data** — users, sessions, verifications, avatars — accessed through Kysely,
-  migrated by kysely-ctl in `@vers/db`.
-- **Activity checkpoints** — an append-only table keyed by `(activity_id, version)`, one row per
-  checkpoint batch, alongside a per-activity head row carrying the appended and verified cursors.
-  The workload is append-heavy submissions, point reads for "latest progress" off the head row, and
-  full-stream replays by the verifier — a natural fit for indexed Postgres, with the head row's
-  compare-and-swap backing the checkpoint hash chain. The table carries no inbound foreign keys and
-  no global uniqueness constraint, so time-range partitioning with a retention window that
-  cold-archives verified streams to object storage is a storage change, not a schema change.
-- **Seed chain state** — one `activity_chains` row per `(avatar_id, scope_type, scope_id)` chain
-  scope, holding the chain's genesis seed and its appended and verified anchors, from which each
-  activity at the scope draws its seed. See [the seed chain](./seed-chain.md).
+- **Relational identity data** — users, sessions, verifications, and avatars — is accessed through
+  Kysely and migrated by kysely-ctl in `@vers/db`.
+- **Activity checkpoints** — an append-only log plus a per-activity head row — carry the
+  simulation's progress and the cursors its verification advances
+  ([database](./platform/database.md)).
+- **Seed chain state** — one row per `(avatar, chain scope)` pair — hands each activity at a scope
+  the seed it draws from ([the seed chain](./game/seed-chain.md)).
 
 ## Game layer
 
-The simulation is deterministic: a seeded tick engine (`@vers/idle-core`) runs combat in a
-SharedWorker on the client (`@vers/idle-client`, cross-tab, fixed-timestep), emitting a stream of
-hash-chained checkpoints. Encounter derivation is a pure function of node seed and difficulty living
-in the shared libs — not a service — so client and verifier compute identical encounters from the
-same inputs.
+The simulation is deterministic. A seeded tick engine (`@vers/idle-core`) runs combat in a
+SharedWorker on the client and emits a stream of hash-chained checkpoints
+([game simulation](./game/game-simulation.md)). Encounter derivation is a pure function of node seed
+and difficulty that lives in shared libraries rather than a service, so the client and the verifier
+compute identical encounters from the same inputs.
 
-Checkpoint batches are submitted to the activities service; the verifier replays the same seeds
-server-side and compares results before progress is trusted (in build). Checkpoint hashes chain the
-stream together but don't attest combat outcomes — replay is the proof. The same replay path
-generates offline progress: simulate forward from the last verified checkpoint.
+The server trusts progress only through replay. The client submits checkpoint batches to the
+activities service, and the verifier replays the same seeds server-side and compares results before
+progress settles ([game simulation](./game/game-simulation.md)). The checkpoint hashes chain the
+stream together but do not attest combat outcomes. Replay is the proof, and the same replay path
+generates offline progress by simulating forward from the last verified checkpoint.
 
-The world map (`@vers/worldmap-*`) generates the world graph — concentric difficulty rings of baked
-nodes — and renders it with three.js via react-three-fiber. How the 3D world and the HTML UI share
-the screen: [game rendering](./game-rendering.md).
+The world map (`@vers/worldmap-*`) generates the world graph as concentric difficulty rings of baked
+nodes. It renders that graph with three.js through react-three-fiber
+([game rendering](./game/game-rendering.md)).
 
 ## Cross-cutting
 
-- **Service-to-service auth** — services trust no caller, private mesh included. Every request
-  carries a short-lived signed service token minted at the edge with the acting user's ID; the
-  runtime plugin in `@vers/service-runtime` verifies it before any handler runs.
+- **Service-to-service auth** — services trust no caller, the private mesh included. Every request
+  carries a short-lived signed service token minted at the edge with the acting user's ID, and the
+  runtime plugin in `@vers/service-runtime` verifies it before any handler runs
+  ([auth](./services/auth.md)).
 - **Contracts** — each service's API is declared in its own `@vers/contract-*` package, oRPC
-  contract-first with Zod schemas owned by the contract that declares them. Mechanics, error
-  taxonomy, and change discipline: [service contracts](./service-contracts.md).
-- **Atomic release** — contracts are unversioned workspace source packages; the repo deploys as one
-  unit from one SHA. Turborepo re-typechecks every consumer on any contract change, so divergence
-  cannot land on `main`. There is no version matrix — the monorepo is the compatibility mechanism.
-- **Observability** — OpenTelemetry (traces and logs to Axiom) and the Sentry SDK (errors to
-  Bugsink) are wired into every service by `@vers/service-runtime`; request IDs propagate edge to
-  service.
+  contract-first with Zod schemas owned by the declaring contract
+  ([service contracts](./services/service-contracts.md)).
+- **Atomic release** — contracts are unversioned workspace source packages, and the repo deploys as
+  one unit from one SHA. Turborepo re-typechecks every consumer on any contract change, so
+  divergence cannot land on `main`. There is no version matrix; the monorepo is the compatibility
+  mechanism ([deployment](./platform/deployment.md)).
+- **Observability** — OpenTelemetry sends traces and logs to Axiom; the Sentry SDK sends errors to
+  Bugsink. Both are wired into every service by `@vers/service-runtime`, and request IDs propagate
+  from edge to service ([observability](./platform/observability.md)).
 
 ## Core technology
 
@@ -174,6 +165,10 @@ Libraries (`libs/`, grouped by domain):
 - `libs/core/utils` - low-level platform-agnostic utils
 - `libs/data/data` - core static game data
 - `libs/data/db` - kysely connection helper, migrations, and generated database types
+- `libs/data/release-registry` - deploy release registry: records a row per rollout that passed its
+  post-deploy probes and finds each app's newest release as its rollback target
+- `libs/data/sim-registry` - sim-engine version registry: registers built engine images, resolves
+  versions by engine hash, and expires rows past their retention deadline
 - `libs/design/design-system` - ui component library (Ark UI primitives + Panda recipes)
 - `libs/design/panda-preset` - design tokens & panda css config
 - `libs/design/styled-system` - generated code for panda css design system
@@ -201,7 +196,9 @@ Libraries (`libs/`, grouped by domain):
 - `libs/testing/test-utils` - generic test helpers: env override/cleanup, MSW lifecycle wiring, JWT
   and in-process RPC-client fixtures, and oRPC conformance-case collection
 
-Infrastructure:
+Infrastructure and tooling:
 
 - `infra` - pulumi infrastructure definitions and the Tinybird workspace datafiles
   (`infra/tinybird`)
+- `scripts` - operational tooling: the deploy, stack, and postgres CLIs invoked through
+  root-manifest scripts

@@ -12,13 +12,13 @@ import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
 import type pino from 'pino';
 import * as z from 'zod';
-import { BASE_ENV_SCHEMA } from './base-env-schema';
+import { baseEnvSchema } from './base-env-schema';
 import { createLogger } from './create-logger';
 import { reportUnexpectedError } from './report-unexpected-error';
 import { startErrorReporting } from './start-error-reporting';
 import type { ServiceContext } from './types';
 
-type ServiceEnv<TEnvShape extends z.ZodRawShape> = z.infer<typeof BASE_ENV_SCHEMA> &
+type ServiceEnv<TEnvShape extends z.ZodRawShape> = z.infer<typeof baseEnvSchema> &
   z.infer<z.ZodObject<TEnvShape>>;
 
 interface ServiceRuntime<TEnvShape extends z.ZodRawShape> {
@@ -149,7 +149,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
 function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
   envShape: TEnvShape,
 ): ServiceEnv<TEnvShape> {
-  const base = BASE_ENV_SCHEMA.safeParse(process.env);
+  const base = baseEnvSchema.safeParse(process.env);
   const extra = z.object(envShape).safeParse(process.env);
 
   if (!base.success || !extra.success) {
@@ -207,7 +207,7 @@ interface RegisterORPCHandlerDeps {
 /**
  * Registers an oRPC fetch handler behind the s2s trust boundary: an invalid service token short-
  * circuits with a plain 401 before the handler ever runs, per the auth/trust-boundary split in
- * docs/architecture/service-contracts.md. Every response — including that 401 — carries the request's trace id
+ * docs/architecture/services/service-contracts.md. Every response — including that 401 — carries the request's trace id
  * in `x-trace-id`, and the whole request runs inside its trace-context scope so logs correlate.
  * Every request logs one structured line on completion (method, path, status, duration), severity
  * following the response status; a trust-boundary rejection's line carries the rejection reason.

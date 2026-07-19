@@ -16,11 +16,19 @@ interface CreateReplayServiceConfig {
   readonly db?: Kysely<DB>;
 }
 
-const REPLAY_SERVICE_ENV_SHAPE = {
-  DATABASE_URL: z.string(),
-  KEYS_SERVICE_URL: z.url(),
-  SERVICE_AUTH_PRIVATE_KEY: z.string().min(1),
-  SIM_ENGINE_HASH: z.string().min(1),
+const envShape = {
+  DATABASE_URL: z.string().describe('Postgres connection string the worker claims chains from'),
+  KEYS_SERVICE_URL: z
+    .url()
+    .describe('Origin of the keys service the mint step resolves roll keys through'),
+  SERVICE_AUTH_PRIVATE_KEY: z
+    .string()
+    .min(1)
+    .describe('Ed25519 PKCS8 private key the worker signs outbound s2s tokens with'),
+  SIM_ENGINE_HASH: z
+    .string()
+    .min(1)
+    .describe('Engine hash baked at build; the provider answers replay only for this version'),
 };
 
 /**
@@ -28,7 +36,7 @@ const REPLAY_SERVICE_ENV_SHAPE = {
  * `serve.ts` starts the replay worker alongside the router from these same resolved values,
  * rather than re-deriving them from `env` a second time.
  */
-export interface ReplayService extends Service<typeof REPLAY_SERVICE_ENV_SHAPE> {
+export interface ReplayService extends Service<typeof envShape> {
   readonly db: Kysely<DB>;
   readonly privateKey: CryptoKey;
 
@@ -62,7 +70,7 @@ export async function createReplayService(
 
       return buildReplayRouter({ simVersion: runtime.env.SIM_ENGINE_HASH });
     },
-    envShape: REPLAY_SERVICE_ENV_SHAPE,
+    envShape,
     name: 'service-replay',
   });
 
