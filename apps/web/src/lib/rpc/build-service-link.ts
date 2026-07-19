@@ -1,7 +1,7 @@
 import { RPCLink } from '@orpc/client/fetch';
 import { createIsomorphicFn } from '@tanstack/react-start';
 import type { ServiceName } from '@vers/service-auth';
-import { findTraceContext } from '@vers/service-utils';
+import { buildTracingInterceptor } from '@vers/service-utils/orpc';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
 import { createEdgeServiceToken } from './create-edge-service-token';
 import { loadSessionActor } from './load-session-actor';
@@ -25,41 +25,42 @@ export interface ServiceLinkContext {
  * outside the private network.
  */
 export function buildServiceLink(service: ServiceName): RPCLink<ServiceLinkContext> {
-  return createIsomorphicFn()
-    .server(
-      () =>
-        new RPCLink<ServiceLinkContext>({
-          headers: async (options) => {
-            // an explicit acting user (login, force-logout) has no cookie session to name, so the
-            // token carries no `sid` claim on that path
-            const actor =
-              options.context.actingUserID === undefined ? await loadSessionActor() : null;
+  return (
+    createIsomorphicFn()
+      .server(
+        () =>
+          new RPCLink<ServiceLinkContext>({
+            clientInterceptors: [buildTracingInterceptor()],
+            headers: async (options) => {
+              // an explicit acting user (login, force-logout) has no cookie session to name, so the
+              // token carries no `sid` claim on that path
+              const actor =
+                options.context.actingUserID === undefined ? await loadSessionActor() : null;
 
-            const actingUserID =
-              options.context.actingUserID === undefined
-                ? (actor?.userID ?? null)
-                : options.context.actingUserID;
+              const actingUserID =
+                options.context.actingUserID === undefined
+                  ? (actor?.userID ?? null)
+                  : options.context.actingUserID;
 
-            const token = await createEdgeServiceToken({
-              actingSessionID: actor?.sessionID ?? null,
-              actingUserID,
-              audience: service,
-            });
+              const token = await createEdgeServiceToken({
+                actingSessionID: actor?.sessionID ?? null,
+                actingUserID,
+                audience: service,
+              });
 
-            // mint this hop as a child of the request's ambient trace scope; outside a request
-            // (background work) no scope exists, which starts a fresh trace instead
-            const trace = createTraceContext(findTraceContext());
+              return { authorization: `Bearer ${token}` };
+            },
+            url: `${SERVICE_URLS[service]}/rpc`,
+          }),
+      )
 
-            return { authorization: `Bearer ${token}`, traceparent: buildTraceparent(trace) };
-          },
-          url: `${SERVICE_URLS[service]}/rpc`,
-        }),
-    )
-    .client(
-      () =>
-        new RPCLink<ServiceLinkContext>({
-          headers: () => ({ traceparent: buildTraceparent(createTraceContext()) }),
-          url: `${globalThis.location.origin}/api/rpc/${service}`,
-        }),
-    )();
+      // no OTel in the browser: the SharedWorker/browser client keeps minting its own header
+      .client(
+        () =>
+          new RPCLink<ServiceLinkContext>({
+            headers: () => ({ traceparent: buildTraceparent(createTraceContext()) }),
+            url: `${globalThis.location.origin}/api/rpc/${service}`,
+          }),
+      )()
+  );
 }

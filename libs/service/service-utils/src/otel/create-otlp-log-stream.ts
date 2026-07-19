@@ -1,7 +1,7 @@
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto';
-import { resourceFromAttributes } from '@opentelemetry/resources';
 import { BatchLogRecordProcessor, LoggerProvider } from '@opentelemetry/sdk-logs';
 import { buildLogRecord } from './build-log-record';
+import { buildTelemetryResource } from './build-telemetry-resource';
 import { isRecord } from './is-record';
 
 interface CreateOTLPLogStreamOptions {
@@ -22,7 +22,7 @@ export interface OTLPLogStream {
 export function createOTLPLogStream(options: CreateOTLPLogStreamOptions): OTLPLogStream {
   const provider = new LoggerProvider({
     processors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })],
-    resource: resourceFromAttributes({ 'service.name': options.serviceName }),
+    resource: buildTelemetryResource({ serviceName: options.serviceName }),
   });
 
   const otelLogger = provider.getLogger(options.serviceName);

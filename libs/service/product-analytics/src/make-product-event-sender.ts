@@ -1,4 +1,6 @@
+import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
 import { encodeProductEventRow } from './encode-product-event-row';
+import { recordDeliveryFailure } from './metrics/record-delivery-failure';
 import type { StampedProductEvent } from './types';
 
 interface ProductEventSenderConfig {
@@ -35,44 +37,69 @@ export function makeProductEventSender(
 
   target.searchParams.set('name', EVENTS_DATA_SOURCE);
 
-  return async (event) => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
+  return (event) => {
+    const tracer = trace.getTracer('@vers/product-analytics');
 
-    // the race bounds the wait rather than aborting the socket: signal instances don't survive
-    // environments that patch the fetch globals, and the runtime's pool reclaims the connection
-    try {
-      const body = JSON.stringify(encodeProductEventRow(event));
+    return tracer.startActiveSpan('tinybird.events', { kind: SpanKind.CLIENT }, async (span) => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
 
-      const response = await Promise.race([
-        fetch(target, {
-          body,
-          headers: {
-            authorization: `Bearer ${config.token}`,
-            'content-type': 'application/x-ndjson',
-          },
-          method: 'POST',
-        }),
-        new Promise<never>((_resolve, reject) => {
-          timer = setTimeout(() => {
-            reject(new Error('product analytics upstream deadline exceeded'));
-          }, UPSTREAM_DEADLINE_MS);
+      // the race bounds the wait rather than aborting the socket: signal instances don't survive
+      // environments that patch the fetch globals, and the runtime's pool reclaims the connection
+      try {
+        const body = JSON.stringify(encodeProductEventRow(event));
 
-          timer.unref?.();
-        }),
-      ]);
+        const response = await Promise.race([
+          fetch(target, {
+            body,
+            headers: {
+              authorization: `Bearer ${config.token}`,
+              'content-type': 'application/x-ndjson',
+            },
+            method: 'POST',
+          }),
+          new Promise<never>((_resolve, reject) => {
+            timer = setTimeout(() => {
+              reject(new Error('product analytics upstream deadline exceeded'));
+            }, UPSTREAM_DEADLINE_MS);
 
-      if (!response.ok) {
+            timer.unref?.();
+          }),
+        ]);
+
+        if (!response.ok) {
+          span.setStatus({ code: SpanStatusCode.ERROR });
+
+          recordDeliveryFailure('rejected');
+
+          return false;
+        }
+
+        const quarantinedRows = await readQuarantinedRowCount(response);
+
+        if (quarantinedRows !== 0) {
+          span.setStatus({ code: SpanStatusCode.ERROR });
+
+          recordDeliveryFailure('quarantined');
+
+          return false;
+        }
+
+        return true;
+      } catch (error) {
+        const exception = error instanceof Error ? error : String(error);
+
+        span.recordException(exception);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+
+        recordDeliveryFailure('unreachable');
+
         return false;
+      } finally {
+        clearTimeout(timer);
+
+        span.end();
       }
-
-      const quarantinedRows = await readQuarantinedRowCount(response);
-
-      return quarantinedRows === 0;
-    } catch {
-      return false;
-    } finally {
-      clearTimeout(timer);
-    }
+    });
   };
 }
 

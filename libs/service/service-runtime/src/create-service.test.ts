@@ -1,10 +1,13 @@
 import { expect, onTestFinished, spyOn, test } from 'bun:test';
+import { trace } from '@opentelemetry/api';
 import { implement } from '@orpc/server';
 import { authedRoute, publicRoute } from '@vers/contract-base';
 import { createServiceToken, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { findSpanTraceContext } from '@vers/service-utils';
 import { buildRPCTestClient, collectConformanceCases, waitFor } from '@vers/test-utils';
 import { updateEnv } from '@vers/test-utils/bun';
 import { expectTypeOf } from 'expect-type';
+import invariant from 'tiny-invariant';
 import * as z from 'zod';
 import { createService } from './create-service';
 import { sentryHandle } from './sentry-handle';
@@ -12,6 +15,8 @@ import type { ServiceContext } from './types';
 
 function buildTestContract() {
   return {
+    getActiveSpanStability: publicRoute.output(z.object({ sameSpanAcrossAwaits: z.boolean() })),
+    getSpanTraceID: publicRoute.output(z.object({ traceID: z.string().nullable() })),
     getThing: authedRoute
       .route({ method: 'GET', path: '/things' })
       .input(z.object({ id: z.string() }))
@@ -26,6 +31,22 @@ function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
   const os = implement(contract).$context<ServiceContext>();
 
   return {
+    getActiveSpanStability: os.getActiveSpanStability.handler(async () => {
+      // exercises the async-context fidelity the Bun spike verified: a Bun.sleep and a
+      // Promise.all both cross a real await boundary, and the request's span stays the active
+      // one (a defined span, not a fresh or absent one) on both sides
+      const before = trace.getActiveSpan();
+
+      await Bun.sleep(0);
+      await Promise.all([Promise.resolve(), Promise.resolve()]);
+
+      const after = trace.getActiveSpan();
+
+      return { sameSpanAcrossAwaits: before !== undefined && before === after };
+    }),
+    getSpanTraceID: os.getSpanTraceID.handler(() => ({
+      traceID: findSpanTraceContext()?.traceID ?? null,
+    })),
     getThing: os.getThing.handler((opts) => {
       if (opts.context.actingUserId === null) {
         throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
@@ -127,6 +148,34 @@ test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugi
       name: 'test-service',
     }),
   ).toResolve();
+});
+
+test('it keeps the active OTel span bound to the request across awaits under the Elysia plugin', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://127.0.0.1:1/');
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    token,
+  });
+
+  const result = await client.getActiveSpanStability();
+
+  expect(result.sameSpanAcrossAwaits).toBeTrue();
 });
 
 test('it serves a router built by an async buildRouter', async () => {
@@ -398,6 +447,50 @@ test('it continues the trace named by an inbound traceparent header', async () =
   );
 
   expect(response.headers.get('x-trace-id')).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
+});
+
+test('it reports the OTel span trace id as x-trace-id when no traceparent came in', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://127.0.0.1:1/');
+  updateEnv('SERVICE_AUTH_PUBLIC_KEY', keyPair.publicKeyPEM);
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    privateKey: keyPair.privateKey,
+  });
+
+  const responses: Array<Response> = [];
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(
+    {
+      handle: async (request) => {
+        const response = await service.app.handle(request);
+
+        responses.push(response);
+
+        return response;
+      },
+    },
+    { token },
+  );
+
+  const result = await client.getSpanTraceID();
+
+  const [response] = responses;
+
+  invariant(result.traceID !== null, 'expected an active span inside the handler');
+  invariant(response !== undefined, 'expected the RPC response to be captured');
+  expect(result.traceID).toMatch(/^[0-9a-f]{32}$/);
+  expect(response.headers.get('x-trace-id')).toBe(result.traceID);
 });
 
 test('it mints a fresh trace id for a malformed traceparent header', async () => {

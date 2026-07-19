@@ -1,7 +1,7 @@
 import { metrics } from '@opentelemetry/api';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
-import { resourceFromAttributes } from '@opentelemetry/resources';
 import { MeterProvider, PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+import { buildTelemetryResource } from './build-telemetry-resource';
 
 interface StartMetricsExportOptions {
   readonly serviceName: string;
@@ -22,7 +22,7 @@ export interface MetricsExport {
 export function startMetricsExport(options: StartMetricsExportOptions): MetricsExport {
   const provider = new MeterProvider({
     readers: [new PeriodicExportingMetricReader({ exporter: new OTLPMetricExporter() })],
-    resource: resourceFromAttributes({ 'service.name': options.serviceName }),
+    resource: buildTelemetryResource({ serviceName: options.serviceName }),
   });
 
   metrics.setGlobalMeterProvider(provider);

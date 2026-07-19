@@ -2,6 +2,7 @@ import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ContractRouterClient } from '@orpc/contract';
 import type { sessionContract } from '@vers/contract-session';
+import { buildTracingInterceptor } from '@vers/service-utils/orpc';
 import { createEdgeServiceToken } from '../create-edge-service-token';
 import { SERVICE_URLS } from '../service-urls';
 
@@ -24,6 +25,7 @@ export const sessionExistenceClient: ContractRouterClient<
   SessionExistenceClientContext
 > = createORPCClient(
   new RPCLink<SessionExistenceClientContext>({
+    clientInterceptors: [buildTracingInterceptor()],
     headers: async (options) => ({
       authorization: `Bearer ${await createEdgeServiceToken({
         actingUserID: options.context.actingUserID,

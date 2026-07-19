@@ -12,6 +12,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@opentelemetry/api": "catalog:",
     "@orpc/server": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
     "@vers/contract-session": "workspace:*",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "catalog:",
+    "@opentelemetry/sdk-metrics": "catalog:",
     "@orpc/contract": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",

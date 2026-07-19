@@ -6,3 +6,5 @@ export type { SessionContract } from './session-contract';
 export { sessionContract } from './session-contract';
 export type { SessionData } from './session-data-schema';
 export { SessionDataSchema } from './session-data-schema';
+export type { SessionTokens } from './session-tokens-schema';
+export { SessionTokensSchema } from './session-tokens-schema';
