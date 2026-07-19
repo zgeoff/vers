@@ -2,7 +2,7 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 
 // a fixed, valid argon2id hash verified against on every miss so a missing user or unset
-// password takes the same time as a real check — never revealing which case occurred (#155)
+// password takes the same time as a real check — never revealing which case occurred
 const DUMMY_HASH =
   '$argon2id$v=19$m=65536,t=2,p=1$HcnWDKgn0Ge+fMLfUNLxdQyZQP62cm11r4tp2hS9GwE$jcksXM4djDmS+FjzQVmKOHr/5+J1lvSh1lPjUesXBco';
 
@@ -15,7 +15,7 @@ interface VerifyPasswordOpts {
 
 /**
  * Checks a password against a user's stored hash; never throws for wrong credentials or an
- * unknown email, and rehashes a successfully verified legacy bcrypt hash to argon2id (#150).
+ * unknown email, and rehashes a successfully verified legacy bcrypt hash to argon2id.
  */
 export async function verifyPassword(
   db: Kysely<DB>,

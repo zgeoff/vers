@@ -49,7 +49,10 @@ export function NodeTooltip(props: Readonly<NodeTooltipProps>) {
   );
 }
 
-// util to prevent us from having SSR issues with document not being defined
+/**
+ * Defers reading `document` until after mount so server rendering, where `document` is
+ * undefined, does not throw.
+ */
 function useDocument() {
   const [myDocument, setMyDocument] = useState<Document | null>(null);
 

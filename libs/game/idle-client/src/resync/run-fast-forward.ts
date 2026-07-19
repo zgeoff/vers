@@ -12,7 +12,7 @@ interface RunFastForwardOptions {
   /**
    * Derives the engine's simulation input and avatar from a server-authored activity row, called
    * fresh for every continuation — the verifier derives the same way from each row's own
-   * `buildSnapshot`, so a stream must never carry one avatar across continuations.
+   * snapshot, so a stream must never carry one avatar across continuations.
    */
   readonly buildSimulationInput: (activity: ActivityData) => {
     activity: ActivityInput;

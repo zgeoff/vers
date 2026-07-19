@@ -206,8 +206,8 @@ interface RegisterORPCHandlerDeps {
 
 /**
  * Registers an oRPC fetch handler behind the s2s trust boundary: an invalid service token short-
- * circuits with a plain 401 before the handler ever runs, per the auth/trust-boundary split in
- * docs/architecture/services/service-contracts.md. Every response — including that 401 — carries the request's trace id
+ * circuits with a plain 401 before the handler ever runs, per the service auth/trust-boundary
+ * split. Every response — including that 401 — carries the request's trace id
  * in `x-trace-id`, and the whole request runs inside its trace-context scope so logs correlate.
  * Every request logs one structured line on completion (method, path, status, duration), severity
  * following the response status; a trust-boundary rejection's line carries the rejection reason.

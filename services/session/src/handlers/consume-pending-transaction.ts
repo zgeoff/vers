@@ -31,7 +31,7 @@ interface ConsumePendingTransactionOpts {
 /**
  * Atomically consumes a pending step-up transaction: the DELETE...RETURNING is the single
  * statement that both claims and reads the row, so a second consume of the same id always finds
- * it already gone (#148). The consuming request's fields are matched against the deleted row only
+ * it already gone. The consuming request's fields are matched against the deleted row only
  * after the delete — a mismatch still burns the transaction, by design, rather than leaving a
  * transaction alive for a second, better-matched attempt.
  */

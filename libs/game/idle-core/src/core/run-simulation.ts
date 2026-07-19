@@ -24,7 +24,7 @@ interface SimulationOutput {
 /**
  * Runs one activity from `Started` to `config.duration` in a single call, stopping the underlying
  * simulation once any tick crosses `duration` — the one-shot path's own termination, never shared
- * with a caller advancing the same simulation across several calls (`createSimulationDriver`).
+ * with a caller that advances the same simulation across several calls.
  */
 export async function runSimulation(
   activity: ActivityInput,

@@ -1,6 +1,6 @@
 /**
  * `2fa-setup` verification isn't confirmed through this shared hub — enabling 2FA has its own
- * bespoke UI (account settings, not yet built) that verifies inline.
+ * bespoke UI (account settings) that verifies inline.
  */
 export function runUnsupported(): Promise<never> {
   return Promise.reject(

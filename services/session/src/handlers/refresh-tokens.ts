@@ -18,7 +18,7 @@ interface RefreshTokensOpts {
 
 /**
  * Rotates a session's refresh token, or skips rotation inside the grace window. Reuse detection
- * (#154) keeps a one-deep history: `previousRefreshToken` is the last rotated-away token, so a
+ * keeps a one-deep history: `previousRefreshToken` is the last rotated-away token, so a
  * client that replays it (its own request having lost the race, or an attacker replaying a
  * stolen token) revokes the whole session rather than being silently ignored. Rotation itself is
  * one conditional UPDATE keyed on the refresh token it expects to replace — a concurrent

@@ -33,7 +33,7 @@ const item = css({
 });
 
 /**
- * Placeholder stash screen: a static item grid stands in until real inventory data is wired up.
+ * Placeholder stash screen rendering a fixed item grid.
  */
 export function StashPanel() {
   return (

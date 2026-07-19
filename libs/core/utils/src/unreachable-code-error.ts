@@ -1,11 +1,8 @@
 /**
- * An error that should never be thrown.
+ * An error thrown to mark a code path as unreachable.
  *
- * This error is used to indicate a piece of code should never be reached.
- * For example, there's an awkward pattern we use in our React Router code
- * where we throw a redirect inside our `logout` method as returning a redirect
- * is far more complicated and ugly, so we use this to make sure TypeScript knows
- * any following code should never be reached.
+ * Use it after a statement that always diverts control flow (for example a
+ * thrown redirect) so the type checker treats any following code as dead.
  */
 export class UnreachableCodeError extends Error {
   constructor(message?: string) {

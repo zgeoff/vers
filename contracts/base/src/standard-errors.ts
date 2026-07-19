@@ -16,7 +16,7 @@ export const STANDARD_ERRORS = defineErrors({
   FORBIDDEN: {
     message: 'Insufficient permissions',
 
-    // Deliberately empty: no permission model exists yet; fields are added additively when it lands.
+    // Deliberately empty: there is no permission model to describe; permission fields would extend this shape additively.
     data: z.object({}),
   },
   UNAUTHORIZED: {

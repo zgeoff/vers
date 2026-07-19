@@ -21,9 +21,8 @@ const ISOMETRIC_CAMERA_ROTATION = new Euler(CAMERA_ROTATION_X, CAMERA_ROTATION_Y
 const AnimatedGroup = animated['group'];
 
 /**
- * this component is a lie. it used to be an orthographic camera configured
- * for an isometric view, but now it's just a perspective camera with the same fixed
- * height and rotation. with out current World layout, isometric looks awful.
+ * A perspective camera fixed at an isometric height and rotation; a true orthographic isometric
+ * projection reads poorly against the current world layout.
  */
 export function IsometricCamera() {
   const cameraRigRef = useRef<Group | null>(null);
@@ -81,24 +80,6 @@ export function IsometricCamera() {
   );
 }
 
-// keeping this for a rainy day
-// <orthographicCamera
-//   ref={cameraRef}
-//   args={[
-//     -CAMERA_DISTANCE * aspect,
-//     CAMERA_DISTANCE * aspect,
-//     CAMERA_DISTANCE,
-//     -CAMERA_DISTANCE,
-//     1,
-//     1000,
-//   ]}
-// />
-
-/**
- * get the camera position we want to animate to for a given node
- * @param node - the node to get the camera position for
- * @returns the camera position
- */
 function getNodeCameraPosition(node: null | Object3D): [number, number, number] {
   if (!node) {
     return [0, CAMERA_DISTANCE, 0];

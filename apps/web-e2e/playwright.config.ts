@@ -3,9 +3,10 @@ import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env['BASE_URL'] ?? 'http://localhost:3000';
 
-// having a million issues trying to use __dirname to establish a reliable path
-// so it's easier to do this to handle the case when this file gets parsed for
-// building our task graph
+/**
+ * Resolves the project root without relying on `__dirname`, which is unreliable when this file is
+ * parsed for the task graph rather than run from its own directory.
+ */
 const projectRoot = process.cwd().includes('web-e2e')
   ? process.cwd()
   : `${process.cwd()}/apps/web-e2e`;

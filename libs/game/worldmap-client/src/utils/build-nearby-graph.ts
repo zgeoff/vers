@@ -3,7 +3,9 @@ import type { Object3D } from 'three';
 import { Vector3 } from 'three';
 import { getScenePosition } from './get-scene-position';
 
-// i dialed this in until it looked acceptable on 1080 with the fog
+/**
+ * Cull radius, tuned empirically against 1080p rendering with the scene fog.
+ */
 const MAX_DISTANCE = 160;
 
 /**

@@ -2,7 +2,9 @@ import type { ServiceName } from '@vers/service-auth';
 import { createServiceToken, parseServicePrivateKey } from '@vers/service-auth';
 import { env } from '../../server/env';
 
-// imported once at module scope, not per call: every mint reuses this same resolved key
+/**
+ * Resolved once at module scope so every mint reuses this same key rather than re-parsing per call.
+ */
 const privateKey = parseServicePrivateKey(env.SERVICE_AUTH_PRIVATE_KEY);
 
 interface CreateEdgeServiceTokenOptions {

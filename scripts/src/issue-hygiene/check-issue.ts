@@ -21,9 +21,9 @@ const TYPE_LABELS = new Set([
 ]);
 
 /**
- * Evaluates an issue against the shape rules in the Issue hygiene section of AGENTS.md and the
- * `.github/ISSUE_TEMPLATE` bodies. Returns one human-readable finding per violated rule, empty
- * when the issue is clean.
+ * Evaluates an issue against the repository's issue-shape rules — required area, type, and priority
+ * labels, a delivery milestone, and the type-specific body sections. Returns one human-readable
+ * finding per violated rule, empty when the issue is clean.
  */
 export function checkIssue(issue: IssueShape): Array<string> {
   if (issue.labels.some((label) => EXEMPT_LABELS.has(label))) {

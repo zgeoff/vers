@@ -15,7 +15,7 @@ interface RemoveSessionOpts {
 
 /**
  * Removes a session owned by the acting user. A foreign or already-missing id is a silent
- * no-op (#147) — the contract declares no NOT_FOUND, so ownership can't be probed by inspecting
+ * no-op — the contract declares no NOT_FOUND, so ownership can't be probed by inspecting
  * the response.
  */
 export async function removeSession(

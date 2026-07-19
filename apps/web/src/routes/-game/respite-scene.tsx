@@ -24,7 +24,7 @@ const dummy = new Object3D();
 
 /**
  * The home city's placeholder scene: a ground plane and a handful of instanced blocks standing in
- * for buildings, until respite grows real content.
+ * for buildings.
  */
 export function RespiteScene() {
   const blocksRef = useRef<InstancedMesh | null>(null);

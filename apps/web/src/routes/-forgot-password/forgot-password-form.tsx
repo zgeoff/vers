@@ -19,9 +19,6 @@ interface ForgotPasswordFormProps {
 const pageInfo = css({ marginBottom: '8', textAlign: 'center' });
 const formStyles = css({ marginBottom: '6', width: '96' });
 
-/**
- * The forgot-password page's client-interactive form: submits to the forgot-password server function.
- */
 export function ForgotPasswordForm(props: ForgotPasswordFormProps) {
   const forgotPasswordFn = useServerFn(forgotPassword);
   const submission = useFormSubmit(props.action ?? forgotPasswordFn, props.lastResult);

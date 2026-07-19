@@ -6,7 +6,7 @@ const ASSET_PATH_PATTERN = /\.[a-z0-9]+$/i;
 
 /**
  * Runs the request inside its W3C trace-context scope. A served static asset (a pathname with a
- * file extension) or the `/health` probe — mirroring `makeRequestLogger`'s debug-path list — skips
+ * file extension) or the `/health` probe — the same paths logged only at debug level — skips
  * opening a span; every other request opens a SERVER span extracted from the inbound headers, a
  * no-op without a registered tracer provider. The stored `TraceContext` derives from that span when
  * it continued or started a real trace; otherwise (no span, or no tracer provider registered) it

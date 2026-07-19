@@ -346,7 +346,7 @@ interface SettledTailRow {
 /**
  * Reports whether a checkpoint batch, replayed from scratch, recomputes onto a settled activity's
  * recorded tail: the last entry's version lands on `settled.appendedHead`, and every entry's hash —
- * rebuilt via `buildCheckpointHash`, never trusted from the submitted `hash` field — chains onto
+ * recomputed from each payload, never trusted from the submitted `hash` field — chains onto
  * the previous entry's rebuilt hash and the final one reproduces `settled.lastHash`. A match proves
  * the recorded tail is this exact batch: the original submit landed and only the ack was lost.
  */
@@ -409,7 +409,7 @@ const RewardSlotsSchema = z.array(RewardSlotSchema);
 
 /**
  * A checkpoint's `rewardSlots` field rides outside the hashed subset like `rewards`, so it's
- * validated here rather than by `CheckpointPayloadSchema`. Absent is valid — an older client or a
+ * validated here rather than by the payload schema. Absent is valid — an older client or a
  * checkpoint that dropped nothing carries no key at all. Present, it must parse and its ordinals
  * must run contiguous from 0 in list order.
  */

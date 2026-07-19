@@ -11,11 +11,8 @@ export interface AvatarData {
   name: string;
   xp: number;
 
-  // TODO: implement this as a map? type? where we use a record to enforce equipment type e.g. 1h/2h weapons = weapons, etc
   paperdoll: {
     [EquipmentSlot.MainHand]: EquipmentWeapon | null;
-
-    // [EquipmentSlot.OffHand]: EquipmentWeapon;
   };
 }
 

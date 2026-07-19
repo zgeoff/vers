@@ -5,8 +5,8 @@ import { TERMINAL_CHECKPOINT_TYPES } from './types';
 import type { CompareVerdict, ReplayedCheckpoint, RewardFact, StoredCheckpoint } from './types';
 
 /**
- * The sole legal entropy-source tag until #467/#470 land mode-aware validation and self-found
- * verification.
+ * The sole legal entropy-source tag: the checkpoint chain is derived only from server-held key
+ * material.
  */
 const SERVER_KEY_ENTROPY_SOURCE: EntropySource = 'server-key';
 

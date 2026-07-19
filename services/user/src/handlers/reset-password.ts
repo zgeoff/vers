@@ -17,7 +17,7 @@ interface ResetPasswordOpts {
 
 /**
  * Resets a user's password given a plaintext reset token whose sha256 hash matches the stored
- * value (#152); atomically rehashes the password and signs the user out of every session (#149).
+ * value; atomically rehashes the password and signs the user out of every session.
  */
 export async function resetPassword(
   db: Kysely<DB>,

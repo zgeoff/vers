@@ -7,8 +7,8 @@ import type { Insertable } from 'kysely';
 /**
  * A plain, unpersisted activity row with faker-generated defaults. Never requires a parent —
  * `avatarId` defaults to a random id, not a real avatar's. `lastHash`/`startHash` default to the
- * real `buildStartHash` of the row's own `id`/`seed`/version fields, so a factory-built row chains
- * correctly with `createMockCheckpointBatch`.
+ * real start hash of the row's own `id`/`seed`/version fields, so a factory-built row chains
+ * correctly with a mock checkpoint batch.
  */
 export function createMockActivity(
   overrides: Readonly<Partial<Insertable<Activities>>> = {},
