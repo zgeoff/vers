@@ -1,6 +1,8 @@
 import { expect, mock, test } from 'bun:test';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import invariant from 'tiny-invariant';
+import type { FormAction } from '../../lib/forms/types';
 import { buildDeferred } from '../../test-utils/build-deferred';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -93,5 +95,59 @@ test('it disables the submit button while the verify request is pending', async 
     await deferred.release(undefined);
 
     expect(screen.getByRole('button', { name: 'Verify' })).not.toBeDisabled();
+  });
+});
+
+test('it pre-fills the OTP field from the code prop', async () => {
+  await withRequestContext({}, async () => {
+    const action = mock<FormAction>(() => Promise.resolve(undefined));
+
+    renderWithRouter(<VerifyOTPForm action={action} code="TMMPD7" target="user_1" type="2fa" />);
+
+    await screen.findByTestId('otp-input');
+
+    expect(document.querySelector('input[name="code"]')).toHaveValue('TMMPD7');
+  });
+});
+
+test('it auto-submits once when a valid code arrives with the emailed link', async () => {
+  await withRequestContext({}, async () => {
+    const action = mock<FormAction>(() => Promise.resolve(undefined));
+
+    renderWithRouter(<VerifyOTPForm action={action} code="TMMPD7" target="user_1" type="2fa" />);
+
+    await waitFor(() => {
+      expect(action).toHaveBeenCalledOnce();
+    });
+
+    const call = action.mock.calls[0]?.[0];
+
+    invariant(call !== undefined, 'expected the auto-submit to dispatch the action');
+    expect(call.data.get('code')).toBe('TMMPD7');
+  });
+});
+
+test('it does not auto-submit when the link carries no code', async () => {
+  await withRequestContext({}, async () => {
+    const action = mock<FormAction>(() => Promise.resolve(undefined));
+
+    renderWithRouter(<VerifyOTPForm action={action} target="user_1" type="2fa" />);
+
+    await screen.findByTestId('otp-input');
+
+    expect(action).not.toHaveBeenCalled();
+  });
+});
+
+test('it pre-fills without auto-submitting when the code is the wrong length', async () => {
+  await withRequestContext({}, async () => {
+    const action = mock<FormAction>(() => Promise.resolve(undefined));
+
+    renderWithRouter(<VerifyOTPForm action={action} code="ABC" target="user_1" type="2fa" />);
+
+    await screen.findByTestId('otp-input');
+
+    expect(document.querySelector('input[name="code"]')).toHaveValue('ABC');
+    expect(action).not.toHaveBeenCalled();
   });
 });

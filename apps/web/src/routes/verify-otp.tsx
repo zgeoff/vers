@@ -20,5 +20,12 @@ function VerifyOTPPage() {
   const search = Route.useSearch();
   const type = VerificationTypeSchema.parse(search.type);
 
-  return <VerifyOTPForm redirectTo={search.redirect} target={search.target ?? ''} type={type} />;
+  return (
+    <VerifyOTPForm
+      code={search.code}
+      redirectTo={search.redirect}
+      target={search.target ?? ''}
+      type={type}
+    />
+  );
 }
