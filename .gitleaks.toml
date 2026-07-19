@@ -27,6 +27,8 @@ targetRules = ["private-key"]
 description = "known throwaway signing keys in committed dev/test env fixtures"
 condition = "AND"
 paths = [
+  '''(^|/)services/activity/\.env\.test$''',
+  '''(^|/)services/activity/\.env\.development$''',
   '''(^|/)services/replay/\.env\.test$''',
   '''(^|/)services/replay/\.env\.development$''',
   '''(^|/)services/session/\.env\.development$''',

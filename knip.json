@@ -52,6 +52,9 @@
       "entry": ["src/serve.ts"],
       "ignoreDependencies": ["@orpc/contract"]
     },
+    "services/activity": {
+      "entry": ["src/serve.ts"]
+    },
     "services/email": {
       "entry": ["src/serve.ts", "src/sweep.ts"],
       "ignoreDependencies": ["@orpc/contract"]
