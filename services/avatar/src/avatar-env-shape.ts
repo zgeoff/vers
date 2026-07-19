@@ -5,5 +5,7 @@ import * as z from 'zod';
  * avatar rows and progression.
  */
 export const AVATAR_ENV_SHAPE = {
-  DATABASE_URL: z.string(),
+  DATABASE_URL: z
+    .string()
+    .describe('Postgres connection string for the avatar and progression tables'),
 };

@@ -6,8 +6,10 @@ import * as z from 'zod';
  * keypair its worker signs outbound calls with, and the engine hash baked at build.
  */
 export const REPLAY_SERVICE_ENV_SHAPE = {
-  DATABASE_URL: z.string(),
-  KEYS_SERVICE_URL: z.url(),
+  DATABASE_URL: z.string().describe('Postgres connection string the worker claims chains from'),
+  KEYS_SERVICE_URL: z
+    .url()
+    .describe('Origin of the keys service the mint step resolves roll keys through'),
   SERVICE_AUTH_PRIVATE_KEY: z
     .string()
     .min(1)

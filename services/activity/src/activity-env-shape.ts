@@ -5,5 +5,5 @@ import * as z from 'zod';
  * the activity event store.
  */
 export const ACTIVITY_ENV_SHAPE = {
-  DATABASE_URL: z.string(),
+  DATABASE_URL: z.string().describe('Postgres connection string for the activity checkpoint store'),
 };

@@ -7,10 +7,22 @@ import { z } from 'zod';
  * than composed across the major-version boundary.
  */
 export const WEB_ENV_SCHEMA = z.object({
-  LOGGING: z.enum(['debug', 'info', 'warn', 'error']).optional().default('info'),
-  NODE_ENV: z.enum(['development', 'e2e', 'production', 'test']),
-  OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
-  SENTRY_DSN: z.url().optional(),
+  LOGGING: z
+    .enum(['debug', 'info', 'warn', 'error'])
+    .optional()
+    .default('info')
+    .describe('Minimum log level the web server emits'),
+  NODE_ENV: z
+    .enum(['development', 'e2e', 'production', 'test'])
+    .describe('Runtime mode; production enables secure cookies and disables dev-only behavior'),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z
+    .url()
+    .optional()
+    .describe('OTLP collector endpoint; unset disables telemetry export'),
+  SENTRY_DSN: z
+    .url()
+    .optional()
+    .describe('Server-side Bugsink project DSN; unset disables server error reporting'),
   TINYBIRD_INGEST_TOKEN: z
     .string()
     .min(1)
@@ -20,8 +32,14 @@ export const WEB_ENV_SCHEMA = z.object({
     .url({ protocol: /^https$/ })
     .optional()
     .describe('Product-analytics Events API origin; unset disables delivery'),
-  UMAMI_URL: z.url().optional(),
-  VITE_SENTRY_DSN: z.url().optional(),
+  UMAMI_URL: z
+    .url()
+    .optional()
+    .describe('Umami deployment the analytics proxy forwards beacons to'),
+  VITE_SENTRY_DSN: z
+    .url()
+    .optional()
+    .describe('Browser-bundle Bugsink DSN; unset ships no client error reporting'),
   SERVICE_AUTH_PRIVATE_KEY: z
     .string()
     .min(1)

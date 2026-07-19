@@ -5,5 +5,5 @@ import * as z from 'zod';
  * for verification rows.
  */
 export const VERIFICATION_ENV_SHAPE = {
-  DATABASE_URL: z.string(),
+  DATABASE_URL: z.string().describe('Postgres connection string for the verification rows'),
 };

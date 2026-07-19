@@ -5,5 +5,7 @@ import * as z from 'zod';
  * account rows.
  */
 export const USER_ENV_SHAPE = {
-  DATABASE_URL: z.string(),
+  DATABASE_URL: z
+    .string()
+    .describe('Postgres connection string for the account and credential tables'),
 };
