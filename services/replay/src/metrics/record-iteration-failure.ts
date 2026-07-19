@@ -3,9 +3,9 @@ import { metrics } from '@opentelemetry/api';
 export type IterationFailureOutcome = 'errored' | 'quarantined';
 
 /**
- * Counts one worker iteration that failed to replay a claimed chain, split by outcome:
+ * Counts one drain iteration that failed to replay a claimed chain, split by outcome:
  * `quarantined` covers an activity that exhausted its replay attempts, `errored` covers every
- * other failed attempt (including one the worker loop itself never got a frontier for). The
+ * other failed attempt (including one the drain loop itself never got a frontier for). The
  * counter is resolved through the global metrics API on every call — the SDK returns the same
  * instrument for an identical registration, and resolving late keeps the counter bound to
  * whichever meter provider the process registered at boot; without one it is the API's no-op.
@@ -14,7 +14,7 @@ export function recordIterationFailure(outcome: IterationFailureOutcome): void {
   const counter = metrics
     .getMeter('@vers/service-replay')
     .createCounter('vers.replay.iteration_failures', {
-      description: 'worker iterations that failed to replay a claimed chain, by outcome',
+      description: 'drain iterations that failed to replay a claimed chain, by outcome',
       unit: '{iteration}',
     });
 
