@@ -21,9 +21,10 @@ const TYPE_LABELS = new Set([
 ]);
 
 /**
- * Evaluates an issue against the repository's issue-shape rules — required area, type, and priority
- * labels, a delivery milestone, and the type-specific body sections. Returns one human-readable
- * finding per violated rule, empty when the issue is clean.
+ * Evaluates an issue against the repository's issue-shape rules, returning one human-readable
+ * finding per violation and an empty array when the issue is clean. Requirements vary by type — an
+ * upkeep issue carries a trigger line and no milestone, where other types require area, type, and
+ * priority labels, a delivery milestone, and their template's body sections.
  */
 export function checkIssue(issue: IssueShape): Array<string> {
   if (issue.labels.some((label) => EXEMPT_LABELS.has(label))) {

@@ -12,6 +12,7 @@ export const ISOMETRIC_OFFSET_X = CAMERA_DISTANCE * Math.sin(CAMERA_ROTATION_Y);
 export const ISOMETRIC_OFFSET_Z = CAMERA_DISTANCE * Math.cos(CAMERA_ROTATION_Y);
 
 /**
- * Positions are scaled up so inter-node distances aren't sub-1, which looked wrong.
+ * Graph node coordinates are multiplied into scene units so adjacent nodes sit more than one unit
+ * apart.
  */
 export const NODE_POSITION_SCALING_FACTOR = 10;

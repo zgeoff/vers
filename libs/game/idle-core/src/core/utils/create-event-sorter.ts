@@ -1,8 +1,8 @@
 import type { Avatar, CombatEvent } from '../../types';
 
 /**
- * Orders combat events by time, breaking ties in favour of the avatar's events so ties resolve
- * deterministically.
+ * Orders combat events by ascending time, placing the avatar's own events before others' at the
+ * same timestamp.
  */
 export function createEventSorter(avatar: Avatar) {
   return (a: CombatEvent, b: CombatEvent) => {

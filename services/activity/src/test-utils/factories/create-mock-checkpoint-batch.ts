@@ -10,7 +10,7 @@ interface CreateMockCheckpointBatchConfig {
 
   /**
    * Extra fields merged into the last entry's payload — `type`/`rewards` for a batch ending in a
-   * terminal checkpoint. Excluded from the hashed subset, so the chain stays valid.
+   * terminal checkpoint. Merged before that entry's hash is computed, so the chain stays valid.
    */
   readonly finalPayloadOverrides?: Readonly<Record<string, unknown>>;
 
