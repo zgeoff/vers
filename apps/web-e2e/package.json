@@ -14,8 +14,10 @@
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/contract-activity": "workspace:*",
+    "@vers/contract-verification": "workspace:*",
     "@vers/mock-services": "workspace:*",
     "@vers/service-auth": "workspace:*",
+    "tiny-invariant": "catalog:",
     "typescript": "catalog:",
     "zod": "catalog:"
   }

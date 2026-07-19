@@ -1,19 +1,25 @@
 import { defineConfig, devices } from '@playwright/test';
+import type { JourneyOptions } from './src/support/types';
 
 const baseURL = process.env['STACK_BASE_URL'] ?? 'http://localhost:3200';
 
 /**
- * The full-stack suite: journeys against the real service images the deploy pipeline is about to
- * promote, booted by `docker-compose.stack.yml` before playwright runs — no webServer entries,
- * the harness owns the stack lifecycle. Specs create their own unique accounts, so a retry never
- * replays against state a failed attempt mutated.
+ * The full-stack suite: the converged spec set's `@journey` tests against the real service images
+ * the deploy pipeline is about to promote, booted by `docker-compose.stack.yml` before playwright
+ * runs — no webServer entries, the harness owns the stack lifecycle. Specs create their own unique
+ * accounts, so a retry never replays against state a failed attempt mutated.
  */
-export default defineConfig({
+export default defineConfig<JourneyOptions>({
   expect: {
     timeout: 10 * 1000,
   },
   fullyParallel: true,
+
+  // only the shell journeys run against the real stack — the @mock-tagged client-only specs stay
+  // on the mock config
+  grep: /@journey/,
   outputDir: '.stack-test-results',
+  testDir: './specs',
   projects: [
     {
       name: 'chromium',
@@ -21,10 +27,11 @@ export default defineConfig({
     },
   ],
   retries: process.env['CI'] === undefined ? 0 : 1,
-  testDir: './stack',
   timeout: 60 * 1000,
   use: {
     baseURL,
+    codeSource: 'stack',
+    resendStubURL: process.env['RESEND_STUB_URL'] ?? 'http://localhost:3020',
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },

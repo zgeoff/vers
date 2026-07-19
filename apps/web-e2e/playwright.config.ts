@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+import type { JourneyOptions } from './src/support/types';
 
 const baseURL = process.env['BASE_URL'] ?? 'http://localhost:3000';
 
@@ -21,16 +22,17 @@ try {
   // needs no secrets
 }
 
-export default defineConfig({
+export default defineConfig<JourneyOptions>({
   expect: {
     timeout: 10 * 1000,
   },
   fullyParallel: true,
-  outputDir: '.test-results',
 
-  // the full-stack suite under ./stack runs on its own config against real services — this
-  // config's mock-backed webServers must never pick those specs up
-  testDir: './src',
+  // the converged spec set: @journey runs identically here and against the stack in
+  // playwright.stack.config.ts; @mock is this config's own client-only coverage
+  grep: /@journey|@mock/,
+  outputDir: '.test-results',
+  testDir: './specs',
   projects: [
     {
       name: 'chromium',
@@ -45,6 +47,11 @@ export default defineConfig({
   timeout: 30 * 1000,
   use: {
     baseURL,
+    codeSource: 'mock',
+
+    // the same origin serve-mock-services.ts binds the verification listener to
+    mockVerificationURL: process.env['VERIFICATION_SERVICE_URL'] ?? 'http://localhost:3004',
+
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
