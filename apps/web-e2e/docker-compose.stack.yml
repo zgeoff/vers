@@ -116,6 +116,8 @@ services:
   app-web:
     image: ${IMAGE_VERS_APP_WEB}
     environment:
+      # canvas-persistence.spec.ts clicks through to the Market nav link, gated behind this flag
+      FEATURE_MARKET: 'true'
       ACTIVITY_SERVICE_URL: http://service-activity:3000
       AVATAR_SERVICE_URL: http://service-avatar:3000
       EMAIL_SERVICE_URL: http://service-email:3000

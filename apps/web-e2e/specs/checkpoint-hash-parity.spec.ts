@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
 import { buildCheckpointHash } from '@vers/contract-activity';
+import { expect, test } from '../src/test';
 
 const FROZEN_DIGEST = 'c51bad8035095b3d570dd972bd05c7a686b403b2f7db11dbe0fc83e6e9e4150e';
 

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../src/test';
 
 /**
  * Serving proof for the deployable artifact needing no signed-in state and no secrets: the health

@@ -1,8 +1,10 @@
 import { RPCHandler } from '@orpc/server/fetch';
+import { VerificationTypeSchema } from '@vers/contract-verification';
 import type { MockContext } from '@vers/mock-services';
 import { createDemoSeed, resolveServiceURL, resolveSessionContext } from '@vers/mock-services';
 import { activityRouter } from '@vers/mock-services/activity';
 import { avatarRouter } from '@vers/mock-services/avatar';
+import { verificationCollection } from '@vers/mock-services/db';
 import { emailRouter } from '@vers/mock-services/email';
 import { keysRouter } from '@vers/mock-services/keys';
 import { replayRouter } from '@vers/mock-services/replay';
@@ -49,8 +51,14 @@ for (const service of SERVICES) {
 
   Bun.serve({
     fetch: async (request) => {
-      if (new URL(request.url).pathname === '/health') {
+      const pathname = new URL(request.url).pathname;
+
+      if (pathname === '/health') {
         return Response.json({ ok: true });
+      }
+
+      if (service === 'verification' && pathname === '/test/verification-code') {
+        return serveVerificationCode(request);
       }
 
       const handled = await rpcHandler.handle(request, {
@@ -68,4 +76,28 @@ for (const service of SERVICES) {
   });
 
   console.log(`mock ${service} listening on ${url.origin}`);
+}
+
+/**
+ * Answers the e2e-only lookup a spec polls for the code the mock verification service generated,
+ * since nothing else observes a mock code once `createVerification` stores it. Responds `{ code }`
+ * for a stored `(target, type)` row, 404 otherwise — a spec still waiting on delivery.
+ */
+function serveVerificationCode(request: Request): Response {
+  const searchParams = new URL(request.url).searchParams;
+
+  const target = searchParams.get('target');
+  const type = VerificationTypeSchema.safeParse(searchParams.get('type'));
+
+  if (target === null || !type.success) {
+    return new Response(null, { status: 400 });
+  }
+
+  const verification = verificationCollection.findFirst((q) =>
+    q.where({ target, type: type.data }),
+  );
+
+  return verification === undefined
+    ? new Response(null, { status: 404 })
+    : Response.json({ code: verification.code });
 }
