@@ -193,9 +193,11 @@ test, lint, boundaries, and knip like any project.
 
 ## Env files
 
-Each env-consuming project ships a committed `.env.example` documenting its keys. Real values come
-from `bun run env:pull`, which pulls each managed file from the `vers` 1Password vault via the `op`
-CLI. `.env` files themselves are never committed.
+A service's env contract is the `envShape` it passes to `createService`, merged with the shared
+`baseEnvSchema` and validated against `process.env` at boot. A project that also needs a local
+`.env` ships a committed `.env.example` documenting its keys; real values come from
+`bun run env:pull`, which pulls each managed file from the `vers` 1Password vault via the `op` CLI.
+`.env` files themselves are never committed.
 
 ## Deploys
 
