@@ -47,7 +47,7 @@ webhook added in its settings. No outgoing email is configured — alerting is w
 per-project alert toggles live in each Bugsink project's settings.
 
 Bugsink's Discord messaging service renders a fixed body the app doesn't template, so these alerts
-keep their own shape rather than the canonical alarms embed the Axiom and CI paths share
+keep their own shape rather than the structured embed the CI path posts to the same channel
 (`docs/architecture/platform/observability.md` § Alarms channel).
 
 ## Housekeeping

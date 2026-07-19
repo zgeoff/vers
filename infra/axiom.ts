@@ -93,37 +93,15 @@ const mcpToken = new axiom.Token(
 
 /**
  * Alert destination: the vers alarms Discord channel. The webhook URL grants
- * post access to the channel, so it stays a secret end to end. One notifier per
- * severity carries that severity's firing colour, so the channel is scannable by
- * hue; both post the shared canonical embed to the same channel.
+ * post access to the channel, so it stays a secret end to end.
  */
-const alarmsWebhookURL = pulumi.secret(requireEnv('DISCORD_ALARMS_WEBHOOK'));
-const alarmsWebhookHeaders = { 'Content-Type': 'application/json' } as const;
-
-const criticalAlarmsNotifier = new axiom.Notifier(
-  'vers-alarms-critical',
+const alarmsNotifier = new axiom.Notifier(
+  'vers-alarms',
   {
-    name: 'vers alarms — critical (Discord)',
+    name: 'vers alarms (Discord)',
     properties: {
-      customWebhook: {
-        url: alarmsWebhookURL,
-        headers: alarmsWebhookHeaders,
-        body: buildAlarmsWebhookBody({ label: 'critical', firingColor: 15_026_253 }),
-      },
-    },
-  },
-  { provider: axiomProvider },
-);
-
-const warningAlarmsNotifier = new axiom.Notifier(
-  'vers-alarms-warning',
-  {
-    name: 'vers alarms — warning (Discord)',
-    properties: {
-      customWebhook: {
-        url: alarmsWebhookURL,
-        headers: alarmsWebhookHeaders,
-        body: buildAlarmsWebhookBody({ label: 'warning', firingColor: 16_757_284 }),
+      discordWebhook: {
+        discordWebhookUrl: pulumi.secret(requireEnv('DISCORD_ALARMS_WEBHOOK')),
       },
     },
   },
@@ -143,7 +121,7 @@ const serverErrorsMonitor = new axiom.Monitor(
     operator: 'AboveOrEqual',
     threshold: 1,
     triggerFromNRuns: 1,
-    notifierIds: [criticalAlarmsNotifier.id],
+    notifierIds: [alarmsNotifier.id],
   },
   { provider: axiomProvider },
 );
@@ -167,7 +145,7 @@ const verificationLagMonitor = new axiom.Monitor(
     threshold: 1800,
     triggerFromNRuns: 1,
     alertOnNoData: true,
-    notifierIds: [warningAlarmsNotifier.id],
+    notifierIds: [alarmsNotifier.id],
   },
   { provider: axiomProvider },
 );
@@ -243,8 +221,7 @@ export const logsDatasetName = logsDataset.name;
 export const metricsDatasetName = metricsDataset.name;
 export const ingestTokenName = ingestToken.name;
 export const mcpTokenName = mcpToken.name;
-export const criticalAlarmsNotifierName = criticalAlarmsNotifier.name;
-export const warningAlarmsNotifierName = warningAlarmsNotifier.name;
+export const alarmsNotifierName = alarmsNotifier.name;
 export const serverErrorsMonitorName = serverErrorsMonitor.name;
 export const verificationLagMonitorName = verificationLagMonitor.name;
 export const baselineDashboardUID = baselineDashboard.uid;
@@ -282,40 +259,6 @@ function sortKeysDeep(value: unknown): unknown {
   }
 
   return value;
-}
-
-interface AlarmsSeverity {
-  readonly label: string;
-  readonly firingColor: number;
-}
-
-/**
- * Renders the canonical alarms embed as a Discord webhook payload. Axiom fills
- * the Go-template placeholders per alert: .Action is "Open" when the monitor
- * trips and "Closed" when it recovers, selecting the firing or recovery colour
- * and title word. The colour placeholder sits unquoted so it renders as the
- * integer Discord requires. Monitor descriptions interpolate straight into this
- * JSON string, so they must stay free of double quotes and newlines.
- */
-function buildAlarmsWebhookBody(severity: AlarmsSeverity): string {
-  const recoveryColor = 3_187_820;
-
-  return [
-    '{',
-    '  "embeds": [',
-    '    {',
-    `      "title": "[Axiom] {{ if eq .Action "Open" }}${severity.label}{{ else }}recovery{{ end }} — {{ .Title }}",`,
-    '      "description": "{{ .Description }}",',
-    '      "url": "https://app.axiom.co",',
-    `      "color": {{ if eq .Action "Open" }}${severity.firingColor}{{ else }}${recoveryColor}{{ end }},`,
-    '      "fields": [',
-    '        { "name": "State", "value": "{{ .Action }}", "inline": true },',
-    '        { "name": "Value", "value": "{{ .Value }}", "inline": true }',
-    '      ]',
-    '    }',
-    '  ]',
-    '}',
-  ].join('\n');
 }
 
 function requireEnv(name: string): string {

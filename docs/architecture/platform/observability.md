@@ -128,11 +128,10 @@ lands with the metrics that make it observable. The conventions:
   logged so a bad query never takes down the process it observes.
 - Every instrument lands with its row in the instrument registry, in the same PR.
 
-Alerting is Axiom threshold monitors over these datasets. Each monitor notifies the custom-webhook
-notifier for its severity, which posts the canonical alarms embed (§ Alarms channel) to the Discord
-channel. Every Axiom resource is managed as code in the `infra/` Pulumi program (`axiom.ts`); a
-console edit to any resource is drift, reconciled by the next `pulumi up`, and the sensitive outputs
-Pulumi records in stack state are encrypted by the stack passphrase.
+Alerting is Axiom threshold monitors over these datasets, notifying the `vers alarms` notifier.
+Every Axiom resource is managed as code in the `infra/` Pulumi program (`axiom.ts`). A console edit
+to any resource is drift, reconciled by the next `pulumi up`. The sensitive outputs Pulumi records
+in stack state are encrypted by the stack passphrase.
 
 ## Instrument registry
 
@@ -175,25 +174,15 @@ non-2xx response from the Tinybird Events API, `quarantined` covers a row the AP
 failed schema validation on, `unreachable` covers a network failure or the upstream deadline
 tripping.
 
-The `vers verification lag` threshold monitor watches `vers.verification.lag` and notifies the
-warning alarms notifier. It alerts on no data as well as on the threshold. The gauge exports from
+The `vers verification lag` threshold monitor watches `vers.verification.lag` and notifies
+`vers alarms`. It alerts on no data as well as on the threshold. The gauge exports from
 `service-replay`'s always-warm machine ([deployment](./deployment.md)), so a silent dataset means
 the exporter or the process around it is down, never a healthy quiet system.
 
 ## Alarms channel
 
-Axiom monitors, the CI pipeline, and Bugsink post to one Discord channel. The first two share a
-canonical embed so kind and severity read at a glance: a `[source] severity — what fired` title, a
-description, one link to the investigation view, detail fields, and a severity colour.
-
-| Severity | Meaning                            | Hex       | Discord decimal |
-| -------- | ---------------------------------- | --------- | --------------- |
-| critical | a failure needing action now       | `#e5484d` | `15026253`      |
-| warning  | a degradation worth attention      | `#ffb224` | `16757284`      |
-| recovery | a cleared alert returning to green | `#30a46c` | `3187820`       |
-
-Axiom carries the embed through two custom-webhook notifiers, one per firing severity, whose
-Go-templated body renders recovery colour and wording when a monitor clears (`infra/axiom.ts`). CI
-builds the same embed at critical in the `alert` job (`.github/workflows/main.yml`). Bugsink posts
-through its stock Discord messaging service, whose body is fixed by the app, so its new-issue,
-regression, and unmute alerts keep their own shape (`apps/bugsink/README.md`).
+Axiom monitors, the CI pipeline, and Bugsink post to one Discord channel. The CI `alert` job posts a
+structured embed — a `[CI] critical — …` title, the failing run's link, and a red severity colour
+(`#e5484d`, decimal `15026253`) — in `.github/workflows/main.yml`. Axiom and Bugsink post their
+tools' stock formats: Axiom's custom-webhook notifier, the one templated body it offers, is not
+enabled on the plan, and Bugsink's Discord messaging service exposes no templating.
