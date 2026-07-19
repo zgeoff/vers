@@ -7,6 +7,7 @@ import invariant from 'tiny-invariant';
 import { applyVerifiedSegment } from '../apply/apply-verified-segment';
 import { parkActivity } from '../dispatch/park-activity';
 import { runReplaySegment } from '../dispatch/run-replay-segment';
+import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { recordRejection } from '../metrics/record-rejection';
 import { recordVerificationLag } from '../metrics/record-verification-lag';
 import { rollRewardItems } from '../mint/roll-reward-items';
@@ -375,6 +376,8 @@ async function countFailedAttempt(
       { activityID: segment.activity.id },
       'replay attempts exhausted; activity quarantined',
     );
+
+    recordIterationFailure('quarantined');
 
     return { kind: 'quarantined' };
   }
