@@ -2,6 +2,7 @@ import { Outlet, createFileRoute, useMatches } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { resolveFlags } from '@vers/flags';
 import { requireAuth } from '../lib/auth/require-auth';
+import { requireActiveAvatar } from '../lib/avatar/require-active-avatar';
 import { ActivityProgressNotice } from './-game/activity-progress-notice';
 import { AmbientSheet } from './-game/ambient-sheet';
 import { GameCanvasMount } from './-game/game-canvas-mount';
@@ -17,7 +18,10 @@ const resolveFlagsFn = createServerFn({ method: 'GET' }).handler(() => resolveFl
 export const Route = createFileRoute('/_game')({
   beforeLoad: async () => ({ flags: await resolveFlagsFn() }),
   component: GameLayout,
-  loader: () => requireAuthFn(),
+  loader: async () => {
+    await requireAuthFn();
+    await requireActiveAvatar();
+  },
 });
 
 function GameLayout() {

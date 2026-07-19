@@ -26,7 +26,7 @@ test('it welcomes a signed-in visitor with links into the game and account', asy
     const welcome = await screen.findByText('Welcome back, Demo Account.');
 
     expect(welcome).toBeVisible();
-    expect(screen.getByText('Enter game').closest('a')).toHaveAttribute('href', '/respite');
+    expect(screen.getByText('Enter game').closest('a')).toHaveAttribute('href', '/avatars');
     expect(screen.getByText('Account').closest('a')).toHaveAttribute('href', '/account');
   });
 });

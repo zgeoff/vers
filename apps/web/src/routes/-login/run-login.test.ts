@@ -179,5 +179,5 @@ test('it lands a caller with no redirect target at respite', async () => {
     return redirectHref;
   });
 
-  expect(outcome.value).toBe('/respite');
+  expect(outcome.value).toBe('/avatars');
 });

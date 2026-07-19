@@ -34,7 +34,7 @@ test('it reports a field error for a name that is already taken', async () => {
   });
 });
 
-test('it creates the avatar and redirects to the avatar page', async () => {
+test('it creates the avatar and enters the game', async () => {
   const signedIn = await createSignedInUser();
 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -45,7 +45,7 @@ test('it creates the avatar and redirects to the avatar page', async () => {
     return redirectHref;
   });
 
-  expect(outcome.value).toBe('/avatar');
+  expect(outcome.value).toBe('/explore');
 
   const created = db.avatarCollection.findFirst((q) =>
     q.where({ name: 'Karnak', userID: signedIn.userID }),
@@ -63,7 +63,7 @@ test('it creates a Self-Found avatar when that mode is requested', async () => {
       .catch((error: unknown) => (isRedirect(error) ? error.options.href : null)),
   );
 
-  expect(outcome.value).toBe('/avatar');
+  expect(outcome.value).toBe('/explore');
 
   const created = db.avatarCollection.findFirst((q) =>
     q.where({ name: 'Vagrant', userID: signedIn.userID }),
