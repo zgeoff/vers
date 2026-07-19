@@ -1,3 +1,13 @@
+import '@fontsource/chakra-petch/500.css';
+import '@fontsource/chakra-petch/600.css';
+import '@fontsource/chakra-petch/700.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/ibm-plex-mono/600.css';
+import '@fontsource/manrope/400.css';
+import '@fontsource/manrope/500.css';
+import '@fontsource/manrope/600.css';
+import '@fontsource/manrope/700.css';
 import type { QueryClient } from '@tanstack/react-query';
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router';
 import type { ReactNode } from 'react';

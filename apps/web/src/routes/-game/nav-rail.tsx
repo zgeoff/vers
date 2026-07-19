@@ -26,7 +26,7 @@ interface RailItem {
  * meta screens. Each inner array renders as a group separated by a divider.
  */
 const RAIL_GROUPS: ReadonlyArray<ReadonlyArray<RailItem>> = [
-  [{ Glyph: Icon.Encounter, label: 'Engagement', to: '/activity' }],
+  [{ Glyph: Icon.Encounter, label: 'Engage', to: '/activity' }],
   [
     { Glyph: Icon.Respite, label: 'Respite', to: '/respite' },
     { Glyph: Icon.Explore, label: 'Explore', to: '/explore' },
@@ -70,11 +70,13 @@ const railButton = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '1',
+  height: 'rail',
+  justifyContent: 'center',
   paddingX: '2',
   paddingY: '2',
   transitionDuration: 'fast',
   transitionProperty: '[color, background-color, border-color]',
-  width: '[3.5rem]',
+  width: 'rail',
   _hover: { borderColor: 'border.strong', color: 'text.primary' },
 });
 
@@ -84,8 +86,15 @@ const railButtonActive = css({
   color: 'bg.panel',
 });
 
-const railGlyph = css({ fontSize: 'xl', lineHeight: '[1]' });
-const railLabel = css({ fontSize: '[0.5rem]', letterSpacing: 'wider', textTransform: 'uppercase' });
+const railGlyph = css({ fontSize: '2xl', lineHeight: '[1]' });
+
+const railLabel = css({
+  fontFamily: 'display',
+  fontSize: '2xs',
+  fontWeight: 'bold',
+  letterSpacing: 'wider',
+  textTransform: 'uppercase',
+});
 
 /**
  * The always-on navigation rail: a persistent vertical stack pinned to the right edge, above the

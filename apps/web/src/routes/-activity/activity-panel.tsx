@@ -21,7 +21,7 @@ const plate = css({
   borderColor: 'border',
   borderRadius: 'md',
   borderWidth: '[1px]',
-  minHeight: '[6rem]',
+  minHeight: 'panelMin',
 });
 
 const twoColumns = css({ display: 'grid', gap: '4', gridTemplateColumns: 'repeat(2, 1fr)' });

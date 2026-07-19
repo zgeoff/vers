@@ -8,7 +8,7 @@ const panel = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '3',
-  minHeight: '[6rem]',
+  minHeight: 'panelMin',
   padding: '4',
 });
 
