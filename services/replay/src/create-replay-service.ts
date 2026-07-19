@@ -68,7 +68,13 @@ export async function createReplayService(
 
       resolvedPrivateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
 
-      return buildReplayRouter({ simVersion: runtime.env.SIM_ENGINE_HASH });
+      return buildReplayRouter({
+        db: resolvedDB,
+        keysServiceURL: runtime.env.KEYS_SERVICE_URL,
+        logger: runtime.logger,
+        privateKey: resolvedPrivateKey,
+        simVersion: runtime.env.SIM_ENGINE_HASH,
+      });
     },
     envShape,
     name: 'service-replay',

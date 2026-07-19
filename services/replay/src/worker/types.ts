@@ -62,11 +62,3 @@ export interface ReplayWorkerDeps {
    */
   readonly simVersion: string;
 }
-
-/**
- * A running worker loop's handle: `stop` requests the loop exit after its in-flight iteration
- * finishes (interrupting an idle sleep immediately) and resolves once it has.
- */
-export interface ReplayWorkerHandle {
-  readonly stop: () => Promise<void>;
-}

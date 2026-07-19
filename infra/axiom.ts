@@ -127,24 +127,24 @@ const serverErrorsMonitor = new axiom.Monitor(
 );
 
 /**
- * alertOnNoData is part of the contract: the lag gauge exports from
- * service-replay's always-warm machine, so a silent dataset means the exporter
- * or its process is down — never a healthy quiet system.
+ * alertOnNoData stays false: the counter emits only when a wake delivery
+ * exhausts its retries, so a quiet dataset is the healthy default, never a
+ * down exporter.
  */
-const verificationLagMonitor = new axiom.Monitor(
-  'vers-verification-lag',
+const replayPokeFailedMonitor = new axiom.Monitor(
+  'vers-replay-poke-failed',
   {
-    name: 'vers verification lag',
+    name: 'vers replay poke failed',
     type: 'Threshold',
     description:
-      "Verification lag: age of the oldest unverified activity append. The optimistic client hides verifier failure, so this gauge is the signal that verification has stalled. Fires when the worst stream has waited 30+ minutes, and on no data — the gauge exports from service-replay's always-warm machine, so a silent dataset means the exporter or its process is down.",
-    aplQuery: '`vers-metrics`:`vers.verification.lag` | align to 5m using max | group using max',
-    intervalMinutes: 10,
-    rangeMinutes: 15,
+      'A wake poke to service-replay exhausted its retries without delivering. The optimistic client hides verifier failure, so this counter is the explicit signal that the replay queue may go undrained despite an activity appending unverified work.',
+    aplQuery:
+      '`vers-metrics`:`vers.activity.replay_poke_failed` | summarize count() by bin(_time, 5m)',
+    intervalMinutes: 5,
+    rangeMinutes: 10,
     operator: 'AboveOrEqual',
-    threshold: 1800,
+    threshold: 1,
     triggerFromNRuns: 1,
-    alertOnNoData: true,
     notifierIds: [alarmsNotifier.id],
   },
   { provider: axiomProvider },
@@ -223,7 +223,7 @@ export const ingestTokenName = ingestToken.name;
 export const mcpTokenName = mcpToken.name;
 export const alarmsNotifierName = alarmsNotifier.name;
 export const serverErrorsMonitorName = serverErrorsMonitor.name;
-export const verificationLagMonitorName = verificationLagMonitor.name;
+export const replayPokeFailedMonitorName = replayPokeFailedMonitor.name;
 export const baselineDashboardUID = baselineDashboard.uid;
 
 /**

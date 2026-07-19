@@ -5,6 +5,12 @@ import type { ActivityStatus } from '@vers/db';
  * A stored `activity_checkpoints` row, as read for comparison against a fresh replay.
  */
 export interface StoredCheckpoint {
+  /**
+   * When this checkpoint landed — absent from a hand-built fixture that never queried the
+   * `activity_checkpoints` row; `loadReplaySegment` always populates it from the stored row's own
+   * `appendedAt`.
+   */
+  readonly appendedAt?: Date;
   readonly hash: string;
   readonly payload: CheckpointPayload;
   readonly prevHash: string;

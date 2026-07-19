@@ -46,7 +46,8 @@
           "consumeTransactionToken",
           "replaySegment",
           "resumeActivity",
-          "trackActivityProgress"
+          "trackActivityProgress",
+          "wake"
         ]
       }
     ],

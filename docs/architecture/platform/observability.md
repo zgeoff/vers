@@ -135,25 +135,27 @@ in stack state are encrypted by the stack passphrase.
 
 ## Instrument registry
 
-| Instrument                           | Type    | Unit           | Attributes    | Meaning                                                                 |
-| ------------------------------------ | ------- | -------------- | ------------- | ----------------------------------------------------------------------- |
-| `vers.verification.lag`              | gauge   | `s`            | —             | age of the oldest unverified append across activity streams             |
-| `vers.verification.head_delta.p95`   | gauge   | `{checkpoint}` | —             | p95 of appended-head minus verified-head over unverified streams        |
-| `vers.verification.quarantined`      | gauge   | `{activity}`   | —             | activities quarantined after exhausting replay attempts                 |
-| `vers.verification.parked`           | gauge   | `{activity}`   | `sim_version` | activities parked for operator resolution, by stamped sim version       |
-| `vers.verification.rejections`       | counter | `{rejection}`  | `reason`      | adjudications that rejected or parked an activity, by reason            |
-| `vers.replay.iteration_failures`     | counter | `{iteration}`  | `outcome`     | worker iterations that failed to replay a claimed chain, by outcome     |
-| `vers.keys.derive_rejections`        | counter | `{rejection}`  | `reason`      | deriveAvatarKey calls that refused to derive a key, by reason           |
-| `vers.activity.terminal_transitions` | counter | `{activity}`   | `status`      | activities that claimed a terminal transition, by status                |
-| `vers.email.delivery_failures`       | counter | `{email}`      | —             | emails that failed to deliver                                           |
-| `vers.session.failed_attempts`       | counter | `{attempt}`    | —             | failed step-up verification attempts                                    |
-| `vers.analytics.delivery_failures`   | counter | `{event}`      | `reason`      | product events that never landed in the Tinybird data source, by reason |
+| Instrument                           | Type      | Unit          | Attributes | Meaning                                                                 |
+| ------------------------------------ | --------- | ------------- | ---------- | ----------------------------------------------------------------------- |
+| `vers.replay.verification_lag`       | histogram | `s`           | —          | seconds between an append landing and a drain cycle confirming it       |
+| `vers.replay.wake`                   | counter   | `{wake}`      | —          | wake requests received                                                  |
+| `vers.replay.drain_duration`         | histogram | `s`           | —          | wall-clock duration of one drain cycle                                  |
+| `vers.replay.backlog_claimed`        | histogram | `{chain}`     | —          | chains claimed and adjudicated in one drain cycle                       |
+| `vers.verification.rejections`       | counter   | `{rejection}` | `reason`   | adjudications that rejected or parked an activity, by reason            |
+| `vers.replay.iteration_failures`     | counter   | `{iteration}` | `outcome`  | worker iterations that failed to replay a claimed chain, by outcome     |
+| `vers.keys.derive_rejections`        | counter   | `{rejection}` | `reason`   | deriveAvatarKey calls that refused to derive a key, by reason           |
+| `vers.activity.terminal_transitions` | counter   | `{activity}`  | `status`   | activities that claimed a terminal transition, by status                |
+| `vers.activity.replay_poke_failed`   | counter   | `{poke}`      | —          | replay wake pokes that never delivered after exhausting retries         |
+| `vers.email.delivery_failures`       | counter   | `{email}`     | —          | emails that failed to deliver                                           |
+| `vers.session.failed_attempts`       | counter   | `{attempt}`   | —          | failed step-up verification attempts                                    |
+| `vers.analytics.delivery_failures`   | counter   | `{event}`     | `reason`   | product events that never landed in the Tinybird data source, by reason |
 
-The verification gauges observe from one snapshot query in `service-replay`
-(`loadVerificationSnapshot`). A stream counts as unverified while appends sit past its verified
-cursor and it hasn't been rejected. Parked and quarantined streams stay in, because an operator hold
-is exactly the staleness the lag gauge exists to show. The optimistic client hides verifier failure
-by design, so this gauge is the signal that verification has stalled.
+`service-activity` pokes `service-replay`'s `POST /wake` each time an append advances an activity
+past its verified cursor. The handler drains the queue — claiming and adjudicating chains until none
+remain claimable — before responding, so every instrument in `service-replay` emits only while a
+drain is actually running and stays silent on an idle, scaled-to-zero machine.
+`vers.replay.verification_lag` records once per newly verified append, from the append's own
+timestamp to the moment the drain confirms it.
 
 `vers.verification.rejections` splits by `reason`:
 
@@ -174,7 +176,8 @@ non-2xx response from the Tinybird Events API, `quarantined` covers a row the AP
 failed schema validation on, `unreachable` covers a network failure or the upstream deadline
 tripping.
 
-The `vers verification lag` threshold monitor watches `vers.verification.lag` and notifies
-`vers alarms`. It alerts on no data as well as on the threshold. The gauge exports from
-`service-replay`'s always-warm machine ([deployment](./deployment.md)), so a silent dataset means
-the exporter or the process around it is down, never a healthy quiet system.
+The `vers replay poke failed` threshold monitor watches `vers.activity.replay_poke_failed` and
+notifies `vers alarms`. It alerts on the threshold alone, never on no data — the counter emits only
+when a wake delivery exhausts its retries, so a quiet dataset is the healthy default, not a down
+exporter. It is the explicit signal that the replay queue may go undrained despite an activity
+appending unverified work.

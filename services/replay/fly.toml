@@ -11,10 +11,7 @@ internal_port = 3000
 force_https = false
 auto_stop_machines = 'suspend'
 auto_start_machines = true
-# The replay worker is a DB poll loop with no inbound traffic in normal play — a
-# suspended machine never wakes on its own, so one machine stays running to keep
-# verification and the lag gauge's exporter alive.
-min_machines_running = 1
+min_machines_running = 0
 processes = ['app']
 
 [http_service.concurrency]
