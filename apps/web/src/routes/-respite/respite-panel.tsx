@@ -2,6 +2,7 @@ import { isDefinedError } from '@orpc/client';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { Heading, Text } from '@vers/design-system';
+import { ScreenPanel } from '../../components/screen-panel';
 import type { OrpcQueryUtils } from '../../lib/rpc/orpc';
 
 interface RespitePanelProps {
@@ -36,8 +37,9 @@ export function RespitePanel(props: RespitePanelProps) {
 
   return (
     <>
-      <Heading level={2}>Respite</Heading>
-      <Text>vers is a work in progress. Check back often for updates.</Text>
+      <Heading level={1}>Respite</Heading>
+      <Text>Your refuge between expeditions.</Text>
+      <ScreenPanel label="Town services — market · stash · sanctum" />
     </>
   );
 }

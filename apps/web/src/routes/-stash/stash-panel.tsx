@@ -1,51 +1,41 @@
-import { Heading, Text } from '@vers/design-system';
-import { css } from '@vers/styled-system/css';
-
-const STASH_ITEMS: ReadonlyArray<string> = [
-  'Worn Traveler Cloak',
-  'Rusted Shortsword',
-  'Vial of Murky Water',
-  'Cracked Leather Satchel',
-  'Bundle of Dry Kindling',
-  'Tarnished Signet Ring',
-];
-
-const panel = css({
-  backgroundColor: 'bg.panel',
-  borderColor: 'border',
-  borderWidth: '[1px]',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '4',
-  margin: '6',
-  padding: '6',
-});
-
-const grid = css({
-  display: 'grid',
-  gap: '3',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-});
-
-const item = css({
-  backgroundColor: 'bg.panelElevated',
-  padding: '3',
-});
+import { Tabs } from '@vers/design-system';
+import { PlaceholderGrid } from '../../components/placeholder-grid';
+import { ScreenLayout } from '../../components/screen-layout';
+import { ScreenPanel } from '../../components/screen-panel';
 
 /**
- * Placeholder stash screen rendering a fixed item grid.
+ * Stash screen: two item tabs over a fixed grid and a currency tab, all placeholder until inventory
+ * data is wired.
  */
 export function StashPanel() {
   return (
-    <main className={panel}>
-      <Heading level={1}>Stash</Heading>
-      <div className={grid} data-testid="stash-item-grid">
-        {STASH_ITEMS.map((label) => (
-          <div key={label} className={item}>
-            <Text>{label}</Text>
-          </div>
-        ))}
-      </div>
-    </main>
+    <ScreenLayout title="Stash">
+      <Tabs
+        items={[
+          {
+            content: <PlaceholderGrid columns={12} count={96} />,
+            label: 'Tab 01',
+            value: 'tab-01',
+          },
+          {
+            content: <PlaceholderGrid columns={12} count={96} />,
+            label: 'Tab 02',
+            value: 'tab-02',
+          },
+          { content: <CurrencyTab />, label: 'Currency', value: 'currency' },
+        ]}
+      />
+    </ScreenLayout>
+  );
+}
+
+function CurrencyTab() {
+  return (
+    <>
+      <ScreenPanel label="Currency">
+        <PlaceholderGrid columns={8} count={24} />
+      </ScreenPanel>
+      <ScreenPanel label="Stacks" />
+    </>
   );
 }

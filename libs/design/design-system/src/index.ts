@@ -10,6 +10,7 @@ export { Sheet } from './components/sheet/sheet';
 export { SingleLineCode } from './components/single-line-code/single-line-code';
 export { Spinner } from './components/spinner/spinner';
 export { StatusButton } from './components/status-button/status-button';
+export { Tabs } from './components/tabs/tabs';
 export { Text } from './components/text/text';
 export type { PolymorphicComponentProps } from './types';
 export { sceneColors } from './scene-colors';

@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { ScreenLayout } from '../components/screen-layout';
 import { getAccountContent } from '../lib/account/get-account-content';
 import { requireAuth } from '../lib/auth/require-auth';
 import { AccountScreen } from './-account/account-screen';
@@ -21,5 +22,9 @@ export const Route = createFileRoute('/account')({
 function AccountPage() {
   const data = Route.useLoaderData();
 
-  return <AccountScreen Content={data.Content} has2FA={data.has2FA} />;
+  return (
+    <ScreenLayout title="Account">
+      <AccountScreen Content={data.Content} has2FA={data.has2FA} />
+    </ScreenLayout>
+  );
 }

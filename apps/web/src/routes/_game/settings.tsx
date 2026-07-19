@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { AccountScreen } from '../-account/account-screen';
+import { SettingsScreen } from '../-settings/settings-screen';
 import { getAccountContent } from '../../lib/account/get-account-content';
 
 export const Route = createFileRoute('/_game/settings')({
@@ -16,5 +16,5 @@ export const Route = createFileRoute('/_game/settings')({
 function SettingsPage() {
   const data = Route.useLoaderData();
 
-  return <AccountScreen Content={data.Content} has2FA={data.has2FA} />;
+  return <SettingsScreen Content={data.Content} has2FA={data.has2FA} />;
 }

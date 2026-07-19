@@ -7,6 +7,7 @@ import { SessionBadgeSlot } from '../components/session-badge-slot';
 import { getHomeContent } from '../lib/session/get-home-content';
 import { sessionBadgeQueryOptions } from '../lib/session/session-badge-query-options';
 import { HomeHero } from './-home/home-hero';
+import { LandingSections } from './-home/landing-sections';
 
 export const Route = createFileRoute('/')({
   component: HomePage,
@@ -37,6 +38,7 @@ function HomePage() {
   return (
     <main className={css({ display: 'flex', flexDirection: 'column', gap: '4', padding: '6' })}>
       <HomeHero orpc={ctx.orpc} />
+      <LandingSections />
       <section className={diagnosticsStyles}>
         <Heading level={2}>Diagnostics</Heading>
         {data.Content}

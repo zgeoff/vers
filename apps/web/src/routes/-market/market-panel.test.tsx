@@ -1,14 +1,17 @@
 import { expect, test } from 'bun:test';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { MarketPanel } from './market-panel';
 
-test('it renders the market title and links each listing to its detail route', async () => {
+test('it links each listing to its detail route from the listings tab', async () => {
+  const user = userEvent.setup();
+
   renderWithRouter(<MarketPanel />);
 
-  const heading = await screen.findByRole('heading', { name: 'Market' });
+  const listingsTab = await screen.findByRole('tab', { name: 'Listings' });
 
-  expect(heading).toBeVisible();
+  await user.click(listingsTab);
 
   const listingLink = screen.getByRole('link', { name: 'Sunforged Blade' });
 
