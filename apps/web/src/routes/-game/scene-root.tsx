@@ -7,7 +7,7 @@ import { RespiteScene } from './respite-scene';
  * The app's scene registry: renders the world matching the scene store's current key.
  */
 export function SceneRoot(): ReactNode {
-  const scene = useSceneState().scene;
+  const scene = useSceneState((state) => state.scene);
 
   if (scene === 'worldmap') {
     return <Scene />;

@@ -125,7 +125,7 @@ function RailGroup(props: Readonly<RailGroupProps>) {
 
   return (
     <>
-      {props.showDivider && <span aria-hidden className={divider} />}
+      {props.showDivider ? <span aria-hidden className={divider} /> : null}
       {visible.map((item) => (
         <Link
           key={item.to}

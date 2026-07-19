@@ -1,7 +1,6 @@
-import { Outlet, createFileRoute } from '@tanstack/react-router';
+import { Outlet, createFileRoute, useMatches } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { resolveFlags } from '@vers/flags';
-import { useSceneState } from '@vers/game-rendering';
 import { requireAuth } from '../lib/auth/require-auth';
 import { ActivityProgressNotice } from './-game/activity-progress-notice';
 import { AmbientSheet } from './-game/ambient-sheet';
@@ -22,7 +21,12 @@ export const Route = createFileRoute('/_game')({
 });
 
 function GameLayout() {
-  const sceneState = useSceneState();
+  const matches = useMatches();
+
+  // Deepest declaration wins, matching the route-to-store fold; read straight from matches so the
+  // wrapper never trails the store's effect-driven update across an ambient↔focus navigation.
+  const presentation = matches.findLast((match) => match.staticData.presentation !== undefined)
+    ?.staticData.presentation;
 
   return (
     <>
@@ -33,7 +37,7 @@ function GameLayout() {
       <WelcomeBackModal />
       <NavRail />
       <ActivityProgressNotice />
-      {sceneState.presentation === 'ambient' ? (
+      {presentation === 'ambient' ? (
         <AmbientSheet>
           <Outlet />
         </AmbientSheet>
