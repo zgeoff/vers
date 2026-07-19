@@ -63,3 +63,18 @@ test('it reports a close request on escape', async () => {
 
   expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
 });
+
+test('it reports a close request from the scrim', async () => {
+  const user = userEvent.setup();
+  const onOpenChange = mock<(open: boolean) => void>();
+
+  render(
+    <Sheet label="Game panel" onOpenChange={onOpenChange} open>
+      <p>panel body</p>
+    </Sheet>,
+  );
+
+  await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+
+  expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
+});

@@ -199,6 +199,7 @@
               "SharedWorker",
               "Uint8Array",
               "URL",
+              "KeyboardEvent",
               "MouseEvent",
               // a live cancellation handle: addEventListener/aborted state, no readonly form
               "AbortSignal",

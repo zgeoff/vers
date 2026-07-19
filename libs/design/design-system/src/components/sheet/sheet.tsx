@@ -1,6 +1,5 @@
-import { Dialog as ArkDialog } from '@ark-ui/react/dialog';
-import { Portal } from '@ark-ui/react/portal';
-import { sva } from '@vers/styled-system/css';
+import { css } from '@vers/styled-system/css';
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Icon } from '../icon/icon';
 
@@ -16,94 +15,119 @@ interface Props {
   open: boolean;
 }
 
-const sheetRecipe = sva({
-  base: {
-    backdrop: {
-      backgroundColor: '[rgba(2, 4, 10, 0.6)]',
-      inset: '0',
-      position: 'fixed',
-      zIndex: '[8]',
-      '&[data-state=open]': {
-        animationDuration: 'normal',
-        animationName: '[fadeIn]',
-        animationTimingFunction: 'default',
-      },
-    },
-    closeTrigger: {
-      alignItems: 'center',
-      backgroundColor: 'bg.panel',
-      borderColor: 'border',
-      borderRadius: 'md',
-      borderWidth: '[1px]',
-      color: 'text.muted',
-      cursor: '[pointer]',
-      display: 'flex',
-      justifyContent: 'center',
-      padding: '2',
-      position: 'absolute',
-      right: '4',
-      top: '4',
-      zIndex: '[1]',
-      _hover: { borderColor: 'border.strong', color: 'text.primary' },
-    },
-    content: {
-      backgroundColor: 'bg.panelElevated',
-      borderColor: 'border',
-      borderTopRadius: 'xl',
-      borderWidth: '[1px]',
-      display: 'flex',
-      flexDirection: 'column',
-      overflowY: 'auto',
-      position: 'relative',
-      width: 'full',
-      '&[data-state=open]': {
-        animationDuration: 'normal',
-        animationName: '[slideInFromBottom]',
-        animationTimingFunction: 'default',
-      },
-    },
-    positioner: {
-      alignItems: 'stretch',
-      bottom: '0',
-      display: 'flex',
-      left: '[4%]',
-      position: 'fixed',
-      right: '[4%]',
-      top: '[7%]',
-      zIndex: '[9]',
-    },
-  },
-  slots: ['backdrop', 'closeTrigger', 'content', 'positioner'],
+const scrim = css({
+  animationDuration: 'normal',
+  animationName: '[fadeIn]',
+  animationTimingFunction: 'default',
+  backgroundColor: '[rgba(2, 4, 10, 0.6)]',
+  border: '[none]',
+  cursor: '[pointer]',
+  inset: '0',
+  position: 'fixed',
+  zIndex: '[8]',
+});
+
+// The native dialog's user-agent rules (fit-content sizing, auto margins, a max-width/height inset,
+// and 1em padding) all fight a full-bleed sheet, so each is overridden back to the insets below.
+const sheet = css({
+  animationDuration: 'normal',
+  animationName: '[slideInFromBottom]',
+  animationTimingFunction: 'default',
+  backgroundColor: 'bg.panelElevated',
+  borderColor: 'border',
+  borderTopRadius: 'xl',
+  borderWidth: '[1px]',
+  bottom: '0',
+  color: 'text.primary',
+  display: 'flex',
+  flexDirection: 'column',
+  height: 'auto',
+  left: '[4%]',
+  margin: '0',
+  maxHeight: '[none]',
+  maxWidth: '[none]',
+  overflowY: 'auto',
+  padding: '0',
+  position: 'fixed',
+  right: '[4%]',
+  top: '[7%]',
+  width: 'auto',
+  zIndex: '[9]',
+});
+
+const closeTrigger = css({
+  alignItems: 'center',
+  backgroundColor: 'bg.panel',
+  borderColor: 'border',
+  borderRadius: 'md',
+  borderWidth: '[1px]',
+  color: 'text.muted',
+  cursor: '[pointer]',
+  display: 'flex',
+  justifyContent: 'center',
+  padding: '2',
+  position: 'absolute',
+  right: '4',
+  top: '4',
+  zIndex: '[1]',
+  _hover: { borderColor: 'border.strong', color: 'text.primary' },
 });
 
 /**
- * A bottom-anchored modal sheet over the Ark UI dialog primitive: focus is trapped while open, and
- * escape, the backdrop, and the close trigger all report through `onOpenChange` — the open state
- * itself is the caller's. The hosted content supplies its own heading, so the accessible name comes
- * from `label` rather than a visible title.
+ * A bottom-anchored, non-modal sheet: it dims the canvas behind it and takes initial focus, but
+ * never traps focus or covers a higher-stacked sibling, so an always-on rail beside it stays live.
+ * Escape, the scrim, and the close control all report through `onOpenChange` — the open state is
+ * the caller's. The hosted content supplies its own heading, so the accessible name comes from
+ * `label` rather than a visible title.
  */
 export function Sheet(props: Readonly<Props>) {
-  const styles = sheetRecipe();
+  const contentRef = useRef<HTMLDialogElement>(null);
+  const open = props.open;
+  const onOpenChange = props.onOpenChange;
+
+  useEffect(() => {
+    if (open) {
+      contentRef.current?.focus();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (open && event.key === 'Escape') {
+        onOpenChange?.(false);
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [onOpenChange, open]);
+
+  if (!open) {
+    return null;
+  }
 
   return (
-    <ArkDialog.Root
-      onOpenChange={(details) => props.onOpenChange?.(details.open)}
-      open={props.open}
-    >
-      <Portal>
-        <ArkDialog.Backdrop className={styles.backdrop} />
-        <ArkDialog.Positioner className={styles.positioner}>
-          <ArkDialog.Content aria-label={props.label} className={styles.content}>
-            <ArkDialog.CloseTrigger
-              aria-label={props.closeLabel ?? 'Close'}
-              className={styles.closeTrigger}
-            >
-              <Icon.Close />
-            </ArkDialog.CloseTrigger>
-            {props.children}
-          </ArkDialog.Content>
-        </ArkDialog.Positioner>
-      </Portal>
-    </ArkDialog.Root>
+    <>
+      <button
+        aria-label="Dismiss"
+        className={scrim}
+        onClick={() => onOpenChange?.(false)}
+        type="button"
+      />
+      <dialog aria-label={props.label} className={sheet} open ref={contentRef} tabIndex={-1}>
+        <button
+          aria-label={props.closeLabel ?? 'Close'}
+          className={closeTrigger}
+          onClick={() => onOpenChange?.(false)}
+          type="button"
+        >
+          <Icon.Close />
+        </button>
+        {props.children}
+      </dialog>
+    </>
   );
 }
