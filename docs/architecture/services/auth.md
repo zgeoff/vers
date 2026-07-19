@@ -8,7 +8,7 @@ service-to-service token for its own outbound calls. Durable state lives in the 
 and step-up transactions in `service-session`, password credentials and reset tokens in
 `service-user`, TOTP verifications in `service-verification`. Services never see cookies. The edge
 validates the session and passes each service a short-lived token naming the acting user
-(`docs/architecture/service-contracts.md`).
+([service contracts](./service-contracts.md)).
 
 ## Session lifecycle
 
@@ -92,4 +92,4 @@ hold the same Ed25519 private key by design: verification checks only the signat
 shared key grants.
 
 Each service verifies the token with the public key in its runtime middleware before any handler
-runs, rejecting a bad token with a plain 401 (`docs/architecture/service-contracts.md`).
+runs, rejecting a bad token with a plain 401 ([service contracts](./service-contracts.md)).

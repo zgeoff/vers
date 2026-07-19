@@ -87,7 +87,7 @@ Status assignment follows the failure's nature:
 `createService` (`@vers/service-runtime`) owns the whole failure path outside handler bodies:
 
 - **Trust boundary.** An invalid s2s token short-circuits with a plain 401 before any oRPC handler
-  runs. The response is not contract-shaped by design (docs/architecture/service-contracts.md).
+  runs. The response is not contract-shaped by design ([service contracts](./service-contracts.md)).
 - **Central error interceptor.** One `onError` client-interceptor on the RPC handler classifies
   everything a procedure throws. A defined contract error or any 4xx passes through untouched: no
   log, no report, it is the caller's outcome. Everything else is logged at error level with the
@@ -150,8 +150,8 @@ trace. The RPC path reports exactly once per unexpected throw.
 One W3C trace id follows a request from the browser through app-web into whichever service it lands
 on, and shows up in three places: every pino log line the request writes, the Bugsink event if one
 fires, and the `x-trace-id` header on every service response. The log-line mixin and the response
-header are telemetry the observability doc owns (docs/architecture/observability.md). A trace id
-from an error screen or a support report greps straight to the logs and the event.
+header are telemetry the [observability](../platform/observability.md) doc owns. A trace id from an
+error screen or a support report greps straight to the logs and the event.
 
 - The browser mints a fresh `traceparent` per RPC call from the `@vers/trace` primitives.
 - app-web's server-side service links continue the ambient request's trace when it carries one, and
