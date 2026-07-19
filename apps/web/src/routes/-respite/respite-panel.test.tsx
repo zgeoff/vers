@@ -16,7 +16,7 @@ test('it shows a call to action for a caller with no avatar', async () => {
     const callToAction = await screen.findByText('Awaken your Avatar');
 
     expect(callToAction).toBeVisible();
-    expect(callToAction.closest('a')).toHaveAttribute('href', '/avatar/create');
+    expect(callToAction.closest('a')).toHaveAttribute('href', '/avatars/create');
   });
 });
 

@@ -151,7 +151,7 @@ test('it creates the account, signs the caller in, and clears the onboarding ses
     },
   );
 
-  expect(outcome.value).toBe('/respite');
+  expect(outcome.value).toBe('/avatars');
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
   expect(outcome.cookies['en_verification']).toStrictEqual({});
 

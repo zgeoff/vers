@@ -39,7 +39,7 @@ export async function runAvatarCreate(formData: FormData): Promise<AvatarCreateR
     };
   }
 
-  throw redirect({ href: '/avatar' });
+  throw redirect({ href: '/explore' });
 }
 
 function toFieldErrors(error: z.ZodError): AvatarCreateResult['fieldErrors'] {

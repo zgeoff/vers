@@ -29,7 +29,7 @@ export function RespitePanel(props: RespitePanelProps) {
         <Heading level={1}>Destiny Awaits a Vessel</Heading>
         <Text>What is an Arbiter without a champion?</Text>
         <Text>Call forth your Avatar and guide their path across the World.</Text>
-        <Link to="/avatar/create">Awaken your Avatar</Link>
+        <Link to="/avatars/create">Awaken your Avatar</Link>
       </>
     );
   }
