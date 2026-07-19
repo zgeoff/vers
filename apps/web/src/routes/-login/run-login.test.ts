@@ -166,7 +166,7 @@ test('it signs a first-time caller in directly and clears their redirect target'
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
 });
 
-test('it lands a caller with no redirect target at respite', async () => {
+test('it lands a caller with no redirect target on the avatar roster', async () => {
   await db.userCollection.create({ email: 'default-landing@vers.test', password: 'password123' });
 
   const outcome = await withRequestContext({}, async () => {

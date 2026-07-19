@@ -14,7 +14,7 @@ const screen = css({
 const grid = css({
   display: 'grid',
   gap: '4',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(12rem, 1fr))',
+  gridTemplateColumns: '[repeat(auto-fill,minmax(12rem,1fr))]',
   width: 'full',
 });
 

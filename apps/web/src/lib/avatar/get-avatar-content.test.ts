@@ -9,8 +9,8 @@ test('it throws when a shell route loads without an active avatar', async () => 
   const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
     getAvatarContent()
       .then(() => null)
-      .catch((error: unknown) => error),
+      .catch((error: unknown) => (error instanceof Error ? error.message : null)),
   );
 
-  expect(outcome.value).toBeInstanceOf(Error);
+  expect(outcome.value).toContain('active avatar');
 });
