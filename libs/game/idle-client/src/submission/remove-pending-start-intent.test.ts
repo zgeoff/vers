@@ -13,7 +13,9 @@ test('it removes the intent naming the expected source row', async () => {
 
   await removePendingStartIntent('activity_1');
 
-  expect(await readPendingStartIntent()).toBeUndefined();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it keeps a fresher intent written while the delivery was in flight', async () => {
@@ -46,11 +48,15 @@ test('it removes whatever intent is held when no source row is expected', async 
 
   await removePendingStartIntent();
 
-  expect(await readPendingStartIntent()).toBeUndefined();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it tolerates removing when nothing is held', async () => {
   await removePendingStartIntent('activity_absent');
 
-  expect(await readPendingStartIntent()).toBeUndefined();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });

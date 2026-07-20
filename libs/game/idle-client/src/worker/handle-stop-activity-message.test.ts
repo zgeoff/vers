@@ -44,7 +44,10 @@ test('it halts the live simulation and clears the runtime', async () => {
 
   expect(simulation.activity).toBeNull();
   expect(context.getActivity()).toBeNull();
-  expect(await readPendingStartIntent()).toBeUndefined();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it replaces the stopped simulation with a fresh empty one', async () => {

@@ -4,7 +4,9 @@ import { writePendingStartIntent } from './write-pending-start-intent';
 import { writePendingStopIntent } from './write-pending-stop-intent';
 
 test('it reads nothing when no intent is held', async () => {
-  expect(await readPendingStartIntent()).toBeUndefined();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it reads the held intent without picking up other preference records', async () => {

@@ -748,7 +748,10 @@ test("it starts a fresh row, installs a live simulation with the worker's failur
   invariant(simulation !== null, 'expected the resync to install a live simulation');
   expect(simulation.activity?.id).toBe(minted.id);
   expect(simulation.failureAction).toBe(ActivityFailureAction.Retry);
-  expect(await readPendingStartIntent()).toBeUndefined();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it attaches the foreign row that races in ahead of the continuation', async () => {
@@ -800,7 +803,10 @@ test('it attaches the foreign row that races in ahead of the continuation', asyn
 
   invariant(racing !== undefined, 'expected the racing row to survive');
   expect(installed.activity?.id).toBe(racing.id);
-  expect(await readPendingStartIntent()).toBeUndefined();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it halts at the boundary and keeps the start intent when the offline budget is spent', async () => {
@@ -835,7 +841,9 @@ test('it halts at the boundary and keeps the start intent when the offline budge
 
   expect(ctx.context.getSimulation().activity).toBeNull();
 
-  expect(await readPendingStartIntent()).toStrictEqual({
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toStrictEqual({
     activityID: stopped.id,
     avatarID: viewer.avatar.id,
     scopeID: stopped.scopeID,
@@ -870,7 +878,9 @@ test('it clears a stale start intent silently when the budget is spent and anoth
 
   await handleRequestResyncMessage(ctx.context, message);
 
-  expect(await readPendingStartIntent()).toBeUndefined();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
   // handler broadcast on the same channel — its lone presence proves no cap-halt rode along
@@ -917,7 +927,9 @@ test('it keeps the start intent and reports offline when the drain fails on tran
 
   expect(ctx.context.getSimulation().activity).toBeNull();
 
-  expect(await readPendingStartIntent()).toStrictEqual({
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toStrictEqual({
     activityID: stopped.id,
     avatarID: viewer.avatar.id,
     scopeID: stopped.scopeID,
@@ -964,7 +976,9 @@ test('it clears the start intent and reports the resync failure status on a defi
     },
   ]);
 
-  expect(await readPendingStartIntent()).toBeUndefined();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it delivers a blocked intent after the pass closes its source row and attaches the minted row', async () => {
@@ -1012,7 +1026,10 @@ test('it delivers a blocked intent after the pass closes its source row and atta
 
   invariant(installed !== null, 'expected the second pass to install the minted row');
   expect(installed.activity?.id).toBe(minted.id);
-  expect(await readPendingStartIntent()).toBeUndefined();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it reports a fault to the error backend and broadcasts a failed status when the resync fails outright', async () => {

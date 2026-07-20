@@ -293,7 +293,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
         // the durable start intent is always the fresher signal: it was recorded at the most
         // recent boundary failure, while the remembered resync avatar can predate it
-        const avatarID = (await readPendingStartIntent())?.avatarID ?? resyncAvatarID ?? null;
+        const heldIntent = await readPendingStartIntent();
+
+        const avatarID = heldIntent?.avatarID ?? resyncAvatarID ?? null;
 
         if (context.getActivity() === null && avatarID !== null) {
           await handleRequestResyncMessage(context, createRequestResyncMessage(avatarID));

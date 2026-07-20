@@ -153,16 +153,21 @@ calls the activity service for lifecycle work itself, so the tabs and the worker
 about which run exists.
 
 - A start intent carries a request id the worker passes as the row's idempotency key (`start_key`).
-  A duplicate delivery of the same start — a retry after a transport failure, a pending continuation
-  honored later — converges on the row the first attempt minted, while a distinct intent into the
-  same scope conflicts. Start flows run one at a time in the worker; a superseded flow abandons its
-  work, and any row it minted is recovered by the fresher flow.
-- A stop halts the local simulation immediately and needs no network. Delivery is a durable intent:
-  earned checkpoints flush first, then a targeted, idempotent server stop lands, retried at every
-  reconnect and resync entry until the row reads closed. An undelivered stop gates resync planning,
-  so a catch-up never revives a run the player ended.
-- Every install path re-checks a stop epoch after each await, so an in-flight resync or continuation
-  abandons its install when a stop landed meanwhile.
+  A duplicate delivery of the same start — a retry after a transport failure, a held continuation
+  intent drained later — converges on the row the first attempt minted, while a distinct intent into
+  the same scope conflicts. A superseded start abandons its work, and any row it minted is recovered
+  by the fresher flow.
+- Lifecycle flows — starts, resyncs, continuations — run strictly one at a time through a mailbox in
+  the worker; a queued flow re-checks its claim when its turn arrives.
+- A stop stays outside the mailbox: it halts the local simulation immediately and needs no network.
+  Delivery is a durable intent: earned checkpoints flush first, then a targeted, idempotent server
+  stop lands, retried at every reconnect and resync entry until the row reads closed. An undelivered
+  stop gates resync planning, so a catch-up never revives a run the player ended.
+- Every install path re-checks a stop epoch captured when its flow began, so a resync or
+  continuation abandons its install when a stop landed meanwhile — the one interleaving the mailbox
+  permits.
+- The worker holds a simulation for its whole lifetime; "no run" is an empty simulation with no
+  activity attached, so no lifecycle path ever special-cases a missing one.
 
 ## Offline progress
 
@@ -188,9 +193,12 @@ there. A larger gap fast-forwards through one or more attempts first, then attac
 whichever continuation is still active when the budget runs out.
 
 A continuation the worker couldn't complete — a same-row race just after a terminal checkpoint, or a
-transport failure starting the next row — leaves a pending record that the next resync consults. A
-non-active row matching that record starts fresh once its terminal append is acknowledged. A player
-stop leaves no such record, so a stopped activity is never resumed.
+transport failure starting the next row — leaves a durable start intent that survives a worker
+reload. A resync for the intent's avatar delivers it at entry, before the confirmed-state fetch, so
+the fetch finds the minted row and attaches it through ordinary planning; an intent whose source row
+still reads active waits for the resync's own queued-checkpoint drain to close it, then retries. A
+player stop, or a fresh player-chosen start, clears the intent, so a run the player ended is never
+resumed.
 
 ### The offline budget
 

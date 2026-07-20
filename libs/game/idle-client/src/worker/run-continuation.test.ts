@@ -92,7 +92,10 @@ test('it hands a foreign-claim CONFLICT to a resync that attaches the conflictin
   expect(installed).not.toBe(simulation);
   expect(installed.activity?.id).toBe(conflictingActivity.id);
   expect(context.getActivity()).toStrictEqual(conflictingActivity);
-  expect(await readPendingStartIntent()).toBeUndefined();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 
   expect(submitter.registerActivity).toHaveBeenCalledExactlyOnceWith({
     activityID: conflictingActivity.id,
@@ -141,7 +144,9 @@ test('it records a durable start intent on a transport failure', async () => {
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(await readPendingStartIntent()).toStrictEqual({
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toStrictEqual({
     activityID: previousActivity.id,
     avatarID: previousActivity.avatarID,
     scopeID: previousActivity.scopeID,
@@ -170,7 +175,9 @@ test('it stops the simulation and records a durable start intent on a same-row C
 
   expect(simulation.activity).toBeNull();
 
-  expect(await readPendingStartIntent()).toStrictEqual({
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toStrictEqual({
     activityID: activity.id,
     avatarID: activity.avatarID,
     scopeID: activity.scopeID,
@@ -199,7 +206,9 @@ test('it records no start intent when the CONFLICT names a different, already-pr
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(await readPendingStartIntent()).toBeUndefined();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it records no start intent on a defined error other than CONFLICT', async () => {
@@ -220,7 +229,9 @@ test('it records no start intent on a defined error other than CONFLICT', async 
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(await readPendingStartIntent()).toBeUndefined();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it stops the row it started when a stop lands mid-flight', async () => {
@@ -284,7 +295,9 @@ test('it records no start intent for a same-row CONFLICT after a stop lands', as
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(await readPendingStartIntent()).toBeUndefined();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it compensates a stop that lands while the intent write is committing', async () => {
@@ -314,7 +327,9 @@ test('it compensates a stop that lands while the intent write is committing', as
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(await readPendingStartIntent()).toBeUndefined();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it leaves a replacement simulation installed when uninstalling after a stop', async () => {
@@ -340,5 +355,8 @@ test('it leaves a replacement simulation installed when uninstalling after a sto
   await runContinuation(context, simulation, previousActivity);
 
   expect(context.getSimulation()).toBe(replacement);
-  expect(await readPendingStartIntent()).toBeUndefined();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });

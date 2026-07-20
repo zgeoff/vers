@@ -20,8 +20,10 @@ test('it runs queued turns strictly one at a time in queue order', async () => {
     order.push('first:exit');
   });
 
-  const second = withLifecycleTurn(context, async () => {
+  const second = withLifecycleTurn(context, () => {
     order.push('second:enter');
+
+    return Promise.resolve();
   });
 
   releaseFirst?.();
@@ -40,8 +42,10 @@ test('it keeps the queue alive past a turn that throws', async () => {
 
   let ran = false;
 
-  await withLifecycleTurn(context, async () => {
+  await withLifecycleTurn(context, () => {
     ran = true;
+
+    return Promise.resolve();
   });
 
   expect(ran).toBeTrue();

@@ -47,10 +47,14 @@ test('it mints the continued row and releases the intent', async () => {
   );
 
   invariant(minted !== undefined, 'expected the delivery to mint an active row');
-  expect(result).toStrictEqual({ outcome: 'delivered', started: expect.anything() });
+  invariant(result.outcome === 'delivered', 'expected the flush to deliver');
+  expect(result.started.id).toBe(minted.id);
   expect(minted.scopeID).toBe(source.scopeID);
   expect(context.getSimulation().activity).toBeNull();
-  expect(await readPendingStartIntent()).toBeUndefined();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it keeps the intent while the source row still reads active', async () => {
@@ -76,7 +80,9 @@ test('it keeps the intent while the source row still reads active', async () => 
 
   expect(result).toStrictEqual({ outcome: 'blocked' });
 
-  expect(await readPendingStartIntent()).toStrictEqual({
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toStrictEqual({
     activityID: source.id,
     avatarID: viewer.avatar.id,
     scopeID: source.scopeID,
@@ -112,7 +118,10 @@ test('it releases a stale intent when a different claim owns the avatar', async 
   const result = await flushPendingStart(context, context.getStopEpoch(), viewer.avatar.id);
 
   expect(result).toStrictEqual({ outcome: 'stale' });
-  expect(await readPendingStartIntent()).toBeUndefined();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 
   const survivor = db.activityCollection.findFirst((q) => q.where({ id: foreign.id }));
 
@@ -133,7 +142,10 @@ test("it leaves another avatar's intent untouched", async () => {
   const result = await flushPendingStart(context, context.getStopEpoch(), 'avatar_resyncing');
 
   expect(result).toStrictEqual({ outcome: 'none' });
-  expect(await readPendingStartIntent()).not.toBeUndefined();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).not.toBeUndefined();
 });
 
 test('it skips the attempt and keeps the intent when the budget is spent', async () => {
@@ -153,7 +165,9 @@ test('it skips the attempt and keeps the intent when the budget is spent', async
 
   expect(result).toStrictEqual({ outcome: 'capped' });
 
-  expect(await readPendingStartIntent()).toStrictEqual({
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toStrictEqual({
     activityID: 'activity_1',
     avatarID: 'avatar_1',
     scopeID: 'scope_1',
@@ -176,7 +190,10 @@ test('it keeps the intent on a transport failure', async () => {
   const result = await flushPendingStart(context, context.getStopEpoch(), 'avatar_1');
 
   expect(result).toStrictEqual({ outcome: 'undelivered' });
-  expect(await readPendingStartIntent()).not.toBeUndefined();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).not.toBeUndefined();
 });
 
 test('it releases the intent and rethrows a defined error other than CONFLICT', async () => {
@@ -197,7 +214,9 @@ test('it releases the intent and rethrows a defined error other than CONFLICT', 
 
   await expect(flushPendingStart(context, context.getStopEpoch(), 'avatar_1')).toReject();
 
-  expect(await readPendingStartIntent()).toBeUndefined();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it stops the minted row back when a stop lands while the start is in flight', async () => {
@@ -242,7 +261,10 @@ test('it stops the minted row back when a stop lands while the start is in fligh
   const result = await flushPendingStart(context, entryEpoch, viewer.avatar.id);
 
   expect(result).toStrictEqual({ outcome: 'stopped' });
-  expect(await readPendingStartIntent()).toBeUndefined();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 
   const minted = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: viewer.avatar.id, scopeID: source.scopeID }),
@@ -250,5 +272,8 @@ test('it stops the minted row back when a stop lands while the start is in fligh
 
   invariant(minted !== undefined, 'expected the minted row to survive');
   expect(minted.status).toBe('stopped');
-  expect(await readPendingStopIntent()).toBeUndefined();
+
+  const heldStop = await readPendingStopIntent();
+
+  expect(heldStop).toBeUndefined();
 });
