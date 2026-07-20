@@ -3,7 +3,6 @@ import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
-import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import { server } from '../mocks/node';
 import type { ActivityServiceClient } from '../submission/types';

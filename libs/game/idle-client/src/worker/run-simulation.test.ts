@@ -263,7 +263,10 @@ test('it skips the continuation when a fresher activity replaced this row mid-su
   const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Retry });
 
   // a different row is tracked than the one the simulation runs — the fresher-owner signal
-  const trackedRow = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'stopped' });
+  const trackedRow = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
 
   context.setActivity(trackedRow);
   context.setSimulation(simulation);

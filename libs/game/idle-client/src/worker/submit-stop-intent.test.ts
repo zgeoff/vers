@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { createAuthedServiceClient } from '@vers/mock-services';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
@@ -11,10 +11,9 @@ import { createStubWorkerContext } from '../test-utils/create-stub-worker-contex
 import { submitStopIntent } from './submit-stop-intent';
 
 test('it delivers the targeted stop and leaves no intent held', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const row = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const viewer = await createViewer();
+  const row = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   const context = createStubWorkerContext({ client });
 

@@ -143,7 +143,11 @@ test('it records a pending continuation on a transport failure', async () => {
 test('it stops the simulation and records a pending continuation on a same-row CONFLICT', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
-  const activity = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
+
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
 
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client: ctx.client, submitter });
@@ -217,7 +221,10 @@ test('it stops the row it started when a stop lands mid-flight', async () => {
 
   // the stop lands while the start call is in flight: the deviation answers with the row the
   // continuation minted, then advances the epoch as a concurrent stop does
-  const started = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
+  const started = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
 
   server.use(
     mockActivityService.startActivity.handler(() => {

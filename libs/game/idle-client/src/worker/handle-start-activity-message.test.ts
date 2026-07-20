@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
-import { createAuthedServiceClient } from '@vers/mock-services';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
@@ -30,9 +30,8 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
 }
 
 test('it mints a row, installs it, and broadcasts the started status', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const connection = createTestConnection();
   const submitter = createStubSubmitter();
@@ -46,7 +45,7 @@ test('it mints a row, installs it, and broadcasts the started status', async () 
   context.setSimulation(createSimulation());
 
   const message: StartActivityMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
@@ -56,7 +55,7 @@ test('it mints a row, installs it, and broadcasts the started status', async () 
   await handleStartActivityMessage(context, message);
 
   const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   invariant(minted !== undefined, 'expected the start to mint an active row');
@@ -85,14 +84,13 @@ test('it mints a row, installs it, and broadcasts the started status', async () 
 });
 
 test('it installs a simulation even when none was initialized yet', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const context = createStubWorkerContext({ client: ctx.client, submitter: createStubSubmitter() });
 
   await handleStartActivityMessage(context, {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
@@ -100,7 +98,7 @@ test('it installs a simulation even when none was initialized yet', async () => 
   });
 
   const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   invariant(minted !== undefined, 'expected the start to mint an active row');
@@ -108,9 +106,8 @@ test('it installs a simulation even when none was initialized yet', async () => 
 });
 
 test('it answers a duplicate delivery with the row the first attempt minted', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const connection = createTestConnection();
 
@@ -123,7 +120,7 @@ test('it answers a duplicate delivery with the row the first attempt minted', as
   context.setSimulation(createSimulation());
 
   const message: StartActivityMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
@@ -132,7 +129,7 @@ test('it answers a duplicate delivery with the row the first attempt minted', as
 
   // the first delivery already minted the row, keyed by this same request
   const existing = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
     startKey: message.requestID,
@@ -141,7 +138,7 @@ test('it answers a duplicate delivery with the row the first attempt minted', as
 
   await handleStartActivityMessage(context, message);
 
-  const rows = db.activityCollection.findMany((q) => q.where({ avatarID: avatar.id }));
+  const rows = db.activityCollection.findMany((q) => q.where({ avatarID: viewer.avatar.id }));
 
   expect(rows).toHaveLength(1);
   expect(context.getSimulation()?.activity?.id).toBe(existing.id);
@@ -159,12 +156,11 @@ test('it answers a duplicate delivery with the row the first attempt minted', as
 });
 
 test('it resyncs onto the already-active row when the same scope conflicts', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const running = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
     startKey: 'someone-elses-start',
@@ -180,7 +176,7 @@ test('it resyncs onto the already-active row when the same scope conflicts', asy
   });
 
   const message: StartActivityMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
@@ -201,12 +197,11 @@ test('it resyncs onto the already-active row when the same scope conflicts', asy
 });
 
 test('it flushes and stops a different scope before starting the requested one', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const previous = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     scopeID: 'old-node',
     scopeType: 'world_map_node',
     status: 'active',
@@ -218,7 +213,7 @@ test('it flushes and stops a different scope before starting the requested one',
   context.setSimulation(createSimulation());
 
   await handleStartActivityMessage(context, {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
@@ -232,7 +227,7 @@ test('it flushes and stops a different scope before starting the requested one',
   expect(submitter.flushNow).toHaveBeenCalledExactlyOnceWith(previous.id);
 
   const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   invariant(minted !== undefined, 'expected the start to mint an active row');
@@ -241,9 +236,8 @@ test('it flushes and stops a different scope before starting the requested one',
 });
 
 test('it stops the minted row back when a stop lands mid-start', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const connection = createTestConnection();
 
@@ -256,7 +250,7 @@ test('it stops the minted row back when a stop lands mid-start', async () => {
   context.setSimulation(createSimulation());
 
   const message: StartActivityMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
@@ -265,7 +259,7 @@ test('it stops the minted row back when a stop lands mid-start', async () => {
 
   // the stop lands while the start call is in flight
   const minted = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
     startKey: message.requestID,
@@ -302,16 +296,15 @@ test('it stops the minted row back when a stop lands mid-start', async () => {
 });
 
 test('it abandons a superseded request without touching the fresher claim', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const context = createStubWorkerContext({ client: ctx.client, submitter: createStubSubmitter() });
 
   context.setSimulation(createSimulation());
 
   const message: StartActivityMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
@@ -319,7 +312,7 @@ test('it abandons a superseded request without touching the fresher claim', asyn
   };
 
   const minted = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
     startKey: message.requestID,
@@ -376,12 +369,11 @@ test('it broadcasts failed on a transport failure', async () => {
 });
 
 test('it fails an attach the resync could not install', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
     startKey: 'someone-elses-start',
@@ -401,7 +393,7 @@ test('it fails an attach the resync could not install', async () => {
   context.setResyncInFlight(true);
 
   const message: StartActivityMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
@@ -424,16 +416,15 @@ test('it fails an attach the resync could not install', async () => {
 });
 
 test('it runs interleaved starts one at a time, the fresher claim winning', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const context = createStubWorkerContext({ client: ctx.client, submitter: createStubSubmitter() });
 
   context.setSimulation(createSimulation());
 
   const first: StartActivityMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     requestID: 'request_first',
     scopeID: 'esaxrt',
     scopeType: 'world_map_node',
@@ -441,7 +432,7 @@ test('it runs interleaved starts one at a time, the fresher claim winning', asyn
   };
 
   const second: StartActivityMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     requestID: 'request_second',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
@@ -456,7 +447,7 @@ test('it runs interleaved starts one at a time, the fresher claim winning', asyn
   ]);
 
   const active = db.activityCollection.findMany((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   expect(active).toHaveLength(1);
