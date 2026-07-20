@@ -18,9 +18,11 @@ import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
+import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
+import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
@@ -1018,4 +1020,98 @@ test('it broadcasts session-expired without a fault report when the session is n
 
   expect(recorded).toStrictEqual([]);
   expect(ctx.context.isResyncInFlight()).toBe(false);
+});
+
+test('it fails the resync while a raised stop is undelivered', async () => {
+  server.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
+
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+
+  await writePendingStopIntent({ activityID: 'activity_stopped', avatarID: avatar.id });
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    { status: { avatarID: avatar.id, kind: 'failed' }, type: WorkerMessageType.ResyncStatus },
+  ]);
+
+  expect(ctx.context.getSimulation()).toBeNull();
+
+  const intent = await readPendingStopIntent();
+
+  expect(intent).toStrictEqual({
+    activityID: 'activity_stopped',
+    avatarID: avatar.id,
+  });
+});
+
+test('it delivers the held stop before planning, leaving the stopped run cleared', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+  const row = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+
+  await writePendingStopIntent({ activityID: row.id, avatarID: avatar.id });
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
+
+  invariant(stopped !== undefined, 'expected the targeted row to survive');
+  expect(stopped.status).toBe('stopped');
+
+  const intent = await readPendingStopIntent();
+
+  expect(intent).toBeUndefined();
+  expect(ctx.context.getSimulation()).toBeNull();
+});
+
+test('it abandons the install when a stop lands mid-resync', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+  const row = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+
+  // the stop lands while the progress fetch is in flight — the deviation answers with the live
+  // row exactly as the stateful mock would, then advances the epoch as a concurrent stop does
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => {
+      ctx.context.advanceStopEpoch();
+
+      return {
+        activity: row,
+        anchor: null,
+        appendedHead: 0,
+        failureAction: 'abort' as const,
+        serverTime: new Date(),
+        verifiedHead: 0,
+      };
+    }),
+  );
+
+  const message: RequestResyncMessage = {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  expect(ctx.context.getSimulation()).toBeNull();
+  expect(ctx.context.getActivity()).toBeNull();
 });

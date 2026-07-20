@@ -17,12 +17,14 @@ import type { FastForwardReport, ResyncPlan, ResyncResult } from '../resync/type
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
+import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import type { RequestResyncMessage, ResyncStatus } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createFailureActionStatusMessage } from './create-failure-action-status-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { createResyncStatusMessage } from './create-resync-status-message';
+import { flushPendingStop } from './flush-pending-stop';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
 import type { WorkerContext } from './types';
@@ -57,10 +59,22 @@ export async function handleRequestResyncMessage(
   context.setResyncInFlight(true);
   context.setResyncAvatarID(message.avatarID);
 
+  // Captured before any await: every simulation install below re-checks it, so a stop the player
+  // raises while this resync runs abandons the install instead of reviving the stopped run.
+  const entryEpoch = context.getStopEpoch();
+
   try {
     // Held batches must land before the progress fetch, or the resync plans against an appended
     // head those checkpoints are still about to advance.
     await context.getSubmitter().flushHeld();
+
+    // An undelivered stop gates the whole resync: until the server row reads closed, the progress
+    // fetch would find it active and plan a catch-up for a run the player already ended.
+    if ((await flushPendingStop(context)) === 'undelivered') {
+      emitResyncStatus(context, { avatarID: message.avatarID, kind: 'failed' });
+
+      return;
+    }
 
     const result = await runResync({
       avatarID: message.avatarID,
@@ -95,7 +109,7 @@ export async function handleRequestResyncMessage(
     });
 
     await sweepStaleActivities(context, result);
-    await applyResyncResult(context, result);
+    await applyResyncResult(context, result, entryEpoch);
   } catch (error) {
     if (error instanceof ORPCError && error.code === 'UNAUTHORIZED') {
       emitResyncStatus(context, { avatarID: message.avatarID, kind: 'session-expired' });
@@ -200,9 +214,10 @@ function pickLatestActivityID(result: Readonly<ResyncResult>): string | undefine
 async function applyResyncResult(
   context: WorkerContext,
   result: Readonly<ResyncResult>,
+  entryEpoch: number,
 ): Promise<void> {
   if (result.report !== undefined) {
-    await applyFastForward(context, result.report);
+    await applyFastForward(context, result.report, entryEpoch);
 
     return;
   }
@@ -214,13 +229,13 @@ async function applyResyncResult(
   }
 
   if (result.plan.kind === 'attach-live') {
-    await applyAttachLive(context, result.plan, result.progress);
+    await applyAttachLive(context, result.plan, result.progress, entryEpoch);
 
     return;
   }
 
   if (result.plan.kind === 'continue') {
-    await applyContinue(context, result.plan);
+    await applyContinue(context, result.plan, entryEpoch);
   }
 }
 
@@ -228,6 +243,7 @@ async function applyAttachLive(
   context: WorkerContext,
   plan: Extract<ResyncPlan, { kind: 'attach-live' }>,
   progress: ResyncResult['progress'],
+  entryEpoch: number,
 ): Promise<void> {
   if (context.getSimulation()?.activity?.id === plan.context.activityID) {
     return;
@@ -249,7 +265,7 @@ async function applyAttachLive(
 
     simulation.startActivity(input.avatar, input.activity);
 
-    setLiveSimulation(context, progress.activity, simulation);
+    setLiveSimulation(context, progress.activity, simulation, entryEpoch);
 
     return;
   }
@@ -271,7 +287,7 @@ async function applyAttachLive(
     previousNextSeed: reconstruction.lastCheckpoint.nextSeed,
   });
 
-  setLiveSimulation(context, progress.activity, reconstruction.simulation);
+  setLiveSimulation(context, progress.activity, reconstruction.simulation, entryEpoch);
 }
 
 /**
@@ -286,7 +302,14 @@ async function applyAttachLive(
 async function applyContinue(
   context: WorkerContext,
   plan: Extract<ResyncPlan, { kind: 'continue' }>,
+  entryEpoch: number,
 ): Promise<void> {
+  // A stop that landed while the plan was computed also cleared the pending continuation the plan
+  // was built from — the continuation intent died with the run the player ended.
+  if (context.getStopEpoch() !== entryEpoch) {
+    return;
+  }
+
   invariant(
     context.getPendingContinuation() !== null,
     'a continue plan is only reached with a pending continuation',
@@ -307,7 +330,16 @@ async function applyContinue(
   );
 
   if (error === null) {
-    await startContinuedActivity(context, started);
+    // The player ended the run while the start was in flight: the fresh row was raised on behalf
+    // of a run that no longer exists, so it is stopped the same durable way any player stop is.
+    if (context.getStopEpoch() !== entryEpoch) {
+      await writePendingStopIntent({ activityID: started.id, avatarID: started.avatarID });
+      await flushPendingStop(context);
+
+      return;
+    }
+
+    await startContinuedActivity(context, started, entryEpoch);
 
     context.setPendingContinuation(null);
 
@@ -318,7 +350,13 @@ async function applyContinue(
     const row = error.data.activity;
 
     if (row.appendedHead === 0 && row.id !== plan.activity.id) {
-      await startContinuedActivity(context, row);
+      // The conflicting row was started elsewhere — another tab or device owns it, so a stop that
+      // landed here only skips the install and leaves the row running.
+      if (context.getStopEpoch() !== entryEpoch) {
+        return;
+      }
+
+      await startContinuedActivity(context, row, entryEpoch);
 
       context.setPendingContinuation(null);
 
@@ -339,6 +377,7 @@ async function applyContinue(
 async function startContinuedActivity(
   context: WorkerContext,
   row: Readonly<ActivityData>,
+  entryEpoch: number,
 ): Promise<void> {
   const input = buildSimulationInput(row, { failureAction: context.getFailureAction() });
 
@@ -353,12 +392,16 @@ async function startContinuedActivity(
 
   simulation.startActivity(input.avatar, input.activity);
 
-  setLiveSimulation(context, row, simulation);
+  setLiveSimulation(context, row, simulation, entryEpoch);
 }
 
-async function applyFastForward(context: WorkerContext, report: FastForwardReport): Promise<void> {
+async function applyFastForward(
+  context: WorkerContext,
+  report: FastForwardReport,
+  entryEpoch: number,
+): Promise<void> {
   if (report.activity.status === 'active' && !report.finalRowTerminal) {
-    await applyFastForwardAttach(context, report);
+    await applyFastForwardAttach(context, report, entryEpoch);
   }
 
   emitResyncStatus(context, {
@@ -381,6 +424,7 @@ async function applyFastForward(context: WorkerContext, report: FastForwardRepor
 async function applyFastForwardAttach(
   context: WorkerContext,
   report: FastForwardReport,
+  entryEpoch: number,
 ): Promise<void> {
   const input = buildSimulationInput(report.activity, {
     failureAction: context.getFailureAction(),
@@ -398,7 +442,7 @@ async function applyFastForwardAttach(
 
     simulation.startActivity(input.avatar, input.activity);
 
-    setLiveSimulation(context, report.activity, simulation);
+    setLiveSimulation(context, report.activity, simulation, entryEpoch);
 
     return;
   }
@@ -427,7 +471,7 @@ async function applyFastForwardAttach(
     startChainIndex: report.activity.startChainIndex,
   });
 
-  setLiveSimulation(context, report.activity, reconstruction.simulation);
+  setLiveSimulation(context, report.activity, reconstruction.simulation, entryEpoch);
 }
 
 function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {
@@ -441,7 +485,14 @@ function setLiveSimulation(
   context: WorkerContext,
   activity: Readonly<ActivityData>,
   simulation: Simulation,
+  entryEpoch: number,
 ): void {
+  // A stop that landed after this resync began wins outright: installing would revive the run
+  // the player just ended, with the server row already closed against its appends.
+  if (context.getStopEpoch() !== entryEpoch) {
+    return;
+  }
+
   const currentID = context.getSimulation()?.activity?.id;
 
   if (currentID !== undefined && currentID !== activity.id) {

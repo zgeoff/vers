@@ -8,6 +8,7 @@ import type { FailureActionPreference } from './types';
  */
 export async function readFailureActionCache(): Promise<FailureActionPreference | undefined> {
   const db = await resolveCheckpointQueueDB();
+  const record = await db.get(PREFERENCES_STORE_NAME, FAILURE_ACTION_PREFERENCE_KEY);
 
-  return db.get(PREFERENCES_STORE_NAME, FAILURE_ACTION_PREFERENCE_KEY);
+  return record !== undefined && 'failureAction' in record ? record : undefined;
 }

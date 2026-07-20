@@ -1,0 +1,247 @@
+import { expect, mock, test } from 'bun:test';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
+import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
+import { createAuthedServiceClient } from '@vers/mock-services';
+import { mockActivityService } from '@vers/mock-services/activity';
+import * as db from '@vers/mock-services/db';
+import { HttpResponse } from 'msw';
+import invariant from 'tiny-invariant';
+import { server } from '../mocks/node';
+import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
+import type { ActivityServiceClient } from '../submission/types';
+import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createTestConnection } from '../test-utils/create-test-connection';
+import { ClientMessageType, WorkerMessageType } from '../types';
+import { handleStopActivityMessage } from './handle-stop-activity-message';
+
+function buildSpySubmitter(): CheckpointSubmitter {
+  return {
+    flushHeld: mock(() => Promise.resolve()),
+    flushNow: mock(() => Promise.resolve()),
+    registerActivity: mock(() => Promise.resolve()),
+    submit: mock(() => Promise.resolve<number | undefined>(undefined)),
+  };
+}
+
+test('it halts the live simulation and clears the runtime', async () => {
+  const submitter = buildSpySubmitter();
+  const context = createStubWorkerContext({ submitter });
+  const simulation = createSimulation();
+  const activity = createMockActivityData();
+
+  context.setSimulation(simulation);
+  context.setActivity(activity);
+
+  context.setPendingContinuation({
+    activityID: activity.id,
+    avatarID: activity.avatarID,
+    scopeID: activity.scopeID,
+    scopeType: activity.scopeType,
+  });
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  await handleStopActivityMessage(context, {
+    activityID: activity.id,
+    avatarID: activity.avatarID,
+    type: ClientMessageType.StopActivity,
+  });
+
+  expect(simulation.activity).toBeNull();
+  expect(context.getActivity()).toBeNull();
+  expect(context.getPendingContinuation()).toBeNull();
+});
+
+test('it replaces the stopped simulation with a fresh empty one', async () => {
+  const context = createStubWorkerContext({ submitter: buildSpySubmitter() });
+  const simulation = createSimulation();
+  const activity = createMockActivityData();
+
+  context.setSimulation(simulation);
+  context.setActivity(activity);
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  await handleStopActivityMessage(context, {
+    activityID: activity.id,
+    avatarID: activity.avatarID,
+    type: ClientMessageType.StopActivity,
+  });
+
+  const replacement = context.getSimulation();
+
+  invariant(replacement !== null, 'expected a replacement simulation');
+  expect(replacement).not.toBe(simulation);
+
+  expect(replacement.getSnapshot()).toStrictEqual({
+    failureAction: ActivityFailureAction.Abort,
+  });
+});
+
+test('it broadcasts a cleared snapshot to every connection', async () => {
+  const connection = createTestConnection();
+
+  const context = createStubWorkerContext({
+    connections: [connection.port],
+    submitter: buildSpySubmitter(),
+  });
+
+  const simulation = createSimulation();
+  const activity = createMockActivityData();
+
+  context.setSimulation(simulation);
+  context.setActivity(activity);
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  await handleStopActivityMessage(context, {
+    activityID: activity.id,
+    avatarID: activity.avatarID,
+    type: ClientMessageType.StopActivity,
+  });
+
+  await connection.waitForMessages(1);
+
+  expect(connection.received).toPartiallyContain({
+    state: { failureAction: ActivityFailureAction.Abort },
+    type: WorkerMessageType.SimulationUpdate,
+  });
+});
+
+test('it resets the reward-slot ledger', async () => {
+  const context = createStubWorkerContext({ submitter: buildSpySubmitter() });
+  const activity = createMockActivityData();
+
+  context.setActivity(activity);
+  context.recordRewardSlots(activity.id, { count: 2, version: 1 });
+
+  await handleStopActivityMessage(context, {
+    activityID: activity.id,
+    avatarID: activity.avatarID,
+    type: ClientMessageType.StopActivity,
+  });
+
+  expect(context.getRewardSlotLedger()).toStrictEqual({ activityID: null, entries: [] });
+});
+
+test('it advances the stop epoch so in-flight installs abandon', async () => {
+  const context = createStubWorkerContext({ submitter: buildSpySubmitter() });
+  const activity = createMockActivityData();
+
+  context.setActivity(activity);
+
+  const entryEpoch = context.getStopEpoch();
+
+  await handleStopActivityMessage(context, {
+    activityID: activity.id,
+    avatarID: activity.avatarID,
+    type: ClientMessageType.StopActivity,
+  });
+
+  expect(context.getStopEpoch()).toBe(entryEpoch + 1);
+});
+
+test('it delivers the targeted server stop and releases the intent', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const row = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+
+  const submitter = buildSpySubmitter();
+  const context = createStubWorkerContext({ client, submitter });
+
+  await handleStopActivityMessage(context, {
+    activityID: row.id,
+    avatarID: avatar.id,
+    type: ClientMessageType.StopActivity,
+  });
+
+  const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
+
+  invariant(stopped !== undefined, 'expected the targeted row to survive');
+  expect(stopped.status).toBe('stopped');
+  expect(submitter.flushNow).toHaveBeenCalledExactlyOnceWith(row.id);
+
+  const intent = await readPendingStopIntent();
+
+  expect(intent).toBeUndefined();
+});
+
+test('it keeps the intent held when delivery fails, with the local halt already done', async () => {
+  server.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
+
+  const context = createStubWorkerContext({ submitter: buildSpySubmitter() });
+  const simulation = createSimulation();
+  const activity = createMockActivityData();
+
+  context.setSimulation(simulation);
+  context.setActivity(activity);
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  await handleStopActivityMessage(context, {
+    activityID: activity.id,
+    avatarID: activity.avatarID,
+    type: ClientMessageType.StopActivity,
+  });
+
+  expect(simulation.activity).toBeNull();
+  expect(context.getActivity()).toBeNull();
+
+  const intent = await readPendingStopIntent();
+
+  expect(intent).toStrictEqual({
+    activityID: activity.id,
+    avatarID: activity.avatarID,
+  });
+});
+
+test('it halts nothing but still delivers when no simulation is installed', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const row = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+
+  const context = createStubWorkerContext({ client, submitter: buildSpySubmitter() });
+  const entryEpoch = context.getStopEpoch();
+
+  await handleStopActivityMessage(context, {
+    activityID: row.id,
+    avatarID: avatar.id,
+    type: ClientMessageType.StopActivity,
+  });
+
+  expect(context.getStopEpoch()).toBe(entryEpoch + 1);
+  expect(context.getSimulation()).not.toBeNull();
+
+  const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
+
+  invariant(stopped !== undefined, 'expected the targeted row to survive');
+  expect(stopped.status).toBe('stopped');
+});
+
+test('it ignores a stop naming an older activity than the live one', async () => {
+  const submitter = buildSpySubmitter();
+  const context = createStubWorkerContext({ submitter });
+  const simulation = createSimulation();
+  const live = createMockActivityData();
+
+  context.setSimulation(simulation);
+  context.setActivity(live);
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  const entryEpoch = context.getStopEpoch();
+
+  await handleStopActivityMessage(context, {
+    activityID: 'activity_older',
+    avatarID: live.avatarID,
+    type: ClientMessageType.StopActivity,
+  });
+
+  expect(context.getSimulation()).toBe(simulation);
+  expect(context.getActivity()).toStrictEqual(live);
+  expect(context.getStopEpoch()).toBe(entryEpoch);
+
+  const intent = await readPendingStopIntent();
+
+  expect(intent).toBeUndefined();
+});

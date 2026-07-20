@@ -9,6 +9,7 @@ import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
@@ -206,5 +207,87 @@ test('it records no pending continuation on a defined error other than CONFLICT'
 
   await runContinuation(context, simulation, previousActivity);
 
+  expect(context.getPendingContinuation()).toBeNull();
+});
+
+test('it stops the row it started when a stop lands mid-flight', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  const submitter = buildSpySubmitter();
+  const context = createStubWorkerContext({ client: ctx.client, submitter });
+  const simulation = createSimulation();
+  const previousActivity = createMockActivityData({ avatarID: avatar.id });
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  // the stop lands while the start call is in flight: the deviation answers with the row the
+  // continuation minted, then advances the epoch as a concurrent stop does
+  const started = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+
+  server.use(
+    mockActivityService.startActivity.handler(() => {
+      context.advanceStopEpoch();
+
+      return started;
+    }),
+  );
+
+  await runContinuation(context, simulation, previousActivity);
+
+  expect(submitter.registerActivity).not.toHaveBeenCalled();
+
+  const row = db.activityCollection.findFirst((q) => q.where({ id: started.id }));
+
+  invariant(row !== undefined, 'expected the started row to survive');
+  expect(row.status).toBe('stopped');
+
+  const intent = await readPendingStopIntent();
+
+  expect(intent).toBeUndefined();
+});
+
+test('it records no pending continuation for a same-row CONFLICT after a stop lands', async () => {
+  const submitter = buildSpySubmitter();
+  const context = createStubWorkerContext({ submitter });
+  const simulation = createSimulation();
+  const previousActivity = createMockActivityData();
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      context.advanceStopEpoch();
+      throw opts.errors.CONFLICT({ data: { activity: previousActivity } });
+    }),
+  );
+
+  await runContinuation(context, simulation, previousActivity);
+
+  expect(context.getPendingContinuation()).toBeNull();
+});
+
+test('it leaves a replacement simulation installed when uninstalling after a stop', async () => {
+  const submitter = buildSpySubmitter();
+  const context = createStubWorkerContext({ submitter });
+  const simulation = createSimulation();
+  const replacement = createSimulation();
+  const previousActivity = createMockActivityData();
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  server.use(
+    mockActivityService.startActivity.handler(() => {
+      context.advanceStopEpoch();
+      context.setSimulation(replacement);
+
+      return HttpResponse.error();
+    }),
+  );
+
+  await runContinuation(context, simulation, previousActivity);
+
+  expect(context.getSimulation()).toBe(replacement);
   expect(context.getPendingContinuation()).toBeNull();
 });

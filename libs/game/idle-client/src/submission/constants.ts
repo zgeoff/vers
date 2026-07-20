@@ -33,4 +33,11 @@ export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
  * the server only for the avatar it was set for.
  */
 export const FAILURE_ACTION_PREFERENCE_KEY = 'failure-action';
+
+/**
+ * The `preferences` record holding the one undelivered stop intent. A worker drives one avatar's
+ * simulation at a time, so a single record suffices: a newer stop overwrites an older one, whose
+ * target row the newer run's own start flow has already closed server-side.
+ */
+export const PENDING_STOP_INTENT_KEY = 'pending-stop';
 export const PREFERENCES_STORE_NAME = 'preferences';

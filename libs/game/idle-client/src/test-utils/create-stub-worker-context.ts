@@ -44,8 +44,12 @@ export function createStubWorkerContext(
   let failureAction: ActivityFailureAction = options.failureAction ?? ActivityFailureAction.Abort;
   let failureActionDirty = false;
   let failureActionPushInFlight = false;
+  let stopEpoch = 0;
 
   return {
+    advanceStopEpoch: () => {
+      stopEpoch += 1;
+    },
     connections,
     getActivity: () => activity,
     getClient: () => client,
@@ -58,6 +62,7 @@ export function createStubWorkerContext(
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
+    getStopEpoch: () => stopEpoch,
     getSubmitter: () => submitter,
     isFailureActionDirty: () => failureActionDirty,
     isFailureActionPushInFlight: () => failureActionPushInFlight,
@@ -74,6 +79,10 @@ export function createStubWorkerContext(
     },
     removeConnection: (port) => {
       connections.delete(port);
+    },
+    resetRewardSlotLedger: () => {
+      rewardSlotLedgerActivityID = null;
+      rewardSlotLedger = [];
     },
     setActivity: (newActivity) => {
       activity = newActivity;

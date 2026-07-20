@@ -240,3 +240,103 @@ test('it rejects a duplicate stop with NOT_FOUND and advances the anchor exactly
 
   expect(chainAfterSecond).toStrictEqual(chainAfterFirst);
 });
+
+test('it stops the targeted row when an activity id is named', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const stopped = await client.stopActivity({ activityID: started.id, avatarID: avatar.id });
+
+  expect(stopped).toStrictEqual({
+    ...started,
+    status: 'stopped',
+    stoppedAt: expect.toBeValidDate(),
+    updatedAt: expect.toBeValidDate(),
+  });
+});
+
+test('it succeeds idempotently when the targeted row already left active', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const stopped = await client.stopActivity({ activityID: started.id, avatarID: avatar.id });
+  const repeated = await client.stopActivity({ activityID: started.id, avatarID: avatar.id });
+
+  expect(repeated).toStrictEqual({ ...stopped, updatedAt: expect.toBeValidDate() });
+});
+
+test('it never stops a row other than the targeted one', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  await client.stopActivity({ activityID: first.id, avatarID: avatar.id });
+
+  const second = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  // a late redelivery of the first row's stop leaves the newer run untouched
+  const redelivered = await client.stopActivity({ activityID: first.id, avatarID: avatar.id });
+
+  expect(redelivered.id).toBe(first.id);
+  expect(redelivered.status).toBe('stopped');
+
+  const current = await client.getCurrentActivity({ avatarID: avatar.id });
+
+  expect(current).toMatchObject({ id: second.id, status: 'active' });
+});
+
+test('it rejects a targeted stop for a row of another user with NOT_FOUND', async () => {
+  await using ctx = await setupTest();
+
+  const owner = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const ownerAvatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+
+  const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
+
+  const started = await ownerClient.startActivity({
+    avatarID: ownerAvatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const intruder = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const intruderClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: intruder.token });
+
+  expect(
+    intruderClient.stopActivity({ activityID: started.id, avatarID: ownerAvatar.id }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+});
