@@ -23,6 +23,13 @@ export const ActivityDataSchema = z.object({
   simVersion: z.string(),
   startChainIndex: z.int().min(0),
   startHash: z.string(),
+
+  /**
+   * The idempotency key the start request stamped, null for rows minted without one — echoed so
+   * a row and the data derived from it stay field-identical.
+   */
+  startKey: z.string().nullable(),
+
   startedAt: z.date(),
   status: ActivityStatusSchema,
   stoppedAt: z.date().nullable(),

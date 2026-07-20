@@ -27,6 +27,7 @@ const ActivityRowSchema = ActivityDataSchema.extend({
   simVersion: z.string().default('0.0.0-mock'),
   startChainIndex: z.int().min(0).default(0),
   startHash: z.string().default(() => buildMockHash()),
+  startKey: z.string().nullable().default(null),
   startedAt: z.date().default(() => new Date()),
   status: ActivityDataSchema.shape.status.default('active'),
   stoppedAt: z.date().nullable().default(null),

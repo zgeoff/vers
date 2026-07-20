@@ -61,7 +61,7 @@ test('it adopts a fresh server-started row for the same scope and registers from
   });
 });
 
-test('it adopts the CONFLICT payload row when one is already active for the scope', async () => {
+test('it hands a foreign-claim CONFLICT to a resync that attaches the conflicting row', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
@@ -79,13 +79,20 @@ test('it adopts the CONFLICT payload row when one is already active for the scop
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(simulation.activity?.id).toBe(conflictingActivity.id);
+  expect(simulation.activity).toBeNull();
+
+  const installed = context.getSimulation();
+
+  invariant(installed !== null, 'expected the resync to install a simulation');
+  expect(installed).not.toBe(simulation);
+  expect(installed.activity?.id).toBe(conflictingActivity.id);
   expect(context.getActivity()).toStrictEqual(conflictingActivity);
+  expect(context.getPendingContinuation()).toBeNull();
 
   expect(submitter.registerActivity).toHaveBeenCalledExactlyOnceWith({
     activityID: conflictingActivity.id,
     appendedHead: 0,
-    lastHash: conflictingActivity.startHash,
+    lastHash: conflictingActivity.lastHash,
     startChainIndex: conflictingActivity.startChainIndex,
   });
 });
@@ -136,11 +143,7 @@ test('it records a pending continuation on a transport failure', async () => {
 test('it stops the simulation and records a pending continuation on a same-row CONFLICT', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
-
-  const activity = await db.activityCollection.create({
-    avatarID: viewer.avatar.id,
-    status: 'active',
-  });
+  const activity = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
 
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client: ctx.client, submitter });
@@ -214,10 +217,7 @@ test('it stops the row it started when a stop lands mid-flight', async () => {
 
   // the stop lands while the start call is in flight: the deviation answers with the row the
   // continuation minted, then advances the epoch as a concurrent stop does
-  const started = await db.activityCollection.create({
-    avatarID: viewer.avatar.id,
-    status: 'active',
-  });
+  const started = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
 
   server.use(
     mockActivityService.startActivity.handler(() => {

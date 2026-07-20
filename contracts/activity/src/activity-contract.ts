@@ -126,6 +126,15 @@ export const activityContract = {
         scopeID: ScopeIdentifierSchema,
         scopeType: ScopeIdentifierSchema,
         simVersion: z.string().optional(),
+
+        /**
+         * Idempotency key stamped on the minted row: a duplicate delivery carrying the same key —
+         * a retried start whose first attempt already landed — succeeds with the existing row
+         * while it is still never-appended, instead of a conflict. Distinct intents into the same
+         * scope (a continuation after a terminal checkpoint) carry distinct keys, so they still
+         * conflict as they must.
+         */
+        startKey: z.string().max(128).optional(),
       }),
     )
     .output(ActivityDataSchema)

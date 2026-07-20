@@ -55,7 +55,18 @@ export const startActivity = os.startActivity.handler(async (opts) => {
     q.where({ avatarID: opts.input.avatarID, status: 'active' }),
   );
 
+  // Mirrors the real handler's duplicate-start idempotency; mock rows carry no writer session,
+  // so that leg of the real check has nothing to compare against here.
   if (active !== undefined) {
+    const isDuplicateStart =
+      opts.input.startKey !== undefined &&
+      active.startKey === opts.input.startKey &&
+      active.appendedHead === 0;
+
+    if (isDuplicateStart) {
+      return active;
+    }
+
     throw opts.errors.CONFLICT({ data: { activity: active } });
   }
 
@@ -90,6 +101,7 @@ export const startActivity = os.startActivity.handler(async (opts) => {
     simVersion: MOCK_SIM_VERSION,
     startChainIndex: 0,
     startHash,
+    startKey: opts.input.startKey ?? null,
     startedAt: now,
     status: 'active',
     stoppedAt: null,

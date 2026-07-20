@@ -2,11 +2,11 @@ import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
-import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createRequestResyncMessage } from './create-request-resync-message';
-import { flushPendingStop } from './flush-pending-stop';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
+import { hasStopIntervened } from './has-stop-intervened';
+import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 
 /**
@@ -15,14 +15,15 @@ import type { WorkerContext } from './types';
  * checkpoint — an append onto it comes back `ACTIVITY_TERMINAL` and kills the stream. This instead
  * starts a fresh server row for the same scope, continuing the same RNG chain the terminal
  * checkpoint's `nextSeed` anchors (the new row's own seed, by the seed-chain identity), and
- * registers submission against that row from a zero cursor. A `CONFLICT` means a row is already
- * live for the avatar: a different, never-appended row is adopted directly from its start fields,
- * while a progressed row — or this same row, its terminal append still unacknowledged — is handed
- * to a full resync, which reconstructs its confirmed checkpoints before attaching; adopting either
- * from a zero cursor would fork the checkpoint chain. The same-row case also records a pending
- * continuation, so a resync that finds the row still closed once the terminal append drains plans
- * to start the next row itself rather than idling. A transport failure stops and uninstalls the
- * simulation, records the same pending continuation, and reports the worker offline rather than
+ * registers submission against that row from a zero cursor. A duplicate delivery of this same
+ * start succeeds idempotently server-side with the row it minted, so a `CONFLICT` always means a
+ * genuinely different claim on the avatar — every one is handed to a full resync, which
+ * reconstructs the confirmed stream before attaching; adopting a conflicting row from a zero
+ * cursor would fork the checkpoint chain. The same-row case — this row's terminal append still
+ * unacknowledged — also records a pending continuation, so a resync that finds the row still
+ * closed once the terminal append drains plans to start the next row itself rather than idling. A
+ * transport failure stops and uninstalls the simulation, records the same pending continuation,
+ * and reports the worker offline rather than
  * retrying inline — the next reconnect resync rebuilds from the server's confirmed state and
  * honors the pending intent. Any other rejection also stops and uninstalls the simulation, but
  * without the offline signal or a pending record: the service answered, so the failure is the
@@ -44,18 +45,21 @@ export async function runContinuation(
   const hasLostOwnership = () =>
     context.getSimulation() !== entrySimulation || context.getActivity()?.id !== entryActivityID;
 
+  // the key is anchored to the terminal row this continuation succeeds, so a retried delivery of
+  // this same continuation dedupes onto the row the first attempt minted, while the next
+  // continuation (anchored to that newer row) conflicts as a distinct intent
   const [error, started] = await safe(
     context.getClient().startActivity({
       avatarID: activity.avatarID,
       scopeID: activity.scopeID,
       scopeType: activity.scopeType,
+      startKey: `continue_${activity.id}`,
     }),
   );
 
   if (error === null) {
-    if (context.getStopEpoch() !== entryEpoch) {
-      await writePendingStopIntent({ activityID: started.id, avatarID: started.avatarID });
-      await flushPendingStop(context);
+    if (hasStopIntervened(context, entryEpoch)) {
+      await submitStopIntent(context, started);
 
       return;
     }
@@ -72,17 +76,7 @@ export async function runContinuation(
   if (isDefinedError(error) && error.code === 'CONFLICT') {
     const row = error.data.activity;
 
-    if (row.appendedHead === 0 && row.id !== activity.id) {
-      if (context.getStopEpoch() !== entryEpoch || hasLostOwnership()) {
-        return;
-      }
-
-      await startContinuationFrom(context, simulation, row);
-
-      return;
-    }
-
-    if (row.id === activity.id && context.getStopEpoch() === entryEpoch) {
+    if (row.id === activity.id && !hasStopIntervened(context, entryEpoch)) {
       setPendingContinuation(context, activity);
     }
 
@@ -95,7 +89,7 @@ export async function runContinuation(
   await stopAndUninstall(context, simulation);
 
   if (!isDefinedError(error)) {
-    if (context.getStopEpoch() === entryEpoch) {
+    if (!hasStopIntervened(context, entryEpoch)) {
       setPendingContinuation(context, activity);
     }
 

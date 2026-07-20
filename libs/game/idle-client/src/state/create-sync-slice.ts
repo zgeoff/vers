@@ -4,6 +4,7 @@ import type {
   OfflineCapStatus,
   ResyncStatus,
   RewardSlotLedgerEntry,
+  StartReport,
 } from '../types';
 
 export interface SyncSlice {
@@ -24,6 +25,13 @@ export interface SyncSlice {
 
   offlineCapStatus: null | OfflineCapStatus;
   resyncStatus: null | ResyncStatus;
+
+  /**
+   * The worker's latest start outcome; tabs match its request id against their own outstanding
+   * attempt, so a report answering another tab's request is ignored rather than misread.
+   */
+  startReport: null | StartReport;
+
   rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry>;
 
   /**
@@ -41,6 +49,7 @@ export function createSyncSlice(): SyncSlice {
     lastCompletedActivityID: null,
     offlineCapStatus: null,
     resyncStatus: null,
+    startReport: null,
     rewardSlotLedger: [],
     rewardSlotLedgerActivityID: null,
   };

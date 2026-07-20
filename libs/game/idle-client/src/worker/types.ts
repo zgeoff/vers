@@ -77,6 +77,14 @@ export interface WorkerContext {
    */
   readonly getRewardSlotLedger: () => RewardSlotLedgerSnapshot;
   readonly getSimulation: () => null | Simulation;
+
+  /**
+   * The most recent start request's id — every start flow re-checks it after each await and
+   * abandons its install when a fresher request has claimed the runtime, leaving any row it
+   * already minted for that fresher flow's own conflict recovery.
+   */
+  readonly getStartRequestID: () => null | string;
+
   readonly getStopEpoch: () => number;
   readonly getSubmitter: () => CheckpointSubmitter;
 
@@ -114,5 +122,6 @@ export interface WorkerContext {
   readonly setPendingContinuation: (pending: PendingContinuation | null) => void;
   readonly setResyncAvatarID: (avatarID: string) => void;
   readonly setResyncInFlight: (inFlight: boolean) => void;
+  readonly setStartRequestID: (requestID: string) => void;
   readonly setSimulation: (simulation: null | Simulation) => void;
 }
