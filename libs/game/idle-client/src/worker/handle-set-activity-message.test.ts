@@ -59,17 +59,3 @@ test('it remembers the row as the live simulation source', async () => {
 
   expect(context.getActivity()).toStrictEqual(activity);
 });
-
-test('it does nothing when no simulation is initialized', async () => {
-  const submitter = createStubSubmitter();
-  const context = createStubWorkerContext({ submitter });
-
-  const message: SetActivityMessage = {
-    activity: createMockActivityData(),
-    type: ClientMessageType.SetActivity,
-  };
-
-  await handleSetActivityMessage(context, message);
-
-  expect(submitter.registerActivity).not.toHaveBeenCalled();
-});

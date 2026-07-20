@@ -8,6 +8,7 @@ import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
+import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
@@ -40,6 +41,8 @@ test('it adopts a fresh server-started row for the same scope and registers from
   const simulation = createSimulation();
   const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
@@ -75,6 +78,8 @@ test('it hands a foreign-claim CONFLICT to a resync that attaches the conflictin
   const simulation = createSimulation();
   const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
@@ -83,11 +88,13 @@ test('it hands a foreign-claim CONFLICT to a resync that attaches the conflictin
 
   const installed = context.getSimulation();
 
-  invariant(installed !== null, 'expected the resync to install a simulation');
   expect(installed).not.toBe(simulation);
   expect(installed.activity?.id).toBe(conflictingActivity.id);
   expect(context.getActivity()).toStrictEqual(conflictingActivity);
-  expect(context.getPendingContinuation()).toBeNull();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 
   expect(submitter.registerActivity).toHaveBeenCalledExactlyOnceWith({
     activityID: conflictingActivity.id,
@@ -106,6 +113,8 @@ test('it stops the simulation and broadcasts offline on a transport failure', as
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
@@ -120,7 +129,7 @@ test('it stops the simulation and broadcasts offline on a transport failure', as
   ]);
 });
 
-test('it records a pending continuation on a transport failure', async () => {
+test('it records a durable start intent on a transport failure', async () => {
   server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
 
   const submitter = createStubSubmitter();
@@ -128,11 +137,15 @@ test('it records a pending continuation on a transport failure', async () => {
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(context.getPendingContinuation()).toStrictEqual({
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toStrictEqual({
     activityID: previousActivity.id,
     avatarID: previousActivity.avatarID,
     scopeID: previousActivity.scopeID,
@@ -140,7 +153,7 @@ test('it records a pending continuation on a transport failure', async () => {
   });
 });
 
-test('it stops the simulation and records a pending continuation on a same-row CONFLICT', async () => {
+test('it stops the simulation and records a durable start intent on a same-row CONFLICT', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
@@ -153,13 +166,17 @@ test('it stops the simulation and records a pending continuation on a same-row C
   const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
 
+  context.setSimulation(simulation);
+  context.setActivity(activity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, activity);
 
   expect(simulation.activity).toBeNull();
 
-  expect(context.getPendingContinuation()).toStrictEqual({
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toStrictEqual({
     activityID: activity.id,
     avatarID: activity.avatarID,
     scopeID: activity.scopeID,
@@ -167,7 +184,7 @@ test('it stops the simulation and records a pending continuation on a same-row C
   });
 });
 
-test('it records no pending continuation when the CONFLICT names a different, already-progressed row', async () => {
+test('it records no start intent when the CONFLICT names a different, already-progressed row', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
@@ -182,14 +199,18 @@ test('it records no pending continuation when the CONFLICT names a different, al
   const simulation = createSimulation();
   const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(context.getPendingContinuation()).toBeNull();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
-test('it records no pending continuation on a defined error other than CONFLICT', async () => {
+test('it records no start intent on a defined error other than CONFLICT', async () => {
   server.use(
     mockActivityService.startActivity.handler((opts) => {
       throw opts.errors.CHAIN_QUARANTINED({ data: {} });
@@ -201,11 +222,15 @@ test('it records no pending continuation on a defined error other than CONFLICT'
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(context.getPendingContinuation()).toBeNull();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it stops the row it started when a stop lands mid-flight', async () => {
@@ -217,6 +242,8 @@ test('it stops the row it started when a stop lands mid-flight', async () => {
   const simulation = createSimulation();
   const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   // the stop lands while the start call is in flight: the deviation answers with the row the
@@ -248,12 +275,14 @@ test('it stops the row it started when a stop lands mid-flight', async () => {
   expect(intent).toBeUndefined();
 });
 
-test('it records no pending continuation for a same-row CONFLICT after a stop lands', async () => {
+test('it records no start intent for a same-row CONFLICT after a stop lands', async () => {
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   server.use(
@@ -265,7 +294,41 @@ test('it records no pending continuation for a same-row CONFLICT after a stop la
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(context.getPendingContinuation()).toBeNull();
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
+});
+
+test('it compensates a stop that lands while the intent write is committing', async () => {
+  server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
+
+  const submitter = createStubSubmitter();
+  const base = createStubWorkerContext({ submitter });
+
+  // Models the untimeable gap between the pre-write epoch guard and the write's transaction
+  // committing: the guard's read still sees the entry epoch, and the stop's bump is only visible
+  // by the post-write re-check. Epoch reads happen in flow order — entry capture, pre-write
+  // guard, post-write re-check — so the scripted sequence hands the bumped value to the re-check
+  // alone.
+  const epochReads = [0, 0, 1];
+
+  const context = {
+    ...base,
+    getStopEpoch: () => epochReads.shift() ?? 1,
+  };
+
+  const simulation = createSimulation();
+  const previousActivity = createMockActivityData();
+
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  await runContinuation(context, simulation, previousActivity);
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it leaves a replacement simulation installed when uninstalling after a stop', async () => {
@@ -275,6 +338,8 @@ test('it leaves a replacement simulation installed when uninstalling after a sto
   const replacement = createSimulation();
   const previousActivity = createMockActivityData();
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   server.use(
@@ -289,5 +354,8 @@ test('it leaves a replacement simulation installed when uninstalling after a sto
   await runContinuation(context, simulation, previousActivity);
 
   expect(context.getSimulation()).toBe(replacement);
-  expect(context.getPendingContinuation()).toBeNull();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });

@@ -34,6 +34,20 @@ export interface PendingStopIntent {
   readonly avatarID: string;
 }
 
+/**
+ * A continuation the worker wanted to start but couldn't complete, held durably so it survives a
+ * worker reload; a resync's entry drain retries it with the idempotent start key
+ * `continue_<activityID>`. `activityID` names the source row, so the drain can tell that row
+ * still being open (keep waiting) from a different claim on the avatar (stale). The row it
+ * eventually starts takes the failure action current at drain time, not raise time.
+ */
+export interface PendingStartIntent {
+  readonly activityID: string;
+  readonly avatarID: string;
+  readonly scopeID: string;
+  readonly scopeType: string;
+}
+
 export interface CheckpointQueueSchema extends DBSchema {
   'pending-checkpoints': {
     key: [string, number];
@@ -41,7 +55,7 @@ export interface CheckpointQueueSchema extends DBSchema {
   };
   preferences: {
     key: string;
-    value: FailureActionPreference | PendingStopIntent;
+    value: FailureActionPreference | PendingStartIntent | PendingStopIntent;
   };
 }
 

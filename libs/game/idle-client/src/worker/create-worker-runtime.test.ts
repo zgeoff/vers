@@ -1,9 +1,6 @@
-import { expect, onTestFinished, test } from 'bun:test';
-import type { ErrorEvent } from '@sentry/browser';
-import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import { expect, test } from 'bun:test';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
-import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
 import { http } from 'msw';
@@ -11,6 +8,7 @@ import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
+import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { createFastClock } from '../test-utils/create-fast-clock';
 import type { TestConnection } from '../test-utils/create-test-connection';
 import { createTestConnection } from '../test-utils/create-test-connection';
@@ -18,8 +16,6 @@ import { makeFailFirstMatchHandler } from '../test-utils/make-fail-first-match-h
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
-import { sentryHandle } from './sentry-handle';
-import { startErrorReporting } from './start-error-reporting';
 
 function createConnection(runtime: WorkerRuntime): TestConnection {
   const connection = createTestConnection();
@@ -92,10 +88,11 @@ test('it retains the cached dirty flag across boot so the next resync flushes it
   });
 });
 
-test('it broadcasts a simulation update once an activity is set', async () => {
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 0 })));
+test('it broadcasts a simulation update once a started run installs', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
-  using runtime = createWorkerRuntime();
+  using runtime = createWorkerRuntime({ client });
 
   const connection = createConnection(runtime);
 
@@ -104,18 +101,21 @@ test('it broadcasts a simulation update once an activity is set', async () => {
   await connection.waitForMessages(2);
 
   connection.post({
-    activity: createMockActivityData(),
-    type: ClientMessageType.SetActivity,
+    avatarID: viewer.avatar.id,
+    requestID: 'start_1',
+    scopeID: 'esaxrt',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
   });
 
-  await connection.waitForMessages(3);
-
-  expect(connection.received[2]?.type).toBe(WorkerMessageType.SimulationUpdate);
+  await waitFor(() => {
+    expect(connection.received).toPartiallyContain({
+      type: WorkerMessageType.SimulationUpdate,
+    });
+  });
 });
 
 test('it stops broadcasting to a connection after it disconnects', async () => {
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 0 })));
-
   using runtime = createWorkerRuntime();
 
   const survivor = createConnection(runtime);
@@ -127,6 +127,8 @@ test('it stops broadcasting to a connection after it disconnects', async () => {
 
   expect(runtime.connections.size).toBe(2);
 
+  const leavingReceivedCount = leaving.received.length;
+
   leaving.post({ type: ClientMessageType.Disconnect });
 
   await waitFor(() => {
@@ -134,53 +136,19 @@ test('it stops broadcasting to a connection after it disconnects', async () => {
   });
 
   survivor.post({
-    activity: createMockActivityData(),
-    type: ClientMessageType.SetActivity,
-  });
-
-  await survivor.waitForMessages(3);
-
-  expect(survivor.received[2]?.type).toBe(WorkerMessageType.SimulationUpdate);
-});
-
-test('it reports a fault to the error backend when a message makes its handler throw', async () => {
-  const previousHandle = sentryHandle.current;
-  const recorded: Array<Readonly<ErrorEvent>> = [];
-
-  onTestFinished(() => {
-    sentryHandle.current = previousHandle;
-  });
-
-  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
-    beforeSend: (event) => {
-      recorded.push(event);
-
-      return null;
-    },
-    disableDefaultIntegrations: true,
-  });
-
-  using runtime = createWorkerRuntime();
-
-  const connection = createConnection(runtime);
-
-  connection.post({ type: ClientMessageType.Initialize });
-
-  await connection.waitForMessages(1);
-
-  // a version-skewed tab can post an activity shape this worker build cannot derive a simulation
-  // input from — the handler's throw must land in the error backend, not vanish into the void'd
-  // routing promise
-  connection.postRaw({
-    activity: { ...createMockActivityData(), buildSnapshot: undefined },
-    type: ClientMessageType.SetActivity,
+    avatarID: 'avatar_1',
+    failureAction: ActivityFailureAction.Retry,
+    type: ClientMessageType.SetFailureAction,
   });
 
   await waitFor(() => {
-    expect(recorded).toHaveLength(1);
+    expect(survivor.received).toPartiallyContain({
+      failureAction: ActivityFailureAction.Retry,
+      type: WorkerMessageType.FailureActionStatus,
+    });
   });
 
-  expect(recorded[0]?.tags).toMatchObject({ site: 'message-routing' });
+  expect(leaving.received).toHaveLength(leavingReceivedCount);
 });
 
 test('it resumes into a fresh row once a same-row CONFLICT resync drains a held terminal append', async () => {
@@ -188,11 +156,14 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
-  // below collapses that wait into a single tick-loop frame
+  // below collapses that wait into a single tick-loop frame. A zero-gap active row makes the
+  // resync below attach it live — the tab-side install path now that only the worker sets
+  // activities.
   const activity = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
     encounterNode: { difficulty: 1 },
     seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
   });
 
   // holds this activity's terminal append once: the row it closes stays active server-side, so
@@ -214,7 +185,7 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
 
   await connection.waitForMessages(1);
 
-  connection.post({ activity, type: ClientMessageType.SetActivity });
+  connection.post({ avatarID: viewer.avatar.id, type: ClientMessageType.RequestResync });
 
   await waitFor(
     () => {
@@ -246,11 +217,14 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
-  // below collapses that wait into a single tick-loop frame
+  // below collapses that wait into a single tick-loop frame. A zero-gap active row makes the
+  // resync below attach it live — the tab-side install path now that only the worker sets
+  // activities.
   const activity = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
     encounterNode: { difficulty: 1 },
     seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
   });
 
   // both this activity's terminal append and its continuation's own startActivity call fail once,
@@ -276,7 +250,7 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
 
   await connection.waitForMessages(1);
 
-  connection.post({ activity, type: ClientMessageType.SetActivity });
+  connection.post({ avatarID: viewer.avatar.id, type: ClientMessageType.RequestResync });
 
   await waitFor(
     () => {
@@ -312,63 +286,47 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
   expect(closed.status).toBe('stopped');
 });
 
-test("it resumes the pending continuation's avatar on reconnect over an earlier avatar it resynced", async () => {
+test("it resumes the held start intent's avatar on reconnect over an earlier avatar it resynced", async () => {
   const viewer = await createViewer();
   const avatar = await db.avatarCollection.create({ userID: viewer.user.id });
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
-  // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
-  // below collapses that wait into a single tick-loop frame
-  const activity = await db.activityCollection.create({
+  // the intent's source row already reads closed, so the reconnect's drain mints the next row
+  const source = await db.activityCollection.create({
     avatarID: avatar.id,
-    encounterNode: { difficulty: 1 },
-    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    status: 'stopped',
   });
 
-  // both this activity's terminal append and its continuation's own startActivity call fail once,
-  // standing in for the device going offline right as the run completes
-  server.use(
-    http.post(
-      `${resolveServiceURL('activity')}/rpc/trackActivityProgress`,
-      makeFailFirstMatchHandler((input) => input['activityID'] === activity.id),
-    ),
-    http.post(
-      `${resolveServiceURL('activity')}/rpc/startActivity`,
-      makeFailFirstMatchHandler((input) => input['avatarID'] === avatar.id),
-    ),
-  );
+  await writePendingStartIntent({
+    activityID: source.id,
+    avatarID: avatar.id,
+    scopeID: source.scopeID,
+    scopeType: source.scopeType,
+  });
 
-  const clock = createFastClock();
+  // a capped row makes the first resync's completion observable: it plans a rebase and emits a
+  // capped status, installing nothing — the reconnect gate below still sees no simulation
+  await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'capped',
+  });
 
-  using runtime = createWorkerRuntime({ client, now: clock.now });
+  using runtime = createWorkerRuntime({ client });
 
   const connection = createConnection(runtime);
 
-  connection.post({ type: ClientMessageType.Initialize });
-
-  await connection.waitForMessages(1);
-
-  // the worker remembers this history-free avatar as its last resync target; the boundary failure
-  // below must outrank that memory on reconnect or the pending continuation strands
+  // the worker remembers this avatar as its last resync target; the held intent must outrank
+  // that memory on reconnect or the continuation strands. The drain leaves the intent alone
+  // here — it belongs to the other avatar.
   connection.post({ avatarID: viewer.avatar.id, type: ClientMessageType.RequestResync });
-  connection.post({ activity, type: ClientMessageType.SetActivity });
 
-  await waitFor(
-    () => {
-      // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
-      // idle frame, so the wait just re-arms the next one until it lands on a live tick
-      clock.jump(65_000);
-
-      expect(connection.received).toPartiallyContain({
-        online: false,
-        type: WorkerMessageType.ConnectionStatus,
-      });
-    },
-
-    // the tick loop paces itself on real timers between each of the many timesteps this jump
-    // spans, so a loaded runner can need several times the default budget to land a live tick
-    { timeoutMs: 5000 },
-  );
+  await waitFor(() => {
+    expect(connection.received).toPartiallyContain({
+      status: { kind: 'capped' },
+      type: WorkerMessageType.ResyncStatus,
+    });
+  });
 
   globalThis.dispatchEvent(new Event('online'));
 
@@ -378,6 +336,6 @@ test("it resumes the pending continuation's avatar on reconnect over an earlier 
     );
 
     invariant(minted !== undefined, 'expected the reconnect to resume the pending avatar');
-    expect(minted.id).not.toBe(activity.id);
+    expect(minted.id).not.toBe(source.id);
   });
 });
