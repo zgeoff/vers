@@ -79,17 +79,15 @@ export interface WorkerContext {
   readonly getSimulation: () => null | Simulation;
 
   /**
-   * The tail of the start-flow chain. Start flows run one at a time, each awaiting the previous
-   * flow's settled promise before touching the server or the runtime — two interleaved starts
-   * could otherwise stop a row the fresher one had just attached. Stops stay concurrent: they
-   * only bump the epoch the queued flow re-checks.
+   * The start-flow chain's tail. Start flows run one at a time — interleaved, a stale flow could
+   * stop a row the fresher one just attached. Stops stay concurrent; they bump the epoch queued
+   * flows re-check.
    */
   readonly getStartFlow: () => Readonly<Promise<void>>;
 
   /**
-   * The most recent start request's id — every start flow re-checks it after each await and
-   * abandons its install when a fresher request has claimed the runtime, leaving any row it
-   * already minted for that fresher flow's own conflict recovery.
+   * The most recent start request's id. A flow that finds a fresher claim after an await abandons
+   * its install, leaving any row it minted for the fresher flow's own recovery.
    */
   readonly getStartRequestID: () => null | string;
 

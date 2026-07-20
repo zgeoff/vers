@@ -8,9 +8,8 @@ interface SendIdleStartActivityInput {
 }
 
 /**
- * Asks the worker to begin a run for the given scope. The worker owns the server start, any
- * conflict recovery, and the simulation install, and answers with a start status carrying the
- * same request id — the tab only correlates that report against its outstanding attempt.
+ * Asks the worker to begin a run for the given scope; it owns the start end to end and answers
+ * with a status carrying the same request id for the tab to correlate.
  */
 export function sendIdleStartActivity(
   worker: Pick<SharedWorker, 'port'>,

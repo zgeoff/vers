@@ -25,8 +25,7 @@ export const ActivityDataSchema = z.object({
   startHash: z.string(),
 
   /**
-   * The idempotency key the start request stamped, null for rows minted without one — echoed so
-   * a row and the data derived from it stay field-identical.
+   * The start request's idempotency key, null when none was sent.
    */
   startKey: z.string().nullable(),
 

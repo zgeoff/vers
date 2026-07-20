@@ -292,13 +292,11 @@ async function applyAttachLive(
 }
 
 /**
- * Starts the row a pending continuation wanted, now that its target has read closed. A budget
- * already spent halts at the boundary exactly like a live continuation would, keeping the pending
- * record for the next reconnect. A duplicate delivery of this same start succeeds idempotently
- * server-side, so a defined error is a genuinely different claim on the avatar: it clears the
- * pending record and rethrows, reported through the caller's own resync-failure handling — the
- * retry's own resync will plan against the conflicting row. A transport failure keeps the pending
- * record and reports the worker offline, leaving the next reconnect to retry.
+ * Starts the row a pending continuation wanted, now that its target reads closed. A spent budget
+ * halts at the boundary, keeping the record. Duplicate deliveries dedupe server-side via the
+ * start key, so a defined error is a genuinely different claim: the record clears and the error
+ * rethrows into the caller's resync-failure handling. A transport failure keeps the record and
+ * reports the worker offline for the next reconnect to retry.
  */
 async function applyContinue(
   context: WorkerContext,
@@ -322,8 +320,7 @@ async function applyContinue(
     return;
   }
 
-  // the same key a live continuation for this row would carry, so honoring a pending record after
-  // a crash or transport failure dedupes onto whatever that earlier attempt already minted
+  // the same key the live continuation carried, so this retry dedupes onto anything it minted
   const [error, started] = await safe(
     context.getClient().startActivity({
       avatarID: plan.activity.avatarID,

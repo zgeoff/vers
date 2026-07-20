@@ -14,17 +14,13 @@ import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 
 /**
- * Begins a run entirely inside the worker: the server start, the conflict recovery, and the
- * simulation install all run here, and the outcome broadcasts as a start status carrying the
- * request's id. A `CONFLICT` for the requested scope resyncs onto the already-active row and
- * reports `attached` only once the runtime actually holds it; a `CONFLICT` for a different scope
- * flushes that row's earned checkpoints, stops it targeted, and retries the start — an avatar
- * runs one activity at a time. Start flows run strictly one at a time: the claim is taken at
- * message arrival, but the flow itself waits for the previous flow to settle, so a stale flow can
- * never stop a row a fresher one just attached. Every await is still followed by a claim
- * re-check — a superseded flow abandons its work and reports `failed`, leaving any row it minted
- * for the fresher flow's own recovery — and a player stop raised mid-start stops the minted row
- * back durably rather than installing a run that no longer exists.
+ * Begins a run entirely inside the worker, broadcasting the outcome as a start status keyed by
+ * the request id. A same-scope `CONFLICT` resyncs onto the running row and reports `attached`
+ * only once the runtime holds it; a different-scope `CONFLICT` flushes that row, stops it
+ * targeted, and retries. Flows run one at a time — the claim is taken at arrival, the flow waits
+ * for its predecessor — so a stale flow can never stop a row a fresher one just attached. After
+ * every await the claim is re-checked: a superseded flow reports `failed` and leaves its minted
+ * row to the fresher flow's recovery; a stop landing mid-start stops the minted row back durably.
  */
 export async function handleStartActivityMessage(
   context: WorkerContext,
@@ -34,8 +30,7 @@ export async function handleStartActivityMessage(
 
   const previous = context.getStartFlow();
 
-  // the flow settles without rejecting — a throw would strand every queued start behind it — so
-  // an unexpected fault is reported here and read by the tab as a plain failure
+  // the flow settles without rejecting — a throw would strand every queued start behind it
   const flow = (async () => {
     await previous;
 
@@ -60,7 +55,7 @@ async function runStart(
 ): Promise<StartStatus> {
   const entryEpoch = context.getStopEpoch();
 
-  // a queued flow may already be superseded, or the run it would start already stopped
+  // a queued flow may be stale before it ever runs
   if (isSuperseded(context, message) || hasStopIntervened(context, entryEpoch)) {
     return { kind: 'failed' };
   }
@@ -79,8 +74,7 @@ async function runStart(
   }
 
   if (!isDefinedError(error) || error.code !== 'CONFLICT') {
-    // a defined non-conflict rejection is the service answering; anything else is a fault the
-    // error backend should see, matching how the resync path reports its own
+    // a defined rejection is the service answering; anything else belongs in the error backend
     if (!isDefinedError(error)) {
       reportWorkerFault('start', error);
     }
@@ -90,15 +84,12 @@ async function runStart(
 
   const row = error.data.activity;
 
-  // the requested scope is already running — the resync attaches its confirmed stream, with the
-  // resync's own guards covering staleness and stops
+  // the requested scope is already running — a resync attaches its confirmed stream
   if (row.scopeType === message.scopeType && row.scopeID === message.scopeID) {
     await handleRequestResyncMessage(context, createRequestResyncMessage(message.avatarID));
 
-    // attached is only true once the runtime actually holds the row: the resync may have been
-    // skipped by its single-flight guard, gated by an undelivered stop, planned nothing for a row
-    // that closed meanwhile, or abandoned its install to a stop or a fresher claim — every one of
-    // those must read as failed, or the tab would wait forever on a run that never arrives
+    // a resync can be skipped, gated, or abandoned without installing; reporting attached anyway
+    // would leave the tab waiting forever on a run that never arrives
     if (context.getSimulation()?.activity?.id !== row.id) {
       return { kind: 'failed' };
     }
@@ -111,8 +102,7 @@ async function runStart(
     return { kind: 'failed' };
   }
 
-  // the replace flow: earned checkpoints land first — the server rejects appends onto a stopped
-  // row — then the other scope's row stops targeted, so a raced newer row is never the casualty
+  // replace flow: earned checkpoints land before the stop closes the row to appends
   await context.getSubmitter().flushNow(row.id);
 
   const [stopError] = await safe(
@@ -157,8 +147,7 @@ async function setLiveStartedRow(
   row: Readonly<ActivityData>,
   entryEpoch: number,
 ): Promise<StartStatus> {
-  // a stop that landed while the start was in flight owns the runtime — the fresh row is stopped
-  // back durably, exactly as a player stop delivers
+  // a stop landed mid-start: the fresh row is stopped back durably, as any player stop delivers
   if (hasStopIntervened(context, entryEpoch)) {
     await submitStopIntent(context, row);
 
@@ -169,8 +158,8 @@ async function setLiveStartedRow(
     return { kind: 'failed' };
   }
 
-  // a worker that never saw an initialize has no simulation yet; the install must not silently
-  // skip, or the tab would spin forever on a started run
+  // a worker that never saw an initialize has no simulation; a silently skipped install would
+  // leave the tab spinning on a started run
   if (context.getSimulation() === null) {
     const simulation = createSimulation();
 
@@ -181,9 +170,8 @@ async function setLiveStartedRow(
 
   await handleSetActivityMessage(context, { activity: row, type: ClientMessageType.SetActivity });
 
-  // the registration await inside the install is this flow's last yield; a request that arrived
-  // during it owns the claim now, and its queued flow will replace this install — its outcome,
-  // not this one, is the one the tabs should act on
+  // the install's registration await is this flow's last yield; a request that arrived during it
+  // owns the claim, and its queued flow will replace this install
   if (isSuperseded(context, message)) {
     return { kind: 'failed' };
   }

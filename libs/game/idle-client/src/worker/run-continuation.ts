@@ -45,9 +45,8 @@ export async function runContinuation(
   const hasLostOwnership = () =>
     context.getSimulation() !== entrySimulation || context.getActivity()?.id !== entryActivityID;
 
-  // the key is anchored to the terminal row this continuation succeeds, so a retried delivery of
-  // this same continuation dedupes onto the row the first attempt minted, while the next
-  // continuation (anchored to that newer row) conflicts as a distinct intent
+  // keyed by the terminal row it succeeds: a retried delivery dedupes onto the first attempt's
+  // row, while the next continuation carries a new key and conflicts as a distinct intent
   const [error, started] = await safe(
     context.getClient().startActivity({
       avatarID: activity.avatarID,

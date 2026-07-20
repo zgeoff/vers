@@ -27,8 +27,7 @@ export interface SyncSlice {
   resyncStatus: null | ResyncStatus;
 
   /**
-   * The worker's latest start outcome; tabs match its request id against their own outstanding
-   * attempt, so a report answering another tab's request is ignored rather than misread.
+   * The worker's latest start outcome; tabs match its request id against their own attempt.
    */
   startReport: null | StartReport;
 

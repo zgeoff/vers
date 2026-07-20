@@ -27,12 +27,10 @@ interface ExploreCurrentPanelProps {
 }
 
 /**
- * The world map node detail view: shows a spinner until the idle worker reports the activity it
- * was asked to start, then renders the encounter, its auto-retry toggle, and its codex slot. The
- * worker owns the whole start — server call, conflict recovery, simulation install — and this
- * panel only sends the intent and correlates the worker's start report against its own attempt,
- * so another tab's outcome never reads as this one's. A failed start renders a retry action
- * instead of spinning forever.
+ * The world map node detail view: a spinner until the worker reports the requested start, then
+ * the encounter, its auto-retry toggle, and its codex slot. The worker owns the whole start; the
+ * panel sends the intent and correlates the report against its own attempt, so another tab's
+ * outcome never reads as this one's. A failed start renders a retry action.
  */
 export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   const isSharedWorkerSupported = useIsSharedWorkerSupported();
@@ -42,12 +40,11 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   const avatarID = avatarQuery.data?.id;
   const isAutoRetryChecked = idleWorkerHandle.failureAction === ActivityFailureAction.Retry;
 
-  // one start attempt per selected node; the worker's report carries the attempt's request id, so
-  // a stale report for a deselected node never gates or publishes anything
+  // one start attempt per selected node, correlated by request id
   const [attempt, setAttempt] = useState<StartAttempt | undefined>(undefined);
 
-  // the store holds only the latest broadcast, and another tab's report can overwrite it at any
-  // time — the outcome for this tab's own attempt is latched locally the moment it correlates
+  // latched locally on correlation: the store holds only the latest broadcast, and another tab's
+  // report can overwrite it at any time
   const [report, setReport] = useState<StartStatus | undefined>(undefined);
 
   // the exploration commits when the encounter view opens for a node — independent of worker
@@ -92,8 +89,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     });
   }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID, selectedNode, attempt]);
 
-  // only the requesting tab's attempt matches the report's request id, so the started event fires
-  // exactly once even with several tabs receiving the same broadcast
+  // only the requesting tab's attempt matches, so the started event fires exactly once
   const startReport = idleWorkerHandle.startReport;
 
   useEffect(() => {

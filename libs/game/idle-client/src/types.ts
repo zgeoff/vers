@@ -51,11 +51,9 @@ export interface RequestResyncMessage extends IClientMessage {
 }
 
 /**
- * Begins a run: the worker owns the whole start — the server call, the conflict recovery that
- * flushes and stops a different scope's active row before retrying, and the simulation install —
- * and answers with a start status carrying the same `requestID`, so the requesting tab can tell
- * its own attempt's outcome from another tab's. A fresh selection sends a new request; the worker
- * abandons a superseded one at its next await rather than installing a run the player has left.
+ * Begins a run. The worker owns the server call, the conflict recovery, and the simulation
+ * install, answering with a start status carrying the same `requestID` — the tab only correlates.
+ * A fresh selection sends a new request; a superseded one is abandoned, never installed.
  */
 export interface StartActivityMessage extends IClientMessage {
   readonly avatarID: string;
@@ -209,10 +207,9 @@ export interface RewardSlotsRecordedMessage extends IWorkerMessage {
 }
 
 /**
- * One start request's outcome: `started` carries the fresh row this request minted and installed,
- * `attached` names the already-active row for the same scope the worker resynced onto instead, and
- * `failed` covers everything a retry from the tab can address. Broadcast to every connection —
- * tabs match `requestID` against their own outstanding attempt and ignore the rest.
+ * One start request's outcome: `started` carries the minted, installed row; `attached` names the
+ * already-active same-scope row the worker resynced onto; `failed` covers everything a tab retry
+ * can address. Broadcast to every connection — tabs match `requestID`, ignore the rest.
  */
 export type StartStatus =
   | { readonly activity: ActivityData; readonly kind: 'started' }

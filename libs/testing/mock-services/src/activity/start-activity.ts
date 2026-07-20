@@ -55,8 +55,7 @@ export const startActivity = os.startActivity.handler(async (opts) => {
     q.where({ avatarID: opts.input.avatarID, status: 'active' }),
   );
 
-  // Mirrors the real handler's duplicate-start idempotency; mock rows carry no writer session,
-  // so that leg of the real check has nothing to compare against here.
+  // Mirrors the real duplicate-start idempotency, minus the writer-session leg mock rows lack.
   if (active !== undefined) {
     const isDuplicateStart =
       opts.input.startKey !== undefined &&

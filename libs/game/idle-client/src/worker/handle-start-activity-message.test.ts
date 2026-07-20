@@ -29,16 +29,6 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
   return { client };
 }
 
-function buildStartMessage(avatarID: string, scopeID: string): StartActivityMessage {
-  return {
-    avatarID,
-    requestID: crypto.randomUUID(),
-    scopeID,
-    scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
-  };
-}
-
 test('it mints a row, installs it, and broadcasts the started status', async () => {
   const user = await db.userCollection.create({});
   const avatar = await db.avatarCollection.create({ userID: user.id });
@@ -55,7 +45,13 @@ test('it mints a row, installs it, and broadcasts the started status', async () 
 
   context.setSimulation(createSimulation());
 
-  const message = buildStartMessage(avatar.id, 'a9lp75');
+  const message: StartActivityMessage = {
+    avatarID: avatar.id,
+    requestID: 'request_start',
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  };
 
   await handleStartActivityMessage(context, message);
 
@@ -95,7 +91,13 @@ test('it installs a simulation even when none was initialized yet', async () => 
 
   const context = createStubWorkerContext({ client: ctx.client, submitter: createStubSubmitter() });
 
-  await handleStartActivityMessage(context, buildStartMessage(avatar.id, 'a9lp75'));
+  await handleStartActivityMessage(context, {
+    avatarID: avatar.id,
+    requestID: 'request_start',
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  });
 
   const minted = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: avatar.id, status: 'active' }),
@@ -120,7 +122,13 @@ test('it answers a duplicate delivery with the row the first attempt minted', as
 
   context.setSimulation(createSimulation());
 
-  const message = buildStartMessage(avatar.id, 'a9lp75');
+  const message: StartActivityMessage = {
+    avatarID: avatar.id,
+    requestID: 'request_start',
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  };
 
   // the first delivery already minted the row, keyed by this same request
   const existing = await db.activityCollection.create({
@@ -171,7 +179,13 @@ test('it resyncs onto the already-active row when the same scope conflicts', asy
     submitter: createStubSubmitter(),
   });
 
-  const message = buildStartMessage(avatar.id, 'a9lp75');
+  const message: StartActivityMessage = {
+    avatarID: avatar.id,
+    requestID: 'request_start',
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  };
 
   await handleStartActivityMessage(context, message);
 
@@ -203,7 +217,13 @@ test('it flushes and stops a different scope before starting the requested one',
 
   context.setSimulation(createSimulation());
 
-  await handleStartActivityMessage(context, buildStartMessage(avatar.id, 'a9lp75'));
+  await handleStartActivityMessage(context, {
+    avatarID: avatar.id,
+    requestID: 'request_start',
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  });
 
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: previous.id }));
 
@@ -235,7 +255,13 @@ test('it stops the minted row back when a stop lands mid-start', async () => {
 
   context.setSimulation(createSimulation());
 
-  const message = buildStartMessage(avatar.id, 'a9lp75');
+  const message: StartActivityMessage = {
+    avatarID: avatar.id,
+    requestID: 'request_start',
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  };
 
   // the stop lands while the start call is in flight
   const minted = await db.activityCollection.create({
@@ -284,7 +310,13 @@ test('it abandons a superseded request without touching the fresher claim', asyn
 
   context.setSimulation(createSimulation());
 
-  const message = buildStartMessage(avatar.id, 'a9lp75');
+  const message: StartActivityMessage = {
+    avatarID: avatar.id,
+    requestID: 'request_start',
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  };
 
   const minted = await db.activityCollection.create({
     avatarID: avatar.id,
@@ -322,7 +354,13 @@ test('it broadcasts failed on a transport failure', async () => {
     submitter: createStubSubmitter(),
   });
 
-  const message = buildStartMessage('avatar_1', 'a9lp75');
+  const message: StartActivityMessage = {
+    avatarID: 'avatar_1',
+    requestID: 'request_start',
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  };
 
   await handleStartActivityMessage(context, message);
 
@@ -362,7 +400,13 @@ test('it fails an attach the resync could not install', async () => {
   // promise a row the runtime never installed
   context.setResyncInFlight(true);
 
-  const message = buildStartMessage(avatar.id, 'a9lp75');
+  const message: StartActivityMessage = {
+    avatarID: avatar.id,
+    requestID: 'request_start',
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  };
 
   await handleStartActivityMessage(context, message);
 
@@ -388,8 +432,21 @@ test('it runs interleaved starts one at a time, the fresher claim winning', asyn
 
   context.setSimulation(createSimulation());
 
-  const first = buildStartMessage(avatar.id, 'esaxrt');
-  const second = buildStartMessage(avatar.id, 'a9lp75');
+  const first: StartActivityMessage = {
+    avatarID: avatar.id,
+    requestID: 'request_first',
+    scopeID: 'esaxrt',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  };
+
+  const second: StartActivityMessage = {
+    avatarID: avatar.id,
+    requestID: 'request_second',
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  };
 
   // both messages land before either flow runs — the chain must run them in order, so the first
   // completes fully before the second's conflict recovery replaces its row

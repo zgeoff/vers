@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
-import type { ClientMessage, StartActivityMessage } from '@vers/idle-client';
+import type { ClientMessage } from '@vers/idle-client';
 import { ClientMessageType, isStartActivityMessage } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
@@ -106,7 +106,10 @@ test('it renders the node and its codex fragment once the worker reports the sta
       expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
     });
 
-    const sent = findStartIntent(calls);
+    const sent = calls.find((call) => isStartActivityMessage(call));
+
+    invariant(sent !== undefined, 'expected a start intent');
+
     const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
 
     // the worker answering the intent is one setter call — mounted components re-render on it
@@ -151,7 +154,9 @@ test('it treats an attached report as ready once the simulation carries that row
       expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
     });
 
-    const sent = findStartIntent(calls);
+    const sent = calls.find((call) => isStartActivityMessage(call));
+
+    invariant(sent !== undefined, 'expected a start intent');
 
     setIdleWorkerHandle({
       activity: createMockActivitySnapshot({ id: 'activity_attached' }),
@@ -232,7 +237,9 @@ test('it offers a retry on a failed report and sends a fresh intent on demand', 
       expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
     });
 
-    const first = findStartIntent(calls);
+    const first = calls.find((call) => isStartActivityMessage(call));
+
+    invariant(first !== undefined, 'expected a start intent');
 
     setIdleWorkerHandle({
       activity: undefined,
@@ -281,7 +288,10 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
       expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
     });
 
-    const sent = findStartIntent(calls);
+    const sent = calls.find((call) => isStartActivityMessage(call));
+
+    invariant(sent !== undefined, 'expected a start intent');
+
     const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
 
     setIdleWorkerHandle({
@@ -309,14 +319,6 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
   });
 });
 
-function findStartIntent(calls: ReadonlyArray<ClientMessage>): StartActivityMessage {
-  const sent = calls.find((call) => isStartActivityMessage(call));
-
-  invariant(sent !== undefined, 'expected a start intent');
-
-  return sent;
-}
-
 test('it keeps its own outcome when a later report answers another tab', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
@@ -340,7 +342,10 @@ test('it keeps its own outcome when a later report answers another tab', async (
       expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
     });
 
-    const sent = findStartIntent(calls);
+    const sent = calls.find((call) => isStartActivityMessage(call));
+
+    invariant(sent !== undefined, 'expected a start intent');
+
     const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
 
     setIdleWorkerHandle({

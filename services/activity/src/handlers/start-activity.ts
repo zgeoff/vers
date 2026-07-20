@@ -53,12 +53,10 @@ interface StartActivityOpts {
  * Starts an activity for an avatar owned by the acting user, snapshotting the avatar's current
  * progression as the build the stream plays against, and stamping the acting session as the
  * stream's writer. Resolves the scope node's encounter params server-side and freezes them on the
- * new row, throwing NODE_UNKNOWN when the scope doesn't resolve to a known node. When an activity
- * is already active — the partial unique index is the serialization point, this handler just
- * reports what it caught — a duplicate delivery of the same start (the existing row carries this
- * request's own idempotency key, is never appended, and the acting session is already its writer
- * or none is stamped) succeeds with that row; every other conflict, a continuation into the same
- * scope included, throws CONFLICT carrying the existing activity. A chain whose
+ * new row, throwing NODE_UNKNOWN when the scope doesn't resolve to a known node. The partial
+ * unique index serializes concurrent starts; a duplicate delivery — same key, same scope, never
+ * appended, caller already the writer or none stamped — succeeds with the existing row, and every
+ * other conflict throws CONFLICT carrying it. A chain whose
  * replay frontier is quarantined admits no new starts until it is adjudicated.
  */
 export async function startActivity(
@@ -179,11 +177,9 @@ export async function startActivity(
       .where('status', '=', 'active')
       .executeTakeFirstOrThrow();
 
-    // A duplicate delivery of the same start: the existing row carries this request's own key and
-    // is indistinguishable from the one this call would have minted — nothing appended yet, the
-    // acting session already able to write it — so returning it beats making every client branch
-    // on a CONFLICT. Key equality is the intent test: a continuation into the same scope carries
-    // a different key and must conflict, or it would adopt the very row it just closed.
+    // Key equality is the intent test: a duplicate delivery gets back the row it already minted,
+    // while a continuation into the same scope carries a different key and must conflict — or it
+    // would adopt the very row it just closed.
     const isDuplicateStart =
       opts.input.startKey !== undefined &&
       existing.startKey === opts.input.startKey &&

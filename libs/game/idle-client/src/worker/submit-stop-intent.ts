@@ -4,10 +4,8 @@ import { flushPendingStop } from './flush-pending-stop';
 import type { WorkerContext } from './types';
 
 /**
- * Accepts a stop for the given row into the durable intent record and attempts its delivery now —
- * the tail every stop shares, whether the player raised it or a lifecycle flow is stopping back a
- * row it minted after losing the runtime. An undelivered intent stays held for the next
- * reconnect or resync entry to retry.
+ * Holds a stop for the given row durably and attempts delivery now — the tail every stop shares.
+ * An undelivered intent stays held for the next reconnect or resync entry to retry.
  */
 export async function submitStopIntent(
   context: WorkerContext,
