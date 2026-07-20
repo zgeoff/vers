@@ -22,6 +22,16 @@ test('it collects assigned keys and skips comments, blanks, and values', () => {
   ]);
 });
 
+test('it never reads an assignment-shaped line inside a quoted multiline value as a key', () => {
+  const keys = parseEnvKeys(
+    ['FIRST=1', 'PEM="-----BEGIN KEY-----', 'FAKE_KEY=inside', '-----END KEY-----"', 'LAST=2'].join(
+      '\n',
+    ),
+  );
+
+  expect(keys).toStrictEqual(['FIRST', 'PEM', 'LAST']);
+});
+
 test('it returns no keys for an empty file', () => {
   expect(parseEnvKeys('')).toBeEmpty();
 });

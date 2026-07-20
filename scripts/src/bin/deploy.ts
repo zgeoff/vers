@@ -541,7 +541,8 @@ async function runVerify(): Promise<void> {
  * Asserts, before any image builds, that each contract-carrying app's required env keys are
  * covered by its `fly.toml` `[env]` table, its set Fly secrets, or a build arg its Dockerfile
  * bakes into the binary — the gap boot-time validation would otherwise only report as a
- * production crash loop. Apps without a generated contract (app-web, bugsink, umami) are skipped.
+ * production crash loop. Non-service apps (app-web, bugsink, umami) carry no generated contract
+ * and are skipped; a service missing its contract fails the run rather than bypassing the gate.
  */
 async function runPreflight(): Promise<void> {
   const manifest = await loadDeployManifest();
@@ -552,6 +553,14 @@ async function runPreflight(): Promise<void> {
     const contract = await loadEnvContract(`${target.configDir}/env-contract.generated.json`);
 
     if (contract === null) {
+      if (target.configDir.startsWith('services/')) {
+        console.error(
+          `✗ ${target.app} — ${target.configDir}/env-contract.generated.json is unreadable`,
+        );
+
+        failed = true;
+      }
+
       continue;
     }
 
@@ -573,13 +582,15 @@ async function runPreflight(): Promise<void> {
 
     for (const gap of gaps) {
       console.error(
-        `✗ ${target.app} — missing from fly.toml [env] and secrets: ${gap.missing.join(', ')}`,
+        `✗ ${target.app} — missing from fly.toml [env], secrets, and baked build args: ${gap.missing.join(', ')}`,
       );
     }
   }
 
   if (failed) {
-    console.error('set the missing keys with `flyctl secrets set` or in fly.toml before deploying');
+    console.error(
+      'cover the missing keys with `flyctl secrets set`, a fly.toml [env] entry, or a baked build arg (buildArgsFromEnv) before deploying',
+    );
 
     process.exitCode = 1;
   }

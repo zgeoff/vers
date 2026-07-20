@@ -893,6 +893,7 @@
       "name": "@vers/scripts",
       "version": "0.0.0",
       "dependencies": {
+        "@dotenvx/dotenvx": "catalog:",
         "@vers/db": "workspace:*",
         "@vers/release-registry": "workspace:*",
         "@vers/sim-registry": "workspace:*",

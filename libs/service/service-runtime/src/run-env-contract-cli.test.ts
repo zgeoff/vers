@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -38,6 +38,50 @@ test('it passes a check when the committed artifact matches the shape', async ()
   const code = await runEnvContractCLI({ args: ['--check'], dir, envShape });
 
   expect(code).toBe(0);
+});
+
+test('it passes a check on an equivalent artifact restyled by a formatter', async () => {
+  const dir = await createContractDir();
+
+  const restyled = JSON.stringify(
+    {
+      optional: ['LOG_LEVEL', 'OTEL_EXPORTER_OTLP_ENDPOINT', 'PORT', 'SENTRY_DSN'],
+      required: ['DATABASE_URL', 'SERVICE_AUTH_PUBLIC_KEY'],
+    },
+    null,
+    4,
+  );
+
+  await writeFile(new URL('env-contract.generated.json', dir), restyled);
+
+  const code = await runEnvContractCLI({
+    args: ['--check'],
+    dir,
+    envShape: { DATABASE_URL: z.string() },
+  });
+
+  expect(code).toBe(0);
+});
+
+test('it leaves an equivalent restyled artifact unwritten', async () => {
+  const dir = await createContractDir();
+
+  const fileURL = new URL('env-contract.generated.json', dir);
+
+  const restyled = JSON.stringify({
+    optional: ['LOG_LEVEL', 'OTEL_EXPORTER_OTLP_ENDPOINT', 'PORT', 'SENTRY_DSN'],
+    required: ['SERVICE_AUTH_PUBLIC_KEY'],
+  });
+
+  await writeFile(fileURL, restyled);
+
+  const code = await runEnvContractCLI({ args: [], dir, envShape: {} });
+
+  expect(code).toBe(0);
+
+  const contents = await readFile(fileURL, 'utf8');
+
+  expect(contents).toBe(restyled);
 });
 
 test('it fails a check when the committed artifact is missing', async () => {

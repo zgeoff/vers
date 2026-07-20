@@ -1,19 +1,10 @@
-const ASSIGNMENT_PATTERN = /^\s*(?:export\s+)?(?<key>[A-Za-z_][A-Za-z0-9_]*)\s*=/;
+import { parse } from '@dotenvx/dotenvx';
 
 /**
- * Collects the variable names a dotenv-format file assigns, ignoring comments, blank lines, and
- * every value — callers compare key coverage, never values.
+ * Collects the variable names a dotenv-format file assigns — callers compare key coverage, never
+ * values. The dotenv grammar tracks quote state, so an assignment-shaped line inside a quoted
+ * multiline value never reads as a key.
  */
 export function parseEnvKeys(source: string): Array<string> {
-  const keys: Array<string> = [];
-
-  for (const line of source.split('\n')) {
-    const key = ASSIGNMENT_PATTERN.exec(line)?.groups?.['key'];
-
-    if (key !== undefined) {
-      keys.push(key);
-    }
-  }
-
-  return keys;
+  return Object.keys(parse(source));
 }
