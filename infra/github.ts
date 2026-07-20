@@ -125,7 +125,7 @@ const productionEnvironment = new github.RepositoryEnvironment(
 
 /**
  * Actions variables carry the deploy configuration. Plainly public values sit
- * in code; the service-auth public key enters through encrypted stack config,
+ * in code; the service-auth JWKS enters through encrypted stack config,
  * keeping key material of any kind out of the committed source.
  */
 const umamiWebsiteIDVariable = new github.ActionsVariable('vite-umami-website-id', {
