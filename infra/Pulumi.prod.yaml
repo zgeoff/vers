@@ -1,5 +1,8 @@
 config:
+  github:owner: zgeoff
   vers-infra:zoneName: versidle.com
   vers-infra:appHostname: vers-app-web.fly.dev
   vers-infra:zoneId: fc9e4cdc2fff4aee760c7fd1e71ffe27
+  vers-infra:serviceAuthPublicKey:
+    secure: v1:9fX6e9Du2R3qZ/WM:XjVN+MrRFi0sVtI0dvWG0N8ZtFL9HkoYyu53yLBqe+MXTmNgxBH9ietOJUaSlsLtdw+ANl87btRSkTxRvUx9LhYzW/y8qAoB8L9n5hyPo9aPzaYZmGzSs4e8RqSQO1tnN6uPsGoj0CymhGTEHdsS/DKtcN9piL20mtEnjrVLdpQ=
 encryptionsalt: v1:X3B5c2FRqiA=:v1:6xmc+OObdCNfxT/j:hcfedYdoJcanVVXYfwNGrBvsmAtmLQ==

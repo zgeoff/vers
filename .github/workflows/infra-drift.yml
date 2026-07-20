@@ -61,6 +61,7 @@ jobs:
           R2_STATE_BUCKET: op://vers-ci/vers-infra/r2-state-bucket
           PULUMI_CONFIG_PASSPHRASE: op://vers-ci/vers-infra/pulumi-passphrase
           AXIOM_TOKEN: op://vers-ci/axiom/iac-token
+          GITHUB_TOKEN: op://vers-ci/vers-infra/github-token
           DISCORD_ALARMS_WEBHOOK: op://vers-ci/discord-alarms-webhook/credential
 
       - name: Preview
