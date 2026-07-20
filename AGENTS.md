@@ -247,6 +247,13 @@ Express a true invariant — a condition only a bug can break — with `tiny-inv
 (`invariant(value, 'message')`) rather than a hand-rolled `if`/`throw`. A condition real input can
 trigger is ordinary control flow, not an invariant.
 
+## Third-party packages
+
+Prefer an established, narrowly scoped third-party package over hand-rolling the same logic —
+recommend one whenever it covers the need. Hand-roll only when no candidate is both proven and
+focused on the problem, when a Bun or Node builtin already covers it, or when the logic is small
+enough that a dependency costs more than it saves.
+
 ## Error handling
 
 Read `docs/architecture/services/error-handling.md` before adding or changing a failure path — it
