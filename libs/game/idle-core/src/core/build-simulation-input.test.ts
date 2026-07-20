@@ -1,6 +1,8 @@
 import { expect, test } from 'bun:test';
 import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import invariant from 'tiny-invariant';
+import { buildLifeFromLevel } from '../progression';
+import { createMockSimulationInputSource } from '../test-utils';
 import { ActivityFailureAction, EquipmentSlot } from '../types';
 import { buildSimulationInput } from './build-simulation-input';
 
@@ -20,6 +22,20 @@ test('it derives the activity id, avatar id, seed, and build snapshot from the s
   expect(result.avatar.id).toBe('avatar_1');
   expect(result.avatar.level).toBe(3);
   expect(result.avatar.xp).toBe(450);
+});
+
+test('it derives the avatar life from the build snapshot level', () => {
+  const levelOne = buildSimulationInput(
+    createMockSimulationInputSource({ buildSnapshot: { level: 1, xp: 0 } }),
+  );
+
+  const levelled = buildSimulationInput(
+    createMockSimulationInputSource({ buildSnapshot: { level: 27, xp: 0 } }),
+  );
+
+  expect(levelOne.avatar.life).toBe(buildLifeFromLevel(1));
+  expect(levelled.avatar.life).toBe(buildLifeFromLevel(27));
+  expect(levelled.avatar.life).toBeGreaterThan(levelOne.avatar.life);
 });
 
 test('it builds the same input for the same source row', () => {

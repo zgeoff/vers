@@ -25,6 +25,7 @@ export function ActivityPanel() {
   const navigate = useNavigate();
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const avatarID = avatarQuery.data?.id;
+  const avatarName = avatarQuery.data?.name;
 
   const currentActivityQuery = useQuery({
     ...buildCurrentActivityQueryOptions(avatarID ?? ''),
@@ -56,7 +57,10 @@ export function ActivityPanel() {
 
   return (
     <ScreenLayout title="Engagement">
-      <EngagementView {...(endRun !== undefined && { onEndRun: endRun })} />
+      <EngagementView
+        {...(avatarName !== undefined && { avatarName })}
+        {...(endRun !== undefined && { onEndRun: endRun })}
+      />
       {pendingCount > 0 ? (
         <output
           className={settlingIndicator}

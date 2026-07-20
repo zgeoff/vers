@@ -9,4 +9,5 @@ export { createMockEnemySnapshot } from './factories/create-mock-enemy-snapshot'
 export { createMockFailedCheckpoint } from './factories/create-mock-failed-checkpoint';
 export { createMockProgressCheckpoint } from './factories/create-mock-progress-checkpoint';
 export { createMockSimulationContext } from './factories/create-mock-simulation-context';
+export { createMockSimulationInputSource } from './factories/create-mock-simulation-input-source';
 export { createMockStartedCheckpoint } from './factories/create-mock-started-checkpoint';

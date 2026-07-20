@@ -31,6 +31,7 @@ const avatarArea = css({
 });
 
 interface EngagementViewProps {
+  readonly avatarName?: string;
   readonly onEndRun?: () => void;
 }
 
@@ -58,7 +59,10 @@ export function EngagementView(props: Readonly<EngagementViewProps>) {
         ))}
       </div>
       <div className={avatarArea}>
-        <AvatarUnitPlate avatar={avatar} />
+        <AvatarUnitPlate
+          avatar={avatar}
+          {...(props.avatarName !== undefined && { displayName: props.avatarName })}
+        />
       </div>
     </div>
   );
