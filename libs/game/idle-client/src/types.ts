@@ -2,18 +2,18 @@ import type { ActivityData } from '@vers/contract-activity';
 import type { ActivityFailureAction, SimulationSnapshot } from '@vers/idle-core';
 
 /**
- * `SetActivity` is for a fresh stream the tab just started through the `startActivity` mutation —
- * it carries the row that mutation returned. Resuming any other activity, live or offline, always
- * goes through `RequestResync`; the worker alone derives its simulation input and submission
- * context from the confirmed row, never trusting a tab's locally reconstructed one.
+ * `SetActivity` installs a fresh, never-appended row the worker already holds confirmed — the
+ * continuation and start flows use it internally. Resuming any other activity, live or offline,
+ * always goes through `RequestResync`; the worker alone derives its simulation input and
+ * submission context from the confirmed row, never trusting a tab's locally reconstructed one.
  */
 export enum ClientMessageType {
   Disconnect = 'disconnect',
   Initialize = 'initialize',
-  RequestFlush = 'request_flush',
   RequestResync = 'request_resync',
   SetActivity = 'set_activity',
   SetFailureAction = 'set_failure_action',
+  StartActivity = 'start_activity',
   StopActivity = 'stop_activity',
 }
 
@@ -51,14 +51,16 @@ export interface RequestResyncMessage extends IClientMessage {
 }
 
 /**
- * Asks the worker to deliver an activity's queued checkpoints now — the tab is about to stop the
- * activity server-side and would otherwise lose whatever the shared progress window still holds
- * unsent.
+ * Begins a run. The worker owns the server call, the conflict recovery, and the simulation
+ * install, answering with a start status carrying the same `requestID` — the tab only correlates.
+ * A fresh selection sends a new request; a superseded one is abandoned, never installed.
  */
-export interface RequestFlushMessage extends IClientMessage {
-  readonly activityID: string;
+export interface StartActivityMessage extends IClientMessage {
+  readonly avatarID: string;
   readonly requestID: string;
-  readonly type: ClientMessageType.RequestFlush;
+  readonly scopeID: string;
+  readonly scopeType: string;
+  readonly type: ClientMessageType.StartActivity;
 }
 
 /**
@@ -77,10 +79,10 @@ export interface StopActivityMessage extends IClientMessage {
 export type ClientMessage =
   | DisconnectMessage
   | InitializeMessage
-  | RequestFlushMessage
   | RequestResyncMessage
   | SetActivityMessage
   | SetFailureActionMessage
+  | StartActivityMessage
   | StopActivityMessage;
 
 export enum WorkerMessageType {
@@ -89,12 +91,12 @@ export enum WorkerMessageType {
   CheckpointStreamInvalid = 'checkpoint_stream_invalid',
   ConnectionStatus = 'connection_status',
   FailureActionStatus = 'failure_action_status',
-  FlushCompleted = 'flush_completed',
   InitialState = 'initial_state',
   OfflineCapStatus = 'offline_cap_status',
   ResyncStatus = 'resync_status',
   RewardSlotsRecorded = 'reward_slots_recorded',
   SimulationUpdate = 'simulation_update',
+  StartStatus = 'start_status',
 }
 
 interface IWorkerMessage {
@@ -205,14 +207,19 @@ export interface RewardSlotsRecordedMessage extends IWorkerMessage {
 }
 
 /**
- * Acks one `RequestFlush` by `requestID`, sent only to the requesting port — never broadcast.
- * Delivery doesn't guarantee the queue drained: the flush attempt it triggered is best-effort, the
- * same as any other flush.
+ * One start request's outcome: `started` carries the minted, installed row; `attached` names the
+ * already-active same-scope row the worker resynced onto; `failed` covers everything a tab retry
+ * can address. Broadcast to every connection — tabs match `requestID`, ignore the rest.
  */
-export interface FlushCompletedMessage extends IWorkerMessage {
-  readonly activityID: string;
+export type StartStatus =
+  | { readonly activity: ActivityData; readonly kind: 'started' }
+  | { readonly activityID: string; readonly kind: 'attached' }
+  | { readonly kind: 'failed' };
+
+export interface StartStatusMessage extends IWorkerMessage {
   readonly requestID: string;
-  readonly type: WorkerMessageType.FlushCompleted;
+  readonly status: StartStatus;
+  readonly type: WorkerMessageType.StartStatus;
 }
 
 export type WorkerMessage =
@@ -221,12 +228,20 @@ export type WorkerMessage =
   | CheckpointStreamInvalidMessage
   | ConnectionStatusMessage
   | FailureActionStatusMessage
-  | FlushCompletedMessage
   | InitialStateMessage
   | OfflineCapStatusMessage
   | ResyncStatusMessage
   | RewardSlotsRecordedMessage
-  | SimulationUpdateMessage;
+  | SimulationUpdateMessage
+  | StartStatusMessage;
+
+/**
+ * The latest start outcome as tabs hold it, keyed by the request it answers.
+ */
+export interface StartReport {
+  readonly requestID: string;
+  readonly status: StartStatus;
+}
 
 /**
  * The latest flush-stall report as tabs hold it — telemetry for the error backend, with the

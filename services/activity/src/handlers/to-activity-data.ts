@@ -29,6 +29,7 @@ export function toActivityData(row: Readonly<Selectable<Activities>>): ActivityD
     simVersion: row.simVersion,
     startChainIndex: row.startChainIndex,
     startHash: row.startHash,
+    startKey: row.startKey,
     startedAt: row.startedAt,
     status: row.status,
     stoppedAt: row.stoppedAt,

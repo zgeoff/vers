@@ -154,7 +154,7 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
   },
 );
 
-test('it adopts a conflict row with no confirmed checkpoints as the continuation', async () => {
+test('it rebuilds through a resync when a never-appended foreign row owns the avatar', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
@@ -173,7 +173,6 @@ test('it adopts a conflict row with no confirmed checkpoints as the continuation
 
   const context = createStubWorkerContext({ client: ctx.client });
   const simulation = createSimulation();
-  const startedSpy = mock<SimulationListener>();
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
   const avatarData = createMockAvatarData({ life: 1 });
@@ -186,12 +185,15 @@ test('it adopts a conflict row with no confirmed checkpoints as the continuation
   context.setActivity(sourceRow);
   context.setSimulation(simulation);
   simulation.startActivity(avatarData, activity);
-  simulation.addEventListener('started', startedSpy);
 
   await runSimulationSteps(context, simulation, 100, 50);
 
-  expect(startedSpy).toHaveBeenCalled();
-  expect(simulation.activity?.id).toBe(conflictRow.id);
+  expect(simulation.activity).toBeNull();
+
+  const installed = context.getSimulation();
+
+  invariant(installed !== null, 'expected the resync to install a simulation');
+  expect(installed.activity?.id).toBe(conflictRow.id);
   expect(context.getActivity()).toStrictEqual(conflictRow);
 });
 

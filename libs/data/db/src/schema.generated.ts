@@ -48,6 +48,7 @@ export interface Activities {
   startChainIndex: Generated<number>;
   startedAt: Generated<Timestamp>;
   startHash: string;
+  startKey: string | null;
   status: Generated<ActivityStatus>;
   stoppedAt: Timestamp | null;
   updatedAt: Generated<Timestamp>;

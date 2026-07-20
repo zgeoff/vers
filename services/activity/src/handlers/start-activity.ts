@@ -45,6 +45,7 @@ interface StartActivityOpts {
     readonly scopeID: string;
     readonly scopeType: string;
     readonly simVersion?: string | undefined;
+    readonly startKey?: string | undefined;
   };
 }
 
@@ -52,10 +53,11 @@ interface StartActivityOpts {
  * Starts an activity for an avatar owned by the acting user, snapshotting the avatar's current
  * progression as the build the stream plays against, and stamping the acting session as the
  * stream's writer. Resolves the scope node's encounter params server-side and freezes them on the
- * new row, throwing NODE_UNKNOWN when the scope doesn't resolve to a known node. Throws CONFLICT
- * with the avatar's existing activity when one is already active — the partial unique index is the
- * serialization point, this handler just reports what it caught. A chain whose replay frontier is
- * quarantined admits no new starts until it is adjudicated.
+ * new row, throwing NODE_UNKNOWN when the scope doesn't resolve to a known node. The partial
+ * unique index serializes concurrent starts; a duplicate delivery — same key, same scope, never
+ * appended, caller already the writer or none stamped — succeeds with the existing row, and every
+ * other conflict throws CONFLICT carrying it. A chain whose
+ * replay frontier is quarantined admits no new starts until it is adjudicated.
  */
 export async function startActivity(
   deps: StartActivityDeps,
@@ -155,6 +157,7 @@ export async function startActivity(
           simVersion,
           startChainIndex: chain.appendedChainIndex,
           startHash,
+          startKey: opts.input.startKey ?? null,
           writerSessionId: opts.context.actingSessionId,
         })
         .returningAll()
@@ -173,6 +176,22 @@ export async function startActivity(
       .where('avatarId', '=', opts.input.avatarID)
       .where('status', '=', 'active')
       .executeTakeFirstOrThrow();
+
+    // Key equality is the intent test: a duplicate delivery gets back the row it already minted,
+    // while a continuation into the same scope carries a different key and must conflict — or it
+    // would adopt the very row it just closed.
+    const isDuplicateStart =
+      opts.input.startKey !== undefined &&
+      existing.startKey === opts.input.startKey &&
+      existing.scopeType === opts.input.scopeType &&
+      existing.scopeId === opts.input.scopeID &&
+      existing.appendedHead === 0 &&
+      (existing.writerSessionId === null ||
+        existing.writerSessionId === opts.context.actingSessionId);
+
+    if (isDuplicateStart) {
+      return toActivityData(existing);
+    }
 
     throw opts.errors.CONFLICT({ data: { activity: toActivityData(existing) } });
   }

@@ -2,18 +2,20 @@ import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
+import { mockActivityService } from '@vers/mock-services/activity';
+import { HttpResponse } from 'msw';
+import { server } from '../mocks/node';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import { createTestConnection } from '../test-utils/create-test-connection';
 import type {
   DisconnectMessage,
   InitializeMessage,
-  RequestFlushMessage,
   RequestResyncMessage,
   SetActivityMessage,
   SetFailureActionMessage,
+  StartActivityMessage,
 } from '../types';
-import { ClientMessageType, WorkerMessageType } from '../types';
+import { ClientMessageType } from '../types';
 import { handleClientMessage } from './handle-client-message';
 
 test('it installs a simulation on an initialize message', async () => {
@@ -98,27 +100,6 @@ test('it records the resync request for the requested avatar', async () => {
   expect(context.getResyncAvatarID()).toBe(viewer.avatar.id);
 });
 
-test('it acks a request flush message back to the sending port', async () => {
-  const connection = createTestConnection();
-  const context = createStubWorkerContext({ connections: [connection.port] });
-
-  const message: RequestFlushMessage = {
-    activityID: 'activity_1',
-    requestID: 'request_1',
-    type: ClientMessageType.RequestFlush,
-  };
-
-  const event = new MessageEvent('message', { data: message });
-
-  await handleClientMessage(context, connection.port, event);
-
-  await connection.waitForMessages(1);
-
-  expect(connection.received).toStrictEqual([
-    { activityID: 'activity_1', requestID: 'request_1', type: WorkerMessageType.FlushCompleted },
-  ]);
-});
-
 test('it drops the connection on a disconnect message', async () => {
   const channel = new MessageChannel();
 
@@ -133,4 +114,26 @@ test('it drops the connection on a disconnect message', async () => {
   await handleClientMessage(context, channel.port2, event);
 
   expect(context.connections.has(channel.port2)).toBeFalse();
+});
+
+test('it routes a start activity message and claims the request', async () => {
+  server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
+
+  const channel = new MessageChannel();
+
+  const context = createStubWorkerContext();
+
+  const message: StartActivityMessage = {
+    avatarID: 'avatar_1',
+    requestID: 'request_1',
+    scopeID: 'scope_1',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  };
+
+  const event = new MessageEvent('message', { data: message });
+
+  await handleClientMessage(context, channel.port2, event);
+
+  expect(context.getStartRequestID()).toBe('request_1');
 });

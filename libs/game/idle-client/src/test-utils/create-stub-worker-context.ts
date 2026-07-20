@@ -40,6 +40,8 @@ export function createStubWorkerContext(
   let failureActionDirty = false;
   let failureActionPushInFlight = false;
   let stopEpoch = 0;
+  let startRequestID: null | string = null;
+  let startFlow: Readonly<Promise<void>> = Promise.resolve();
 
   return {
     advanceStopEpoch: () => {
@@ -57,6 +59,8 @@ export function createStubWorkerContext(
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
+    getStartFlow: () => startFlow,
+    getStartRequestID: () => startRequestID,
     getStopEpoch: () => stopEpoch,
     getSubmitter: () => submitter,
     isFailureActionDirty: () => failureActionDirty,
@@ -99,6 +103,12 @@ export function createStubWorkerContext(
     },
     setResyncInFlight: (inFlight) => {
       resyncInFlight = inFlight;
+    },
+    setStartFlow: (flow) => {
+      startFlow = flow;
+    },
+    setStartRequestID: (requestID) => {
+      startRequestID = requestID;
     },
     setSimulation: (newSimulation) => {
       simulation = newSimulation;

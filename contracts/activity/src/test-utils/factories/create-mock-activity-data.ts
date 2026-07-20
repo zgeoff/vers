@@ -22,6 +22,7 @@ export function createMockActivityData(overrides: Partial<ActivityData> = {}): A
     simVersion: '0.0.0-dev',
     startChainIndex: 0,
     startHash: faker.string.hexadecimal({ casing: 'lower', length: 64, prefix: '' }),
+    startKey: null,
     startedAt,
     status: 'active',
     stoppedAt: null,

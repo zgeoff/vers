@@ -126,6 +126,13 @@ export const activityContract = {
         scopeID: ScopeIdentifierSchema,
         scopeType: ScopeIdentifierSchema,
         simVersion: z.string().optional(),
+
+        /**
+         * Idempotency key stamped on the minted row. A duplicate delivery carrying the same key
+         * succeeds with the existing row while it is never-appended; distinct intents into the
+         * same scope carry distinct keys and still conflict.
+         */
+        startKey: z.string().max(128).optional(),
       }),
     )
     .output(ActivityDataSchema)

@@ -77,6 +77,20 @@ export interface WorkerContext {
    */
   readonly getRewardSlotLedger: () => RewardSlotLedgerSnapshot;
   readonly getSimulation: () => null | Simulation;
+
+  /**
+   * The start-flow chain's tail. Start flows run one at a time — interleaved, a stale flow could
+   * stop a row the fresher one just attached. Stops stay concurrent; they bump the epoch queued
+   * flows re-check.
+   */
+  readonly getStartFlow: () => Readonly<Promise<void>>;
+
+  /**
+   * The most recent start request's id. A flow that finds a fresher claim after an await abandons
+   * its install, leaving any row it minted for the fresher flow's own recovery.
+   */
+  readonly getStartRequestID: () => null | string;
+
   readonly getStopEpoch: () => number;
   readonly getSubmitter: () => CheckpointSubmitter;
 
@@ -114,5 +128,7 @@ export interface WorkerContext {
   readonly setPendingContinuation: (pending: PendingContinuation | null) => void;
   readonly setResyncAvatarID: (avatarID: string) => void;
   readonly setResyncInFlight: (inFlight: boolean) => void;
+  readonly setStartFlow: (flow: Readonly<Promise<void>>) => void;
+  readonly setStartRequestID: (requestID: string) => void;
   readonly setSimulation: (simulation: null | Simulation) => void;
 }
