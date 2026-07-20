@@ -147,6 +147,10 @@ async function runStart(
   return setLiveStartedRow(context, message, retried, entryEpoch);
 }
 
+function isSuperseded(context: WorkerContext, message: StartActivityMessage): boolean {
+  return context.getStartRequestID() !== message.requestID;
+}
+
 async function setLiveStartedRow(
   context: WorkerContext,
   message: StartActivityMessage,
@@ -177,11 +181,14 @@ async function setLiveStartedRow(
 
   await handleSetActivityMessage(context, { activity: row, type: ClientMessageType.SetActivity });
 
-  return { activity: row, kind: 'started' };
-}
+  // the registration await inside the install is this flow's last yield; a request that arrived
+  // during it owns the claim now, and its queued flow will replace this install — its outcome,
+  // not this one, is the one the tabs should act on
+  if (isSuperseded(context, message)) {
+    return { kind: 'failed' };
+  }
 
-function isSuperseded(context: WorkerContext, message: StartActivityMessage): boolean {
-  return context.getStartRequestID() !== message.requestID;
+  return { activity: row, kind: 'started' };
 }
 
 function emitStartStatus(
