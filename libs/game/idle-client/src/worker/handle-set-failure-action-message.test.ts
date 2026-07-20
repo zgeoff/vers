@@ -1,8 +1,7 @@
 import { expect, test } from 'bun:test';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
-import { createAuthedServiceClient } from '@vers/mock-services';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
-import * as db from '@vers/mock-services/db';
 import { server } from '../mocks/node';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import type { ActivityServiceClient } from '../submission/types';
@@ -26,9 +25,8 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
 }
 
 test('it forwards the change to a live simulation instead of dropping it', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const simulation = createSimulation();
   const context = createStubWorkerContext({ client: ctx.client });
@@ -36,7 +34,7 @@ test('it forwards the change to a live simulation instead of dropping it', async
   context.setSimulation(simulation);
 
   const message: SetFailureActionMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     failureAction: ActivityFailureAction.Retry,
     type: ClientMessageType.SetFailureAction,
   };
@@ -47,14 +45,13 @@ test('it forwards the change to a live simulation instead of dropping it', async
 });
 
 test('it applies the change with no live simulation instead of warning and dropping it', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const context = createStubWorkerContext({ client: ctx.client });
 
   const message: SetFailureActionMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     failureAction: ActivityFailureAction.Retry,
     type: ClientMessageType.SetFailureAction,
   };
@@ -65,14 +62,13 @@ test('it applies the change with no live simulation instead of warning and dropp
 });
 
 test('it clears the dirty flag once the server push succeeds', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const context = createStubWorkerContext({ client: ctx.client });
 
   const message: SetFailureActionMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     failureAction: ActivityFailureAction.Retry,
     type: ClientMessageType.SetFailureAction,
   };
@@ -84,16 +80,15 @@ test('it clears the dirty flag once the server push succeeds', async () => {
   const cached = await readFailureActionCache();
 
   expect(cached).toStrictEqual({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     dirty: false,
     failureAction: ActivityFailureAction.Retry,
   });
 });
 
 test('it keeps the dirty flag when the server push fails', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   server.use(
     mockActivityService.updateFailureAction.handler(() => {
@@ -104,7 +99,7 @@ test('it keeps the dirty flag when the server push fails', async () => {
   const context = createStubWorkerContext({ client: ctx.client });
 
   const message: SetFailureActionMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     failureAction: ActivityFailureAction.Retry,
     type: ClientMessageType.SetFailureAction,
   };
@@ -116,16 +111,15 @@ test('it keeps the dirty flag when the server push fails', async () => {
   const cached = await readFailureActionCache();
 
   expect(cached).toStrictEqual({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     dirty: true,
     failureAction: ActivityFailureAction.Retry,
   });
 });
 
 test('it broadcasts the effective failure action to every connection', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const channel = new MessageChannel();
 
@@ -138,7 +132,7 @@ test('it broadcasts the effective failure action to every connection', async () 
   });
 
   const message: SetFailureActionMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     failureAction: ActivityFailureAction.Retry,
     type: ClientMessageType.SetFailureAction,
   };

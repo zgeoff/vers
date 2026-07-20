@@ -9,7 +9,7 @@ import {
   createSimulation,
   runAttempt,
 } from '@vers/idle-core';
-import { createAuthedServiceClient } from '@vers/mock-services';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
@@ -80,12 +80,11 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
 }
 
 test('it broadcasts nothing for an avatar with no activity history', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -105,19 +104,18 @@ test('it broadcasts nothing for an avatar with no activity history', async () =>
 });
 
 test('it broadcasts capped and installs no simulation for a capped activity', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   await db.activityCollection.create({
     appendedHead: 5,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'capped',
     verifiedHead: 3,
   });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -133,13 +131,12 @@ test('it broadcasts capped and installs no simulation for a capped activity', as
 });
 
 test('it delivers a queued row for the resync-determined latest activity rather than sweeping it, while sweeping every other activity', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const activity = await db.activityCollection.create({
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(),
   });
 
@@ -151,7 +148,7 @@ test('it delivers a queued row for the resync-determined latest activity rather 
   );
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -171,9 +168,8 @@ test('it delivers a queued row for the resync-determined latest activity rather 
 });
 
 test('it sweeps every queued checkpoint when the avatar has no activity history', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   await writeQueuedCheckpoint(
     'stray-no-activity-activity',
@@ -181,7 +177,7 @@ test('it sweeps every queued checkpoint when the avatar has no activity history'
   );
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -193,16 +189,15 @@ test('it sweeps every queued checkpoint when the avatar has no activity history'
 });
 
 test('it keeps the queued rows of an activity that went live while the resync was running', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const viewer = await createViewer();
 
   await db.activityCollection.create({
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(),
   });
 
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   let releaseHeldFlush: (() => void) | undefined;
 
@@ -230,7 +225,7 @@ test('it keeps the queued rows of an activity that went live while the resync wa
   );
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -257,18 +252,17 @@ test('it keeps the queued rows of an activity that went live while the resync wa
 });
 
 test('it flushes a held checkpoint for a previously tracked, no-longer-latest activity before sweeping it', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const staleActivity = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(Date.now() - 60_000),
   });
 
   await db.activityCollection.create({
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(),
   });
 
@@ -303,7 +297,7 @@ test('it flushes a held checkpoint for a previously tracked, no-longer-latest ac
   expect(track).toHaveBeenCalledOnce();
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -319,12 +313,11 @@ test('it flushes a held checkpoint for a previously tracked, no-longer-latest ac
 });
 
 test('it reconstructs and installs a live simulation mid-stream, registering from the recovered cursor', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const activity = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(Date.now() - 2000),
   });
 
@@ -350,7 +343,7 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
   });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -388,12 +381,11 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
 });
 
 test('it reports a divergence via the checkpoint-stream-error channel and skips registration', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const activity = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(Date.now() - 2000),
   });
 
@@ -411,7 +403,7 @@ test('it reports a divergence via the checkpoint-stream-error channel and skips 
   });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -431,9 +423,8 @@ test('it reports a divergence via the checkpoint-stream-error channel and skips 
 });
 
 test('it fast-forwards a short gap, broadcasts progress and final tallies, and installs a registered live sim on the final active row', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; a 63s gap
   // leaves just under 3s of budget for the next continuation, too little for any encounter to
@@ -441,13 +432,13 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
   // unregistered final row regardless of its own random seed
   const activity = await db.activityCollection.create({
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
     startedAt: new Date(Date.now() - 63_000),
   });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -470,7 +461,7 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
   // the completed attempt's terminal batch closed the seeded row, so the backend holds exactly
   // one fresh active continuation for the avatar
   const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   invariant(minted !== undefined, 'expected the fast-forward to mint an active continuation');
@@ -501,9 +492,8 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
 });
 
 test('it reconstructs a fast-forward report left mid-stream and registers from its recovered cursor', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time with one
   // confirmed ("started") checkpoint at its head; a 20s gap is enough to pick the fast-forward
@@ -511,13 +501,13 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
   // attempted, reporting back the very row the resync started from
   const activity = await db.activityCollection.create({
     appendedHead: 1,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
     startedAt: new Date(Date.now() - 20_000),
   });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -562,18 +552,17 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
 });
 
 test('it attaches a fresh login live without broadcasting any catch-up status', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const activity = await db.activityCollection.create({
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(),
   });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -596,18 +585,17 @@ test('it attaches a fresh login live without broadcasting any catch-up status', 
 });
 
 test('it adopts a server-persisted retry preference during resync, caching and broadcasting the change', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ failureAction: 'retry', userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer({ avatar: { failureAction: 'retry' } });
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   await db.activityCollection.create({
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(),
   });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -624,35 +612,38 @@ test('it adopts a server-persisted retry preference during resync, caching and b
   const cached = await readFailureActionCache();
 
   expect(cached).toStrictEqual({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     dirty: false,
     failureAction: ActivityFailureAction.Retry,
   });
 });
 
 test('it flushes a dirty local failure action to the server during resync, clearing dirty on success', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ failureAction: ActivityFailureAction.Retry, userID: user.id });
+  const viewer = await createViewer();
+
+  const ctx = await setupTest({
+    failureAction: ActivityFailureAction.Retry,
+    userID: viewer.user.id,
+  });
 
   ctx.context.setFailureActionDirty(true);
 
   // the dirty value lives in the persisted outbox, scoped to this avatar — the record's avatar is
   // what lets the resync flush it rather than adopt the server's
   await writeFailureActionCache({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     dirty: true,
     failureAction: ActivityFailureAction.Retry,
   });
 
   await db.activityCollection.create({
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(),
   });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -663,28 +654,31 @@ test('it flushes a dirty local failure action to the server during resync, clear
   const cached = await readFailureActionCache();
 
   expect(cached).toStrictEqual({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     dirty: false,
     failureAction: ActivityFailureAction.Retry,
   });
 
-  const updatedAvatar = db.avatarCollection.findFirst((q) => q.where({ id: avatar.id }));
+  const updatedAvatar = db.avatarCollection.findFirst((q) => q.where({ id: viewer.avatar.id }));
 
   invariant(updatedAvatar !== undefined, 'expected the seeded avatar to still exist');
   expect(updatedAvatar.failureAction).toBe('retry');
 });
 
 test('it keeps the dirty flag when the resync push to the server fails', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ failureAction: ActivityFailureAction.Retry, userID: user.id });
+  const viewer = await createViewer();
+
+  const ctx = await setupTest({
+    failureAction: ActivityFailureAction.Retry,
+    userID: viewer.user.id,
+  });
 
   ctx.context.setFailureActionDirty(true);
 
   // the dirty value lives in the persisted outbox, scoped to this avatar — a failed push must leave
   // that record intact for the next resync to retry
   await writeFailureActionCache({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     dirty: true,
     failureAction: ActivityFailureAction.Retry,
   });
@@ -697,12 +691,12 @@ test('it keeps the dirty flag when the resync push to the server fails', async (
 
   await db.activityCollection.create({
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(),
   });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -714,36 +708,39 @@ test('it keeps the dirty flag when the resync push to the server fails', async (
   const cached = await readFailureActionCache();
 
   expect(cached).toStrictEqual({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     dirty: true,
     failureAction: ActivityFailureAction.Retry,
   });
 });
 
 test("it starts a fresh row, installs a live simulation with the worker's failure action, and clears the pending continuation", async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ failureAction: 'retry', userID: user.id });
-  const stopped = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+  const viewer = await createViewer({ avatar: { failureAction: 'retry' } });
+
+  const stopped = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
 
   const ctx = await setupTest({
     pendingContinuation: {
       activityID: stopped.id,
-      avatarID: avatar.id,
+      avatarID: viewer.avatar.id,
       scopeID: stopped.scopeID,
       scopeType: stopped.scopeType,
     },
-    userID: user.id,
+    userID: viewer.user.id,
   });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
   await handleRequestResyncMessage(ctx.context, message);
 
   const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   invariant(minted !== undefined, 'expected the continue plan to mint a fresh row');
@@ -758,9 +755,12 @@ test("it starts a fresh row, installs a live simulation with the worker's failur
 });
 
 test('it adopts a fresh row another session raced in ahead of the continuation and clears the pending continuation', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const stopped = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+  const viewer = await createViewer();
+
+  const stopped = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
 
   // the racing row lands between the resync's progress fetch and its start call, so it must not
   // exist when the plan is computed — the scripted handler mints it at start time and answers
@@ -769,7 +769,7 @@ test('it adopts a fresh row another session raced in ahead of the continuation a
     mockActivityService.startActivity.handler(async (opts) => {
       const racing = await db.activityCollection.create({
         appendedHead: 0,
-        avatarID: avatar.id,
+        avatarID: viewer.avatar.id,
         status: 'active',
       });
 
@@ -780,22 +780,22 @@ test('it adopts a fresh row another session raced in ahead of the continuation a
   const ctx = await setupTest({
     pendingContinuation: {
       activityID: stopped.id,
-      avatarID: avatar.id,
+      avatarID: viewer.avatar.id,
       scopeID: stopped.scopeID,
       scopeType: stopped.scopeType,
     },
-    userID: user.id,
+    userID: viewer.user.id,
   });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
   await handleRequestResyncMessage(ctx.context, message);
 
   const racing = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   invariant(racing !== undefined, 'expected the scripted handler to mint the racing row');
@@ -809,13 +809,16 @@ test('it adopts a fresh row another session raced in ahead of the continuation a
 });
 
 test('it halts at the boundary and keeps the pending continuation when the offline budget is spent', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const stopped = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+  const viewer = await createViewer();
+
+  const stopped = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
 
   const pending: PendingContinuation = {
     activityID: stopped.id,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     scopeID: stopped.scopeID,
     scopeType: stopped.scopeType,
   };
@@ -823,11 +826,11 @@ test('it halts at the boundary and keeps the pending continuation when the offli
   const ctx = await setupTest({
     pendingContinuation: pending,
     remainingBudgetMs: 0,
-    userID: user.id,
+    userID: viewer.user.id,
   });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -843,30 +846,33 @@ test('it halts at the boundary and keeps the pending continuation when the offli
   expect(ctx.context.getPendingContinuation()).toStrictEqual(pending);
 
   const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   expect(minted).toBeUndefined();
 });
 
 test('it keeps the pending continuation and reports offline when starting the continued row fails on transport', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const stopped = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+  const viewer = await createViewer();
+
+  const stopped = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
 
   const pending: PendingContinuation = {
     activityID: stopped.id,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     scopeID: stopped.scopeID,
     scopeType: stopped.scopeType,
   };
 
   server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
 
-  const ctx = await setupTest({ pendingContinuation: pending, userID: user.id });
+  const ctx = await setupTest({ pendingContinuation: pending, userID: viewer.user.id });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -883,13 +889,16 @@ test('it keeps the pending continuation and reports offline when starting the co
 });
 
 test('it clears the pending continuation and reports the resync failure status on a defined error other than CONFLICT', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const stopped = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+  const viewer = await createViewer();
+
+  const stopped = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
 
   const pending: PendingContinuation = {
     activityID: stopped.id,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     scopeID: stopped.scopeID,
     scopeType: stopped.scopeType,
   };
@@ -900,10 +909,10 @@ test('it clears the pending continuation and reports the resync failure status o
     }),
   );
 
-  const ctx = await setupTest({ pendingContinuation: pending, userID: user.id });
+  const ctx = await setupTest({ pendingContinuation: pending, userID: viewer.user.id });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -912,7 +921,10 @@ test('it clears the pending continuation and reports the resync failure status o
   await ctx.connection.waitForMessages(1);
 
   expect(ctx.connection.received).toStrictEqual([
-    { status: { avatarID: avatar.id, kind: 'failed' }, type: WorkerMessageType.ResyncStatus },
+    {
+      status: { avatarID: viewer.avatar.id, kind: 'failed' },
+      type: WorkerMessageType.ResyncStatus,
+    },
   ]);
 
   expect(ctx.context.getPendingContinuation()).toBeNull();
@@ -994,9 +1006,8 @@ test('it broadcasts session-expired without a fault report when the session is n
     disableDefaultIntegrations: true,
   });
 
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   server.use(
     mockActivityService.getLatestActivityProgress.handler((opts) => {
@@ -1005,7 +1016,7 @@ test('it broadcasts session-expired without a fault report when the session is n
   );
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -1015,7 +1026,7 @@ test('it broadcasts session-expired without a fault report when the session is n
 
   expect(ctx.connection.received).toStrictEqual([
     {
-      status: { avatarID: avatar.id, kind: 'session-expired' },
+      status: { avatarID: viewer.avatar.id, kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
     },
   ]);
@@ -1027,16 +1038,15 @@ test('it broadcasts session-expired without a fault report when the session is n
 test('it fails the resync while a raised stop is undelivered', async () => {
   server.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
 
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
-  await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+  await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
 
-  await writePendingStopIntent({ activityID: 'activity_stopped', avatarID: avatar.id });
+  await writePendingStopIntent({ activityID: 'activity_stopped', avatarID: viewer.avatar.id });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -1045,7 +1055,10 @@ test('it fails the resync while a raised stop is undelivered', async () => {
   await ctx.connection.waitForMessages(1);
 
   expect(ctx.connection.received).toStrictEqual([
-    { status: { avatarID: avatar.id, kind: 'failed' }, type: WorkerMessageType.ResyncStatus },
+    {
+      status: { avatarID: viewer.avatar.id, kind: 'failed' },
+      type: WorkerMessageType.ResyncStatus,
+    },
   ]);
 
   expect(ctx.context.getSimulation()).toBeNull();
@@ -1054,20 +1067,19 @@ test('it fails the resync while a raised stop is undelivered', async () => {
 
   expect(intent).toStrictEqual({
     activityID: 'activity_stopped',
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
   });
 });
 
 test('it delivers the held stop before planning, leaving the stopped run cleared', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
-  const row = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+  const row = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
 
-  await writePendingStopIntent({ activityID: row.id, avatarID: avatar.id });
+  await writePendingStopIntent({ activityID: row.id, avatarID: viewer.avatar.id });
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -1085,10 +1097,9 @@ test('it delivers the held stop before planning, leaving the stopped run cleared
 });
 
 test('it abandons the install when a stop lands mid-resync', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
-  const row = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+  const row = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
 
   // the stop lands while the progress fetch is in flight — the deviation answers with the live
   // row exactly as the stateful mock would, then advances the epoch as a concurrent stop does
@@ -1108,7 +1119,7 @@ test('it abandons the install when a stop lands mid-resync', async () => {
   );
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -1119,10 +1130,14 @@ test('it abandons the install when a stop lands mid-resync', async () => {
 });
 
 test('it stops back a continued row when a stop lands during its registration', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const previous = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const viewer = await createViewer();
+
+  const previous = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
+
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   // the stop lands while the continued row's registration is in flight — after the continue
   // plan's own epoch checks, in the last await before the install guard
@@ -1141,7 +1156,7 @@ test('it stops back a continued row when a stop lands during its registration', 
     client,
     pendingContinuation: {
       activityID: previous.id,
-      avatarID: avatar.id,
+      avatarID: viewer.avatar.id,
       scopeID: previous.scopeID,
       scopeType: previous.scopeType,
     },
@@ -1151,14 +1166,14 @@ test('it stops back a continued row when a stop lands during its registration', 
   contextHolder.current = context;
 
   await handleRequestResyncMessage(context, {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   });
 
   expect(context.getSimulation()).toBeNull();
 
   const revived = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   expect(revived).toBeUndefined();

@@ -5,7 +5,7 @@ import {
   createMockAvatarData,
   createMockEnemyData,
 } from '@vers/idle-core/test-utils';
-import { createAuthedServiceClient } from '@vers/mock-services';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
@@ -44,12 +44,11 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
 }
 
 test('it resolves to none for an avatar with no activity history', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const result = await runResync({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
         encounter: {
@@ -74,19 +73,18 @@ test('it resolves to none for an avatar with no activity history', async () => {
 });
 
 test('it rebases from the stop index without simulating when the activity is capped', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const activity = await db.activityCollection.create({
     appendedHead: 5,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'capped',
     verifiedHead: 3,
   });
 
   const result = await runResync({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
         encounter: {
@@ -121,20 +119,19 @@ test('it rebases from the stop index without simulating when the activity is cap
 });
 
 test('it attaches live when the gap is negligible, leaving the submitter untouched', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const activity = await db.activityCollection.create({
     appendedAt: new Date(Date.now() - 2000),
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'active',
     verifiedHead: 0,
   });
 
   const result = await runResync({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
         encounter: {
@@ -168,20 +165,19 @@ test('it attaches live when the gap is negligible, leaving the submitter untouch
 });
 
 test('it fast-forwards a real offline gap and reports the outcome', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   await db.activityCollection.create({
     appendedAt: new Date(Date.now() - 60_000),
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'active',
     verifiedHead: 0,
   });
 
   const result = await runResync({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
         encounter: {
@@ -213,14 +209,13 @@ test('it fast-forwards a real offline gap and reports the outcome', async () => 
 });
 
 test('it awaits onProgressFetched with the settled progress before planning a fast-forward', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const activity = await db.activityCollection.create({
     appendedAt: new Date(Date.now() - 60_000),
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'active',
     verifiedHead: 0,
   });
@@ -237,7 +232,7 @@ test('it awaits onProgressFetched with the settled progress before planning a fa
   });
 
   const resync = runResync({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
         encounter: {
@@ -276,14 +271,13 @@ test('it awaits onProgressFetched with the settled progress before planning a fa
 });
 
 test('it delivers checkpoints a previous worker left queued and plans against the head they advanced', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const activity = await db.activityCollection.create({
     appendedAt: new Date(Date.now() - 60_000),
     appendedHead: 5,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'active',
     verifiedHead: 0,
   });
@@ -299,7 +293,7 @@ test('it delivers checkpoints a previous worker left queued and plans against th
   );
 
   const result = await runResync({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
         encounter: {
@@ -333,14 +327,13 @@ test('it delivers checkpoints a previous worker left queued and plans against th
 });
 
 test('it refuses to plan while stranded checkpoints cannot be delivered', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ scheduleRetry: () => {}, userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ scheduleRetry: () => {}, userID: viewer.user.id });
 
   const activity = await db.activityCollection.create({
     appendedAt: new Date(Date.now() - 60_000),
     appendedHead: 5,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'active',
     verifiedHead: 0,
   });
@@ -358,7 +351,7 @@ test('it refuses to plan while stranded checkpoints cannot be delivered', async 
 
   expect(
     runResync({
-      avatarID: avatar.id,
+      avatarID: viewer.avatar.id,
       buildSimulationInput: (started) => ({
         activity: createMockActivityInput({
           encounter: {
@@ -382,20 +375,19 @@ test('it refuses to plan while stranded checkpoints cannot be delivered', async 
 });
 
 test('it downgrades a fast-forward to attach-live when the activity is already simulating live', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const activity = await db.activityCollection.create({
     appendedAt: new Date(Date.now() - 60_000),
     appendedHead: 3,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'active',
     verifiedHead: 0,
   });
 
   const result = await runResync({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
         encounter: {
@@ -422,14 +414,13 @@ test('it downgrades a fast-forward to attach-live when the activity is already s
 });
 
 test('it leaves a live activity queue untouched instead of draining it', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const activity = await db.activityCollection.create({
     appendedAt: new Date(Date.now() - 2000),
     appendedHead: 5,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'active',
     verifiedHead: 0,
   });
@@ -441,7 +432,7 @@ test('it leaves a live activity queue untouched instead of draining it', async (
   );
 
   const result = await runResync({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     buildSimulationInput: (started) => ({
       activity: createMockActivityInput({
         encounter: {

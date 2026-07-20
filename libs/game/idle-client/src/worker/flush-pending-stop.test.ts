@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { createAuthedServiceClient } from '@vers/mock-services';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
@@ -23,15 +23,19 @@ test('it reports none when no stop is held', async () => {
 });
 
 test('it flushes the queue, stops the row, and releases the intent', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const activity = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const viewer = await createViewer();
+
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
+
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client, submitter });
 
-  await writePendingStopIntent({ activityID: activity.id, avatarID: avatar.id });
+  await writePendingStopIntent({ activityID: activity.id, avatarID: viewer.avatar.id });
 
   const outcome = await flushPendingStop(context);
 
@@ -49,13 +53,12 @@ test('it flushes the queue, stops the row, and releases the intent', async () =>
 });
 
 test('it treats a missing row as delivered and releases the intent', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
 
-  await writePendingStopIntent({ activityID: 'activity_gone', avatarID: avatar.id });
+  await writePendingStopIntent({ activityID: 'activity_gone', avatarID: viewer.avatar.id });
 
   const outcome = await flushPendingStop(context);
 
@@ -67,15 +70,23 @@ test('it treats a missing row as delivered and releases the intent', async () =>
 });
 
 test('it never touches a row other than the targeted one', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ended = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
-  const newer = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const viewer = await createViewer();
+
+  const ended = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
+
+  const newer = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
+
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
 
-  await writePendingStopIntent({ activityID: ended.id, avatarID: avatar.id });
+  await writePendingStopIntent({ activityID: ended.id, avatarID: viewer.avatar.id });
 
   const outcome = await flushPendingStop(context);
 
