@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
@@ -11,7 +10,6 @@ import type {
   DisconnectMessage,
   InitializeMessage,
   RequestResyncMessage,
-  SetActivityMessage,
   SetFailureActionMessage,
   StartActivityMessage,
 } from '../types';
@@ -32,30 +30,6 @@ test('it installs a simulation on an initialize message', async () => {
   await handleClientMessage(context, channel.port2, event);
 
   expect(context.getSimulation()).not.toBeNull();
-});
-
-test('it starts the sent activity on the live simulation', async () => {
-  const context = createStubWorkerContext();
-
-  const channel = new MessageChannel();
-
-  const simulation = createSimulation();
-
-  context.setSimulation(simulation);
-
-  const activity = createMockActivityData();
-
-  const message: SetActivityMessage = {
-    activity,
-    type: ClientMessageType.SetActivity,
-  };
-
-  const event = new MessageEvent('message', { data: message });
-
-  await handleClientMessage(context, channel.port2, event);
-
-  expect(simulation.activity?.id).toBe(activity.id);
-  expect(simulation.avatar?.id).toBe(activity.avatarID);
 });
 
 test('it applies the sent failure action to the live simulation', async () => {

@@ -388,9 +388,9 @@ test('it fails an attach the resync could not install', async () => {
     submitter: createStubSubmitter(),
   });
 
-  // a resync already in flight makes the nested attach resync a no-op — the status must not
+  // the attach resync's own progress fetch fails, so it installs nothing — the status must not
   // promise a row the runtime never installed
-  context.setResyncInFlight(true);
+  server.use(mockActivityService.getLatestActivityProgress.handler(() => HttpResponse.error()));
 
   const message: StartActivityMessage = {
     avatarID: viewer.avatar.id,
@@ -404,9 +404,13 @@ test('it fails an attach the resync could not install', async () => {
 
   expect(context.getSimulation()).toBeNull();
 
-  await connection.waitForMessages(1);
+  await connection.waitForMessages(2);
 
   expect(connection.received).toStrictEqual([
+    {
+      status: { avatarID: viewer.avatar.id, kind: 'failed' },
+      type: WorkerMessageType.ResyncStatus,
+    },
     {
       requestID: message.requestID,
       status: { kind: 'failed' },

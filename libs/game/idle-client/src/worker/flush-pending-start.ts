@@ -13,8 +13,11 @@ export type PendingStartFlushResult =
 /**
  * Attempts delivery of the held continuation-start intent, installing nothing itself — a resync
  * that follows finds the row the delivery minted (returned as `started`) and attaches it through
- * its normal planning. A spent offline budget skips the attempt outright (`capped`), leaving the
- * caller to decide from fetched progress whether the intent is genuinely halted or just stale. A
+ * its normal planning. An intent held for a different avatar than the one resyncing is left
+ * untouched (`none`) — delivering it would mint a row the current resync never attaches, leaving
+ * it active with no local driver; the intent waits for its own avatar's resync. A spent offline
+ * budget skips the attempt outright (`capped`), leaving the caller to decide from fetched
+ * progress whether the intent is genuinely halted or just stale. A
  * `CONFLICT` naming the intent's own source row means its terminal append hasn't landed yet
  * (`blocked` — the intent stays for a later attempt); any other conflicting row is a genuinely
  * different claim on the avatar, which makes the intent stale — duplicate deliveries of the same
@@ -27,10 +30,11 @@ export type PendingStartFlushResult =
 export async function flushPendingStart(
   context: WorkerContext,
   entryEpoch: number,
+  avatarID: string,
 ): Promise<PendingStartFlushResult> {
   const intent = await readPendingStartIntent();
 
-  if (intent === undefined) {
+  if (intent === undefined || intent.avatarID !== avatarID) {
     return { outcome: 'none' };
   }
 

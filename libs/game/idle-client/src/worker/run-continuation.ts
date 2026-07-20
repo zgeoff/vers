@@ -6,8 +6,8 @@ import { removePendingStartIntent } from '../submission/remove-pending-start-int
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createRequestResyncMessage } from './create-request-resync-message';
-import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { hasStopIntervened } from './has-stop-intervened';
+import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 
@@ -28,24 +28,24 @@ import type { WorkerContext } from './types';
  * intent, and reports the worker offline rather than retrying inline — the next reconnect resync
  * rebuilds from the server's confirmed state and honors the intent. Any other rejection also
  * stops and uninstalls the simulation, but without the offline signal or an intent record: the
- * service answered, so the failure is the activity's, not the connection's. Every path past the
- * start call re-checks the stop epoch and the runtime's simulation/activity pair as they stood at
- * entry — a stop or a fresher selection that landed while the call was in flight owns the runtime
- * now, so a row this continuation itself started under a stop is stopped back durably, an adopted
- * foreign row is left running but not installed, and no intent is recorded for a run that no
- * longer exists.
+ * service answered, so the failure is the activity's, not the connection's. The flow runs as a
+ * lifecycle turn queued from the tick loop, so the entry guard is the staleness check: a queued
+ * turn whose simulation/activity pair no longer owns the runtime — a stop or a fresher selection
+ * ran while it waited — returns without touching anything. Past the start call only stops can
+ * interleave, and every path re-checks the stop epoch: a row this continuation itself started
+ * under a stop is stopped back durably, and no intent is recorded for a run that no longer
+ * exists.
  */
 export async function runContinuation(
   context: WorkerContext,
   simulation: Simulation,
   activity: Readonly<ActivityData>,
 ): Promise<void> {
-  const entryEpoch = context.getStopEpoch();
-  const entrySimulation = context.getSimulation();
-  const entryActivityID = context.getActivity()?.id;
+  if (context.getSimulation() !== simulation || context.getActivity()?.id !== activity.id) {
+    return;
+  }
 
-  const hasLostOwnership = () =>
-    context.getSimulation() !== entrySimulation || context.getActivity()?.id !== entryActivityID;
+  const entryEpoch = context.getStopEpoch();
 
   // keyed by the terminal row it succeeds: a retried delivery dedupes onto the first attempt's
   // row, while the next continuation carries a new key and conflicts as a distinct intent
@@ -65,10 +65,6 @@ export async function runContinuation(
       return;
     }
 
-    if (hasLostOwnership()) {
-      return;
-    }
-
     await startContinuationFrom(context, simulation, started);
 
     return;
@@ -82,7 +78,10 @@ export async function runContinuation(
     }
 
     await stopAndUninstall(context, simulation);
-    await handleRequestResyncMessage(context, createRequestResyncMessage(row.avatarID));
+
+    // called inner-to-inner: this flow already holds the mailbox turn, and queueing a resync
+    // behind itself would deadlock
+    await runResyncFlow(context, createRequestResyncMessage(row.avatarID), entryEpoch);
 
     return;
   }

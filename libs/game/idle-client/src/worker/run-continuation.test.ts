@@ -41,6 +41,8 @@ test('it adopts a fresh server-started row for the same scope and registers from
   const simulation = createSimulation();
   const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
@@ -76,6 +78,8 @@ test('it hands a foreign-claim CONFLICT to a resync that attaches the conflictin
   const simulation = createSimulation();
   const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
@@ -107,6 +111,8 @@ test('it stops the simulation and broadcasts offline on a transport failure', as
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
@@ -129,6 +135,8 @@ test('it records a durable start intent on a transport failure', async () => {
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
@@ -154,6 +162,8 @@ test('it stops the simulation and records a durable start intent on a same-row C
   const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
 
+  context.setSimulation(simulation);
+  context.setActivity(activity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, activity);
@@ -183,6 +193,8 @@ test('it records no start intent when the CONFLICT names a different, already-pr
   const simulation = createSimulation();
   const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
@@ -202,6 +214,8 @@ test('it records no start intent on a defined error other than CONFLICT', async 
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
@@ -218,6 +232,8 @@ test('it stops the row it started when a stop lands mid-flight', async () => {
   const simulation = createSimulation();
   const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   // the stop lands while the start call is in flight: the deviation answers with the row the
@@ -255,6 +271,8 @@ test('it records no start intent for a same-row CONFLICT after a stop lands', as
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   server.use(
@@ -290,6 +308,8 @@ test('it compensates a stop that lands while the intent write is committing', as
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
@@ -304,6 +324,8 @@ test('it leaves a replacement simulation installed when uninstalling after a sto
   const replacement = createSimulation();
   const previousActivity = createMockActivityData();
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   server.use(

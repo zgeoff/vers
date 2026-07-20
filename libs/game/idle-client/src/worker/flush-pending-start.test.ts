@@ -16,7 +16,7 @@ import { flushPendingStart } from './flush-pending-start';
 test('it reports none when no intent is held', async () => {
   const context = createStubWorkerContext({ submitter: createStubSubmitter() });
 
-  const result = await flushPendingStart(context, context.getStopEpoch());
+  const result = await flushPendingStart(context, context.getStopEpoch(), 'avatar_1');
 
   expect(result).toStrictEqual({ outcome: 'none' });
 });
@@ -40,7 +40,7 @@ test('it mints the continued row and releases the intent', async () => {
     scopeType: source.scopeType,
   });
 
-  const result = await flushPendingStart(context, context.getStopEpoch());
+  const result = await flushPendingStart(context, context.getStopEpoch(), viewer.avatar.id);
 
   const minted = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: viewer.avatar.id, status: 'active' }),
@@ -72,7 +72,7 @@ test('it keeps the intent while the source row still reads active', async () => 
     scopeType: source.scopeType,
   });
 
-  const result = await flushPendingStart(context, context.getStopEpoch());
+  const result = await flushPendingStart(context, context.getStopEpoch(), viewer.avatar.id);
 
   expect(result).toStrictEqual({ outcome: 'blocked' });
 
@@ -109,7 +109,7 @@ test('it releases a stale intent when a different claim owns the avatar', async 
     scopeType: departed.scopeType,
   });
 
-  const result = await flushPendingStart(context, context.getStopEpoch());
+  const result = await flushPendingStart(context, context.getStopEpoch(), viewer.avatar.id);
 
   expect(result).toStrictEqual({ outcome: 'stale' });
   expect(await readPendingStartIntent()).toBeUndefined();
@@ -118,6 +118,22 @@ test('it releases a stale intent when a different claim owns the avatar', async 
 
   invariant(survivor !== undefined, 'expected the foreign claim to survive');
   expect(survivor.status).toBe('active');
+});
+
+test("it leaves another avatar's intent untouched", async () => {
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+
+  await writePendingStartIntent({
+    activityID: 'activity_1',
+    avatarID: 'avatar_other',
+    scopeID: 'scope_1',
+    scopeType: 'mission',
+  });
+
+  const result = await flushPendingStart(context, context.getStopEpoch(), 'avatar_resyncing');
+
+  expect(result).toStrictEqual({ outcome: 'none' });
+  expect(await readPendingStartIntent()).not.toBeUndefined();
 });
 
 test('it skips the attempt and keeps the intent when the budget is spent', async () => {
@@ -133,7 +149,7 @@ test('it skips the attempt and keeps the intent when the budget is spent', async
     scopeType: 'mission',
   });
 
-  const result = await flushPendingStart(context, context.getStopEpoch());
+  const result = await flushPendingStart(context, context.getStopEpoch(), 'avatar_1');
 
   expect(result).toStrictEqual({ outcome: 'capped' });
 
@@ -157,7 +173,7 @@ test('it keeps the intent on a transport failure', async () => {
     scopeType: 'mission',
   });
 
-  const result = await flushPendingStart(context, context.getStopEpoch());
+  const result = await flushPendingStart(context, context.getStopEpoch(), 'avatar_1');
 
   expect(result).toStrictEqual({ outcome: 'undelivered' });
   expect(await readPendingStartIntent()).not.toBeUndefined();
@@ -179,7 +195,7 @@ test('it releases the intent and rethrows a defined error other than CONFLICT', 
     scopeType: 'mission',
   });
 
-  await expect(flushPendingStart(context, context.getStopEpoch())).toReject();
+  await expect(flushPendingStart(context, context.getStopEpoch(), 'avatar_1')).toReject();
 
   expect(await readPendingStartIntent()).toBeUndefined();
 });
@@ -223,7 +239,7 @@ test('it stops the minted row back when a stop lands while the start is in fligh
     }),
   );
 
-  const result = await flushPendingStart(context, entryEpoch);
+  const result = await flushPendingStart(context, entryEpoch, viewer.avatar.id);
 
   expect(result).toStrictEqual({ outcome: 'stopped' });
   expect(await readPendingStartIntent()).toBeUndefined();

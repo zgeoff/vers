@@ -5,22 +5,24 @@ import type { StartActivityMessage, StartStatus } from '../types';
 import { ClientMessageType } from '../types';
 import { createRequestResyncMessage } from './create-request-resync-message';
 import { createStartStatusMessage } from './create-start-status-message';
-import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { hasStopIntervened } from './has-stop-intervened';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
+import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
+import { withLifecycleTurn } from './with-lifecycle-turn';
 
 /**
  * Begins a run entirely inside the worker, broadcasting the outcome as a start status keyed by
  * the request id. A same-scope `CONFLICT` resyncs onto the running row and reports `attached`
  * only once the runtime holds it; a different-scope `CONFLICT` flushes that row, stops it
- * targeted, and retries. Flows run one at a time — the claim is taken at arrival, the flow waits
- * for its predecessor — so a stale flow can never stop a row a fresher one just attached. After
- * every await the claim is re-checked: a superseded flow reports `failed` and leaves its minted
- * row to the fresher flow's recovery; a stop landing mid-start stops the minted row back durably.
+ * targeted, and retries. The flow runs as a lifecycle turn — the claim is taken at arrival, the
+ * turn waits for its predecessors — so a stale flow can never stop a row a fresher one just
+ * attached. The claim is still re-checked after every await: a fresher request can land while
+ * this turn runs, and a superseded flow reports `failed`, leaving its minted row to the fresher
+ * flow's recovery; a stop landing mid-start stops the minted row back durably.
  */
 export async function handleStartActivityMessage(
   context: WorkerContext,
@@ -28,12 +30,9 @@ export async function handleStartActivityMessage(
 ): Promise<void> {
   context.setStartRequestID(message.requestID);
 
-  const previous = context.getStartFlow();
-
-  // the flow settles without rejecting — a throw would strand every queued start behind it
-  const flow = (async () => {
-    await previous;
-
+  await withLifecycleTurn(context, async () => {
+    // failures settle as a failed status rather than escaping into the mailbox's fault report —
+    // a tab is always waiting on this request id
     try {
       const status = await runStart(context, message);
 
@@ -42,11 +41,7 @@ export async function handleStartActivityMessage(
       reportWorkerFault('start', error);
       emitStartStatus(context, message.requestID, { kind: 'failed' });
     }
-  })();
-
-  context.setStartFlow(flow);
-
-  await flow;
+  });
 }
 
 async function runStart(
@@ -84,9 +79,10 @@ async function runStart(
 
   const row = error.data.activity;
 
-  // the requested scope is already running — a resync attaches its confirmed stream
+  // the requested scope is already running — a resync attaches its confirmed stream; called
+  // inner-to-inner, since queueing a turn from inside this turn would deadlock the mailbox
   if (row.scopeType === message.scopeType && row.scopeID === message.scopeID) {
-    await handleRequestResyncMessage(context, createRequestResyncMessage(message.avatarID));
+    await runResyncFlow(context, createRequestResyncMessage(message.avatarID), entryEpoch);
 
     // a resync can be skipped, gated, or abandoned without installing; reporting attached anyway
     // would leave the tab waiting forever on a run that never arrives

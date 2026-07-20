@@ -7,6 +7,7 @@ import { OFFLINE_CAP_WARNING_MS } from './offline-cap-warning-ms';
 import { pickPostTerminalAction } from './pick-post-terminal-action';
 import { runContinuation } from './run-continuation';
 import type { WorkerContext } from './types';
+import { withLifecycleTurn } from './with-lifecycle-turn';
 
 /**
  * Advances the simulation one tick, submits any checkpoint it yields, and resolves what follows a
@@ -78,13 +79,14 @@ export async function runSimulation(
 
   const activity = context.getActivity();
 
-  // A SetActivity or resync that landed while the terminal batch was awaited owns the runtime
-  // now — starting a continuation for this stale row would overwrite its activity and scope.
+  // A start or resync that landed while the terminal batch was awaited owns the runtime now —
+  // starting a continuation for this stale row would overwrite its activity and scope. The same
+  // guard re-runs inside the queued turn, which may wait behind further flows.
   if (context.getSimulation() !== simulation || activity?.id !== activityID) {
     return;
   }
 
-  await runContinuation(context, simulation, activity);
+  await withLifecycleTurn(context, () => runContinuation(context, simulation, activity));
 }
 
 function emitActivityCompleted(context: WorkerContext, activityID: string) {
