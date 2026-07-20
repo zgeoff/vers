@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
-import { createAuthedServiceClient } from '@vers/mock-services';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
@@ -133,17 +133,16 @@ test('it advances the stop epoch so in-flight installs abandon', async () => {
 });
 
 test('it delivers the targeted server stop and releases the intent', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const row = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const viewer = await createViewer();
+  const row = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client, submitter });
 
   await handleStopActivityMessage(context, {
     activityID: row.id,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.StopActivity,
   });
 
@@ -187,17 +186,16 @@ test('it keeps the intent held when delivery fails, with the local halt already 
 });
 
 test('it halts nothing but still delivers when no simulation is installed', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const row = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const viewer = await createViewer();
+  const row = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
   const entryEpoch = context.getStopEpoch();
 
   await handleStopActivityMessage(context, {
     activityID: row.id,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.StopActivity,
   });
 

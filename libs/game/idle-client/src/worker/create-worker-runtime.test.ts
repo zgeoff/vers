@@ -2,7 +2,7 @@ import { expect, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/browser';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction } from '@vers/idle-core';
-import { createAuthedServiceClient, resolveServiceURL } from '@vers/mock-services';
+import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
@@ -63,31 +63,30 @@ test('it seeds the boot state from the device-local failure-action cache before 
 });
 
 test('it retains the cached dirty flag across boot so the next resync flushes it to the server', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const viewer = await createViewer();
 
   await db.activityCollection.create({
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(),
   });
 
   await writeFailureActionCache({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     dirty: true,
     failureAction: ActivityFailureAction.Retry,
   });
 
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   using runtime = createWorkerRuntime({ client });
 
   const connection = createConnection(runtime);
 
-  connection.post({ avatarID: avatar.id, type: ClientMessageType.RequestResync });
+  connection.post({ avatarID: viewer.avatar.id, type: ClientMessageType.RequestResync });
 
   await waitFor(() => {
-    const updatedAvatar = db.avatarCollection.findFirst((q) => q.where({ id: avatar.id }));
+    const updatedAvatar = db.avatarCollection.findFirst((q) => q.where({ id: viewer.avatar.id }));
 
     expect(updatedAvatar?.failureAction).toBe('retry');
   });
@@ -185,14 +184,13 @@ test('it reports a fault to the error backend when a message makes its handler t
 });
 
 test('it resumes into a fresh row once a same-row CONFLICT resync drains a held terminal append', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
   // below collapses that wait into a single tick-loop frame
   const activity = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     encounterNode: { difficulty: 1 },
     seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
   });
@@ -225,7 +223,7 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
       clock.jump(65_000);
 
       const minted = db.activityCollection.findFirst((q) =>
-        q.where({ avatarID: avatar.id, status: 'active' }),
+        q.where({ avatarID: viewer.avatar.id, status: 'active' }),
       );
 
       invariant(minted !== undefined, 'expected the same-row CONFLICT resync to mint a fresh row');
@@ -244,14 +242,13 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
 });
 
 test('it resumes into a fresh row once a reconnect drains a held terminal append behind an offline continuation', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
   // below collapses that wait into a single tick-loop frame
   const activity = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     encounterNode: { difficulty: 1 },
     seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
   });
@@ -265,7 +262,7 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
     ),
     http.post(
       `${resolveServiceURL('activity')}/rpc/startActivity`,
-      makeFailFirstMatchHandler((input) => input['avatarID'] === avatar.id),
+      makeFailFirstMatchHandler((input) => input['avatarID'] === viewer.avatar.id),
     ),
   );
 
@@ -302,7 +299,7 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
 
   await waitFor(() => {
     const minted = db.activityCollection.findFirst((q) =>
-      q.where({ avatarID: avatar.id, status: 'active' }),
+      q.where({ avatarID: viewer.avatar.id, status: 'active' }),
     );
 
     invariant(minted !== undefined, 'expected the reconnect resync to mint a fresh row');
@@ -316,10 +313,9 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
 });
 
 test("it resumes the pending continuation's avatar on reconnect over an earlier avatar it resynced", async () => {
-  const user = await db.userCollection.create({});
-  const earlierAvatar = await db.avatarCollection.create({ userID: user.id });
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const viewer = await createViewer();
+  const avatar = await db.avatarCollection.create({ userID: viewer.user.id });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
   // below collapses that wait into a single tick-loop frame
@@ -354,7 +350,7 @@ test("it resumes the pending continuation's avatar on reconnect over an earlier 
 
   // the worker remembers this history-free avatar as its last resync target; the boundary failure
   // below must outrank that memory on reconnect or the pending continuation strands
-  connection.post({ avatarID: earlierAvatar.id, type: ClientMessageType.RequestResync });
+  connection.post({ avatarID: viewer.avatar.id, type: ClientMessageType.RequestResync });
   connection.post({ activity, type: ClientMessageType.SetActivity });
 
   await waitFor(

@@ -6,7 +6,7 @@ import {
   createMockAvatarData,
   createMockEnemyData,
 } from '@vers/idle-core/test-utils';
-import { createAuthedServiceClient } from '@vers/mock-services';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
@@ -44,13 +44,12 @@ async function runSimulationSteps(
 }
 
 test('it continues into a fresh server-started row if it fails and the failure action is retry', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   // the running row's terminal already landed server-side, so no active row blocks the start
   const sourceRow = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'stopped',
   });
 
@@ -74,7 +73,7 @@ test('it continues into a fresh server-started row if it fails and the failure a
   await runSimulationSteps(context, simulation, 100, 50);
 
   const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   invariant(minted !== undefined, 'the continuation minted an active row');
@@ -108,12 +107,11 @@ test('it does not continue if it fails and the failure action is abort', async (
 test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
   'it continues into a fresh server-started row if it completes, regardless of the failure action (%s)',
   async (failureAction) => {
-    const user = await db.userCollection.create({});
-    const avatar = await db.avatarCollection.create({ userID: user.id });
-    const ctx = await setupTest({ userID: user.id });
+    const viewer = await createViewer();
+    const ctx = await setupTest({ userID: viewer.user.id });
 
     const sourceRow = await db.activityCollection.create({
-      avatarID: avatar.id,
+      avatarID: viewer.avatar.id,
       status: 'stopped',
     });
 
@@ -146,7 +144,7 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
     await runSimulationSteps(context, simulation, 100, 700);
 
     const minted = db.activityCollection.findFirst((q) =>
-      q.where({ avatarID: avatar.id, status: 'active' }),
+      q.where({ avatarID: viewer.avatar.id, status: 'active' }),
     );
 
     invariant(minted !== undefined, 'the continuation minted an active row');
@@ -157,12 +155,11 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
 );
 
 test('it adopts a conflict row with no confirmed checkpoints as the continuation', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const sourceRow = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(Date.now() - 60_000),
     status: 'stopped',
   });
@@ -170,7 +167,7 @@ test('it adopts a conflict row with no confirmed checkpoints as the continuation
   // a live never-appended row already owns the avatar, so the start conflicts with it
   const conflictRow = await db.activityCollection.create({
     appendedHead: 0,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'active',
   });
 
@@ -199,12 +196,11 @@ test('it adopts a conflict row with no confirmed checkpoints as the continuation
 });
 
 test('it rebuilds through a resync when the conflict row already has confirmed checkpoints', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const sourceRow = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     startedAt: new Date(Date.now() - 60_000),
     status: 'stopped',
   });
@@ -213,7 +209,7 @@ test('it rebuilds through a resync when the conflict row already has confirmed c
   const conflictRow = await db.activityCollection.create({
     appendedAt: new Date(Date.now() - 2000),
     appendedHead: 1,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'active',
   });
 
@@ -254,9 +250,8 @@ test('it rebuilds through a resync when the conflict row already has confirmed c
 });
 
 test('it skips the continuation when a fresher activity replaced this row mid-submission', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const context = createStubWorkerContext({ client: ctx.client });
   const simulation = createSimulation();
@@ -266,7 +261,10 @@ test('it skips the continuation when a fresher activity replaced this row mid-su
   const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Retry });
 
   // a different row is tracked than the one the simulation runs — the fresher-owner signal
-  const trackedRow = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+  const trackedRow = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
 
   context.setActivity(trackedRow);
   context.setSimulation(simulation);
@@ -276,7 +274,7 @@ test('it skips the continuation when a fresher activity replaced this row mid-su
 
   // no continuation start reached the service: nothing was minted for the avatar
   const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   expect(minted).toBeUndefined();
