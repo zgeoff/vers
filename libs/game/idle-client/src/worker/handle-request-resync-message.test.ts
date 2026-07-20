@@ -16,6 +16,7 @@ import { waitFor } from '@vers/test-utils';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
+import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
@@ -24,6 +25,7 @@ import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
+import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
@@ -33,7 +35,7 @@ import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
-import type { PendingContinuation } from './types';
+import type { PendingContinuation, WorkerContext } from './types';
 
 interface SetupTestConfig {
   readonly failureAction?: ActivityFailureAction;
@@ -1114,4 +1116,54 @@ test('it abandons the install when a stop lands mid-resync', async () => {
 
   expect(ctx.context.getSimulation()).toBeNull();
   expect(ctx.context.getActivity()).toBeNull();
+});
+
+test('it stops back a continued row when a stop lands during its registration', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const previous = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+
+  // the stop lands while the continued row's registration is in flight — after the continue
+  // plan's own epoch checks, in the last await before the install guard
+  const contextHolder: { current?: WorkerContext } = {};
+
+  const submitter: CheckpointSubmitter = {
+    ...createStubSubmitter(),
+    registerActivity: mock(() => {
+      contextHolder.current?.advanceStopEpoch();
+
+      return Promise.resolve();
+    }),
+  };
+
+  const context = createStubWorkerContext({
+    client,
+    pendingContinuation: {
+      activityID: previous.id,
+      avatarID: avatar.id,
+      scopeID: previous.scopeID,
+      scopeType: previous.scopeType,
+    },
+    submitter,
+  });
+
+  contextHolder.current = context;
+
+  await handleRequestResyncMessage(context, {
+    avatarID: avatar.id,
+    type: ClientMessageType.RequestResync,
+  });
+
+  expect(context.getSimulation()).toBeNull();
+
+  const revived = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: avatar.id, status: 'active' }),
+  );
+
+  expect(revived).toBeUndefined();
+
+  const intent = await readPendingStopIntent();
+
+  expect(intent).toBeUndefined();
 });

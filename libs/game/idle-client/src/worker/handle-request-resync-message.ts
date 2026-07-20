@@ -392,7 +392,15 @@ async function startContinuedActivity(
 
   simulation.startActivity(input.avatar, input.activity);
 
-  setLiveSimulation(context, row, simulation, entryEpoch);
+  const installed = setLiveSimulation(context, row, simulation, entryEpoch);
+
+  // A stop that landed during the registration await left this freshly started row active on the
+  // server with nothing local driving it — the next resync would revive it — so it is stopped
+  // back durably, the same way any player stop delivers.
+  if (!installed && context.getStopEpoch() !== entryEpoch) {
+    await writePendingStopIntent({ activityID: row.id, avatarID: row.avatarID });
+    await flushPendingStop(context);
+  }
 }
 
 async function applyFastForward(
@@ -481,28 +489,34 @@ function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {
   );
 }
 
+/**
+ * Installs a resync's simulation as the live one, reporting whether it actually installed: a stop
+ * that landed after the resync began wins outright — installing would revive the run the player
+ * just ended, with the server row already closed against its appends — and a different activity
+ * that went live while the resync ran keeps its fresher claim.
+ */
 function setLiveSimulation(
   context: WorkerContext,
   activity: Readonly<ActivityData>,
   simulation: Simulation,
   entryEpoch: number,
-): void {
-  // A stop that landed after this resync began wins outright: installing would revive the run
-  // the player just ended, with the server row already closed against its appends.
+): boolean {
   if (context.getStopEpoch() !== entryEpoch) {
-    return;
+    return false;
   }
 
   const currentID = context.getSimulation()?.activity?.id;
 
   if (currentID !== undefined && currentID !== activity.id) {
-    return;
+    return false;
   }
 
   context.setActivity(activity);
   context.setSimulation(simulation);
 
   registerSimulationListeners(context, simulation);
+
+  return true;
 }
 
 function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>): void {
