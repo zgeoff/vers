@@ -8,6 +8,7 @@ import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
+import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
@@ -41,6 +42,8 @@ test('it adopts a fresh server-started row for the same scope and registers from
   const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
 
   await runContinuation(context, simulation, previousActivity);
 
@@ -76,6 +79,8 @@ test('it hands a foreign-claim CONFLICT to a resync that attaches the conflictin
   const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
 
   await runContinuation(context, simulation, previousActivity);
 
@@ -87,7 +92,10 @@ test('it hands a foreign-claim CONFLICT to a resync that attaches the conflictin
   expect(installed).not.toBe(simulation);
   expect(installed.activity?.id).toBe(conflictingActivity.id);
   expect(context.getActivity()).toStrictEqual(conflictingActivity);
-  expect(context.getPendingContinuation()).toBeNull();
+
+  const intent = await readPendingStartIntent();
+
+  expect(intent).toBeUndefined();
 
   expect(submitter.registerActivity).toHaveBeenCalledExactlyOnceWith({
     activityID: conflictingActivity.id,
@@ -107,6 +115,8 @@ test('it stops the simulation and broadcasts offline on a transport failure', as
   const previousActivity = createMockActivityData();
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
 
   await runContinuation(context, simulation, previousActivity);
 
@@ -129,14 +139,18 @@ test('it records a pending continuation on a transport failure', async () => {
   const previousActivity = createMockActivityData();
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(context.getPendingContinuation()).toStrictEqual({
-    activityID: previousActivity.id,
+  const intent = await readPendingStartIntent();
+
+  expect(intent).toStrictEqual({
     avatarID: previousActivity.avatarID,
     scopeID: previousActivity.scopeID,
     scopeType: previousActivity.scopeType,
+    startKey: `continue_${previousActivity.id}`,
   });
 });
 
@@ -154,16 +168,20 @@ test('it stops the simulation and records a pending continuation on a same-row C
   const simulation = createSimulation();
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+  context.setSimulation(simulation);
+  context.setActivity(activity);
 
   await runContinuation(context, simulation, activity);
 
   expect(simulation.activity).toBeNull();
 
-  expect(context.getPendingContinuation()).toStrictEqual({
-    activityID: activity.id,
+  const intent = await readPendingStartIntent();
+
+  expect(intent).toStrictEqual({
     avatarID: activity.avatarID,
     scopeID: activity.scopeID,
     scopeType: activity.scopeType,
+    startKey: `continue_${activity.id}`,
   });
 });
 
@@ -183,10 +201,14 @@ test('it records no pending continuation when the CONFLICT names a different, al
   const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(context.getPendingContinuation()).toBeNull();
+  const intent = await readPendingStartIntent();
+
+  expect(intent).toBeUndefined();
 });
 
 test('it records no pending continuation on a defined error other than CONFLICT', async () => {
@@ -202,10 +224,14 @@ test('it records no pending continuation on a defined error other than CONFLICT'
   const previousActivity = createMockActivityData();
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(context.getPendingContinuation()).toBeNull();
+  const intent = await readPendingStartIntent();
+
+  expect(intent).toBeUndefined();
 });
 
 test('it stops the row it started when a stop lands mid-flight', async () => {
@@ -233,6 +259,9 @@ test('it stops the row it started when a stop lands mid-flight', async () => {
       return started;
     }),
   );
+
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
 
   await runContinuation(context, simulation, previousActivity);
 
@@ -265,7 +294,9 @@ test('it records no pending continuation for a same-row CONFLICT after a stop la
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(context.getPendingContinuation()).toBeNull();
+  const intent = await readPendingStartIntent();
+
+  expect(intent).toBeUndefined();
 });
 
 test('it leaves a replacement simulation installed when uninstalling after a stop', async () => {
@@ -286,8 +317,14 @@ test('it leaves a replacement simulation installed when uninstalling after a sto
     }),
   );
 
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
+
   await runContinuation(context, simulation, previousActivity);
 
   expect(context.getSimulation()).toBe(replacement);
-  expect(context.getPendingContinuation()).toBeNull();
+
+  const intent = await readPendingStartIntent();
+
+  expect(intent).toBeUndefined();
 });

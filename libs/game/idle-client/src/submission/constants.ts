@@ -40,4 +40,11 @@ export const FAILURE_ACTION_PREFERENCE_KEY = 'failure-action';
  * target row the newer run's own start flow has already closed server-side.
  */
 export const PENDING_STOP_INTENT_KEY = 'pending-stop';
+
+/**
+ * The `preferences` record holding the one undelivered start intent — a continuation raised
+ * against a closing row, delivered once that row reads closed. A newer intent overwrites an
+ * older one; the worker drives one avatar at a time.
+ */
+export const PENDING_START_INTENT_KEY = 'pending-start';
 export const PREFERENCES_STORE_NAME = 'preferences';

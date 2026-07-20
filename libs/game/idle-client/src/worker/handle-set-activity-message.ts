@@ -8,12 +8,6 @@ export async function handleSetActivityMessage(
 ): Promise<void> {
   const simulation = context.getSimulation();
 
-  if (!simulation) {
-    console.warn('-- tried setting activity but no simulation');
-
-    return;
-  }
-
   const input = buildSimulationInput(message.activity, {
     failureAction: context.getFailureAction(),
   });
@@ -29,7 +23,6 @@ export async function handleSetActivityMessage(
   });
 
   context.setActivity(message.activity);
-  context.setPendingContinuation(null);
   simulation.startActivity(input.avatar, input.activity);
 
   await registration;

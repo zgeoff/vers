@@ -1,4 +1,4 @@
-import { ORPCError, isDefinedError, safe } from '@orpc/client';
+import { ORPCError, safe } from '@orpc/client';
 import type {
   ActivityData,
   ActivityFailureAction as ContractFailureAction,
@@ -19,14 +19,14 @@ import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import type { RequestResyncMessage, ResyncStatus } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
-import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createFailureActionStatusMessage } from './create-failure-action-status-message';
-import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { createResyncStatusMessage } from './create-resync-status-message';
+import { flushPendingStart } from './flush-pending-start';
 import { flushPendingStop } from './flush-pending-stop';
 import { hasStopIntervened } from './has-stop-intervened';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
+import { runOnLifecycleChain } from './run-on-lifecycle-chain';
 import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 
@@ -53,11 +53,31 @@ export async function handleRequestResyncMessage(
   context: WorkerContext,
   message: RequestResyncMessage,
 ): Promise<void> {
+  // single-flight across arrival and queueing: a request that lands while one is in flight or
+  // queued is dropped rather than stacked — a tab's retry re-requests it
   if (context.isResyncInFlight()) {
     return;
   }
 
   context.setResyncInFlight(true);
+
+  await runOnLifecycleChain(context, 'resync', async () => {
+    try {
+      await runResyncFlow(context, message);
+    } finally {
+      context.setResyncInFlight(false);
+    }
+  });
+}
+
+/**
+ * One resync request end to end, run inside an already-claimed lifecycle-chain slot — a running
+ * lifecycle flow resyncs by calling this directly, never by re-entering the chain.
+ */
+export async function runResyncFlow(
+  context: WorkerContext,
+  message: RequestResyncMessage,
+): Promise<void> {
   context.setResyncAvatarID(message.avatarID);
 
   // Captured before any await: every simulation install below re-checks it, so a stop the player
@@ -77,12 +97,16 @@ export async function handleRequestResyncMessage(
       return;
     }
 
+    // A held continuation delivers before the snapshot is fetched, so the row it mints is already
+    // in the snapshot and attaches like any other active row.
+    await flushPendingStart(context);
+
     const result = await runResync({
       avatarID: message.avatarID,
       buildSimulationInput: (activity) =>
         buildSimulationInput(activity, { failureAction: context.getFailureAction() }),
       client: context.getClient(),
-      isActivityLive: (activityID) => context.getSimulation()?.activity?.id === activityID,
+      isActivityLive: (activityID) => context.getSimulation().activity?.id === activityID,
       onProgress: (progress) => {
         emitResyncStatus(context, { ...progress, kind: 'fast-forwarding' });
       },
@@ -105,7 +129,6 @@ export async function handleRequestResyncMessage(
           toActivityFailureAction(progress.failureAction),
         );
       },
-      pendingContinuation: context.getPendingContinuation(),
       submitter: context.getSubmitter(),
     });
 
@@ -118,8 +141,6 @@ export async function handleRequestResyncMessage(
       reportWorkerFault('resync', error);
       emitResyncStatus(context, { avatarID: message.avatarID, kind: 'failed' });
     }
-  } finally {
-    context.setResyncInFlight(false);
   }
 }
 
@@ -205,10 +226,6 @@ function pickLatestActivityID(result: Readonly<ResyncResult>): string | undefine
     return undefined;
   }
 
-  if (result.plan.kind === 'continue') {
-    return result.plan.activity.id;
-  }
-
   return result.plan.context.activityID;
 }
 
@@ -231,12 +248,6 @@ async function applyResyncResult(
 
   if (result.plan.kind === 'attach-live') {
     await applyAttachLive(context, result.plan, result.progress, entryEpoch);
-
-    return;
-  }
-
-  if (result.plan.kind === 'continue') {
-    await applyContinue(context, result.plan, entryEpoch);
   }
 }
 
@@ -246,7 +257,7 @@ async function applyAttachLive(
   progress: ResyncResult['progress'],
   entryEpoch: number,
 ): Promise<void> {
-  if (context.getSimulation()?.activity?.id === plan.context.activityID) {
+  if (context.getSimulation().activity?.id === plan.context.activityID) {
     return;
   }
 
@@ -266,7 +277,7 @@ async function applyAttachLive(
 
     simulation.startActivity(input.avatar, input.activity);
 
-    setLiveSimulation(context, progress.activity, simulation, entryEpoch);
+    await setLiveSimulationOrStopBack(context, progress.activity, simulation, entryEpoch);
 
     return;
   }
@@ -288,100 +299,12 @@ async function applyAttachLive(
     previousNextSeed: reconstruction.lastCheckpoint.nextSeed,
   });
 
-  setLiveSimulation(context, progress.activity, reconstruction.simulation, entryEpoch);
-}
-
-/**
- * Starts the row a pending continuation wanted, now that its target reads closed. A spent budget
- * halts at the boundary, keeping the record. Duplicate deliveries dedupe server-side via the
- * start key, so a defined error is a genuinely different claim: the record clears and the error
- * rethrows into the caller's resync-failure handling. A transport failure keeps the record and
- * reports the worker offline for the next reconnect to retry.
- */
-async function applyContinue(
-  context: WorkerContext,
-  plan: Extract<ResyncPlan, { kind: 'continue' }>,
-  entryEpoch: number,
-): Promise<void> {
-  // A stop that landed while the plan was computed also cleared the pending continuation the plan
-  // was built from — the continuation intent died with the run the player ended.
-  if (hasStopIntervened(context, entryEpoch)) {
-    return;
-  }
-
-  invariant(
-    context.getPendingContinuation() !== null,
-    'a continue plan is only reached with a pending continuation',
+  await setLiveSimulationOrStopBack(
+    context,
+    progress.activity,
+    reconstruction.simulation,
+    entryEpoch,
   );
-
-  if (context.getRemainingBudgetMs() <= 0) {
-    emitCapStatus(context, 0, true);
-
-    return;
-  }
-
-  // the same key the live continuation carried, so this retry dedupes onto anything it minted
-  const [error, started] = await safe(
-    context.getClient().startActivity({
-      avatarID: plan.activity.avatarID,
-      scopeID: plan.activity.scopeID,
-      scopeType: plan.activity.scopeType,
-      startKey: `continue_${plan.activity.id}`,
-    }),
-  );
-
-  if (error === null) {
-    // The player ended the run while the start was in flight: the fresh row was raised on behalf
-    // of a run that no longer exists, so it is stopped the same durable way any player stop is.
-    if (hasStopIntervened(context, entryEpoch)) {
-      await submitStopIntent(context, started);
-
-      return;
-    }
-
-    await startContinuedActivity(context, started, entryEpoch);
-
-    context.setPendingContinuation(null);
-
-    return;
-  }
-
-  if (!isDefinedError(error)) {
-    emitConnectionStatus(context, false);
-
-    return;
-  }
-
-  context.setPendingContinuation(null);
-  throw error;
-}
-
-async function startContinuedActivity(
-  context: WorkerContext,
-  row: Readonly<ActivityData>,
-  entryEpoch: number,
-): Promise<void> {
-  const input = buildSimulationInput(row, { failureAction: context.getFailureAction() });
-
-  await context.getSubmitter().registerActivity({
-    activityID: row.id,
-    appendedHead: 0,
-    lastHash: row.startHash,
-    startChainIndex: row.startChainIndex,
-  });
-
-  const simulation = createSimulation();
-
-  simulation.startActivity(input.avatar, input.activity);
-
-  const installed = setLiveSimulation(context, row, simulation, entryEpoch);
-
-  // A stop that landed during the registration await left this freshly started row active on the
-  // server with nothing local driving it — the next resync would revive it — so it is stopped
-  // back durably, the same way any player stop delivers.
-  if (!installed && hasStopIntervened(context, entryEpoch)) {
-    await submitStopIntent(context, row);
-  }
 }
 
 async function applyFastForward(
@@ -431,7 +354,7 @@ async function applyFastForwardAttach(
 
     simulation.startActivity(input.avatar, input.activity);
 
-    setLiveSimulation(context, report.activity, simulation, entryEpoch);
+    await setLiveSimulationOrStopBack(context, report.activity, simulation, entryEpoch);
 
     return;
   }
@@ -460,7 +383,12 @@ async function applyFastForwardAttach(
     startChainIndex: report.activity.startChainIndex,
   });
 
-  setLiveSimulation(context, report.activity, reconstruction.simulation, entryEpoch);
+  await setLiveSimulationOrStopBack(
+    context,
+    report.activity,
+    reconstruction.simulation,
+    entryEpoch,
+  );
 }
 
 function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {
@@ -468,6 +396,24 @@ function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {
     checkpoint.type === ActivityCheckpointType.Completed ||
     checkpoint.type === ActivityCheckpointType.Failed
   );
+}
+
+/**
+ * Installs a resync's simulation, stopping the row back durably when a landed stop refused the
+ * install — the row would otherwise sit active on the server with nothing local driving it. A
+ * refusal to a fresher claim leaves the row to its owner.
+ */
+async function setLiveSimulationOrStopBack(
+  context: WorkerContext,
+  activity: Readonly<ActivityData>,
+  simulation: Simulation,
+  entryEpoch: number,
+): Promise<void> {
+  const installed = setLiveSimulation(context, activity, simulation, entryEpoch);
+
+  if (!installed && hasStopIntervened(context, entryEpoch)) {
+    await submitStopIntent(context, activity);
+  }
 }
 
 /**
@@ -486,7 +432,7 @@ function setLiveSimulation(
     return false;
   }
 
-  const currentID = context.getSimulation()?.activity?.id;
+  const currentID = context.getSimulation().activity?.id;
 
   if (currentID !== undefined && currentID !== activity.id) {
     return false;
@@ -521,22 +467,6 @@ function emitFailureActionStatus(
   failureAction: ActivityFailureAction,
 ): void {
   const message = createFailureActionStatusMessage(failureAction);
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
-  }
-}
-
-function emitCapStatus(context: WorkerContext, remainingMs: number, halted: boolean): void {
-  const message = createOfflineCapStatusMessage(remainingMs, halted);
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
-  }
-}
-
-function emitConnectionStatus(context: WorkerContext, online: boolean): void {
-  const message = createConnectionStatusMessage(online);
 
   for (const connection of context.connections) {
     connection.postMessage(message);

@@ -34,6 +34,18 @@ export interface PendingStopIntent {
   readonly avatarID: string;
 }
 
+/**
+ * A continuation the server hasn't confirmed yet, held durably so it survives worker restarts
+ * and offline gaps. `startKey` makes delivery idempotent: a retry converges on whatever row an
+ * earlier attempt already minted.
+ */
+export interface PendingStartIntent {
+  readonly avatarID: string;
+  readonly scopeID: string;
+  readonly scopeType: string;
+  readonly startKey: string;
+}
+
 export interface CheckpointQueueSchema extends DBSchema {
   'pending-checkpoints': {
     key: [string, number];
@@ -41,7 +53,7 @@ export interface CheckpointQueueSchema extends DBSchema {
   };
   preferences: {
     key: string;
-    value: FailureActionPreference | PendingStopIntent;
+    value: FailureActionPreference | PendingStartIntent | PendingStopIntent;
   };
 }
 

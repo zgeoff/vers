@@ -7,7 +7,7 @@ test('it creates a context with no connections and no simulation by default', ()
   const context = createStubWorkerContext();
 
   expect(context.connections.size).toBe(0);
-  expect(context.getSimulation()).toBeNull();
+  expect(context.getSimulation().activity).toBeNull();
 });
 
 test('it seeds the connections set from the given ports', () => {

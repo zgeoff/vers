@@ -188,9 +188,11 @@ there. A larger gap fast-forwards through one or more attempts first, then attac
 whichever continuation is still active when the budget runs out.
 
 A continuation the worker couldn't complete — a same-row race just after a terminal checkpoint, or a
-transport failure starting the next row — leaves a pending record that the next resync consults. A
-non-active row matching that record starts fresh once its terminal append is acknowledged. A player
-stop leaves no such record, so a stopped activity is never resumed.
+transport failure starting the next row — is held as a durable start intent. Intents deliver before
+a resync fetches its snapshot, so the row an intent mints is already in the snapshot and attaches
+like any other active row; delivery is idempotent through the intent's start key, and a claim
+another device raced in moots the intent. A player stop clears any held intent, so a stopped
+activity is never resumed.
 
 ### The offline budget
 

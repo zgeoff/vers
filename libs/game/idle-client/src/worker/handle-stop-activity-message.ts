@@ -1,4 +1,6 @@
 import { createSimulation } from '@vers/idle-core';
+import { readPendingStartIntent } from '../submission/read-pending-start-intent';
+import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import type { StopActivityMessage } from '../types';
 import { createSimulationUpdateMessage } from './create-simulation-update-message';
 import { registerSimulationListeners } from './register-simulation-listeners';
@@ -27,11 +29,7 @@ export async function handleStopActivityMessage(
 
   context.advanceStopEpoch();
 
-  const simulation = context.getSimulation();
-
-  if (simulation !== null) {
-    await simulation.stopActivity();
-  }
+  await context.getSimulation().stopActivity();
 
   const replacement = createSimulation();
 
@@ -39,10 +37,16 @@ export async function handleStopActivityMessage(
 
   context.setSimulation(replacement);
   context.setActivity(null);
-  context.setPendingContinuation(null);
   context.resetRewardSlotLedger();
 
   emitClearedSnapshot(context);
+
+  // a held continuation dies with the run the player ended
+  const startIntent = await readPendingStartIntent();
+
+  if (startIntent !== undefined) {
+    await removePendingStartIntent(startIntent.startKey);
+  }
 
   await submitStopIntent(context, { avatarID: message.avatarID, id: message.activityID });
 }

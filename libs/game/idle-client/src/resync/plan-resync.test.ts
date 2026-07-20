@@ -27,49 +27,11 @@ test('it plans nothing for a stopped activity', () => {
   });
 });
 
-test('it plans nothing for a stopped activity when the pending continuation names a different row', () => {
-  const activity = createMockActivityData({ status: 'stopped' });
-
-  const plan = planResync({
-    pendingContinuation: {
-      activityID: 'a-different-activity',
-      avatarID: activity.avatarID,
-      scopeID: activity.scopeID,
-      scopeType: activity.scopeType,
-    },
-    progress: createMockLatestActivityProgress({ activity }),
-  });
-
-  expect(plan).toStrictEqual({ kind: 'none' });
-});
-
-test('it continues a stopped activity matching the pending continuation', () => {
-  const activity = createMockActivityData({ status: 'stopped' });
-
-  const plan = planResync({
-    pendingContinuation: {
-      activityID: activity.id,
-      avatarID: activity.avatarID,
-      scopeID: activity.scopeID,
-      scopeType: activity.scopeType,
-    },
-    progress: createMockLatestActivityProgress({ activity }),
-  });
-
-  expect(plan).toStrictEqual({ activity, kind: 'continue' });
-});
-
-test('it rebases a capped activity over a matching pending continuation', () => {
+test('it rebases a capped activity', () => {
   const activity = createMockActivityData({ appendedHead: 7, status: 'capped' });
   const progress = createMockLatestActivityProgress({ activity, appendedHead: 7 });
 
   const plan = planResync({
-    pendingContinuation: {
-      activityID: activity.id,
-      avatarID: activity.avatarID,
-      scopeID: activity.scopeID,
-      scopeType: activity.scopeType,
-    },
     progress,
   });
 

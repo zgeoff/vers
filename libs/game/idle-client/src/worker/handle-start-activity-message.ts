@@ -1,15 +1,16 @@
 import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
-import { createSimulation } from '@vers/idle-core';
+import { readPendingStartIntent } from '../submission/read-pending-start-intent';
+import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import type { StartActivityMessage, StartStatus } from '../types';
 import { ClientMessageType } from '../types';
 import { createRequestResyncMessage } from './create-request-resync-message';
 import { createStartStatusMessage } from './create-start-status-message';
-import { handleRequestResyncMessage } from './handle-request-resync-message';
+import { runResyncFlow } from './handle-request-resync-message';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { hasStopIntervened } from './has-stop-intervened';
-import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
+import { runOnLifecycleChain } from './run-on-lifecycle-chain';
 import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 
@@ -28,12 +29,8 @@ export async function handleStartActivityMessage(
 ): Promise<void> {
   context.setStartRequestID(message.requestID);
 
-  const previous = context.getStartFlow();
-
-  // the flow settles without rejecting — a throw would strand every queued start behind it
-  const flow = (async () => {
-    await previous;
-
+  await runOnLifecycleChain(context, 'start', async () => {
+    // a throw still answers the tab — an unreported outcome would leave it spinning
     try {
       const status = await runStart(context, message);
 
@@ -42,11 +39,7 @@ export async function handleStartActivityMessage(
       reportWorkerFault('start', error);
       emitStartStatus(context, message.requestID, { kind: 'failed' });
     }
-  })();
-
-  context.setStartFlow(flow);
-
-  await flow;
+  });
 }
 
 async function runStart(
@@ -86,11 +79,11 @@ async function runStart(
 
   // the requested scope is already running — a resync attaches its confirmed stream
   if (row.scopeType === message.scopeType && row.scopeID === message.scopeID) {
-    await handleRequestResyncMessage(context, createRequestResyncMessage(message.avatarID));
+    await runResyncFlow(context, createRequestResyncMessage(message.avatarID));
 
     // a resync can be skipped, gated, or abandoned without installing; reporting attached anyway
     // would leave the tab waiting forever on a run that never arrives
-    if (context.getSimulation()?.activity?.id !== row.id) {
+    if (context.getSimulation().activity?.id !== row.id) {
       return { kind: 'failed' };
     }
 
@@ -158,17 +151,14 @@ async function setLiveStartedRow(
     return { kind: 'failed' };
   }
 
-  // a worker that never saw an initialize has no simulation; a silently skipped install would
-  // leave the tab spinning on a started run
-  if (context.getSimulation() === null) {
-    const simulation = createSimulation();
-
-    registerSimulationListeners(context, simulation);
-
-    context.setSimulation(simulation);
-  }
-
   await handleSetActivityMessage(context, { activity: row, type: ClientMessageType.SetActivity });
+
+  // a held continuation is moot once the player starts a run of their own choosing
+  const startIntent = await readPendingStartIntent();
+
+  if (startIntent !== undefined && startIntent.startKey !== message.requestID) {
+    await removePendingStartIntent(startIntent.startKey);
+  }
 
   // the install's registration await is this flow's last yield; a request that arrived during it
   // owns the claim, and its queued flow will replace this install

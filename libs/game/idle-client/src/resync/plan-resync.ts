@@ -1,12 +1,10 @@
 import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import { PROGRESS_FLUSH_INTERVAL_MS } from '../submission/constants';
 import type { ActivitySubmissionContext } from '../submission/types';
-import type { PendingContinuation } from '../worker/types';
 import type { LatestActivityProgress, ResyncPlan } from './types';
 
 interface PlanResyncInput {
   readonly capMs?: number;
-  readonly pendingContinuation?: PendingContinuation | null;
   readonly progress: LatestActivityProgress;
 }
 
@@ -15,10 +13,8 @@ interface PlanResyncInput {
  * entirely from server data — the server clock minus the last append (or the start, for a stream
  * that never appended) — so a skewed local clock can neither inflate nor starve the budget, and
  * the budget never exceeds the cap. A capped activity resolves to a rebase from its exact stop
- * index rather than trusting any locally derived cursor, taking priority over a pending
- * continuation. A non-active row matching a pending continuation's target plans `continue`
- * instead of `none` — the pending intent is stale, and ignored, when it names a different row than
- * the one fetched.
+ * index rather than trusting any locally derived cursor. A non-active row plans nothing: pending
+ * intents deliver before the snapshot is fetched, so whatever they mint is already in it.
  */
 export function planResync(input: Readonly<PlanResyncInput>): ResyncPlan {
   const capMs = input.capMs ?? OFFLINE_PROGRESS_CAP_MS;
@@ -36,10 +32,6 @@ export function planResync(input: Readonly<PlanResyncInput>): ResyncPlan {
   }
 
   if (activity.status !== 'active') {
-    if (input.pendingContinuation?.activityID === activity.id) {
-      return { activity, kind: 'continue' };
-    }
-
     return { kind: 'none' };
   }
 

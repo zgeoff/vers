@@ -8,8 +8,10 @@ import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
+import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
+import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
@@ -25,11 +27,11 @@ test('it halts the live simulation and clears the runtime', async () => {
   context.setSimulation(simulation);
   context.setActivity(activity);
 
-  context.setPendingContinuation({
-    activityID: activity.id,
+  await writePendingStartIntent({
     avatarID: activity.avatarID,
     scopeID: activity.scopeID,
     scopeType: activity.scopeType,
+    startKey: `continue_${activity.id}`,
   });
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
@@ -42,7 +44,10 @@ test('it halts the live simulation and clears the runtime', async () => {
 
   expect(simulation.activity).toBeNull();
   expect(context.getActivity()).toBeNull();
-  expect(context.getPendingContinuation()).toBeNull();
+
+  const startIntent = await readPendingStartIntent();
+
+  expect(startIntent).toBeUndefined();
 });
 
 test('it replaces the stopped simulation with a fresh empty one', async () => {

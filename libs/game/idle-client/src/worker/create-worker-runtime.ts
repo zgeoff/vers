@@ -1,11 +1,12 @@
 import type { ActivityData } from '@vers/contract-activity';
 import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
-import { ActivityFailureAction, SIMULATION_TIMESTEP_MS } from '@vers/idle-core';
+import { ActivityFailureAction, SIMULATION_TIMESTEP_MS, createSimulation } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
+import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import type { ClientMessage, RewardSlotLedgerEntry, WorkerMessage } from '../types';
 import { createCheckpointFlushStalledMessage } from './create-checkpoint-flush-stalled-message';
@@ -16,9 +17,10 @@ import { createRequestResyncMessage } from './create-request-resync-message';
 import { flushPendingStop } from './flush-pending-stop';
 import { handleClientMessage } from './handle-client-message';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
+import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
 import { runSimulation } from './run-simulation';
-import type { PendingContinuation, WorkerContext } from './types';
+import type { WorkerContext } from './types';
 
 export interface WorkerRuntime {
   readonly connections: ReadonlySet<MessagePort>;
@@ -62,13 +64,13 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   const connections = new Set<MessagePort>();
 
   const client = options.client ?? createActivityServiceClient();
-  let simulation: null | Simulation = null;
+  const initialSimulation = createSimulation();
+  let simulation: Simulation = initialSimulation;
   let activity: ActivityData | null = null;
   let running = false;
   let stopped = false;
   let lastFrameTime = now();
   let accumulator = 0;
-  let pendingContinuation: PendingContinuation | null = null;
   let resyncAvatarID: string | null = null;
   let resyncInFlight = false;
   let failureAction: ActivityFailureAction = ActivityFailureAction.Abort;
@@ -76,7 +78,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let failureActionPushInFlight = false;
   let stopEpoch = 0;
   let startRequestID: null | string = null;
-  let startFlow: Readonly<Promise<void>> = Promise.resolve();
+  let lifecycleFlow: Readonly<Promise<void>> = Promise.resolve();
 
   // Every client message and the self-triggered reconnect resync await this before running, so a
   // relaunch-while-offline never plans against the enum's Abort default while the real cached
@@ -138,7 +140,6 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     getActivity: () => activity,
     getClient: () => client,
     getFailureAction: () => failureAction,
-    getPendingContinuation: () => pendingContinuation,
     getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
     getResyncAvatarID: () => resyncAvatarID,
     getRewardSlotLedger: () => ({
@@ -146,7 +147,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
-    getStartFlow: () => startFlow,
+    getLifecycleFlow: () => lifecycleFlow,
     getStartRequestID: () => startRequestID,
     getStopEpoch: () => stopEpoch,
     getSubmitter: () => submitter,
@@ -182,17 +183,14 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
     },
-    setPendingContinuation: (pending) => {
-      pendingContinuation = pending;
-    },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
     },
     setResyncInFlight: (inFlight) => {
       resyncInFlight = inFlight;
     },
-    setStartFlow: (flow) => {
-      startFlow = flow;
+    setLifecycleFlow: (flow) => {
+      lifecycleFlow = flow;
     },
     setStartRequestID: (requestID) => {
       startRequestID = requestID;
@@ -201,6 +199,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       simulation = newSimulation;
     },
   };
+
+  registerSimulationListeners(context, initialSimulation);
 
   // cache our listeners so we can message them later
   const handleConnect = (event: MessageEvent) => {
@@ -251,11 +251,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     while (accumulator >= timestep) {
       accumulator -= timestep;
 
-      const currentSimulation = context.getSimulation();
-
-      if (currentSimulation) {
-        await runSimulation(context, currentSimulation, timestep);
-      }
+      await runSimulation(context, context.getSimulation(), timestep);
     }
 
     lastFrameTime = frameNow;
@@ -293,11 +289,13 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
         // below is skipped while a simulation is live, and after a stop one always is.
         await flushPendingStop(context);
 
-        // the pending continuation is always the fresher signal: it was recorded at the most
-        // recent boundary failure, while the remembered resync avatar can predate it
-        const avatarID = pendingContinuation?.avatarID ?? resyncAvatarID ?? null;
+        // the held continuation is the fresher signal: it was raised at the most recent boundary
+        // failure, while the remembered resync avatar can predate it
+        const startIntent = await readPendingStartIntent();
 
-        if (context.getSimulation() === null && avatarID !== null) {
+        const avatarID = startIntent?.avatarID ?? resyncAvatarID ?? null;
+
+        if (context.getActivity() === null && avatarID !== null) {
           await handleRequestResyncMessage(context, createRequestResyncMessage(avatarID));
         }
       } catch (error) {

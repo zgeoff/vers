@@ -9,7 +9,6 @@ export type LatestActivityProgress = Awaited<
  * The action a resync snapshot resolves to, decided before any simulation runs: `fast-forward`
  * re-simulates the offline gap up to its budget, `attach-live` resumes live submission with no
  * catch-up worth simulating, `rebase` restarts bookkeeping from a capped activity's stop index,
- * `continue` starts the next row a pending continuation wanted once its target row reads closed,
  * and `none` means no resumable activity exists.
  */
 export type ResyncPlan =
@@ -20,7 +19,6 @@ export type ResyncPlan =
     }
   | { readonly context: ActivitySubmissionContext; readonly kind: 'attach-live' }
   | { readonly context: ActivitySubmissionContext; readonly kind: 'rebase' }
-  | { readonly activity: ActivityData; readonly kind: 'continue' }
   | { readonly kind: 'none' };
 
 export interface FastForwardProgress {

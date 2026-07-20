@@ -1,11 +1,14 @@
 import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
-import { buildSimulationInput } from '@vers/idle-core';
+import { buildSimulationInput, createSimulation } from '@vers/idle-core';
+import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createRequestResyncMessage } from './create-request-resync-message';
-import { handleRequestResyncMessage } from './handle-request-resync-message';
+import { runResyncFlow } from './handle-request-resync-message';
 import { hasStopIntervened } from './has-stop-intervened';
+import { registerSimulationListeners } from './register-simulation-listeners';
+import { runOnLifecycleChain } from './run-on-lifecycle-chain';
 import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 
@@ -38,12 +41,23 @@ export async function runContinuation(
   simulation: Simulation,
   activity: Readonly<ActivityData>,
 ): Promise<void> {
-  const entryEpoch = context.getStopEpoch();
-  const entrySimulation = context.getSimulation();
-  const entryActivityID = context.getActivity()?.id;
+  await runOnLifecycleChain(context, 'continuation', () =>
+    runContinuationFlow(context, simulation, activity),
+  );
+}
 
-  const hasLostOwnership = () =>
-    context.getSimulation() !== entrySimulation || context.getActivity()?.id !== entryActivityID;
+async function runContinuationFlow(
+  context: WorkerContext,
+  simulation: Simulation,
+  activity: Readonly<ActivityData>,
+): Promise<void> {
+  const entryEpoch = context.getStopEpoch();
+
+  // the chain serialized any queued lifecycle work behind this flow, but the runtime may already
+  // have moved past the terminal row before this flow got its turn
+  if (context.getSimulation() !== simulation || context.getActivity()?.id !== activity.id) {
+    return;
+  }
 
   // keyed by the terminal row it succeeds: a retried delivery dedupes onto the first attempt's
   // row, while the next continuation carries a new key and conflicts as a distinct intent
@@ -63,10 +77,6 @@ export async function runContinuation(
       return;
     }
 
-    if (hasLostOwnership()) {
-      return;
-    }
-
     await startContinuationFrom(context, simulation, started);
 
     return;
@@ -76,20 +86,20 @@ export async function runContinuation(
     const row = error.data.activity;
 
     if (row.id === activity.id && !hasStopIntervened(context, entryEpoch)) {
-      setPendingContinuation(context, activity);
+      await parkContinuation(activity);
     }
 
-    await stopAndUninstall(context, simulation);
-    await handleRequestResyncMessage(context, createRequestResyncMessage(row.avatarID));
+    await stopAndClear(context, simulation);
+    await runResyncFlow(context, createRequestResyncMessage(row.avatarID));
 
     return;
   }
 
-  await stopAndUninstall(context, simulation);
+  await stopAndClear(context, simulation);
 
   if (!isDefinedError(error)) {
     if (!hasStopIntervened(context, entryEpoch)) {
-      setPendingContinuation(context, activity);
+      await parkContinuation(activity);
     }
 
     emitConnectionStatus(context, false);
@@ -115,23 +125,33 @@ async function startContinuationFrom(
 }
 
 /**
- * Stops this continuation's own simulation and uninstalls it — but only while it still owns the
- * runtime; a stop or a fresher selection may have installed a replacement this must not evict.
+ * Stops this continuation's own simulation and clears the runtime to an empty replacement — but
+ * only while it still owns the runtime; a stop may have installed a replacement this must not
+ * evict. The stopped instance retains avatar and combat state, so it never stays installed.
  */
-async function stopAndUninstall(context: WorkerContext, simulation: Simulation): Promise<void> {
+async function stopAndClear(context: WorkerContext, simulation: Simulation): Promise<void> {
   await simulation.stopActivity();
 
   if (context.getSimulation() === simulation) {
-    context.setSimulation(null);
+    const replacement = createSimulation();
+
+    registerSimulationListeners(context, replacement);
+
+    context.setSimulation(replacement);
+    context.setActivity(null);
   }
 }
 
-function setPendingContinuation(context: WorkerContext, activity: Readonly<ActivityData>): void {
-  context.setPendingContinuation({
-    activityID: activity.id,
+/**
+ * Sets this continuation aside as a durable start intent for a later reconnect or resync entry
+ * to deliver.
+ */
+async function parkContinuation(activity: Readonly<ActivityData>): Promise<void> {
+  await writePendingStartIntent({
     avatarID: activity.avatarID,
     scopeID: activity.scopeID,
     scopeType: activity.scopeType,
+    startKey: `continue_${activity.id}`,
   });
 }
 
