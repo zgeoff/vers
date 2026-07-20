@@ -42,10 +42,6 @@
     "typegen": {
       "outputs": ["src/routeTree.gen.ts"]
     },
-    "env-contract": {
-      "outputs": ["env-contract.generated.json"]
-    },
-    "env-contract:check": {},
     "typecheck": {
       "dependsOn": ["^typecheck", "codegen", "typegen"],
       "outputs": []

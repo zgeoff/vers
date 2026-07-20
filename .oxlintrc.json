@@ -182,7 +182,7 @@
           { "from": "package", "name": "Collection", "package": "@msw/data" },
           {
             "from": "package",
-            "name": ["CryptoKey", "Request", "Response", "AbortSignal", "URL"],
+            "name": ["CryptoKey", "Request", "Response", "AbortSignal"],
             "package": "@types/node"
           },
           {
