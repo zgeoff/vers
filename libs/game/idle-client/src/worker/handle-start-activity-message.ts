@@ -14,13 +14,12 @@ import { withLifecycleTurn } from './with-lifecycle-turn';
 
 /**
  * Begins a run entirely inside the worker, broadcasting the outcome as a start status keyed by
- * the request id. A same-scope `CONFLICT` resyncs onto the running row and reports `attached`
+ * the request id. A same-scope `CONFLICT` resyncs onto the running row, reporting `attached`
  * only once the runtime holds it; a different-scope `CONFLICT` flushes that row, stops it
- * targeted, and retries. The flow runs as a lifecycle turn — the claim is taken at arrival, the
- * turn waits for its predecessors — so a stale flow can never stop a row a fresher one just
- * attached. The claim is still re-checked after every await: a fresher request can land while
- * this turn runs, and a superseded flow reports `failed`, leaving its minted row to the fresher
- * flow's recovery; a stop landing mid-start stops the minted row back durably.
+ * targeted, and retries. The claim is taken at arrival and re-checked after every await — a
+ * fresher request can land while this turn runs, and a superseded flow reports `failed`, leaving
+ * its minted row to the fresher flow's recovery. A stop landing mid-start stops the minted row
+ * back durably.
  */
 export async function handleStartActivityMessage(
   context: WorkerContext,

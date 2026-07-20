@@ -13,29 +13,18 @@ import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 
 /**
- * Starts the next continuation after a terminal checkpoint. `simulation.restartActivity()` keeps
- * the same activity id, which the server has already closed to further appends on that terminal
- * checkpoint — an append onto it comes back `ACTIVITY_TERMINAL` and kills the stream. This instead
- * starts a fresh server row for the same scope, continuing the same RNG chain the terminal
- * checkpoint's `nextSeed` anchors (the new row's own seed, by the seed-chain identity), and
- * registers submission against that row from a zero cursor. A duplicate delivery of this same
- * start succeeds idempotently server-side with the row it minted, so a `CONFLICT` always means a
- * genuinely different claim on the avatar — every one is handed to a full resync, which
- * reconstructs the confirmed stream before attaching; adopting a conflicting row from a zero
- * cursor would fork the checkpoint chain. The same-row case — this row's terminal append still
- * unacknowledged — also records a durable start intent, so a later resync's entry drain starts
- * the next row itself once the terminal append lands, and a worker reload in between loses
- * nothing. A transport failure stops and uninstalls the simulation, records the same durable
- * intent, and reports the worker offline rather than retrying inline — the next reconnect resync
- * rebuilds from the server's confirmed state and honors the intent. Any other rejection also
- * stops and uninstalls the simulation, but without the offline signal or an intent record: the
- * service answered, so the failure is the activity's, not the connection's. The flow runs as a
- * lifecycle turn queued from the tick loop, so the entry guard is the staleness check: a queued
- * turn whose simulation/activity pair no longer owns the runtime — a stop or a fresher selection
- * ran while it waited — returns without touching anything. Past the start call only stops can
- * interleave, and every path re-checks the stop epoch: a row this continuation itself started
- * under a stop is stopped back durably, and no intent is recorded for a run that no longer
- * exists.
+ * Starts the next continuation after a terminal checkpoint: a fresh server row for the same
+ * scope, continuing the RNG chain the terminal checkpoint's `nextSeed` anchors, registered from
+ * a zero cursor. Restarting the same row is impossible — the server closed it to appends on the
+ * terminal checkpoint. Duplicate deliveries dedupe on the start key, so a `CONFLICT` is a
+ * genuinely different claim and is handed to a full resync — adopting a conflicting row from a
+ * zero cursor would fork the checkpoint chain. The same-row case (terminal append still
+ * unacknowledged) and a transport failure both park a durable start intent for a later resync's
+ * drain, surviving a worker reload; any other rejection parks nothing — the service answered, so
+ * the failure is the activity's, not the connection's. Queued from the tick loop, the entry
+ * guard is the staleness check: a turn whose simulation/activity pair lost the runtime while it
+ * waited returns untouched. Past the start call only stops can interleave; a row started under
+ * one is stopped back durably.
  */
 export async function runContinuation(
   context: WorkerContext,
@@ -130,12 +119,10 @@ async function stopAndReset(context: WorkerContext, simulation: Simulation): Pro
 }
 
 /**
- * Records the durable start intent, then re-checks the stop epoch and compensates: the caller's
- * pre-write guard is a synchronous check, and a stop — always concurrent with lifecycle flows —
- * can land and run its own unconditional intent removal in the gap before this write's
- * transaction commits. Readwrite transactions on the store run in creation order, so a
- * compensating remove issued after the write settles is ordered after the stop's removal — a
- * ghost intent can never survive to revive the run the player just ended.
+ * Parks the durable start intent, then re-checks the stop epoch and compensates: a stop can land
+ * its own unconditional removal in the gap before this write's transaction commits. Readwrite
+ * transactions on the store run in creation order, so the compensating remove is ordered after
+ * the stop's — a ghost intent never survives to revive the run the player ended.
  */
 async function parkContinuation(
   context: WorkerContext,

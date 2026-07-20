@@ -11,24 +11,16 @@ export type PendingStartFlushResult =
   | { readonly outcome: 'delivered'; readonly started: Readonly<ActivityData> };
 
 /**
- * Attempts delivery of the held continuation-start intent, installing nothing itself — a resync
- * that follows finds the row the delivery minted (returned as `started`) and attaches it through
- * its normal planning. An intent held for a different avatar than the one resyncing is left
- * untouched (`none`) — delivering it would mint a row the current resync never attaches, leaving
- * it active with no local driver; the intent waits for its own avatar's resync (a fresh
- * player-chosen start still clears it, whichever avatar installs). A spent offline budget skips
- * the attempt outright (`capped`), leaving the caller to decide from fetched progress whether the
- * intent is genuinely halted or just stale. A `CONFLICT` naming the intent's own source row means
- * its terminal append hasn't landed yet (`blocked` — the intent stays for a later attempt); any
- * other conflicting row is a genuinely different claim on the avatar, which makes the intent
- * stale — duplicate deliveries of the same intent dedupe server-side on the start key, so they
- * never read as conflicts. An `UNAUTHORIZED` or `FORBIDDEN` rejection keeps the intent and
- * rethrows — the session lapsing says nothing about the continuation, and dropping the record
- * here would lose it across the re-sign-in the broadcastable failure asks for. Any other defined
- * rejection is the service answering that the intent is dead: the record clears and the error
- * rethrows into the caller's failure handling. A transport failure keeps the intent held
- * (`undelivered`). A stop that lands while the start call is in flight has the freshly minted row
- * stopped back durably (`stopped`) — the run it was raised for no longer exists.
+ * Attempts delivery of the held continuation-start intent, installing nothing itself — the
+ * resync that follows fetches the minted row (`started`) and attaches it through normal
+ * planning. Another avatar's intent is left untouched: delivering it would mint a row this
+ * resync never attaches. A spent budget skips the attempt (`capped`); whether that is a real
+ * halt or a stale intent is the caller's call, from fetched progress. Same-key deliveries dedupe
+ * server-side, so a same-row `CONFLICT` means the terminal append hasn't landed (`blocked`) and
+ * any other `CONFLICT` is a different claim (`stale`). An auth rejection keeps the intent — the
+ * session lapsing says nothing about the continuation — while any other defined rejection is the
+ * service declaring it dead; both rethrow into the caller's failure handling. A stop landing
+ * mid-call has the minted row stopped back durably (`stopped`).
  */
 export async function flushPendingStart(
   context: WorkerContext,

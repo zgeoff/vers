@@ -35,24 +35,16 @@ import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 
 /**
- * Runs one resync end to end. This is the mailbox-inner body: the public message handler queues
- * it as a lifecycle turn, while the start flow and a continuation call it directly from inside
- * their own turns — queueing there would deadlock the mailbox on itself. `entryEpoch` is the
- * caller's stop-epoch capture; every simulation install re-checks it, so a stop the player raised
- * after the caller began — including while this flow sat queued — abandons the install instead of
- * reviving the stopped run. Only a plan that covers a real away period — a fast-forward or a
- * capped rebase — broadcasts a `ResyncStatus` progression, ending on `done` (or `capped`) so a
- * connected tab's welcome-back UI always resolves; a zero-gap outcome (live re-attach, no
- * activity) stays silent, so a fresh login never opens that UI. Once the plan settles, the
- * durable checkpoint queue is swept down to the determined latest activity plus whichever
- * activity is live at sweep time, since a prior worker lifetime's stranded rows for any other
- * activity have no delivery path and are worthless. A resync that fails outright forwards the
- * fault to the error backend and broadcasts a `failed` `ResyncStatus` for the requesting avatar,
- * never a connection-status change — connectivity is the connection layer's own signal, not a
- * resync outcome — and never rejects; a tab's retry re-requests it. One failure cause is routed
- * apart: an `UNAUTHORIZED` rejection broadcasts `session-expired` instead, with no fault report —
- * the session lapsing is expected behaviour whose only remedy is a fresh sign-in, so a tab
- * renders a sign-in path rather than a retry that can never succeed.
+ * Runs one resync end to end — the mailbox-inner body: the message handler queues it as a turn,
+ * while the start flow and continuations call it directly from inside their own turns (queueing
+ * there would deadlock). Every install re-checks `entryEpoch`, the caller's stop-epoch capture,
+ * so a stop raised after the caller began — including during a queue wait — aborts the install.
+ * Only a plan covering a real away period broadcasts a `ResyncStatus` progression ending on
+ * `done` or `capped`, so a tab's welcome-back UI always resolves; zero-gap outcomes stay silent
+ * so a fresh login never opens it. An outright failure reports the fault and broadcasts
+ * `failed`, never a connection-status change, and never rejects — a tab's retry re-requests it.
+ * `UNAUTHORIZED` broadcasts `session-expired` instead, with no fault report: the only remedy is
+ * a fresh sign-in, so the tab renders that rather than a futile retry.
  */
 export async function runResyncFlow(
   context: WorkerContext,
@@ -145,15 +137,11 @@ async function runResyncPass(
 
 /**
  * Settles the entry drain's outcome now that fetched progress can adjudicate it. A delivered
- * intent's minted row is stopped back durably when a stop kept the pass from installing it — the
- * run it continues no longer exists, and leaving it active would let the next resync revive it. A
- * `blocked` intent gets one retry — the pass's own queued-checkpoint drain may have closed the
- * source row — and a delivery there earns the single bounded second pass that attaches the minted
- * row; a retry that stays blocked keeps the intent for the next resync. A `capped` intent is
- * halted only while progress still names its source row: closed means
- * actionable-but-unaffordable (broadcast the cap halt, keep the intent), active means the
- * terminal append hasn't landed (keep silently) — any other row, or no history, means the intent
- * is stale and clears without a cap broadcast, which would otherwise repeat on every resync
+ * row a stop kept from installing is stopped back. A `blocked` intent gets one retry — the
+ * pass's own queued-checkpoint drain may have closed the source row — and a delivery there earns
+ * one bounded second pass to attach the minted row. A `capped` intent broadcasts the cap halt
+ * only while progress names its source row closed; a still-active source keeps silently, and any
+ * other row clears the intent without a broadcast, which would otherwise repeat on every resync
  * forever.
  */
 async function applyStartFlush(
@@ -270,13 +258,11 @@ async function updateFailureActionFromServer(
 }
 
 /**
- * Sweeps every queued checkpoint outside the resync's determined latest activity and the activity
- * live at sweep time — a fresher activity can go live while the resync is still running, and its
- * queued rows are its running writer's own pipeline, never stranded work. Outside those, a worker
- * restart has no delivery path for a stranded row, and the server settles rewards authoritatively,
- * so nothing else is ever worth keeping. Returns the swept activity ids. Failure never fails the
- * resync: it only reports the fault and returns nothing swept, since a stranded row costs nothing
- * but disk until the next sweep.
+ * Sweeps every queued checkpoint outside the resync's determined latest activity and whichever
+ * activity is live at sweep time (its queue is its running writer's pipeline, never stranded
+ * work). Nothing else is worth keeping: a worker restart has no delivery path for a stranded row
+ * and the server settles rewards authoritatively. Failure only reports the fault — a stranded
+ * row costs nothing but disk until the next sweep.
  */
 async function sweepStaleActivities(
   context: WorkerContext,
@@ -406,14 +392,12 @@ async function applyFastForward(
 }
 
 /**
- * Attaches the fast-forward's final row live, chaining onto its confirmed head exactly like a
- * plain attach-live resync would: a fresh, checkpoint-0 simulation only when nothing is confirmed
- * yet, otherwise a simulation reconstructed to the confirmed head so the registered cursor's
- * `previousNextSeed` matches what the engine will actually emit next. The caller keeps
- * fast-forward-closed streams out via the report's terminal flag; the reconstruction's own
- * terminal check below covers the remaining path — a row adopted mid-stream whose confirmed head
- * already sits on a terminal checkpoint — skipping the attach rather than installing a simulation
- * with nothing left to submit.
+ * Attaches the fast-forward's final row live, chaining onto its confirmed head: a checkpoint-0
+ * simulation when nothing is confirmed yet, otherwise one reconstructed to the head so the
+ * registered cursor's `previousNextSeed` matches what the engine emits next. The caller filters
+ * fast-forward-closed streams via the report's terminal flag; the reconstruction's terminal
+ * check covers a row adopted mid-stream whose confirmed head is already terminal, skipping an
+ * attach with nothing left to submit.
  */
 async function applyFastForwardAttach(
   context: WorkerContext,

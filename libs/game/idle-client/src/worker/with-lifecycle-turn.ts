@@ -3,14 +3,11 @@ import { reportWorkerFault } from './report-worker-fault';
 import type { WorkerContext } from './types';
 
 /**
- * Queues a lifecycle flow behind the mailbox tail and runs it once every earlier flow has
- * settled, so starts, resyncs, and continuations execute strictly one at a time. Only public
- * entrypoints queue a turn — a flow that needs a sub-flow calls its inner function directly,
- * since a turn awaiting a turn queued behind itself would deadlock the mailbox. The turn settles
- * without rejecting — a throw would strand every queued flow behind it — so a flow that wants its
- * own failure signalling catches inside its callback; anything that escapes is reported as a
- * fault under the caller's site. Stops never queue: their local halt is instant, and a queued
- * flow observes them through the stop epoch instead.
+ * Queues a lifecycle flow behind the mailbox tail: starts, resyncs, and continuations run
+ * strictly one at a time. Only public entrypoints queue — a flow needing a sub-flow calls its
+ * inner function directly, since a turn awaiting a turn queued behind itself deadlocks. The turn
+ * never rejects (a throw would strand the queue); an escaping error reports as a fault under
+ * `site`. Stops never queue — queued flows observe them through the stop epoch.
  */
 export async function withLifecycleTurn(
   context: WorkerContext,
