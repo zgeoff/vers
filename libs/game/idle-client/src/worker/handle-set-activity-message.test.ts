@@ -1,23 +1,14 @@
-import { expect, mock, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
-import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import type { SetActivityMessage } from '../types';
 import { ClientMessageType } from '../types';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 
-function buildSpySubmitter(): CheckpointSubmitter {
-  return {
-    flushHeld: mock(() => Promise.resolve()),
-    flushNow: mock(() => Promise.resolve()),
-    registerActivity: mock(() => Promise.resolve()),
-    submit: mock(() => Promise.resolve(undefined)),
-  };
-}
-
 test('it starts the activity on the simulation', async () => {
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
 
@@ -32,7 +23,7 @@ test('it starts the activity on the simulation', async () => {
 });
 
 test('it registers the row against the submitter, seeded from its own chain-link fields', async () => {
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
 
   context.setSimulation(createSimulation());
@@ -70,7 +61,7 @@ test('it remembers the row as the live simulation source', async () => {
 });
 
 test('it does nothing when no simulation is initialized', async () => {
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
 
   const message: SetActivityMessage = {

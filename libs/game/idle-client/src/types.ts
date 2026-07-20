@@ -14,6 +14,7 @@ export enum ClientMessageType {
   RequestResync = 'request_resync',
   SetActivity = 'set_activity',
   SetFailureAction = 'set_failure_action',
+  StopActivity = 'stop_activity',
 }
 
 interface IClientMessage {
@@ -60,13 +61,27 @@ export interface RequestFlushMessage extends IClientMessage {
   readonly type: ClientMessageType.RequestFlush;
 }
 
+/**
+ * Ends a run: the worker halts the local simulation immediately and owns the rest — flushing the
+ * activity's earned checkpoints, delivering the targeted server stop, and retrying that delivery
+ * from a durable intent on later reconnects — so the tab never awaits the server and the stop
+ * works offline. `activityID` names the run the player ended; a stop raised against a row that a
+ * newer run has since replaced leaves the newer run untouched.
+ */
+export interface StopActivityMessage extends IClientMessage {
+  readonly activityID: string;
+  readonly avatarID: string;
+  readonly type: ClientMessageType.StopActivity;
+}
+
 export type ClientMessage =
   | DisconnectMessage
   | InitializeMessage
   | RequestFlushMessage
   | RequestResyncMessage
   | SetActivityMessage
-  | SetFailureActionMessage;
+  | SetFailureActionMessage
+  | StopActivityMessage;
 
 export enum WorkerMessageType {
   ActivityCompleted = 'activity_completed',

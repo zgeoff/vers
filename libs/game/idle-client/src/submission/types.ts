@@ -23,6 +23,17 @@ export interface FailureActionPreference {
   readonly failureAction: ActivityFailureAction;
 }
 
+/**
+ * A stop the player raised that the server hasn't confirmed yet. Held durably so a stop raised
+ * offline, or lost to a crash, is delivered on the next reconnect before any resync plans — the
+ * server row must read closed by then, or the resync would revive the stopped run and award
+ * offline progress for time after the player quit.
+ */
+export interface PendingStopIntent {
+  readonly activityID: string;
+  readonly avatarID: string;
+}
+
 export interface CheckpointQueueSchema extends DBSchema {
   'pending-checkpoints': {
     key: [string, number];
@@ -30,7 +41,7 @@ export interface CheckpointQueueSchema extends DBSchema {
   };
   preferences: {
     key: string;
-    value: FailureActionPreference;
+    value: FailureActionPreference | PendingStopIntent;
   };
 }
 

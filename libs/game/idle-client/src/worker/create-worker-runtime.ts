@@ -13,6 +13,7 @@ import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { createRequestResyncMessage } from './create-request-resync-message';
+import { flushPendingStop } from './flush-pending-stop';
 import { handleClientMessage } from './handle-client-message';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { reportWorkerFault } from './report-worker-fault';
@@ -73,6 +74,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let failureAction: ActivityFailureAction = ActivityFailureAction.Abort;
   let failureActionDirty = false;
   let failureActionPushInFlight = false;
+  let stopEpoch = 0;
 
   // Every client message and the self-triggered reconnect resync await this before running, so a
   // relaunch-while-offline never plans against the enum's Abort default while the real cached
@@ -127,6 +129,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   });
 
   const context: WorkerContext = {
+    advanceStopEpoch: () => {
+      stopEpoch += 1;
+    },
     connections,
     getActivity: () => activity,
     getClient: () => client,
@@ -139,6 +144,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
+    getStopEpoch: () => stopEpoch,
     getSubmitter: () => submitter,
     isFailureActionDirty: () => failureActionDirty,
     isFailureActionPushInFlight: () => failureActionPushInFlight,
@@ -155,6 +161,10 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     removeConnection: (port) => {
       connections.delete(port);
+    },
+    resetRewardSlotLedger: () => {
+      rewardSlotLedgerActivityID = null;
+      rewardSlotLedger = [];
     },
     setActivity: (newActivity) => {
       activity = newActivity;
@@ -268,6 +278,10 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
         await failureActionSeeded;
 
         await submitter.flushHeld();
+
+        // A stop raised offline delivers here even when no resync will follow — the self-resync
+        // below is skipped while a simulation is live, and after a stop one always is.
+        await flushPendingStop(context);
 
         // the pending continuation is always the fresher signal: it was recorded at the most
         // recent boundary failure, while the remembered resync avatar can predate it

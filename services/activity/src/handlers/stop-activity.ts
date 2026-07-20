@@ -15,14 +15,17 @@ interface StopActivityOpts {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
-  readonly input: { readonly avatarID: string };
+  readonly input: { readonly activityID?: string | undefined; readonly avatarID: string };
 }
 
 /**
- * Stops the active activity for an avatar owned by the acting user, then advances the chain's
- * appended anchor to the stopped stream's tail. The ownership check folds into the same statement
- * — a foreign or missing avatar matches no row, the same NOT_FOUND path as an avatar with nothing
- * active.
+ * Stops an activity for an avatar owned by the acting user, then advances the chain's appended
+ * anchor to the stopped stream's tail. Without `activityID` the call stops whatever is active —
+ * `NOT_FOUND` when nothing is. With `activityID` the call is targeted and idempotent: only that
+ * row is ever touched, a row that already left `active` succeeds with the row as-is, and
+ * `NOT_FOUND` means the row doesn't exist for this caller — so a stop delivered late or twice
+ * from a durable client queue can neither fail spuriously nor kill a newer run. The ownership
+ * check folds into each statement — a foreign or missing avatar matches no row.
  */
 export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Promise<ActivityData> {
   const actingUserID = opts.context.actingUserId;
@@ -32,36 +35,44 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
   }
 
   const row = await db.transaction().execute(async (trx) => {
-    // A lockless read to learn which chain the active activity belongs to; the guarded update
-    // below re-verifies everything it found. Writers that touch both rows acquire the chain row
-    // before the activity row, so the chain lock comes first.
-    const active = await trx
+    // A lockless read to learn which chain the activity belongs to; the guarded update below
+    // re-verifies everything it found. Writers that touch both rows acquire the chain row before
+    // the activity row, so the chain lock comes first.
+    const baseQuery = trx
       .selectFrom('activities')
-      .select(['scopeId', 'scopeType'])
+      .selectAll()
       .where('avatarId', '=', opts.input.avatarID)
-      .where('status', '=', 'active')
       .where('avatarId', 'in', (subquery) =>
         subquery.selectFrom('avatars').select('id').where('userId', '=', actingUserID),
-      )
-      .executeTakeFirst();
+      );
 
-    if (active === undefined) {
+    const found = await (
+      opts.input.activityID === undefined
+        ? baseQuery.where('status', '=', 'active')
+        : baseQuery.where('id', '=', opts.input.activityID)
+    ).executeTakeFirst();
+
+    if (found === undefined) {
       throw opts.errors.NOT_FOUND({ data: {} });
+    }
+
+    if (found.status !== 'active') {
+      return found;
     }
 
     await trx
       .selectFrom('activityChains')
       .select('appendedChainIndex')
       .where('avatarId', '=', opts.input.avatarID)
-      .where('scopeType', '=', active.scopeType)
-      .where('scopeId', '=', active.scopeId)
+      .where('scopeType', '=', found.scopeType)
+      .where('scopeId', '=', found.scopeId)
       .forUpdate()
       .execute();
 
     const stopped = await trx
       .updateTable('activities')
       .set({ status: 'stopped', stoppedAt: sql`now()` })
-      .where('avatarId', '=', opts.input.avatarID)
+      .where('id', '=', found.id)
       .where('status', '=', 'active')
       .where('avatarId', 'in', (subquery) =>
         subquery.selectFrom('avatars').select('id').where('userId', '=', actingUserID),
@@ -69,8 +80,26 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
       .returningAll()
       .executeTakeFirst();
 
+    // The row left `active` between the read and the guarded update — a terminal append or a
+    // concurrent stop won the race. A targeted call is already satisfied by that outcome, so the
+    // settled row is re-read and returned; the untargeted form keeps its original meaning and
+    // reports nothing active.
     if (stopped === undefined) {
-      throw opts.errors.NOT_FOUND({ data: {} });
+      if (opts.input.activityID === undefined) {
+        throw opts.errors.NOT_FOUND({ data: {} });
+      }
+
+      const settled = await trx
+        .selectFrom('activities')
+        .selectAll()
+        .where('id', '=', found.id)
+        .executeTakeFirst();
+
+      if (settled === undefined) {
+        throw opts.errors.NOT_FOUND({ data: {} });
+      }
+
+      return settled;
     }
 
     await updateAppendedAnchorFromTail(trx, {
