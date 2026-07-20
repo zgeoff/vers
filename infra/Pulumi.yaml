@@ -12,3 +12,9 @@ packages:
     parameters:
       - axiomhq/axiom
       - 1.6.2
+  neon:
+    source: terraform-provider
+    version: 1.2.0
+    parameters:
+      - kislerdm/neon
+      - 0.13.0

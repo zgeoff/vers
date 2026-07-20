@@ -14,12 +14,14 @@
     "@pulumi/axiom": "file:sdks/axiom",
     "@pulumi/cloudflare": "catalog:",
     "@pulumi/github": "catalog:",
+    "@pulumi/neon": "file:sdks/neon",
     "@pulumi/pulumi": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:"
   },
   "trustedDependencies": [
-    "@pulumi/axiom"
+    "@pulumi/axiom",
+    "@pulumi/neon"
   ]
 }
