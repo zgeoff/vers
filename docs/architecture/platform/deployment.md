@@ -379,6 +379,12 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
        SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS"
    done
 
+   fly secrets set -a vers-service-email \
+     DATABASE_URL="$DATABASE_URL" \
+     SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS" \
+     EMAIL_FROM="$EMAIL_FROM" \
+     RESEND_API_KEY="$RESEND_API_KEY"
+
    fly secrets set -a vers-service-activity \
      DATABASE_URL="$DATABASE_URL" \
      SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS" \
