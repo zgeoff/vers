@@ -76,10 +76,11 @@ async function runStart(
 
   const row = error.data.activity;
 
-  // the requested scope is already running — a resync attaches its confirmed stream; called
-  // inner-to-inner, since queueing a turn from inside this turn would deadlock the mailbox
+  // the requested scope is already running — a resync attaches its confirmed stream, claiming
+  // the writer since the player's start is a deliberate attach; called inner-to-inner, since
+  // queueing a turn from inside this turn would deadlock the mailbox
   if (row.scopeType === message.scopeType && row.scopeID === message.scopeID) {
-    await runResyncFlow(context, createRequestResyncMessage(message.avatarID), entryEpoch);
+    await runResyncFlow(context, createRequestResyncMessage(message.avatarID, true), entryEpoch);
 
     // a resync can be skipped, gated, or abandoned without installing; reporting attached anyway
     // would leave the tab waiting forever on a run that never arrives

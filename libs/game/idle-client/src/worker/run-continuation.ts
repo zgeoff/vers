@@ -70,8 +70,9 @@ export async function runContinuation(
     await stopAndReset(context, simulation);
 
     // called inner-to-inner: this flow already holds the mailbox turn, and queueing a resync
-    // behind itself would deadlock
-    await runResyncFlow(context, createRequestResyncMessage(row.avatarID), entryEpoch);
+    // behind itself would deadlock. An automatic continuation never claims the writer — the
+    // conflicting row may be another device's live run
+    await runResyncFlow(context, createRequestResyncMessage(row.avatarID, false), entryEpoch);
 
     return;
   }

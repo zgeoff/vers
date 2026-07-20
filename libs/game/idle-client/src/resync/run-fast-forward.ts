@@ -96,6 +96,20 @@ export async function runFastForward(
       await options.submitter.submit(activity.id, checkpoint);
     }
 
+    // A concurrent claimer can take the stream's writer mid-pass: the tail's terminal flush lands
+    // `SESSION_EVICTED` and nothing past the confirmed head persisted. Simulating further
+    // continuations would only report tallies the player never earned.
+    if (options.submitter.isEvicted(activity.id)) {
+      return {
+        activity,
+        appendedHead,
+        attempts,
+        finalRowTerminal: false,
+        levelUps,
+        reason: 'displaced',
+      };
+    }
+
     attempts += 1;
     levelUps += countLevelUps(tail);
     remainingMs -= tailTimeMs;

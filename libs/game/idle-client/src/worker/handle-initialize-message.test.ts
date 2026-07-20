@@ -40,6 +40,7 @@ test('it sends an initial state message to all connections', async () => {
     rewardSlotLedger: { activityID: null, entries: [] },
     state: simulation?.getSnapshot(),
     type: WorkerMessageType.InitialState,
+    writerDisplacedActivityID: null,
   });
 });
 
@@ -68,6 +69,7 @@ test('it sends the retained reward-slot ledger to a connection that initializes 
     rewardSlotLedger: { activityID: 'activity_1', entries: [{ count: 2, version: 1 }] },
     state: context.getSimulation().getSnapshot(),
     type: WorkerMessageType.InitialState,
+    writerDisplacedActivityID: null,
   });
 });
 

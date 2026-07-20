@@ -13,6 +13,7 @@ export function handleInitializeMessage(context: WorkerContext, _message: Initia
   const initialStateMessage = createInitialStateMessage(
     context.getSimulation().getSnapshot(),
     context.getRewardSlotLedger(),
+    context.getWriterDisplacedActivityID(),
   );
 
   const failureActionStatusMessage = createFailureActionStatusMessage(context.getFailureAction());

@@ -1,6 +1,12 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
-import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import {
+  createAnonymousViewer,
+  createServiceToken,
+  createTestDB,
+  createViewer,
+  getTestServiceKeyPair,
+} from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
@@ -339,4 +345,89 @@ test('it rejects a targeted stop for a row of another user with NOT_FOUND', asyn
   expect(
     intruderClient.stopActivity({ activityID: started.id, avatarID: ownerAvatar.id }),
   ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+});
+
+test('it rejects a stop from a session another writer displaced with SESSION_EVICTED', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+  const keyPair = await getTestServiceKeyPair();
+
+  const tokenA = await createServiceToken({
+    actingSessionId: 'session-a',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenA });
+
+  const started = await clientA.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const tokenB = await createServiceToken({
+    actingSessionId: 'session-b',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientB = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenB });
+
+  await clientB.resumeActivity({ activityID: started.id });
+
+  expect(
+    clientA.stopActivity({ activityID: started.id, avatarID: avatar.id }),
+  ).rejects.toMatchObject({ code: 'SESSION_EVICTED' });
+
+  const row = await ctx.db
+    .selectFrom('activities')
+    .select('status')
+    .where('id', '=', started.id)
+    .executeTakeFirst();
+
+  expect(row?.status).toBe('active');
+});
+
+test('it still succeeds idempotently for a displaced session once the row left active', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+  const keyPair = await getTestServiceKeyPair();
+
+  const tokenA = await createServiceToken({
+    actingSessionId: 'session-a',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenA });
+
+  const started = await clientA.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const tokenB = await createServiceToken({
+    actingSessionId: 'session-b',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientB = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenB });
+
+  await clientB.resumeActivity({ activityID: started.id });
+  await clientB.stopActivity({ activityID: started.id, avatarID: avatar.id });
+
+  const settled = await clientA.stopActivity({ activityID: started.id, avatarID: avatar.id });
+
+  expect(settled.status).toBe('stopped');
 });

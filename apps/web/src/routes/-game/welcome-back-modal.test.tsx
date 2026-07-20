@@ -79,7 +79,10 @@ test('it retries by requesting a fresh resync and clearing the failed status', a
 
   await user.click(screen.getByRole('button', { name: 'Try again' }));
 
-  expect(calls).toStrictEqual([{ avatarID: 'avatar_1', type: ClientMessageType.RequestResync }]);
+  expect(calls).toStrictEqual([
+    { avatarID: 'avatar_1', claim: true, type: ClientMessageType.RequestResync },
+  ]);
+
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 

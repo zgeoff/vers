@@ -10,7 +10,10 @@ import { toCheckpointData } from './to-checkpoint-data';
  * oRPC handler opts for the authed `getLatestActivityProgress` procedure.
  */
 interface GetLatestActivityProgressOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: {
+    readonly actingSessionId: null | string;
+    readonly actingUserId: null | string;
+  };
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
@@ -23,6 +26,7 @@ interface GetLatestActivityProgressResult {
   readonly anchor: Checkpoint | null;
   readonly appendedHead: number;
   readonly failureAction: ActivityFailureAction;
+  readonly isWriter: boolean;
   readonly serverTime: Date;
   readonly verifiedHead: number;
 }
@@ -32,6 +36,8 @@ interface GetLatestActivityProgressResult {
  * checkpoint the client resumes from — null while `verifiedHead` is still 0, since the client
  * then resumes from the start record instead — and the database's current time, read in the same
  * query as the row so the client computes its offline gap against the clock that meters it.
+ * `isWriter` reports whether the calling session may append: it matches the stamped writer, or no
+ * writer is stamped yet.
  */
 export async function getLatestActivityProgress(
   db: Kysely<DB>,
@@ -74,6 +80,7 @@ export async function getLatestActivityProgress(
     anchor: anchor === undefined ? null : toCheckpointData(anchor),
     appendedHead: row.appendedHead,
     failureAction: row.failureAction,
+    isWriter: row.writerSessionId === null || row.writerSessionId === opts.context.actingSessionId,
     serverTime: row.serverTime,
     verifiedHead: row.verifiedHead,
   };

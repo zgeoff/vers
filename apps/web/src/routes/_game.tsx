@@ -6,6 +6,7 @@ import { AmbientSheet } from './-game/ambient-sheet';
 import { GameCanvasMount } from './-game/game-canvas-mount';
 import { GameSimulationMount } from './-game/game-simulation-mount';
 import { NavRail } from './-game/nav-rail';
+import { PlayingElsewhereNotice } from './-game/playing-elsewhere-notice';
 import { SatelliteStack } from './-game/satellite-stack';
 import { SceneStateSync } from './-game/scene-state-sync';
 import { WelcomeBackModal } from './-game/welcome-back-modal';
@@ -35,6 +36,7 @@ function GameLayout() {
       <SceneStateSync />
       <GameSimulationMount />
       <WelcomeBackModal />
+      <PlayingElsewhereNotice />
       <NavRail />
       {presentation === 'ambient' ? (
         <AmbientSheet>

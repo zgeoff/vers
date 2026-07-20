@@ -90,6 +90,14 @@ export const activityContract = {
         anchor: CheckpointSchema.nullable(),
         appendedHead: z.int(),
         failureAction: ActivityFailureActionSchema,
+
+        /**
+         * Whether the calling session may append to the activity's stream: it is the stamped
+         * writer, or no writer is stamped yet. `false` means another session owns the stream and
+         * an append would be rejected.
+         */
+        isWriter: z.boolean(),
+
         serverTime: z.date(),
         verifiedHead: z.int(),
       }),
@@ -189,6 +197,11 @@ export const activityContract = {
     .errors(
       defineErrors({
         NOT_FOUND: { data: z.object({}), message: 'No active activity for this avatar' },
+        SESSION_EVICTED: {
+          data: z.object({}),
+          message: "The stopping session is no longer the activity's writer",
+          status: 403,
+        },
       }),
     ),
 

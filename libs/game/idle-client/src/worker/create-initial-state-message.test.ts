@@ -15,14 +15,19 @@ test('it creates an initial state message', () => {
     failureAction: ActivityFailureAction.Abort,
   };
 
-  const message = createInitialStateMessage(state, {
-    activityID: 'activity_1',
-    entries: [{ count: 2, version: 1 }],
-  });
+  const message = createInitialStateMessage(
+    state,
+    {
+      activityID: 'activity_1',
+      entries: [{ count: 2, version: 1 }],
+    },
+    'activity_2',
+  );
 
   expect(message).toStrictEqual({
     rewardSlotLedger: { activityID: 'activity_1', entries: [{ count: 2, version: 1 }] },
     state,
     type: WorkerMessageType.InitialState,
+    writerDisplacedActivityID: 'activity_2',
   });
 });

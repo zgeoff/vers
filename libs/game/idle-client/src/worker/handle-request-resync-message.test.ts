@@ -83,6 +83,7 @@ test('it broadcasts nothing for an avatar with no activity history', async () =>
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -114,6 +115,7 @@ test('it broadcasts capped and installs no simulation for a capped activity', as
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -147,6 +149,7 @@ test('it delivers a queued row for the resync-determined latest activity rather 
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -176,6 +179,7 @@ test('it sweeps every queued checkpoint when the avatar has no activity history'
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -210,6 +214,7 @@ test('it keeps the queued rows of an activity that went live while the resync wa
       flushNow: () => Promise.resolve(),
       registerActivity: () => Promise.resolve(),
       submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
     },
   });
 
@@ -224,6 +229,7 @@ test('it keeps the queued rows of an activity that went live while the resync wa
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -296,6 +302,7 @@ test('it flushes a held checkpoint for a previously tracked, no-longer-latest ac
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -342,6 +349,7 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -401,6 +409,7 @@ test('it reports a divergence via the checkpoint-stream-error channel and skips 
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -436,6 +445,7 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -503,6 +513,7 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -556,6 +567,7 @@ test('it attaches a fresh login live without broadcasting any catch-up status', 
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -588,6 +600,7 @@ test('it adopts a server-persisted retry preference during resync, caching and b
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -636,6 +649,7 @@ test('it flushes a dirty local failure action to the server during resync, clear
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -689,6 +703,7 @@ test('it keeps the dirty flag when the resync push to the server fails', async (
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -725,6 +740,7 @@ test("it starts a fresh row, installs a live simulation with the worker's failur
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -781,6 +797,7 @@ test('it attaches the foreign row that races in ahead of the continuation', asyn
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -819,6 +836,7 @@ test('it halts at the boundary and keeps the start intent when the offline budge
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -864,6 +882,7 @@ test('it clears a stale start intent silently when the budget is spent and anoth
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -905,6 +924,7 @@ test('it keeps the start intent and reports offline when the drain fails on tran
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -953,6 +973,7 @@ test('it clears the start intent and reports the resync failure status on a defi
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -997,6 +1018,7 @@ test('it keeps the start intent through a session-expired resync', async () => {
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -1052,6 +1074,7 @@ test('it stops back an attach-live row when a stop lands during its registration
 
   await handleRequestResyncMessage(context, {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   });
 
@@ -1092,6 +1115,7 @@ test('it delivers a blocked intent after the pass closes its source row and atta
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -1139,11 +1163,13 @@ test('it reports a fault to the error backend and broadcasts a failed status whe
       flushNow: () => Promise.resolve(),
       registerActivity: () => Promise.resolve(),
       submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
     },
   });
 
   const message: RequestResyncMessage = {
     avatarID: 'avatar-with-held-tail',
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -1200,6 +1226,7 @@ test('it broadcasts session-expired without a fault report when the session is n
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -1230,6 +1257,7 @@ test('it fails the resync while a raised stop is undelivered', async () => {
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -1263,6 +1291,7 @@ test('it delivers the held stop before planning, leaving the stopped run cleared
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -1295,6 +1324,7 @@ test('it abandons the install when a stop lands mid-resync', async () => {
         anchor: null,
         appendedHead: 0,
         failureAction: 'abort' as const,
+        isWriter: true,
         serverTime: new Date(),
         verifiedHead: 0,
       };
@@ -1303,6 +1333,7 @@ test('it abandons the install when a stop lands mid-resync', async () => {
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 
@@ -1348,6 +1379,7 @@ test('it stops back a drain-minted row when a stop lands during its attach', asy
 
   await handleRequestResyncMessage(context, {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   });
 
@@ -1362,4 +1394,129 @@ test('it stops back a drain-minted row when a stop lands during its attach', asy
   const intent = await readPendingStopIntent();
 
   expect(intent).toBeUndefined();
+});
+
+test('it broadcasts the displacement and clears a live sim the writer was taken from', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedAt: new Date(Date.now() - 2000),
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'active',
+    verifiedHead: 0,
+  });
+
+  // the run is simulating live on this device when another session takes the writer
+  const input = buildSimulationInput(activity);
+  const simulation = createSimulation();
+
+  simulation.startActivity(input.avatar, input.activity);
+  ctx.context.setSimulation(simulation);
+  ctx.context.setActivity(activity);
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      activity,
+      anchor: null,
+      appendedHead: 0,
+      failureAction: 'abort' as const,
+      isWriter: false,
+      serverTime: new Date(),
+      verifiedHead: 0,
+    })),
+  );
+
+  const message: RequestResyncMessage = {
+    avatarID: viewer.avatar.id,
+    claim: false,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    { activityID: activity.id, type: WorkerMessageType.WriterDisplaced },
+  ]);
+
+  expect(ctx.context.getActivity()).toBeNull();
+  expect(ctx.context.getWriterDisplacedActivityID()).toBe(activity.id);
+});
+
+test('it holds a claiming request behind an in-flight resync and claims once it settles', async () => {
+  const viewer = await createViewer();
+
+  const activity = await db.activityCollection.create({
+    appendedAt: new Date(Date.now() - 2000),
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'active',
+    verifiedHead: 0,
+  });
+
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  let releaseHeldFlush: (() => void) | undefined;
+
+  const heldFlush = new Promise<void>((resolve) => {
+    releaseHeldFlush = resolve;
+  });
+
+  const connection = createTestConnection();
+
+  const context = createStubWorkerContext({
+    client,
+    connections: [connection.port],
+    submitter: {
+      flushHeld: () => heldFlush,
+      flushNow: () => Promise.resolve(),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
+    },
+  });
+
+  const resume = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      activity,
+      anchor: null,
+      appendedHead: 0,
+      failureAction: 'abort' as const,
+      isWriter: false,
+      serverTime: new Date(),
+      verifiedHead: 0,
+    })),
+    mockActivityService.resumeActivity.handler((opts) => {
+      resume(opts.input);
+
+      return activity;
+    }),
+  );
+
+  const first = handleRequestResyncMessage(context, {
+    avatarID: viewer.avatar.id,
+    claim: false,
+    type: ClientMessageType.RequestResync,
+  });
+
+  // the player clicks continue-here while the automatic resync is still parked on its held flush
+  await handleRequestResyncMessage(context, {
+    avatarID: viewer.avatar.id,
+    claim: true,
+    type: ClientMessageType.RequestResync,
+  });
+
+  expect(resume).not.toHaveBeenCalled();
+  releaseHeldFlush?.();
+
+  await first;
+
+  expect(resume).toHaveBeenCalledExactlyOnceWith({ activityID: activity.id });
+  expect(context.getActivity()?.id).toBe(activity.id);
+  expect(context.getWriterDisplacedActivityID()).toBeNull();
 });

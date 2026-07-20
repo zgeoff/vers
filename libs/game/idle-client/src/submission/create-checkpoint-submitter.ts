@@ -87,6 +87,13 @@ export interface CheckpointSubmitter {
    * invalid activity.
    */
   flushNow: (activityID: string) => Promise<void>;
+
+  /**
+   * Reports whether an activity's stream was evicted — a flush answered `SESSION_EVICTED` and
+   * discarded its queue — and no registration has superseded the eviction since. A caller that
+   * takes the writer back registers the activity again, which clears the marker.
+   */
+  isEvicted: (activityID: string) => boolean;
 }
 
 interface CreateCheckpointSubmitterOptions {
@@ -120,6 +127,15 @@ interface CreateCheckpointSubmitterOptions {
    * trace; a stream stopped by a local failure carries none.
    */
   readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
+
+  /**
+   * Called once a `SESSION_EVICTED` response stops an activity's stream — another session took
+   * over as the activity's writer — after its queue rows are discarded and its state evicted, so
+   * the caller can clear the displaced simulation and tell the player. Fired from inside a flush
+   * at an arbitrary time relative to lifecycle flows: the caller defers any simulation mutation
+   * to a safe point rather than acting inline.
+   */
+  readonly onEvicted?: (activityID: string) => void;
 
   /**
    * Called each time a batch is held for retry — a transport failure or `UNAUTHORIZED` — so the
@@ -156,15 +172,18 @@ interface CreateCheckpointSubmitterOptions {
  * An activity whose stream stops with its rows discarded — `ACTIVITY_CAPPED`, `ACTIVITY_TERMINAL`,
  * `SESSION_EVICTED`, `NOT_FOUND` — has its cursor and registration evicted from both tracking maps,
  * so a later registration re-seeds fresh rather than resolving stale state; a fully confirmed
- * terminal checkpoint evicts the same way once its flush lands. `CHECKPOINT_INVALID` keeps its rows
- * and its tombstoned state for the worker's lifetime, so a later registration attempt never resends
- * what the server already rejected.
+ * terminal checkpoint evicts the same way once its flush lands. `SESSION_EVICTED` additionally
+ * marks the activity as evicted until a later registration supersedes it, so lifecycle flows can
+ * tell a displaced stream from one that drained clean. `CHECKPOINT_INVALID` keeps its rows and its
+ * tombstoned state for the worker's lifetime, so a later registration attempt never resends what
+ * the server already rejected.
  */
 export function createCheckpointSubmitter(
   options: Readonly<CreateCheckpointSubmitterOptions>,
 ): CheckpointSubmitter {
   const activityStates = new Map<string, ActivityState>();
   const registrations = new Map<string, Promise<void>>();
+  const evictedActivityIDs = new Set<string>();
 
   const scheduleFlush: (flush: () => Promise<void>) => void =
     options.scheduleFlush ??
@@ -346,6 +365,9 @@ export function createCheckpointSubmitter(
 
         removeActivityState(activityID);
 
+        evictedActivityIDs.add(activityID);
+        options.onEvicted?.(activityID);
+
         return;
       }
 
@@ -422,6 +444,10 @@ export function createCheckpointSubmitter(
   };
 
   const registerActivity = async (context: Readonly<ActivitySubmissionContext>): Promise<void> => {
+    // a fresh registration supersedes any recorded eviction: the caller re-attaches only after
+    // taking the writer back, so the stream is live again for this session
+    evictedActivityIDs.delete(context.activityID);
+
     const existing = registrations.get(context.activityID);
 
     if (existing !== undefined) {
@@ -532,7 +558,9 @@ export function createCheckpointSubmitter(
     await flush(activityID);
   };
 
-  return { flushHeld, flushNow, registerActivity, submit };
+  const isEvicted = (activityID: string): boolean => evictedActivityIDs.has(activityID);
+
+  return { flushHeld, flushNow, registerActivity, submit, isEvicted };
 }
 
 const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set([

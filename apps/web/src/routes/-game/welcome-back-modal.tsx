@@ -55,6 +55,10 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
     );
   }
 
+  if (resyncStatus.kind === 'active-elsewhere') {
+    return <Text>Your run picked up on another device, so it&rsquo;s paused here.</Text>;
+  }
+
   if (resyncStatus.kind === 'failed') {
     return (
       <>
@@ -62,7 +66,7 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
         <Button
           onClick={() => {
             if (idleWorkerHandle.worker !== undefined) {
-              sendIdleRequestResync(idleWorkerHandle.worker, resyncStatus.avatarID);
+              sendIdleRequestResync(idleWorkerHandle.worker, resyncStatus.avatarID, true);
             }
 
             setResyncStatus(null);
@@ -79,7 +83,12 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
 
 function formatResyncStatus(
   resyncStatus: Readonly<
-    Exclude<ResyncStatus, { readonly kind: 'failed' } | { readonly kind: 'session-expired' }>
+    Exclude<
+      ResyncStatus,
+      | { readonly kind: 'active-elsewhere' }
+      | { readonly kind: 'failed' }
+      | { readonly kind: 'session-expired' }
+    >
   >,
 ): string {
   if (resyncStatus.kind === 'capped') {

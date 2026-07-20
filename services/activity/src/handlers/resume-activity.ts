@@ -1,6 +1,7 @@
 import type { ActivityData } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
+import { recordWriterTakeover } from '../metrics/record-writer-takeover';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 import { toActivityData } from './to-activity-data';
 
@@ -52,6 +53,8 @@ export async function resumeActivity(
   if (row === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
+
+  recordWriterTakeover();
 
   return toActivityData(row);
 }
