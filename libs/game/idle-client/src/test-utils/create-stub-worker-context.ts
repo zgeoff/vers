@@ -8,6 +8,7 @@ import type { CheckpointSubmitter } from '../submission/create-checkpoint-submit
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry } from '../types';
 import type { PendingContinuation, WorkerContext } from '../worker/types';
+import { createStubSubmitter } from './create-stub-submitter';
 
 interface CreateStubWorkerContextOptions {
   readonly client?: ActivityServiceClient;
@@ -27,13 +28,7 @@ export function createStubWorkerContext(
     options.client ??
     createORPCClient(new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }));
 
-  const submitter: CheckpointSubmitter = options.submitter ?? {
-    flushHeld: () => Promise.resolve(),
-    flushNow: () => Promise.resolve(),
-    registerActivity: () => Promise.resolve(),
-    submit: () => Promise.resolve(undefined),
-  };
-
+  const submitter: CheckpointSubmitter = options.submitter ?? createStubSubmitter();
   let simulation: null | Simulation = null;
   let activity: ActivityData | null = null;
   let pendingContinuation: PendingContinuation | null = options.pendingContinuation ?? null;
@@ -44,8 +39,12 @@ export function createStubWorkerContext(
   let failureAction: ActivityFailureAction = options.failureAction ?? ActivityFailureAction.Abort;
   let failureActionDirty = false;
   let failureActionPushInFlight = false;
+  let stopEpoch = 0;
 
   return {
+    advanceStopEpoch: () => {
+      stopEpoch += 1;
+    },
     connections,
     getActivity: () => activity,
     getClient: () => client,
@@ -58,6 +57,7 @@ export function createStubWorkerContext(
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
+    getStopEpoch: () => stopEpoch,
     getSubmitter: () => submitter,
     isFailureActionDirty: () => failureActionDirty,
     isFailureActionPushInFlight: () => failureActionPushInFlight,
@@ -74,6 +74,10 @@ export function createStubWorkerContext(
     },
     removeConnection: (port) => {
       connections.delete(port);
+    },
+    resetRewardSlotLedger: () => {
+      rewardSlotLedgerActivityID = null;
+      rewardSlotLedger = [];
     },
     setActivity: (newActivity) => {
       activity = newActivity;

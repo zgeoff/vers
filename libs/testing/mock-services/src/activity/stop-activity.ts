@@ -16,15 +16,28 @@ export const stopActivity = os.stopActivity.handler(async (opts) => {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  const active = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: opts.input.avatarID, status: 'active' }),
-  );
+  // The targeted form is idempotent: a row that already left `active` succeeds as-is, and no row
+  // other than the targeted one is ever touched.
+  const activityID = opts.input.activityID;
 
-  if (active === undefined) {
+  const row =
+    activityID === undefined
+      ? db.activityCollection.findFirst((q) =>
+          q.where({ avatarID: opts.input.avatarID, status: 'active' }),
+        )
+      : db.activityCollection.findFirst((q) =>
+          q.where({ avatarID: opts.input.avatarID, id: activityID }),
+        );
+
+  if (row === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  const stopped = await db.activityCollection.update(active, {
+  if (row.status !== 'active') {
+    return row;
+  }
+
+  const stopped = await db.activityCollection.update(row, {
     data(record) {
       record.status = 'stopped';
 

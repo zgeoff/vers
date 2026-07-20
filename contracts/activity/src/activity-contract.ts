@@ -165,7 +165,19 @@ export const activityContract = {
       path: '/activities/stop',
       summary: 'Stop the active activity for an avatar owned by the caller',
     })
-    .input(z.object({ avatarID: z.string() }))
+    .input(
+      z.object({
+        /**
+         * Targets one specific row, making the call idempotent: stopping a row that already left
+         * `active` succeeds with that row as-is, and a row other than the targeted one is never
+         * touched — so a stop delivered late, or twice, from a durable client queue can neither
+         * fail spuriously nor kill a newer run. Without it, the call keeps its original meaning:
+         * stop whatever is active, `NOT_FOUND` when nothing is.
+         */
+        activityID: z.string().optional(),
+        avatarID: z.string(),
+      }),
+    )
     .output(ActivityDataSchema)
     .errors(
       defineErrors({

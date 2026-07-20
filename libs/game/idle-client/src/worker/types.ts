@@ -26,6 +26,14 @@ export interface PendingContinuation {
  * runtime's whole lifetime, where the simulation is created and later replaced.
  */
 export interface WorkerContext {
+  /**
+   * Marks a player-raised stop: every async flow that installs a simulation or starts a server
+   * row captures the epoch at entry and re-checks it after each await, abandoning its install
+   * when a stop landed in between — an in-flight resync or continuation must never revive a run
+   * the player just ended.
+   */
+  readonly advanceStopEpoch: () => void;
+
   readonly connections: ReadonlySet<MessagePort>;
 
   /**
@@ -69,6 +77,7 @@ export interface WorkerContext {
    */
   readonly getRewardSlotLedger: () => RewardSlotLedgerSnapshot;
   readonly getSimulation: () => null | Simulation;
+  readonly getStopEpoch: () => number;
   readonly getSubmitter: () => CheckpointSubmitter;
 
   /**
@@ -97,6 +106,7 @@ export interface WorkerContext {
    */
   readonly recordRewardSlots: (activityID: string, entry: RewardSlotLedgerEntry) => void;
   readonly removeConnection: (port: MessagePort) => void;
+  readonly resetRewardSlotLedger: () => void;
   readonly setActivity: (activity: ActivityData | null) => void;
   readonly setFailureAction: (action: ActivityFailureAction) => void;
   readonly setFailureActionDirty: (dirty: boolean) => void;

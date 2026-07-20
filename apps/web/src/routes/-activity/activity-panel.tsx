@@ -1,3 +1,4 @@
+import { safe } from '@orpc/client';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Spinner } from '@vers/design-system';
@@ -7,6 +8,8 @@ import { ScreenLayout } from '../../components/screen-layout';
 import { buildCurrentActivityQueryOptions } from '../../lib/activity/build-current-activity-query-options';
 import { useActivityRewards } from '../../lib/activity/use-activity-rewards';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
+import { sendIdleStopActivity } from '../../lib/idle/send-idle-stop-activity';
+import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { activityClient } from '../../lib/rpc/clients/activity-client';
 
 const settlingIndicator = css({
@@ -23,6 +26,7 @@ const settlingIndicator = css({
  */
 export function ActivityPanel() {
   const navigate = useNavigate();
+  const idleWorkerHandle = useIdleWorkerHandle();
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const avatarID = avatarQuery.data?.id;
   const avatarName = avatarQuery.data?.name;
@@ -44,15 +48,25 @@ export function ActivityPanel() {
       ? 0
       : Math.max(0, activity.appendedHead - verifiedHead);
 
+  // The worker owns the stop end to end — local halt, checkpoint flush, durable server delivery —
+  // so navigation never waits on the network and ending a run works offline. Without SharedWorker
+  // support there is no local simulation to halt, and the targeted server stop goes out directly,
+  // fire-and-forget: a failure must not strand the player on the dead engagement screen.
+  const activityID = activity?.id;
+
   const endRun =
-    avatarID === undefined
+    avatarID === undefined || activityID === undefined
       ? undefined
       : () => {
-          void (async () => {
-            await activityClient.stopActivity({ avatarID });
+          const worker = idleWorkerHandle.worker;
 
-            await navigate({ to: '/explore' });
-          })();
+          if (worker === undefined) {
+            void safe(activityClient.stopActivity({ activityID, avatarID }));
+          } else {
+            sendIdleStopActivity(worker, avatarID, activityID);
+          }
+
+          void navigate({ to: '/explore' });
         };
 
   return (

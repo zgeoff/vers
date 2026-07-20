@@ -2,8 +2,10 @@ import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
+import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createRequestResyncMessage } from './create-request-resync-message';
+import { flushPendingStop } from './flush-pending-stop';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 import type { WorkerContext } from './types';
 
@@ -24,13 +26,24 @@ import type { WorkerContext } from './types';
  * retrying inline — the next reconnect resync rebuilds from the server's confirmed state and
  * honors the pending intent. Any other rejection also stops and uninstalls the simulation, but
  * without the offline signal or a pending record: the service answered, so the failure is the
- * activity's, not the connection's.
+ * activity's, not the connection's. Every path past the start call re-checks the stop epoch and
+ * the runtime's simulation/activity pair as they stood at entry — a stop or a fresher selection
+ * that landed while the call was in flight owns the runtime now, so a row this continuation
+ * itself started under a stop is stopped back durably, an adopted foreign row is left running but
+ * not installed, and no pending continuation is recorded for a run that no longer exists.
  */
 export async function runContinuation(
   context: WorkerContext,
   simulation: Simulation,
   activity: Readonly<ActivityData>,
 ): Promise<void> {
+  const entryEpoch = context.getStopEpoch();
+  const entrySimulation = context.getSimulation();
+  const entryActivityID = context.getActivity()?.id;
+
+  const hasLostOwnership = () =>
+    context.getSimulation() !== entrySimulation || context.getActivity()?.id !== entryActivityID;
+
   const [error, started] = await safe(
     context.getClient().startActivity({
       avatarID: activity.avatarID,
@@ -40,6 +53,17 @@ export async function runContinuation(
   );
 
   if (error === null) {
+    if (context.getStopEpoch() !== entryEpoch) {
+      await writePendingStopIntent({ activityID: started.id, avatarID: started.avatarID });
+      await flushPendingStop(context);
+
+      return;
+    }
+
+    if (hasLostOwnership()) {
+      return;
+    }
+
     await startContinuationFrom(context, simulation, started);
 
     return;
@@ -49,30 +73,32 @@ export async function runContinuation(
     const row = error.data.activity;
 
     if (row.appendedHead === 0 && row.id !== activity.id) {
+      if (context.getStopEpoch() !== entryEpoch || hasLostOwnership()) {
+        return;
+      }
+
       await startContinuationFrom(context, simulation, row);
 
       return;
     }
 
-    if (row.id === activity.id) {
+    if (row.id === activity.id && context.getStopEpoch() === entryEpoch) {
       setPendingContinuation(context, activity);
     }
 
-    await simulation.stopActivity();
-
-    context.setSimulation(null);
-
+    await stopAndUninstall(context, simulation);
     await handleRequestResyncMessage(context, createRequestResyncMessage(row.avatarID));
 
     return;
   }
 
-  await simulation.stopActivity();
-
-  context.setSimulation(null);
+  await stopAndUninstall(context, simulation);
 
   if (!isDefinedError(error)) {
-    setPendingContinuation(context, activity);
+    if (context.getStopEpoch() === entryEpoch) {
+      setPendingContinuation(context, activity);
+    }
+
     emitConnectionStatus(context, false);
   }
 }
@@ -93,6 +119,18 @@ async function startContinuationFrom(
     lastHash: row.startHash,
     startChainIndex: row.startChainIndex,
   });
+}
+
+/**
+ * Stops this continuation's own simulation and uninstalls it — but only while it still owns the
+ * runtime; a stop or a fresher selection may have installed a replacement this must not evict.
+ */
+async function stopAndUninstall(context: WorkerContext, simulation: Simulation): Promise<void> {
+  await simulation.stopActivity();
+
+  if (context.getSimulation() === simulation) {
+    context.setSimulation(null);
+  }
 }
 
 function setPendingContinuation(context: WorkerContext, activity: Readonly<ActivityData>): void {

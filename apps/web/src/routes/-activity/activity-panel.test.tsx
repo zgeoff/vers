@@ -1,8 +1,14 @@
 import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
+import type { ClientMessage } from '@vers/idle-client';
+import { ClientMessageType, setSimulationSnapshot } from '@vers/idle-client';
+import { ActivityFailureAction } from '@vers/idle-core';
+import { createMockActivitySnapshot, createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
 import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { render } from '../../test-utils/render';
+import { renderWithRouter } from '../../test-utils/render-with-router';
+import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ActivityPanel } from './activity-panel';
 
@@ -52,5 +58,46 @@ test('it shows no settling indicator once the appended progress is fully verifie
     });
 
     expect(rendered.queryByTestId('settling-indicator')).not.toBeInTheDocument();
+  });
+});
+
+test('it hands END RUN to the worker and never awaits the server', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+  const activity = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+
+  const calls: Array<ClientMessage> = [];
+  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+
+  setIdleWorkerHandle({
+    activity: createMockActivitySnapshot(),
+    avatar: createMockAvatarSnapshot(),
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
+
+  setSimulationSnapshot({
+    activity: createMockActivitySnapshot(),
+    avatar: createMockAvatarSnapshot(),
+    failureAction: ActivityFailureAction.Abort,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ActivityPanel />);
+
+    const endRunButton = await rendered.findByRole('button', { name: 'END RUN' });
+
+    endRunButton.click();
+
+    await waitFor(() => {
+      expect(calls).toStrictEqual([
+        {
+          activityID: activity.id,
+          avatarID: avatar.id,
+          type: ClientMessageType.StopActivity,
+        },
+      ]);
+    });
   });
 });

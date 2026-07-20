@@ -5,12 +5,14 @@ import { handleRequestFlushMessage } from './handle-request-flush-message';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { handleSetFailureActionMessage } from './handle-set-failure-action-message';
+import { handleStopActivityMessage } from './handle-stop-activity-message';
 import { isDisconnectMessage } from './is-disconnect-message';
 import { isInitializeMessage } from './is-initialize-message';
 import { isRequestFlushMessage } from './is-request-flush-message';
 import { isRequestResyncMessage } from './is-request-resync-message';
 import { isSetActivityMessage } from './is-set-activity-message';
 import { isSetFailureActionMessage } from './is-set-failure-action-message';
+import { isStopActivityMessage } from './is-stop-activity-message';
 import type { WorkerContext } from './types';
 
 export async function handleClientMessage(
@@ -28,6 +30,10 @@ export async function handleClientMessage(
 
   if (isSetFailureActionMessage(event.data)) {
     await handleSetFailureActionMessage(context, event.data);
+  }
+
+  if (isStopActivityMessage(event.data)) {
+    await handleStopActivityMessage(context, event.data);
   }
 
   if (isRequestResyncMessage(event.data)) {
