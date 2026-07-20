@@ -336,3 +336,74 @@ test('it broadcasts failed on a transport failure', async () => {
     },
   ]);
 });
+
+test('it fails an attach the resync could not install', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  await db.activityCollection.create({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    startKey: 'someone-elses-start',
+    status: 'active',
+  });
+
+  const connection = createTestConnection();
+
+  const context = createStubWorkerContext({
+    client: ctx.client,
+    connections: [connection.port],
+    submitter: createStubSubmitter(),
+  });
+
+  // a resync already in flight makes the nested attach resync a no-op — the status must not
+  // promise a row the runtime never installed
+  context.setResyncInFlight(true);
+
+  const message = buildStartMessage(avatar.id, 'a9lp75');
+
+  await handleStartActivityMessage(context, message);
+
+  expect(context.getSimulation()).toBeNull();
+
+  await connection.waitForMessages(1);
+
+  expect(connection.received).toStrictEqual([
+    {
+      requestID: message.requestID,
+      status: { kind: 'failed' },
+      type: WorkerMessageType.StartStatus,
+    },
+  ]);
+});
+
+test('it runs interleaved starts one at a time, the fresher claim winning', async () => {
+  const user = await db.userCollection.create({});
+  const avatar = await db.avatarCollection.create({ userID: user.id });
+  const ctx = await setupTest({ userID: user.id });
+
+  const context = createStubWorkerContext({ client: ctx.client, submitter: createStubSubmitter() });
+
+  context.setSimulation(createSimulation());
+
+  const first = buildStartMessage(avatar.id, 'esaxrt');
+  const second = buildStartMessage(avatar.id, 'a9lp75');
+
+  // both messages land before either flow runs — the chain must run them in order, so the first
+  // completes fully before the second's conflict recovery replaces its row
+  await Promise.all([
+    handleStartActivityMessage(context, first),
+    handleStartActivityMessage(context, second),
+  ]);
+
+  const active = db.activityCollection.findMany((q) =>
+    q.where({ avatarID: avatar.id, status: 'active' }),
+  );
+
+  expect(active).toHaveLength(1);
+  invariant(active[0] !== undefined, 'expected one active row');
+  expect(active[0].scopeID).toBe('a9lp75');
+  expect(context.getActivity()?.id).toBe(active[0].id);
+});

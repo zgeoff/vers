@@ -76,6 +76,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let failureActionPushInFlight = false;
   let stopEpoch = 0;
   let startRequestID: null | string = null;
+  let startFlow: Readonly<Promise<void>> = Promise.resolve();
 
   // Every client message and the self-triggered reconnect resync await this before running, so a
   // relaunch-while-offline never plans against the enum's Abort default while the real cached
@@ -145,6 +146,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
+    getStartFlow: () => startFlow,
     getStartRequestID: () => startRequestID,
     getStopEpoch: () => stopEpoch,
     getSubmitter: () => submitter,
@@ -188,6 +190,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     setResyncInFlight: (inFlight) => {
       resyncInFlight = inFlight;
+    },
+    setStartFlow: (flow) => {
+      startFlow = flow;
     },
     setStartRequestID: (requestID) => {
       startRequestID = requestID;

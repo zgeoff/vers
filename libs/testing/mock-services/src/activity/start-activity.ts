@@ -61,6 +61,8 @@ export const startActivity = os.startActivity.handler(async (opts) => {
     const isDuplicateStart =
       opts.input.startKey !== undefined &&
       active.startKey === opts.input.startKey &&
+      active.scopeType === opts.input.scopeType &&
+      active.scopeID === opts.input.scopeID &&
       active.appendedHead === 0;
 
     if (isDuplicateStart) {

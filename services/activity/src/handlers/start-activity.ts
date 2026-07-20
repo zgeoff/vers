@@ -187,6 +187,8 @@ export async function startActivity(
     const isDuplicateStart =
       opts.input.startKey !== undefined &&
       existing.startKey === opts.input.startKey &&
+      existing.scopeType === opts.input.scopeType &&
+      existing.scopeId === opts.input.scopeID &&
       existing.appendedHead === 0 &&
       (existing.writerSessionId === null ||
         existing.writerSessionId === opts.context.actingSessionId);

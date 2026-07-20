@@ -46,6 +46,10 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   // a stale report for a deselected node never gates or publishes anything
   const [attempt, setAttempt] = useState<StartAttempt | undefined>(undefined);
 
+  // the store holds only the latest broadcast, and another tab's report can overwrite it at any
+  // time — the outcome for this tab's own attempt is latched locally the moment it correlates
+  const [report, setReport] = useState<StartStatus | undefined>(undefined);
+
   // the exploration commits when the encounter view opens for a node — independent of worker
   // readiness, and a retried failed start on the same node never re-reports it
   const lastExploredNodeID = useRef<string | undefined>(undefined);
@@ -78,6 +82,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     const requestID = crypto.randomUUID();
 
     setAttempt({ requestID, scopeID: selectedNode.id });
+    setReport(undefined);
 
     sendIdleStartActivity(idleWorkerHandle.worker, {
       avatarID,
@@ -89,10 +94,13 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
 
   // only the requesting tab's attempt matches the report's request id, so the started event fires
   // exactly once even with several tabs receiving the same broadcast
-  const report =
-    attempt !== undefined && idleWorkerHandle.startReport?.requestID === attempt.requestID
-      ? idleWorkerHandle.startReport.status
-      : undefined;
+  const startReport = idleWorkerHandle.startReport;
+
+  useEffect(() => {
+    if (attempt !== undefined && startReport?.requestID === attempt.requestID) {
+      setReport(startReport.status);
+    }
+  }, [attempt, startReport]);
 
   useEffect(() => {
     if (report?.kind !== 'started') {
@@ -122,6 +130,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
         data-testid="start-activity-retry"
         onClick={() => {
           setAttempt(undefined);
+          setReport(undefined);
         }}
       >
         Couldn’t start this activity — retry

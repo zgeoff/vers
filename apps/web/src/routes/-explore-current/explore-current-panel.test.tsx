@@ -316,3 +316,56 @@ function findStartIntent(calls: ReadonlyArray<ClientMessage>): StartActivityMess
 
   return sent;
 }
+
+test('it keeps its own outcome when a later report answers another tab', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+
+  const calls: Array<ClientMessage> = [];
+  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    worker,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
+    });
+
+    const sent = findStartIntent(calls);
+    const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
+
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: started.id }),
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      startReport: {
+        requestID: sent.requestID,
+        status: { activity: started, kind: 'started' },
+      },
+      worker,
+    });
+
+    await rendered.findByTestId('world-map-node-codex-stub');
+
+    // another tab's broadcast replaces the shared slot — this tab already latched its own outcome
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: started.id }),
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      startReport: { requestID: 'another-tabs-request', status: { kind: 'failed' } },
+      worker,
+    });
+
+    expect(rendered.getByTestId('world-map-node-codex-stub')).toBeVisible();
+    expect(rendered.queryByTestId('start-activity-retry')).not.toBeInTheDocument();
+  });
+});
