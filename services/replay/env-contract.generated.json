@@ -3,8 +3,8 @@
   "required": [
     "DATABASE_URL",
     "KEYS_SERVICE_URL",
+    "SERVICE_AUTH_JWKS",
     "SERVICE_AUTH_PRIVATE_KEY",
-    "SERVICE_AUTH_PUBLIC_KEY",
     "SIM_ENGINE_HASH"
   ]
 }

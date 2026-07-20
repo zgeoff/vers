@@ -18,7 +18,7 @@ test('it sorts required keys as those whose schema rejects an absent value', () 
       'RETRY_LIMIT',
       'SENTRY_DSN',
     ],
-    required: ['DATABASE_URL', 'SERVICE_AUTH_PUBLIC_KEY'],
+    required: ['DATABASE_URL', 'SERVICE_AUTH_JWKS'],
   });
 });
 
@@ -36,6 +36,6 @@ test('it derives the base contract alone from an empty shape', () => {
 
   expect(contract).toStrictEqual({
     optional: ['LOG_LEVEL', 'OTEL_EXPORTER_OTLP_ENDPOINT', 'PORT', 'SENTRY_DSN'],
-    required: ['SERVICE_AUTH_PUBLIC_KEY'],
+    required: ['SERVICE_AUTH_JWKS'],
   });
 });

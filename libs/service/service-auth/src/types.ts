@@ -9,3 +9,5 @@ export type ServiceName =
   | 'verification';
 
 export type ServiceAudience = `service-${ServiceName}`;
+
+export type TokenIssuer = 'app-web' | 'service-activity' | 'service-replay';

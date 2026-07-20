@@ -79,16 +79,19 @@ matches it in constant time.
 ## Service-to-service tokens
 
 Every service call over the private network carries a short-lived JWT from `createServiceToken`
-(`@vers/service-auth`): EdDSA over an Ed25519 keypair, issuer `vers-edge`, 60-second default expiry.
-The `sub` claim names the acting user, omitted for a verified-anonymous call. The `aud` claim is the
-target service's registered audience, `service-<name>` from `buildServiceAudience`.
+(`@vers/service-auth`): EdDSA over an Ed25519 keypair, 60-second default expiry. The `iss` claim and
+the protected header's `kid` both name the minting service. The `sub` claim names the acting user,
+omitted for a verified-anonymous call. The `aud` claim is the target service's registered audience,
+`service-<name>` from `buildServiceAudience`.
 
-Two signers mint these tokens. The edge signs its own outbound calls in `createEdgeServiceToken`,
-keyed by `SERVICE_AUTH_PRIVATE_KEY`. service-replay's worker signs its calls toward a version-pinned
-replay provider (`services/replay/src/dispatch/`), scoped to the `service-replay` audience. Both
-hold the same Ed25519 private key by design: verification checks only the signature, `iss`, and
-`aud`, so splitting the key per signer buys nothing until a caller needs narrower trust than the
-shared key grants.
+Three issuers mint these tokens, each signing with its own private key — the
+`SERVICE_AUTH_PRIVATE_KEY` in its own environment, held by no other app. `app-web` signs the edge's
+outbound calls in `createEdgeServiceToken`. `service-replay` signs the worker's calls toward the
+keys service and toward version-pinned replay providers (`services/replay/src/dispatch/`).
+`service-activity` signs the wake poke a committed append sends toward service-replay.
 
-Each service verifies the token with the public key in its runtime middleware before any handler
-runs, rejecting a bad token with a plain 401 ([service contracts](./service-contracts.md)).
+Each service verifies inbound tokens in its runtime middleware before any handler runs, against
+`SERVICE_AUTH_JWKS` — a JWKS registering every issuer's public key under its `kid`. A token's
+claimed `iss` must be a known issuer and equal its `kid`, and the signature only validates against
+that issuer's registered key, so a leaked minting key lets its holder impersonate only that one
+service. A bad token is rejected with a plain 401 ([service contracts](./service-contracts.md)).

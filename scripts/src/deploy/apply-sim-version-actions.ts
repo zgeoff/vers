@@ -52,8 +52,8 @@ async function applySimVersionAction(action: SimVersionAction): Promise<void> {
 }
 
 async function runProviderMachine(app: string, image: string): Promise<void> {
-  const publicKey = requireEnvVar(
-    'SERVICE_AUTH_PUBLIC_KEY',
+  const jwks = requireEnvVar(
+    'SERVICE_AUTH_JWKS',
     'a sim-version provider machine must verify inbound s2s calls',
   );
 
@@ -65,7 +65,7 @@ async function runProviderMachine(app: string, image: string): Promise<void> {
     app,
     ...PROVIDER_MACHINE_FLAGS,
     '--env',
-    `SERVICE_AUTH_PUBLIC_KEY=${publicKey}`,
+    `SERVICE_AUTH_JWKS=${jwks}`,
   ]);
 }
 

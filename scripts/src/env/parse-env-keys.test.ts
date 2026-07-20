@@ -8,7 +8,7 @@ test('it collects assigned keys and skips comments, blanks, and values', () => {
       'NODE_ENV="development"',
       '',
       'DATABASE_URL=',
-      String.raw`SERVICE_AUTH_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nabc\n-----END PUBLIC KEY-----\n"`,
+      String.raw`SERVICE_AUTH_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n"`,
       'export EXPORTED_KEY=1',
       'not a key line',
     ].join('\n'),
@@ -17,7 +17,7 @@ test('it collects assigned keys and skips comments, blanks, and values', () => {
   expect(keys).toStrictEqual([
     'NODE_ENV',
     'DATABASE_URL',
-    'SERVICE_AUTH_PUBLIC_KEY',
+    'SERVICE_AUTH_PRIVATE_KEY',
     'EXPORTED_KEY',
   ]);
 });

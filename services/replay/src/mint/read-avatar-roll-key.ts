@@ -33,7 +33,11 @@ export async function readAvatarRollKey(
   deps: Readonly<ReadAvatarRollKeyDeps>,
   input: Readonly<ReadAvatarRollKeyInput>,
 ): Promise<Uint8Array> {
-  const token = await createServiceToken({ audience: 'keys', privateKey: deps.privateKey });
+  const token = await createServiceToken({
+    audience: 'keys',
+    issuer: 'service-replay',
+    privateKey: deps.privateKey,
+  });
 
   const client: ContractRouterClient<typeof keysContract> = createORPCClient(
     new RPCLink({

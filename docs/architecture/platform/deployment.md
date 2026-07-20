@@ -56,15 +56,14 @@ contract's to declare — [provision from nothing](#provision-from-nothing) sets
 - `vers-bugsink` and `vers-umami` read their upstream images' documented env. Bugsink additionally
   reads the `R2_*` keys in `apps/bugsink/r2_storage.py`, which back its uploaded-file storage.
 
-`SERVICE_AUTH_PUBLIC_KEY` and `SERVICE_AUTH_PRIVATE_KEY` are one Ed25519 keypair: the SPKI public
-key every service verifies inbound calls with, and the PKCS8 private half that signs outbound s2s
-tokens ([auth](../services/auth.md)). Three callers hold the private half: `app-web` toward the
-domain services, `service-replay` toward version-pinned replay providers, and `service-activity`
-toward `service-replay`'s `/wake` endpoint. Each token's `aud` is the target's registered service
-name (`service-replay`). Every signer holds the same key deliberately. Verification checks
-signature, `iss`, and `aud` only, so any holder can mint a token for any service — the private half
-is confined to first-party callers, and a per-caller key split buys nothing until a caller with
-narrower trust exists.
+s2s auth runs on one Ed25519 keypair per minting service ([auth](../services/auth.md)). Each minter
+— `app-web` toward the domain services, `service-replay` toward the keys service and version-pinned
+replay providers, `service-activity` toward `service-replay`'s `/wake` endpoint — holds its own
+PKCS8 private half as `SERVICE_AUTH_PRIVATE_KEY` in its own app's secrets, and no other app's.
+`SERVICE_AUTH_JWKS` is the JSON key set every app verifies inbound calls with: each minter's public
+half under its issuer-named `kid`, so a token only validates against the key of the service it
+claims to be from, and a compromised minter can impersonate only itself. Each token's `aud` is the
+target's registered service name (`service-replay`).
 
 The remaining keys with cross-service meaning:
 
@@ -345,34 +344,54 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
      op item edit github-actions --vault vers-ci 'fly-api-token[concealed]=-'
    ```
 
-4. Generate the keys and set each app's secrets. The s2s public key also goes into the `vers`
-   1Password vault (`s2s-auth` item, `public-key` field): provisioning a single service later reads
-   it with `op read 'op://vers/s2s-auth/public-key'`. The generated key files are deleted once the
-   secrets are set, so the deployed value lives only in Fly's secret store. The Tinybird pair — the
-   Events API origin and the `product_events` append token ([analytics](../analytics.md)) — comes
-   from the `tinybird` item in the `vers` 1Password vault.
+4. Generate the keys and set each app's secrets. Each minting issuer (`app-web`, `service-activity`,
+   `service-replay`) gets its own Ed25519 keypair: the private half lands only in that app's
+   secrets, and the public halves combine into the `SERVICE_AUTH_JWKS` every domain service verifies
+   with. The JWKS also goes into the `vers` 1Password vault (`s2s-auth` item, `jwks` field):
+   provisioning a single service later reads it with `op read 'op://vers/s2s-auth/jwks'`. The
+   generated key files are deleted once the secrets are set, so the deployed private keys live only
+   in Fly's secret store. The Tinybird pair — the Events API origin and the `product_events` append
+   token ([analytics](../analytics.md)) — comes from the `tinybird` item in the `vers` 1Password
+   vault.
 
    ```sh
-   openssl genpkey -algorithm ed25519 -out s2s.key
-   openssl pkey -in s2s.key -pubout -out s2s.pub
+   for issuer in app-web service-activity service-replay; do
+     openssl genpkey -algorithm ed25519 -out "s2s-$issuer.key"
+   done
    openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out session.key
 
+   SERVICE_AUTH_JWKS="$(bun -e '
+     import { createPublicKey } from "node:crypto";
+     import { readFileSync } from "node:fs";
+     const keys = ["app-web", "service-activity", "service-replay"].map((kid) => ({
+       ...createPublicKey(readFileSync(`s2s-${kid}.key`)).export({ format: "jwk" }),
+       kid,
+     }));
+     console.log(JSON.stringify({ keys }));
+   ')"
+
    op item create --vault vers --category "API Credential" --title s2s-auth \
-     "public-key[text]=$(cat s2s.pub)"
+     "jwks[text]=$SERVICE_AUTH_JWKS"
 
    for svc in avatar user verification; do
      fly secrets set -a "vers-service-$svc" \
        DATABASE_URL="$DATABASE_URL" \
-       SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)"
+       SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS"
    done
+
+   fly secrets set -a vers-service-email \
+     DATABASE_URL="$DATABASE_URL" \
+     SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS" \
+     EMAIL_FROM="$EMAIL_FROM" \
+     RESEND_API_KEY="$RESEND_API_KEY"
 
    fly secrets set -a vers-service-activity \
      DATABASE_URL="$DATABASE_URL" \
-     SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)" \
-     SERVICE_AUTH_PRIVATE_KEY="$(cat s2s.key)"
+     SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS" \
+     SERVICE_AUTH_PRIVATE_KEY="$(cat s2s-service-activity.key)"
 
    fly secrets set -a vers-service-keys \
-     SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)" \
+     SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS" \
      ROLL_KEY_ROOTS="$(jq -nc \
        --arg trade "$(openssl rand -hex 32)" \
        --arg selfFound "$(openssl rand -hex 32)" \
@@ -380,23 +399,23 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
 
    fly secrets set -a vers-service-session \
      DATABASE_URL="$DATABASE_URL" \
-     SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)" \
+     SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS" \
      API_IDENTIFIER=vers-api \
      JWT_SIGNING_PRIVKEY="$(cat session.key)"
 
    fly secrets set -a vers-service-replay \
      DATABASE_URL="$DATABASE_URL" \
-     SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)" \
-     SERVICE_AUTH_PRIVATE_KEY="$(cat s2s.key)"
+     SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS" \
+     SERVICE_AUTH_PRIVATE_KEY="$(cat s2s-service-replay.key)"
 
    fly secrets set -a vers-app-web \
      SESSION_SECRET="$(openssl rand -base64 32)" \
      COOKIE_DOMAIN="$DOMAIN" \
-     SERVICE_AUTH_PRIVATE_KEY="$(cat s2s.key)" \
+     SERVICE_AUTH_PRIVATE_KEY="$(cat s2s-app-web.key)" \
      TINYBIRD_URL="$TINYBIRD_URL" \
      TINYBIRD_INGEST_TOKEN="$TINYBIRD_INGEST_TOKEN"
 
-   rm s2s.key s2s.pub session.key
+   rm s2s-*.key session.key
    ```
 
 5. Stand up the error tracker. The first deploy is by hand; CI redeploys it on later config changes.

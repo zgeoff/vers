@@ -20,7 +20,6 @@
     "@vers/service-utils": "workspace:*",
     "@vers/trace": "workspace:*",
     "elysia": "catalog:",
-    "jose": "catalog:",
     "pino": "catalog:",
     "zod": "catalog:"
   },

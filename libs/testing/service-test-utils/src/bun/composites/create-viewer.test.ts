@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { TOKEN_ALGORITHM } from '@vers/service-auth';
+import { parseServiceJWKS } from '@vers/service-auth';
 import * as jose from 'jose';
 import { createTestDB } from '../create-test-db';
 import { getTestServiceKeyPair } from '../get-test-service-key-pair';
@@ -10,9 +10,10 @@ test('it persists a user and mints a token carrying that user as the acting subj
 
   const keyPair = await getTestServiceKeyPair();
   const viewer = await createViewer({ audience: 'create-viewer-spec', db: testDB.db });
-  const publicKey = await jose.importSPKI(keyPair.publicKeyPEM, TOKEN_ALGORITHM);
 
-  const verified = await jose.jwtVerify(viewer.token, publicKey, {
+  const keySet = parseServiceJWKS(keyPair.jwksJSON);
+
+  const verified = await jose.jwtVerify(viewer.token, keySet, {
     audience: 'create-viewer-spec',
   });
 
