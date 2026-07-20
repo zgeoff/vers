@@ -6,7 +6,7 @@ import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
-import type { RewardSlotLedgerEntry } from '../types';
+import type { RequestResyncMessage, RewardSlotLedgerEntry } from '../types';
 import type { WorkerContext } from '../worker/types';
 import { createStubSubmitter } from './create-stub-submitter';
 
@@ -40,6 +40,8 @@ export function createStubWorkerContext(
   let stopEpoch = 0;
   let startRequestID: null | string = null;
   let lifecycleTail: Readonly<Promise<void>> = Promise.resolve();
+  let queuedClaimResync: RequestResyncMessage | null = null;
+  let writerDisplacedActivityID: null | string = null;
 
   return {
     advanceStopEpoch: () => {
@@ -57,9 +59,11 @@ export function createStubWorkerContext(
     }),
     getSimulation: () => simulation,
     getLifecycleTail: () => lifecycleTail,
+    getQueuedClaimResync: () => queuedClaimResync,
     getStartRequestID: () => startRequestID,
     getStopEpoch: () => stopEpoch,
     getSubmitter: () => submitter,
+    getWriterDisplacedActivityID: () => writerDisplacedActivityID,
     isFailureActionDirty: () => failureActionDirty,
     isFailureActionPushInFlight: () => failureActionPushInFlight,
     isResyncInFlight: () => resyncInFlight,
@@ -92,6 +96,9 @@ export function createStubWorkerContext(
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
     },
+    setQueuedClaimResync: (message) => {
+      queuedClaimResync = message;
+    },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
     },
@@ -106,6 +113,9 @@ export function createStubWorkerContext(
     },
     setSimulation: (newSimulation) => {
       simulation = newSimulation;
+    },
+    setWriterDisplacedActivityID: (activityID) => {
+      writerDisplacedActivityID = activityID;
     },
   };
 }

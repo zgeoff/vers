@@ -86,7 +86,11 @@ test('it sends initialize then requests a resync once the active avatar resolves
     render(<GameSimulationMount />);
 
     await waitFor(() => {
-      expect(calls).toContainEqual({ avatarID: avatar.id, type: ClientMessageType.RequestResync });
+      expect(calls).toContainEqual({
+        avatarID: avatar.id,
+        claim: true,
+        type: ClientMessageType.RequestResync,
+      });
     });
   });
 });
@@ -131,7 +135,11 @@ test('it sends a resync request only once across re-renders', async () => {
     const rendered = render(<GameSimulationMount />);
 
     await waitFor(() => {
-      expect(calls).toContainEqual({ avatarID: avatar.id, type: ClientMessageType.RequestResync });
+      expect(calls).toContainEqual({
+        avatarID: avatar.id,
+        claim: true,
+        type: ClientMessageType.RequestResync,
+      });
     });
 
     rendered.refresh();
@@ -161,7 +169,11 @@ test('it requests another resync when the browser comes back online', async () =
     render(<GameSimulationMount />);
 
     await waitFor(() => {
-      expect(calls).toContainEqual({ avatarID: avatar.id, type: ClientMessageType.RequestResync });
+      expect(calls).toContainEqual({
+        avatarID: avatar.id,
+        claim: true,
+        type: ClientMessageType.RequestResync,
+      });
     });
 
     globalThis.dispatchEvent(new Event('online'));

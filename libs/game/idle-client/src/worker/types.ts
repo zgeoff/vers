@@ -2,7 +2,11 @@ import type { ActivityData } from '@vers/contract-activity';
 import type { ActivityFailureAction, Simulation } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
-import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
+import type {
+  RequestResyncMessage,
+  RewardSlotLedgerEntry,
+  RewardSlotLedgerSnapshot,
+} from '../types';
 
 /**
  * Accessors over the runtime's closure state, threaded to every message and simulation event
@@ -70,8 +74,22 @@ export interface WorkerContext {
    */
   readonly getStartRequestID: () => null | string;
 
+  /**
+   * The claiming resync request that arrived while another resync was in flight, held so it runs
+   * once the in-flight one settles — dropping it would swallow a deliberate take-over (the
+   * player's continue action) behind an automatic resync. `null` when none is held.
+   */
+  readonly getQueuedClaimResync: () => RequestResyncMessage | null;
+
   readonly getStopEpoch: () => number;
   readonly getSubmitter: () => CheckpointSubmitter;
+
+  /**
+   * The activity another session displaced this device from, `null` when none. Held so the
+   * displacement broadcast fires only on transition and a connecting tab's initial state carries
+   * it.
+   */
+  readonly getWriterDisplacedActivityID: () => null | string;
 
   /**
    * Whether the held failure action is a local value the server hasn't acknowledged yet — set the
@@ -104,9 +122,11 @@ export interface WorkerContext {
   readonly setFailureAction: (action: ActivityFailureAction) => void;
   readonly setFailureActionDirty: (dirty: boolean) => void;
   readonly setFailureActionPushInFlight: (inFlight: boolean) => void;
+  readonly setQueuedClaimResync: (message: RequestResyncMessage | null) => void;
   readonly setResyncAvatarID: (avatarID: string) => void;
   readonly setResyncInFlight: (inFlight: boolean) => void;
   readonly setLifecycleTail: (flow: Readonly<Promise<void>>) => void;
   readonly setStartRequestID: (requestID: string) => void;
   readonly setSimulation: (simulation: Simulation) => void;
+  readonly setWriterDisplacedActivityID: (activityID: null | string) => void;
 }

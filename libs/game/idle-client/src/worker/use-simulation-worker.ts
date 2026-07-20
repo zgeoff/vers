@@ -11,6 +11,7 @@ import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
 import { setSimulationWorker } from '../state/set-simulation-worker';
 import { setStartReport } from '../state/set-start-report';
+import { setWriterDisplacedActivityID } from '../state/set-writer-displaced-activity-id';
 import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
 import { useIdleStore } from '../state/use-idle-store';
 import type {
@@ -26,6 +27,7 @@ import type {
   SimulationUpdateMessage,
   StartStatusMessage,
   WorkerMessage,
+  WriterDisplacedMessage,
 } from '../types';
 import { WorkerMessageType } from '../types';
 import { createDisconnectMessage } from './create-disconnect-message';
@@ -135,6 +137,14 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
   if (isStartStatusMessage(event.data)) {
     setStartReport({ requestID: event.data.requestID, status: event.data.status });
   }
+
+  if (isInitialStateMessage(event.data)) {
+    setWriterDisplacedActivityID(event.data.writerDisplacedActivityID);
+  }
+
+  if (isWriterDisplacedMessage(event.data)) {
+    setWriterDisplacedActivityID(event.data.activityID);
+  }
 }
 
 function isInitialStateMessage(message: WorkerMessage): message is InitialStateMessage {
@@ -187,4 +197,8 @@ function isRewardSlotsRecordedMessage(
 
 function isStartStatusMessage(message: WorkerMessage): message is StartStatusMessage {
   return message.type === WorkerMessageType.StartStatus;
+}
+
+function isWriterDisplacedMessage(message: WorkerMessage): message is WriterDisplacedMessage {
+  return message.type === WorkerMessageType.WriterDisplaced;
 }

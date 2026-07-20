@@ -21,7 +21,20 @@ interface RunResyncOptions {
   };
 
   readonly capMs?: number;
-  readonly client: Pick<ActivityServiceClient, 'getLatestActivityProgress' | 'startActivity'>;
+
+  /**
+   * Take over as the fetched activity's writer before planning — the deliberate-attach signal.
+   * The claim is skipped when this session already holds the writer, and a claim that lands on a
+   * row another writer advanced since the fetch triggers one refetch, so the plan and any
+   * reconstruction target the head the claim froze. Absent or false, an active activity under
+   * another session's writer resolves to `active-elsewhere` instead of attaching.
+   */
+  readonly claimWriter?: boolean;
+
+  readonly client: Pick<
+    ActivityServiceClient,
+    'getLatestActivityProgress' | 'resumeActivity' | 'startActivity'
+  >;
 
   /**
    * Reports whether a live simulation is already running the given activity. When it is, a
@@ -44,6 +57,17 @@ interface RunResyncOptions {
    * fast-forward reads it.
    */
   readonly onProgressFetched?: (progress: LatestActivityProgress) => Promise<void>;
+
+  /**
+   * Called when the fetched progress shows the live simulation's run under another session's
+   * writer: the local simulation is a dead fork whose cursor trails the new writer's appends. The
+   * caller stops it before the pass continues — left ticking, its submissions would corrupt the
+   * stream a claiming pass is about to take, or chase rejections a non-claiming pass already
+   * knows are coming. The pass then treats the run as not live: its queued rows drain like any
+   * stale fork's, and a plan installs a freshly reconstructed simulation rather than keeping the
+   * fork.
+   */
+  readonly onWriterLost?: (activityID: string) => void;
 
   readonly submitter: CheckpointSubmitter;
 }
@@ -75,17 +99,58 @@ export async function runResync(
   // A live activity's queued rows are its writer's normal in-flight pipeline, not stranded
   // work — draining would re-register as a no-op, find the rows still queued, and falsely
   // report a healthy session offline.
-  const isLive = options.isActivityLive?.(first.activity.id) === true;
+  let isLive = options.isActivityLive?.(first.activity.id) === true;
+
+  // That reasoning holds only while this session is the run's writer. A live simulation of a run
+  // another session took over is a dead fork: the caller stops it, and the pass proceeds as if
+  // nothing were live — its queue drains (and is evicted server-side) like any stale fork's.
+  if (isLive && first.activity.status === 'active' && !first.isWriter) {
+    options.onWriterLost?.(first.activity.id);
+    isLive = false;
+  }
+
   const drained = isLive ? false : await drainQueuedCheckpoints(options.submitter, first);
-  const progress = drained ? await readLatestProgress(options) : first;
+  let progress = drained ? await readLatestProgress(options) : first;
 
   if (progress === null) {
     return { plan: { kind: 'none' }, progress: null };
   }
 
+  // The claim runs only after the drain: a drain flushed as a non-writer is evicted and its stale
+  // rows discarded, while a pre-claim drain would deliver a dead fork into the claimed stream and
+  // corrupt it. A successful claim freezes the head against the displaced writer's appends and
+  // stops; another session can still claim over this one, so the refetch adopts the refetched
+  // writer verdict rather than assuming the claim's.
+  let mayWrite = progress.isWriter;
+
+  if (options.claimWriter === true && progress.activity.status === 'active' && !mayWrite) {
+    const claimed = await claimActivityWriter(options.client, progress.activity.id);
+
+    if (claimed === null) {
+      // the row left `active` between the fetch and the claim — refetch and let the plan resolve
+      // the terminal outcome
+      progress = await readLatestProgress(options);
+
+      mayWrite = progress?.isWriter ?? false;
+    } else {
+      mayWrite = true;
+
+      if (claimed.appendedHead !== progress.appendedHead) {
+        progress = await readLatestProgress(options);
+
+        mayWrite = progress?.isWriter ?? false;
+      }
+    }
+
+    if (progress === null) {
+      return { plan: { kind: 'none' }, progress: null };
+    }
+  }
+
   await options.onProgressFetched?.(progress);
 
   const plan = planResync({
+    mayWrite,
     progress,
     ...(options.capMs !== undefined && { capMs: options.capMs }),
   });
@@ -163,4 +228,27 @@ async function drainQueuedCheckpoints(
   }
 
   return true;
+}
+
+/**
+ * Takes over as the activity's writer, returning the fresh row the claim stamped — its head is
+ * authoritative, since any append in flight from the displaced writer either landed before the
+ * claim or was rejected by it. `null` means the row is no longer active, so there is no writer
+ * to take.
+ */
+async function claimActivityWriter(
+  client: Pick<ActivityServiceClient, 'resumeActivity'>,
+  activityID: string,
+): Promise<ActivityData | null> {
+  const [error, activity] = await safe(client.resumeActivity({ activityID }));
+
+  if (error !== null) {
+    if (isDefinedError(error) && error.code === 'NOT_FOUND') {
+      return null;
+    }
+
+    throw error;
+  }
+
+  return activity;
 }

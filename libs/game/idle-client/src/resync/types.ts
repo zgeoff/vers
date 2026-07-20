@@ -9,7 +9,8 @@ export type LatestActivityProgress = Awaited<
  * The action a resync snapshot resolves to, decided before any simulation runs: `fast-forward`
  * re-simulates the offline gap up to its budget, `attach-live` resumes live submission with no
  * catch-up worth simulating, `rebase` restarts bookkeeping from a capped activity's stop index,
- * and `none` means no resumable activity exists.
+ * `active-elsewhere` means the activity is live under another session's writer and this session
+ * neither attaches nor appends, and `none` means no resumable activity exists.
  */
 export type ResyncPlan =
   | {
@@ -17,6 +18,7 @@ export type ResyncPlan =
       readonly context: ActivitySubmissionContext;
       readonly kind: 'fast-forward';
     }
+  | { readonly activityID: string; readonly kind: 'active-elsewhere' }
   | { readonly context: ActivitySubmissionContext; readonly kind: 'attach-live' }
   | { readonly context: ActivitySubmissionContext; readonly kind: 'rebase' }
   | { readonly kind: 'none' };
@@ -31,13 +33,15 @@ export interface FastForwardProgress {
  * whichever continuation was live when the budget ran out or a failure aborted it — so a caller
  * can attach to it directly without a further round trip. `finalRowTerminal` is true when the
  * fast-forward itself submitted that row's terminal checkpoint: the stream is closed even though
- * the row's fetched `status` still reads active, so no live attach may follow.
+ * the row's fetched `status` still reads active, so no live attach may follow. `displaced` means
+ * another session took the stream's writer mid-run: the tallies past the confirmed head never
+ * persisted, and no live attach may follow.
  */
 export interface FastForwardReport extends FastForwardProgress {
   readonly activity: ActivityData;
   readonly appendedHead: number;
   readonly finalRowTerminal: boolean;
-  readonly reason: 'aborted-on-failure' | 'budget-exhausted';
+  readonly reason: 'aborted-on-failure' | 'budget-exhausted' | 'displaced';
 }
 
 /**

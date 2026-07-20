@@ -8,7 +8,7 @@ test('it rebases from the stop index when the activity is capped', () => {
   const activity = createMockActivityData({ appendedHead: 7, status: 'capped' });
   const progress = createMockLatestActivityProgress({ activity, appendedHead: 7 });
 
-  expect(planResync({ progress })).toStrictEqual({
+  expect(planResync({ mayWrite: true, progress })).toStrictEqual({
     context: {
       activityID: activity.id,
       appendedHead: 7,
@@ -22,9 +22,26 @@ test('it rebases from the stop index when the activity is capped', () => {
 test('it plans nothing for a stopped activity', () => {
   const activity = createMockActivityData({ status: 'stopped' });
 
-  expect(planResync({ progress: createMockLatestActivityProgress({ activity }) })).toStrictEqual({
+  expect(
+    planResync({ mayWrite: true, progress: createMockLatestActivityProgress({ activity }) }),
+  ).toStrictEqual({
     kind: 'none',
   });
+});
+
+test('it resolves active-elsewhere for an active activity this session may not write', () => {
+  const activity = createMockActivityData({ status: 'active' });
+
+  expect(
+    planResync({ mayWrite: false, progress: createMockLatestActivityProgress({ activity }) }),
+  ).toStrictEqual({ activityID: activity.id, kind: 'active-elsewhere' });
+});
+
+test('it still rebases a capped activity when this session may not write', () => {
+  const activity = createMockActivityData({ appendedHead: 3, status: 'capped' });
+  const progress = createMockLatestActivityProgress({ activity, appendedHead: 3 });
+
+  expect(planResync({ mayWrite: false, progress }).kind).toBe('rebase');
 });
 
 test('it attaches live when the gap is not worth simulating', () => {
@@ -34,7 +51,10 @@ test('it attaches live when the gap is not worth simulating', () => {
     appendedAt: new Date(serverTime.getTime() - 4000),
   });
 
-  const plan = planResync({ progress: createMockLatestActivityProgress({ activity, serverTime }) });
+  const plan = planResync({
+    mayWrite: true,
+    progress: createMockLatestActivityProgress({ activity, serverTime }),
+  });
 
   expect(plan.kind).toBe('attach-live');
 });
@@ -46,7 +66,10 @@ test('it fast-forwards the offline gap measured from the last append', () => {
     appendedAt: new Date(serverTime.getTime() - 7_200_000),
   });
 
-  const plan = planResync({ progress: createMockLatestActivityProgress({ activity, serverTime }) });
+  const plan = planResync({
+    mayWrite: true,
+    progress: createMockLatestActivityProgress({ activity, serverTime }),
+  });
 
   expect(plan).toMatchObject({ budgetMs: 7_200_000, kind: 'fast-forward' });
 });
@@ -59,7 +82,10 @@ test('it measures the gap from the start when nothing was appended', () => {
     startedAt: new Date(serverTime.getTime() - 60_000),
   });
 
-  const plan = planResync({ progress: createMockLatestActivityProgress({ activity, serverTime }) });
+  const plan = planResync({
+    mayWrite: true,
+    progress: createMockLatestActivityProgress({ activity, serverTime }),
+  });
 
   expect(plan).toMatchObject({ budgetMs: 60_000, kind: 'fast-forward' });
 });
@@ -71,7 +97,10 @@ test('it never budgets past the cap', () => {
     appendedAt: new Date(serverTime.getTime() - 3 * OFFLINE_PROGRESS_CAP_MS),
   });
 
-  const plan = planResync({ progress: createMockLatestActivityProgress({ activity, serverTime }) });
+  const plan = planResync({
+    mayWrite: true,
+    progress: createMockLatestActivityProgress({ activity, serverTime }),
+  });
 
   expect(plan).toMatchObject({ budgetMs: OFFLINE_PROGRESS_CAP_MS, kind: 'fast-forward' });
 });
@@ -85,6 +114,7 @@ test('it honours an injected cap', () => {
 
   const plan = planResync({
     capMs: 60_000,
+    mayWrite: true,
     progress: createMockLatestActivityProgress({ activity, serverTime }),
   });
 

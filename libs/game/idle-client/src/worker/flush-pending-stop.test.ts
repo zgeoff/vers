@@ -133,3 +133,38 @@ test('it keeps the intent held when the session is not recognized', async () => 
     avatarID: 'avatar_1',
   });
 });
+
+test('it releases a stop another writer superseded, leaving the row active', async () => {
+  const viewer = await createViewer();
+
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
+
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const submitter = createStubSubmitter();
+  const context = createStubWorkerContext({ client, submitter });
+
+  server.use(
+    mockActivityService.stopActivity.handler((opts) => {
+      throw opts.errors.SESSION_EVICTED({ data: {} });
+    }),
+  );
+
+  await writePendingStopIntent({ activityID: activity.id, avatarID: viewer.avatar.id });
+
+  const outcome = await flushPendingStop(context);
+
+  expect(outcome).toBe('delivered');
+
+  const intent = await readPendingStopIntent();
+
+  expect(intent).toBeUndefined();
+
+  const row = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
+
+  invariant(row !== undefined, 'expected the targeted row to survive');
+  expect(row.status).toBe('active');
+});

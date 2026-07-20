@@ -43,10 +43,13 @@ export interface DisconnectMessage extends IClientMessage {
 /**
  * Asks the worker to resync the avatar's confirmed activity state — the tab's own trigger for a
  * catch-up the worker alone plans and runs, since only the worker holds the live simulation a plan
- * might attach to.
+ * might attach to. `claim` marks a deliberate attach — a fresh page load, an explicit continue or
+ * retry — and lets the resync take over as an active activity's writer; an automatic trigger (a
+ * reconnect relay) never claims, so two open devices can't trade the writer back and forth.
  */
 export interface RequestResyncMessage extends IClientMessage {
   readonly avatarID: string;
+  readonly claim: boolean;
   readonly type: ClientMessageType.RequestResync;
 }
 
@@ -96,6 +99,7 @@ export enum WorkerMessageType {
   RewardSlotsRecorded = 'reward_slots_recorded',
   SimulationUpdate = 'simulation_update',
   StartStatus = 'start_status',
+  WriterDisplaced = 'writer_displaced',
 }
 
 interface IWorkerMessage {
@@ -119,6 +123,12 @@ export interface InitialStateMessage extends IWorkerMessage {
   readonly rewardSlotLedger: RewardSlotLedgerSnapshot;
   readonly state: SimulationSnapshot;
   readonly type: WorkerMessageType.InitialState;
+
+  /**
+   * The activity another session displaced this device from, `null` when none — included so a tab
+   * connecting after the displacement broadcast still learns of it.
+   */
+  readonly writerDisplacedActivityID: null | string;
 }
 
 export interface SimulationUpdateMessage extends IWorkerMessage {
@@ -221,6 +231,18 @@ export interface StartStatusMessage extends IWorkerMessage {
   readonly type: WorkerMessageType.StartStatus;
 }
 
+/**
+ * Reports that another session took over as an activity's writer, displacing this device: its
+ * local simulation is cleared and nothing it submits for that activity persists. `activityID` is
+ * `null` once the displacement resolves — this session re-attached (taking the writer back) or
+ * installed a different run. Broadcast only on transition, so a dismissed notice isn't re-raised
+ * by every reconnect.
+ */
+export interface WriterDisplacedMessage extends IWorkerMessage {
+  readonly activityID: null | string;
+  readonly type: WorkerMessageType.WriterDisplaced;
+}
+
 export type WorkerMessage =
   | ActivityCompletedMessage
   | CheckpointFlushStalledMessage
@@ -232,7 +254,8 @@ export type WorkerMessage =
   | ResyncStatusMessage
   | RewardSlotsRecordedMessage
   | SimulationUpdateMessage
-  | StartStatusMessage;
+  | StartStatusMessage
+  | WriterDisplacedMessage;
 
 /**
  * The latest start outcome as tabs hold it, keyed by the request it answers.
@@ -284,13 +307,16 @@ export interface RewardSlotLedgerSnapshot {
 /**
  * The catch-up flow's lifecycle as tabs observe it: fast-forwarding with running attempt and
  * level-up counts, done with the final tallies, capped when the server stopped the stream at the
- * offline-progress bound, failed when the catch-up couldn't complete, or session-expired when the
- * server no longer recognizes the caller's session — a state no retry can leave, only a fresh
- * sign-in. A resync with no real away period broadcasts nothing.
+ * offline-progress bound, active-elsewhere when another session took the stream's writer mid
+ * catch-up — the tallies past the confirmed head never persisted — failed when the catch-up
+ * couldn't complete, or session-expired when the server no longer recognizes the caller's session
+ * — a state no retry can leave, only a fresh sign-in. A resync with no real away period
+ * broadcasts nothing.
  */
 export type ResyncStatus =
   | { readonly attempts: number; readonly kind: 'done'; readonly levelUps: number }
   | { readonly attempts: number; readonly kind: 'fast-forwarding'; readonly levelUps: number }
+  | { readonly activityID: string; readonly kind: 'active-elsewhere' }
   | { readonly avatarID: string; readonly kind: 'failed' }
   | { readonly avatarID: string; readonly kind: 'session-expired' }
   | { readonly kind: 'capped' };

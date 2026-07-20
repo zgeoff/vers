@@ -5,10 +5,12 @@ import { WorkerMessageType } from '../types';
 export function createInitialStateMessage(
   state: SimulationSnapshot,
   rewardSlotLedger: RewardSlotLedgerSnapshot,
+  writerDisplacedActivityID: null | string,
 ): InitialStateMessage {
   return {
     rewardSlotLedger,
     state,
     type: WorkerMessageType.InitialState,
+    writerDisplacedActivityID,
   };
 }

@@ -33,6 +33,7 @@ function setupTest(
   const client: ActivityServiceClient = createORPCClient(link);
   const onAcked = mock<(activityID: string, appendedHead: number) => void>();
   const onCapped = mock<(activityID: string, appendedHead: number) => void>();
+  const onEvicted = mock<(activityID: string) => void>();
   const onFlushStalled = mock<(activityID: string, reason: string, traceID: string) => void>();
   const onInvalid = mock<(activityID: string, reason: string, traceID?: string) => void>();
   const onHeld = mock<(activityID: string) => void>();
@@ -41,13 +42,14 @@ function setupTest(
     client,
     onAcked,
     onCapped,
+    onEvicted,
     onFlushStalled,
     onHeld,
     onInvalid,
     ...config,
   });
 
-  return { client, onAcked, onCapped, onFlushStalled, onHeld, onInvalid, submitter };
+  return { client, onAcked, onCapped, onEvicted, onFlushStalled, onHeld, onInvalid, submitter };
 }
 
 test('it flushes immediately on a terminal checkpoint and confirms the queue on success', async () => {
@@ -443,6 +445,40 @@ test('it discards the queue and stops the stream on SESSION_EVICTED', async () =
   const stillEmpty = await readQueuedCheckpoints('evicted-activity');
 
   expect(stillEmpty).toStrictEqual([]);
+});
+
+test('it reports the eviction and marks the activity evicted until a registration supersedes it', async () => {
+  const ctx = setupTest();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.SESSION_EVICTED({ data: {} });
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'displaced-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  expect(ctx.submitter.isEvicted('displaced-activity')).toBeFalse();
+
+  await ctx.submitter.submit('displaced-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onEvicted).toHaveBeenCalledExactlyOnceWith('displaced-activity');
+  expect(ctx.submitter.isEvicted('displaced-activity')).toBeTrue();
+
+  // taking the writer back re-attaches through a fresh registration, which clears the marker
+  await ctx.submitter.registerActivity({
+    activityID: 'displaced-activity',
+    appendedHead: 3,
+    lastHash: 'claimed_hash',
+    startChainIndex: 0,
+  });
+
+  expect(ctx.submitter.isEvicted('displaced-activity')).toBeFalse();
 });
 
 test('it seeds a checkpoint submitted during registration from the queued cursor', async () => {

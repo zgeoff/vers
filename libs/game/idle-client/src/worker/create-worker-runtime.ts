@@ -8,7 +8,13 @@ import { createCheckpointSubmitter } from '../submission/create-checkpoint-submi
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import type { ActivityServiceClient } from '../submission/types';
-import type { ClientMessage, RewardSlotLedgerEntry, WorkerMessage } from '../types';
+import type {
+  ClientMessage,
+  RequestResyncMessage,
+  RewardSlotLedgerEntry,
+  WorkerMessage,
+} from '../types';
+import { applyEviction } from './apply-eviction';
 import { createCheckpointFlushStalledMessage } from './create-checkpoint-flush-stalled-message';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
 import { createConnectionStatusMessage } from './create-connection-status-message';
@@ -21,6 +27,7 @@ import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
+import { withLifecycleTurn } from './with-lifecycle-turn';
 
 export interface WorkerRuntime {
   readonly connections: ReadonlySet<MessagePort>;
@@ -81,6 +88,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let stopEpoch = 0;
   let startRequestID: null | string = null;
   let lifecycleTail: Readonly<Promise<void>> = Promise.resolve();
+  let queuedClaimResync: RequestResyncMessage | null = null;
+  let writerDisplacedActivityID: null | string = null;
 
   // Every client message and the self-triggered reconnect resync await this before running, so a
   // relaunch-while-offline never plans against the enum's Abort default while the real cached
@@ -123,6 +132,17 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     onCapped: () => {
       emitWorkerMessage(createOfflineCapStatusMessage(0, true));
     },
+
+    // Deferred to a lifecycle turn rather than acted on inline: the callback fires from inside a
+    // flush at an arbitrary point, and clearing the simulation mid-install would race the
+    // lifecycle flow that owns it.
+    onEvicted: (activityID) => {
+      void withLifecycleTurn(context, 'eviction', () => {
+        applyEviction(context, activityID);
+
+        return Promise.resolve();
+      });
+    },
     onHeld: () => {
       emitConnectionStatus(false);
     },
@@ -150,9 +170,11 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     }),
     getSimulation: () => simulation,
     getLifecycleTail: () => lifecycleTail,
+    getQueuedClaimResync: () => queuedClaimResync,
     getStartRequestID: () => startRequestID,
     getStopEpoch: () => stopEpoch,
     getSubmitter: () => submitter,
+    getWriterDisplacedActivityID: () => writerDisplacedActivityID,
     isFailureActionDirty: () => failureActionDirty,
     isFailureActionPushInFlight: () => failureActionPushInFlight,
     isResyncInFlight: () => resyncInFlight,
@@ -185,6 +207,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
     },
+    setQueuedClaimResync: (message) => {
+      queuedClaimResync = message;
+    },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
     },
@@ -199,6 +224,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     setSimulation: (newSimulation) => {
       simulation = newSimulation;
+    },
+    setWriterDisplacedActivityID: (activityID) => {
+      writerDisplacedActivityID = activityID;
     },
   };
 
@@ -297,8 +325,10 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
         const avatarID = heldIntent?.avatarID ?? resyncAvatarID ?? null;
 
+        // a reconnect is an automatic trigger, never a deliberate attach — it must not take the
+        // writer from a device the player is actively driving
         if (context.getActivity() === null && avatarID !== null) {
-          await handleRequestResyncMessage(context, createRequestResyncMessage(avatarID));
+          await handleRequestResyncMessage(context, createRequestResyncMessage(avatarID, false));
         }
       } catch (error) {
         reportWorkerFault('reconnect', error);

@@ -79,7 +79,10 @@ test('it retries by requesting a fresh resync and clearing the failed status', a
 
   await user.click(screen.getByRole('button', { name: 'Try again' }));
 
-  expect(calls).toStrictEqual([{ avatarID: 'avatar_1', type: ClientMessageType.RequestResync }]);
+  expect(calls).toStrictEqual([
+    { avatarID: 'avatar_1', claim: true, type: ClientMessageType.RequestResync },
+  ]);
+
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
@@ -91,5 +94,11 @@ test('it dismisses by clearing the resync status', async () => {
 
   await user.click(screen.getByRole('button', { name: 'Close' }));
 
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+test('it renders nothing when the catch-up ended on another device taking the run', () => {
+  setResyncStatus({ activityID: 'activity_1', kind: 'active-elsewhere' });
+  render(<WelcomeBackModal />);
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });

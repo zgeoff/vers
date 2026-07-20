@@ -38,6 +38,12 @@ export interface SyncSlice {
    * or gains an entry — internal bookkeeping with no selector of its own.
    */
   rewardSlotLedgerActivityID: null | string;
+
+  /**
+   * The activity another session displaced this device from — its writer was taken over and
+   * nothing this device submits for it persists — `null` when none.
+   */
+  writerDisplacedActivityID: null | string;
 }
 
 export function createSyncSlice(): SyncSlice {
@@ -51,5 +57,6 @@ export function createSyncSlice(): SyncSlice {
     startReport: null,
     rewardSlotLedger: [],
     rewardSlotLedgerActivityID: null,
+    writerDisplacedActivityID: null,
   };
 }

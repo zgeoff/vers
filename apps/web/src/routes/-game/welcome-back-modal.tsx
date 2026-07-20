@@ -21,6 +21,12 @@ export function WelcomeBackModal() {
     return null;
   }
 
+  // a catch-up ended by another device taking the run resolves in the playing-elsewhere notice,
+  // which carries the take-back action — a second dialog saying the same thing helps nobody
+  if (resyncStatus.kind === 'active-elsewhere') {
+    return null;
+  }
+
   return (
     <Dialog
       onOpenChange={(open) => {
@@ -37,7 +43,7 @@ export function WelcomeBackModal() {
 }
 
 interface ResyncOutcomeProps {
-  readonly resyncStatus: ResyncStatus;
+  readonly resyncStatus: Exclude<ResyncStatus, { readonly kind: 'active-elsewhere' }>;
 }
 
 function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
@@ -62,7 +68,7 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
         <Button
           onClick={() => {
             if (idleWorkerHandle.worker !== undefined) {
-              sendIdleRequestResync(idleWorkerHandle.worker, resyncStatus.avatarID);
+              sendIdleRequestResync(idleWorkerHandle.worker, resyncStatus.avatarID, true);
             }
 
             setResyncStatus(null);
@@ -79,7 +85,12 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
 
 function formatResyncStatus(
   resyncStatus: Readonly<
-    Exclude<ResyncStatus, { readonly kind: 'failed' } | { readonly kind: 'session-expired' }>
+    Exclude<
+      ResyncStatus,
+      | { readonly kind: 'active-elsewhere' }
+      | { readonly kind: 'failed' }
+      | { readonly kind: 'session-expired' }
+    >
   >,
 ): string {
   if (resyncStatus.kind === 'capped') {
