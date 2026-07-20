@@ -1,8 +1,9 @@
 # infra
 
-Cloudflare DNS for `versidle.com` and the Axiom observability backend (datasets, API tokens,
-monitors, notifiers, dashboards), with Pulumi state held in Cloudflare R2. Credentials resolve from
-1Password at run time, so nothing sensitive lives on disk.
+Cloudflare DNS for `versidle.com`, the Axiom observability backend (datasets, API tokens, monitors,
+notifiers, dashboards), and the zgeoff/vers GitHub repo configuration (labels, rulesets, the
+production environment, Actions variables), with Pulumi state held in Cloudflare R2. Credentials
+resolve from 1Password at run time, so nothing sensitive lives on disk.
 
 - `index.ts` — apex and `www` records pointing `versidle.com` at the Fly web app, DNS-only so Fly
   serves TLS.
@@ -14,6 +15,14 @@ monitors, notifiers, dashboards), with Pulumi state held in Cloudflare R2. Crede
   vault item and dependent Fly secrets within the 48-hour rotation grace window. The provider's own
   credential is console-managed: a token cannot rotate itself without invalidating the session doing
   the rotating.
+- `github.ts` — the zgeoff/vers repo configuration: the authoritative label set (the registry the
+  issue-hygiene rules point at), the `main protection` branch ruleset, the `production` environment,
+  and the Actions variables (repo- and environment-scoped; the service-auth public key value comes
+  from encrypted stack config, the rest sit in code). Console-managed and therefore not drift:
+  milestones and the delivery board (delivery state, not schema — and Projects v2 lacks mature
+  provider support), Actions secrets (values live only in the 1Password vault and the console), and
+  the provider's own PAT, for the same reason the Axiom token is — a token cannot rotate itself
+  without invalidating the session doing the rotating.
 - `sdks/axiom/` — committed TypeScript SDK generated from the bridged Terraform provider
   (`pulumi package add terraform-provider axiomhq/axiom 1.6.2` regenerates it; the version is pinned
   in `Pulumi.yaml`).
@@ -30,6 +39,9 @@ monitors, notifiers, dashboards), with Pulumi state held in Cloudflare R2. Crede
   create/read/update/delete on monitors, notifiers, dashboards, datasets, and API tokens, plus query
   permission on all datasets — Axiom rejects monitor writes unless the token can query every dataset
   the monitor's APL references.
+- A GitHub fine-grained PAT (the `github-token` field on the `vers-ci` vault's `vers-infra` item)
+  scoped to the zgeoff/vers repository with read/write on Administration, Environments, Issues,
+  Secrets, Variables, and Webhooks.
 
 ## One-time setup
 

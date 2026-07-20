@@ -55,6 +55,7 @@
       "@paralleldrive/cuid2": "3.3.0",
       "@playwright/test": "1.61.1",
       "@pulumi/cloudflare": "6.17.0",
+      "@pulumi/github": "6.14.0",
       "@pulumi/pulumi": "3.250.0",
       "@react-email/components": "1.0.12",
       "@react-hookz/web": "25.2.0",

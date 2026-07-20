@@ -5,6 +5,7 @@
   "type": "module",
   "main": "index.ts",
   "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "preview": "op run --env-file=.env -- pulumi preview",
     "up": "op run --env-file=.env -- pulumi up",
     "destroy": "op run --env-file=.env -- pulumi destroy"
@@ -12,6 +13,7 @@
   "dependencies": {
     "@pulumi/axiom": "file:sdks/axiom",
     "@pulumi/cloudflare": "catalog:",
+    "@pulumi/github": "catalog:",
     "@pulumi/pulumi": "catalog:"
   },
   "devDependencies": {
