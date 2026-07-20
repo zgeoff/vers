@@ -22,6 +22,7 @@
     "p-retry": "catalog:",
     "postgres": "catalog:",
     "tiny-invariant": "catalog:",
+    "yaml": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

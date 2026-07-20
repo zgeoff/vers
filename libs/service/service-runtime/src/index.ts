@@ -1,6 +1,7 @@
 export { baseEnvSchema } from './base-env-schema';
 export { createLogger } from './create-logger';
 export { createService } from './create-service';
+export { runEnvContractCLI } from './run-env-contract-cli';
 export type { Service, ServiceConfig } from './create-service';
 export { flushErrorReports } from './flush-error-reports';
 export { reportUnexpectedError } from './report-unexpected-error';

@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "bun --watch src/serve.ts",
+    "env-contract": "bun src/write-env-contract.ts",
+    "env-contract:check": "bun src/write-env-contract.ts --check",
     "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
