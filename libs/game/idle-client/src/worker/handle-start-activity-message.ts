@@ -2,7 +2,6 @@ import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import type { StartActivityMessage, StartStatus } from '../types';
 import { ClientMessageType } from '../types';
-import { createRequestResyncMessage } from './create-request-resync-message';
 import { createStartStatusMessage } from './create-start-status-message';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { hasStopIntervened } from './has-stop-intervened';
@@ -80,7 +79,7 @@ async function runStart(
   // the writer since the player's start is a deliberate attach; called inner-to-inner, since
   // queueing a turn from inside this turn would deadlock the mailbox
   if (row.scopeType === message.scopeType && row.scopeID === message.scopeID) {
-    await runResyncFlow(context, createRequestResyncMessage(message.avatarID, true), entryEpoch);
+    await runResyncFlow(context, message.avatarID, true, entryEpoch);
 
     // a resync can be skipped, gated, or abandoned without installing; reporting attached anyway
     // would leave the tab waiting forever on a run that never arrives

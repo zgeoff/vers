@@ -2,12 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Button, Dialog, Text } from '@vers/design-system';
 import { setWriterDisplacedActivityID, useWriterDisplacedActivityID } from '@vers/idle-client';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
-import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
+import { sendIdleReportOnline } from '../../lib/idle/send-idle-report-online';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 
 /**
  * Tells the player their run is being played on another device: this device's simulation stopped
- * and nothing it submits persists. "Continue here" claims the run back through a claiming resync;
+ * and nothing it submits persists. "Continue here" claims the run back through a claiming report;
  * dismissing leaves the run to the other device. Both clear the tab's displaced state while the
  * worker keeps its own record, whose transition-only broadcast never re-raises an unchanged
  * displacement — but a fresh one (the same run displaced again after a take-back) transitions
@@ -46,7 +46,7 @@ export function PlayingElsewhereNotice() {
             return;
           }
 
-          sendIdleRequestResync(idleWorkerHandle.worker, avatarID, true);
+          sendIdleReportOnline(idleWorkerHandle.worker, avatarID, true);
           setWriterDisplacedActivityID(null);
         }}
       >

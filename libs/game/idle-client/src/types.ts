@@ -3,14 +3,15 @@ import type { ActivityFailureAction, SimulationSnapshot } from '@vers/idle-core'
 
 /**
  * `SetActivity` is worker-internal — the start flow's install step, never routed from a tab.
- * Resuming any activity, live or offline, always goes through `RequestResync`; the worker alone
- * derives its simulation input and submission context from the confirmed row, never trusting a
- * tab's locally reconstructed one.
+ * Tabs never command a catch-up: `ReportOnline` reports connectivity and the session's avatar,
+ * and the worker alone decides whether a resync follows — only it holds the live simulation a
+ * plan might attach to, and it derives simulation input and submission context from the
+ * confirmed row, never trusting a tab's locally reconstructed one.
  */
 export enum ClientMessageType {
   Disconnect = 'disconnect',
   Initialize = 'initialize',
-  RequestResync = 'request_resync',
+  ReportOnline = 'report_online',
   SetActivity = 'set_activity',
   SetFailureAction = 'set_failure_action',
   StartActivity = 'start_activity',
@@ -41,16 +42,19 @@ export interface DisconnectMessage extends IClientMessage {
 }
 
 /**
- * Asks the worker to resync the avatar's confirmed activity state — the tab's own trigger for a
- * catch-up the worker alone plans and runs, since only the worker holds the live simulation a plan
- * might attach to. `claim` marks a deliberate attach — a fresh page load, an explicit continue or
- * retry — and lets the resync take over as an active activity's writer; an automatic trigger (a
- * reconnect relay) never claims, so two open devices can't trade the writer back and forth.
+ * A tab's connectivity signal: the network looks reachable again (or the tab just loaded) and the
+ * session's active avatar is `avatarID`. Chromium never fires online events inside a SharedWorker,
+ * so tabs relay theirs; the worker alone decides whether a catch-up follows. The avatar rides
+ * along as context because only the session can name it — the worker's own memory doesn't survive
+ * its restart, and a fresh device has none. `claim` marks a deliberate presence — a fresh page
+ * load, an explicit continue or retry — and lets a resync the worker schedules take over as an
+ * active activity's writer; an automatic trigger (a reconnect relay) never claims, so two open
+ * devices can't trade the writer back and forth.
  */
-export interface RequestResyncMessage extends IClientMessage {
+export interface ReportOnlineMessage extends IClientMessage {
   readonly avatarID: string;
   readonly claim: boolean;
-  readonly type: ClientMessageType.RequestResync;
+  readonly type: ClientMessageType.ReportOnline;
 }
 
 /**
@@ -82,7 +86,7 @@ export interface StopActivityMessage extends IClientMessage {
 export type ClientMessage =
   | DisconnectMessage
   | InitializeMessage
-  | RequestResyncMessage
+  | ReportOnlineMessage
   | SetFailureActionMessage
   | StartActivityMessage
   | StopActivityMessage;

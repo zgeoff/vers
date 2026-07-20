@@ -18,6 +18,7 @@ import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 function setupTest(
   config: Readonly<{
+    onServerContact?: () => void;
     scheduleFlush?: (flush: () => Promise<void>) => void;
     scheduleRetry?: (delayMs: number, retry: () => Promise<void>) => void;
   }> = {},
@@ -37,6 +38,7 @@ function setupTest(
   const onFlushStalled = mock<(activityID: string, reason: string, traceID: string) => void>();
   const onInvalid = mock<(activityID: string, reason: string, traceID?: string) => void>();
   const onHeld = mock<(activityID: string) => void>();
+  const onServerContact = mock<() => void>();
 
   const submitter = createCheckpointSubmitter({
     client,
@@ -46,10 +48,21 @@ function setupTest(
     onFlushStalled,
     onHeld,
     onInvalid,
+    onServerContact,
     ...config,
   });
 
-  return { client, onAcked, onCapped, onEvicted, onFlushStalled, onHeld, onInvalid, submitter };
+  return {
+    client,
+    onAcked,
+    onCapped,
+    onEvicted,
+    onFlushStalled,
+    onHeld,
+    onInvalid,
+    onServerContact,
+    submitter,
+  };
 }
 
 test('it flushes immediately on a terminal checkpoint and confirms the queue on success', async () => {
@@ -1546,4 +1559,89 @@ test('it evicts safely when a concurrent flush call sets flushPending during a t
   await expect(heldFlush).toResolve();
 
   expect(track).toHaveBeenCalledOnce();
+});
+
+test('it reports server contact on a successful flush', async () => {
+  const ctx = setupTest();
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
+
+  await ctx.submitter.registerActivity({
+    activityID: 'contact-ack-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('contact-ack-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onServerContact).toHaveBeenCalledOnce();
+});
+
+test('it reports server contact on a stream-ending contract rejection', async () => {
+  const ctx = setupTest();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: 0 } });
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'contact-capped-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('contact-capped-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onServerContact).toHaveBeenCalledOnce();
+});
+
+test('it reports no server contact on a transport failure', async () => {
+  const ctx = setupTest({ scheduleRetry: () => {} });
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+
+  await ctx.submitter.registerActivity({
+    activityID: 'contact-transport-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('contact-transport-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onServerContact).not.toHaveBeenCalled();
+});
+
+test('it reports server contact only after the answered flush settles the local queue', async () => {
+  // kicked off inside the synchronous callback: the read transaction is created after the
+  // response's confirmed-row removal, so its rows are what a triggered recovery would see
+  let queueAtContact: ReturnType<typeof readQueuedCheckpoints> | undefined;
+
+  const ctx = setupTest({
+    onServerContact: () => {
+      queueAtContact = readQueuedCheckpoints('contact-order-activity');
+    },
+  });
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
+
+  await ctx.submitter.registerActivity({
+    activityID: 'contact-order-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('contact-order-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('contact-order-activity', createMockCompletedCheckpoint());
+
+  invariant(queueAtContact !== undefined, 'expected the contact callback to fire');
+
+  const rowsAtContact = await queueAtContact;
+
+  expect(rowsAtContact).toStrictEqual([]);
 });

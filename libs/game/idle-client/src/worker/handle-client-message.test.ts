@@ -9,7 +9,7 @@ import { createStubWorkerContext } from '../test-utils/create-stub-worker-contex
 import type {
   DisconnectMessage,
   InitializeMessage,
-  RequestResyncMessage,
+  ReportOnlineMessage,
   SetFailureActionMessage,
   StartActivityMessage,
 } from '../types';
@@ -52,7 +52,7 @@ test('it applies the sent failure action to the live simulation', async () => {
   expect(simulation.failureAction).toBe(ActivityFailureAction.Retry);
 });
 
-test('it records the resync request for the requested avatar', async () => {
+test('it runs the reconnect recovery for the reported avatar', async () => {
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
@@ -60,10 +60,10 @@ test('it records the resync request for the requested avatar', async () => {
 
   const channel = new MessageChannel();
 
-  const message: RequestResyncMessage = {
+  const message: ReportOnlineMessage = {
     avatarID: viewer.avatar.id,
     claim: false,
-    type: ClientMessageType.RequestResync,
+    type: ClientMessageType.ReportOnline,
   };
 
   const event = new MessageEvent('message', { data: message });

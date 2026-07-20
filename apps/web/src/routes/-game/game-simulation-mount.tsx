@@ -6,7 +6,7 @@ import { buildAvatarProgressionQueryOptions } from '../../lib/activity/build-ava
 import { buildCurrentActivityQueryOptions } from '../../lib/activity/build-current-activity-query-options';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
-import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
+import { sendIdleReportOnline } from '../../lib/idle/send-idle-report-online';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { emitProductEvent } from '../../lib/product-events/emit-product-event';
 
@@ -25,7 +25,7 @@ export function GameSimulationMount() {
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const resyncStatus = useResyncStatus();
   const avatarID = avatarQuery.data?.id;
-  const hasSentResync = useRef(false);
+  const hasSentOnlineReport = useRef(false);
   const lastWorkerActivityID = useRef(idleWorkerHandle.activity?.id);
 
   useEffect(() => {
@@ -75,23 +75,24 @@ export function GameSimulationMount() {
     setCheckpointFlushStall(null);
   }, [idleWorkerHandle.checkpointFlushStall]);
 
-  // sends once per page load, only once the worker has reported its initial state and an active
-  // avatar is known — an activity started fresh goes through SetActivity, never this path
+  // reports once per page load, only once the worker has reported its initial state and an
+  // active avatar is known — a connectivity signal, not a resync command: the worker decides
+  // whether a catch-up follows, and an activity started fresh goes through SetActivity
   useEffect(() => {
     if (
       idleWorkerHandle.worker === undefined ||
       !idleWorkerHandle.initialized ||
       avatarID === undefined ||
-      hasSentResync.current
+      hasSentOnlineReport.current
     ) {
       return;
     }
 
-    hasSentResync.current = true;
+    hasSentOnlineReport.current = true;
 
-    // a page load is a deliberate attach: the player opened the game here, so this device claims
-    // an active run's writer
-    sendIdleRequestResync(idleWorkerHandle.worker, avatarID, true);
+    // a page load is a deliberate presence: the player opened the game here, so a catch-up the
+    // worker schedules may claim an active run's writer
+    sendIdleReportOnline(idleWorkerHandle.worker, avatarID, true);
   }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID]);
 
   // fires once per page load under the same gate as the resync: a live worker and a known avatar
@@ -124,15 +125,15 @@ export function GameSimulationMount() {
   }, [idleWorkerHandle.lastCompletedActivityID]);
 
   // the tab relays connectivity to the worker: Chromium never fires online events inside a
-  // SharedWorker, so this is the reconnect trigger there. The worker single-flights concurrent
-  // requests and drains held batches before planning, so a duplicate relay is harmless
+  // SharedWorker, so this is the reconnect signal there. The worker's flushes are idempotent and
+  // its resync single-flights, so a duplicate relay is harmless
   useEffect(() => {
     const worker = idleWorkerHandle.worker;
 
     const handleOnline = () => {
       // an automatic reconnect never claims the writer — the run may be live on another device
       if (worker !== undefined && avatarID !== undefined) {
-        sendIdleRequestResync(worker, avatarID, false);
+        sendIdleReportOnline(worker, avatarID, false);
       }
     };
 

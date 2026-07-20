@@ -32,9 +32,8 @@ import { createStubWorkerContext } from '../test-utils/create-stub-worker-contex
 import { createTestConnection } from '../test-utils/create-test-connection';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockStartedCheckpoint } from '../test-utils/factories/create-mock-started-checkpoint';
-import type { RequestResyncMessage } from '../types';
-import { ClientMessageType, WorkerMessageType } from '../types';
-import { handleRequestResyncMessage } from './handle-request-resync-message';
+import { WorkerMessageType } from '../types';
+import { runResyncTurn } from './run-resync-turn';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
 import type { WorkerContext } from './types';
@@ -81,13 +80,7 @@ test('it broadcasts nothing for an avatar with no activity history', async () =>
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
   // handler broadcast on the same channel — an empty prefix proves the resync stayed silent
@@ -113,13 +106,7 @@ test('it broadcasts capped and installs no simulation for a capped activity', as
     verifiedHead: 3,
   });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(1);
 
@@ -147,13 +134,7 @@ test('it delivers a queued row for the resync-determined latest activity rather 
     createMockCheckpointBatchEntry({ version: 1 }),
   );
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   // the resync's own drain delivered the determined latest activity's queued row over the
   // network rather than the sweep silently discarding it
@@ -177,13 +158,7 @@ test('it sweeps every queued checkpoint when the avatar has no activity history'
     createMockCheckpointBatchEntry({ version: 1 }),
   );
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   const swept = await readQueuedCheckpoints('stray-no-activity-activity');
 
@@ -228,13 +203,7 @@ test('it keeps the queued rows of an activity that went live while the resync wa
     createMockCheckpointBatchEntry({ version: 1 }),
   );
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  const handled = handleRequestResyncMessage(context, message);
+  const handled = runResyncTurn(context, viewer.avatar.id, false);
 
   // a fresher activity goes live while the resync is parked on its held-batch flush, exactly as
   // a set-activity request landing mid-resync would install it
@@ -301,13 +270,7 @@ test('it flushes a held checkpoint for a previously tracked, no-longer-latest ac
   expect(heldRows).toHaveLength(1);
   expect(track).toHaveBeenCalledOnce();
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   // flushHeld ran before the sweep determined a fresher activity is latest, delivering the held
   // row over the network rather than letting the sweep silently discard it
@@ -348,13 +311,7 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
     strict: true,
   });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
   // handler broadcast on the same channel — an empty prefix proves the resync stayed silent
@@ -408,13 +365,7 @@ test('it reports a divergence via the checkpoint-stream-error channel and skips 
     strict: true,
   });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(1);
 
@@ -444,13 +395,7 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
     startedAt: new Date(Date.now() - 63_000),
   });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(3);
 
@@ -512,13 +457,7 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
     startedAt: new Date(Date.now() - 20_000),
   });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(2);
 
@@ -566,13 +505,7 @@ test('it attaches a fresh login live without broadcasting any catch-up status', 
     startedAt: new Date(),
   });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
   // handler broadcast on the same channel — an empty prefix proves the resync stayed silent
@@ -599,13 +532,7 @@ test('it adopts a server-persisted retry preference during resync, caching and b
     startedAt: new Date(),
   });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(1);
 
@@ -648,13 +575,7 @@ test('it flushes a dirty local failure action to the server during resync, clear
     startedAt: new Date(),
   });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   expect(ctx.context.isFailureActionDirty()).toBeFalse();
 
@@ -702,13 +623,7 @@ test('it keeps the dirty flag when the resync push to the server fails', async (
     startedAt: new Date(),
   });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   expect(ctx.context.isFailureActionDirty()).toBeTrue();
   expect(ctx.context.getFailureAction()).toBe(ActivityFailureAction.Retry);
@@ -739,13 +654,7 @@ test("it starts a fresh row, installs a live simulation with the worker's failur
 
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   const minted = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: viewer.avatar.id, status: 'active' }),
@@ -796,13 +705,7 @@ test('it attaches the foreign row that races in ahead of the continuation', asyn
 
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   const installed = ctx.context.getSimulation();
 
@@ -835,13 +738,7 @@ test('it halts at the boundary and keeps the start intent when the offline budge
 
   const ctx = await setupTest({ remainingBudgetMs: 0, userID: viewer.user.id });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(1);
 
@@ -881,13 +778,7 @@ test('it clears a stale start intent silently when the budget is spent and anoth
 
   const ctx = await setupTest({ remainingBudgetMs: 0, userID: viewer.user.id });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   const heldIntent = await readPendingStartIntent();
 
@@ -923,13 +814,7 @@ test('it keeps the start intent and reports offline when the drain fails on tran
 
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(1);
 
@@ -972,13 +857,7 @@ test('it clears the start intent and reports the resync failure status on a defi
 
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(1);
 
@@ -1017,13 +896,7 @@ test('it keeps the start intent through a session-expired resync', async () => {
 
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(1);
 
@@ -1073,11 +946,7 @@ test('it stops back an attach-live row when a stop lands during its registration
 
   contextHolder.current = context;
 
-  await handleRequestResyncMessage(context, {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  });
+  await runResyncTurn(context, viewer.avatar.id, false);
 
   expect(context.getSimulation().activity).toBeNull();
 
@@ -1113,14 +982,7 @@ test('it delivers a blocked intent after the pass closes its source row and atta
   });
 
   await writeQueuedCheckpoint(source.id, terminal);
-
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   const minted = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: viewer.avatar.id, scopeID: source.scopeID, status: 'active' }),
@@ -1169,13 +1031,7 @@ test('it reports a fault to the error backend and broadcasts a failed status whe
     },
   });
 
-  const message: RequestResyncMessage = {
-    avatarID: 'avatar-with-held-tail',
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(context, message);
+  await runResyncTurn(context, 'avatar-with-held-tail', false);
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
   // handler broadcast on the same channel — a single failed status proves no connection-status
@@ -1226,13 +1082,7 @@ test('it broadcasts session-expired without a fault report when the session is n
     }),
   );
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(1);
 
@@ -1256,14 +1106,7 @@ test('it fails the resync while a raised stop is undelivered', async () => {
   await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
 
   await writePendingStopIntent({ activityID: 'activity_stopped', avatarID: viewer.avatar.id });
-
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(1);
 
@@ -1290,14 +1133,7 @@ test('it delivers the held stop before planning, leaving the stopped run cleared
   const row = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
 
   await writePendingStopIntent({ activityID: row.id, avatarID: viewer.avatar.id });
-
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
 
@@ -1333,13 +1169,7 @@ test('it abandons the install when a stop lands mid-resync', async () => {
     }),
   );
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   expect(ctx.context.getSimulation().activity).toBeNull();
   expect(ctx.context.getActivity()).toBeNull();
@@ -1379,11 +1209,7 @@ test('it stops back a drain-minted row when a stop lands during its attach', asy
 
   contextHolder.current = context;
 
-  await handleRequestResyncMessage(context, {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  });
+  await runResyncTurn(context, viewer.avatar.id, false);
 
   expect(context.getSimulation().activity).toBeNull();
 
@@ -1430,13 +1256,7 @@ test('it broadcasts the displacement and clears a live sim the writer was taken 
     })),
   );
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(1);
 
@@ -1504,18 +1324,10 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
   // the device already knows it was displaced from this run
   context.setWriterDisplacedActivityID(activity.id);
 
-  const first = handleRequestResyncMessage(context, {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  });
+  const first = runResyncTurn(context, viewer.avatar.id, false);
 
   // the player clicks continue-here while the automatic resync is still parked on its held flush
-  await handleRequestResyncMessage(context, {
-    avatarID: viewer.avatar.id,
-    claim: true,
-    type: ClientMessageType.RequestResync,
-  });
+  await runResyncTurn(context, viewer.avatar.id, true);
 
   expect(resume).not.toHaveBeenCalled();
   releaseHeldFlush?.();
@@ -1553,13 +1365,7 @@ test('it settles a mid-fast-forward displacement as active-elsewhere with the no
     }),
   );
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(3);
 
@@ -1593,13 +1399,7 @@ test('it clears a moot displacement once the fetched run is no longer active', a
   // the device was displaced from this run, and the other device has since finished it
   ctx.context.setWriterDisplacedActivityID(activity.id);
 
-  const message: RequestResyncMessage = {
-    avatarID: viewer.avatar.id,
-    claim: true,
-    type: ClientMessageType.RequestResync,
-  };
-
-  await handleRequestResyncMessage(ctx.context, message);
+  await runResyncTurn(ctx.context, viewer.avatar.id, true);
 
   await ctx.connection.waitForMessages(1);
 
