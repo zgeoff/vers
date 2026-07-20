@@ -126,9 +126,7 @@ const productionEnvironment = new github.RepositoryEnvironment(
 /**
  * Actions variables carry the deploy configuration. Plainly public values sit
  * in code; the service-auth public key enters through encrypted stack config,
- * keeping key material of any kind out of the committed source. Actions
- * secrets are console-managed: their values cannot be read back through the
- * API, so a declaration here could only overwrite them, never adopt them.
+ * keeping key material of any kind out of the committed source.
  */
 const umamiWebsiteIDVariable = new github.ActionsVariable('vite-umami-website-id', {
   repository,
@@ -153,9 +151,73 @@ const sentryDSNVariable = new github.ActionsEnvironmentVariable('vite-sentry-dsn
   value: 'https://929f735fcaf5436db8d0910fd1c0d71d@vers-bugsink.fly.dev/1',
 });
 
+/**
+ * Actions secrets. Values live in the vers-ci 1Password vault and reach the
+ * program as environment variables resolved by `op run`; GitHub cannot return
+ * a secret's value, so the program pushes and the vault stays the source of
+ * truth. OP_SERVICE_ACCOUNT_TOKEN is console-managed: it is the credential the
+ * resolution itself authenticates with, and a value cannot rotate itself
+ * without invalidating the session doing the rotating.
+ */
+const dotenvAppWebDevSecret = new github.ActionsSecret('dotenv-app-web-dev', {
+  repository,
+  secretName: 'DOTENV_APP_WEB_DEV',
+  value: requireEnv('DOTENV_APP_WEB_DEV'),
+});
+
+const dotenvAppWebE2ESecret = new github.ActionsSecret('dotenv-app-web-e2e', {
+  repository,
+  secretName: 'DOTENV_APP_WEB_E2E',
+  value: requireEnv('DOTENV_APP_WEB_E2E'),
+});
+
+const databaseURLSecret = new github.ActionsEnvironmentSecret('database-url', {
+  repository,
+  environment: productionEnvironment.environment,
+  secretName: 'DATABASE_URL',
+  value: requireEnv('DATABASE_URL'),
+});
+
+const discordWebhookURLSecret = new github.ActionsEnvironmentSecret('discord-webhook-url', {
+  repository,
+  environment: productionEnvironment.environment,
+  secretName: 'DISCORD_WEBHOOK_URL',
+  value: requireEnv('DISCORD_WEBHOOK_URL'),
+});
+
+const flyAPITokenSecret = new github.ActionsEnvironmentSecret('fly-api-token', {
+  repository,
+  environment: productionEnvironment.environment,
+  secretName: 'FLY_API_TOKEN',
+  value: requireEnv('FLY_API_TOKEN'),
+});
+
+const sentryAuthTokenSecret = new github.ActionsEnvironmentSecret('sentry-auth-token', {
+  repository,
+  environment: productionEnvironment.environment,
+  secretName: 'SENTRY_AUTH_TOKEN',
+  value: requireEnv('SENTRY_AUTH_TOKEN'),
+});
+
+function requireEnv(name: string): pulumi.Output<string> {
+  const value = process.env[name];
+
+  if (value === undefined || value === '') {
+    throw new Error(`environment variable ${name} is not set — run through \`op run\``);
+  }
+
+  return pulumi.secret(value);
+}
+
 export const labelCount = labels.labels.apply((entries) => entries?.length ?? 0);
 export const mainProtectionRulesetName = mainProtectionRuleset.name;
 export const productionEnvironmentName = productionEnvironment.environment;
 export const umamiWebsiteIDVariableName = umamiWebsiteIDVariable.variableName;
 export const serviceAuthPublicKeyVariableName = serviceAuthPublicKeyVariable.variableName;
 export const sentryDSNVariableName = sentryDSNVariable.variableName;
+export const dotenvAppWebDevSecretName = dotenvAppWebDevSecret.secretName;
+export const dotenvAppWebE2ESecretName = dotenvAppWebE2ESecret.secretName;
+export const databaseURLSecretName = databaseURLSecret.secretName;
+export const discordWebhookURLSecretName = discordWebhookURLSecret.secretName;
+export const flyAPITokenSecretName = flyAPITokenSecret.secretName;
+export const sentryAuthTokenSecretName = sentryAuthTokenSecret.secretName;
