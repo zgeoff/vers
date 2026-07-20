@@ -61,4 +61,5 @@ shared Neon database. It enqueues a snappea background task, so the run returns 
 Tokens are minted in the Bugsink UI or with `bugsink-manage create_auth_token` over
 `fly ssh console`. Two exist: the MCP server's token, stored as `mcp-token` on the `bugsink` item in
 the `vers` 1Password vault (read by `.mcp.json` at connect time), and CI's source-map upload token,
-stored as the `SENTRY_AUTH_TOKEN` GitHub secret beside the `VITE_SENTRY_DSN` GitHub variable.
+stored as `sentry-auth-token` on the `github-actions` item in the `vers-ci` vault, which the
+vers-infra Pulumi program pushes to the `SENTRY_AUTH_TOKEN` GitHub secret.

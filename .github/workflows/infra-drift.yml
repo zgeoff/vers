@@ -64,6 +64,12 @@ jobs:
           GITHUB_TOKEN: op://vers-ci/vers-infra/github-token
           NEON_API_KEY: op://vers-ci/neon/api-key
           DISCORD_ALARMS_WEBHOOK: op://vers-ci/discord-alarms-webhook/credential
+          DOTENV_APP_WEB_DEV: op://vers-ci/DOTENV_APP_WEB_DEV/notesPlain
+          DOTENV_APP_WEB_E2E: op://vers-ci/DOTENV_APP_WEB_E2E/notesPlain
+          DATABASE_URL: op://vers-ci/github-actions/database-url
+          DISCORD_WEBHOOK_URL: op://vers-ci/discord-ci-webhook/credential
+          FLY_API_TOKEN: op://vers-ci/github-actions/fly-api-token
+          SENTRY_AUTH_TOKEN: op://vers-ci/github-actions/sentry-auth-token
 
       - name: Preview
         uses: pulumi/actions@8e5e406f4007fca908480587cb9893c07090f58d # v7.0.0

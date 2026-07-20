@@ -17,12 +17,14 @@ resolve from 1Password at run time, so nothing sensitive lives on disk.
   the rotating.
 - `github.ts` — the zgeoff/vers repo configuration: the authoritative label set (the registry the
   issue-hygiene rules point at), the `main protection` branch ruleset, the `production` environment,
-  and the Actions variables (repo- and environment-scoped; the service-auth public key value comes
-  from encrypted stack config, the rest sit in code). Console-managed and therefore not drift:
-  milestones and the delivery board (delivery state, not schema — and Projects v2 lacks mature
-  provider support), Actions secrets (values live only in the 1Password vault and the console), and
-  the provider's own PAT, for the same reason the Axiom token is — a token cannot rotate itself
-  without invalidating the session doing the rotating.
+  the Actions variables (repo- and environment-scoped; the service-auth public key value comes from
+  encrypted stack config, the rest sit in code), and the Actions secrets (values resolve from the
+  `vers-ci` vault as environment variables at run time — GitHub cannot return a secret's value, so
+  the program pushes and the vault stays the source of truth). Console-managed and therefore not
+  drift: milestones and the delivery board (delivery state, not schema — and Projects v2 lacks
+  mature provider support), the `OP_SERVICE_ACCOUNT_TOKEN` secret (the credential the resolution
+  itself authenticates with), and the provider's own PAT, for the same reason the Axiom token is — a
+  token cannot rotate itself without invalidating the session doing the rotating.
 - `sdks/axiom/` — committed TypeScript SDK generated from the bridged Terraform provider
   (`pulumi package add terraform-provider axiomhq/axiom 1.6.2` regenerates it; the version is pinned
   in `Pulumi.yaml`).

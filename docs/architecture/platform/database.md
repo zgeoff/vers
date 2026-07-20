@@ -187,4 +187,5 @@ neonctl connection-string main --project-id <new-id> --database-name vers
 
 After provisioning, write the string into `libs/data/db/.env.local`. Then `db:migrate` and `db:seed`
 (run with `--env-file=.env.local`) bring the schema and dev seed data up from zero. Update the
-`DATABASE_URL` Actions secret and each Fly app's secret to the new string.
+`database-url` field on the `vers-ci` vault's `github-actions` item (the vers-infra program pushes
+it to the `DATABASE_URL` Actions secret) and each Fly app's secret to the new string.

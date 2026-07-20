@@ -15,7 +15,7 @@ export interface EnvKeySource {
 
 export interface EnvFileManifestEntry {
   readonly itemTitle: string;
-  readonly vault: 'vers';
+  readonly vault: 'vers' | 'vers-ci';
   readonly targetPath: string;
 }
 
