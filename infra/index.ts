@@ -13,6 +13,15 @@ export {
   tracesDatasetName,
 } from './axiom.ts';
 
+export {
+  labelCount,
+  mainProtectionRulesetName,
+  productionEnvironmentName,
+  sentryDSNVariableName,
+  serviceAuthPublicKeyVariableName,
+  umamiWebsiteIDVariableName,
+} from './github.ts';
+
 const config = new pulumi.Config();
 
 const zoneId = config.require('zoneId');

@@ -4,6 +4,6 @@
     "types": ["node"]
   },
   "files": [],
-  "include": ["index.ts", "axiom.ts"],
+  "include": ["index.ts", "axiom.ts", "github.ts"],
   "exclude": []
 }

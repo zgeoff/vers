@@ -65,6 +65,9 @@ Triage a GitHub issue the moment it's opened, not in a later pass:
 
 An open issue that isn't on the board with a milestone and status is a defect.
 
+The label registry is the vers-infra Pulumi program (`infra/github.ts`): a label change is a PR
+there, never a console edit. Milestones stay console-managed — they are delivery state, not schema.
+
 A new issue's body follows its type's template in `.github/ISSUE_TEMPLATE` (feature, bug, upkeep). A
 feature issue whose outcome a player can perceive — every `area/game` feature — carries a
 `## Player story` section: second person, present tense, what the player concretely sees or feels
