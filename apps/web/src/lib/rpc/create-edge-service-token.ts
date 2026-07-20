@@ -24,6 +24,7 @@ export async function createEdgeServiceToken(
 ): Promise<string> {
   return createServiceToken({
     audience: options.audience,
+    issuer: 'app-web',
     privateKey: await privateKey,
     ...(options.actingUserID !== null && { actingUserId: options.actingUserID }),
     ...(options.actingSessionID !== null &&

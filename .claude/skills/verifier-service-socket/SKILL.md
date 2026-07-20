@@ -14,8 +14,8 @@ The bun test suites boot the real service factory against a real postgres and ca
 through `buildRPCTestClient` with real token verification, so procedure logic, auth, and declared
 errors are verified there. Socket verification covers what that in-process client never executes:
 
-- the `src/serve.ts` entrypoint and its env wiring (`DATABASE_URL`, `SERVICE_AUTH_PUBLIC_KEY`,
-  `PORT`) and `GET /health`
+- the `src/serve.ts` entrypoint and its env wiring (`DATABASE_URL`, `SERVICE_AUTH_JWKS`, `PORT`) and
+  `GET /health`
 - wire-format contracts: the serialized error envelope, `x-trace-id` response headers, `traceparent`
   continuity
 - per-request side effects of the central `onError` interceptor (Sentry reporting, pino output)
@@ -45,18 +45,21 @@ connections.
 
 ## Credentials
 
-Services validate s2s tokens against `SERVICE_AUTH_PUBLIC_KEY`. Mint a throwaway keypair + tokens
-with a scratchpad script using `jose` and `TOKEN_ALGORITHM`/`TOKEN_ISSUER` from
-`libs/service/service-auth/src/index.ts` (import by absolute path — scratchpad files can't resolve
-workspace names): `generateKeyPair` → `exportSPKI`, then `SignJWT` with issuer, audience = service
-name (`service-user`), and `sub` for an acting user (omit `sub` for anonymous).
+Services validate s2s tokens against `SERVICE_AUTH_JWKS` — a JSON key set holding each minting
+issuer's public key under an issuer-named `kid` (`app-web`, `service-activity`, `service-replay`).
+Mint a throwaway keypair + tokens with a scratchpad script using `jose`: `generateKeyPair('EdDSA')`
+→ `exportJWK`, wrap as `{"keys":[{...jwk, kid: "app-web"}]}`, then `SignJWT` with protected header
+`{ alg: 'EdDSA', kid: 'app-web' }`, issuer equal to the `kid`, audience = service name
+(`service-user`), and `sub` for an acting user (omit `sub` for anonymous). A token whose `iss` isn't
+a registered issuer, doesn't equal its `kid`, or is signed by a different issuer's key is rejected
+with a 401.
 
 ## Boot and drive
 
 ```sh
 cd services/<name>
 DATABASE_URL="postgresql://test:test@127.0.0.1:<port>/verify_db" PORT=3399 \
-  SERVICE_AUTH_PUBLIC_KEY="$(jq -r .publicKeyPEM creds.json)" bun src/serve.ts &
+  SERVICE_AUTH_JWKS="$(jq -r .jwks creds.json)" bun src/serve.ts &
 ```
 
 Endpoints: `GET /health` (no token), `POST /rpc/<procedure>` with `authorization: Bearer <token>`,

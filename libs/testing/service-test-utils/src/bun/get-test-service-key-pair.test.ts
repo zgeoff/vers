@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { TOKEN_ALGORITHM } from '@vers/service-auth';
+import { parseServiceJWKS } from '@vers/service-auth';
 import * as jose from 'jose';
 import { createServiceToken } from './create-service-token';
 import { getTestServiceKeyPair } from './get-test-service-key-pair';
@@ -9,20 +9,31 @@ test('it memoizes the same keypair across repeated calls within a process', asyn
   const second = await getTestServiceKeyPair();
 
   expect(second.privateKey).toBe(first.privateKey);
-  expect(second.publicKeyPEM).toBe(first.publicKeyPEM);
+  expect(second.jwksJSON).toBe(first.jwksJSON);
 });
 
-test('it returns a public PEM that verifies tokens signed with the private key', async () => {
+test('it returns a JWKS that verifies tokens signed with the private key as any issuer', async () => {
   const keyPair = await getTestServiceKeyPair();
 
-  const token = await createServiceToken({
+  const keySet = parseServiceJWKS(keyPair.jwksJSON);
+
+  const webToken = await createServiceToken({
     audience: 'get-test-service-key-pair-spec',
+    issuer: 'app-web',
     privateKey: keyPair.privateKey,
   });
 
-  const publicKey = await jose.importSPKI(keyPair.publicKeyPEM, TOKEN_ALGORITHM);
+  const activityToken = await createServiceToken({
+    audience: 'get-test-service-key-pair-spec',
+    issuer: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
 
   await expect(
-    jose.jwtVerify(token, publicKey, { audience: 'get-test-service-key-pair-spec' }),
+    jose.jwtVerify(webToken, keySet, { audience: 'get-test-service-key-pair-spec' }),
+  ).toResolve();
+
+  await expect(
+    jose.jwtVerify(activityToken, keySet, { audience: 'get-test-service-key-pair-spec' }),
   ).toResolve();
 });

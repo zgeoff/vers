@@ -24,7 +24,7 @@ export {
   productionEnvironmentName,
   sentryAuthTokenSecretName,
   sentryDSNVariableName,
-  serviceAuthPublicKeyVariableName,
+  serviceAuthJWKSVariableName,
   umamiWebsiteIDVariableName,
 } from './github.ts';
 

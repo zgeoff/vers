@@ -11,7 +11,7 @@ await setupBunTestDB();
 
 const serviceKeyPair = await getTestServiceKeyPair();
 
-process.env['SERVICE_AUTH_PUBLIC_KEY'] = serviceKeyPair.publicKeyPEM;
+process.env['SERVICE_AUTH_JWKS'] = serviceKeyPair.jwksJSON;
 
 const jwtKeyPair = await getTestJWTKeyPair();
 

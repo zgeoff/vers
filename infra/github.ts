@@ -134,15 +134,12 @@ const umamiWebsiteIDVariable = new github.ActionsVariable('vite-umami-website-id
   value: 'b72918cb-3763-411c-b471-ac694e31d8f4',
 });
 
-const serviceAuthPublicKeyVariable = new github.ActionsEnvironmentVariable(
-  'service-auth-public-key',
-  {
-    repository,
-    environment: productionEnvironment.environment,
-    variableName: 'SERVICE_AUTH_PUBLIC_KEY',
-    value: new pulumi.Config('vers-infra').requireSecret('serviceAuthPublicKey'),
-  },
-);
+const serviceAuthJWKSVariable = new github.ActionsEnvironmentVariable('service-auth-jwks', {
+  repository,
+  environment: productionEnvironment.environment,
+  variableName: 'SERVICE_AUTH_JWKS',
+  value: new pulumi.Config('vers-infra').requireSecret('serviceAuthJWKS'),
+});
 
 const sentryDSNVariable = new github.ActionsEnvironmentVariable('vite-sentry-dsn', {
   repository,
@@ -213,7 +210,7 @@ export const labelCount = labels.labels.apply((entries) => entries?.length ?? 0)
 export const mainProtectionRulesetName = mainProtectionRuleset.name;
 export const productionEnvironmentName = productionEnvironment.environment;
 export const umamiWebsiteIDVariableName = umamiWebsiteIDVariable.variableName;
-export const serviceAuthPublicKeyVariableName = serviceAuthPublicKeyVariable.variableName;
+export const serviceAuthJWKSVariableName = serviceAuthJWKSVariable.variableName;
 export const sentryDSNVariableName = sentryDSNVariable.variableName;
 export const dotenvAppWebDevSecretName = dotenvAppWebDevSecret.secretName;
 export const dotenvAppWebE2ESecretName = dotenvAppWebE2ESecret.secretName;
