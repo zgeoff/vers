@@ -178,3 +178,11 @@ The `vers verification lag` threshold monitor watches `vers.verification.lag` an
 `vers alarms`. It alerts on no data as well as on the threshold. The gauge exports from
 `service-replay`'s always-warm machine ([deployment](./deployment.md)), so a silent dataset means
 the exporter or the process around it is down, never a healthy quiet system.
+
+## Alarms channel
+
+Axiom monitors, the CI pipeline, and Bugsink post to one Discord channel. The CI `alert` job posts a
+structured embed — a `[CI] critical — …` title, the failing run's link, and a red severity colour
+(`#e5484d`, decimal `15026253`) — in `.github/workflows/main.yml`. Axiom and Bugsink post their
+tools' stock formats: Axiom's custom-webhook notifier, the one templated body it offers, is not
+enabled on the plan, and Bugsink's Discord messaging service exposes no templating.
