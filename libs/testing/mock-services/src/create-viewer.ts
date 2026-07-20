@@ -23,7 +23,12 @@ interface Viewer {
  */
 export async function createViewer(config: Readonly<CreateViewerConfig> = {}): Promise<Viewer> {
   const user = await userCollection.create(config.user ?? {});
-  const avatar = await avatarCollection.create({ userID: user.id, ...config.avatar });
+
+  const avatar = await avatarCollection.create({
+    ...config.avatar,
+    userID: config.avatar?.userID ?? user.id,
+  });
+
   const token = await createTestAccessToken(user.id);
 
   return { avatar, token, user };
