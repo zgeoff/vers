@@ -356,6 +356,9 @@
     "libs/core/trace": {
       "name": "@vers/trace",
       "version": "0.0.0",
+      "dependencies": {
+        "@noble/hashes": "catalog:",
+      },
       "devDependencies": {
         "@types/bun": "catalog:",
         "@types/node": "catalog:",

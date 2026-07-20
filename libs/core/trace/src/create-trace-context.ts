@@ -1,3 +1,4 @@
+import { bytesToHex } from '@noble/hashes/utils.js';
 import type { TraceContext } from './types';
 
 /**
@@ -6,11 +7,7 @@ import type { TraceContext } from './types';
  */
 export function createTraceContext(parent?: Readonly<TraceContext>): TraceContext {
   return {
-    spanID: toHex(crypto.getRandomValues(new Uint8Array(8))),
-    traceID: parent?.traceID ?? toHex(crypto.getRandomValues(new Uint8Array(16))),
+    spanID: bytesToHex(crypto.getRandomValues(new Uint8Array(8))),
+    traceID: parent?.traceID ?? bytesToHex(crypto.getRandomValues(new Uint8Array(16))),
   };
-}
-
-function toHex(bytes: Uint8Array): string {
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
