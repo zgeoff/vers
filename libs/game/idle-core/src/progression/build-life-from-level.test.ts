@@ -8,6 +8,8 @@ test('it returns the base life at level one', () => {
 test('it grows life by a fixed amount per level', () => {
   const perLevel = buildLifeFromLevel(2) - buildLifeFromLevel(1);
 
+  expect(perLevel).toBe(20);
+
   for (let level = 2; level <= 50; level++) {
     expect(buildLifeFromLevel(level) - buildLifeFromLevel(level - 1)).toBe(perLevel);
   }

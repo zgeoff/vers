@@ -86,9 +86,9 @@ interface AvatarUnitPlateProps {
 
 /**
  * The player's frame: identity, the life/barrier/aether stack, the weapon swing timer, active
- * effects, and the ability bar. Life and the swing timer read real combat state; the rest stand in
- * until their state exists. The simulation knows the avatar only by id, so `displayName` carries
- * the player-facing name; the sim-reported name is the fallback.
+ * effects, and the ability bar. Life and the swing timer read real combat state; the rest render
+ * fixed stubs. The simulation knows the avatar only by id, so `displayName` carries the
+ * player-facing name; the sim-reported name is the fallback.
  */
 export function AvatarUnitPlate(props: Readonly<AvatarUnitPlateProps>) {
   const lastAttackTime = props.avatar.behaviours.avatar_weapon_attack?.lastAttackTime ?? 0;
