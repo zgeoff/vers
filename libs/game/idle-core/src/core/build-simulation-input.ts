@@ -1,4 +1,5 @@
 import { MIN_DIFFICULTY, buildEncounter, getEncounterContent } from '@vers/game-utils';
+import { buildLifeFromLevel } from '../progression';
 import type { ActivityInput, AvatarData } from '../types';
 import { ActivityFailureAction, ActivityType, EquipmentSlot } from '../types';
 
@@ -59,7 +60,7 @@ export function buildSimulationInput(
     avatar: {
       id: source.avatarID,
       level: source.buildSnapshot.level,
-      life: 200,
+      life: buildLifeFromLevel(source.buildSnapshot.level),
       name: source.avatarID,
       paperdoll: { [EquipmentSlot.MainHand]: buildPlaceholderWeapon() },
       xp: source.buildSnapshot.xp,

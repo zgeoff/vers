@@ -14,3 +14,13 @@ export const COMPLETION_BASE_XP = 25;
  * Fraction of an avatar's progress into its current level lost on activity failure.
  */
 export const FAILURE_XP_LOSS_FRACTION = 0.1;
+
+/**
+ * Life at level 1, before per-level growth.
+ */
+export const LIFE_BASE = 200;
+
+/**
+ * Life gained per level past the first.
+ */
+export const LIFE_PER_LEVEL = 20;
