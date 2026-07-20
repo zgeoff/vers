@@ -420,6 +420,7 @@
       "files": [
         "**/apps/web/src/routes/**/*.ts",
         "**/apps/web/src/routes/**/*.tsx",
+        "**/apps/web/src/lib/activity/**/*.ts",
         "**/apps/web/src/lib/auth/**/*.ts",
         "**/apps/web/src/lib/avatar/**/*.ts",
         "**/apps/web/src/lib/avatar/**/*.tsx"

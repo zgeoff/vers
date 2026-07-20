@@ -1,4 +1,4 @@
-export { WorldMapEncounterActivity } from './world-map-encounter-activity';
+export { EngagementView } from './engagement-view';
 export { planResync } from './resync/plan-resync';
 export { runFastForward } from './resync/run-fast-forward';
 export { runReconstruction } from './resync/run-reconstruction';

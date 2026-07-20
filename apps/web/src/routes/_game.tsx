@@ -2,7 +2,6 @@ import { Outlet, createFileRoute, useMatches } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { resolveFlags } from '@vers/flags';
 import { requireAuth } from '../lib/auth/require-auth';
-import { ActivityProgressNotice } from './-game/activity-progress-notice';
 import { AmbientSheet } from './-game/ambient-sheet';
 import { GameCanvasMount } from './-game/game-canvas-mount';
 import { GameSimulationMount } from './-game/game-simulation-mount';
@@ -37,7 +36,6 @@ function GameLayout() {
       <GameSimulationMount />
       <WelcomeBackModal />
       <NavRail />
-      <ActivityProgressNotice />
       {presentation === 'ambient' ? (
         <AmbientSheet>
           <Outlet />

@@ -2,6 +2,7 @@ import { Link, useRouteContext, useRouterState } from '@tanstack/react-router';
 import { Icon } from '@vers/design-system';
 import type { FlagKey } from '@vers/flags';
 import { css, cx } from '@vers/styled-system/css';
+import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { AvatarChip } from './avatar-chip';
 
 type RailTarget =
@@ -89,6 +90,12 @@ const railButtonActive = css({
   color: 'bg.panel',
 });
 
+const railButtonDisabled = css({
+  cursor: '[not-allowed]',
+  opacity: '[0.4]',
+  _hover: { borderColor: 'border', color: 'text.muted' },
+});
+
 const railGlyph = css({ fontSize: '2xl', lineHeight: '[1]' });
 
 const railLabel = css({
@@ -106,6 +113,8 @@ const railLabel = css({
 export function NavRail() {
   const routeContext = useRouteContext({ from: '/_game' });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const idleWorkerHandle = useIdleWorkerHandle();
+  const hasActivity = idleWorkerHandle.activity !== undefined;
 
   return (
     <nav aria-label="Game navigation" className={rail}>
@@ -115,6 +124,7 @@ export function NavRail() {
         <RailGroup
           key={group[0]?.to ?? index}
           flags={routeContext.flags}
+          hasActivity={hasActivity}
           items={group}
           pathname={pathname}
           showDivider={index > 0}
@@ -126,6 +136,7 @@ export function NavRail() {
 
 interface RailGroupProps {
   readonly flags: Partial<Record<FlagKey, boolean>>;
+  readonly hasActivity: boolean;
   readonly items: ReadonlyArray<RailItem>;
   readonly pathname: string;
   readonly showDivider: boolean;
@@ -141,17 +152,26 @@ function RailGroup(props: Readonly<RailGroupProps>) {
   return (
     <>
       {props.showDivider ? <span aria-hidden className={divider} /> : null}
-      {visible.map((item) => (
-        <Link
-          key={item.to}
-          aria-current={isActive(props.pathname, item.to) ? 'page' : undefined}
-          className={cx(railButton, isActive(props.pathname, item.to) && railButtonActive)}
-          to={item.to}
-        >
-          <item.Glyph className={railGlyph} />
-          <span className={railLabel}>{item.label}</span>
-        </Link>
-      ))}
+      {visible.map((item) =>
+        // the engagement view has nothing to show without a running activity — a click would only
+        // bounce off its guard, so the rail entry stays inert until one is live
+        item.to === '/activity' && !props.hasActivity ? (
+          <span key={item.to} aria-disabled="true" className={cx(railButton, railButtonDisabled)}>
+            <item.Glyph className={railGlyph} />
+            <span className={railLabel}>{item.label}</span>
+          </span>
+        ) : (
+          <Link
+            key={item.to}
+            aria-current={isActive(props.pathname, item.to) ? 'page' : undefined}
+            className={cx(railButton, isActive(props.pathname, item.to) && railButtonActive)}
+            to={item.to}
+          >
+            <item.Glyph className={railGlyph} />
+            <span className={railLabel}>{item.label}</span>
+          </Link>
+        ),
+      )}
     </>
   );
 }
