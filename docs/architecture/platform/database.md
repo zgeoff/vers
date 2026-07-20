@@ -14,10 +14,13 @@ connection after a suspend pays a resume cost.
 | Postgres        | 17                                            |
 | Branch          | `main` (default)                              |
 | Database        | `vers`, owned by `neondb_owner`               |
-| Compute         | 0.25 CU fixed, scale-to-zero                  |
-| Suspend timeout | 300s                                          |
+| Compute         | autoscaling 0.25–8 CU, scale-to-zero          |
+| Suspend timeout | 300s (Neon's default; `suspend_timeout` 0)    |
 
-The 300s suspend timeout is fixed on the free plan — the flag to change it returns 403.
+The project, branches, compute endpoints, and roles are declared in the vers-infra Pulumi program
+(`infra/neon.ts`), applied with `pulumi up` from `infra/` and drift-checked by the infra-drift
+workflow. Databases, schemas, and migrations stay with the migration pipeline, and each role's
+in-database grants are SQL — the Neon API models role existence, not privileges.
 
 Idle compute resumes on the next connection. A resume runs ~0.6–1.1s, observed from a Fly Sydney
 machine; once warm, queries run ~2ms and fresh connections ~55–70ms. Fly's idle-stop timing must not
@@ -136,32 +139,33 @@ with migrations that landed after the template was last refreshed.
 
 ### Provisioning agent access from nothing
 
-Create the branch, the roles, and the vault items, then build the template.
+The `dev` branch and both roles come from the Pulumi program; grants, passwords, and vault items
+follow by hand.
 
-1. Create the `dev` branch.
+1. Apply the program — it declares the `dev` branch and the `mcp_ro` and `mcp_dev` roles.
 
    ```sh
-   neonctl branches create --project-id patient-dust-07220142 --name dev
+   cd infra && op run --env-file=.env -- pulumi up
    ```
 
-2. Create the read-only role as `neondb_owner` against `vers` on `main`.
+2. Grant the read-only role as `neondb_owner` against `vers` on `main`.
 
    ```sql
-   CREATE ROLE mcp_ro LOGIN PASSWORD '<generated>';
    GRANT USAGE ON SCHEMA public TO mcp_ro;
    GRANT SELECT ON ALL TABLES IN SCHEMA public TO mcp_ro;
    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO mcp_ro;
    ALTER ROLE mcp_ro SET default_transaction_read_only = on;
    ```
 
-3. Create the dev role as `neondb_owner` against `vers` on `dev`.
+3. Grant the dev role as `neondb_owner` against `vers` on `dev`.
 
    ```sql
-   CREATE ROLE mcp_dev LOGIN CREATEDB PASSWORD '<generated>';
+   ALTER ROLE mcp_dev CREATEDB;
    ```
 
-4. Store both DSNs and build the template. Both point at the `vers` database with
-   `sslmode=verify-full` — `mcp_ro` on the `main` host, `mcp_dev` on the `dev` host.
+4. Mint each role's password (`neonctl roles reset-password` or the console), store both DSNs, and
+   build the template. Both point at the `vers` database with `sslmode=verify-full` — `mcp_ro` on
+   the `main` host, `mcp_dev` on the `dev` host.
 
    ```sh
    op item create --vault vers --category Password --title neon-mcp-ro "dsn[concealed]=<mcp_ro DSN>"
@@ -171,11 +175,11 @@ Create the branch, the roles, and the vault items, then build the template.
 
 ## Re-provisioning from nothing
 
-The whole setup reduces to four commands (neonctl authenticated via `neonctl auth`):
+The Pulumi program creates the Neon layer (project, branches, endpoints, roles); the database and
+its connection string follow with neonctl (authenticated via `neonctl auth`):
 
 ```sh
-neonctl projects create --name vers --region-id aws-ap-southeast-2 \
-  --org-id org-long-snow-12176298 --pg-version 17
+cd infra && op run --env-file=.env -- pulumi up
 neonctl databases create --project-id <new-id> --name vers --owner-name neondb_owner
 neonctl connection-string main --project-id <new-id> --database-name vers
 # then: rewrite sslmode to verify-full, drop channel_binding, and distribute to the consumer stores

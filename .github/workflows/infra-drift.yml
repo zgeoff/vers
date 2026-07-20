@@ -62,6 +62,7 @@ jobs:
           PULUMI_CONFIG_PASSPHRASE: op://vers-ci/vers-infra/pulumi-passphrase
           AXIOM_TOKEN: op://vers-ci/axiom/iac-token
           GITHUB_TOKEN: op://vers-ci/vers-infra/github-token
+          NEON_API_KEY: op://vers-ci/neon/api-key
           DISCORD_ALARMS_WEBHOOK: op://vers-ci/discord-alarms-webhook/credential
 
       - name: Preview
