@@ -459,3 +459,67 @@ test('it runs interleaved starts one at a time, the fresher claim winning', asyn
   expect(active[0].scopeID).toBe('a9lp75');
   expect(context.getActivity()?.id).toBe(active[0].id);
 });
+
+test('it takes over and stops a different scope another writer owns before starting the requested one', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const previous = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    scopeID: 'old-node',
+    scopeType: 'world_map_node',
+    status: 'active',
+  });
+
+  // the conflicting run belongs to another device's writer until this session claims it back
+  let claimed = false;
+
+  server.use(
+    mockActivityService.stopActivity.handler((opts) => {
+      if (!claimed) {
+        throw opts.errors.SESSION_EVICTED({ data: {} });
+      }
+
+      const row = db.activityCollection.findFirst((q) => q.where({ id: previous.id }));
+
+      invariant(row !== undefined, 'expected the previous row to survive the stop');
+
+      return db.activityCollection.update(row, {
+        data(record) {
+          record.status = 'stopped';
+        },
+        strict: true,
+      });
+    }),
+    mockActivityService.resumeActivity.handler(() => {
+      claimed = true;
+
+      return previous;
+    }),
+  );
+
+  const context = createStubWorkerContext({ client: ctx.client });
+
+  context.setSimulation(createSimulation());
+
+  await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    requestID: 'request_takeover_start',
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  });
+
+  const stopped = db.activityCollection.findFirst((q) => q.where({ id: previous.id }));
+
+  invariant(stopped !== undefined, 'expected the previous row to survive');
+  expect(stopped.status).toBe('stopped');
+
+  const minted = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
+  );
+
+  invariant(minted !== undefined, 'expected the start to mint an active row');
+  expect(minted.scopeID).toBe('a9lp75');
+  expect(context.getSimulation()?.activity?.id).toBe(minted.id);
+});

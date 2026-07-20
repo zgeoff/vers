@@ -39,10 +39,14 @@ export function PlayingElsewhereNotice() {
       </Text>
       <Button
         onClick={() => {
-          if (idleWorkerHandle.worker !== undefined && avatarID !== undefined) {
-            sendIdleRequestResync(idleWorkerHandle.worker, avatarID, true);
+          // The displaced state clears only once the claim is actually sent — clearing without
+          // sending would dismiss the player's one recovery notice with nothing claimed. A click
+          // before the worker or avatar id resolves leaves the notice open for the next try.
+          if (idleWorkerHandle.worker === undefined || avatarID === undefined) {
+            return;
           }
 
+          sendIdleRequestResync(idleWorkerHandle.worker, avatarID, true);
           setWriterDisplacedActivityID(null);
         }}
       >

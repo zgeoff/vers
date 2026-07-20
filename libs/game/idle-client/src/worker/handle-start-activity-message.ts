@@ -99,15 +99,7 @@ async function runStart(
   // replace flow: earned checkpoints land before the stop closes the row to appends
   await context.getSubmitter().flushNow(row.id);
 
-  const [stopError] = await safe(
-    context.getClient().stopActivity({ activityID: row.id, avatarID: message.avatarID }),
-  );
-
-  if (stopError !== null && !(isDefinedError(stopError) && stopError.code === 'NOT_FOUND')) {
-    if (!isDefinedError(stopError)) {
-      reportWorkerFault('start', stopError);
-    }
-
+  if (!(await stopConflictingRow(context, row.id, message.avatarID))) {
     return { kind: 'failed' };
   }
 
@@ -133,6 +125,61 @@ async function runStart(
 
 function isSuperseded(context: WorkerContext, message: StartActivityMessage): boolean {
   return context.getStartRequestID() !== message.requestID;
+}
+
+/**
+ * Stops the different-scope row a replace-flow start conflicts with, reporting whether the row is
+ * closed to further appends. A stop rejected with SESSION_EVICTED means another session's writer
+ * owns the run — the player's start here is a deliberate act that supersedes it, so this session
+ * claims the writer and retries the stop once. A claim answering NOT_FOUND means the row already
+ * left `active`, which is all a stop could have achieved.
+ */
+async function stopConflictingRow(
+  context: WorkerContext,
+  activityID: string,
+  avatarID: string,
+): Promise<boolean> {
+  const [stopError] = await safe(context.getClient().stopActivity({ activityID, avatarID }));
+
+  if (stopError === null || (isDefinedError(stopError) && stopError.code === 'NOT_FOUND')) {
+    return true;
+  }
+
+  if (!isDefinedError(stopError)) {
+    reportWorkerFault('start', stopError);
+
+    return false;
+  }
+
+  if (stopError.code !== 'SESSION_EVICTED') {
+    return false;
+  }
+
+  const [claimError] = await safe(context.getClient().resumeActivity({ activityID }));
+
+  if (claimError !== null) {
+    if (isDefinedError(claimError) && claimError.code === 'NOT_FOUND') {
+      return true;
+    }
+
+    if (!isDefinedError(claimError)) {
+      reportWorkerFault('start', claimError);
+    }
+
+    return false;
+  }
+
+  const [retryError] = await safe(context.getClient().stopActivity({ activityID, avatarID }));
+
+  if (retryError === null || (isDefinedError(retryError) && retryError.code === 'NOT_FOUND')) {
+    return true;
+  }
+
+  if (!isDefinedError(retryError)) {
+    reportWorkerFault('start', retryError);
+  }
+
+  return false;
 }
 
 async function setLiveStartedRow(

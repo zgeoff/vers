@@ -48,14 +48,11 @@ test('it claims the run back with a claiming resync on continue-here', async () 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     render(<PlayingElsewhereNotice />);
 
-    // the avatar query resolves before the click can carry its id
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Continue here' })).toBeInTheDocument();
-    });
+    // a click lands only once the avatar id has resolved; an early one leaves the notice open,
+    // so the loop retries exactly as a player would
+    await waitFor(async () => {
+      await user.click(screen.getByRole('button', { name: 'Continue here' }));
 
-    await user.click(screen.getByRole('button', { name: 'Continue here' }));
-
-    await waitFor(() => {
       expect(calls.filter((call) => isRequestResyncMessage(call))).toStrictEqual([
         { avatarID: avatar.id, claim: true, type: ClientMessageType.RequestResync },
       ]);
