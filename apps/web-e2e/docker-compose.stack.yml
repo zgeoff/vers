@@ -49,7 +49,9 @@ services:
       retries: 15
   service-activity:
     image: ${IMAGE_VERS_SERVICE_ACTIVITY}
-    environment: *db-env
+    environment:
+      <<: *db-env
+      REPLAY_SERVICE_URL: http://service-replay:3000
     depends_on:
       postgres:
         condition: service_healthy
