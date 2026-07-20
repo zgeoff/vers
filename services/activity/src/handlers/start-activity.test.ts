@@ -4,9 +4,11 @@ import { buildStartHash } from '@vers/contract-activity';
 import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import {
   createAnonymousViewer,
+  createServiceToken,
   createTestDB,
   createTestUser,
   createViewer,
+  getTestServiceKeyPair,
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient, waitFor } from '@vers/test-utils';
@@ -63,6 +65,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     simVersion: current.engineHash,
     startChainIndex: 0,
     startHash: expect.toBeString(),
+    startKey: null,
     startedAt: expect.toBeValidDate(),
     status: 'active',
     stoppedAt: null,
@@ -561,4 +564,204 @@ test('it roots a new activity at the anchor a concurrent forward exit commits', 
     .executeTakeFirstOrThrow();
 
   expect(row.startChainIndex).toBe(7);
+});
+
+test('it stamps the start key on the minted row', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    startKey: 'start_request_1',
+  });
+
+  expect(started.startKey).toBe('start_request_1');
+});
+
+test('it answers a duplicate start carrying the same key with the row already minted', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    startKey: 'start_request_1',
+  });
+
+  const second = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    startKey: 'start_request_1',
+  });
+
+  expect(second).toStrictEqual(first);
+});
+
+test('it conflicts a keyed start when the active row carries a different key', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    startKey: 'start_request_1',
+  });
+
+  expect(
+    client.startActivity({
+      avatarID: avatar.id,
+      scopeID: 'a9lp75',
+      scopeType: 'world_map_node',
+      startKey: 'continue_of_something_else',
+    }),
+  ).rejects.toMatchObject({ code: 'CONFLICT', data: { activity: { id: first.id } } });
+});
+
+test('it conflicts an unkeyed duplicate start as before', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  expect(
+    client.startActivity({ avatarID: avatar.id, scopeID: 'a9lp75', scopeType: 'world_map_node' }),
+  ).rejects.toMatchObject({ code: 'CONFLICT', data: { activity: { id: first.id } } });
+});
+
+test('it conflicts a keyed duplicate once the row has appended progress', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    startKey: 'start_request_1',
+  });
+
+  // a duplicate delivered after progress landed must conflict — returning the row would hand the
+  // caller a zero cursor onto a progressed chain
+  await ctx.db
+    .updateTable('activities')
+    .set({ appendedHead: 1 })
+    .where('id', '=', first.id)
+    .execute();
+
+  expect(
+    client.startActivity({
+      avatarID: avatar.id,
+      scopeID: 'a9lp75',
+      scopeType: 'world_map_node',
+      startKey: 'start_request_1',
+    }),
+  ).rejects.toMatchObject({ code: 'CONFLICT', data: { activity: { id: first.id } } });
+});
+
+test('it conflicts a keyed duplicate arriving from a different session', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({
+    audience: 'service-activity',
+    db: ctx.db,
+    sessionID: 'session_writer',
+  });
+
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const writerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await writerClient.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    startKey: 'start_request_1',
+  });
+
+  const keyPair = await getTestServiceKeyPair();
+
+  const otherSessionToken = await createServiceToken({
+    actingSessionId: 'session_other',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const otherClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: otherSessionToken });
+
+  expect(
+    otherClient.startActivity({
+      avatarID: avatar.id,
+      scopeID: 'a9lp75',
+      scopeType: 'world_map_node',
+      startKey: 'start_request_1',
+    }),
+  ).rejects.toMatchObject({ code: 'CONFLICT', data: { activity: { id: first.id } } });
+});
+
+test('it conflicts a keyed duplicate naming a different scope', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    startKey: 'start_request_1',
+  });
+
+  expect(
+    client.startActivity({
+      avatarID: avatar.id,
+      scopeID: 'esaxrt',
+      scopeType: 'world_map_node',
+      startKey: 'start_request_1',
+    }),
+  ).rejects.toMatchObject({ code: 'CONFLICT', data: { activity: { id: first.id } } });
 });

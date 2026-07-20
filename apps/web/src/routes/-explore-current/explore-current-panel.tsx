@@ -1,7 +1,6 @@
-import { isDefinedError, safe } from '@orpc/client';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import type { ActivityData } from '@vers/contract-activity';
+import { useQuery } from '@tanstack/react-query';
 import { Button, CheckboxField, Spinner } from '@vers/design-system';
+import type { StartStatus } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -9,20 +8,17 @@ import { SimulationUnsupportedNotice } from '../../components/simulation-unsuppo
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
-import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
-import { sendIdleSetActivity } from '../../lib/idle/send-idle-set-activity';
 import { sendIdleSetFailureAction } from '../../lib/idle/send-idle-set-failure-action';
+import { sendIdleStartActivity } from '../../lib/idle/send-idle-start-activity';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
-import { waitForIdleFlush } from '../../lib/idle/wait-for-idle-flush';
 import { useIsSharedWorkerSupported } from '../../lib/platform/use-is-shared-worker-supported';
 import { emitProductEvent } from '../../lib/product-events/emit-product-event';
-import { activityClient } from '../../lib/rpc/clients/activity-client';
 import type { OrpcQueryUtils } from '../../lib/rpc/orpc';
 import { ActivityRewardsPanel } from './activity-rewards-panel';
 import { ApproachingCapWarning } from './approaching-cap-warning';
 
 interface StartAttempt {
-  readonly activityID?: string;
+  readonly requestID: string;
   readonly scopeID: string;
 }
 
@@ -31,9 +27,10 @@ interface ExploreCurrentPanelProps {
 }
 
 /**
- * The world map node detail view: shows a spinner until the idle worker reports the activity it
- * was sent, then renders the encounter, its auto-retry toggle, and its codex slot. A failed start
- * renders a retry action instead of spinning forever.
+ * The world map node detail view: a spinner until the worker reports the requested start, then
+ * the encounter, its auto-retry toggle, and its codex slot. The worker owns the whole start; the
+ * panel sends the intent and correlates the report against its own attempt, so another tab's
+ * outcome never reads as this one's. A failed start renders a retry action.
  */
 export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   const isSharedWorkerSupported = useIsSharedWorkerSupported();
@@ -43,17 +40,12 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   const avatarID = avatarQuery.data?.id;
   const isAutoRetryChecked = idleWorkerHandle.failureAction === ActivityFailureAction.Retry;
 
-  // one start attempt per selected node; the attempt's activity id arrives when its request
-  // resolves, so a stale attempt for a deselected node never gates or publishes anything
+  // one start attempt per selected node, correlated by request id
   const [attempt, setAttempt] = useState<StartAttempt | undefined>(undefined);
 
-  // read by an in-flight start's conflict recovery, which must never stop a newer selection's
-  // activity on behalf of a node the player has already left
-  const selectedScopeIDRef = useRef<string | undefined>(selectedNode?.id);
-
-  useEffect(() => {
-    selectedScopeIDRef.current = selectedNode?.id;
-  }, [selectedNode]);
+  // latched locally on correlation: the store holds only the latest broadcast, and another tab's
+  // report can overwrite it at any time
+  const [report, setReport] = useState<StartStatus | undefined>(undefined);
 
   // the exploration commits when the encounter view opens for a node — independent of worker
   // readiness, and a retried failed start on the same node never re-reports it
@@ -68,48 +60,6 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
 
     emitProductEvent('node_explored', { nodeID: selectedNode.id });
   }, [selectedNode]);
-
-  const isActivityReady =
-    attempt?.activityID !== undefined &&
-    attempt.scopeID === selectedNode?.id &&
-    idleWorkerHandle.activity?.id === attempt.activityID;
-
-  const startMutation = useMutation({
-    mutationFn: (input: Readonly<{ avatarID: string; scopeID: string }>) =>
-      startActivityForNode(
-        input.avatarID,
-        input.scopeID,
-        () => selectedScopeIDRef.current === input.scopeID,
-        idleWorkerHandle.worker,
-      ),
-    onSuccess: (outcome) => {
-      const scopeID = outcome.kind === 'attach' ? outcome.scopeID : outcome.activity.scopeID;
-
-      // the service confirmed this start even when the player has already moved on, so it reports
-      // before the stale-selection guard; an attach resumes a start that already reported
-      if (outcome.kind === 'started') {
-        emitProductEvent('activity_started', { activityID: outcome.activity.id, nodeID: scopeID });
-      }
-
-      // a selection change while the request was in flight makes this outcome stale
-      if (idleWorkerHandle.worker === undefined || scopeID !== selectedNode?.id) {
-        return;
-      }
-
-      if (outcome.kind === 'attach') {
-        setAttempt({ activityID: outcome.activityID, scopeID });
-        sendIdleRequestResync(idleWorkerHandle.worker, outcome.avatarID);
-
-        return;
-      }
-
-      setAttempt({ activityID: outcome.activity.id, scopeID });
-      sendIdleSetActivity(idleWorkerHandle.worker, outcome.activity);
-    },
-  });
-
-  const startActivity = startMutation.mutate;
-  const resetStart = startMutation.reset;
 
   useEffect(() => {
     if (idleWorkerHandle.worker === undefined) {
@@ -126,28 +76,57 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
       return;
     }
 
-    setAttempt({ scopeID: selectedNode.id });
-    startActivity({ avatarID, scopeID: selectedNode.id });
-  }, [
-    idleWorkerHandle.worker,
-    idleWorkerHandle.initialized,
-    avatarID,
-    selectedNode,
-    attempt,
-    startActivity,
-  ]);
+    const requestID = crypto.randomUUID();
+
+    setAttempt({ requestID, scopeID: selectedNode.id });
+    setReport(undefined);
+
+    sendIdleStartActivity(idleWorkerHandle.worker, {
+      avatarID,
+      requestID,
+      scopeID: selectedNode.id,
+      scopeType: 'world_map_node',
+    });
+  }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID, selectedNode, attempt]);
+
+  // only the requesting tab's attempt matches, so the started event fires exactly once
+  const startReport = idleWorkerHandle.startReport;
+
+  useEffect(() => {
+    if (attempt !== undefined && startReport?.requestID === attempt.requestID) {
+      setReport(startReport.status);
+    }
+  }, [attempt, startReport]);
+
+  useEffect(() => {
+    if (report?.kind !== 'started') {
+      return;
+    }
+
+    emitProductEvent('activity_started', {
+      activityID: report.activity.id,
+      nodeID: report.activity.scopeID,
+    });
+  }, [report]);
+
+  const expectedActivityID = findExpectedActivityID(report);
+
+  const isActivityReady =
+    expectedActivityID !== undefined &&
+    attempt?.scopeID === selectedNode?.id &&
+    idleWorkerHandle.activity?.id === expectedActivityID;
 
   if (!isSharedWorkerSupported) {
     return <SimulationUnsupportedNotice />;
   }
 
-  if (startMutation.isError) {
+  if (report?.kind === 'failed') {
     return (
       <Button
         data-testid="start-activity-retry"
         onClick={() => {
-          resetStart();
           setAttempt(undefined);
+          setReport(undefined);
         }}
       >
         Couldn’t start this activity — retry
@@ -189,69 +168,14 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   );
 }
 
-/**
- * Starting the same world-map-node scope the caller already has active isn't a failure — the
- * CONFLICT payload's row is exactly the stream to attach to instead. Any other active scope stops
- * that one first: an avatar has one active activity at a time — but first asks the worker to flush
- * that activity's queued checkpoints, so the stop never races the shared progress window's held
- * tail.
- */
-type StartOutcome =
-  | { readonly activity: ActivityData; readonly kind: 'started' }
-  | {
-      readonly activityID: string;
-      readonly avatarID: string;
-      readonly kind: 'attach';
-      readonly scopeID: string;
-    };
-
-async function startActivityForNode(
-  avatarID: string,
-  scopeID: string,
-  isScopeStillSelected: () => boolean,
-  worker: SharedWorker | undefined,
-): Promise<StartOutcome> {
-  const [error, started] = await safe(
-    activityClient.startActivity({ avatarID, scopeID, scopeType: 'world_map_node' }),
-  );
-
-  if (error === null) {
-    return { activity: started, kind: 'started' };
+function findExpectedActivityID(report: StartStatus | undefined): string | undefined {
+  if (report === undefined || report.kind === 'failed') {
+    return undefined;
   }
 
-  if (!isDefinedError(error) || error.code !== 'CONFLICT') {
-    throw error;
+  if (report.kind === 'started') {
+    return report.activity.id;
   }
 
-  if (
-    error.data.activity.scopeType === 'world_map_node' &&
-    error.data.activity.scopeID === scopeID
-  ) {
-    return {
-      activityID: error.data.activity.id,
-      avatarID: error.data.activity.avatarID,
-      kind: 'attach',
-      scopeID: error.data.activity.scopeID,
-    };
-  }
-
-  // the conflicting row may be the activity a newer selection just started — replace it only
-  // while this request's node is still the one on screen
-  if (!isScopeStillSelected()) {
-    throw error;
-  }
-
-  if (worker !== undefined) {
-    await waitForIdleFlush(worker, error.data.activity.id);
-  }
-
-  await activityClient.stopActivity({ avatarID });
-
-  const retried = await activityClient.startActivity({
-    avatarID,
-    scopeID,
-    scopeType: 'world_map_node',
-  });
-
-  return { activity: retried, kind: 'started' };
+  return report.activityID;
 }

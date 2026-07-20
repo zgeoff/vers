@@ -1,9 +1,8 @@
 import { createSimulation } from '@vers/idle-core';
-import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import type { StopActivityMessage } from '../types';
 import { createSimulationUpdateMessage } from './create-simulation-update-message';
-import { flushPendingStop } from './flush-pending-stop';
 import { registerSimulationListeners } from './register-simulation-listeners';
+import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 
 /**
@@ -45,8 +44,7 @@ export async function handleStopActivityMessage(
 
   emitClearedSnapshot(context);
 
-  await writePendingStopIntent({ activityID: message.activityID, avatarID: message.avatarID });
-  await flushPendingStop(context);
+  await submitStopIntent(context, { avatarID: message.avatarID, id: message.activityID });
 }
 
 function emitClearedSnapshot(context: WorkerContext): void {

@@ -17,7 +17,6 @@ import type { FastForwardReport, ResyncPlan, ResyncResult } from '../resync/type
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
-import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import type { RequestResyncMessage, ResyncStatus } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
 import { createConnectionStatusMessage } from './create-connection-status-message';
@@ -25,8 +24,10 @@ import { createFailureActionStatusMessage } from './create-failure-action-status
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { createResyncStatusMessage } from './create-resync-status-message';
 import { flushPendingStop } from './flush-pending-stop';
+import { hasStopIntervened } from './has-stop-intervened';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
+import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 
 /**
@@ -291,13 +292,11 @@ async function applyAttachLive(
 }
 
 /**
- * Starts the row a pending continuation wanted, now that its target has read closed. A budget
- * already spent halts at the boundary exactly like a live continuation would, keeping the pending
- * record for the next reconnect. `startActivity` answering with a fresh, never-appended row is
- * adopted directly, mirroring `runContinuation`'s own same-scope race handling; any other defined
- * error clears the pending record and rethrows, reported through the caller's own resync-failure
- * handling; a transport failure keeps the pending record and reports the worker offline, leaving
- * the next reconnect to retry.
+ * Starts the row a pending continuation wanted, now that its target reads closed. A spent budget
+ * halts at the boundary, keeping the record. Duplicate deliveries dedupe server-side via the
+ * start key, so a defined error is a genuinely different claim: the record clears and the error
+ * rethrows into the caller's resync-failure handling. A transport failure keeps the record and
+ * reports the worker offline for the next reconnect to retry.
  */
 async function applyContinue(
   context: WorkerContext,
@@ -306,7 +305,7 @@ async function applyContinue(
 ): Promise<void> {
   // A stop that landed while the plan was computed also cleared the pending continuation the plan
   // was built from — the continuation intent died with the run the player ended.
-  if (context.getStopEpoch() !== entryEpoch) {
+  if (hasStopIntervened(context, entryEpoch)) {
     return;
   }
 
@@ -321,20 +320,21 @@ async function applyContinue(
     return;
   }
 
+  // the same key the live continuation carried, so this retry dedupes onto anything it minted
   const [error, started] = await safe(
     context.getClient().startActivity({
       avatarID: plan.activity.avatarID,
       scopeID: plan.activity.scopeID,
       scopeType: plan.activity.scopeType,
+      startKey: `continue_${plan.activity.id}`,
     }),
   );
 
   if (error === null) {
     // The player ended the run while the start was in flight: the fresh row was raised on behalf
     // of a run that no longer exists, so it is stopped the same durable way any player stop is.
-    if (context.getStopEpoch() !== entryEpoch) {
-      await writePendingStopIntent({ activityID: started.id, avatarID: started.avatarID });
-      await flushPendingStop(context);
+    if (hasStopIntervened(context, entryEpoch)) {
+      await submitStopIntent(context, started);
 
       return;
     }
@@ -344,24 +344,6 @@ async function applyContinue(
     context.setPendingContinuation(null);
 
     return;
-  }
-
-  if (isDefinedError(error) && error.code === 'CONFLICT') {
-    const row = error.data.activity;
-
-    if (row.appendedHead === 0 && row.id !== plan.activity.id) {
-      // The conflicting row was started elsewhere — another tab or device owns it, so a stop that
-      // landed here only skips the install and leaves the row running.
-      if (context.getStopEpoch() !== entryEpoch) {
-        return;
-      }
-
-      await startContinuedActivity(context, row, entryEpoch);
-
-      context.setPendingContinuation(null);
-
-      return;
-    }
   }
 
   if (!isDefinedError(error)) {
@@ -397,9 +379,8 @@ async function startContinuedActivity(
   // A stop that landed during the registration await left this freshly started row active on the
   // server with nothing local driving it — the next resync would revive it — so it is stopped
   // back durably, the same way any player stop delivers.
-  if (!installed && context.getStopEpoch() !== entryEpoch) {
-    await writePendingStopIntent({ activityID: row.id, avatarID: row.avatarID });
-    await flushPendingStop(context);
+  if (!installed && hasStopIntervened(context, entryEpoch)) {
+    await submitStopIntent(context, row);
   }
 }
 
@@ -501,7 +482,7 @@ function setLiveSimulation(
   simulation: Simulation,
   entryEpoch: number,
 ): boolean {
-  if (context.getStopEpoch() !== entryEpoch) {
+  if (hasStopIntervened(context, entryEpoch)) {
     return false;
   }
 

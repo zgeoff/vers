@@ -145,6 +145,25 @@ Resume always anchors on the last verified checkpoint. The client rebuilds optim
 simulating forward from that anchor. It never renders the server's settled progression columns
 directly, because they lag verification by design.
 
+## Activity lifecycle
+
+The SharedWorker owns every lifecycle transition — start, stop, continuation, resync. A tab
+expresses intent in one message and correlates the worker's broadcast outcome by request id; no tab
+calls the activity service for lifecycle work itself, so the tabs and the worker can never disagree
+about which run exists.
+
+- A start intent carries a request id the worker passes as the row's idempotency key (`start_key`).
+  A duplicate delivery of the same start — a retry after a transport failure, a pending continuation
+  honored later — converges on the row the first attempt minted, while a distinct intent into the
+  same scope conflicts. Start flows run one at a time in the worker; a superseded flow abandons its
+  work, and any row it minted is recovered by the fresher flow.
+- A stop halts the local simulation immediately and needs no network. Delivery is a durable intent:
+  earned checkpoints flush first, then a targeted, idempotent server stop lands, retried at every
+  reconnect and resync entry until the row reads closed. An undelivered stop gates resync planning,
+  so a catch-up never revives a run the player ended.
+- Every install path re-checks a stop epoch after each await, so an in-flight resync or continuation
+  abandons its install when a stop landed meanwhile.
+
 ## Offline progress
 
 Four processes move simulation results around, each with one name:

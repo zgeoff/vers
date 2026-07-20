@@ -5,6 +5,7 @@ export type WorkerFaultSite =
   | 'preference-seed'
   | 'reconnect'
   | 'resync'
+  | 'start'
   | 'tick-loop';
 
 /**

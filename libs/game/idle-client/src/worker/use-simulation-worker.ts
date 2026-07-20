@@ -10,6 +10,7 @@ import { setRewardSlotLedger } from '../state/set-reward-slot-ledger';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
 import { setSimulationWorker } from '../state/set-simulation-worker';
+import { setStartReport } from '../state/set-start-report';
 import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
 import { useIdleStore } from '../state/use-idle-store';
 import type {
@@ -23,6 +24,7 @@ import type {
   ResyncStatusMessage,
   RewardSlotsRecordedMessage,
   SimulationUpdateMessage,
+  StartStatusMessage,
   WorkerMessage,
 } from '../types';
 import { WorkerMessageType } from '../types';
@@ -129,6 +131,10 @@ function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
       version: event.data.version,
     });
   }
+
+  if (isStartStatusMessage(event.data)) {
+    setStartReport({ requestID: event.data.requestID, status: event.data.status });
+  }
 }
 
 function isInitialStateMessage(message: WorkerMessage): message is InitialStateMessage {
@@ -177,4 +183,8 @@ function isRewardSlotsRecordedMessage(
   message: WorkerMessage,
 ): message is RewardSlotsRecordedMessage {
   return message.type === WorkerMessageType.RewardSlotsRecorded;
+}
+
+function isStartStatusMessage(message: WorkerMessage): message is StartStatusMessage {
+  return message.type === WorkerMessageType.StartStatus;
 }

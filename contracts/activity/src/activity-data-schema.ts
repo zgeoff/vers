@@ -23,6 +23,12 @@ export const ActivityDataSchema = z.object({
   simVersion: z.string(),
   startChainIndex: z.int().min(0),
   startHash: z.string(),
+
+  /**
+   * The start request's idempotency key, null when none was sent.
+   */
+  startKey: z.string().nullable(),
+
   startedAt: z.date(),
   status: ActivityStatusSchema,
   stoppedAt: z.date().nullable(),

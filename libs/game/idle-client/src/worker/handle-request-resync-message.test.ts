@@ -754,7 +754,7 @@ test("it starts a fresh row, installs a live simulation with the worker's failur
   expect(ctx.context.getPendingContinuation()).toBeNull();
 });
 
-test('it adopts a fresh row another session raced in ahead of the continuation and clears the pending continuation', async () => {
+test('it fails the resync when a foreign row races in ahead of the continuation', async () => {
   const viewer = await createViewer();
 
   const stopped = await db.activityCollection.create({
@@ -794,18 +794,15 @@ test('it adopts a fresh row another session raced in ahead of the continuation a
 
   await handleRequestResyncMessage(ctx.context, message);
 
-  const racing = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
-  );
-
-  invariant(racing !== undefined, 'expected the scripted handler to mint the racing row');
-
-  const simulation = ctx.context.getSimulation();
-
-  invariant(simulation !== null, 'expected the racing row to be adopted into a live simulation');
-  expect(simulation.activity?.id).toBe(racing.id);
-  expect(ctx.context.getActivity()).toStrictEqual(racing);
+  expect(ctx.context.getSimulation()).toBeNull();
   expect(ctx.context.getPendingContinuation()).toBeNull();
+
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toContainEqual({
+    status: { avatarID: viewer.avatar.id, kind: 'failed' },
+    type: WorkerMessageType.ResyncStatus,
+  });
 });
 
 test('it halts at the boundary and keeps the pending continuation when the offline budget is spent', async () => {

@@ -11,5 +11,6 @@ test('it builds the empty sync state', () => {
     resyncStatus: null,
     rewardSlotLedger: [],
     rewardSlotLedgerActivityID: null,
+    startReport: null,
   });
 });
