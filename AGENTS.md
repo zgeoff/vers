@@ -98,31 +98,38 @@ the function's shape without opening it.
 
 **Effectful** — touches the world (filesystem, streams, processes, registries):
 
-| Prefix     | Contract                                                                                                                                | Example           |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| `apply`    | perform previously planned changes                                                                                                      | `applyEdits`      |
-| `create`   | bring a resource into existence (file, directory, process)                                                                              | `createWorkDir`   |
-| `claim`    | atomically take exclusive ownership of a work item or resource; ownership ends at commit or an explicit release                         | `claimNextChain`  |
-| `read`     | pull raw content from filesystem or network into memory                                                                                 | `readSource`      |
-| `load`     | read **and** parse into a ready structure                                                                                               | `loadConfig`      |
-| `write`    | persist to the filesystem                                                                                                               | `writeOutput`     |
-| `remove`   | delete a resource                                                                                                                       | `removeStaleDist` |
-| `update`   | mutate existing state or resource in place                                                                                              | `updateIndex`     |
-| `upsert`   | single-statement insert-or-update keyed by a natural or composite key, refreshing the conflicting row's columns in place                | `upsertUser`      |
-| `set`      | assign a store's named state slice wholesale — the store-setter idiom; partial mutation is `update`                                     | `setSelectedNode` |
-| `print`    | write to stdout/stderr                                                                                                                  | `printHelp`       |
-| `run`      | execute a subprocess, task, or whole pipeline                                                                                           | `runCLI`          |
-| `check`    | evaluate and report findings; effects allowed per mode                                                                                  | `checkFile`       |
-| `try<X>`   | X with failures captured as a value instead of a throw                                                                                  | `tryCheckFile`    |
-| `register` | add to a registry the caller doesn't own                                                                                                | `registerMatcher` |
-| `assert`   | throw when an invariant doesn't hold                                                                                                    | `assertSpan`      |
-| `require`  | throw unless a runtime condition holds — a guard real input can trip (`assert` covers invariants)                                       | `requireAuth`     |
-| `emit`     | dispatch an event or notification                                                                                                       | `emitProgress`    |
-| `send`     | transmit a payload to a remote receiver (fire-and-forget or RPC — no resource semantics; REST mutations are `create`/`update`/`remove`) | `sendWebhook`     |
-| `wait`     | block until an event or condition resolves; may return the awaited value                                                                | `waitForMessage`  |
-| `start`    | put a long-running resource into service (server, worker, poll loop); `stop` reverses it                                                | `startQueues`     |
-| `stop`     | take a long-running resource out of service, releasing what `start` acquired                                                            | `stopWorker`      |
-| `drain`    | consume a pending backlog until empty                                                                                                   | `drainJobs`       |
+| Prefix         | Contract                                                                                                                                | Example            |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `apply`        | perform previously planned changes                                                                                                      | `applyEdits`       |
+| `create`       | bring a resource into existence (file, directory, process)                                                                              | `createWorkDir`    |
+| `claim`        | atomically take exclusive ownership of a work item or resource; ownership ends at commit or an explicit release                         | `claimNextChain`   |
+| `read`         | pull raw content from filesystem or network into memory                                                                                 | `readSource`       |
+| `load`         | read **and** parse into a ready structure                                                                                               | `loadConfig`       |
+| `write`        | persist to the filesystem                                                                                                               | `writeOutput`      |
+| `remove`       | delete a resource                                                                                                                       | `removeStaleDist`  |
+| `update`       | mutate existing state or resource in place                                                                                              | `updateIndex`      |
+| `upsert`       | single-statement insert-or-update keyed by a natural or composite key, refreshing the conflicting row's columns in place                | `upsertUser`       |
+| `set`          | assign a store's named state slice wholesale — the store-setter idiom; partial mutation is `update`                                     | `setSelectedNode`  |
+| `toggle<Flag>` | invert a boolean state slice                                                                                                            | `toggleDevCamera`  |
+| `reset`        | return state to its initial value                                                                                                       | `resetCombatState` |
+| `print`        | write to stdout/stderr                                                                                                                  | `printHelp`        |
+| `run`          | execute a subprocess, task, or whole pipeline                                                                                           | `runCLI`           |
+| `check`        | evaluate and report findings; effects allowed per mode                                                                                  | `checkFile`        |
+| `try<X>`       | X with failures captured as a value instead of a throw                                                                                  | `tryCheckFile`     |
+| `register`     | add to a registry the caller doesn't own                                                                                                | `registerMatcher`  |
+| `subscribe`    | attach a listener to an event source, returning or enabling detachment                                                                  | `subscribeToTicks` |
+| `unsubscribe`  | detach what `subscribe` attached                                                                                                        | `unsubscribe`      |
+| `assert`       | throw when an invariant doesn't hold                                                                                                    | `assertSpan`       |
+| `require`      | throw unless a runtime condition holds — a guard real input can trip (`assert` covers invariants)                                       | `requireAuth`      |
+| `verify`       | test a claim or credential against evidence, rejecting on mismatch                                                                      | `verifySession`    |
+| `emit`         | dispatch an event or notification                                                                                                       | `emitProgress`     |
+| `send`         | transmit a payload to a remote receiver (fire-and-forget or RPC — no resource semantics; REST mutations are `create`/`update`/`remove`) | `sendWebhook`      |
+| `wait`         | block until an event or condition resolves; may return the awaited value                                                                | `waitForMessage`   |
+| `setup`        | prepare the environment or fixture the following code assumes; `teardown` reverses it                                                   | `setupTest`        |
+| `teardown`     | release what `setup` prepared                                                                                                           | `teardownTest`     |
+| `start`        | put a long-running resource into service (server, worker, poll loop); `stop` reverses it                                                | `startQueues`      |
+| `stop`         | take a long-running resource out of service, releasing what `start` acquired                                                            | `stopWorker`       |
+| `drain`        | consume a pending backlog until empty                                                                                                   | `drainJobs`        |
 
 **Wrappers and factories** — the result is behaviour, not data:
 
