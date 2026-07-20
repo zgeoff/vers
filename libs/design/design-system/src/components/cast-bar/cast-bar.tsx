@@ -1,5 +1,5 @@
 import { css, cva } from '@vers/styled-system/css';
-import { useRef } from 'react';
+import { useState } from 'react';
 
 /**
  * Which actor's palette the cast fill takes — the avatar channels in world teal, a hostile in
@@ -80,10 +80,17 @@ interface CastBarProps {
  */
 export function CastBar(props: Readonly<CastBarProps>) {
   const pct = Math.max(0, Math.min(100, props.progress));
-  const previousPct = useRef(pct);
-  const eased = pct >= previousPct.current;
 
-  previousPct.current = pct;
+  // Track direction via committed state, not a render-time ref: refs mutated during render are
+  // corrupted by StrictMode's double invocation, which would keep the ease on the reset frame and
+  // swallow the snap to empty.
+  const [previousPct, setPreviousPct] = useState(pct);
+  const [eased, setEased] = useState(true);
+
+  if (previousPct !== pct) {
+    setEased(pct >= previousPct);
+    setPreviousPct(pct);
+  }
 
   return (
     <div className={container}>
