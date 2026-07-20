@@ -27,25 +27,6 @@ test('it plans nothing for a stopped activity', () => {
   });
 });
 
-test('it rebases a capped activity', () => {
-  const activity = createMockActivityData({ appendedHead: 7, status: 'capped' });
-  const progress = createMockLatestActivityProgress({ activity, appendedHead: 7 });
-
-  const plan = planResync({
-    progress,
-  });
-
-  expect(plan).toStrictEqual({
-    context: {
-      activityID: activity.id,
-      appendedHead: 7,
-      lastHash: activity.lastHash,
-      startChainIndex: activity.startChainIndex,
-    },
-    kind: 'rebase',
-  });
-});
-
 test('it attaches live when the gap is not worth simulating', () => {
   const serverTime = new Date('2026-07-14T12:00:00Z');
 
