@@ -1,3 +1,5 @@
+import { bytesToHex } from '@noble/hashes/utils.js';
+
 const ALL_ZERO_SEED = '0'.repeat(32);
 
 /**
@@ -17,7 +19,5 @@ export function createGenesisSeed(): string {
 }
 
 function buildRandomHex(): string {
-  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
-
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return bytesToHex(globalThis.crypto.getRandomValues(new Uint8Array(16)));
 }
