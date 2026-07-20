@@ -1,7 +1,7 @@
-import { withRetry } from '../utils/with-retry';
+import pRetry from 'p-retry';
 import { readAppState } from './read-app-state';
 
-const WAIT_ATTEMPTS = 10;
+const WAIT_RETRIES = 9;
 const WAIT_DELAY_MS = 3000;
 
 /**
@@ -11,7 +11,7 @@ const WAIT_DELAY_MS = 3000;
  * image — it throws if the fleet never converges.
  */
 export async function waitForDeployedSHA(app: string, sha: string): Promise<void> {
-  await withRetry(
+  await pRetry(
     async () => {
       const state = await readAppState(app);
 
@@ -23,6 +23,6 @@ export async function waitForDeployedSHA(app: string, sha: string): Promise<void
         throw new Error(`${app} fleet reports SHA ${state.deployedSHA ?? 'none'}, expected ${sha}`);
       }
     },
-    { attempts: WAIT_ATTEMPTS, delayMS: WAIT_DELAY_MS },
+    { factor: 1, minTimeout: WAIT_DELAY_MS, retries: WAIT_RETRIES },
   );
 }

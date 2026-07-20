@@ -1,5 +1,5 @@
-import { setTimeout as sleep } from 'node:timers/promises';
 import { applyMigrations } from '@vers/db';
+import pRetry from 'p-retry';
 import postgres from 'postgres';
 import invariant from 'tiny-invariant';
 import { buildDevDSN } from './build-dev-dsn';
@@ -55,7 +55,7 @@ export async function createDevDB(config: Readonly<CreateDevDBConfig>): Promise<
   }
 }
 
-const CLONE_ATTEMPTS = 4;
+const CLONE_RETRIES = 3;
 const CLONE_RETRY_DELAY_MS = 1500;
 
 /**
@@ -65,19 +65,11 @@ const CLONE_RETRY_DELAY_MS = 1500;
  * throws immediately.
  */
 async function createCloneOfDevBase(pg: postgres.Sql, dbName: string): Promise<void> {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      await pg.unsafe(`CREATE DATABASE ${dbName} TEMPLATE dev_base`);
-
-      return;
-    } catch (error) {
-      const isTemplateBusy = error instanceof postgres.PostgresError && error.code === '55006';
-
-      if (!isTemplateBusy || attempt >= CLONE_ATTEMPTS) {
-        throw error;
-      }
-
-      await sleep(CLONE_RETRY_DELAY_MS);
-    }
-  }
+  await pRetry(() => pg.unsafe(`CREATE DATABASE ${dbName} TEMPLATE dev_base`), {
+    factor: 1,
+    minTimeout: CLONE_RETRY_DELAY_MS,
+    retries: CLONE_RETRIES,
+    shouldRetry: (context) =>
+      context.error instanceof postgres.PostgresError && context.error.code === '55006',
+  });
 }

@@ -31,6 +31,7 @@
     "@vers/utils": "workspace:*",
     "jose": "catalog:",
     "kysely": "catalog:",
+    "lru-cache": "catalog:",
     "pino": "catalog:",
     "tiny-invariant": "catalog:",
     "zod": "catalog:"

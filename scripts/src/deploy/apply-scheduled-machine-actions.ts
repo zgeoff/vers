@@ -1,8 +1,8 @@
+import pRetry from 'p-retry';
 import { runFlyctl } from '../utils/run-flyctl';
-import { withRetry } from '../utils/with-retry';
 import type { ScheduledMachineAction } from './types';
 
-const UPDATE_ATTEMPTS = 5;
+const UPDATE_RETRIES = 4;
 const UPDATE_RETRY_DELAY_MS = 5000;
 
 /**
@@ -55,7 +55,7 @@ async function runUpdateImage(
   sha: string,
   action: Extract<ScheduledMachineAction, { kind: 'update-image' }>,
 ): Promise<void> {
-  await withRetry(
+  await pRetry(
     () =>
       runFlyctl([
         'machine',
@@ -69,6 +69,6 @@ async function runUpdateImage(
         `GIT_SHA=${sha}`,
         '--yes',
       ]),
-    { attempts: UPDATE_ATTEMPTS, delayMS: UPDATE_RETRY_DELAY_MS },
+    { factor: 1, minTimeout: UPDATE_RETRY_DELAY_MS, retries: UPDATE_RETRIES },
   );
 }
