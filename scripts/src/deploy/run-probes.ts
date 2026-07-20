@@ -1,7 +1,7 @@
-import { withRetry } from '../utils/with-retry';
+import pRetry from 'p-retry';
 import type { Probe } from './types';
 
-const PROBE_ATTEMPTS = 10;
+const PROBE_RETRIES = 9;
 const PROBE_DELAY_MS = 5000;
 
 /**
@@ -14,7 +14,11 @@ export async function runProbes(probes: ReadonlyArray<Probe>): Promise<ReadonlyA
 
   for (const probe of probes) {
     try {
-      await withRetry(() => runProbe(probe), { attempts: PROBE_ATTEMPTS, delayMS: PROBE_DELAY_MS });
+      await pRetry(() => runProbe(probe), {
+        factor: 1,
+        minTimeout: PROBE_DELAY_MS,
+        retries: PROBE_RETRIES,
+      });
 
       console.log(`✓ probe passed: ${formatProbe(probe)}`);
     } catch (error) {

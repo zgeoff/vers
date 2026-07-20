@@ -19,6 +19,7 @@
     "execa": "catalog:",
     "kysely": "catalog:",
     "ora": "catalog:",
+    "p-retry": "catalog:",
     "postgres": "catalog:",
     "tiny-invariant": "catalog:",
     "zod": "catalog:"

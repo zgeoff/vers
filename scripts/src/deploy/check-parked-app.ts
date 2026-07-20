@@ -1,9 +1,9 @@
+import pRetry from 'p-retry';
 import { runFlyctl } from '../utils/run-flyctl';
-import { withRetry } from '../utils/with-retry';
 import { readAppState } from './read-app-state';
 import type { AppState } from './types';
 
-const WAKE_ATTEMPTS = 20;
+const WAKE_RETRIES = 19;
 const WAKE_DELAY_MS = 3000;
 
 /**
@@ -28,7 +28,7 @@ export async function checkParkedApp(app: string, state: AppState): Promise<Read
   try {
     await runFlyctl(['machine', 'start', machine.id, '--app', app]);
 
-    await withRetry(
+    await pRetry(
       async () => {
         const current = await readAppState(app);
 
@@ -50,7 +50,7 @@ export async function checkParkedApp(app: string, state: AppState): Promise<Read
           );
         }
       },
-      { attempts: WAKE_ATTEMPTS, delayMS: WAKE_DELAY_MS },
+      { factor: 1, minTimeout: WAKE_DELAY_MS, retries: WAKE_RETRIES },
     );
 
     return [];

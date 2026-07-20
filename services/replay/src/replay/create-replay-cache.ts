@@ -1,4 +1,5 @@
 import type { SimulationDriver } from '@vers/idle-core';
+import { LRUCache } from 'lru-cache';
 
 /**
  * Default cap on how many in-process streams the cache holds live at once, bounding worker
@@ -44,8 +45,6 @@ export function createReplayCache(
   cap: number = REPLAY_CACHE_CAP,
   onStopError: (error: unknown) => void = printDriverStopError,
 ): ReplayCache {
-  const entries = new Map<string, CachedReplayStream>();
-
   const stopDriver = async (driver: SimulationDriver): Promise<void> => {
     try {
       await driver.stop();
@@ -58,61 +57,37 @@ export function createReplayCache(
     }
   };
 
-  const remove = (activityID: string): void => {
-    const entry = entries.get(activityID);
-
-    entries.delete(activityID);
-
-    if (entry !== undefined) {
-      void stopDriver(entry.driver);
-    }
-  };
-
-  const get = (activityID: string): CachedReplayStream | undefined => {
-    const entry = entries.get(activityID);
-
-    if (entry === undefined) {
-      return undefined;
-    }
-
-    entries.delete(activityID);
-    entries.set(activityID, entry);
-
-    return entry;
-  };
+  // Replacement is excluded here: a re-set entry may reuse the displaced entry's driver, so the
+  // set path below decides whether the old driver actually stops.
+  const entries = new LRUCache<string, CachedReplayStream>({
+    dispose: (entry, _activityID, reason) => {
+      if (reason !== 'set') {
+        void stopDriver(entry.driver);
+      }
+    },
+    max: cap,
+  });
 
   const set = (activityID: string, entry: Readonly<CachedReplayStream>): void => {
-    const replaced = entries.get(activityID);
+    const replaced = entries.peek(activityID);
 
-    entries.delete(activityID);
     entries.set(activityID, entry);
 
     if (replaced !== undefined && replaced.driver !== entry.driver) {
       void stopDriver(replaced.driver);
     }
-
-    const oldestKey = entries.size > cap ? entries.keys().next().value : undefined;
-
-    if (oldestKey !== undefined) {
-      const oldest = entries.get(oldestKey);
-
-      entries.delete(oldestKey);
-
-      if (oldest !== undefined) {
-        void stopDriver(oldest.driver);
-      }
-    }
   };
 
-  const stopAll = (): void => {
-    for (const entry of entries.values()) {
-      void stopDriver(entry.driver);
-    }
-
-    entries.clear();
+  return {
+    get: (activityID) => entries.get(activityID),
+    remove: (activityID) => {
+      entries.delete(activityID);
+    },
+    set,
+    stopAll: () => {
+      entries.clear();
+    },
   };
-
-  return { get, remove, set, stopAll };
 }
 
 function printDriverStopError(error: unknown): void {
