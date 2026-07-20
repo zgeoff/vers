@@ -1,8 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
-import { createAuthedServiceClient } from '@vers/mock-services';
-import * as db from '@vers/mock-services/db';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
@@ -80,16 +79,15 @@ test('it applies the sent failure action to the live simulation', async () => {
 });
 
 test('it records the resync request for the requested avatar', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   const context = createStubWorkerContext({ client });
 
   const channel = new MessageChannel();
 
   const message: RequestResyncMessage = {
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     type: ClientMessageType.RequestResync,
   };
 
@@ -97,7 +95,7 @@ test('it records the resync request for the requested avatar', async () => {
 
   await handleClientMessage(context, channel.port2, event);
 
-  expect(context.getResyncAvatarID()).toBe(avatar.id);
+  expect(context.getResyncAvatarID()).toBe(viewer.avatar.id);
 });
 
 test('it acks a request flush message back to the sending port', async () => {

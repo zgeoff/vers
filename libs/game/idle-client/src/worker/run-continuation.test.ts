@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
-import { createAuthedServiceClient } from '@vers/mock-services';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
@@ -32,21 +32,20 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
 }
 
 test('it adopts a fresh server-started row for the same scope and registers from a zero cursor', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
-  const previousActivity = createMockActivityData({ avatarID: avatar.id });
+  const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   await runContinuation(context, simulation, previousActivity);
 
   const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   invariant(minted !== undefined, 'expected the continuation to mint an active row');
@@ -63,19 +62,18 @@ test('it adopts a fresh server-started row for the same scope and registers from
 });
 
 test('it adopts the CONFLICT payload row when one is already active for the scope', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const conflictingActivity = await db.activityCollection.create({
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'active',
   });
 
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
-  const previousActivity = createMockActivityData({ avatarID: avatar.id });
+  const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
@@ -136,10 +134,13 @@ test('it records a pending continuation on a transport failure', async () => {
 });
 
 test('it stops the simulation and records a pending continuation on a same-row CONFLICT', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
-  const activity = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
 
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client: ctx.client, submitter });
@@ -160,20 +161,19 @@ test('it stops the simulation and records a pending continuation on a same-row C
 });
 
 test('it records no pending continuation when the CONFLICT names a different, already-progressed row', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   await db.activityCollection.create({
     appendedHead: 3,
-    avatarID: avatar.id,
+    avatarID: viewer.avatar.id,
     status: 'active',
   });
 
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
-  const previousActivity = createMockActivityData({ avatarID: avatar.id });
+  const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
@@ -202,20 +202,22 @@ test('it records no pending continuation on a defined error other than CONFLICT'
 });
 
 test('it stops the row it started when a stop lands mid-flight', async () => {
-  const user = await db.userCollection.create({});
-  const avatar = await db.avatarCollection.create({ userID: user.id });
-  const ctx = await setupTest({ userID: user.id });
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
-  const previousActivity = createMockActivityData({ avatarID: avatar.id });
+  const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   // the stop lands while the start call is in flight: the deviation answers with the row the
   // continuation minted, then advances the epoch as a concurrent stop does
-  const started = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+  const started = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
 
   server.use(
     mockActivityService.startActivity.handler(() => {
