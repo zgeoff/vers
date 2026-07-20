@@ -1,7 +1,6 @@
 import { CastBar } from '@vers/design-system';
 import type { CastBarTint } from '@vers/design-system';
-import { useCombatElapsed } from '../state/use-combat-elapsed';
-import { buildSwingProgress } from './build-swing-progress';
+import { useSwingCharge } from './use-swing-charge';
 
 interface SwingBarProps {
   readonly attackSpeed: number;
@@ -13,15 +12,12 @@ interface SwingBarProps {
 
 /**
  * The live swing timer for one actor: the fill charges toward the next attack and snaps back to
- * empty the instant it lands. Subscribes to combat elapsed on its own so only this leaf re-renders
- * each tick.
+ * empty the instant it lands. Interpolated at display refresh so the ~20Hz simulation cadence
+ * doesn't show through.
  */
 export function SwingBar(props: Readonly<SwingBarProps>) {
-  const elapsed = useCombatElapsed();
-
-  const progress = buildSwingProgress({
+  const charge = useSwingCharge({
     attackSpeed: props.attackSpeed,
-    elapsed,
     isAlive: props.isAlive,
     lastAttackTime: props.lastAttackTime,
   });
@@ -29,7 +25,7 @@ export function SwingBar(props: Readonly<SwingBarProps>) {
   return (
     <CastBar
       label={props.label}
-      progress={progress}
+      progress={charge}
       tint={props.tint}
       {...(props.attackSpeed > 0 && { time: `${(1 / props.attackSpeed).toFixed(1)}s` })}
     />
