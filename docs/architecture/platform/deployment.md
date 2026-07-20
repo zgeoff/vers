@@ -212,9 +212,9 @@ pull requests are skipped: GitHub withholds secrets from them, so the preview ca
 The job authenticates through the `OP_SERVICE_ACCOUNT_TOKEN` repo secret — a non-expiring 1Password
 service account scoped to read only the `vers-ci` vault — and resolves the stack's credentials from
 their `op://` references at run time. `vers-ci` holds exactly the items the workflow's `op://`
-references name, so a compromised job step cannot reach the signing keys, database URLs, and other
-credentials in the `vers` vault. When the job gains a new credential, its item moves into `vers-ci`
-— never a copy, which rots on rotation — and everything the job does not read stays in `vers`.
+references name, so a compromised job step cannot reach the signing keys and other credentials in
+the `vers` vault. When the job gains a new credential, its item moves into `vers-ci` — never a copy,
+which rots on rotation — and everything the job does not read stays in `vers`.
 
 The job only ever previews — reconciling a reported drift is a human decision, applied with
 `pulumi up` from a checkout.
@@ -337,10 +337,12 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
    done
    ```
 
-3. Mint the CI deploy token and store it for the workflow:
+3. Mint the CI deploy token and store it where the vers-infra program reads it (`infra/github.ts`
+   pushes it to the `FLY_API_TOKEN` secret on its next `pulumi up`):
 
    ```sh
-   fly tokens create deploy --name github-ci | gh secret set FLY_API_TOKEN
+   fly tokens create org -o vers --name github-actions |
+     op item edit github-actions --vault vers-ci 'fly-api-token[concealed]=-'
    ```
 
 4. Generate the keys and set each app's secrets. The s2s public key also goes into the `vers`
@@ -430,8 +432,9 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
      `vers-app-web` secret of the same name.
    - Add the alarms Discord webhook (the `bugsink-discord-webhook` item in the `vers` 1Password
      vault) as each project's messaging service, so new-issue alerts reach the alarms channel.
-   - Mint an API token for CI source-map uploads (`SENTRY_AUTH_TOKEN` GitHub secret) and one for the
-     MCP server, added to the vault item as `mcp-token`.
+   - Mint an API token for CI source-map uploads (the `sentry-auth-token` field on the `vers-ci`
+     vault's `github-actions` item, pushed to the `SENTRY_AUTH_TOKEN` secret by the vers-infra
+     program) and one for the MCP server, added to the `bugsink` vault item as `mcp-token`.
 
 7. Stand up web analytics. The first deploy is by hand; CI redeploys it on later config changes.
    Umami boots with an `admin`/`umami` account, so the rotation to the vault value runs in the same

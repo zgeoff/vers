@@ -14,9 +14,15 @@ export {
 } from './axiom.ts';
 
 export {
+  databaseURLSecretName,
+  discordWebhookURLSecretName,
+  dotenvAppWebDevSecretName,
+  dotenvAppWebE2ESecretName,
+  flyAPITokenSecretName,
   labelCount,
   mainProtectionRulesetName,
   productionEnvironmentName,
+  sentryAuthTokenSecretName,
   sentryDSNVariableName,
   serviceAuthPublicKeyVariableName,
   umamiWebsiteIDVariableName,
