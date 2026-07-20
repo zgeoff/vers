@@ -130,9 +130,9 @@ const serverErrorsMonitor = new axiom.Monitor(
  * alertOnNoData stays false: the counter emits only when a wake delivery
  * exhausts its retries, so a quiet dataset is the healthy default, never a
  * down exporter. The metric is an OTLP cumulative counter (the exporter sets no
- * delta temporality), so the query measures its per-window increase — a point
- * count over a cumulative series counts export intervals, not failures. The
- * threshold fires when the counter climbs by at least one inside the window.
+ * delta temporality), so `map increase` reduces each window's aligned maximum to
+ * the number of new failures inside it — the threshold fires when that climbs by
+ * at least one.
  */
 const replayPokeFailedMonitor = new axiom.Monitor(
   'vers-replay-poke-failed',
@@ -141,9 +141,10 @@ const replayPokeFailedMonitor = new axiom.Monitor(
     type: 'Threshold',
     description:
       'A wake poke to service-replay exhausted its retries without delivering. The optimistic client hides verifier failure, so this counter is the explicit signal that the replay queue may go undrained despite an activity appending unverified work.',
-    mplQuery: 'increase({__name__="vers.activity.replay_poke_failed"}[5m])',
+    mplQuery:
+      '`vers-metrics`:`vers.activity.replay_poke_failed` | align to 5m using max | group using max | map increase',
     intervalMinutes: 5,
-    rangeMinutes: 10,
+    rangeMinutes: 15,
     operator: 'AboveOrEqual',
     threshold: 1,
     triggerFromNRuns: 1,
