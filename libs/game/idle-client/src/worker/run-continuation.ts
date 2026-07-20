@@ -2,6 +2,8 @@ import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
+import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
+import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createRequestResyncMessage } from './create-request-resync-message';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
@@ -20,18 +22,18 @@ import type { WorkerContext } from './types';
  * genuinely different claim on the avatar — every one is handed to a full resync, which
  * reconstructs the confirmed stream before attaching; adopting a conflicting row from a zero
  * cursor would fork the checkpoint chain. The same-row case — this row's terminal append still
- * unacknowledged — also records a pending continuation, so a resync that finds the row still
- * closed once the terminal append drains plans to start the next row itself rather than idling. A
- * transport failure stops and uninstalls the simulation, records the same pending continuation,
- * and reports the worker offline rather than
- * retrying inline — the next reconnect resync rebuilds from the server's confirmed state and
- * honors the pending intent. Any other rejection also stops and uninstalls the simulation, but
- * without the offline signal or a pending record: the service answered, so the failure is the
- * activity's, not the connection's. Every path past the start call re-checks the stop epoch and
- * the runtime's simulation/activity pair as they stood at entry — a stop or a fresher selection
- * that landed while the call was in flight owns the runtime now, so a row this continuation
- * itself started under a stop is stopped back durably, an adopted foreign row is left running but
- * not installed, and no pending continuation is recorded for a run that no longer exists.
+ * unacknowledged — also records a durable start intent, so a later resync's entry drain starts
+ * the next row itself once the terminal append lands, and a worker reload in between loses
+ * nothing. A transport failure stops and uninstalls the simulation, records the same durable
+ * intent, and reports the worker offline rather than retrying inline — the next reconnect resync
+ * rebuilds from the server's confirmed state and honors the intent. Any other rejection also
+ * stops and uninstalls the simulation, but without the offline signal or an intent record: the
+ * service answered, so the failure is the activity's, not the connection's. Every path past the
+ * start call re-checks the stop epoch and the runtime's simulation/activity pair as they stood at
+ * entry — a stop or a fresher selection that landed while the call was in flight owns the runtime
+ * now, so a row this continuation itself started under a stop is stopped back durably, an adopted
+ * foreign row is left running but not installed, and no intent is recorded for a run that no
+ * longer exists.
  */
 export async function runContinuation(
   context: WorkerContext,
@@ -76,7 +78,7 @@ export async function runContinuation(
     const row = error.data.activity;
 
     if (row.id === activity.id && !hasStopIntervened(context, entryEpoch)) {
-      setPendingContinuation(context, activity);
+      await writeStartIntent(context, activity, entryEpoch);
     }
 
     await stopAndUninstall(context, simulation);
@@ -89,7 +91,7 @@ export async function runContinuation(
 
   if (!isDefinedError(error)) {
     if (!hasStopIntervened(context, entryEpoch)) {
-      setPendingContinuation(context, activity);
+      await writeStartIntent(context, activity, entryEpoch);
     }
 
     emitConnectionStatus(context, false);
@@ -126,13 +128,29 @@ async function stopAndUninstall(context: WorkerContext, simulation: Simulation):
   }
 }
 
-function setPendingContinuation(context: WorkerContext, activity: Readonly<ActivityData>): void {
-  context.setPendingContinuation({
+/**
+ * Records the durable start intent, then re-checks the stop epoch and compensates: the caller's
+ * pre-write guard is a synchronous check, and a stop — always concurrent with lifecycle flows —
+ * can land and run its own unconditional intent removal in the gap before this write's
+ * transaction commits. Readwrite transactions on the store run in creation order, so a
+ * compensating remove issued after the write settles is ordered after the stop's removal — a
+ * ghost intent can never survive to revive the run the player just ended.
+ */
+async function writeStartIntent(
+  context: WorkerContext,
+  activity: Readonly<ActivityData>,
+  entryEpoch: number,
+): Promise<void> {
+  await writePendingStartIntent({
     activityID: activity.id,
     avatarID: activity.avatarID,
     scopeID: activity.scopeID,
     scopeType: activity.scopeType,
   });
+
+  if (hasStopIntervened(context, entryEpoch)) {
+    await removePendingStartIntent(activity.id);
+  }
 }
 
 function emitConnectionStatus(context: WorkerContext, online: boolean): void {

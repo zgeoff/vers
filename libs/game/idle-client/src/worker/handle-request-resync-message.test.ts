@@ -19,10 +19,12 @@ import { server } from '../mocks/node';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
+import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
+import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
@@ -35,11 +37,10 @@ import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
-import type { PendingContinuation, WorkerContext } from './types';
+import type { WorkerContext } from './types';
 
 interface SetupTestConfig {
   readonly failureAction?: ActivityFailureAction;
-  readonly pendingContinuation?: PendingContinuation | null;
   readonly remainingBudgetMs?: number;
   readonly userID: string;
 }
@@ -70,9 +71,6 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
     connections: [connection.port],
     submitter,
     ...(config.failureAction === undefined ? {} : { failureAction: config.failureAction }),
-    ...(config.pendingContinuation !== undefined && {
-      pendingContinuation: config.pendingContinuation,
-    }),
     ...(config.remainingBudgetMs !== undefined && { remainingBudgetMs: config.remainingBudgetMs }),
   });
 
@@ -714,7 +712,7 @@ test('it keeps the dirty flag when the resync push to the server fails', async (
   });
 });
 
-test("it starts a fresh row, installs a live simulation with the worker's failure action, and clears the pending continuation", async () => {
+test("it starts a fresh row, installs a live simulation with the worker's failure action, and clears the start intent", async () => {
   const viewer = await createViewer({ avatar: { failureAction: 'retry' } });
 
   const stopped = await db.activityCollection.create({
@@ -722,15 +720,14 @@ test("it starts a fresh row, installs a live simulation with the worker's failur
     status: 'stopped',
   });
 
-  const ctx = await setupTest({
-    pendingContinuation: {
-      activityID: stopped.id,
-      avatarID: viewer.avatar.id,
-      scopeID: stopped.scopeID,
-      scopeType: stopped.scopeType,
-    },
-    userID: viewer.user.id,
+  await writePendingStartIntent({
+    activityID: stopped.id,
+    avatarID: viewer.avatar.id,
+    scopeID: stopped.scopeID,
+    scopeType: stopped.scopeType,
   });
+
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
@@ -743,18 +740,18 @@ test("it starts a fresh row, installs a live simulation with the worker's failur
     q.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
-  invariant(minted !== undefined, 'expected the continue plan to mint a fresh row');
+  invariant(minted !== undefined, 'expected the drained intent to mint a fresh row');
   expect(minted.scopeID).toBe(stopped.scopeID);
 
   const simulation = ctx.context.getSimulation();
 
-  invariant(simulation !== null, 'expected the continue plan to install a live simulation');
+  invariant(simulation !== null, 'expected the resync to install a live simulation');
   expect(simulation.activity?.id).toBe(minted.id);
   expect(simulation.failureAction).toBe(ActivityFailureAction.Retry);
-  expect(ctx.context.getPendingContinuation()).toBeNull();
+  expect(await readPendingStartIntent()).toBeUndefined();
 });
 
-test('it fails the resync when a foreign row races in ahead of the continuation', async () => {
+test('it attaches the foreign row that races in ahead of the continuation', async () => {
   const viewer = await createViewer();
 
   const stopped = await db.activityCollection.create({
@@ -762,9 +759,9 @@ test('it fails the resync when a foreign row races in ahead of the continuation'
     status: 'stopped',
   });
 
-  // the racing row lands between the resync's progress fetch and its start call, so it must not
-  // exist when the plan is computed — the scripted handler mints it at start time and answers
-  // CONFLICT with it, exactly as the real service would
+  // the racing row lands at the drain's start call, so it must not exist when the intent was
+  // recorded — the scripted handler mints it at start time and answers CONFLICT with it, exactly
+  // as the real service would for a genuinely different claim
   server.use(
     mockActivityService.startActivity.handler(async (opts) => {
       const racing = await db.activityCollection.create({
@@ -777,15 +774,14 @@ test('it fails the resync when a foreign row races in ahead of the continuation'
     }),
   );
 
-  const ctx = await setupTest({
-    pendingContinuation: {
-      activityID: stopped.id,
-      avatarID: viewer.avatar.id,
-      scopeID: stopped.scopeID,
-      scopeType: stopped.scopeType,
-    },
-    userID: viewer.user.id,
+  await writePendingStartIntent({
+    activityID: stopped.id,
+    avatarID: viewer.avatar.id,
+    scopeID: stopped.scopeID,
+    scopeType: stopped.scopeType,
   });
+
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
@@ -794,18 +790,20 @@ test('it fails the resync when a foreign row races in ahead of the continuation'
 
   await handleRequestResyncMessage(ctx.context, message);
 
-  expect(ctx.context.getSimulation()).toBeNull();
-  expect(ctx.context.getPendingContinuation()).toBeNull();
+  const installed = ctx.context.getSimulation();
 
-  await ctx.connection.waitForMessages(1);
+  invariant(installed !== null, 'expected the resync to attach the racing row');
 
-  expect(ctx.connection.received).toContainEqual({
-    status: { avatarID: viewer.avatar.id, kind: 'failed' },
-    type: WorkerMessageType.ResyncStatus,
-  });
+  const racing = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
+  );
+
+  invariant(racing !== undefined, 'expected the racing row to survive');
+  expect(installed.activity?.id).toBe(racing.id);
+  expect(await readPendingStartIntent()).toBeUndefined();
 });
 
-test('it halts at the boundary and keeps the pending continuation when the offline budget is spent', async () => {
+test('it halts at the boundary and keeps the start intent when the offline budget is spent', async () => {
   const viewer = await createViewer();
 
   const stopped = await db.activityCollection.create({
@@ -813,18 +811,14 @@ test('it halts at the boundary and keeps the pending continuation when the offli
     status: 'stopped',
   });
 
-  const pending: PendingContinuation = {
+  await writePendingStartIntent({
     activityID: stopped.id,
     avatarID: viewer.avatar.id,
     scopeID: stopped.scopeID,
     scopeType: stopped.scopeType,
-  };
-
-  const ctx = await setupTest({
-    pendingContinuation: pending,
-    remainingBudgetMs: 0,
-    userID: viewer.user.id,
   });
+
+  const ctx = await setupTest({ remainingBudgetMs: 0, userID: viewer.user.id });
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
@@ -840,7 +834,13 @@ test('it halts at the boundary and keeps the pending continuation when the offli
   ]);
 
   expect(ctx.context.getSimulation()).toBeNull();
-  expect(ctx.context.getPendingContinuation()).toStrictEqual(pending);
+
+  expect(await readPendingStartIntent()).toStrictEqual({
+    activityID: stopped.id,
+    avatarID: viewer.avatar.id,
+    scopeID: stopped.scopeID,
+    scopeType: stopped.scopeType,
+  });
 
   const minted = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: viewer.avatar.id, status: 'active' }),
@@ -849,7 +849,41 @@ test('it halts at the boundary and keeps the pending continuation when the offli
   expect(minted).toBeUndefined();
 });
 
-test('it keeps the pending continuation and reports offline when starting the continued row fails on transport', async () => {
+test('it clears a stale start intent silently when the budget is spent and another claim owns the avatar', async () => {
+  const viewer = await createViewer();
+
+  await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'stopped' });
+
+  await writePendingStartIntent({
+    activityID: 'activity_departed',
+    avatarID: viewer.avatar.id,
+    scopeID: 'scope_departed',
+    scopeType: 'mission',
+  });
+
+  const ctx = await setupTest({ remainingBudgetMs: 0, userID: viewer.user.id });
+
+  const message: RequestResyncMessage = {
+    avatarID: viewer.avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  expect(await readPendingStartIntent()).toBeUndefined();
+
+  // posted on the worker's own port after the handler settles, this arrives after anything the
+  // handler broadcast on the same channel — its lone presence proves no cap-halt rode along
+  ctx.connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
+
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    { online: true, type: WorkerMessageType.ConnectionStatus },
+  ]);
+});
+
+test('it keeps the start intent and reports offline when the drain fails on transport', async () => {
   const viewer = await createViewer();
 
   const stopped = await db.activityCollection.create({
@@ -857,16 +891,16 @@ test('it keeps the pending continuation and reports offline when starting the co
     status: 'stopped',
   });
 
-  const pending: PendingContinuation = {
+  await writePendingStartIntent({
     activityID: stopped.id,
     avatarID: viewer.avatar.id,
     scopeID: stopped.scopeID,
     scopeType: stopped.scopeType,
-  };
+  });
 
   server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
 
-  const ctx = await setupTest({ pendingContinuation: pending, userID: viewer.user.id });
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
@@ -882,10 +916,16 @@ test('it keeps the pending continuation and reports offline when starting the co
   ]);
 
   expect(ctx.context.getSimulation()).toBeNull();
-  expect(ctx.context.getPendingContinuation()).toStrictEqual(pending);
+
+  expect(await readPendingStartIntent()).toStrictEqual({
+    activityID: stopped.id,
+    avatarID: viewer.avatar.id,
+    scopeID: stopped.scopeID,
+    scopeType: stopped.scopeType,
+  });
 });
 
-test('it clears the pending continuation and reports the resync failure status on a defined error other than CONFLICT', async () => {
+test('it clears the start intent and reports the resync failure status on a defined error other than CONFLICT', async () => {
   const viewer = await createViewer();
 
   const stopped = await db.activityCollection.create({
@@ -893,12 +933,12 @@ test('it clears the pending continuation and reports the resync failure status o
     status: 'stopped',
   });
 
-  const pending: PendingContinuation = {
+  await writePendingStartIntent({
     activityID: stopped.id,
     avatarID: viewer.avatar.id,
     scopeID: stopped.scopeID,
     scopeType: stopped.scopeType,
-  };
+  });
 
   server.use(
     mockActivityService.startActivity.handler((opts) => {
@@ -906,7 +946,7 @@ test('it clears the pending continuation and reports the resync failure status o
     }),
   );
 
-  const ctx = await setupTest({ pendingContinuation: pending, userID: viewer.user.id });
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
@@ -924,7 +964,55 @@ test('it clears the pending continuation and reports the resync failure status o
     },
   ]);
 
-  expect(ctx.context.getPendingContinuation()).toBeNull();
+  expect(await readPendingStartIntent()).toBeUndefined();
+});
+
+test('it delivers a blocked intent after the pass closes its source row and attaches the minted row', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  // restart shape: the source row still reads active because its terminal append sits only in
+  // the durable queue — a fresh worker's held map is empty, so nothing flushes at entry and the
+  // drain's start call conflicts with the source row itself
+  const source = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
+
+  await writePendingStartIntent({
+    activityID: source.id,
+    avatarID: viewer.avatar.id,
+    scopeID: source.scopeID,
+    scopeType: source.scopeType,
+  });
+
+  const terminal = createMockCheckpointBatchEntry({
+    payload: { rewards: { xp: 0 }, type: 'completed' },
+    prevHash: source.lastHash,
+    version: 1,
+  });
+
+  await writeQueuedCheckpoint(source.id, terminal);
+
+  const message: RequestResyncMessage = {
+    avatarID: viewer.avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  const minted = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: viewer.avatar.id, scopeID: source.scopeID, status: 'active' }),
+  );
+
+  invariant(minted !== undefined, 'expected the retried intent to mint a fresh row');
+  expect(minted.id).not.toBe(source.id);
+
+  const installed = ctx.context.getSimulation();
+
+  invariant(installed !== null, 'expected the second pass to install the minted row');
+  expect(installed.activity?.id).toBe(minted.id);
+  expect(await readPendingStartIntent()).toBeUndefined();
 });
 
 test('it reports a fault to the error backend and broadcasts a failed status when the resync fails outright', async () => {
@@ -1126,7 +1214,7 @@ test('it abandons the install when a stop lands mid-resync', async () => {
   expect(ctx.context.getActivity()).toBeNull();
 });
 
-test('it stops back a continued row when a stop lands during its registration', async () => {
+test('it stops back a drain-minted row when a stop lands during its attach', async () => {
   const viewer = await createViewer();
 
   const previous = await db.activityCollection.create({
@@ -1136,8 +1224,8 @@ test('it stops back a continued row when a stop lands during its registration', 
 
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
-  // the stop lands while the continued row's registration is in flight — after the continue
-  // plan's own epoch checks, in the last await before the install guard
+  // the stop lands while the minted row's registration is in flight — after the drain's own
+  // epoch check, in the attach's last await before the install guard
   const contextHolder: { current?: WorkerContext } = {};
 
   const submitter: CheckpointSubmitter = {
@@ -1149,16 +1237,14 @@ test('it stops back a continued row when a stop lands during its registration', 
     }),
   };
 
-  const context = createStubWorkerContext({
-    client,
-    pendingContinuation: {
-      activityID: previous.id,
-      avatarID: viewer.avatar.id,
-      scopeID: previous.scopeID,
-      scopeType: previous.scopeType,
-    },
-    submitter,
+  await writePendingStartIntent({
+    activityID: previous.id,
+    avatarID: viewer.avatar.id,
+    scopeID: previous.scopeID,
+    scopeType: previous.scopeType,
   });
+
+  const context = createStubWorkerContext({ client, submitter });
 
   contextHolder.current = context;
 

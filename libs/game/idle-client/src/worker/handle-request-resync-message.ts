@@ -1,4 +1,4 @@
-import { ORPCError, isDefinedError, safe } from '@orpc/client';
+import { ORPCError, safe } from '@orpc/client';
 import type {
   ActivityData,
   ActivityFailureAction as ContractFailureAction,
@@ -15,6 +15,8 @@ import { runReconstruction } from '../resync/run-reconstruction';
 import { runResync } from '../resync/run-resync';
 import type { FastForwardReport, ResyncPlan, ResyncResult } from '../resync/types';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
+import { readPendingStartIntent } from '../submission/read-pending-start-intent';
+import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import type { RequestResyncMessage, ResyncStatus } from '../types';
@@ -23,6 +25,8 @@ import { createConnectionStatusMessage } from './create-connection-status-messag
 import { createFailureActionStatusMessage } from './create-failure-action-status-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { createResyncStatusMessage } from './create-resync-status-message';
+import type { PendingStartFlushResult } from './flush-pending-start';
+import { flushPendingStart } from './flush-pending-start';
 import { flushPendingStop } from './flush-pending-stop';
 import { hasStopIntervened } from './has-stop-intervened';
 import { registerSimulationListeners } from './register-simulation-listeners';
@@ -77,40 +81,19 @@ export async function handleRequestResyncMessage(
       return;
     }
 
-    const result = await runResync({
-      avatarID: message.avatarID,
-      buildSimulationInput: (activity) =>
-        buildSimulationInput(activity, { failureAction: context.getFailureAction() }),
-      client: context.getClient(),
-      isActivityLive: (activityID) => context.getSimulation()?.activity?.id === activityID,
-      onProgress: (progress) => {
-        emitResyncStatus(context, { ...progress, kind: 'fast-forwarding' });
-      },
-      onProgressFetched: async (progress) => {
-        // The dirty local value is flushed only when the cached record was set for this avatar;
-        // otherwise the server's value wins, and the cache is rewritten clean for this avatar so a
-        // dirty value left over from a different avatar this worker drove earlier is discarded
-        // rather than delivered to the wrong row.
-        const cached = await readFailureActionCache();
+    // The held continuation-start intent delivers before planning, so the progress fetch finds
+    // the row it minted and the plan attaches it. Offline is the only entry-time signal; every
+    // other outcome resolves after the pass, once fetched progress can tell a live intent from a
+    // stale one.
+    const startFlush = await flushPendingStart(context, entryEpoch);
 
-        if (context.isFailureActionDirty() && cached?.avatarID === message.avatarID) {
-          await flushFailureAction(context, message.avatarID);
+    if (startFlush.outcome === 'undelivered') {
+      emitConnectionStatus(context, false);
+    }
 
-          return;
-        }
+    const result = await runResyncPass(context, message, entryEpoch);
 
-        await updateFailureActionFromServer(
-          context,
-          message.avatarID,
-          toActivityFailureAction(progress.failureAction),
-        );
-      },
-      pendingContinuation: context.getPendingContinuation(),
-      submitter: context.getSubmitter(),
-    });
-
-    await sweepStaleActivities(context, result);
-    await applyResyncResult(context, result, entryEpoch);
+    await resolveStartFlush(context, message, entryEpoch, startFlush, result);
   } catch (error) {
     if (error instanceof ORPCError && error.code === 'UNAUTHORIZED') {
       emitResyncStatus(context, { avatarID: message.avatarID, kind: 'session-expired' });
@@ -121,6 +104,135 @@ export async function handleRequestResyncMessage(
   } finally {
     context.setResyncInFlight(false);
   }
+}
+
+/**
+ * One full fetch → plan → sweep → apply pass. Split out so a delivered start intent can trigger a
+ * single bounded second pass that attaches the row the delivery minted.
+ */
+async function runResyncPass(
+  context: WorkerContext,
+  message: RequestResyncMessage,
+  entryEpoch: number,
+): Promise<ResyncResult> {
+  const result = await runResync({
+    avatarID: message.avatarID,
+    buildSimulationInput: (activity) =>
+      buildSimulationInput(activity, { failureAction: context.getFailureAction() }),
+    client: context.getClient(),
+    isActivityLive: (activityID) => context.getSimulation()?.activity?.id === activityID,
+    onProgress: (progress) => {
+      emitResyncStatus(context, { ...progress, kind: 'fast-forwarding' });
+    },
+    onProgressFetched: async (progress) => {
+      // The dirty local value is flushed only when the cached record was set for this avatar;
+      // otherwise the server's value wins, and the cache is rewritten clean for this avatar so a
+      // dirty value left over from a different avatar this worker drove earlier is discarded
+      // rather than delivered to the wrong row.
+      const cached = await readFailureActionCache();
+
+      if (context.isFailureActionDirty() && cached?.avatarID === message.avatarID) {
+        await flushFailureAction(context, message.avatarID);
+
+        return;
+      }
+
+      await updateFailureActionFromServer(
+        context,
+        message.avatarID,
+        toActivityFailureAction(progress.failureAction),
+      );
+    },
+    submitter: context.getSubmitter(),
+  });
+
+  await sweepStaleActivities(context, result);
+  await applyResyncResult(context, result, entryEpoch);
+
+  return result;
+}
+
+/**
+ * Settles the entry drain's outcome now that fetched progress can adjudicate it. A delivered
+ * intent's minted row is stopped back durably when a stop kept the pass from installing it — the
+ * run it continues no longer exists, and leaving it active would let the next resync revive it. A
+ * `blocked` intent gets one retry — the pass's own queued-checkpoint drain may have closed the
+ * source row — and a delivery there earns the single bounded second pass that attaches the minted
+ * row; a retry that stays blocked keeps the intent for the next resync. A `capped` intent is
+ * halted only while progress still names its source row: closed means
+ * actionable-but-unaffordable (broadcast the cap halt, keep the intent), active means the
+ * terminal append hasn't landed (keep silently) — any other row, or no history, means the intent
+ * is stale and clears without a cap broadcast, which would otherwise repeat on every resync
+ * forever.
+ */
+async function resolveStartFlush(
+  context: WorkerContext,
+  message: RequestResyncMessage,
+  entryEpoch: number,
+  startFlush: Readonly<PendingStartFlushResult>,
+  result: Readonly<ResyncResult>,
+): Promise<void> {
+  if (startFlush.outcome === 'delivered') {
+    await stopBackUninstalledRow(context, startFlush.started, entryEpoch);
+
+    return;
+  }
+
+  if (startFlush.outcome === 'blocked') {
+    const retryFlush = await flushPendingStart(context, entryEpoch);
+
+    if (retryFlush.outcome === 'delivered') {
+      await runResyncPass(context, message, entryEpoch);
+      await stopBackUninstalledRow(context, retryFlush.started, entryEpoch);
+    } else if (retryFlush.outcome === 'undelivered') {
+      emitConnectionStatus(context, false);
+    }
+
+    return;
+  }
+
+  if (startFlush.outcome !== 'capped') {
+    return;
+  }
+
+  const intent = await readPendingStartIntent();
+
+  if (intent === undefined) {
+    return;
+  }
+
+  const progressActivity = result.progress?.activity;
+
+  if (progressActivity === undefined || progressActivity.id !== intent.activityID) {
+    await removePendingStartIntent(intent.activityID);
+
+    return;
+  }
+
+  if (progressActivity.status !== 'active') {
+    emitCapStatus(context, 0, true);
+  }
+}
+
+/**
+ * Stops a drain-minted row back durably when a stop landed after its delivery and the pass never
+ * installed it — active on the server with nothing local driving it, the next resync would
+ * otherwise revive the run the player just ended.
+ */
+async function stopBackUninstalledRow(
+  context: WorkerContext,
+  started: Readonly<ActivityData>,
+  entryEpoch: number,
+): Promise<void> {
+  if (!hasStopIntervened(context, entryEpoch)) {
+    return;
+  }
+
+  if (context.getSimulation()?.activity?.id === started.id) {
+    return;
+  }
+
+  await submitStopIntent(context, started);
 }
 
 function toActivityFailureAction(failureAction: ContractFailureAction): ActivityFailureAction {
@@ -205,10 +317,6 @@ function pickLatestActivityID(result: Readonly<ResyncResult>): string | undefine
     return undefined;
   }
 
-  if (result.plan.kind === 'continue') {
-    return result.plan.activity.id;
-  }
-
   return result.plan.context.activityID;
 }
 
@@ -231,12 +339,6 @@ async function applyResyncResult(
 
   if (result.plan.kind === 'attach-live') {
     await applyAttachLive(context, result.plan, result.progress, entryEpoch);
-
-    return;
-  }
-
-  if (result.plan.kind === 'continue') {
-    await applyContinue(context, result.plan, entryEpoch);
   }
 }
 
@@ -289,99 +391,6 @@ async function applyAttachLive(
   });
 
   setLiveSimulation(context, progress.activity, reconstruction.simulation, entryEpoch);
-}
-
-/**
- * Starts the row a pending continuation wanted, now that its target reads closed. A spent budget
- * halts at the boundary, keeping the record. Duplicate deliveries dedupe server-side via the
- * start key, so a defined error is a genuinely different claim: the record clears and the error
- * rethrows into the caller's resync-failure handling. A transport failure keeps the record and
- * reports the worker offline for the next reconnect to retry.
- */
-async function applyContinue(
-  context: WorkerContext,
-  plan: Extract<ResyncPlan, { kind: 'continue' }>,
-  entryEpoch: number,
-): Promise<void> {
-  // A stop that landed while the plan was computed also cleared the pending continuation the plan
-  // was built from — the continuation intent died with the run the player ended.
-  if (hasStopIntervened(context, entryEpoch)) {
-    return;
-  }
-
-  invariant(
-    context.getPendingContinuation() !== null,
-    'a continue plan is only reached with a pending continuation',
-  );
-
-  if (context.getRemainingBudgetMs() <= 0) {
-    emitCapStatus(context, 0, true);
-
-    return;
-  }
-
-  // the same key the live continuation carried, so this retry dedupes onto anything it minted
-  const [error, started] = await safe(
-    context.getClient().startActivity({
-      avatarID: plan.activity.avatarID,
-      scopeID: plan.activity.scopeID,
-      scopeType: plan.activity.scopeType,
-      startKey: `continue_${plan.activity.id}`,
-    }),
-  );
-
-  if (error === null) {
-    // The player ended the run while the start was in flight: the fresh row was raised on behalf
-    // of a run that no longer exists, so it is stopped the same durable way any player stop is.
-    if (hasStopIntervened(context, entryEpoch)) {
-      await submitStopIntent(context, started);
-
-      return;
-    }
-
-    await startContinuedActivity(context, started, entryEpoch);
-
-    context.setPendingContinuation(null);
-
-    return;
-  }
-
-  if (!isDefinedError(error)) {
-    emitConnectionStatus(context, false);
-
-    return;
-  }
-
-  context.setPendingContinuation(null);
-  throw error;
-}
-
-async function startContinuedActivity(
-  context: WorkerContext,
-  row: Readonly<ActivityData>,
-  entryEpoch: number,
-): Promise<void> {
-  const input = buildSimulationInput(row, { failureAction: context.getFailureAction() });
-
-  await context.getSubmitter().registerActivity({
-    activityID: row.id,
-    appendedHead: 0,
-    lastHash: row.startHash,
-    startChainIndex: row.startChainIndex,
-  });
-
-  const simulation = createSimulation();
-
-  simulation.startActivity(input.avatar, input.activity);
-
-  const installed = setLiveSimulation(context, row, simulation, entryEpoch);
-
-  // A stop that landed during the registration await left this freshly started row active on the
-  // server with nothing local driving it — the next resync would revive it — so it is stopped
-  // back durably, the same way any player stop delivers.
-  if (!installed && hasStopIntervened(context, entryEpoch)) {
-    await submitStopIntent(context, row);
-  }
 }
 
 async function applyFastForward(

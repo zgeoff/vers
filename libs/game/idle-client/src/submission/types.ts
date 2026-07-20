@@ -34,6 +34,23 @@ export interface PendingStopIntent {
   readonly avatarID: string;
 }
 
+/**
+ * A continuation the worker wanted to start but couldn't complete — a same-row `CONFLICT` (the
+ * terminal append that closes the row is still unacknowledged) or a transport failure on its own
+ * start-activity call. Held durably so the intent survives a worker reload; the next resync's
+ * entry drain retries it with the idempotent start key `continue_<activityID>`. `activityID`
+ * names the row the intent was raised against, so the drain can tell that row still being open
+ * (keep waiting) apart from a genuinely different claim on the avatar (the intent is stale). The
+ * row it eventually starts takes the worker's failure action at drain time, not a snapshot from
+ * raise time, so a preference changed while the intent waited still applies.
+ */
+export interface PendingStartIntent {
+  readonly activityID: string;
+  readonly avatarID: string;
+  readonly scopeID: string;
+  readonly scopeType: string;
+}
+
 export interface CheckpointQueueSchema extends DBSchema {
   'pending-checkpoints': {
     key: [string, number];
@@ -41,7 +58,7 @@ export interface CheckpointQueueSchema extends DBSchema {
   };
   preferences: {
     key: string;
-    value: FailureActionPreference | PendingStopIntent;
+    value: FailureActionPreference | PendingStartIntent | PendingStopIntent;
   };
 }
 

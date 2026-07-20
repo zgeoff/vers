@@ -6,6 +6,7 @@ import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
+import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import type { ClientMessage, RewardSlotLedgerEntry, WorkerMessage } from '../types';
 import { createCheckpointFlushStalledMessage } from './create-checkpoint-flush-stalled-message';
@@ -18,7 +19,7 @@ import { handleClientMessage } from './handle-client-message';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { reportWorkerFault } from './report-worker-fault';
 import { runSimulation } from './run-simulation';
-import type { PendingContinuation, WorkerContext } from './types';
+import type { WorkerContext } from './types';
 
 export interface WorkerRuntime {
   readonly connections: ReadonlySet<MessagePort>;
@@ -68,7 +69,6 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let stopped = false;
   let lastFrameTime = now();
   let accumulator = 0;
-  let pendingContinuation: PendingContinuation | null = null;
   let resyncAvatarID: string | null = null;
   let resyncInFlight = false;
   let failureAction: ActivityFailureAction = ActivityFailureAction.Abort;
@@ -138,7 +138,6 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     getActivity: () => activity,
     getClient: () => client,
     getFailureAction: () => failureAction,
-    getPendingContinuation: () => pendingContinuation,
     getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
     getResyncAvatarID: () => resyncAvatarID,
     getRewardSlotLedger: () => ({
@@ -181,9 +180,6 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
-    },
-    setPendingContinuation: (pending) => {
-      pendingContinuation = pending;
     },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
@@ -293,9 +289,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
         // below is skipped while a simulation is live, and after a stop one always is.
         await flushPendingStop(context);
 
-        // the pending continuation is always the fresher signal: it was recorded at the most
+        // the durable start intent is always the fresher signal: it was recorded at the most
         // recent boundary failure, while the remembered resync avatar can predate it
-        const avatarID = pendingContinuation?.avatarID ?? resyncAvatarID ?? null;
+        const avatarID = (await readPendingStartIntent())?.avatarID ?? resyncAvatarID ?? null;
 
         if (context.getSimulation() === null && avatarID !== null) {
           await handleRequestResyncMessage(context, createRequestResyncMessage(avatarID));

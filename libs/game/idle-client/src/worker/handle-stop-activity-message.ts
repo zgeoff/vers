@@ -1,4 +1,5 @@
 import { createSimulation } from '@vers/idle-core';
+import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import type { StopActivityMessage } from '../types';
 import { createSimulationUpdateMessage } from './create-simulation-update-message';
 import { registerSimulationListeners } from './register-simulation-listeners';
@@ -39,11 +40,12 @@ export async function handleStopActivityMessage(
 
   context.setSimulation(replacement);
   context.setActivity(null);
-  context.setPendingContinuation(null);
   context.resetRewardSlotLedger();
 
   emitClearedSnapshot(context);
 
+  // unconditional: whatever continuation was outstanding died with the run the player ended
+  await removePendingStartIntent();
   await submitStopIntent(context, { avatarID: message.avatarID, id: message.activityID });
 }
 
