@@ -1,28 +1,19 @@
-import { expect, mock, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { createAuthedServiceClient } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
-import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
+import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { flushPendingStop } from './flush-pending-stop';
 
-function buildSpySubmitter(): CheckpointSubmitter {
-  return {
-    flushHeld: mock(() => Promise.resolve()),
-    flushNow: mock(() => Promise.resolve()),
-    registerActivity: mock(() => Promise.resolve()),
-    submit: mock(() => Promise.resolve<number | undefined>(undefined)),
-  };
-}
-
 test('it reports none when no stop is held', async () => {
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
 
   const outcome = await flushPendingStop(context);
@@ -37,7 +28,7 @@ test('it flushes the queue, stops the row, and releases the intent', async () =>
   const activity = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
 
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client, submitter });
 
   await writePendingStopIntent({ activityID: activity.id, avatarID: avatar.id });
@@ -62,7 +53,7 @@ test('it treats a missing row as delivered and releases the intent', async () =>
   const avatar = await db.avatarCollection.create({ userID: user.id });
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
 
-  const context = createStubWorkerContext({ client, submitter: buildSpySubmitter() });
+  const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
 
   await writePendingStopIntent({ activityID: 'activity_gone', avatarID: avatar.id });
 
@@ -82,7 +73,7 @@ test('it never touches a row other than the targeted one', async () => {
   const newer = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
 
-  const context = createStubWorkerContext({ client, submitter: buildSpySubmitter() });
+  const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
 
   await writePendingStopIntent({ activityID: ended.id, avatarID: avatar.id });
 
@@ -99,7 +90,7 @@ test('it never touches a row other than the targeted one', async () => {
 test('it keeps the intent held on a transport failure', async () => {
   server.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
 
-  const context = createStubWorkerContext({ submitter: buildSpySubmitter() });
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
 
   await writePendingStopIntent({ activityID: 'activity_1', avatarID: 'avatar_1' });
 
@@ -116,7 +107,7 @@ test('it keeps the intent held on a transport failure', async () => {
 });
 
 test('it keeps the intent held when the session is not recognized', async () => {
-  const context = createStubWorkerContext({ submitter: buildSpySubmitter() });
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
 
   await writePendingStopIntent({ activityID: 'activity_1', avatarID: 'avatar_1' });
 

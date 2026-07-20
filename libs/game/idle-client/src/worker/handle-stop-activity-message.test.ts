@@ -1,4 +1,4 @@
-import { expect, mock, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
@@ -8,25 +8,16 @@ import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
-import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
+import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { handleStopActivityMessage } from './handle-stop-activity-message';
 
-function buildSpySubmitter(): CheckpointSubmitter {
-  return {
-    flushHeld: mock(() => Promise.resolve()),
-    flushNow: mock(() => Promise.resolve()),
-    registerActivity: mock(() => Promise.resolve()),
-    submit: mock(() => Promise.resolve<number | undefined>(undefined)),
-  };
-}
-
 test('it halts the live simulation and clears the runtime', async () => {
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
   const activity = createMockActivityData();
@@ -55,7 +46,7 @@ test('it halts the live simulation and clears the runtime', async () => {
 });
 
 test('it replaces the stopped simulation with a fresh empty one', async () => {
-  const context = createStubWorkerContext({ submitter: buildSpySubmitter() });
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
   const simulation = createSimulation();
   const activity = createMockActivityData();
 
@@ -84,7 +75,7 @@ test('it broadcasts a cleared snapshot to every connection', async () => {
 
   const context = createStubWorkerContext({
     connections: [connection.port],
-    submitter: buildSpySubmitter(),
+    submitter: createStubSubmitter(),
   });
 
   const simulation = createSimulation();
@@ -109,7 +100,7 @@ test('it broadcasts a cleared snapshot to every connection', async () => {
 });
 
 test('it resets the reward-slot ledger', async () => {
-  const context = createStubWorkerContext({ submitter: buildSpySubmitter() });
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
   const activity = createMockActivityData();
 
   context.setActivity(activity);
@@ -125,7 +116,7 @@ test('it resets the reward-slot ledger', async () => {
 });
 
 test('it advances the stop epoch so in-flight installs abandon', async () => {
-  const context = createStubWorkerContext({ submitter: buildSpySubmitter() });
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
   const activity = createMockActivityData();
 
   context.setActivity(activity);
@@ -147,7 +138,7 @@ test('it delivers the targeted server stop and releases the intent', async () =>
   const row = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
 
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client, submitter });
 
   await handleStopActivityMessage(context, {
@@ -170,7 +161,7 @@ test('it delivers the targeted server stop and releases the intent', async () =>
 test('it keeps the intent held when delivery fails, with the local halt already done', async () => {
   server.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
 
-  const context = createStubWorkerContext({ submitter: buildSpySubmitter() });
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
   const simulation = createSimulation();
   const activity = createMockActivityData();
 
@@ -201,7 +192,7 @@ test('it halts nothing but still delivers when no simulation is installed', asyn
   const row = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', user.id);
 
-  const context = createStubWorkerContext({ client, submitter: buildSpySubmitter() });
+  const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
   const entryEpoch = context.getStopEpoch();
 
   await handleStopActivityMessage(context, {
@@ -220,7 +211,7 @@ test('it halts nothing but still delivers when no simulation is installed', asyn
 });
 
 test('it ignores a stop naming an older activity than the live one', async () => {
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
   const live = createMockActivityData();

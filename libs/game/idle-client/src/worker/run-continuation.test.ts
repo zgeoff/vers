@@ -1,4 +1,4 @@
-import { expect, mock, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
@@ -8,9 +8,9 @@ import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
-import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
+import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
 import { WorkerMessageType } from '../types';
@@ -31,21 +31,12 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
   return { client };
 }
 
-function buildSpySubmitter(): CheckpointSubmitter {
-  return {
-    flushHeld: mock(() => Promise.resolve()),
-    flushNow: mock(() => Promise.resolve()),
-    registerActivity: mock(() => Promise.resolve()),
-    submit: mock(() => Promise.resolve<number | undefined>(undefined)),
-  };
-}
-
 test('it adopts a fresh server-started row for the same scope and registers from a zero cursor', async () => {
   const user = await db.userCollection.create({});
   const avatar = await db.avatarCollection.create({ userID: user.id });
   const ctx = await setupTest({ userID: user.id });
 
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData({ avatarID: avatar.id });
@@ -81,7 +72,7 @@ test('it adopts the CONFLICT payload row when one is already active for the scop
     status: 'active',
   });
 
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData({ avatarID: avatar.id });
@@ -105,7 +96,7 @@ test('it stops the simulation and broadcasts offline on a transport failure', as
   server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
 
   const connection = createTestConnection();
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ connections: [connection.port], submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
@@ -127,7 +118,7 @@ test('it stops the simulation and broadcasts offline on a transport failure', as
 test('it records a pending continuation on a transport failure', async () => {
   server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
 
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
@@ -150,7 +141,7 @@ test('it stops the simulation and records a pending continuation on a same-row C
   const ctx = await setupTest({ userID: user.id });
   const activity = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
 
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
 
@@ -179,7 +170,7 @@ test('it records no pending continuation when the CONFLICT names a different, al
     status: 'active',
   });
 
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData({ avatarID: avatar.id });
@@ -198,7 +189,7 @@ test('it records no pending continuation on a defined error other than CONFLICT'
     }),
   );
 
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
@@ -215,7 +206,7 @@ test('it stops the row it started when a stop lands mid-flight', async () => {
   const avatar = await db.avatarCollection.create({ userID: user.id });
   const ctx = await setupTest({ userID: user.id });
 
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData({ avatarID: avatar.id });
@@ -249,7 +240,7 @@ test('it stops the row it started when a stop lands mid-flight', async () => {
 });
 
 test('it records no pending continuation for a same-row CONFLICT after a stop lands', async () => {
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
@@ -269,7 +260,7 @@ test('it records no pending continuation for a same-row CONFLICT after a stop la
 });
 
 test('it leaves a replacement simulation installed when uninstalling after a stop', async () => {
-  const submitter = buildSpySubmitter();
+  const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
   const replacement = createSimulation();

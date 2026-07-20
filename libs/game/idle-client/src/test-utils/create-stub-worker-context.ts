@@ -8,6 +8,7 @@ import type { CheckpointSubmitter } from '../submission/create-checkpoint-submit
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry } from '../types';
 import type { PendingContinuation, WorkerContext } from '../worker/types';
+import { createStubSubmitter } from './create-stub-submitter';
 
 interface CreateStubWorkerContextOptions {
   readonly client?: ActivityServiceClient;
@@ -27,13 +28,7 @@ export function createStubWorkerContext(
     options.client ??
     createORPCClient(new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }));
 
-  const submitter: CheckpointSubmitter = options.submitter ?? {
-    flushHeld: () => Promise.resolve(),
-    flushNow: () => Promise.resolve(),
-    registerActivity: () => Promise.resolve(),
-    submit: () => Promise.resolve(undefined),
-  };
-
+  const submitter: CheckpointSubmitter = options.submitter ?? createStubSubmitter();
   let simulation: null | Simulation = null;
   let activity: ActivityData | null = null;
   let pendingContinuation: PendingContinuation | null = options.pendingContinuation ?? null;
