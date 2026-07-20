@@ -196,6 +196,34 @@ test('it keeps the intent on a transport failure', async () => {
   expect(heldIntent).not.toBeUndefined();
 });
 
+test('it keeps the intent and rethrows when the session is not recognized', async () => {
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.UNAUTHORIZED({ data: { reason: 'expired-session' } });
+    }),
+  );
+
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+
+  await writePendingStartIntent({
+    activityID: 'activity_1',
+    avatarID: 'avatar_1',
+    scopeID: 'scope_1',
+    scopeType: 'mission',
+  });
+
+  await expect(flushPendingStart(context, context.getStopEpoch(), 'avatar_1')).toReject();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toStrictEqual({
+    activityID: 'activity_1',
+    avatarID: 'avatar_1',
+    scopeID: 'scope_1',
+    scopeType: 'mission',
+  });
+});
+
 test('it releases the intent and rethrows a defined error other than CONFLICT', async () => {
   server.use(
     mockActivityService.startActivity.handler((opts) => {

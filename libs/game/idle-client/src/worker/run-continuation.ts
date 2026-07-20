@@ -75,7 +75,7 @@ export async function runContinuation(
     const row = error.data.activity;
 
     if (row.id === activity.id && !hasStopIntervened(context, entryEpoch)) {
-      await writeStartIntent(context, activity, entryEpoch);
+      await parkContinuation(context, activity, entryEpoch);
     }
 
     await stopAndReset(context, simulation);
@@ -91,7 +91,7 @@ export async function runContinuation(
 
   if (!isDefinedError(error)) {
     if (!hasStopIntervened(context, entryEpoch)) {
-      await writeStartIntent(context, activity, entryEpoch);
+      await parkContinuation(context, activity, entryEpoch);
     }
 
     emitConnectionStatus(context, false);
@@ -137,7 +137,7 @@ async function stopAndReset(context: WorkerContext, simulation: Simulation): Pro
  * compensating remove issued after the write settles is ordered after the stop's removal — a
  * ghost intent can never survive to revive the run the player just ended.
  */
-async function writeStartIntent(
+async function parkContinuation(
   context: WorkerContext,
   activity: Readonly<ActivityData>,
   entryEpoch: number,

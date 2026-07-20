@@ -12,7 +12,7 @@ test('it runs queued turns strictly one at a time in queue order', async () => {
     releaseFirst = resolve;
   });
 
-  const first = withLifecycleTurn(context, async () => {
+  const first = withLifecycleTurn(context, 'start', async () => {
     order.push('first:enter');
 
     await firstGate;
@@ -20,7 +20,7 @@ test('it runs queued turns strictly one at a time in queue order', async () => {
     order.push('first:exit');
   });
 
-  const second = withLifecycleTurn(context, () => {
+  const second = withLifecycleTurn(context, 'start', () => {
     order.push('second:enter');
 
     return Promise.resolve();
@@ -33,16 +33,52 @@ test('it runs queued turns strictly one at a time in queue order', async () => {
   expect(order).toStrictEqual(['first:enter', 'first:exit', 'second:enter']);
 });
 
+test('it serializes turns of different kinds on the one mailbox', async () => {
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+  const order: Array<string> = [];
+  let releaseStart: (() => void) | undefined;
+
+  const startGate = new Promise<void>((resolve) => {
+    releaseStart = resolve;
+  });
+
+  const start = withLifecycleTurn(context, 'start', async () => {
+    order.push('start:enter');
+
+    await startGate;
+
+    order.push('start:exit');
+  });
+
+  const resync = withLifecycleTurn(context, 'resync', () => {
+    order.push('resync:enter');
+
+    return Promise.resolve();
+  });
+
+  const continuation = withLifecycleTurn(context, 'continuation', () => {
+    order.push('continuation:enter');
+
+    return Promise.resolve();
+  });
+
+  releaseStart?.();
+
+  await Promise.all([start, resync, continuation]);
+
+  expect(order).toStrictEqual(['start:enter', 'start:exit', 'resync:enter', 'continuation:enter']);
+});
+
 test('it keeps the queue alive past a turn that throws', async () => {
   const context = createStubWorkerContext({ submitter: createStubSubmitter() });
 
   await expect(
-    withLifecycleTurn(context, () => Promise.reject(new Error('turn exploded'))),
+    withLifecycleTurn(context, 'start', () => Promise.reject(new Error('turn exploded'))),
   ).toResolve();
 
   let ran = false;
 
-  await withLifecycleTurn(context, () => {
+  await withLifecycleTurn(context, 'start', () => {
     ran = true;
 
     return Promise.resolve();
@@ -55,7 +91,7 @@ test('it resolves the caller only once its own turn settles', async () => {
   const context = createStubWorkerContext({ submitter: createStubSubmitter() });
   let settled = false;
 
-  await withLifecycleTurn(context, async () => {
+  await withLifecycleTurn(context, 'start', async () => {
     await Promise.resolve();
 
     settled = true;

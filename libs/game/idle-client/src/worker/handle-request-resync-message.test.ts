@@ -981,6 +981,97 @@ test('it clears the start intent and reports the resync failure status on a defi
   expect(heldIntent).toBeUndefined();
 });
 
+test('it keeps the start intent through a session-expired resync', async () => {
+  const viewer = await createViewer();
+
+  const stopped = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
+
+  await writePendingStartIntent({
+    activityID: stopped.id,
+    avatarID: viewer.avatar.id,
+    scopeID: stopped.scopeID,
+    scopeType: stopped.scopeType,
+  });
+
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.UNAUTHORIZED({ data: { reason: 'expired-session' } });
+    }),
+  );
+
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const message: RequestResyncMessage = {
+    avatarID: viewer.avatar.id,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    {
+      status: { avatarID: viewer.avatar.id, kind: 'session-expired' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+  ]);
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toStrictEqual({
+    activityID: stopped.id,
+    avatarID: viewer.avatar.id,
+    scopeID: stopped.scopeID,
+    scopeType: stopped.scopeType,
+  });
+});
+
+test('it stops back an attach-live row when a stop lands during its registration', async () => {
+  const viewer = await createViewer();
+
+  const row = await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    startedAt: new Date(),
+    status: 'active',
+  });
+
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  // the stop lands while the attach's registration is in flight — after the epoch capture, in the
+  // last await before the install boundary
+  const contextHolder: { current?: WorkerContext } = {};
+
+  const submitter: CheckpointSubmitter = {
+    ...createStubSubmitter(),
+    registerActivity: mock(() => {
+      contextHolder.current?.advanceStopEpoch();
+
+      return Promise.resolve();
+    }),
+  };
+
+  const context = createStubWorkerContext({ client, submitter });
+
+  contextHolder.current = context;
+
+  await handleRequestResyncMessage(context, {
+    avatarID: viewer.avatar.id,
+    type: ClientMessageType.RequestResync,
+  });
+
+  expect(context.getSimulation().activity).toBeNull();
+
+  const stoppedBack = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
+
+  invariant(stoppedBack !== undefined, 'expected the targeted row to survive');
+  expect(stoppedBack.status).toBe('stopped');
+});
+
 test('it delivers a blocked intent after the pass closes its source row and attaches the minted row', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });

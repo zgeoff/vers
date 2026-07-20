@@ -28,7 +28,7 @@ export async function handleStartActivityMessage(
 ): Promise<void> {
   context.setStartRequestID(message.requestID);
 
-  await withLifecycleTurn(context, async () => {
+  await withLifecycleTurn(context, 'start', async () => {
     // failures settle as a failed status rather than escaping into the mailbox's fault report —
     // a tab is always waiting on this request id
     try {

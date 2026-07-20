@@ -86,7 +86,7 @@ export async function runResyncFlow(
 
     const result = await runResyncPass(context, message, entryEpoch);
 
-    await resolveStartFlush(context, message, entryEpoch, startFlush, result);
+    await applyStartFlush(context, message, entryEpoch, startFlush, result);
   } catch (error) {
     if (error instanceof ORPCError && error.code === 'UNAUTHORIZED') {
       emitResyncStatus(context, { avatarID: message.avatarID, kind: 'session-expired' });
@@ -156,7 +156,7 @@ async function runResyncPass(
  * is stale and clears without a cap broadcast, which would otherwise repeat on every resync
  * forever.
  */
-async function resolveStartFlush(
+async function applyStartFlush(
   context: WorkerContext,
   message: RequestResyncMessage,
   entryEpoch: number,
@@ -359,7 +359,7 @@ async function applyAttachLive(
 
     simulation.startActivity(input.avatar, input.activity);
 
-    setLiveSimulation(context, progress.activity, simulation, entryEpoch);
+    await setLiveSimulationOrStopBack(context, progress.activity, simulation, entryEpoch);
 
     return;
   }
@@ -381,7 +381,12 @@ async function applyAttachLive(
     previousNextSeed: reconstruction.lastCheckpoint.nextSeed,
   });
 
-  setLiveSimulation(context, progress.activity, reconstruction.simulation, entryEpoch);
+  await setLiveSimulationOrStopBack(
+    context,
+    progress.activity,
+    reconstruction.simulation,
+    entryEpoch,
+  );
 }
 
 async function applyFastForward(
@@ -431,7 +436,7 @@ async function applyFastForwardAttach(
 
     simulation.startActivity(input.avatar, input.activity);
 
-    setLiveSimulation(context, report.activity, simulation, entryEpoch);
+    await setLiveSimulationOrStopBack(context, report.activity, simulation, entryEpoch);
 
     return;
   }
@@ -460,7 +465,12 @@ async function applyFastForwardAttach(
     startChainIndex: report.activity.startChainIndex,
   });
 
-  setLiveSimulation(context, report.activity, reconstruction.simulation, entryEpoch);
+  await setLiveSimulationOrStopBack(
+    context,
+    report.activity,
+    reconstruction.simulation,
+    entryEpoch,
+  );
 }
 
 function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {
@@ -471,27 +481,28 @@ function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {
 }
 
 /**
- * Installs a resync's simulation as the live one, reporting whether it actually installed: a stop
- * that landed after the caller's flow began wins outright — installing would revive the run the
- * player just ended, with the server row already closed against its appends. No fresher-activity
- * guard remains: lifecycle flows are the only installers, and they run one at a time.
+ * Installs a resync's simulation as the live one, or stops the row back durably when a stop
+ * landed after the caller's flow began: installing would revive the run the player just ended,
+ * and leaving the row active with nothing local driving it would let the next resync revive it
+ * instead. No fresher-activity guard remains: lifecycle flows are the only installers, and they
+ * run one at a time.
  */
-function setLiveSimulation(
+async function setLiveSimulationOrStopBack(
   context: WorkerContext,
   activity: Readonly<ActivityData>,
   simulation: Simulation,
   entryEpoch: number,
-): boolean {
+): Promise<void> {
   if (hasStopIntervened(context, entryEpoch)) {
-    return false;
+    await submitStopIntent(context, activity);
+
+    return;
   }
 
   context.setActivity(activity);
   context.setSimulation(simulation);
 
   registerSimulationListeners(context, simulation);
-
-  return true;
 }
 
 function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>): void {

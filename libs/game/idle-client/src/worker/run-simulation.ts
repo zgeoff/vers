@@ -86,7 +86,9 @@ export async function runSimulation(
     return;
   }
 
-  await withLifecycleTurn(context, () => runContinuation(context, simulation, activity));
+  await withLifecycleTurn(context, 'continuation', () =>
+    runContinuation(context, simulation, activity),
+  );
 }
 
 function emitActivityCompleted(context: WorkerContext, activityID: string) {

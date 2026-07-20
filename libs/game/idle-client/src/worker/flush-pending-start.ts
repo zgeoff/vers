@@ -15,13 +15,16 @@ export type PendingStartFlushResult =
  * that follows finds the row the delivery minted (returned as `started`) and attaches it through
  * its normal planning. An intent held for a different avatar than the one resyncing is left
  * untouched (`none`) — delivering it would mint a row the current resync never attaches, leaving
- * it active with no local driver; the intent waits for its own avatar's resync. A spent offline
- * budget skips the attempt outright (`capped`), leaving the caller to decide from fetched
- * progress whether the intent is genuinely halted or just stale. A
- * `CONFLICT` naming the intent's own source row means its terminal append hasn't landed yet
- * (`blocked` — the intent stays for a later attempt); any other conflicting row is a genuinely
- * different claim on the avatar, which makes the intent stale — duplicate deliveries of the same
- * intent dedupe server-side on the start key, so they never read as conflicts. Any other defined
+ * it active with no local driver; the intent waits for its own avatar's resync (a fresh
+ * player-chosen start still clears it, whichever avatar installs). A spent offline budget skips
+ * the attempt outright (`capped`), leaving the caller to decide from fetched progress whether the
+ * intent is genuinely halted or just stale. A `CONFLICT` naming the intent's own source row means
+ * its terminal append hasn't landed yet (`blocked` — the intent stays for a later attempt); any
+ * other conflicting row is a genuinely different claim on the avatar, which makes the intent
+ * stale — duplicate deliveries of the same intent dedupe server-side on the start key, so they
+ * never read as conflicts. An `UNAUTHORIZED` or `FORBIDDEN` rejection keeps the intent and
+ * rethrows — the session lapsing says nothing about the continuation, and dropping the record
+ * here would lose it across the re-sign-in the broadcastable failure asks for. Any other defined
  * rejection is the service answering that the intent is dead: the record clears and the error
  * rethrows into the caller's failure handling. A transport failure keeps the intent held
  * (`undelivered`). A stop that lands while the start call is in flight has the freshly minted row
@@ -66,6 +69,10 @@ export async function flushPendingStart(
 
   if (!isDefinedError(error)) {
     return { outcome: 'undelivered' };
+  }
+
+  if (error.code === 'UNAUTHORIZED' || error.code === 'FORBIDDEN') {
+    throw error;
   }
 
   if (error.code !== 'CONFLICT') {

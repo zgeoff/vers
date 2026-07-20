@@ -1,7 +1,7 @@
 import { sentryHandle } from './sentry-handle';
 
 export type WorkerFaultSite =
-  | 'lifecycle'
+  | 'continuation'
   | 'message-routing'
   | 'preference-seed'
   | 'reconnect'

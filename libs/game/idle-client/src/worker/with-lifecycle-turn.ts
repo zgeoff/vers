@@ -1,3 +1,4 @@
+import type { WorkerFaultSite } from './report-worker-fault';
 import { reportWorkerFault } from './report-worker-fault';
 import type { WorkerContext } from './types';
 
@@ -8,11 +9,12 @@ import type { WorkerContext } from './types';
  * since a turn awaiting a turn queued behind itself would deadlock the mailbox. The turn settles
  * without rejecting — a throw would strand every queued flow behind it — so a flow that wants its
  * own failure signalling catches inside its callback; anything that escapes is reported as a
- * fault. Stops never queue: their local halt is instant, and a queued flow observes them through
- * the stop epoch instead.
+ * fault under the caller's site. Stops never queue: their local halt is instant, and a queued
+ * flow observes them through the stop epoch instead.
  */
 export async function withLifecycleTurn(
   context: WorkerContext,
+  site: WorkerFaultSite,
   fn: () => Promise<void>,
 ): Promise<void> {
   const previous = context.getLifecycleTail();
@@ -23,7 +25,7 @@ export async function withLifecycleTurn(
     try {
       await fn();
     } catch (error) {
-      reportWorkerFault('lifecycle', error);
+      reportWorkerFault(site, error);
     }
   })();
 

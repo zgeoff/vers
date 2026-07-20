@@ -24,7 +24,7 @@ export async function handleRequestResyncMessage(
   const entryEpoch = context.getStopEpoch();
 
   try {
-    await withLifecycleTurn(context, () => runResyncFlow(context, message, entryEpoch));
+    await withLifecycleTurn(context, 'resync', () => runResyncFlow(context, message, entryEpoch));
   } finally {
     context.setResyncInFlight(false);
   }
