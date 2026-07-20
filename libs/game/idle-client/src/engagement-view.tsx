@@ -14,23 +14,32 @@ const view = css({
   width: 'full',
 });
 
+/**
+ * A wave holds at most six enemies, so each plate is capped at a sixth of the row (minus the five
+ * gaps between six) and the group centres — a short wave stays plate-sized instead of stretching.
+ */
 const encounterRow = css({
-  '& > *': { flex: '1', minWidth: '0' },
+  '& > *': { flex: '1', maxWidth: '[calc((100% - 3.75rem) / 6)]', minWidth: '0' },
   alignItems: 'stretch',
   display: 'flex',
   gap: '3',
+  justifyContent: 'center',
 });
 
 const avatarArea = css({
   maxWidth: '[640px]',
 });
 
+interface EngagementViewProps {
+  readonly onEndRun?: () => void;
+}
+
 /**
  * The engagement screen's live combat view: the mission header, the row of enemy plates for the
  * current wave, and the player's own plate. Enemies render in kill order so the next target reads
  * left-to-right.
  */
-export function EngagementView() {
+export function EngagementView(props: Readonly<EngagementViewProps>) {
   const activity = useActivity();
   const avatar = useAvatar();
 
@@ -42,7 +51,7 @@ export function EngagementView() {
 
   return (
     <div className={view}>
-      <MissionHeader activity={activity} />
+      <MissionHeader activity={activity} {...(props.onEndRun && { onEndRun: props.onEndRun })} />
       <div className={encounterRow}>
         {enemies.map((enemy) => (
           <EnemyUnitPlate enemy={enemy} key={enemy.id} />
