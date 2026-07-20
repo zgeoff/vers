@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { ClientMessage } from '@vers/idle-client';
 import {
   ClientMessageType,
-  isRequestResyncMessage,
+  isReportOnlineMessage,
   setWriterDisplacedActivityID,
 } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
@@ -27,7 +27,7 @@ test('it tells the player their run picked up on another device', () => {
   expect(screen.getByRole('button', { name: 'Continue here' })).toBeInTheDocument();
 });
 
-test('it claims the run back with a claiming resync on continue-here', async () => {
+test('it claims the run back with a claiming report on continue-here', async () => {
   const user = userEvent.setup();
 
   const signedIn = await createSignedInUser();
@@ -53,8 +53,8 @@ test('it claims the run back with a claiming resync on continue-here', async () 
     await waitFor(async () => {
       await user.click(screen.getByRole('button', { name: 'Continue here' }));
 
-      expect(calls.filter((call) => isRequestResyncMessage(call))).toStrictEqual([
-        { avatarID: avatar.id, claim: true, type: ClientMessageType.RequestResync },
+      expect(calls.filter((call) => isReportOnlineMessage(call))).toStrictEqual([
+        { avatarID: avatar.id, claim: true, type: ClientMessageType.ReportOnline },
       ]);
     });
 

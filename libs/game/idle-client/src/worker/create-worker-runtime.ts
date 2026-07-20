@@ -6,25 +6,17 @@ import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
-import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import type { ActivityServiceClient } from '../submission/types';
-import type {
-  ClientMessage,
-  RequestResyncMessage,
-  RewardSlotLedgerEntry,
-  WorkerMessage,
-} from '../types';
+import type { ClientMessage, RewardSlotLedgerEntry, WorkerMessage } from '../types';
 import { applyEviction } from './apply-eviction';
 import { createCheckpointFlushStalledMessage } from './create-checkpoint-flush-stalled-message';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
-import { createRequestResyncMessage } from './create-request-resync-message';
-import { flushPendingStop } from './flush-pending-stop';
 import { handleClientMessage } from './handle-client-message';
-import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
+import { runReconnectRecovery } from './run-reconnect-recovery';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
 import { withLifecycleTurn } from './with-lifecycle-turn';
@@ -88,8 +80,12 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let stopEpoch = 0;
   let startRequestID: null | string = null;
   let lifecycleTail: Readonly<Promise<void>> = Promise.resolve();
-  let queuedClaimResync: RequestResyncMessage | null = null;
+  let queuedClaimResync: null | string = null;
   let writerDisplacedActivityID: null | string = null;
+
+  // Online until proven otherwise: a fresh worker's first ack must not read as a reconnect, or
+  // every boot would fire a spurious recovery.
+  let connectivityOnline = true;
 
   // Every client message and the self-triggered reconnect resync await this before running, so a
   // relaunch-while-offline never plans against the enum's Abort default while the real cached
@@ -124,6 +120,16 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     emitWorkerMessage(createConnectionStatusMessage(online));
   };
 
+  const updateConnectivity = (online: boolean) => {
+    if (connectivityOnline === online) {
+      return;
+    }
+
+    connectivityOnline = online;
+
+    emitConnectionStatus(online);
+  };
+
   const submitter = createCheckpointSubmitter({
     client,
     onAcked: () => {
@@ -144,7 +150,19 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       });
     },
     onHeld: () => {
-      emitConnectionStatus(false);
+      updateConnectivity(false);
+    },
+
+    // The submitter's backoff retries double as a reconnect probe: the first answer after an
+    // outage — an ack or a stream-ending rejection, which may be the activity's last traffic —
+    // flips the tracked state and recovers without waiting on any tab event.
+    onServerContact: () => {
+      if (connectivityOnline) {
+        return;
+      }
+
+      updateConnectivity(true);
+      scheduleReconnectRecovery();
     },
     onFlushStalled: (activityID, reason, traceID) => {
       emitWorkerMessage(createCheckpointFlushStalledMessage(activityID, reason, traceID));
@@ -207,8 +225,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
     },
-    setQueuedClaimResync: (message) => {
-      queuedClaimResync = message;
+    setQueuedClaimResync: (avatarID) => {
+      queuedClaimResync = avatarID;
     },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
@@ -228,9 +246,25 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     setWriterDisplacedActivityID: (activityID) => {
       writerDisplacedActivityID = activityID;
     },
+    updateConnectivity,
   };
 
   registerSimulationListeners(context, simulation);
+
+  // Fire-and-forget so event callbacks stay synchronous; the preference seed gates every
+  // recovery so a relaunch-while-offline never plans against the enum default. The submitter's
+  // server-contact callback closes over this before it exists — safe only because the submitter
+  // fires no callbacks during construction, before this declaration runs.
+  const scheduleReconnectRecovery = () => {
+    void (async () => {
+      try {
+        await failureActionSeeded;
+        await runReconnectRecovery(context);
+      } catch (error) {
+        reportWorkerFault('reconnect', error);
+      }
+    })();
+  };
 
   // cache our listeners so we can message them later
   const handleConnect = (event: MessageEvent) => {
@@ -303,41 +337,15 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     })();
   };
 
-  // The worker's own reconnect recovery: a returning connection resends whatever the submitter
-  // held, then — once the held tail is drained, so a resync never reads a stale appended head —
-  // self-triggers a resync when no run is live to catch up an avatar it remembers.
+  // The platform's own reconnect trigger where online events reach workers; Chromium never
+  // delivers them here, so tabs relay theirs as messages into the same recovery.
   const handleOnline = () => {
-    emitConnectionStatus(true);
-
-    void (async () => {
-      try {
-        await failureActionSeeded;
-
-        await submitter.flushHeld();
-
-        // A stop raised offline delivers here even when no resync will follow — the self-resync
-        // below runs only while no run is live.
-        await flushPendingStop(context);
-
-        // the durable start intent is always the fresher signal: it was recorded at the most
-        // recent boundary failure, while the remembered resync avatar can predate it
-        const heldIntent = await readPendingStartIntent();
-
-        const avatarID = heldIntent?.avatarID ?? resyncAvatarID ?? null;
-
-        // a reconnect is an automatic trigger, never a deliberate attach — it must not take the
-        // writer from a device the player is actively driving
-        if (context.getActivity() === null && avatarID !== null) {
-          await handleRequestResyncMessage(context, createRequestResyncMessage(avatarID, false));
-        }
-      } catch (error) {
-        reportWorkerFault('reconnect', error);
-      }
-    })();
+    updateConnectivity(true);
+    scheduleReconnectRecovery();
   };
 
   const handleOffline = () => {
-    emitConnectionStatus(false);
+    updateConnectivity(false);
   };
 
   self.addEventListener('online', handleOnline);

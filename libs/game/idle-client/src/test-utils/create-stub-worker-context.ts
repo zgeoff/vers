@@ -6,7 +6,8 @@ import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
-import type { RequestResyncMessage, RewardSlotLedgerEntry } from '../types';
+import type { RewardSlotLedgerEntry } from '../types';
+import { WorkerMessageType } from '../types';
 import type { WorkerContext } from '../worker/types';
 import { createStubSubmitter } from './create-stub-submitter';
 
@@ -40,8 +41,9 @@ export function createStubWorkerContext(
   let stopEpoch = 0;
   let startRequestID: null | string = null;
   let lifecycleTail: Readonly<Promise<void>> = Promise.resolve();
-  let queuedClaimResync: RequestResyncMessage | null = null;
+  let queuedClaimResync: null | string = null;
   let writerDisplacedActivityID: null | string = null;
+  let connectivityOnline = true;
 
   return {
     advanceStopEpoch: () => {
@@ -96,8 +98,8 @@ export function createStubWorkerContext(
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
     },
-    setQueuedClaimResync: (message) => {
-      queuedClaimResync = message;
+    setQueuedClaimResync: (avatarID) => {
+      queuedClaimResync = avatarID;
     },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
@@ -116,6 +118,17 @@ export function createStubWorkerContext(
     },
     setWriterDisplacedActivityID: (activityID) => {
       writerDisplacedActivityID = activityID;
+    },
+    updateConnectivity: (online) => {
+      if (connectivityOnline === online) {
+        return;
+      }
+
+      connectivityOnline = online;
+
+      for (const port of connections) {
+        port.postMessage({ online, type: WorkerMessageType.ConnectionStatus });
+      }
     },
   };
 }

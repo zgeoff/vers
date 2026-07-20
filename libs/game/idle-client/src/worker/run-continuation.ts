@@ -4,8 +4,6 @@ import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
-import { createConnectionStatusMessage } from './create-connection-status-message';
-import { createRequestResyncMessage } from './create-request-resync-message';
 import { hasStopIntervened } from './has-stop-intervened';
 import { resetSimulation } from './reset-simulation';
 import { runResyncFlow } from './run-resync-flow';
@@ -72,7 +70,7 @@ export async function runContinuation(
     // called inner-to-inner: this flow already holds the mailbox turn, and queueing a resync
     // behind itself would deadlock. An automatic continuation never claims the writer — the
     // conflicting row may be another device's live run
-    await runResyncFlow(context, createRequestResyncMessage(row.avatarID, false), entryEpoch);
+    await runResyncFlow(context, row.avatarID, false, entryEpoch);
 
     return;
   }
@@ -84,7 +82,7 @@ export async function runContinuation(
       await parkContinuation(context, activity, entryEpoch);
     }
 
-    emitConnectionStatus(context, false);
+    context.updateConnectivity(false);
   }
 }
 
@@ -139,13 +137,5 @@ async function parkContinuation(
 
   if (hasStopIntervened(context, entryEpoch)) {
     await removePendingStartIntent(activity.id);
-  }
-}
-
-function emitConnectionStatus(context: WorkerContext, online: boolean): void {
-  const message = createConnectionStatusMessage(online);
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
   }
 }

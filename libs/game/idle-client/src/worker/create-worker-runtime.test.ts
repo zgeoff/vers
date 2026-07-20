@@ -9,10 +9,12 @@ import { server } from '../mocks/node';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
+import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { createFastClock } from '../test-utils/create-fast-clock';
 import type { TestConnection } from '../test-utils/create-test-connection';
 import { createTestConnection } from '../test-utils/create-test-connection';
 import { makeFailFirstMatchHandler } from '../test-utils/make-fail-first-match-handler';
+import type { SimulationUpdateMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
@@ -82,7 +84,7 @@ test('it retains the cached dirty flag across boot so the next resync flushes it
   connection.post({
     avatarID: viewer.avatar.id,
     claim: false,
-    type: ClientMessageType.RequestResync,
+    type: ClientMessageType.ReportOnline,
   });
 
   await waitFor(() => {
@@ -192,7 +194,7 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
   connection.post({
     avatarID: viewer.avatar.id,
     claim: false,
-    type: ClientMessageType.RequestResync,
+    type: ClientMessageType.ReportOnline,
   });
 
   await waitFor(
@@ -261,7 +263,7 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
   connection.post({
     avatarID: viewer.avatar.id,
     claim: false,
-    type: ClientMessageType.RequestResync,
+    type: ClientMessageType.ReportOnline,
   });
 
   await waitFor(
@@ -309,13 +311,6 @@ test("it resumes the held start intent's avatar on reconnect over an earlier ava
     status: 'stopped',
   });
 
-  await writePendingStartIntent({
-    activityID: source.id,
-    avatarID: avatar.id,
-    scopeID: source.scopeID,
-    scopeType: source.scopeType,
-  });
-
   // a capped row makes the first resync's completion observable: it plans a rebase and emits a
   // capped status, installing nothing — the reconnect gate below still sees no simulation
   await db.activityCollection.create({
@@ -328,13 +323,11 @@ test("it resumes the held start intent's avatar on reconnect over an earlier ava
 
   const connection = createConnection(runtime);
 
-  // the worker remembers this avatar as its last resync target; the held intent must outrank
-  // that memory on reconnect or the continuation strands. The drain leaves the intent alone
-  // here — it belongs to the other avatar.
+  // the worker remembers this avatar as its last resync target once the report's recovery runs
   connection.post({
     avatarID: viewer.avatar.id,
     claim: false,
-    type: ClientMessageType.RequestResync,
+    type: ClientMessageType.ReportOnline,
   });
 
   await waitFor(() => {
@@ -342,6 +335,15 @@ test("it resumes the held start intent's avatar on reconnect over an earlier ava
       status: { kind: 'capped' },
       type: WorkerMessageType.ResyncStatus,
     });
+  });
+
+  // parked while offline, after the earlier resync: the held intent must outrank the remembered
+  // avatar on reconnect or the continuation strands
+  await writePendingStartIntent({
+    activityID: source.id,
+    avatarID: avatar.id,
+    scopeID: source.scopeID,
+    scopeType: source.scopeType,
   });
 
   globalThis.dispatchEvent(new Event('online'));
@@ -354,4 +356,96 @@ test("it resumes the held start intent's avatar on reconnect over an earlier ava
     invariant(minted !== undefined, 'expected the reconnect to resume the pending avatar');
     expect(minted.id).not.toBe(source.id);
   });
+});
+
+test('it broadcasts connection status only when the tracked connectivity transitions', async () => {
+  using runtime = createWorkerRuntime();
+
+  const connection = createConnection(runtime);
+
+  connection.post({ type: ClientMessageType.Initialize });
+
+  await connection.waitForMessages(1);
+
+  globalThis.dispatchEvent(new Event('offline'));
+  globalThis.dispatchEvent(new Event('offline'));
+  globalThis.dispatchEvent(new Event('online'));
+
+  await waitFor(() => {
+    expect(
+      connection.received.filter((message) => message.type === WorkerMessageType.ConnectionStatus),
+    ).toStrictEqual([
+      { online: false, type: WorkerMessageType.ConnectionStatus },
+      { online: true, type: WorkerMessageType.ConnectionStatus },
+    ]);
+  });
+});
+
+test('it recovers a stop parked offline once a flush answer proves the connection returned', async () => {
+  const viewer = await createViewer();
+  const avatarB = await db.avatarCollection.create({ userID: viewer.user.id });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  // this seed's placeholder encounter completes in exactly 60s of simulated time, so the terminal
+  // append is the first flush traffic after the offline window below
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  const clock = createFastClock();
+
+  using runtime = createWorkerRuntime({ client, now: clock.now });
+
+  const connection = createConnection(runtime);
+
+  connection.post({ type: ClientMessageType.Initialize });
+
+  await connection.waitForMessages(1);
+
+  connection.post({
+    avatarID: viewer.avatar.id,
+    claim: true,
+    type: ClientMessageType.ReportOnline,
+  });
+
+  // small re-armed jumps drive live ticks until the attach's simulation broadcasts, staying far
+  // short of the encounter's 60s completion so no flush traffic lands before the offline window
+  await waitFor(() => {
+    clock.jump(1000);
+
+    const update = connection.received.findLast(
+      (message): message is SimulationUpdateMessage =>
+        message.type === WorkerMessageType.SimulationUpdate,
+    );
+
+    expect(update?.state.activity?.id).toBe(activity.id);
+  });
+
+  globalThis.dispatchEvent(new Event('offline'));
+
+  // parked while the tracked state reads offline, for the other avatar so no flow of the live
+  // run's own — continuation or inline resync — can deliver it; only the server-contact
+  // recovery flushes a pending stop outside a resync
+  const other = await db.activityCollection.create({ avatarID: avatarB.id, status: 'active' });
+
+  await writePendingStopIntent({ activityID: other.id, avatarID: avatarB.id });
+
+  await waitFor(
+    () => {
+      // re-armed every poll until the jump lands on a live tick and the terminal append flushes
+      clock.jump(65_000);
+
+      const stopped = db.activityCollection.findFirst((q) => q.where({ id: other.id }));
+
+      invariant(stopped !== undefined, "expected the parked stop's row to survive");
+      expect(stopped.status).toBe('stopped');
+    },
+
+    // the tick loop paces itself on real timers between each of the many timesteps this jump
+    // spans, so a loaded runner can need several times the default budget to land a live tick
+    { timeoutMs: 5000 },
+  );
 });
