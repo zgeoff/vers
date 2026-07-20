@@ -74,7 +74,11 @@ async function sendProviderReplaySegment(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- job carries zod-inferred wire types with no readonly form
   job: ReplaySegmentInput,
 ): Promise<ReplaySegmentOutput> {
-  const token = await createServiceToken({ audience: 'replay', privateKey: deps.privateKey });
+  const token = await createServiceToken({
+    audience: 'replay',
+    issuer: 'service-replay',
+    privateKey: deps.privateKey,
+  });
 
   const client: ContractRouterClient<typeof replayContract> = createORPCClient(
     new RPCLink({

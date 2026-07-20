@@ -2,14 +2,13 @@ import type { AnyRouter } from '@orpc/server';
 import { ORPCError, onError } from '@orpc/server';
 import type { FetchHandler } from '@orpc/server/fetch';
 import { RPCHandler } from '@orpc/server/fetch';
-import { TOKEN_ALGORITHM, parseServiceToken } from '@vers/service-auth';
+import type { ServiceKeySet } from '@vers/service-auth';
+import { parseServiceJWKS, parseServiceToken } from '@vers/service-auth';
 import { findSpanTraceContext, withTraceContext } from '@vers/service-utils';
 import type { MetricsExport, OTLPLogStream } from '@vers/service-utils/otel';
 import type { TraceContext } from '@vers/trace';
 import { createTraceContext, parseTraceparent } from '@vers/trace';
 import { Elysia } from 'elysia';
-import type { CryptoKey } from 'jose';
-import * as jose from 'jose';
 import type pino from 'pino';
 import * as z from 'zod';
 import { baseEnvSchema } from './base-env-schema';
@@ -64,7 +63,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
     ...(otlpLogStream !== undefined && { stream: otlpLogStream }),
   });
 
-  const publicKey = await jose.importSPKI(env.SERVICE_AUTH_PUBLIC_KEY, TOKEN_ALGORITHM);
+  const keySet = parseServiceJWKS(env.SERVICE_AUTH_JWKS);
 
   const app = new Elysia();
 
@@ -124,8 +123,8 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
   });
 
   registerORPCHandler(app, '/rpc', handler, {
+    keySet,
     logger,
-    publicKey,
     serviceName: config.name,
   });
 
@@ -199,8 +198,8 @@ function createTrace(request: Request): TraceContext {
 }
 
 interface RegisterORPCHandlerDeps {
+  readonly keySet: ServiceKeySet;
   readonly logger: pino.Logger;
-  readonly publicKey: CryptoKey;
   readonly serviceName: string;
 }
 
@@ -234,7 +233,7 @@ function registerORPCHandler(
 
         const resolution = await parseServiceToken(context.request, {
           audience: deps.serviceName,
-          publicKey: deps.publicKey,
+          keySet: deps.keySet,
         });
 
         if ('failure' in resolution) {

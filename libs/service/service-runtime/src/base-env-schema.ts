@@ -14,8 +14,10 @@ export const baseEnvSchema = z.object({
     .describe('OTLP collector endpoint; unset leaves every instrument a no-op'),
   PORT: z.coerce.number().int().positive().default(3000).describe('TCP port the HTTP server binds'),
   SENTRY_DSN: z.url().optional().describe('Bugsink project DSN; unset disables error reporting'),
-  SERVICE_AUTH_PUBLIC_KEY: z
+  SERVICE_AUTH_JWKS: z
     .string()
     .min(1)
-    .describe('Ed25519 SPKI public key inbound s2s tokens are verified against'),
+    .describe(
+      'JSON JWKS holding each minting issuer public key under its kid; inbound s2s tokens only verify against the key registered for their claimed issuer',
+    ),
 });

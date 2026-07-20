@@ -394,7 +394,7 @@ jobs:
         uses: ./.github/actions/fly-deploy
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SERVICE_AUTH_PUBLIC_KEY: ${{ vars.SERVICE_AUTH_PUBLIC_KEY }}
+          SERVICE_AUTH_JWKS: ${{ vars.SERVICE_AUTH_JWKS }}
         with:
           args: cutover --app ${{ matrix.app }}
           fly-api-token: ${{ secrets.FLY_API_TOKEN }}

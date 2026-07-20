@@ -42,7 +42,7 @@ async function buildReplayClient(): Promise<ContractRouterClient<typeof replayCo
     new RPCLink({
       clientInterceptors: [buildTracingInterceptor()],
       headers: async () => ({
-        authorization: `Bearer ${await createServiceToken({ audience: 'replay', privateKey })}`,
+        authorization: `Bearer ${await createServiceToken({ audience: 'replay', issuer: 'service-activity', privateKey })}`,
       }),
       url: `${readRequiredEnv('REPLAY_SERVICE_URL')}/rpc`,
     }),

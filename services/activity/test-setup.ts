@@ -11,7 +11,7 @@ await setupBunTestDB();
 
 const serviceKeyPair = await getTestServiceKeyPair();
 
-process.env['SERVICE_AUTH_PUBLIC_KEY'] = serviceKeyPair.publicKeyPEM;
+process.env['SERVICE_AUTH_JWKS'] = serviceKeyPair.jwksJSON;
 
 // parsed by `envShape` but never read: each suite injects its transaction-bound db directly
 process.env['DATABASE_URL'] = `${resolveTestDBTarget().baseURI}/postgres`;
