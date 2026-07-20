@@ -24,12 +24,16 @@ import { planSimVersionActions } from '../deploy/plan-sim-version-actions';
 import { readAppState } from '../deploy/read-app-state';
 import { readChangesSince } from '../deploy/read-changes-since';
 import { readFleetImage } from '../deploy/read-fleet-image';
+import { readFlyEnvKeys } from '../deploy/read-fly-env-keys';
+import { readFlySecretNames } from '../deploy/read-fly-secret-names';
 import { readProviderAppState } from '../deploy/read-provider-app-state';
 import { readSimVersionRow } from '../deploy/read-sim-version-row';
 import { runProbes } from '../deploy/run-probes';
 import type { DeployManifest, DeployTarget } from '../deploy/types';
 import { updateParkedActivities } from '../deploy/update-parked-activities';
 import { waitForDeployedSHA } from '../deploy/wait-for-deployed-sha';
+import { findEnvGaps } from '../env/find-env-gaps';
+import { loadEnvContract } from '../env/load-env-contract';
 import { requireEnvVar } from '../utils/require-env-var';
 
 interface DeployCommandOptions {
@@ -76,6 +80,15 @@ program
   .description('assert every app is online and current; any finding fails the run')
   .action(async () => {
     await runVerify();
+  });
+
+program
+  .command('preflight')
+  .description(
+    "assert every app's required env keys are covered by its fly env, secrets, or baked build args",
+  )
+  .action(async () => {
+    await runPreflight();
   });
 
 program
@@ -520,6 +533,65 @@ async function runVerify(): Promise<void> {
   }
 
   if (failed) {
+    process.exitCode = 1;
+  }
+}
+
+/**
+ * Asserts, before any image builds, that each contract-carrying app's required env keys are
+ * covered by its `fly.toml` `[env]` table, its set Fly secrets, or a build arg its Dockerfile
+ * bakes into the binary — the gap boot-time validation would otherwise only report as a
+ * production crash loop. Non-service apps (app-web, bugsink, umami) carry no generated contract
+ * and are skipped; a service missing its contract fails the run rather than bypassing the gate.
+ */
+async function runPreflight(): Promise<void> {
+  const manifest = await loadDeployManifest();
+
+  let failed = false;
+
+  for (const target of manifest.apps) {
+    const contract = await loadEnvContract(`${target.configDir}/env-contract.generated.json`);
+
+    if (contract === null) {
+      if (target.configDir.startsWith('services/')) {
+        console.error(
+          `✗ ${target.app} — ${target.configDir}/env-contract.generated.json is unreadable`,
+        );
+
+        failed = true;
+      }
+
+      continue;
+    }
+
+    const [envKeys, secretNames] = await Promise.all([
+      readFlyEnvKeys(target.configDir),
+      readFlySecretNames(target.app),
+    ]);
+
+    const available = new Set([...envKeys, ...secretNames, ...(target.buildArgsFromEnv ?? [])]);
+
+    const gaps = findEnvGaps(contract.required, [{ available, label: target.app }]);
+
+    if (gaps.length === 0) {
+      console.log(`✓ ${target.app} — required env covered`);
+      continue;
+    }
+
+    failed = true;
+
+    for (const gap of gaps) {
+      console.error(
+        `✗ ${target.app} — missing from fly.toml [env], secrets, and baked build args: ${gap.missing.join(', ')}`,
+      );
+    }
+  }
+
+  if (failed) {
+    console.error(
+      'cover the missing keys with `flyctl secrets set`, a fly.toml [env] entry, or a baked build arg (buildArgsFromEnv) before deploying',
+    );
+
     process.exitCode = 1;
   }
 }

@@ -69,6 +69,14 @@ jobs:
       - name: Boundaries
         run: bun run boundaries
 
+      # stale generated contracts fail here; the coverage leg catches a
+      # required key missing from a service's dev env files or either
+      # compose stack
+      - name: Check Env Contracts
+        run: |
+          bun run env:contract:check
+          bun run env:coverage
+
       - name: Generate Types
         run: bun run codegen:types
 
@@ -163,15 +171,49 @@ jobs:
         id: list
         run: echo "apps=$(bun scripts/src/bin/deploy.ts list)" >> "$GITHUB_OUTPUT"
 
+  preflight:
+    name: Check deploy env
+    needs: checks
+    # a required env key uncovered by an app's fly.toml [env], set secrets, or
+    # baked build args fails the run before any image builds — boot-time
+    # validation would otherwise report the gap as a crash loop after cutover
+    if: ${{ needs.checks.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check required env against the fleet
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: bun scripts/src/bin/deploy.ts preflight
+
   build:
     name: Build
-    needs: [checks, manifest]
+    needs: [checks, manifest, preflight]
     # build images for every stale app as soon as checks are green — the phase
     # has no fleet side effects, so it runs beside migrate rather than after
     # it. Each leg self-gates inside the deploy CLI: it compares HEAD against
     # the GIT_SHA stamped on the app's machines, so a build skipped by an
     # earlier failure or cancellation stays "stale" and ships on the next push.
-    if: ${{ needs.checks.result == 'success' && needs.manifest.result == 'success' }}
+    if:
+      ${{ needs.checks.result == 'success' && needs.manifest.result == 'success' &&
+      needs.preflight.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
     # worst observed leg (app-web remote build) is ~4 minutes; headroom for
@@ -305,7 +347,7 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: [checks, migrate, manifest, build, stack-e2e]
+    needs: [checks, migrate, manifest, preflight, build, stack-e2e]
     # cut over after the shared schema is current and the full-stack suite
     # has passed against the images being promoted. The build job is an
     # ordering edge only — its matrix result never gates this job directly —
@@ -315,7 +357,8 @@ jobs:
     # as the build phase does.
     if:
       ${{ !cancelled() && needs.checks.result == 'success' && needs.migrate.result == 'success' &&
-      needs.manifest.result == 'success' && needs.stack-e2e.result == 'success' }}
+      needs.manifest.result == 'success' && needs.preflight.result == 'success' &&
+      needs.stack-e2e.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
     # bluegreen cutover plus probes is ~3 minutes at worst; headroom without

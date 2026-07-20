@@ -81,6 +81,14 @@ jobs:
       - name: Boundaries
         run: bun run boundaries
 
+      # stale generated contracts fail here; the coverage leg catches a
+      # required key missing from a service's dev env files or either
+      # compose stack
+      - name: Check Env Contracts
+        run: |
+          bun run env:contract:check
+          bun run env:coverage
+
       - name: Generate Types
         run: bun run codegen:types
 

@@ -3,8 +3,8 @@ import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
-import * as z from 'zod';
 import { buildUserRouter } from './build-router';
+import { envShape } from './env-shape';
 
 interface CreateUserServiceConfig {
   /**
@@ -12,12 +12,6 @@ interface CreateUserServiceConfig {
    */
   readonly db?: Kysely<DB>;
 }
-
-const envShape = {
-  DATABASE_URL: z
-    .string()
-    .describe('Postgres connection string for the account and credential tables'),
-};
 
 /**
  * Boots the user service; the production entrypoint and tests both call this as the one shared config.

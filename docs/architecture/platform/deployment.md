@@ -48,8 +48,9 @@ Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.to
 Secrets are set with `fly secrets set` and never committed. Which variables an app needs is its env
 contract's to declare — [provision from nothing](#provision-from-nothing) sets the current values:
 
-- A service requires the base schema (`BASE_ENV_SCHEMA`, `@vers/service-runtime`) plus its own shape
-  — `services/<name>/src/<name>-env-shape.ts`.
+- A service requires the base schema (`baseEnvSchema`, `@vers/service-runtime`) plus its own shape —
+  `services/<name>/src/env-shape.ts`. The derived key lists are committed as
+  `services/<name>/env-contract.generated.json` ([env preflight](#env-preflight)).
 - `app-web`'s keys are the schema in `apps/web/src/server/web-env-schema.ts` plus the cookie
   config's `SESSION_SECRET` and `COOKIE_DOMAIN` reads (`apps/web/src/lib/auth/`).
 - `vers-bugsink` and `vers-umami` read their upstream images' documented env. Bugsink additionally
@@ -105,6 +106,24 @@ an app to the manifest is the whole change. Each leg self-gates: the CLI compare
 `GIT_SHA` stamped on the app's machines, so a phase lost to an earlier failure ships on the next
 push. The `build` job orders the later phases without gating them directly; an app's failed build
 leaves its ref unavailable to `stack-e2e`, whose fleet-wide failure holds every cutover.
+
+### Env preflight
+
+Each service commits `env-contract.generated.json`: the sorted required and optional key lists
+derived from its env shape merged over the base schema, where a key is required exactly when its
+schema rejects an absent value. `bun run env:contract` regenerates the artifacts, so a PR that adds
+a required key shows it in the diff.
+
+The checks job fails on a stale artifact (`bun run env:contract:check`) and on a required key
+missing from the service's `.env.development`, its `.env.example` when one exists, or either compose
+stack (`bun run env:coverage`). Keys a Dockerfile bakes into the binary from build args
+(`buildArgsFromEnv` in `deploy.config.ts`) count as covered wherever the built image runs.
+
+The `preflight` job (`bun run deploy -- preflight`) gates `build` and `deploy`: every required key
+of each contract-carrying app must appear in its `fly.toml` `[env]` table, its set Fly secrets, or
+its baked build args. `flyctl secrets list` returns names and digests only, so no secret value
+enters the run. Production secrets are unreadable from PR checks, which is why the fleet check runs
+in the deploy phase while file coverage runs at checks time.
 
 ### Full-stack gate
 

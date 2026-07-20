@@ -3,8 +3,8 @@ import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
-import * as z from 'zod';
 import { buildAvatarRouter } from './build-router';
+import { envShape } from './env-shape';
 
 interface CreateAvatarServiceConfig {
   /**
@@ -12,12 +12,6 @@ interface CreateAvatarServiceConfig {
    */
   readonly db?: Kysely<DB>;
 }
-
-const envShape = {
-  DATABASE_URL: z
-    .string()
-    .describe('Postgres connection string for the avatar and progression tables'),
-};
 
 /**
  * Boots the avatar service; the production entrypoint and tests both call this as the one shared config.
