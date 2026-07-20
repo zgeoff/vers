@@ -109,7 +109,11 @@ export function AvatarUnitPlate(props: Readonly<AvatarUnitPlateProps>) {
         value={props.avatar.life}
         valueLabel={`${props.avatar.life} / ${props.avatar.maxLife}`}
       >
-        <ResourceBar.Overlay tint="barrier" value={props.avatar.maxLife * STUB_BARRIER_FRACTION} />
+        <ResourceBar.Overlay
+          max={props.avatar.maxLife}
+          tint="barrier"
+          value={props.avatar.maxLife * STUB_BARRIER_FRACTION}
+        />
       </ResourceBar>
 
       <ResourceBar

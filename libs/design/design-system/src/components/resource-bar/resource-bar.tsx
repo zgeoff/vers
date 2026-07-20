@@ -1,5 +1,4 @@
 import { css, cva, cx } from '@vers/styled-system/css';
-import { createContext, use, useMemo } from 'react';
 import type { ReactNode } from 'react';
 
 /**
@@ -42,8 +41,8 @@ const fill = cva({
     position: 'absolute',
     top: '[0]',
     /**
-     * The store pushes a fresh width every simulation tick (~20Hz); the transition eases the gap
-     * between those discrete values so a slow bar still reads as continuous.
+     * A vital only steps on discrete combat events, so easing the width change reads as the pool
+     * draining rather than teleporting.
      */
     transition: '[width 120ms linear]',
   },
@@ -83,12 +82,6 @@ const valueText = css({
   fontWeight: 'bold',
 });
 
-interface ResourceBarContextValue {
-  readonly max: number;
-}
-
-const ResourceBarContext = createContext<ResourceBarContextValue | null>(null);
-
 interface ResourceBarProps {
   readonly children?: ReactNode;
   readonly className?: string;
@@ -101,31 +94,29 @@ interface ResourceBarProps {
 }
 
 /**
- * A layered vitals bar: the primary fill plus any `Overlay`/`Reserved` layers passed as children,
- * all measured against one shared `max`. Enrich a bar by adding a layer, never a boolean prop.
+ * A layered vitals bar: the primary fill plus any `Overlay`/`Reserved` layers passed as children.
+ * Enrich a bar by adding a layer, never a boolean prop; each layer is measured against the same
+ * `max` the caller passes it.
  */
 export function ResourceBar(props: Readonly<ResourceBarProps>) {
   const hasHeader = props.label !== undefined || props.valueLabel !== undefined;
-  const contextValue = useMemo(() => ({ max: props.max }), [props.max]);
 
   return (
-    <ResourceBarContext value={contextValue}>
-      <div className={props.className}>
-        {hasHeader ? (
-          <div className={header}>
-            <span className={labelText}>{props.label}</span>
-            <span className={valueText}>{props.valueLabel}</span>
-          </div>
-        ) : null}
-        <div className={track({ ...(props.size !== undefined && { size: props.size }) })}>
-          <div
-            className={fill({ tint: props.tint })}
-            style={{ width: toWidth(props.value, props.max) }}
-          />
-          {props.children}
+    <div className={props.className}>
+      {hasHeader ? (
+        <div className={header}>
+          <span className={labelText}>{props.label}</span>
+          <span className={valueText}>{props.valueLabel}</span>
         </div>
+      ) : null}
+      <div className={track({ ...(props.size !== undefined && { size: props.size }) })}>
+        <div
+          className={fill({ tint: props.tint })}
+          style={{ width: toWidth(props.value, props.max) }}
+        />
+        {props.children}
       </div>
-    </ResourceBarContext>
+    </div>
   );
 }
 
@@ -139,6 +130,7 @@ const overlay = css({
 });
 
 interface LayerProps {
+  readonly max: number;
   readonly tint?: ResourceBarTint;
   readonly value: number;
 }
@@ -148,12 +140,10 @@ interface LayerProps {
  * top of the same track.
  */
 function ResourceBarOverlay(props: Readonly<LayerProps>) {
-  const max = useResourceBarMax();
-
   return (
     <div
       className={cx(overlay, fill({ tint: props.tint ?? 'barrier' }))}
-      style={{ opacity: 0.55, width: toWidth(props.value, max) }}
+      style={{ opacity: 0.55, width: toWidth(props.value, props.max) }}
     />
   );
 }
@@ -171,19 +161,11 @@ const reserved = css({
  * An unavailable slice anchored to the right end of the track — capacity held back from the pool.
  */
 function ResourceBarReserved(props: Readonly<LayerProps>) {
-  const max = useResourceBarMax();
-
-  return <div className={reserved} style={{ width: toWidth(props.value, max) }} />;
+  return <div className={reserved} style={{ width: toWidth(props.value, props.max) }} />;
 }
 
 ResourceBar.Overlay = ResourceBarOverlay;
 ResourceBar.Reserved = ResourceBarReserved;
-
-function useResourceBarMax(): number {
-  const context = use(ResourceBarContext);
-
-  return context?.max ?? 0;
-}
 
 function toWidth(value: number, max: number): string {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
