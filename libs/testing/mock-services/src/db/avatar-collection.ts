@@ -11,7 +11,7 @@ import * as z from 'zod';
  * `failureAction` is the activity service's own column on this row, not part of the avatar
  * contract's public shape.
  */
-const AvatarRowSchema = AvatarDataSchema.extend({
+export const AvatarRowSchema = AvatarDataSchema.extend({
   createdAt: z.date().default(() => new Date()),
   failureAction: ActivityFailureActionSchema.default('abort'),
   id: z.string().default(() => createId()),
