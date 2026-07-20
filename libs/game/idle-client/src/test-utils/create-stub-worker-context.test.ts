@@ -3,11 +3,11 @@ import { createSimulation } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { createStubWorkerContext } from './create-stub-worker-context';
 
-test('it creates a context with no connections and no simulation by default', () => {
+test('it creates a context with no connections and an empty simulation by default', () => {
   const context = createStubWorkerContext();
 
   expect(context.connections.size).toBe(0);
-  expect(context.getSimulation()).toBeNull();
+  expect(context.getSimulation().activity).toBeNull();
 });
 
 test('it seeds the connections set from the given ports', () => {

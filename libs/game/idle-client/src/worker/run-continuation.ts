@@ -7,6 +7,7 @@ import { writePendingStartIntent } from '../submission/write-pending-start-inten
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createRequestResyncMessage } from './create-request-resync-message';
 import { hasStopIntervened } from './has-stop-intervened';
+import { resetSimulation } from './reset-simulation';
 import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
@@ -77,7 +78,7 @@ export async function runContinuation(
       await writeStartIntent(context, activity, entryEpoch);
     }
 
-    await stopAndUninstall(context, simulation);
+    await stopAndReset(context, simulation);
 
     // called inner-to-inner: this flow already holds the mailbox turn, and queueing a resync
     // behind itself would deadlock
@@ -86,7 +87,7 @@ export async function runContinuation(
     return;
   }
 
-  await stopAndUninstall(context, simulation);
+  await stopAndReset(context, simulation);
 
   if (!isDefinedError(error)) {
     if (!hasStopIntervened(context, entryEpoch)) {
@@ -116,14 +117,15 @@ async function startContinuationFrom(
 }
 
 /**
- * Stops this continuation's own simulation and uninstalls it — but only while it still owns the
- * runtime; a stop or a fresher selection may have installed a replacement this must not evict.
+ * Stops this continuation's own simulation and resets the runtime to idle — but only while it
+ * still owns the runtime; a concurrent stop may have installed its own replacement, which must
+ * not be evicted.
  */
-async function stopAndUninstall(context: WorkerContext, simulation: Simulation): Promise<void> {
+async function stopAndReset(context: WorkerContext, simulation: Simulation): Promise<void> {
   await simulation.stopActivity();
 
   if (context.getSimulation() === simulation) {
-    context.setSimulation(null);
+    resetSimulation(context);
   }
 }
 

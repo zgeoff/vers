@@ -98,7 +98,7 @@ test('it broadcasts nothing for an avatar with no activity history', async () =>
     { online: true, type: WorkerMessageType.ConnectionStatus },
   ]);
 
-  expect(ctx.context.getSimulation()).toBeNull();
+  expect(ctx.context.getSimulation().activity).toBeNull();
 });
 
 test('it broadcasts capped and installs no simulation for a capped activity', async () => {
@@ -125,7 +125,7 @@ test('it broadcasts capped and installs no simulation for a capped activity', as
     { status: { kind: 'capped' }, type: WorkerMessageType.ResyncStatus },
   ]);
 
-  expect(ctx.context.getSimulation()).toBeNull();
+  expect(ctx.context.getSimulation().activity).toBeNull();
 });
 
 test('it delivers a queued row for the resync-determined latest activity rather than sweeping it, while sweeping every other activity', async () => {
@@ -417,7 +417,7 @@ test('it reports a divergence via the checkpoint-stream-error channel and skips 
     },
   ]);
 
-  expect(ctx.context.getSimulation()).toBeNull();
+  expect(ctx.context.getSimulation().activity).toBeNull();
 });
 
 test('it fast-forwards a short gap, broadcasts progress and final tallies, and installs a registered live sim on the final active row', async () => {
@@ -833,7 +833,7 @@ test('it halts at the boundary and keeps the start intent when the offline budge
     { halted: true, remainingMs: 0, type: WorkerMessageType.OfflineCapStatus },
   ]);
 
-  expect(ctx.context.getSimulation()).toBeNull();
+  expect(ctx.context.getSimulation().activity).toBeNull();
 
   expect(await readPendingStartIntent()).toStrictEqual({
     activityID: stopped.id,
@@ -915,7 +915,7 @@ test('it keeps the start intent and reports offline when the drain fails on tran
     { online: false, type: WorkerMessageType.ConnectionStatus },
   ]);
 
-  expect(ctx.context.getSimulation()).toBeNull();
+  expect(ctx.context.getSimulation().activity).toBeNull();
 
   expect(await readPendingStartIntent()).toStrictEqual({
     activityID: stopped.id,
@@ -1146,7 +1146,7 @@ test('it fails the resync while a raised stop is undelivered', async () => {
     },
   ]);
 
-  expect(ctx.context.getSimulation()).toBeNull();
+  expect(ctx.context.getSimulation().activity).toBeNull();
 
   const intent = await readPendingStopIntent();
 
@@ -1178,7 +1178,7 @@ test('it delivers the held stop before planning, leaving the stopped run cleared
   const intent = await readPendingStopIntent();
 
   expect(intent).toBeUndefined();
-  expect(ctx.context.getSimulation()).toBeNull();
+  expect(ctx.context.getSimulation().activity).toBeNull();
 });
 
 test('it abandons the install when a stop lands mid-resync', async () => {
@@ -1210,7 +1210,7 @@ test('it abandons the install when a stop lands mid-resync', async () => {
 
   await handleRequestResyncMessage(ctx.context, message);
 
-  expect(ctx.context.getSimulation()).toBeNull();
+  expect(ctx.context.getSimulation().activity).toBeNull();
   expect(ctx.context.getActivity()).toBeNull();
 });
 
@@ -1253,7 +1253,7 @@ test('it stops back a drain-minted row when a stop lands during its attach', asy
     type: ClientMessageType.RequestResync,
   });
 
-  expect(context.getSimulation()).toBeNull();
+  expect(context.getSimulation().activity).toBeNull();
 
   const revived = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: viewer.avatar.id, status: 'active' }),

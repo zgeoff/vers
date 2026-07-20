@@ -49,7 +49,7 @@ test('it mints the continued row and releases the intent', async () => {
   invariant(minted !== undefined, 'expected the delivery to mint an active row');
   expect(result).toStrictEqual({ outcome: 'delivered', started: expect.anything() });
   expect(minted.scopeID).toBe(source.scopeID);
-  expect(context.getSimulation()).toBeNull();
+  expect(context.getSimulation().activity).toBeNull();
   expect(await readPendingStartIntent()).toBeUndefined();
 });
 

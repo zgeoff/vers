@@ -55,7 +55,7 @@ export interface WorkerContext {
    * its initial state.
    */
   readonly getRewardSlotLedger: () => RewardSlotLedgerSnapshot;
-  readonly getSimulation: () => null | Simulation;
+  readonly getSimulation: () => Simulation;
 
   /**
    * The lifecycle mailbox's tail. Starts, resyncs, and continuations queue behind it and run one
@@ -108,5 +108,5 @@ export interface WorkerContext {
   readonly setResyncInFlight: (inFlight: boolean) => void;
   readonly setLifecycleTail: (flow: Readonly<Promise<void>>) => void;
   readonly setStartRequestID: (requestID: string) => void;
-  readonly setSimulation: (simulation: null | Simulation) => void;
+  readonly setSimulation: (simulation: Simulation) => void;
 }

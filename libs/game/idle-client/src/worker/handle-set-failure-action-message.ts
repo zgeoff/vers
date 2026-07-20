@@ -21,7 +21,8 @@ export async function handleSetFailureActionMessage(
 ): Promise<void> {
   context.setFailureAction(message.failureAction);
   context.setFailureActionDirty(true);
-  context.getSimulation()?.setFailureAction(message.failureAction);
+  context.getSimulation().setFailureAction(message.failureAction);
+
   const statusMessage = createFailureActionStatusMessage(message.failureAction);
 
   for (const connection of context.connections) {

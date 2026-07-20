@@ -202,7 +202,6 @@ test('it halts nothing but still delivers when no simulation is installed', asyn
   });
 
   expect(context.getStopEpoch()).toBe(entryEpoch + 1);
-  expect(context.getSimulation()).not.toBeNull();
 
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
 

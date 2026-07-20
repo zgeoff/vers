@@ -1,18 +1,14 @@
-import { createSimulation } from '@vers/idle-core';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import type { StopActivityMessage } from '../types';
 import { createSimulationUpdateMessage } from './create-simulation-update-message';
-import { registerSimulationListeners } from './register-simulation-listeners';
+import { resetSimulation } from './reset-simulation';
 import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 
 /**
  * Ends a run entirely inside the worker: the local halt lands first and needs no network — the
- * simulation stops, a fresh empty one takes its place, and every tab sees a cleared snapshot —
- * then the durable intent is written and its delivery attempted. The stopped instance is replaced
- * rather than kept because stopping only detaches its activity; its avatar and combat state would
- * otherwise linger in every later snapshot a connecting tab receives. The runtime keeps a non-null
- * simulation throughout, so a later fresh-start message still finds one to install into.
+ * simulation stops, the runtime resets to its idle state, and every tab sees a cleared snapshot —
+ * then the durable intent is written and its delivery attempted.
  */
 export async function handleStopActivityMessage(
   context: WorkerContext,
@@ -28,18 +24,10 @@ export async function handleStopActivityMessage(
 
   context.advanceStopEpoch();
 
-  const simulation = context.getSimulation();
+  await context.getSimulation().stopActivity();
 
-  if (simulation !== null) {
-    await simulation.stopActivity();
-  }
+  resetSimulation(context);
 
-  const replacement = createSimulation();
-
-  registerSimulationListeners(context, replacement);
-
-  context.setSimulation(replacement);
-  context.setActivity(null);
   context.resetRewardSlotLedger();
 
   emitClearedSnapshot(context);

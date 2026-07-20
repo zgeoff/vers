@@ -2,7 +2,7 @@ import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
-import { ActivityFailureAction } from '@vers/idle-core';
+import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
@@ -28,7 +28,7 @@ export function createStubWorkerContext(
     createORPCClient(new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }));
 
   const submitter: CheckpointSubmitter = options.submitter ?? createStubSubmitter();
-  let simulation: null | Simulation = null;
+  let simulation: Simulation = createSimulation();
   let activity: ActivityData | null = null;
   let resyncAvatarID: string | null = null;
   let resyncInFlight = false;

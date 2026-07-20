@@ -9,12 +9,6 @@ export async function handleSetActivityMessage(
 ): Promise<void> {
   const simulation = context.getSimulation();
 
-  if (!simulation) {
-    console.warn('-- tried setting activity but no simulation');
-
-    return;
-  }
-
   const input = buildSimulationInput(message.activity, {
     failureAction: context.getFailureAction(),
   });

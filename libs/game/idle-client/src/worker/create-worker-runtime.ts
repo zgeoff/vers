@@ -1,7 +1,7 @@
 import type { ActivityData } from '@vers/contract-activity';
 import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
-import { ActivityFailureAction, SIMULATION_TIMESTEP_MS } from '@vers/idle-core';
+import { ActivityFailureAction, SIMULATION_TIMESTEP_MS, createSimulation } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
@@ -17,6 +17,7 @@ import { createRequestResyncMessage } from './create-request-resync-message';
 import { flushPendingStop } from './flush-pending-stop';
 import { handleClientMessage } from './handle-client-message';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
+import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
@@ -63,7 +64,10 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   const connections = new Set<MessagePort>();
 
   const client = options.client ?? createActivityServiceClient();
-  let simulation: null | Simulation = null;
+
+  // the worker always holds a simulation — "no run" is an empty one; listeners attach right
+  // after the context literal below exists
+  let simulation: Simulation = createSimulation();
   let activity: ActivityData | null = null;
   let running = false;
   let stopped = false;
@@ -198,6 +202,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
   };
 
+  registerSimulationListeners(context, simulation);
+
   // cache our listeners so we can message them later
   const handleConnect = (event: MessageEvent) => {
     const [port] = event.ports;
@@ -247,11 +253,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     while (accumulator >= timestep) {
       accumulator -= timestep;
 
-      const currentSimulation = context.getSimulation();
-
-      if (currentSimulation) {
-        await runSimulation(context, currentSimulation, timestep);
-      }
+      await runSimulation(context, context.getSimulation(), timestep);
     }
 
     lastFrameTime = frameNow;
@@ -275,7 +277,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
   // The worker's own reconnect recovery: a returning connection resends whatever the submitter
   // held, then — once the held tail is drained, so a resync never reads a stale appended head —
-  // self-triggers a resync when nothing is live to catch up an avatar it remembers.
+  // self-triggers a resync when no run is live to catch up an avatar it remembers.
   const handleOnline = () => {
     emitConnectionStatus(true);
 
@@ -286,14 +288,14 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
         await submitter.flushHeld();
 
         // A stop raised offline delivers here even when no resync will follow — the self-resync
-        // below is skipped while a simulation is live, and after a stop one always is.
+        // below runs only while no run is live.
         await flushPendingStop(context);
 
         // the durable start intent is always the fresher signal: it was recorded at the most
         // recent boundary failure, while the remembered resync avatar can predate it
         const avatarID = (await readPendingStartIntent())?.avatarID ?? resyncAvatarID ?? null;
 
-        if (context.getSimulation() === null && avatarID !== null) {
+        if (context.getActivity() === null && avatarID !== null) {
           await handleRequestResyncMessage(context, createRequestResyncMessage(avatarID));
         }
       } catch (error) {

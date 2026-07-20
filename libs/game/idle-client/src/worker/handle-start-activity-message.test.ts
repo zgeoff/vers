@@ -402,7 +402,7 @@ test('it fails an attach the resync could not install', async () => {
 
   await handleStartActivityMessage(context, message);
 
-  expect(context.getSimulation()).toBeNull();
+  expect(context.getSimulation().activity).toBeNull();
 
   await connection.waitForMessages(2);
 

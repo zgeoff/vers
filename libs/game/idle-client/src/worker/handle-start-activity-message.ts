@@ -1,13 +1,11 @@
 import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
-import { createSimulation } from '@vers/idle-core';
 import type { StartActivityMessage, StartStatus } from '../types';
 import { ClientMessageType } from '../types';
 import { createRequestResyncMessage } from './create-request-resync-message';
 import { createStartStatusMessage } from './create-start-status-message';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { hasStopIntervened } from './has-stop-intervened';
-import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
 import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
@@ -86,7 +84,7 @@ async function runStart(
 
     // a resync can be skipped, gated, or abandoned without installing; reporting attached anyway
     // would leave the tab waiting forever on a run that never arrives
-    if (context.getSimulation()?.activity?.id !== row.id) {
+    if (context.getSimulation().activity?.id !== row.id) {
       return { kind: 'failed' };
     }
 
@@ -152,16 +150,6 @@ async function setLiveStartedRow(
 
   if (isSuperseded(context, message)) {
     return { kind: 'failed' };
-  }
-
-  // a worker that never saw an initialize has no simulation; a silently skipped install would
-  // leave the tab spinning on a started run
-  if (context.getSimulation() === null) {
-    const simulation = createSimulation();
-
-    registerSimulationListeners(context, simulation);
-
-    context.setSimulation(simulation);
   }
 
   await handleSetActivityMessage(context, { activity: row, type: ClientMessageType.SetActivity });

@@ -111,7 +111,7 @@ async function runResyncPass(
     buildSimulationInput: (activity) =>
       buildSimulationInput(activity, { failureAction: context.getFailureAction() }),
     client: context.getClient(),
-    isActivityLive: (activityID) => context.getSimulation()?.activity?.id === activityID,
+    isActivityLive: (activityID) => context.getSimulation().activity?.id === activityID,
     onProgress: (progress) => {
       emitResyncStatus(context, { ...progress, kind: 'fast-forwarding' });
     },
@@ -219,7 +219,7 @@ async function stopBackUninstalledRow(
     return;
   }
 
-  if (context.getSimulation()?.activity?.id === started.id) {
+  if (context.getSimulation().activity?.id === started.id) {
     return;
   }
 
@@ -285,7 +285,7 @@ async function sweepStaleActivities(
   try {
     const keepActivityIDs = [
       ...new Set(
-        [pickLatestActivityID(result), context.getSimulation()?.activity?.id].filter(
+        [pickLatestActivityID(result), context.getSimulation().activity?.id].filter(
           (activityID): activityID is string => activityID !== undefined,
         ),
       ),
@@ -339,7 +339,7 @@ async function applyAttachLive(
   progress: ResyncResult['progress'],
   entryEpoch: number,
 ): Promise<void> {
-  if (context.getSimulation()?.activity?.id === plan.context.activityID) {
+  if (context.getSimulation().activity?.id === plan.context.activityID) {
     return;
   }
 

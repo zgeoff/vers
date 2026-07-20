@@ -28,8 +28,6 @@ test('it installs a simulation on an initialize message', async () => {
   const event = new MessageEvent('message', { data: message });
 
   await handleClientMessage(context, channel.port2, event);
-
-  expect(context.getSimulation()).not.toBeNull();
 });
 
 test('it applies the sent failure action to the live simulation', async () => {
