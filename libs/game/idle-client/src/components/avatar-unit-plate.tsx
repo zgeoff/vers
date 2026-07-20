@@ -8,7 +8,7 @@ import { SwingBar } from './swing-bar';
  * the frame read at its full structure until the combat model carries them.
  */
 const STUB_DISCIPLINE = 'WARD · AEGIS DISCIPLINE';
-const STUB_BARRIER = { max: 640, value: 640 };
+const STUB_BARRIER_FRACTION = 0.25;
 const STUB_AETHER = { max: 1600, value: 1024 };
 const STUB_BUFFS = ['Fortified', 'Aegis Ward'];
 const STUB_DEBUFFS = ['Chilled'];
@@ -109,7 +109,7 @@ export function AvatarUnitPlate(props: Readonly<AvatarUnitPlateProps>) {
         value={props.avatar.life}
         valueLabel={`${props.avatar.life} / ${props.avatar.maxLife}`}
       >
-        <ResourceBar.Overlay tint="barrier" value={STUB_BARRIER.value} />
+        <ResourceBar.Overlay tint="barrier" value={props.avatar.maxLife * STUB_BARRIER_FRACTION} />
       </ResourceBar>
 
       <ResourceBar
@@ -125,7 +125,7 @@ export function AvatarUnitPlate(props: Readonly<AvatarUnitPlateProps>) {
         isAlive={props.avatar.isAlive}
         label="STRIKE"
         lastAttackTime={lastAttackTime}
-        tint="world"
+        tint="self"
       />
 
       <div className={statusRow}>

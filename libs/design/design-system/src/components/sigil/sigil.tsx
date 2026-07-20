@@ -1,9 +1,10 @@
 import { cva, cx } from '@vers/styled-system/css';
 
 /**
- * Whose faceted crest this is — sets the stroke/fill colour from the matching `accent.*` role.
+ * Whose faceted crest this is — sets the stroke/fill colour from the matching `accent.*` role or
+ * rarity tier.
  */
-export type SigilTint = 'enemy' | 'self' | 'world';
+export type SigilTint = 'artisan' | 'enhanced' | 'normal' | 'self' | 'unique' | 'world';
 
 const sigil = cva({
   base: {
@@ -12,8 +13,11 @@ const sigil = cva({
   defaultVariants: { tint: 'world' },
   variants: {
     tint: {
-      enemy: { color: 'accent.enemy' },
+      artisan: { color: 'accent.rarity.artisan' },
+      enhanced: { color: 'accent.rarity.enhanced' },
+      normal: { color: 'accent.rarity.normal' },
       self: { color: 'accent.self' },
+      unique: { color: 'accent.rarity.unique' },
       world: { color: 'accent.world' },
     },
   },

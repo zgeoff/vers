@@ -1,10 +1,10 @@
 import { css, cva } from '@vers/styled-system/css';
 
 /**
- * Which actor's palette the cast fill takes — the avatar channels in world teal, a hostile in
- * enemy coral.
+ * Which actor's palette the cast fill takes — the avatar's own output in self gold, a hostile in
+ * its rarity colour, an aether channel in world teal.
  */
-export type CastBarTint = 'enemy' | 'world';
+export type CastBarTint = 'artisan' | 'enhanced' | 'normal' | 'self' | 'unique' | 'world';
 
 const container = css({
   display: 'flex',
@@ -47,7 +47,11 @@ const fill = cva({
   },
   variants: {
     tint: {
-      enemy: { backgroundColor: 'accent.enemy' },
+      artisan: { backgroundColor: 'accent.rarity.artisan' },
+      enhanced: { backgroundColor: 'accent.rarity.enhanced' },
+      normal: { backgroundColor: 'accent.rarity.normal' },
+      self: { backgroundColor: 'accent.self' },
+      unique: { backgroundColor: 'accent.rarity.unique' },
       world: { backgroundColor: 'accent.world' },
     },
   },

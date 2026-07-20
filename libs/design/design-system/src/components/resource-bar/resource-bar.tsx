@@ -6,7 +6,15 @@ import type { ReactNode } from 'react';
  * The palette a bar or layer paints its fill in. Names map to `accent.*` semantic tokens, so a
  * re-skin moves the colour without touching callers.
  */
-export type ResourceBarTint = 'aether' | 'barrier' | 'enemy' | 'self' | 'world';
+export type ResourceBarTint =
+  | 'aether'
+  | 'artisan'
+  | 'barrier'
+  | 'enhanced'
+  | 'normal'
+  | 'self'
+  | 'unique'
+  | 'world';
 
 const track = cva({
   base: {
@@ -42,9 +50,12 @@ const fill = cva({
   variants: {
     tint: {
       aether: { backgroundColor: 'accent.aether' },
+      artisan: { backgroundColor: 'accent.rarity.artisan' },
       barrier: { backgroundColor: 'accent.barrier' },
-      enemy: { backgroundColor: 'accent.enemy' },
+      enhanced: { backgroundColor: 'accent.rarity.enhanced' },
+      normal: { backgroundColor: 'accent.rarity.normal' },
       self: { backgroundColor: 'accent.self' },
+      unique: { backgroundColor: 'accent.rarity.unique' },
       world: { backgroundColor: 'accent.world' },
     },
   },

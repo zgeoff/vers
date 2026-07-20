@@ -4,10 +4,10 @@ import { css, cx } from '@vers/styled-system/css';
 import { SwingBar } from './swing-bar';
 
 /**
- * Enemy rarity has no backing state yet, so every hostile reads as Normal until the combat model
- * carries a tier.
+ * Enemy rarity has no backing state yet, so every hostile reads as Normal — and takes the grey
+ * Normal tint of the shared rarity ramp — until the combat model carries a tier.
  */
-const STUB_RARITY_LABEL = 'NORMAL';
+const STUB_RARITY = 'normal' as const;
 
 const plate = css({
   backgroundColor: 'bg.panel',
@@ -28,7 +28,7 @@ const deadPlate = css({
 
 const header = css({
   alignItems: 'center',
-  color: 'accent.enemy',
+  color: 'accent.rarity.normal',
   display: 'flex',
   fontFamily: 'mono',
   fontSize: '2xs',
@@ -82,17 +82,17 @@ export function EnemyUnitPlate(props: Readonly<EnemyUnitPlateProps>) {
   return (
     <div className={cx(plate, !props.enemy.isAlive && deadPlate)}>
       <div className={header}>
-        <span>{STUB_RARITY_LABEL}</span>
+        <span>{STUB_RARITY.toUpperCase()}</span>
         <span className={levelText}>LV {props.enemy.level}</span>
       </div>
       <div className={portrait}>
-        <Sigil tint="enemy" />
+        <Sigil tint={STUB_RARITY} />
       </div>
       <div className={name}>{props.enemy.name}</div>
       <ResourceBar
         label="LIFE"
         max={props.enemy.maxLife}
-        tint="enemy"
+        tint={STUB_RARITY}
         value={props.enemy.life}
         valueLabel={`${props.enemy.life} / ${props.enemy.maxLife}`}
       />
@@ -101,7 +101,7 @@ export function EnemyUnitPlate(props: Readonly<EnemyUnitPlateProps>) {
         isAlive={props.enemy.isAlive}
         label="ATTACK"
         lastAttackTime={lastAttackTime}
-        tint="enemy"
+        tint={STUB_RARITY}
       />
       {props.enemy.isAlive ? null : <span className={defeatedOverlay}>DEFEATED</span>}
     </div>
