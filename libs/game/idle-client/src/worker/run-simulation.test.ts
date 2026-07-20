@@ -192,7 +192,6 @@ test('it rebuilds through a resync when a never-appended foreign row owns the av
 
   const installed = context.getSimulation();
 
-  invariant(installed !== null, 'expected the resync to install a simulation');
   expect(installed.activity?.id).toBe(conflictRow.id);
   expect(context.getActivity()).toStrictEqual(conflictRow);
 });

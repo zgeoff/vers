@@ -2,19 +2,18 @@ import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
-import { ActivityFailureAction } from '@vers/idle-core';
+import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry } from '../types';
-import type { PendingContinuation, WorkerContext } from '../worker/types';
+import type { WorkerContext } from '../worker/types';
 import { createStubSubmitter } from './create-stub-submitter';
 
 interface CreateStubWorkerContextOptions {
   readonly client?: ActivityServiceClient;
   readonly connections?: ReadonlyArray<MessagePort>;
   readonly failureAction?: ActivityFailureAction;
-  readonly pendingContinuation?: PendingContinuation | null;
   readonly remainingBudgetMs?: number;
   readonly submitter?: Readonly<CheckpointSubmitter>;
 }
@@ -29,9 +28,8 @@ export function createStubWorkerContext(
     createORPCClient(new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }));
 
   const submitter: CheckpointSubmitter = options.submitter ?? createStubSubmitter();
-  let simulation: null | Simulation = null;
+  let simulation: Simulation = createSimulation();
   let activity: ActivityData | null = null;
-  let pendingContinuation: PendingContinuation | null = options.pendingContinuation ?? null;
   let resyncAvatarID: string | null = null;
   let resyncInFlight = false;
   let rewardSlotLedgerActivityID: null | string = null;
@@ -41,7 +39,7 @@ export function createStubWorkerContext(
   let failureActionPushInFlight = false;
   let stopEpoch = 0;
   let startRequestID: null | string = null;
-  let startFlow: Readonly<Promise<void>> = Promise.resolve();
+  let lifecycleTail: Readonly<Promise<void>> = Promise.resolve();
 
   return {
     advanceStopEpoch: () => {
@@ -51,7 +49,6 @@ export function createStubWorkerContext(
     getActivity: () => activity,
     getClient: () => client,
     getFailureAction: () => failureAction,
-    getPendingContinuation: () => pendingContinuation,
     getRemainingBudgetMs: () => options.remainingBudgetMs ?? Number.MAX_SAFE_INTEGER,
     getResyncAvatarID: () => resyncAvatarID,
     getRewardSlotLedger: () => ({
@@ -59,7 +56,7 @@ export function createStubWorkerContext(
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
-    getStartFlow: () => startFlow,
+    getLifecycleTail: () => lifecycleTail,
     getStartRequestID: () => startRequestID,
     getStopEpoch: () => stopEpoch,
     getSubmitter: () => submitter,
@@ -95,17 +92,14 @@ export function createStubWorkerContext(
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
     },
-    setPendingContinuation: (pending) => {
-      pendingContinuation = pending;
-    },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
     },
     setResyncInFlight: (inFlight) => {
       resyncInFlight = inFlight;
     },
-    setStartFlow: (flow) => {
-      startFlow = flow;
+    setLifecycleTail: (flow) => {
+      lifecycleTail = flow;
     },
     setStartRequestID: (requestID) => {
       startRequestID = requestID;

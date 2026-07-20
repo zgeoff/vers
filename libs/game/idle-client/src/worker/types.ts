@@ -5,21 +5,6 @@ import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
 
 /**
- * A continuation the worker wanted to start but couldn't complete — a same-row `CONFLICT`
- * (the terminal append that closes the row is still unacknowledged) or a transport failure on its
- * own start-activity call. `activityID` names the row the pending intent was raised against, so a
- * resync plans `continue` only once that exact row reads closed, never a different one. The row
- * it eventually starts takes the worker's current failure action, not a snapshot from raise time,
- * so a preference changed while the intent waited still applies.
- */
-export interface PendingContinuation {
-  readonly activityID: string;
-  readonly avatarID: string;
-  readonly scopeID: string;
-  readonly scopeType: string;
-}
-
-/**
  * Accessors over the runtime's closure state, threaded to every message and simulation event
  * handler. `connections` is exposed read-only — `removeConnection` is the one mutation a handler
  * needs. `getSubmitter` and `getClient` always return the same instance: both exist for the
@@ -53,12 +38,6 @@ export interface WorkerContext {
   readonly getFailureAction: () => ActivityFailureAction;
 
   /**
-   * The continuation intent a resync should honor once its target row reads closed — `null` when
-   * no continuation is outstanding.
-   */
-  readonly getPendingContinuation: () => PendingContinuation | null;
-
-  /**
    * The worker's conservative view of the avatar's offline-progress budget: the cap minus the
    * wall clock elapsed since the last acknowledged submission. It can only under-estimate the
    * server's meter, never over-run it.
@@ -76,14 +55,14 @@ export interface WorkerContext {
    * its initial state.
    */
   readonly getRewardSlotLedger: () => RewardSlotLedgerSnapshot;
-  readonly getSimulation: () => null | Simulation;
+  readonly getSimulation: () => Simulation;
 
   /**
-   * The start-flow chain's tail. Start flows run one at a time — interleaved, a stale flow could
-   * stop a row the fresher one just attached. Stops stay concurrent; they bump the epoch queued
-   * flows re-check.
+   * The lifecycle mailbox's tail. Starts, resyncs, and continuations queue behind it and run one
+   * at a time — interleaved, a stale flow could stop a row a fresher one just attached. Stops
+   * stay concurrent; they bump the epoch queued flows re-check.
    */
-  readonly getStartFlow: () => Readonly<Promise<void>>;
+  readonly getLifecycleTail: () => Readonly<Promise<void>>;
 
   /**
    * The most recent start request's id. A flow that finds a fresher claim after an await abandons
@@ -125,10 +104,9 @@ export interface WorkerContext {
   readonly setFailureAction: (action: ActivityFailureAction) => void;
   readonly setFailureActionDirty: (dirty: boolean) => void;
   readonly setFailureActionPushInFlight: (inFlight: boolean) => void;
-  readonly setPendingContinuation: (pending: PendingContinuation | null) => void;
   readonly setResyncAvatarID: (avatarID: string) => void;
   readonly setResyncInFlight: (inFlight: boolean) => void;
-  readonly setStartFlow: (flow: Readonly<Promise<void>>) => void;
+  readonly setLifecycleTail: (flow: Readonly<Promise<void>>) => void;
   readonly setStartRequestID: (requestID: string) => void;
-  readonly setSimulation: (simulation: null | Simulation) => void;
+  readonly setSimulation: (simulation: Simulation) => void;
 }

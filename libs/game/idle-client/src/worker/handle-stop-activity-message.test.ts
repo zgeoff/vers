@@ -8,8 +8,10 @@ import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
+import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
+import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
@@ -25,7 +27,7 @@ test('it halts the live simulation and clears the runtime', async () => {
   context.setSimulation(simulation);
   context.setActivity(activity);
 
-  context.setPendingContinuation({
+  await writePendingStartIntent({
     activityID: activity.id,
     avatarID: activity.avatarID,
     scopeID: activity.scopeID,
@@ -42,7 +44,10 @@ test('it halts the live simulation and clears the runtime', async () => {
 
   expect(simulation.activity).toBeNull();
   expect(context.getActivity()).toBeNull();
-  expect(context.getPendingContinuation()).toBeNull();
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
 });
 
 test('it replaces the stopped simulation with a fresh empty one', async () => {
@@ -62,7 +67,6 @@ test('it replaces the stopped simulation with a fresh empty one', async () => {
 
   const replacement = context.getSimulation();
 
-  invariant(replacement !== null, 'expected a replacement simulation');
   expect(replacement).not.toBe(simulation);
 
   expect(replacement.getSnapshot()).toStrictEqual({
@@ -200,7 +204,6 @@ test('it halts nothing but still delivers when no simulation is installed', asyn
   });
 
   expect(context.getStopEpoch()).toBe(entryEpoch + 1);
-  expect(context.getSimulation()).not.toBeNull();
 
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
 

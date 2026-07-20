@@ -4,7 +4,6 @@ import type { ActivityInput, AvatarData } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient } from '../submission/types';
-import type { PendingContinuation } from '../worker/types';
 import { planResync } from './plan-resync';
 import { runFastForward } from './run-fast-forward';
 import type { FastForwardProgress, LatestActivityProgress, ResyncResult } from './types';
@@ -45,12 +44,6 @@ interface RunResyncOptions {
    * fast-forward reads it.
    */
   readonly onProgressFetched?: (progress: LatestActivityProgress) => Promise<void>;
-
-  /**
-   * A continuation a previous worker started but couldn't complete, honored as a `continue` plan
-   * once its target row reads closed.
-   */
-  readonly pendingContinuation?: PendingContinuation | null;
 
   readonly submitter: CheckpointSubmitter;
 }
@@ -95,9 +88,6 @@ export async function runResync(
   const plan = planResync({
     progress,
     ...(options.capMs !== undefined && { capMs: options.capMs }),
-    ...(options.pendingContinuation !== undefined && {
-      pendingContinuation: options.pendingContinuation,
-    }),
   });
 
   if (plan.kind !== 'fast-forward') {

@@ -2,10 +2,10 @@ import type { ActivityData } from '@vers/contract-activity';
 import type { ActivityFailureAction, SimulationSnapshot } from '@vers/idle-core';
 
 /**
- * `SetActivity` installs a fresh, never-appended row the worker already holds confirmed — the
- * continuation and start flows use it internally. Resuming any other activity, live or offline,
- * always goes through `RequestResync`; the worker alone derives its simulation input and
- * submission context from the confirmed row, never trusting a tab's locally reconstructed one.
+ * `SetActivity` is worker-internal — the start flow's install step, never routed from a tab.
+ * Resuming any activity, live or offline, always goes through `RequestResync`; the worker alone
+ * derives its simulation input and submission context from the confirmed row, never trusting a
+ * tab's locally reconstructed one.
  */
 export enum ClientMessageType {
   Disconnect = 'disconnect',
@@ -80,7 +80,6 @@ export type ClientMessage =
   | DisconnectMessage
   | InitializeMessage
   | RequestResyncMessage
-  | SetActivityMessage
   | SetFailureActionMessage
   | StartActivityMessage
   | StopActivityMessage;

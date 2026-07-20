@@ -9,5 +9,7 @@ export async function readPendingStopIntent(): Promise<PendingStopIntent | undef
   const db = await resolveCheckpointQueueDB();
   const record = await db.get(PREFERENCES_STORE_NAME, PENDING_STOP_INTENT_KEY);
 
-  return record !== undefined && 'activityID' in record ? record : undefined;
+  return record !== undefined && 'activityID' in record && !('scopeID' in record)
+    ? record
+    : undefined;
 }
