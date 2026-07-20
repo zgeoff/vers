@@ -10,6 +10,7 @@ export function createMockLatestActivityProgress(
     anchor: null,
     appendedHead: 0,
     failureAction: 'abort',
+    isWriter: true,
     serverTime: faker.date.recent(),
     verifiedHead: 0,
     ...overrides,

@@ -79,7 +79,11 @@ test('it retains the cached dirty flag across boot so the next resync flushes it
 
   const connection = createConnection(runtime);
 
-  connection.post({ avatarID: viewer.avatar.id, type: ClientMessageType.RequestResync });
+  connection.post({
+    avatarID: viewer.avatar.id,
+    claim: false,
+    type: ClientMessageType.RequestResync,
+  });
 
   await waitFor(() => {
     const updatedAvatar = db.avatarCollection.findFirst((q) => q.where({ id: viewer.avatar.id }));
@@ -185,7 +189,11 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
 
   await connection.waitForMessages(1);
 
-  connection.post({ avatarID: viewer.avatar.id, type: ClientMessageType.RequestResync });
+  connection.post({
+    avatarID: viewer.avatar.id,
+    claim: false,
+    type: ClientMessageType.RequestResync,
+  });
 
   await waitFor(
     () => {
@@ -250,7 +258,11 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
 
   await connection.waitForMessages(1);
 
-  connection.post({ avatarID: viewer.avatar.id, type: ClientMessageType.RequestResync });
+  connection.post({
+    avatarID: viewer.avatar.id,
+    claim: false,
+    type: ClientMessageType.RequestResync,
+  });
 
   await waitFor(
     () => {
@@ -319,7 +331,11 @@ test("it resumes the held start intent's avatar on reconnect over an earlier ava
   // the worker remembers this avatar as its last resync target; the held intent must outrank
   // that memory on reconnect or the continuation strands. The drain leaves the intent alone
   // here — it belongs to the other avatar.
-  connection.post({ avatarID: viewer.avatar.id, type: ClientMessageType.RequestResync });
+  connection.post({
+    avatarID: viewer.avatar.id,
+    claim: false,
+    type: ClientMessageType.RequestResync,
+  });
 
   await waitFor(() => {
     expect(connection.received).toPartiallyContain({

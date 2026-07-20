@@ -21,6 +21,7 @@ export { setRewardSlotLedger } from './state/set-reward-slot-ledger';
 export { setSimulationSnapshot } from './state/set-simulation-snapshot';
 export { setStartReport } from './state/set-start-report';
 export { setSimulationWorker } from './state/set-simulation-worker';
+export { setWriterDisplacedActivityID } from './state/set-writer-displaced-activity-id';
 export { useConnectionStatus } from './state/use-connection-status';
 export { updateRewardSlotLedger } from './state/update-reward-slot-ledger';
 export { useOfflineCapStatus } from './state/use-offline-cap-status';
@@ -34,6 +35,7 @@ export { useLastCompletedActivityID } from './state/use-last-completed-activity-
 export { useRewardSlotLedger } from './state/use-reward-slot-ledger';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
 export { useStartReport } from './state/use-start-report';
+export { useWriterDisplacedActivityID } from './state/use-writer-displaced-activity-id';
 export type { ActivitySubmissionContext } from './submission/types';
 export * from './types';
 export { createInitializeMessage } from './worker/create-initialize-message';

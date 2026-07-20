@@ -89,7 +89,9 @@ export function GameSimulationMount() {
 
     hasSentResync.current = true;
 
-    sendIdleRequestResync(idleWorkerHandle.worker, avatarID);
+    // a page load is a deliberate attach: the player opened the game here, so this device claims
+    // an active run's writer
+    sendIdleRequestResync(idleWorkerHandle.worker, avatarID, true);
   }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID]);
 
   // fires once per page load under the same gate as the resync: a live worker and a known avatar
@@ -128,8 +130,9 @@ export function GameSimulationMount() {
     const worker = idleWorkerHandle.worker;
 
     const handleOnline = () => {
+      // an automatic reconnect never claims the writer — the run may be live on another device
       if (worker !== undefined && avatarID !== undefined) {
-        sendIdleRequestResync(worker, avatarID);
+        sendIdleRequestResync(worker, avatarID, false);
       }
     };
 

@@ -145,6 +145,7 @@ in stack state are encrypted by the stack passphrase.
 | `vers.replay.iteration_failures`     | counter   | `{iteration}` | `outcome`  | worker iterations that failed to replay a claimed chain, by outcome     |
 | `vers.keys.derive_rejections`        | counter   | `{rejection}` | `reason`   | deriveAvatarKey calls that refused to derive a key, by reason           |
 | `vers.activity.terminal_transitions` | counter   | `{activity}`  | `status`   | activities that claimed a terminal transition, by status                |
+| `vers.activity.writer_takeovers`     | counter   | `{takeover}`  | —          | successful writer-session claims on active activities                   |
 | `vers.activity.replay_poke_failed`   | counter   | `{poke}`      | —          | replay wake pokes that never delivered after exhausting retries         |
 | `vers.email.delivery_failures`       | counter   | `{email}`     | —          | emails that failed to deliver                                           |
 | `vers.session.failed_attempts`       | counter   | `{attempt}`   | —          | failed step-up verification attempts                                    |

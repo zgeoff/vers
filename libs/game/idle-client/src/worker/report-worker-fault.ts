@@ -2,6 +2,7 @@ import { sentryHandle } from './sentry-handle';
 
 export type WorkerFaultSite =
   | 'continuation'
+  | 'eviction'
   | 'message-routing'
   | 'preference-seed'
   | 'reconnect'

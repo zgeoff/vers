@@ -5,6 +5,14 @@ import type { LatestActivityProgress, ResyncPlan } from './types';
 
 interface PlanResyncInput {
   readonly capMs?: number;
+
+  /**
+   * Whether this session may append to the activity's stream — it holds the writer (stamped or
+   * freshly claimed) or no writer is stamped. An active activity this session may not write
+   * resolves to `active-elsewhere`: attaching would only simulate progress the server rejects.
+   */
+  readonly mayWrite: boolean;
+
   readonly progress: LatestActivityProgress;
 }
 
@@ -32,6 +40,10 @@ export function planResync(input: Readonly<PlanResyncInput>): ResyncPlan {
 
   if (activity.status !== 'active') {
     return { kind: 'none' };
+  }
+
+  if (!input.mayWrite) {
+    return { activityID: activity.id, kind: 'active-elsewhere' };
   }
 
   const anchorAt = activity.appendedAt ?? activity.startedAt;

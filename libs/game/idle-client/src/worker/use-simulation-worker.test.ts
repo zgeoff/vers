@@ -15,6 +15,7 @@ import type {
   ResyncStatusMessage,
   RewardSlotsRecordedMessage,
   SimulationUpdateMessage,
+  WriterDisplacedMessage,
 } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { useSimulationWorker } from './use-simulation-worker';
@@ -104,6 +105,7 @@ test('it updates simulation state from worker messages', async () => {
     rewardSlotLedger: { activityID: null, entries: [] },
     state: { combat: { elapsed: 1000 }, failureAction: ActivityFailureAction.Retry },
     type: WorkerMessageType.InitialState,
+    writerDisplacedActivityID: null,
   };
 
   worker.channel.port2.postMessage(message);
@@ -295,6 +297,7 @@ test('it accumulates the reward-slot ledger from worker messages', async () => {
       failureAction: ActivityFailureAction.Retry,
     },
     type: WorkerMessageType.InitialState,
+    writerDisplacedActivityID: null,
   };
 
   worker.channel.port2.postMessage(initialStateMessage);
@@ -353,6 +356,7 @@ test('it resets the reward-slot ledger once a new activity reports its own messa
       failureAction: ActivityFailureAction.Retry,
     },
     type: WorkerMessageType.InitialState,
+    writerDisplacedActivityID: null,
   } satisfies InitialStateMessage);
 
   await waitFor(() => {
@@ -414,6 +418,7 @@ test('it installs the reward-slot ledger carried by the initial state', async ()
       failureAction: ActivityFailureAction.Retry,
     },
     type: WorkerMessageType.InitialState,
+    writerDisplacedActivityID: null,
   } satisfies InitialStateMessage);
 
   await waitFor(() => {
@@ -421,4 +426,30 @@ test('it installs the reward-slot ledger carried by the initial state', async ()
   });
 
   expect(useIdleStore.getState().rewardSlotLedgerActivityID).toBe('activity_1');
+});
+
+test('it maps a writer displaced message onto the store', async () => {
+  registerSharedWorkerStub();
+
+  const hook = renderHook(() => useSimulationWorker());
+
+  hook.rerender();
+
+  invariant(hook.result.current, 'Worker not initialized');
+
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the hook was stubbed to construct a StubSharedWorker, so its return value has that shape at runtime
+  const worker = hook.result.current as unknown as StubSharedWorker;
+
+  worker.channel.port2.start();
+
+  const message: WriterDisplacedMessage = {
+    activityID: 'activity_1',
+    type: WorkerMessageType.WriterDisplaced,
+  };
+
+  worker.channel.port2.postMessage(message);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().writerDisplacedActivityID).toBe('activity_1');
+  });
 });

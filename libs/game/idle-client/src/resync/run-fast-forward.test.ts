@@ -297,3 +297,54 @@ test('it reports the final row it left off at, for a caller to attach directly',
   expect(report.activity).toStrictEqual(lastStarted);
   expect(report.appendedHead).toBe(0);
 });
+
+test('it aborts to displaced when another session takes the writer mid-pass', async () => {
+  const ctx = setupTest();
+  const onProgress = mock<(progress: FastForwardProgress) => void>();
+  const progress = createMockLatestActivityProgress();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.SESSION_EVICTED({ data: {} });
+    }),
+  );
+
+  const report = await runFastForward({
+    budgetMs: 60_000,
+    buildSimulationInput: (activity) => ({
+      activity: createMockActivityInput({
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
+        failureAction: ActivityFailureAction.Abort,
+        id: activity.id,
+        seed: activity.seed,
+      }),
+
+      // life 1 dies on the first hit taken, so the attempt ends quickly
+      avatar: createMockAvatarData({ life: 1 }),
+    }),
+    client: ctx.client,
+    onProgress,
+    progress,
+    submitter: ctx.submitter,
+  });
+
+  expect(report).toStrictEqual({
+    activity: progress.activity,
+    appendedHead: 0,
+    attempts: 0,
+    finalRowTerminal: false,
+    levelUps: 0,
+    reason: 'displaced',
+  });
+
+  // the tallies never persisted, so the pass reports none
+  expect(onProgress).not.toHaveBeenCalled();
+  expect(ctx.startedActivities).toStrictEqual([]);
+});

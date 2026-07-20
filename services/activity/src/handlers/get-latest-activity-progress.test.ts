@@ -1,6 +1,12 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
-import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import {
+  createAnonymousViewer,
+  createServiceToken,
+  createTestDB,
+  createViewer,
+  getTestServiceKeyPair,
+} from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
@@ -43,6 +49,7 @@ test('it returns a fresh activity with a null anchor at verifiedHead 0', async (
     anchor: null,
     appendedHead: 0,
     failureAction: 'abort',
+    isWriter: true,
     serverTime: expect.toBeValidDate(),
     verifiedHead: 0,
   });
@@ -178,4 +185,76 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
     code: 'UNAUTHORIZED',
     data: { reason: 'missing-session' },
   });
+});
+
+test('it reports isWriter false to a session another writer displaced', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+  const keyPair = await getTestServiceKeyPair();
+
+  const tokenA = await createServiceToken({
+    actingSessionId: 'session-a',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenA });
+
+  const started = await clientA.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const tokenB = await createServiceToken({
+    actingSessionId: 'session-b',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientB = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenB });
+
+  const progressB = await clientB.getLatestActivityProgress({ avatarID: avatar.id });
+
+  expect(progressB.isWriter).toBeFalse();
+
+  const progressA = await clientA.getLatestActivityProgress({ avatarID: avatar.id });
+
+  expect(progressA.isWriter).toBeTrue();
+  expect(progressB.activity.id).toBe(started.id);
+});
+
+test('it reports isWriter true for an unstamped stream whatever the session', async () => {
+  await using ctx = await setupTest();
+
+  // the session-less token leaves the started row's writer unstamped
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const sessionlessClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  await sessionlessClient.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const keyPair = await getTestServiceKeyPair();
+
+  const token = await createServiceToken({
+    actingSessionId: 'session-a',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token });
+
+  const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
+
+  expect(progress.isWriter).toBeTrue();
 });

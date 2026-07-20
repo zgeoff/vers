@@ -62,6 +62,7 @@ test('it records the resync request for the requested avatar', async () => {
 
   const message: RequestResyncMessage = {
     avatarID: viewer.avatar.id,
+    claim: false,
     type: ClientMessageType.RequestResync,
   };
 

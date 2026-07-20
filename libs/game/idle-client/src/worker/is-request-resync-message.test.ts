@@ -4,7 +4,7 @@ import { createRequestResyncMessage } from './create-request-resync-message';
 import { isRequestResyncMessage } from './is-request-resync-message';
 
 test('it recognizes a request resync message', () => {
-  expect(isRequestResyncMessage(createRequestResyncMessage('avatar_1'))).toBeTrue();
+  expect(isRequestResyncMessage(createRequestResyncMessage('avatar_1', false))).toBeTrue();
 });
 
 test('it rejects a message of another type', () => {

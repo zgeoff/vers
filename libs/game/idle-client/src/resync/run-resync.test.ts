@@ -460,3 +460,479 @@ test('it leaves a live activity queue untouched instead of draining it', async (
 
   expect(stillQueued).toHaveLength(1);
 });
+
+test('it resolves active-elsewhere without claiming when another session holds the writer', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedAt: new Date(Date.now() - 2000),
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'active',
+    verifiedHead: 0,
+  });
+
+  const resume = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      activity,
+      anchor: null,
+      appendedHead: 0,
+      failureAction: 'abort' as const,
+      isWriter: false,
+      serverTime: new Date(),
+      verifiedHead: 0,
+    })),
+    mockActivityService.resumeActivity.handler((opts) => {
+      resume(opts.input);
+
+      return activity;
+    }),
+  );
+
+  const result = await runResync({
+    avatarID: viewer.avatar.id,
+    buildSimulationInput: (started) => ({
+      activity: createMockActivityInput({
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
+      avatar: createMockAvatarData(),
+    }),
+    client: ctx.client,
+    submitter: ctx.submitter,
+  });
+
+  expect(result.plan).toStrictEqual({ activityID: activity.id, kind: 'active-elsewhere' });
+  expect(result.report).toBeUndefined();
+  expect(resume).not.toHaveBeenCalled();
+});
+
+test('it takes over the writer before planning when claiming a run another session holds', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedAt: new Date(Date.now() - 2000),
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'active',
+    verifiedHead: 0,
+  });
+
+  const resume = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      activity,
+      anchor: null,
+      appendedHead: 0,
+      failureAction: 'abort' as const,
+      isWriter: false,
+      serverTime: new Date(),
+      verifiedHead: 0,
+    })),
+    mockActivityService.resumeActivity.handler((opts) => {
+      resume(opts.input);
+
+      return activity;
+    }),
+  );
+
+  const result = await runResync({
+    avatarID: viewer.avatar.id,
+    buildSimulationInput: (started) => ({
+      activity: createMockActivityInput({
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
+      avatar: createMockAvatarData(),
+    }),
+    claimWriter: true,
+    client: ctx.client,
+    submitter: ctx.submitter,
+  });
+
+  expect(result.plan.kind).toBe('attach-live');
+  expect(resume).toHaveBeenCalledExactlyOnceWith({ activityID: activity.id });
+});
+
+test('it skips the claim when this session already holds the writer', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedAt: new Date(Date.now() - 2000),
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'active',
+    verifiedHead: 0,
+  });
+
+  const resume = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.resumeActivity.handler((opts) => {
+      resume(opts.input);
+
+      return activity;
+    }),
+  );
+
+  const result = await runResync({
+    avatarID: viewer.avatar.id,
+    buildSimulationInput: (started) => ({
+      activity: createMockActivityInput({
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
+      avatar: createMockAvatarData(),
+    }),
+    claimWriter: true,
+    client: ctx.client,
+    submitter: ctx.submitter,
+  });
+
+  expect(result.plan.kind).toBe('attach-live');
+  expect(resume).not.toHaveBeenCalled();
+});
+
+test('it refetches after a claim that reveals appends the fetch missed', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedAt: new Date(Date.now() - 2000),
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'active',
+    verifiedHead: 0,
+  });
+
+  let fetches = 0;
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => {
+      fetches += 1;
+
+      // the displaced writer lands one more batch between the first fetch and the claim
+      const appendedHead = fetches === 1 ? 0 : 2;
+
+      return {
+        activity: { ...activity, appendedHead },
+        anchor: null,
+        appendedHead,
+        failureAction: 'abort' as const,
+        isWriter: fetches > 1,
+        serverTime: new Date(),
+        verifiedHead: 0,
+      };
+    }),
+    mockActivityService.resumeActivity.handler(() => ({ ...activity, appendedHead: 2 })),
+  );
+
+  const result = await runResync({
+    avatarID: viewer.avatar.id,
+    buildSimulationInput: (started) => ({
+      activity: createMockActivityInput({
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
+      avatar: createMockAvatarData(),
+    }),
+    claimWriter: true,
+    client: ctx.client,
+    submitter: ctx.submitter,
+  });
+
+  expect(fetches).toBe(2);
+  expect(result.plan).toMatchObject({ context: { appendedHead: 2 }, kind: 'attach-live' });
+});
+
+test('it plans the terminal outcome without claiming when the run ends before the claim lands', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedAt: new Date(Date.now() - 2000),
+    appendedHead: 4,
+    avatarID: viewer.avatar.id,
+    status: 'active',
+    verifiedHead: 0,
+  });
+
+  let fetches = 0;
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => {
+      fetches += 1;
+
+      // the other session stops the run between the first fetch and the claim
+      const status = fetches === 1 ? ('active' as const) : ('stopped' as const);
+
+      return {
+        activity: { ...activity, status },
+        anchor: null,
+        appendedHead: 4,
+        failureAction: 'abort' as const,
+        isWriter: false,
+        serverTime: new Date(),
+        verifiedHead: 0,
+      };
+    }),
+    mockActivityService.resumeActivity.handler((opts) => {
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  const result = await runResync({
+    avatarID: viewer.avatar.id,
+    buildSimulationInput: (started) => ({
+      activity: createMockActivityInput({
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
+      avatar: createMockAvatarData(),
+    }),
+    claimWriter: true,
+    client: ctx.client,
+    submitter: ctx.submitter,
+  });
+
+  expect(fetches).toBe(2);
+  expect(result.plan).toStrictEqual({ kind: 'none' });
+});
+
+test('it drains a stale fork before claiming, so the fork lands as an eviction, never in the claimed stream', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedAt: new Date(Date.now() - 2000),
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'active',
+    verifiedHead: 0,
+  });
+
+  // a previous worker lifetime queued a row the new writer's appends have since outrun
+  await writeQueuedCheckpoint(activity.id, createMockCheckpointBatchEntry({ version: 1 }));
+
+  const track = mock<(input: unknown) => void>();
+  const resume = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      activity,
+      anchor: null,
+      appendedHead: 0,
+      failureAction: 'abort' as const,
+      isWriter: false,
+      serverTime: new Date(),
+      verifiedHead: 0,
+    })),
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+      throw opts.errors.SESSION_EVICTED({ data: {} });
+    }),
+    mockActivityService.resumeActivity.handler((opts) => {
+      resume(opts.input);
+
+      return activity;
+    }),
+  );
+
+  const result = await runResync({
+    avatarID: viewer.avatar.id,
+    buildSimulationInput: (started) => ({
+      activity: createMockActivityInput({
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
+      avatar: createMockAvatarData(),
+    }),
+    claimWriter: true,
+    client: ctx.client,
+    submitter: ctx.submitter,
+  });
+
+  expect(track).toHaveBeenCalledBefore(resume);
+  expect(resume).toHaveBeenCalledExactlyOnceWith({ activityID: activity.id });
+  expect(result.plan.kind).toBe('attach-live');
+
+  const remaining = await readQueuedCheckpoints(activity.id);
+
+  expect(remaining).toStrictEqual([]);
+});
+
+test('it reports a lost writer for a live run another session took, then resolves active-elsewhere', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedAt: new Date(Date.now() - 2000),
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'active',
+    verifiedHead: 0,
+  });
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => ({
+      activity,
+      anchor: null,
+      appendedHead: 0,
+      failureAction: 'abort' as const,
+      isWriter: false,
+      serverTime: new Date(),
+      verifiedHead: 0,
+    })),
+  );
+
+  const onWriterLost = mock<(activityID: string) => void>();
+
+  const result = await runResync({
+    avatarID: viewer.avatar.id,
+    buildSimulationInput: (started) => ({
+      activity: createMockActivityInput({
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
+      avatar: createMockAvatarData(),
+    }),
+    client: ctx.client,
+    isActivityLive: (activityID) => activityID === activity.id,
+    onWriterLost,
+    submitter: ctx.submitter,
+  });
+
+  expect(onWriterLost).toHaveBeenCalledExactlyOnceWith(activity.id);
+  expect(result.plan).toStrictEqual({ activityID: activity.id, kind: 'active-elsewhere' });
+});
+
+test('it yields to a third session that claims over this one before the refetch', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedAt: new Date(Date.now() - 2000),
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'active',
+    verifiedHead: 0,
+  });
+
+  let fetches = 0;
+
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => {
+      fetches += 1;
+
+      // the claim's returned head reveals missed appends, and by the refetch a third session has
+      // claimed over this one
+      const appendedHead = fetches === 1 ? 0 : 2;
+
+      return {
+        activity: { ...activity, appendedHead },
+        anchor: null,
+        appendedHead,
+        failureAction: 'abort' as const,
+        isWriter: false,
+        serverTime: new Date(),
+        verifiedHead: 0,
+      };
+    }),
+    mockActivityService.resumeActivity.handler(() => ({ ...activity, appendedHead: 2 })),
+  );
+
+  const result = await runResync({
+    avatarID: viewer.avatar.id,
+    buildSimulationInput: (started) => ({
+      activity: createMockActivityInput({
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
+        failureAction: ActivityFailureAction.Abort,
+        id: started.id,
+        seed: started.seed,
+      }),
+      avatar: createMockAvatarData(),
+    }),
+    claimWriter: true,
+    client: ctx.client,
+    submitter: ctx.submitter,
+  });
+
+  expect(fetches).toBe(2);
+  expect(result.plan).toStrictEqual({ activityID: activity.id, kind: 'active-elsewhere' });
+});

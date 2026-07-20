@@ -43,6 +43,10 @@ export const getLatestActivityProgress = os.getLatestActivityProgress.handler((o
     anchor: anchor ?? null,
     appendedHead: latest.appendedHead,
     failureAction: avatar.failureAction,
+
+    // the mock backend tracks no writer session, so every caller may append
+    isWriter: true,
+
     serverTime: new Date(),
     verifiedHead: latest.verifiedHead,
   };

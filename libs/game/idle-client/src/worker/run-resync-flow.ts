@@ -31,8 +31,10 @@ import { flushPendingStop } from './flush-pending-stop';
 import { hasStopIntervened } from './has-stop-intervened';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
+import { resetSimulation } from './reset-simulation';
 import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
+import { updateWriterDisplacedStatus } from './update-writer-displaced-status';
 
 /**
  * Runs one resync end to end — the mailbox-inner body: the message handler queues it as a turn,
@@ -102,8 +104,14 @@ async function runResyncPass(
     avatarID: message.avatarID,
     buildSimulationInput: (activity) =>
       buildSimulationInput(activity, { failureAction: context.getFailureAction() }),
+    claimWriter: message.claim,
     client: context.getClient(),
     isActivityLive: (activityID) => context.getSimulation().activity?.id === activityID,
+    onWriterLost: (activityID) => {
+      if (context.getActivity()?.id === activityID) {
+        resetSimulation(context);
+      }
+    },
     onProgress: (progress) => {
       emitResyncStatus(context, { ...progress, kind: 'fast-forwarding' });
     },
@@ -294,6 +302,10 @@ function pickLatestActivityID(result: Readonly<ResyncResult>): string | undefine
     return undefined;
   }
 
+  if (result.plan.kind === 'active-elsewhere') {
+    return result.plan.activityID;
+  }
+
   return result.plan.context.activityID;
 }
 
@@ -302,6 +314,19 @@ async function applyResyncResult(
   result: Readonly<ResyncResult>,
   entryEpoch: number,
 ): Promise<void> {
+  // A fetched row that is no longer active moots any recorded displacement for it: the run is
+  // over, so neither a queued eviction settlement nor a lingering notice should tell the player
+  // it continues elsewhere.
+  const fetchedActivity = result.progress?.activity;
+
+  if (fetchedActivity !== undefined && fetchedActivity.status !== 'active') {
+    context.getSubmitter().removeEviction(fetchedActivity.id);
+
+    if (context.getWriterDisplacedActivityID() === fetchedActivity.id) {
+      updateWriterDisplacedStatus(context, null);
+    }
+  }
+
   if (result.report !== undefined) {
     await applyFastForward(context, result.report, entryEpoch);
 
@@ -314,9 +339,29 @@ async function applyResyncResult(
     return;
   }
 
+  if (result.plan.kind === 'active-elsewhere') {
+    applyActiveElsewhere(context, result.plan.activityID);
+
+    return;
+  }
+
   if (result.plan.kind === 'attach-live') {
     await applyAttachLive(context, result.plan, result.progress, entryEpoch);
   }
+}
+
+/**
+ * Settles a displaced outcome: a still-live local simulation of the activity is cleared — its
+ * appends are rejected, so leaving it ticking would show progress that never persists — and the
+ * displacement is recorded and broadcast. No `ResyncStatus` accompanies it: no catch-up
+ * progression started, so there is nothing to resolve.
+ */
+function applyActiveElsewhere(context: WorkerContext, activityID: string): void {
+  if (context.getActivity()?.id === activityID) {
+    resetSimulation(context);
+  }
+
+  updateWriterDisplacedStatus(context, activityID);
 }
 
 async function applyAttachLive(
@@ -380,6 +425,15 @@ async function applyFastForward(
   report: FastForwardReport,
   entryEpoch: number,
 ): Promise<void> {
+  // The progression already broadcast `fast-forwarding`, so it must still resolve — with the
+  // displaced outcome, not `done`, since the tallies past the confirmed head never persisted.
+  if (report.reason === 'displaced') {
+    applyActiveElsewhere(context, report.activity.id);
+    emitResyncStatus(context, { activityID: report.activity.id, kind: 'active-elsewhere' });
+
+    return;
+  }
+
   if (report.activity.status === 'active' && !report.finalRowTerminal) {
     await applyFastForwardAttach(context, report, entryEpoch);
   }
@@ -487,6 +541,10 @@ async function setLiveSimulationOrStopBack(
   context.setSimulation(simulation);
 
   registerSimulationListeners(context, simulation);
+
+  // an install resolves any recorded displacement: this session either took the writer back or
+  // moved on to a different run
+  updateWriterDisplacedStatus(context, null);
 }
 
 function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>): void {
