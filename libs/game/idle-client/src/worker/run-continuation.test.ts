@@ -88,7 +88,6 @@ test('it hands a foreign-claim CONFLICT to a resync that attaches the conflictin
 
   const installed = context.getSimulation();
 
-  invariant(installed !== null, 'expected the resync to install a simulation');
   expect(installed).not.toBe(simulation);
   expect(installed.activity?.id).toBe(conflictingActivity.id);
   expect(context.getActivity()).toStrictEqual(conflictingActivity);

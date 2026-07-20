@@ -67,7 +67,6 @@ test('it replaces the stopped simulation with a fresh empty one', async () => {
 
   const replacement = context.getSimulation();
 
-  invariant(replacement !== null, 'expected a replacement simulation');
   expect(replacement).not.toBe(simulation);
 
   expect(replacement.getSnapshot()).toStrictEqual({

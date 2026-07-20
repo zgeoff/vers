@@ -3,7 +3,8 @@ import { resolveCheckpointQueueDB } from './resolve-checkpoint-queue-db';
 import type { PendingStartIntent } from './types';
 
 /**
- * Reads the outstanding continuation-start intent, `undefined` when none is held.
+ * Reads the held continuation-start intent, narrowing past the other record shapes sharing the
+ * preferences store; `undefined` when none is held.
  */
 export async function readPendingStartIntent(): Promise<PendingStartIntent | undefined> {
   const db = await resolveCheckpointQueueDB();

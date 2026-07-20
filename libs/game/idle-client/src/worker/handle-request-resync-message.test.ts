@@ -359,7 +359,6 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
 
   const simulation = ctx.context.getSimulation();
 
-  invariant(simulation !== null, 'expected the resync to install a live simulation');
   expect(simulation.activity?.id).toBe(activity.id);
 
   // submitting the reconstructed sim's next checkpoint proves the registered cursor chains onto
@@ -467,8 +466,6 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
 
   const simulation = ctx.context.getSimulation();
 
-  invariant(simulation !== null, 'expected the fast-forward to install a live simulation');
-
   // the live sim attaches to the fast-forward's final, never-attempted continuation — not the
   // first activity its one completed attempt already registered
   expect(simulation.activity?.id).toBe(minted.id);
@@ -523,8 +520,6 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
 
   const simulation = ctx.context.getSimulation();
 
-  invariant(simulation !== null, 'expected the fast-forward to install a live simulation');
-
   // the live sim attaches to the fast-forward's own head row — no continuation was ever started
   expect(simulation.activity?.id).toBe(activity.id);
 
@@ -578,7 +573,6 @@ test('it attaches a fresh login live without broadcasting any catch-up status', 
 
   const simulation = ctx.context.getSimulation();
 
-  invariant(simulation !== null, 'expected the resync to install a live simulation');
   expect(simulation.activity?.id).toBe(activity.id);
 });
 
@@ -745,7 +739,6 @@ test("it starts a fresh row, installs a live simulation with the worker's failur
 
   const simulation = ctx.context.getSimulation();
 
-  invariant(simulation !== null, 'expected the resync to install a live simulation');
   expect(simulation.activity?.id).toBe(minted.id);
   expect(simulation.failureAction).toBe(ActivityFailureAction.Retry);
 
@@ -794,8 +787,6 @@ test('it attaches the foreign row that races in ahead of the continuation', asyn
   await handleRequestResyncMessage(ctx.context, message);
 
   const installed = ctx.context.getSimulation();
-
-  invariant(installed !== null, 'expected the resync to attach the racing row');
 
   const racing = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: viewer.avatar.id, status: 'active' }),
@@ -1115,7 +1106,6 @@ test('it delivers a blocked intent after the pass closes its source row and atta
 
   const installed = ctx.context.getSimulation();
 
-  invariant(installed !== null, 'expected the second pass to install the minted row');
   expect(installed.activity?.id).toBe(minted.id);
 
   const heldIntent = await readPendingStartIntent();
