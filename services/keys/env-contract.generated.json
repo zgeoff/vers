@@ -1,0 +1,4 @@
+{
+  "optional": ["LOG_LEVEL", "OTEL_EXPORTER_OTLP_ENDPOINT", "PORT", "SENTRY_DSN"],
+  "required": ["ROLL_KEY_ROOTS", "SERVICE_AUTH_PUBLIC_KEY"]
+}

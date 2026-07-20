@@ -144,6 +144,7 @@
       "turbo": "2.10.3",
       "typescript": "7.0.2",
       "vite": "8.1.4",
+      "yaml": "2.9.0",
       "zod": "4.4.3",
       "zustand": "5.0.14"
     }
@@ -166,6 +167,9 @@
     "codegen:styles": "turbo run codegen",
     "codegen:types": "turbo run typegen",
     "deploy": "bun scripts/src/bin/deploy.ts",
+    "env:contract": "bun scripts/src/bin/write-env-contracts.ts",
+    "env:contract:check": "bun scripts/src/bin/write-env-contracts.ts --check",
+    "env:coverage": "bun scripts/src/bin/check-env-coverage.ts",
     "env:pull": "bun scripts/src/bin/env-pull.ts",
     "pg:dev:refresh-base": "bun scripts/src/bin/pg-dev-refresh-base.ts",
     "pg:dev:sweep": "bun scripts/src/bin/pg-dev-sweep.ts",

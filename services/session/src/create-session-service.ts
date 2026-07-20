@@ -4,8 +4,8 @@ import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import * as jose from 'jose';
 import type { Kysely } from 'kysely';
-import * as z from 'zod';
 import { buildSessionRouter } from './build-router';
+import { envShape } from './env-shape';
 
 interface CreateSessionServiceConfig {
   /**
@@ -13,14 +13,6 @@ interface CreateSessionServiceConfig {
    */
   readonly db?: Kysely<DB>;
 }
-
-const envShape = {
-  API_IDENTIFIER: z.string().describe('Issuer and audience stamped into signed user tokens'),
-  DATABASE_URL: z
-    .string()
-    .describe('Postgres connection string for the session and step-up tables'),
-  JWT_SIGNING_PRIVKEY: z.string().describe('RS256 PKCS8 private key user tokens are signed with'),
-};
 
 /**
  * The production entrypoint and tests both boot through this one shared config.

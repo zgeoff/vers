@@ -5,8 +5,8 @@ import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
-import * as z from 'zod';
 import { buildActivityRouter } from './build-router';
+import { envShape } from './env-shape';
 
 const KEY_VERSION = 1;
 
@@ -24,17 +24,6 @@ interface CreateActivityServiceConfig {
    */
   readonly simTimeCapMs?: number;
 }
-
-const envShape = {
-  DATABASE_URL: z.string().describe('Postgres connection string for the activity checkpoint store'),
-  REPLAY_SERVICE_URL: z
-    .url()
-    .describe('Origin of the replay service a committed append pokes to drain claimable work'),
-  SERVICE_AUTH_PRIVATE_KEY: z
-    .string()
-    .min(1)
-    .describe('Ed25519 PKCS8 private key this service signs its replay wake-poke tokens with'),
-};
 
 /**
  * Boots the activities service; the production entrypoint and tests both call this as the one shared config.

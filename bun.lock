@@ -894,8 +894,10 @@
       "name": "@vers/scripts",
       "version": "0.0.0",
       "dependencies": {
+        "@dotenvx/dotenvx": "catalog:",
         "@vers/db": "workspace:*",
         "@vers/release-registry": "workspace:*",
+        "@vers/service-runtime": "workspace:*",
         "@vers/sim-registry": "workspace:*",
         "@zgeoff/dbhub": "catalog:",
         "commander": "catalog:",
@@ -905,6 +907,7 @@
         "p-retry": "catalog:",
         "postgres": "catalog:",
         "tiny-invariant": "catalog:",
+        "yaml": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -1291,6 +1294,7 @@
     "turbo": "2.10.3",
     "typescript": "7.0.2",
     "vite": "8.1.4",
+    "yaml": "2.9.0",
     "zod": "4.4.3",
     "zustand": "5.0.14",
   },

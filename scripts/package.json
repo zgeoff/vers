@@ -11,8 +11,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@dotenvx/dotenvx": "catalog:",
     "@vers/db": "workspace:*",
     "@vers/release-registry": "workspace:*",
+    "@vers/service-runtime": "workspace:*",
     "@vers/sim-registry": "workspace:*",
     "@zgeoff/dbhub": "catalog:",
     "commander": "catalog:",
@@ -22,6 +24,7 @@
     "p-retry": "catalog:",
     "postgres": "catalog:",
     "tiny-invariant": "catalog:",
+    "yaml": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
