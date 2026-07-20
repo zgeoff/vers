@@ -181,3 +181,11 @@ notifies `vers alarms`. It alerts on the threshold alone, never on no data — t
 when a wake delivery exhausts its retries, so a quiet dataset is the healthy default, not a down
 exporter. It is the explicit signal that the replay queue may go undrained despite an activity
 appending unverified work.
+
+## Alarms channel
+
+Axiom monitors, the CI pipeline, and Bugsink post to one Discord channel. The CI `alert` job posts a
+structured embed — a `[CI] critical — …` title, the failing run's link, and a red severity colour
+(`#e5484d`, decimal `15026253`) — in `.github/workflows/main.yml`. Axiom and Bugsink post their
+tools' stock formats: Axiom's custom-webhook notifier, the one templated body it offers, is not
+enabled on the plan, and Bugsink's Discord messaging service exposes no templating.

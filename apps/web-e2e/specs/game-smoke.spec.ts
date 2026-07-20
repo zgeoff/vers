@@ -4,10 +4,6 @@ import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 test('it renders respite, avatar, and explore for a signed-in caller without console errors', async ({
   page,
 }) => {
-  // three client-side game navigations, each holding a mounted canvas, run past other specs'
-  // budget under CI's shared dev server and CPU contention
-  test.slow();
-
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/login');
 
@@ -37,7 +33,7 @@ test('it renders respite, avatar, and explore for a signed-in caller without con
   // the heading text also appears as the nav rail's 'Respite' link label, so a bare text locator
   // would break strict mode
   await expect(page.getByRole('heading', { name: 'Respite' })).toBeVisible();
-  await expect(page.locator('canvas').first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('canvas').first()).toBeVisible();
 
   // guard against the app shipping without its generated stylesheet: at least one sheet must be
   // linked, preflight must have applied (body margin reset), and the preset's global token
@@ -61,7 +57,7 @@ test('it renders respite, avatar, and explore for a signed-in caller without con
   await page.getByRole('link', { exact: true, name: 'Explore' }).click();
 
   await expect(page).toHaveURL(/\/explore$/);
-  await expect(page.locator('canvas').first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('canvas').first()).toBeVisible();
 
   expect(consoleErrors).toStrictEqual([]);
 });

@@ -42,6 +42,9 @@
       "dependencies": {
         "@conform-to/react": "catalog:",
         "@conform-to/zod": "catalog:",
+        "@fontsource/chakra-petch": "catalog:",
+        "@fontsource/ibm-plex-mono": "catalog:",
+        "@fontsource/manrope": "catalog:",
         "@opentelemetry/api": "catalog:",
         "@orpc/client": "catalog:",
         "@orpc/contract": "catalog:",
@@ -1159,6 +1162,9 @@
     "@elysiajs/opentelemetry": "1.4.11",
     "@epic-web/totp": "4.0.1",
     "@faker-js/faker": "10.5.0",
+    "@fontsource/chakra-petch": "5.2.7",
+    "@fontsource/ibm-plex-mono": "5.2.7",
+    "@fontsource/manrope": "5.2.8",
     "@happy-dom/global-registrator": "20.10.6",
     "@ladle/react": "5.1.1",
     "@msw/data": "1.1.6",
@@ -1541,6 +1547,12 @@
     "@floating-ui/dom": ["@floating-ui/dom@1.7.6", "", { "dependencies": { "@floating-ui/core": "^1.7.5", "@floating-ui/utils": "^0.2.11" } }, "sha512-9gZSAI5XM36880PPMm//9dfiEngYoC6Am2izES1FF406YFsjvyBMmeJ2g4SAju3xWwtuynNRFL2s9hgxpLI5SQ=="],
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
+
+    "@fontsource/chakra-petch": ["@fontsource/chakra-petch@5.2.7", "", {}, "sha512-GLbun5WZJNAEc8FtWxwcgo+4Kurqdwejvf671l+YfIjyQgPvTjyxXYP7Ffg2HAY89NGnp3oOvKQjRzfm/fBECw=="],
+
+    "@fontsource/ibm-plex-mono": ["@fontsource/ibm-plex-mono@5.2.7", "", {}, "sha512-MKAb8qV+CaiMQn2B0dIi1OV3565NYzp3WN5b4oT6LTkk+F0jR6j0ZN+5BKJiIhffDC3rtBULsYZE65+0018z9w=="],
+
+    "@fontsource/manrope": ["@fontsource/manrope@5.2.8", "", {}, "sha512-gJHJmcuUk7qWcNCfcAri/DJQtXtBYqi9yKratr4jXhSo0I3xUtNNKI+igQIcw5c+m95g0vounk8ZnX/kb8o0TA=="],
 
     "@gar/promise-retry": ["@gar/promise-retry@1.0.3", "", {}, "sha512-GmzA9ckNokPypTg10pgpeHNQe7ph+iIKKmhKu3Ob9ANkswreCx7R3cKmY781K8QK3AqVL3xVh9A42JvIAbkkSA=="],
 
