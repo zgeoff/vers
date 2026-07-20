@@ -53,3 +53,35 @@ test('it settles a throwing flow without stranding the next', async () => {
 
   expect(order).toStrictEqual(['second-ran']);
 });
+
+test('it serializes flows of different kinds on the one chain', async () => {
+  const context = createStubWorkerContext();
+  const order: Array<string> = [];
+  const gate = Promise.withResolvers<void>();
+
+  const start = runOnLifecycleChain(context, 'start', async () => {
+    order.push('start-entered');
+
+    await gate.promise;
+
+    order.push('start-settled');
+  });
+
+  const resync = runOnLifecycleChain(context, 'resync', () => {
+    order.push('resync-entered');
+
+    return Promise.resolve();
+  });
+
+  await waitFor(() => {
+    expect(order).toContain('start-entered');
+  });
+
+  expect(order).toStrictEqual(['start-entered']);
+
+  gate.resolve();
+
+  await Promise.all([start, resync]);
+
+  expect(order).toStrictEqual(['start-entered', 'start-settled', 'resync-entered']);
+});

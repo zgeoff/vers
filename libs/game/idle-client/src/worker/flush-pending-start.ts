@@ -55,6 +55,12 @@ export async function flushPendingStart(context: WorkerContext): Promise<Pending
     return 'none';
   }
 
+  // an expired or insufficient session is expected behavior with one remedy — a fresh sign-in —
+  // so the intent survives it, exactly as it survives a transport failure
+  if (isDefinedError(error) && (error.code === 'UNAUTHORIZED' || error.code === 'FORBIDDEN')) {
+    return 'held';
+  }
+
   if (isDefinedError(error)) {
     reportWorkerFault('start', error);
 

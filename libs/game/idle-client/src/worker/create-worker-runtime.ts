@@ -285,8 +285,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
         await submitter.flushHeld();
 
-        // A stop raised offline delivers here even when no resync will follow — the self-resync
-        // below is skipped while a simulation is live, and after a stop one always is.
+        // A stop raised offline delivers here even when no resync follows; a stopped runtime has
+        // no activity, so the self-resync below also fires and resolves to a no-op plan.
         await flushPendingStop(context);
 
         // the held continuation is the fresher signal: it was raised at the most recent boundary

@@ -13,6 +13,7 @@ import { isSetActivityMessage } from './is-set-activity-message';
 import { isSetFailureActionMessage } from './is-set-failure-action-message';
 import { isStartActivityMessage } from './is-start-activity-message';
 import { isStopActivityMessage } from './is-stop-activity-message';
+import { runOnLifecycleChain } from './run-on-lifecycle-chain';
 import type { WorkerContext } from './types';
 
 export async function handleClientMessage(
@@ -25,7 +26,13 @@ export async function handleClientMessage(
   }
 
   if (isSetActivityMessage(event.data)) {
-    await handleSetActivityMessage(context, event.data);
+    const message = event.data;
+
+    // installs mutate the runtime, so an externally raised install takes a chain slot like every
+    // other lifecycle flow
+    await runOnLifecycleChain(context, 'message-routing', () =>
+      handleSetActivityMessage(context, message),
+    );
   }
 
   if (isSetFailureActionMessage(event.data)) {

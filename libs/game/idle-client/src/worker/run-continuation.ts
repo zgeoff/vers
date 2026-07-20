@@ -2,6 +2,7 @@ import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput, createSimulation } from '@vers/idle-core';
+import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createRequestResyncMessage } from './create-request-resync-message';
@@ -87,6 +88,7 @@ async function runContinuationFlow(
 
     if (row.id === activity.id && !hasStopIntervened(context, entryEpoch)) {
       await parkContinuation(activity);
+      await removeParkIfStopped(context, entryEpoch, activity);
     }
 
     await stopAndClear(context, simulation);
@@ -100,6 +102,7 @@ async function runContinuationFlow(
   if (!isDefinedError(error)) {
     if (!hasStopIntervened(context, entryEpoch)) {
       await parkContinuation(activity);
+      await removeParkIfStopped(context, entryEpoch, activity);
     }
 
     emitConnectionStatus(context, false);
@@ -139,6 +142,21 @@ async function stopAndClear(context: WorkerContext, simulation: Simulation): Pro
 
     context.setSimulation(replacement);
     context.setActivity(null);
+  }
+}
+
+/**
+ * Removes a just-parked intent when a stop landed while the park's durable write was in flight —
+ * the stop's own clear can read the store before the write commits, and a surviving intent would
+ * resume the run the player ended.
+ */
+async function removeParkIfStopped(
+  context: WorkerContext,
+  entryEpoch: number,
+  activity: Readonly<ActivityData>,
+): Promise<void> {
+  if (hasStopIntervened(context, entryEpoch)) {
+    await removePendingStartIntent(`continue_${activity.id}`);
   }
 }
 
