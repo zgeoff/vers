@@ -15,6 +15,7 @@ import type {
   StaleHeadPayload,
   TerminalStatusPayload,
 } from '../types';
+import { sendReplayWake } from '../wake/send-replay-wake';
 import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail';
 
 interface TrackActivityProgressDeps {
@@ -194,6 +195,7 @@ export async function trackActivityProgress(
     }
 
     recordTerminalTransition('capped');
+    sendReplayWake();
     throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: capOutcome.appendedHead } });
   }
 
@@ -299,6 +301,10 @@ export async function trackActivityProgress(
   // it.
   if (appendOutcome.kind === 'stopped') {
     recordTerminalTransition('stopped');
+  }
+
+  if (appendOutcome.kind !== 'resolved') {
+    sendReplayWake();
   }
 
   return { appendedHead: appendOutcome.appendedHead };

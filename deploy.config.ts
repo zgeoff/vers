@@ -76,7 +76,6 @@ export default defineDeployManifest({
       buildArgsFromEnv: ['SIM_ENGINE_HASH', 'BUN_VERSION'],
       configDir: 'services/replay',
       dockerfile: 'services/replay/Dockerfile',
-      minStartedMachines: 1,
       simVersionProvider: true,
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-replay' },
     },

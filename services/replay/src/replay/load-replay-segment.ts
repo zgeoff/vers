@@ -53,7 +53,7 @@ export async function loadReplaySegment(
 
   const rows = await db
     .selectFrom('activityCheckpoints')
-    .select(['hash', 'payload', 'prevHash', 'version'])
+    .select(['appendedAt', 'hash', 'payload', 'prevHash', 'version'])
     .where('activityId', '=', frontier.activityID)
     .where('version', '<=', frontier.appendedHead)
     .orderBy('version')
@@ -85,6 +85,7 @@ export async function loadReplaySegment(
     },
     chain,
     checkpoints: rows.map((row) => ({
+      appendedAt: row.appendedAt,
       hash: row.hash,
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is schema-validated contract input
       payload: row.payload as CheckpointPayload,

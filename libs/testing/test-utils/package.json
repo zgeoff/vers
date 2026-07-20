@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@happy-dom/global-registrator": "catalog:",
+    "@opentelemetry/api": "catalog:",
+    "@opentelemetry/sdk-metrics": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
     "@orpc/openapi": "catalog:",

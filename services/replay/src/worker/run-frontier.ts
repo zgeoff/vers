@@ -7,7 +7,9 @@ import invariant from 'tiny-invariant';
 import { applyVerifiedSegment } from '../apply/apply-verified-segment';
 import { parkActivity } from '../dispatch/park-activity';
 import { runReplaySegment } from '../dispatch/run-replay-segment';
+import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { recordRejection } from '../metrics/record-rejection';
+import { recordVerificationLag } from '../metrics/record-verification-lag';
 import { rollRewardItems } from '../mint/roll-reward-items';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
 import { buildSegmentDuration } from '../replay/build-segment-duration';
@@ -297,6 +299,16 @@ async function applyMatch(
     xpDelta: verifiedXPDelta,
   });
 
+  if (result.applied) {
+    const now = Date.now();
+
+    for (const checkpoint of segment.checkpoints.slice(segment.verifiedHead, lastStored.version)) {
+      if (checkpoint.appendedAt !== undefined) {
+        recordVerificationLag((now - checkpoint.appendedAt.getTime()) / 1000);
+      }
+    }
+  }
+
   const effect: PendingCacheEffect =
     result.applied && !forwardExited && driver !== undefined
       ? {
@@ -364,6 +376,8 @@ async function countFailedAttempt(
       { activityID: segment.activity.id },
       'replay attempts exhausted; activity quarantined',
     );
+
+    recordIterationFailure('quarantined');
 
     return { kind: 'quarantined' };
   }

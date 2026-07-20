@@ -24,12 +24,16 @@ alone.
 Every app scales to zero. `auto_stop_machines = 'suspend'` parks an idle machine with its memory
 snapshot for sub-second wake, and a service wakes on its first request. Two deviations:
 
-- `app-web` and `service-replay` keep one machine warm (`min_machines_running = 1`, enforced by
-  `deploy verify` through the manifest's `minStartedMachines`): `app-web` so a visitor never waits
-  on a cold start, and `service-replay` because its poll-driven worker receives no inbound requests
-  and would stop claiming chains the moment its machines suspend.
+- `app-web` keeps one machine warm (`min_machines_running = 1`, enforced by `deploy verify` through
+  the manifest's `minStartedMachines`) so a visitor never waits on a cold start.
 - `service-email` stops rather than suspends (`auto_stop_machines = 'stop'`) — the queue-hosting
   policy ([queues](./queues.md)).
+
+`service-replay` carries no inbound player traffic of its own — `service-activity` pokes it over
+flycast (`POST /wake`) each time an append advances an activity past its verified cursor, which
+wakes a suspended machine like any other flycast request. The handler drains every claimable chain
+before responding, holding the request open so the machine stays up until the queue is actually
+empty; with nothing to poke, `service-replay`'s Neon compute scales to zero alongside its machine.
 
 ## Networking
 
@@ -53,12 +57,13 @@ contract's to declare — [provision from nothing](#provision-from-nothing) sets
 
 `SERVICE_AUTH_PUBLIC_KEY` and `SERVICE_AUTH_PRIVATE_KEY` are one Ed25519 keypair: the SPKI public
 key every service verifies inbound calls with, and the PKCS8 private half that signs outbound s2s
-tokens ([auth](../services/auth.md)). Two callers hold the private half: `app-web` toward the domain
-services, and `service-replay`'s worker toward version-pinned replay providers. Each token's `aud`
-is the target's registered service name (`service-user`). Both signers hold the same key
-deliberately. Verification checks signature, `iss`, and `aud` only, so any holder can mint a token
-for any service — the private half is confined to first-party callers, and a per-caller key split
-buys nothing until a caller with narrower trust exists.
+tokens ([auth](../services/auth.md)). Three callers hold the private half: `app-web` toward the
+domain services, `service-replay` toward version-pinned replay providers, and `service-activity`
+toward `service-replay`'s `/wake` endpoint. Each token's `aud` is the target's registered service
+name (`service-replay`). Every signer holds the same key deliberately. Verification checks
+signature, `iss`, and `aud` only, so any holder can mint a token for any service — the private half
+is confined to first-party callers, and a per-caller key split buys nothing until a caller with
+narrower trust exists.
 
 The remaining keys with cross-service meaning:
 
@@ -334,11 +339,16 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
    op item create --vault vers --category "API Credential" --title s2s-auth \
      "public-key[text]=$(cat s2s.pub)"
 
-   for svc in activity avatar user verification; do
+   for svc in avatar user verification; do
      fly secrets set -a "vers-service-$svc" \
        DATABASE_URL="$DATABASE_URL" \
        SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)"
    done
+
+   fly secrets set -a vers-service-activity \
+     DATABASE_URL="$DATABASE_URL" \
+     SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)" \
+     SERVICE_AUTH_PRIVATE_KEY="$(cat s2s.key)"
 
    fly secrets set -a vers-service-keys \
      SERVICE_AUTH_PUBLIC_KEY="$(cat s2s.pub)" \

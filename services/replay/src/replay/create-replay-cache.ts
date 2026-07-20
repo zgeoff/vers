@@ -22,13 +22,16 @@ interface CachedReplayStream {
  * An in-memory, least-recently-used cache of live in-process replay streams, keyed by activity id.
  * A `get` counts as a use and bumps the entry to most-recently-used; a `set` past `cap`, and an
  * explicit `remove`, stop the displaced entry's driver so its underlying generator cleans up
- * without waiting on GC. Never persisted — a worker restart is a cold cache, and every entry's
- * driver rebuilds lazily from the activity's `Started` snapshot on its next replay.
+ * without waiting on GC. `stopAll` empties the cache and stops every entry still held, so a caller
+ * done with the cache leaves no live driver behind. Never persisted — a worker restart is a cold
+ * cache, and every entry's driver rebuilds lazily from the activity's `Started` snapshot on its
+ * next replay.
  */
 export interface ReplayCache {
   get: (activityID: string) => CachedReplayStream | undefined;
   remove: (activityID: string) => void;
   set: (activityID: string, entry: Readonly<CachedReplayStream>) => void;
+  stopAll: () => void;
 }
 
 /**
@@ -101,7 +104,15 @@ export function createReplayCache(
     }
   };
 
-  return { get, remove, set };
+  const stopAll = (): void => {
+    for (const entry of entries.values()) {
+      void stopDriver(entry.driver);
+    }
+
+    entries.clear();
+  };
+
+  return { get, remove, set, stopAll };
 }
 
 function printDriverStopError(error: unknown): void {

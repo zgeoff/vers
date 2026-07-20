@@ -2,12 +2,14 @@ import { authedRoute, defineErrors } from '@vers/contract-base';
 import * as z from 'zod';
 import { ReplaySegmentInputSchema } from './replay-segment-input-schema';
 import { ReplaySegmentOutputSchema } from './replay-segment-output-schema';
+import { WakeOutputSchema } from './wake-output-schema';
 
 const SimVersionMismatchDataSchema = z.object({ providerSimVersion: z.string() });
 
 /**
  * The replay service's API: one provider endpoint the dispatcher calls to re-run a simulation
- * segment against this deploy's baked engine.
+ * segment against this deploy's baked engine, and one drain endpoint that wakes the machine to
+ * work through whatever the queue currently holds.
  */
 export const replayContract = {
   replaySegment: authedRoute
@@ -27,6 +29,15 @@ export const replayContract = {
         },
       }),
     ),
+
+  wake: authedRoute
+    .route({
+      method: 'POST',
+      path: '/wake',
+      summary: 'Drain the replay queue: claim and adjudicate every chain with claimable work',
+    })
+    .input(z.object({}))
+    .output(WakeOutputSchema),
 };
 
 export type ReplayContract = typeof replayContract;

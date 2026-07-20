@@ -18,3 +18,5 @@ export type { ReplaySegmentInput } from './replay-segment-input-schema';
 export { ReplaySegmentInputSchema } from './replay-segment-input-schema';
 export type { ReplaySegmentOutput } from './replay-segment-output-schema';
 export { ReplaySegmentOutputSchema } from './replay-segment-output-schema';
+export type { WakeOutput } from './wake-output-schema';
+export { WakeOutputSchema } from './wake-output-schema';

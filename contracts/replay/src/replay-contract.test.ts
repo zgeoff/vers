@@ -17,6 +17,13 @@ test('it declares UNAUTHORIZED, FORBIDDEN, and a bespoke SIM_VERSION_MISMATCH on
   expect(replaySegmentDef.errorMap.SIM_VERSION_MISMATCH?.status).toBe(409);
 });
 
+test('it declares no bespoke error codes on wake', () => {
+  const wakeDef = replayContract.wake['~orpc'];
+
+  expect(wakeDef.outputSchema).toBeDefined();
+  expect(Object.keys(wakeDef.errorMap).toSorted()).toStrictEqual(['FORBIDDEN', 'UNAUTHORIZED']);
+});
+
 test('it generates a valid OpenAPI document from the replay contract', async () => {
   const generator = new OpenAPIGenerator({
     schemaConverters: [new ZodToJsonSchemaConverter()],

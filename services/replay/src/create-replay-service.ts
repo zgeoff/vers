@@ -33,8 +33,8 @@ const envShape = {
 
 /**
  * The booted replay service, plus the `db` and s2s signing key its RPC router resolved at boot —
- * `serve.ts` starts the replay worker alongside the router from these same resolved values,
- * rather than re-deriving them from `env` a second time.
+ * `buildReplayRouter` hands both to the `wake` procedure's drain handler, rather than re-deriving
+ * them from `env` a second time.
  */
 export interface ReplayService extends Service<typeof envShape> {
   readonly db: Kysely<DB>;
@@ -68,7 +68,13 @@ export async function createReplayService(
 
       resolvedPrivateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
 
-      return buildReplayRouter({ simVersion: runtime.env.SIM_ENGINE_HASH });
+      return buildReplayRouter({
+        db: resolvedDB,
+        keysServiceURL: runtime.env.KEYS_SERVICE_URL,
+        logger: runtime.logger,
+        privateKey: resolvedPrivateKey,
+        simVersion: runtime.env.SIM_ENGINE_HASH,
+      });
     },
     envShape,
     name: 'service-replay',

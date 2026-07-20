@@ -8,9 +8,9 @@ export {
   logsDatasetName,
   mcpTokenName,
   metricsDatasetName,
+  replayPokeFailedMonitorName,
   serverErrorsMonitorName,
   tracesDatasetName,
-  verificationLagMonitorName,
 } from './axiom.ts';
 
 const config = new pulumi.Config();
