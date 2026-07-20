@@ -19,9 +19,8 @@ import { readPendingStartIntent } from '../submission/read-pending-start-intent'
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
-import type { RequestResyncMessage, ResyncStatus } from '../types';
+import type { ResyncStatus } from '../types';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
-import { createConnectionStatusMessage } from './create-connection-status-message';
 import { createFailureActionStatusMessage } from './create-failure-action-status-message';
 import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { createResyncStatusMessage } from './create-resync-status-message';
@@ -37,23 +36,24 @@ import type { WorkerContext } from './types';
 import { updateWriterDisplacedStatus } from './update-writer-displaced-status';
 
 /**
- * Runs one resync end to end — the mailbox-inner body: the message handler queues it as a turn,
- * while the start flow and continuations call it directly from inside their own turns (queueing
- * there would deadlock). Every install re-checks `entryEpoch`, the caller's stop-epoch capture,
- * so a stop raised after the caller began — including during a queue wait — aborts the install.
- * Only a plan covering a real away period broadcasts a `ResyncStatus` progression ending on
- * `done` or `capped`, so a tab's welcome-back UI always resolves; zero-gap outcomes stay silent
- * so a fresh login never opens it. An outright failure reports the fault and broadcasts
- * `failed`, never a connection-status change, and never rejects — a tab's retry re-requests it.
+ * Runs one resync end to end — the mailbox-inner body: the reconnect recovery queues it as a
+ * turn, while the start flow and continuations call it directly from inside their own turns
+ * (queueing there would deadlock). Every install re-checks `entryEpoch`, the caller's stop-epoch
+ * capture, so a stop raised after the caller began — including during a queue wait — aborts the
+ * install. Only a plan covering a real away period broadcasts a `ResyncStatus` progression ending
+ * on `done` or `capped`, so a tab's welcome-back UI always resolves; zero-gap outcomes stay
+ * silent so a fresh login never opens it. An outright failure reports the fault and broadcasts
+ * `failed`, never a connection-status change, and never rejects — a tab's retry re-signals it.
  * `UNAUTHORIZED` broadcasts `session-expired` instead, with no fault report: the only remedy is
  * a fresh sign-in, so the tab renders that rather than a futile retry.
  */
 export async function runResyncFlow(
   context: WorkerContext,
-  message: RequestResyncMessage,
+  avatarID: string,
+  claim: boolean,
   entryEpoch: number,
 ): Promise<void> {
-  context.setResyncAvatarID(message.avatarID);
+  context.setResyncAvatarID(avatarID);
 
   try {
     // Held batches must land before the progress fetch, or the resync plans against an appended
@@ -63,7 +63,7 @@ export async function runResyncFlow(
     // An undelivered stop gates the whole resync: until the server row reads closed, the progress
     // fetch would find it active and plan a catch-up for a run the player already ended.
     if ((await flushPendingStop(context)) === 'undelivered') {
-      emitResyncStatus(context, { avatarID: message.avatarID, kind: 'failed' });
+      emitResyncStatus(context, { avatarID, kind: 'failed' });
 
       return;
     }
@@ -72,21 +72,21 @@ export async function runResyncFlow(
     // the row it minted and the plan attaches it. Offline is the only entry-time signal; every
     // other outcome resolves after the pass, once fetched progress can tell a live intent from a
     // stale one.
-    const startFlush = await flushPendingStart(context, entryEpoch, message.avatarID);
+    const startFlush = await flushPendingStart(context, entryEpoch, avatarID);
 
     if (startFlush.outcome === 'undelivered') {
-      emitConnectionStatus(context, false);
+      context.updateConnectivity(false);
     }
 
-    const result = await runResyncPass(context, message, entryEpoch);
+    const result = await runResyncPass(context, avatarID, claim, entryEpoch);
 
-    await applyStartFlush(context, message, entryEpoch, startFlush, result);
+    await applyStartFlush(context, avatarID, claim, entryEpoch, startFlush, result);
   } catch (error) {
     if (error instanceof ORPCError && error.code === 'UNAUTHORIZED') {
-      emitResyncStatus(context, { avatarID: message.avatarID, kind: 'session-expired' });
+      emitResyncStatus(context, { avatarID, kind: 'session-expired' });
     } else {
       reportWorkerFault('resync', error);
-      emitResyncStatus(context, { avatarID: message.avatarID, kind: 'failed' });
+      emitResyncStatus(context, { avatarID, kind: 'failed' });
     }
   }
 }
@@ -97,14 +97,15 @@ export async function runResyncFlow(
  */
 async function runResyncPass(
   context: WorkerContext,
-  message: RequestResyncMessage,
+  avatarID: string,
+  claim: boolean,
   entryEpoch: number,
 ): Promise<ResyncResult> {
   const result = await runResync({
-    avatarID: message.avatarID,
+    avatarID,
     buildSimulationInput: (activity) =>
       buildSimulationInput(activity, { failureAction: context.getFailureAction() }),
-    claimWriter: message.claim,
+    claimWriter: claim,
     client: context.getClient(),
     isActivityLive: (activityID) => context.getSimulation().activity?.id === activityID,
     onWriterLost: (activityID) => {
@@ -122,15 +123,15 @@ async function runResyncPass(
       // rather than delivered to the wrong row.
       const cached = await readFailureActionCache();
 
-      if (context.isFailureActionDirty() && cached?.avatarID === message.avatarID) {
-        await flushFailureAction(context, message.avatarID);
+      if (context.isFailureActionDirty() && cached?.avatarID === avatarID) {
+        await flushFailureAction(context, avatarID);
 
         return;
       }
 
       await updateFailureActionFromServer(
         context,
-        message.avatarID,
+        avatarID,
         toActivityFailureAction(progress.failureAction),
       );
     },
@@ -154,7 +155,8 @@ async function runResyncPass(
  */
 async function applyStartFlush(
   context: WorkerContext,
-  message: RequestResyncMessage,
+  avatarID: string,
+  claim: boolean,
   entryEpoch: number,
   startFlush: Readonly<PendingStartFlushResult>,
   result: Readonly<ResyncResult>,
@@ -166,13 +168,13 @@ async function applyStartFlush(
   }
 
   if (startFlush.outcome === 'blocked') {
-    const retryFlush = await flushPendingStart(context, entryEpoch, message.avatarID);
+    const retryFlush = await flushPendingStart(context, entryEpoch, avatarID);
 
     if (retryFlush.outcome === 'delivered') {
-      await runResyncPass(context, message, entryEpoch);
+      await runResyncPass(context, avatarID, claim, entryEpoch);
       await stopBackUninstalledRow(context, retryFlush.started, entryEpoch);
     } else if (retryFlush.outcome === 'undelivered') {
-      emitConnectionStatus(context, false);
+      context.updateConnectivity(false);
     }
 
     return;
@@ -576,14 +578,6 @@ function emitFailureActionStatus(
 
 function emitCapStatus(context: WorkerContext, remainingMs: number, halted: boolean): void {
   const message = createOfflineCapStatusMessage(remainingMs, halted);
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
-  }
-}
-
-function emitConnectionStatus(context: WorkerContext, online: boolean): void {
-  const message = createConnectionStatusMessage(online);
 
   for (const connection of context.connections) {
     connection.postMessage(message);

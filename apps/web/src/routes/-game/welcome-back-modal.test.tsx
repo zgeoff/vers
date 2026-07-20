@@ -62,7 +62,7 @@ test('it offers a sign-in link back to this page when the session expired mid ca
   );
 });
 
-test('it retries by requesting a fresh resync and clearing the failed status', async () => {
+test('it retries by reporting online and clearing the failed status', async () => {
   const user = userEvent.setup();
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
@@ -80,7 +80,7 @@ test('it retries by requesting a fresh resync and clearing the failed status', a
   await user.click(screen.getByRole('button', { name: 'Try again' }));
 
   expect(calls).toStrictEqual([
-    { avatarID: 'avatar_1', claim: true, type: ClientMessageType.RequestResync },
+    { avatarID: 'avatar_1', claim: true, type: ClientMessageType.ReportOnline },
   ]);
 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

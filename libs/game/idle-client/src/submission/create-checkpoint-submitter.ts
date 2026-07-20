@@ -151,6 +151,15 @@ interface CreateCheckpointSubmitterOptions {
   readonly onHeld?: (activityID: string) => void;
 
   /**
+   * Called each time a flush attempt gets any answer from the activity service — a success or a
+   * defined contract outcome alike — proving the connection is up. A stream-ending rejection is
+   * often the first response after an outage and may also be the last traffic the activity ever
+   * generates, so connectivity recovery cannot wait for a later ack. Fires only once the answer
+   * has settled the local queue and cursor, so a recovery it triggers reads settled state.
+   */
+  readonly onServerContact?: () => void;
+
+  /**
    * Schedules a non-terminal checkpoint's deferred progress-window flush. Defaults to a
    * `PROGRESS_FLUSH_INTERVAL_MS` timer; a test injects a capturing stub to drive the window
    * without waiting on real time, awaiting the returned flush to drain it deterministically.
@@ -286,6 +295,8 @@ export function createCheckpointSubmitter(
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cursor this function bumps in place as the attempt settles
     state: ActivityState,
   ): Promise<void> => {
+    let serverAnswered = false;
+
     try {
       const rows = await readQueuedCheckpoints(activityID);
 
@@ -308,6 +319,7 @@ export function createCheckpointSubmitter(
 
       if (error === null) {
         state.consecutiveFlushFailures = 0;
+        serverAnswered = true;
 
         await removeConfirmedCheckpoints(activityID, result.appendedHead);
 
@@ -337,8 +349,10 @@ export function createCheckpointSubmitter(
         return;
       }
 
-      // a defined contract outcome ends the stall streak, whatever it decides for the stream
+      // a defined contract outcome ends the stall streak, whatever it decides for the stream —
+      // and proves the server answered, whatever it decided
       state.consecutiveFlushFailures = 0;
+      serverAnswered = true;
 
       if (error.code === 'ACTIVITY_CAPPED') {
         state.invalid = true;
@@ -409,6 +423,12 @@ export function createCheckpointSubmitter(
       scheduleHeldRetry(activityID, state);
     } finally {
       state.inFlight = false;
+
+      // deferred until the answered branch has settled the queue and cursor, so a recovery the
+      // callback triggers never plans against rows the response already confirmed or discarded
+      if (serverAnswered) {
+        options.onServerContact?.();
+      }
 
       if (state.flushPending) {
         state.flushPending = false;

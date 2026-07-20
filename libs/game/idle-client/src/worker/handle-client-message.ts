@@ -1,13 +1,13 @@
 import type { ClientMessage } from '../types';
 import { handleDisconnectMessage } from './handle-disconnect-message';
 import { handleInitializeMessage } from './handle-initialize-message';
-import { handleRequestResyncMessage } from './handle-request-resync-message';
+import { handleReportOnlineMessage } from './handle-report-online-message';
 import { handleSetFailureActionMessage } from './handle-set-failure-action-message';
 import { handleStartActivityMessage } from './handle-start-activity-message';
 import { handleStopActivityMessage } from './handle-stop-activity-message';
 import { isDisconnectMessage } from './is-disconnect-message';
 import { isInitializeMessage } from './is-initialize-message';
-import { isRequestResyncMessage } from './is-request-resync-message';
+import { isReportOnlineMessage } from './is-report-online-message';
 import { isSetFailureActionMessage } from './is-set-failure-action-message';
 import { isStartActivityMessage } from './is-start-activity-message';
 import { isStopActivityMessage } from './is-stop-activity-message';
@@ -34,8 +34,8 @@ export async function handleClientMessage(
     await handleStopActivityMessage(context, event.data);
   }
 
-  if (isRequestResyncMessage(event.data)) {
-    await handleRequestResyncMessage(context, event.data);
+  if (isReportOnlineMessage(event.data)) {
+    await handleReportOnlineMessage(context, event.data);
   }
 
   if (isDisconnectMessage(event.data)) {

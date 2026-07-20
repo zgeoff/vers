@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
 import type { ClientMessage } from '@vers/idle-client';
-import { ClientMessageType, isRequestResyncMessage } from '@vers/idle-client';
+import { ClientMessageType, isReportOnlineMessage } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
@@ -68,7 +68,7 @@ test('it renders without error when the worker reports a stopped checkpoint stre
   expect(rendered.container).toBeEmptyDOMElement();
 });
 
-test('it sends initialize then requests a resync once the active avatar resolves', async () => {
+test('it sends initialize then reports online once the active avatar resolves', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
@@ -89,13 +89,13 @@ test('it sends initialize then requests a resync once the active avatar resolves
       expect(calls).toContainEqual({
         avatarID: avatar.id,
         claim: true,
-        type: ClientMessageType.RequestResync,
+        type: ClientMessageType.ReportOnline,
       });
     });
   });
 });
 
-test('it never sends a resync request without a known avatar', async () => {
+test('it never reports online without a known avatar', async () => {
   const calls: Array<ClientMessage> = [];
   const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
 
@@ -112,12 +112,12 @@ test('it never sends a resync request without a known avatar', async () => {
     rendered.refresh();
 
     expect(calls).not.toContainEqual(
-      expect.objectContaining({ type: ClientMessageType.RequestResync }),
+      expect.objectContaining({ type: ClientMessageType.ReportOnline }),
     );
   });
 });
 
-test('it sends a resync request only once across re-renders', async () => {
+test('it reports online only once across re-renders', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
@@ -138,20 +138,20 @@ test('it sends a resync request only once across re-renders', async () => {
       expect(calls).toContainEqual({
         avatarID: avatar.id,
         claim: true,
-        type: ClientMessageType.RequestResync,
+        type: ClientMessageType.ReportOnline,
       });
     });
 
     rendered.refresh();
     rendered.refresh();
 
-    const resyncCalls = calls.filter((call) => isRequestResyncMessage(call));
+    const onlineReports = calls.filter((call) => isReportOnlineMessage(call));
 
-    expect(resyncCalls).toHaveLength(1);
+    expect(onlineReports).toHaveLength(1);
   });
 });
 
-test('it requests another resync when the browser comes back online', async () => {
+test('it reports online again when the browser comes back online', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
@@ -172,14 +172,14 @@ test('it requests another resync when the browser comes back online', async () =
       expect(calls).toContainEqual({
         avatarID: avatar.id,
         claim: true,
-        type: ClientMessageType.RequestResync,
+        type: ClientMessageType.ReportOnline,
       });
     });
 
     globalThis.dispatchEvent(new Event('online'));
 
     await waitFor(() => {
-      expect(calls.filter((call) => isRequestResyncMessage(call))).toHaveLength(2);
+      expect(calls.filter((call) => isReportOnlineMessage(call))).toHaveLength(2);
     });
   });
 });

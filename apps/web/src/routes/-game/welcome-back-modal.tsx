@@ -2,7 +2,7 @@ import { Button, Dialog, Text } from '@vers/design-system';
 import { setResyncStatus, useResyncStatus } from '@vers/idle-client';
 import type { ResyncStatus } from '@vers/idle-client';
 import { getLoginPathWithRedirect } from '../../lib/auth/get-login-path-with-redirect';
-import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
+import { sendIdleReportOnline } from '../../lib/idle/send-idle-report-online';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 
 /**
@@ -68,7 +68,7 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
         <Button
           onClick={() => {
             if (idleWorkerHandle.worker !== undefined) {
-              sendIdleRequestResync(idleWorkerHandle.worker, resyncStatus.avatarID, true);
+              sendIdleReportOnline(idleWorkerHandle.worker, resyncStatus.avatarID, true);
             }
 
             setResyncStatus(null);

@@ -2,11 +2,7 @@ import type { ActivityData } from '@vers/contract-activity';
 import type { ActivityFailureAction, Simulation } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
-import type {
-  RequestResyncMessage,
-  RewardSlotLedgerEntry,
-  RewardSlotLedgerSnapshot,
-} from '../types';
+import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
 
 /**
  * Accessors over the runtime's closure state, threaded to every message and simulation event
@@ -49,8 +45,8 @@ export interface WorkerContext {
   readonly getRemainingBudgetMs: () => number;
 
   /**
-   * The avatar a resync was last requested for — remembered so a reconnect can self-trigger a
-   * resync without a tab having to resend it. `null` until the tab's first request.
+   * The avatar the last resync ran for — remembered so a reconnect can self-trigger a resync
+   * without a tab having to re-report. `null` until the first resync of the worker's lifetime.
    */
   readonly getResyncAvatarID: () => string | null;
 
@@ -75,11 +71,11 @@ export interface WorkerContext {
   readonly getStartRequestID: () => null | string;
 
   /**
-   * The claiming resync request that arrived while another resync was in flight, held so it runs
-   * once the in-flight one settles — dropping it would swallow a deliberate take-over (the
+   * The avatar of the claiming resync that arrived while another resync was in flight, held so it
+   * runs once the in-flight one settles — dropping it would swallow a deliberate take-over (the
    * player's continue action) behind an automatic resync. `null` when none is held.
    */
-  readonly getQueuedClaimResync: () => RequestResyncMessage | null;
+  readonly getQueuedClaimResync: () => null | string;
 
   readonly getStopEpoch: () => number;
   readonly getSubmitter: () => CheckpointSubmitter;
@@ -122,11 +118,19 @@ export interface WorkerContext {
   readonly setFailureAction: (action: ActivityFailureAction) => void;
   readonly setFailureActionDirty: (dirty: boolean) => void;
   readonly setFailureActionPushInFlight: (inFlight: boolean) => void;
-  readonly setQueuedClaimResync: (message: RequestResyncMessage | null) => void;
+  readonly setQueuedClaimResync: (avatarID: null | string) => void;
   readonly setResyncAvatarID: (avatarID: string) => void;
   readonly setResyncInFlight: (inFlight: boolean) => void;
   readonly setLifecycleTail: (flow: Readonly<Promise<void>>) => void;
   readonly setStartRequestID: (requestID: string) => void;
   readonly setSimulation: (simulation: Simulation) => void;
   readonly setWriterDisplacedActivityID: (activityID: null | string) => void;
+
+  /**
+   * Moves the worker's tracked connectivity to the given state, broadcasting the connection
+   * status to every tab only on an actual transition — every path that learns the connection's
+   * state (native online/offline events, a tab's report, a flush outcome) routes through here, so
+   * per-batch outcomes never spam repeat broadcasts.
+   */
+  readonly updateConnectivity: (online: boolean) => void;
 }
