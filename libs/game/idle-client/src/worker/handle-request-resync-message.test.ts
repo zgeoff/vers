@@ -215,6 +215,7 @@ test('it keeps the queued rows of an activity that went live while the resync wa
       registerActivity: () => Promise.resolve(),
       submit: () => Promise.resolve(undefined),
       isEvicted: () => false,
+      removeEviction: () => {},
     },
   });
 
@@ -1164,6 +1165,7 @@ test('it reports a fault to the error backend and broadcasts a failed status whe
       registerActivity: () => Promise.resolve(),
       submit: () => Promise.resolve(undefined),
       isEvicted: () => false,
+      removeEviction: () => {},
     },
   });
 
@@ -1476,6 +1478,7 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
       registerActivity: () => Promise.resolve(),
       submit: () => Promise.resolve(undefined),
       isEvicted: () => false,
+      removeEviction: () => {},
     },
   });
 
@@ -1498,6 +1501,9 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
     }),
   );
 
+  // the device already knows it was displaced from this run
+  context.setWriterDisplacedActivityID(activity.id);
+
   const first = handleRequestResyncMessage(context, {
     avatarID: viewer.avatar.id,
     claim: false,
@@ -1519,4 +1525,88 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
   expect(resume).toHaveBeenCalledExactlyOnceWith({ activityID: activity.id });
   expect(context.getActivity()?.id).toBe(activity.id);
   expect(context.getWriterDisplacedActivityID()).toBeNull();
+
+  // the claiming install resolved the recorded displacement and told every tab
+  await connection.waitForMessages(1);
+
+  expect(connection.received).toStrictEqual([
+    { activityID: null, type: WorkerMessageType.WriterDisplaced },
+  ]);
+});
+
+test('it settles a mid-fast-forward displacement as active-elsewhere with the notice raised', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(Date.now() - 63_000),
+  });
+
+  // another session takes the writer while the catch-up simulates, so its first submitted tail
+  // is rejected whole
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.SESSION_EVICTED({ data: {} });
+    }),
+  );
+
+  const message: RequestResyncMessage = {
+    avatarID: viewer.avatar.id,
+    claim: false,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(3);
+
+  expect(ctx.connection.received).toStrictEqual([
+    {
+      status: { attempts: 0, kind: 'fast-forwarding', levelUps: 0 },
+      type: WorkerMessageType.ResyncStatus,
+    },
+    { activityID: activity.id, type: WorkerMessageType.WriterDisplaced },
+    {
+      status: { activityID: activity.id, kind: 'active-elsewhere' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+  ]);
+
+  expect(ctx.context.getSimulation().activity).toBeNull();
+  expect(ctx.context.getWriterDisplacedActivityID()).toBe(activity.id);
+});
+
+test('it clears a moot displacement once the fetched run is no longer active', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const activity = await db.activityCollection.create({
+    appendedHead: 3,
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+    verifiedHead: 0,
+  });
+
+  // the device was displaced from this run, and the other device has since finished it
+  ctx.context.setWriterDisplacedActivityID(activity.id);
+
+  const message: RequestResyncMessage = {
+    avatarID: viewer.avatar.id,
+    claim: true,
+    type: ClientMessageType.RequestResync,
+  };
+
+  await handleRequestResyncMessage(ctx.context, message);
+
+  await ctx.connection.waitForMessages(1);
+
+  expect(ctx.connection.received).toStrictEqual([
+    { activityID: null, type: WorkerMessageType.WriterDisplaced },
+  ]);
+
+  expect(ctx.context.getWriterDisplacedActivityID()).toBeNull();
+  expect(ctx.context.getSubmitter().isEvicted(activity.id)).toBeFalse();
 });

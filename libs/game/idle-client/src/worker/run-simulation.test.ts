@@ -222,6 +222,7 @@ test('it rebuilds through a resync when the conflict row already has confirmed c
     registerActivity,
     submit: () => Promise.resolve<number | undefined>(undefined),
     isEvicted: () => false,
+    removeEviction: () => {},
   };
 
   const context = createStubWorkerContext({ client: ctx.client, submitter });
@@ -357,6 +358,7 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
       return Promise.resolve(version);
     },
     isEvicted: () => false,
+    removeEviction: () => {},
   };
 
   const context = createStubWorkerContext({ connections: [channel.port1], submitter });

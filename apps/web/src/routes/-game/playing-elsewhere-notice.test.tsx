@@ -65,7 +65,7 @@ test('it claims the run back with a claiming resync on continue-here', async () 
   });
 });
 
-test('it dismisses per displacement, re-opening only for a fresh one', async () => {
+test('it dismisses by clearing the displaced state, and a fresh displacement re-opens it', async () => {
   const user = userEvent.setup();
 
   setWriterDisplacedActivityID('activity_1');
@@ -75,8 +75,9 @@ test('it dismisses per displacement, re-opening only for a fresh one', async () 
 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-  // a displacement from a different run is fresh news and re-opens the notice
-  setWriterDisplacedActivityID('activity_2');
+  // any later displacement — the same run taken again after a take-back included — arrives as a
+  // fresh worker broadcast and re-opens the notice
+  setWriterDisplacedActivityID('activity_1');
 
   await waitFor(() => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();

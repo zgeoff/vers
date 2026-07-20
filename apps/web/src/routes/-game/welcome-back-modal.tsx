@@ -21,6 +21,12 @@ export function WelcomeBackModal() {
     return null;
   }
 
+  // a catch-up ended by another device taking the run resolves in the playing-elsewhere notice,
+  // which carries the take-back action — a second dialog saying the same thing helps nobody
+  if (resyncStatus.kind === 'active-elsewhere') {
+    return null;
+  }
+
   return (
     <Dialog
       onOpenChange={(open) => {
@@ -37,7 +43,7 @@ export function WelcomeBackModal() {
 }
 
 interface ResyncOutcomeProps {
-  readonly resyncStatus: ResyncStatus;
+  readonly resyncStatus: Exclude<ResyncStatus, { readonly kind: 'active-elsewhere' }>;
 }
 
 function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
@@ -53,10 +59,6 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
         </Button>
       </>
     );
-  }
-
-  if (resyncStatus.kind === 'active-elsewhere') {
-    return <Text>Your run picked up on another device, so it&rsquo;s paused here.</Text>;
   }
 
   if (resyncStatus.kind === 'failed') {

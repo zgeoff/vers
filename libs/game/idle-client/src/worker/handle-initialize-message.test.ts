@@ -86,3 +86,32 @@ test('it does not create a new simulation if one already exists', () => {
   handleInitializeMessage(context, message);
   expect(context.getSimulation()).toBe(existingSimulation);
 });
+
+test('it carries a held displacement in the initial state for a late-connecting tab', async () => {
+  const channel = new MessageChannel();
+
+  const context = createStubWorkerContext({ connections: [channel.port2] });
+
+  context.setSimulation(createSimulation());
+  context.setWriterDisplacedActivityID('activity_9');
+  channel.port1.start();
+
+  const received = new Promise<MessageEvent>((resolve) => {
+    channel.port1.addEventListener('message', resolve, { once: true });
+  });
+
+  const message: InitializeMessage = {
+    type: ClientMessageType.Initialize,
+  };
+
+  handleInitializeMessage(context, message);
+
+  const event = await received;
+
+  expect(event.data).toStrictEqual({
+    rewardSlotLedger: { activityID: null, entries: [] },
+    state: context.getSimulation().getSnapshot(),
+    type: WorkerMessageType.InitialState,
+    writerDisplacedActivityID: 'activity_9',
+  });
+});

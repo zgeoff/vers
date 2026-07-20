@@ -44,6 +44,7 @@ test('it returns the injected submitter', () => {
     registerActivity: mock(() => Promise.resolve()),
     submit: mock(() => Promise.resolve(undefined)),
     isEvicted: mock(() => false),
+    removeEviction: mock(() => {}),
   };
 
   const context = createStubWorkerContext({ submitter });

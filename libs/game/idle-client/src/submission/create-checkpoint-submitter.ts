@@ -94,6 +94,13 @@ export interface CheckpointSubmitter {
    * takes the writer back registers the activity again, which clears the marker.
    */
   isEvicted: (activityID: string) => boolean;
+
+  /**
+   * Removes an activity's recorded eviction without re-registering it — for a run that has since
+   * left `active`, where the displacement is moot and a deferred consumer of the marker must not
+   * tell the player the run continues elsewhere.
+   */
+  removeEviction: (activityID: string) => void;
 }
 
 interface CreateCheckpointSubmitterOptions {
@@ -560,7 +567,11 @@ export function createCheckpointSubmitter(
 
   const isEvicted = (activityID: string): boolean => evictedActivityIDs.has(activityID);
 
-  return { flushHeld, flushNow, registerActivity, submit, isEvicted };
+  const removeEviction = (activityID: string): void => {
+    evictedActivityIDs.delete(activityID);
+  };
+
+  return { flushHeld, flushNow, isEvicted, registerActivity, removeEviction, submit };
 }
 
 const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set([

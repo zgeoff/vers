@@ -14,6 +14,7 @@ import type {
   RewardSlotLedgerEntry,
   WorkerMessage,
 } from '../types';
+import { applyEviction } from './apply-eviction';
 import { createCheckpointFlushStalledMessage } from './create-checkpoint-flush-stalled-message';
 import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
 import { createConnectionStatusMessage } from './create-connection-status-message';
@@ -24,10 +25,8 @@ import { handleClientMessage } from './handle-client-message';
 import { handleRequestResyncMessage } from './handle-request-resync-message';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
-import { resetSimulation } from './reset-simulation';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
-import { updateWriterDisplacedStatus } from './update-writer-displaced-status';
 import { withLifecycleTurn } from './with-lifecycle-turn';
 
 export interface WorkerRuntime {
@@ -136,20 +135,10 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
     // Deferred to a lifecycle turn rather than acted on inline: the callback fires from inside a
     // flush at an arbitrary point, and clearing the simulation mid-install would race the
-    // lifecycle flow that owns it. The turn re-checks the eviction marker — a claiming resync
-    // that re-attached the stream in the meantime has superseded it, and clearing then would
-    // tear down the healthy run it just installed.
+    // lifecycle flow that owns it.
     onEvicted: (activityID) => {
       void withLifecycleTurn(context, 'eviction', () => {
-        if (!submitter.isEvicted(activityID)) {
-          return Promise.resolve();
-        }
-
-        if (context.getActivity()?.id === activityID) {
-          resetSimulation(context);
-        }
-
-        updateWriterDisplacedStatus(context, activityID);
+        applyEviction(context, activityID);
 
         return Promise.resolve();
       });

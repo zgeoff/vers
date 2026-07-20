@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Button, Dialog, Text } from '@vers/design-system';
-import { useWriterDisplacedActivityID } from '@vers/idle-client';
-import { useState } from 'react';
+import { setWriterDisplacedActivityID, useWriterDisplacedActivityID } from '@vers/idle-client';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { sendIdleRequestResync } from '../../lib/idle/send-idle-request-resync';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
@@ -9,18 +8,18 @@ import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 /**
  * Tells the player their run is being played on another device: this device's simulation stopped
  * and nothing it submits persists. "Continue here" claims the run back through a claiming resync;
- * dismissing leaves the run to the other device. Dismissal is per displaced activity, so a later
- * displacement (or the same run displaced again after a take-back) re-opens it, while the
- * worker's transition-only broadcast keeps reconnect churn from re-raising a dismissed notice.
+ * dismissing leaves the run to the other device. Both clear the tab's displaced state while the
+ * worker keeps its own record, whose transition-only broadcast never re-raises an unchanged
+ * displacement — but a fresh one (the same run displaced again after a take-back) transitions
+ * through null and re-opens the notice.
  */
 export function PlayingElsewhereNotice() {
   const displacedActivityID = useWriterDisplacedActivityID();
   const idleWorkerHandle = useIdleWorkerHandle();
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
-  const [dismissedActivityID, setDismissedActivityID] = useState<null | string>(null);
   const avatarID = avatarQuery.data?.id;
 
-  if (displacedActivityID === null || displacedActivityID === dismissedActivityID) {
+  if (displacedActivityID === null) {
     return null;
   }
 
@@ -28,7 +27,7 @@ export function PlayingElsewhereNotice() {
     <Dialog
       onOpenChange={(open) => {
         if (!open) {
-          setDismissedActivityID(displacedActivityID);
+          setWriterDisplacedActivityID(null);
         }
       }}
       open
@@ -44,7 +43,7 @@ export function PlayingElsewhereNotice() {
             sendIdleRequestResync(idleWorkerHandle.worker, avatarID, true);
           }
 
-          setDismissedActivityID(displacedActivityID);
+          setWriterDisplacedActivityID(null);
         }}
       >
         Continue here

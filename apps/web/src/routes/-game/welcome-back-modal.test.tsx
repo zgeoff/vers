@@ -96,3 +96,9 @@ test('it dismisses by clearing the resync status', async () => {
 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
+
+test('it renders nothing when the catch-up ended on another device taking the run', () => {
+  setResyncStatus({ activityID: 'activity_1', kind: 'active-elsewhere' });
+  render(<WelcomeBackModal />);
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});

@@ -107,6 +107,11 @@ async function runResyncPass(
     claimWriter: message.claim,
     client: context.getClient(),
     isActivityLive: (activityID) => context.getSimulation().activity?.id === activityID,
+    onWriterLost: (activityID) => {
+      if (context.getActivity()?.id === activityID) {
+        resetSimulation(context);
+      }
+    },
     onProgress: (progress) => {
       emitResyncStatus(context, { ...progress, kind: 'fast-forwarding' });
     },
@@ -309,6 +314,19 @@ async function applyResyncResult(
   result: Readonly<ResyncResult>,
   entryEpoch: number,
 ): Promise<void> {
+  // A fetched row that is no longer active moots any recorded displacement for it: the run is
+  // over, so neither a queued eviction settlement nor a lingering notice should tell the player
+  // it continues elsewhere.
+  const fetchedActivity = result.progress?.activity;
+
+  if (fetchedActivity !== undefined && fetchedActivity.status !== 'active') {
+    context.getSubmitter().removeEviction(fetchedActivity.id);
+
+    if (context.getWriterDisplacedActivityID() === fetchedActivity.id) {
+      updateWriterDisplacedStatus(context, null);
+    }
+  }
+
   if (result.report !== undefined) {
     await applyFastForward(context, result.report, entryEpoch);
 
