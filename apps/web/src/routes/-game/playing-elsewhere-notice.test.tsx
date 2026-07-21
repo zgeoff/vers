@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setWriterDisplacedActivityID } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
-import * as db from '@vers/mock-services/db';
+import { createActiveAvatar } from '../../test-utils/create-active-avatar';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { render } from '../../test-utils/render';
@@ -29,7 +29,7 @@ test('it claims the run back with a claiming report on continue-here', async () 
   const user = userEvent.setup();
 
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
   const client = createStubWorkerClient();
 

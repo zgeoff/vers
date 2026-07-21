@@ -18,5 +18,14 @@ export const deleteAvatar = os.deleteAvatar.handler((opts) => {
 
   db.avatarCollection.delete(avatar);
 
+  // mirrors the real table's FK cascade: deleting the active avatar drops the selection
+  const selection = db.activeAvatarCollection.findFirst((q) =>
+    q.where({ avatarID: avatar.id, userID: actingUserId }),
+  );
+
+  if (selection !== undefined) {
+    db.activeAvatarCollection.delete(selection);
+  }
+
   return { deletedID: avatar.id };
 });

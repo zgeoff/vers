@@ -10,9 +10,9 @@ import { findActiveAvatar } from './find-active-avatar';
  * an avatarless caller to the roster before any shell route loads, so an active avatar is present.
  */
 export const getAvatarContent = createServerFn({ method: 'GET' }).handler(async () => {
-  const avatars = await avatarClient.getAvatars({});
+  const roster = await avatarClient.getAvatars({});
 
-  const avatar = findActiveAvatar(avatars);
+  const avatar = findActiveAvatar(roster);
 
   invariant(avatar, 'a shell route loaded without an active avatar');
 
