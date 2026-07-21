@@ -941,14 +941,14 @@ test('it stops back an attach-live row when a stop lands during its registration
 
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
-  // the stop lands while the attach's registration is in flight — after the epoch capture, in the
+  // the stop lands while the attach's registration is in flight — after the signal capture, in the
   // last await before the install boundary
   const contextHolder: { current?: WorkerContext } = {};
 
   const submitter: CheckpointSubmitter = {
     ...createStubSubmitter(),
     registerActivity: mock(() => {
-      contextHolder.current?.advanceStopEpoch();
+      contextHolder.current?.advanceStopScope();
 
       return Promise.resolve();
     }),
@@ -1167,10 +1167,10 @@ test('it abandons the install when a stop lands mid-resync', async () => {
   const row = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
 
   // the stop lands while the progress fetch is in flight — the deviation answers with the live
-  // row exactly as the stateful mock would, then advances the epoch as a concurrent stop does
+  // row exactly as the stateful mock would, then advances the stop scope as a concurrent stop does
   server.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
-      ctx.context.advanceStopEpoch();
+      ctx.context.advanceStopScope();
 
       return {
         activity: row,
@@ -1201,13 +1201,13 @@ test('it stops back a drain-minted row when a stop lands during its attach', asy
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   // the stop lands while the minted row's registration is in flight — after the drain's own
-  // epoch check, in the attach's last await before the install guard
+  // stop check, in the attach's last await before the install guard
   const contextHolder: { current?: WorkerContext } = {};
 
   const submitter: CheckpointSubmitter = {
     ...createStubSubmitter(),
     registerActivity: mock(() => {
-      contextHolder.current?.advanceStopEpoch();
+      contextHolder.current?.advanceStopScope();
 
       return Promise.resolve();
     }),

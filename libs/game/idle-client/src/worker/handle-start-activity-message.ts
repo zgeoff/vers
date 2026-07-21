@@ -3,11 +3,11 @@ import type { ActivityData } from '@vers/contract-activity';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import type { StartActivityMessage } from './client-to-worker-message-schema';
 import { handleSetActivityMessage } from './handle-set-activity-message';
-import { hasStopIntervened } from './has-stop-intervened';
+import { isAbortError } from './is-abort-error';
 import { reportWorkerFault } from './report-worker-fault';
 import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
-import type { WorkerContext } from './types';
+import type { FlowSignals, WorkerContext } from './types';
 import { withLifecycleTurn } from './with-lifecycle-turn';
 import type { StartStatus, WorkerMessage } from './worker-to-client-message-schema';
 
@@ -18,7 +18,8 @@ import type { StartStatus, WorkerMessage } from './worker-to-client-message-sche
  * targeted, and retries. The claim is taken at arrival and re-checked after every await — a
  * fresher request can land while this turn runs, and a superseded flow reports `failed`, leaving
  * its minted row to the fresher flow's recovery. A stop landing mid-start stops the minted row
- * back durably.
+ * back durably. An abort — a stop or shutdown cancelling the entry check before any row is
+ * minted — settles as `failed` too, without a fault report.
  */
 export async function handleStartActivityMessage(
   context: WorkerContext,
@@ -27,14 +28,22 @@ export async function handleStartActivityMessage(
   context.setStartRequestID(message.requestID);
 
   await withLifecycleTurn(context, 'start', async () => {
+    const signals: FlowSignals = {
+      cancel: context.getCancelSignal(),
+      stop: context.getStopSignal(),
+    };
+
     // failures settle as a failed status rather than escaping into the mailbox's fault report —
     // a tab is always waiting on this request id
     try {
-      const status = await runStart(context, message);
+      const status = await runStart(context, message, signals);
 
       emitStartStatus(context, message.requestID, status);
     } catch (error) {
-      reportWorkerFault('start', error);
+      if (!isAbortError(error, signals.cancel)) {
+        reportWorkerFault('start', error);
+      }
+
       emitStartStatus(context, message.requestID, { kind: 'failed' });
     }
   });
@@ -43,14 +52,18 @@ export async function handleStartActivityMessage(
 async function runStart(
   context: WorkerContext,
   message: StartActivityMessage,
+  signals: Readonly<FlowSignals>,
 ): Promise<StartStatus> {
-  const entryEpoch = context.getStopEpoch();
-
   // a queued flow may be stale before it ever runs
-  if (isSuperseded(context, message) || hasStopIntervened(context, entryEpoch)) {
+  if (isSuperseded(context, message)) {
     return { kind: 'failed' };
   }
 
+  // a pure unwind with nothing to compensate yet — no row is minted below this point
+  signals.cancel.throwIfAborted();
+
+  // a row-minting call: aborting it client-side would lose the only handle on whether the server
+  // still mints the row, so it runs unsigned and settles for the compensation below to target it
   const [error, started] = await safe(
     context.getClient().startActivity({
       avatarID: message.avatarID,
@@ -61,7 +74,7 @@ async function runStart(
   );
 
   if (error === null) {
-    return setLiveStartedRow(context, message, started, entryEpoch);
+    return setLiveStartedRow(context, message, started, signals);
   }
 
   if (!isDefinedError(error) || error.code !== 'CONFLICT') {
@@ -79,7 +92,7 @@ async function runStart(
   // the writer since the player's start is a deliberate attach; called inner-to-inner, since
   // queueing a turn from inside this turn would deadlock the mailbox
   if (row.scopeType === message.scopeType && row.scopeID === message.scopeID) {
-    await runResyncFlow(context, message.avatarID, true, entryEpoch);
+    await runResyncFlow(context, message.avatarID, true, signals);
 
     // a resync can be skipped, gated, or abandoned without installing; reporting attached anyway
     // would leave the tab waiting forever on a run that never arrives
@@ -102,6 +115,7 @@ async function runStart(
     return { kind: 'failed' };
   }
 
+  // a row-minting call, excluded from the signal for the same reason as the first attempt above
   const [retryError, retried] = await safe(
     context.getClient().startActivity({
       avatarID: message.avatarID,
@@ -119,7 +133,7 @@ async function runStart(
     return { kind: 'failed' };
   }
 
-  return setLiveStartedRow(context, message, retried, entryEpoch);
+  return setLiveStartedRow(context, message, retried, signals);
 }
 
 function isSuperseded(context: WorkerContext, message: StartActivityMessage): boolean {
@@ -131,7 +145,8 @@ function isSuperseded(context: WorkerContext, message: StartActivityMessage): bo
  * closed to further appends. A stop rejected with SESSION_EVICTED means another session's writer
  * owns the run — the player's start here is a deliberate act that supersedes it, so this session
  * claims the writer and retries the stop once. A claim answering NOT_FOUND means the row already
- * left `active`, which is all a stop could have achieved.
+ * left `active`, which is all a stop could have achieved. Its stop and claim calls further the
+ * stop's own goal, so none of them take the signal — aborting would help nothing.
  */
 async function stopConflictingRow(
   context: WorkerContext,
@@ -185,10 +200,10 @@ async function setLiveStartedRow(
   context: WorkerContext,
   message: StartActivityMessage,
   row: Readonly<ActivityData>,
-  entryEpoch: number,
+  signals: Readonly<FlowSignals>,
 ): Promise<StartStatus> {
   // a stop landed mid-start: the fresh row is stopped back durably, as any player stop delivers
-  if (hasStopIntervened(context, entryEpoch)) {
+  if (signals.stop.aborted) {
     await submitStopIntent(context, row);
 
     return { kind: 'failed' };

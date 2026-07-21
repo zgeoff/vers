@@ -76,7 +76,13 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let failureAction: ActivityFailureAction = ActivityFailureAction.Abort;
   let failureActionDirty = false;
   let failureActionPushInFlight = false;
-  let stopEpoch = 0;
+
+  // the shutdown controller lives for the runtime's whole lifetime; the stop controller is
+  // replaced on every player stop, and the cancel composite is recomputed alongside it
+  const shutdownController = new AbortController();
+  let stopController = new AbortController();
+
+  let cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);
   let startRequestID: null | string = null;
   let lifecycleTail: Readonly<Promise<void>> = Promise.resolve();
   let queuedClaimResync: null | string = null;
@@ -171,14 +177,20 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
       emitWorkerMessage({ activityID, type: WorkerMessageType.CheckpointStreamInvalid });
     },
+    signal: shutdownController.signal,
   });
 
   const context: WorkerContext = {
-    advanceStopEpoch: () => {
-      stopEpoch += 1;
+    advanceStopScope: () => {
+      stopController.abort();
+
+      stopController = new AbortController();
+
+      cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);
     },
     connections,
     getActivity: () => activity,
+    getCancelSignal: () => cancelSignal,
     getClient: () => client,
     getFailureAction: () => failureAction,
     getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
@@ -191,7 +203,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     getLifecycleTail: () => lifecycleTail,
     getQueuedClaimResync: () => queuedClaimResync,
     getStartRequestID: () => startRequestID,
-    getStopEpoch: () => stopEpoch,
+    getStopSignal: () => stopController.signal,
     getSubmitter: () => submitter,
     getWriterDisplacedActivityID: () => writerDisplacedActivityID,
     isFailureActionDirty: () => failureActionDirty,
@@ -358,6 +370,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   const stop = () => {
     stopped = true;
 
+    shutdownController.abort();
     self.removeEventListener('online', handleOnline);
     self.removeEventListener('offline', handleOffline);
   };

@@ -15,6 +15,7 @@ import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
 import { runContinuation } from './run-continuation';
+import type { WorkerContext } from './types';
 
 interface SetupTestConfig {
   readonly userID: string;
@@ -242,7 +243,7 @@ test('it stops the row it started when a stop lands mid-flight', async () => {
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   // the stop lands while the start call is in flight: the deviation answers with the row the
-  // continuation minted, then advances the epoch as a concurrent stop does
+  // continuation minted, then advances the stop scope as a concurrent stop does
   const started = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
     status: 'active',
@@ -250,7 +251,7 @@ test('it stops the row it started when a stop lands mid-flight', async () => {
 
   server.use(
     mockActivityService.startActivity.handler(() => {
-      context.advanceStopEpoch();
+      context.advanceStopScope();
 
       return started;
     }),
@@ -283,7 +284,7 @@ test('it records no start intent for a same-row CONFLICT after a stop lands', as
 
   server.use(
     mockActivityService.startActivity.handler((opts) => {
-      context.advanceStopEpoch();
+      context.advanceStopScope();
       throw opts.errors.CONFLICT({ data: { activity: previousActivity } });
     }),
   );
@@ -301,16 +302,24 @@ test('it compensates a stop that lands while the intent write is committing', as
   const submitter = createStubSubmitter();
   const base = createStubWorkerContext({ submitter });
 
-  // Models the untimeable gap between the pre-write epoch guard and the write's transaction
-  // committing: the guard's read still sees the entry epoch, and the stop's bump is only visible
-  // by the post-write re-check. Epoch reads happen in flow order — entry capture, pre-write
-  // guard, post-write re-check — so the scripted sequence hands the bumped value to the re-check
-  // alone.
-  const epochReads = [0, 0, 1];
+  // Models the untimeable gap between the pre-write stop guard and the write's transaction
+  // committing: the guard reads the captured signal as not yet aborted, and the stop's abort is
+  // only visible by the post-write re-check. Both reads land on the one signal captured at entry
+  // — pre-write guard, then post-write re-check — so the scripted sequence hands the aborted
+  // state to the re-check alone.
+  const abortReads = [false, true];
 
-  const context = {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a hand-built stub exposing only the `aborted` getter every check site reads; a real AbortSignal can't be built with a scripted sequence
+  const fakeSignal = {
+    get aborted() {
+      return abortReads.shift() ?? true;
+    },
+  } as unknown as AbortSignal;
+
+  const context: WorkerContext = {
     ...base,
-    getStopEpoch: () => epochReads.shift() ?? 1,
+    getCancelSignal: () => fakeSignal,
+    getStopSignal: () => fakeSignal,
   };
 
   const simulation = createSimulation();
@@ -340,7 +349,7 @@ test('it leaves a replacement simulation installed when uninstalling after a sto
 
   server.use(
     mockActivityService.startActivity.handler(() => {
-      context.advanceStopEpoch();
+      context.advanceStopScope();
       context.setSimulation(replacement);
 
       return HttpResponse.error();

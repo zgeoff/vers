@@ -20,7 +20,6 @@ import { runResync } from './run-resync';
 import type { LatestActivityProgress } from './types';
 
 interface SetupTestConfig {
-  readonly scheduleRetry?: (delayMs: number, retry: () => Promise<void>) => void;
   readonly userID: string;
 }
 
@@ -33,12 +32,7 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', config.userID);
 
   const onInvalid = mock<(activityID: string, reason: string) => void>();
-
-  const submitter = createCheckpointSubmitter({
-    client,
-    onInvalid,
-    ...(config.scheduleRetry === undefined ? {} : { scheduleRetry: config.scheduleRetry }),
-  });
+  const submitter = createCheckpointSubmitter({ client, onInvalid });
 
   return { client, submitter };
 }
@@ -70,6 +64,40 @@ test('it resolves to none for an avatar with no activity history', async () => {
   });
 
   expect(result).toStrictEqual({ plan: { kind: 'none' }, progress: null });
+});
+
+test('it rejects the progress fetch when the given signal is already aborted', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const controller = new AbortController();
+
+  controller.abort();
+
+  await expect(
+    runResync({
+      avatarID: viewer.avatar.id,
+      buildSimulationInput: (started) => ({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
+      }),
+      client: ctx.client,
+      signal: controller.signal,
+      submitter: ctx.submitter,
+    }),
+  ).toReject();
 });
 
 test('it rebases from the stop index without simulating when the activity is capped', async () => {
@@ -328,7 +356,7 @@ test('it delivers checkpoints a previous worker left queued and plans against th
 
 test('it refuses to plan while stranded checkpoints cannot be delivered', async () => {
   const viewer = await createViewer();
-  const ctx = await setupTest({ scheduleRetry: () => {}, userID: viewer.user.id });
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const activity = await db.activityCollection.create({
     appendedAt: new Date(Date.now() - 60_000),

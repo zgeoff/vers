@@ -278,7 +278,7 @@ test('it stops the minted row back when a stop lands mid-start', async () => {
 
   server.use(
     mockActivityService.startActivity.handler(() => {
-      context.advanceStopEpoch();
+      context.advanceStopScope();
 
       return minted;
     }),

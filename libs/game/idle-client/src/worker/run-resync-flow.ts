@@ -23,32 +23,36 @@ import { WorkerMessageType } from '../types';
 import type { PendingStartFlushResult } from './flush-pending-start';
 import { flushPendingStart } from './flush-pending-start';
 import { flushPendingStop } from './flush-pending-stop';
-import { hasStopIntervened } from './has-stop-intervened';
+import { isAbortError } from './is-abort-error';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
 import { resetSimulation } from './reset-simulation';
 import { submitStopIntent } from './submit-stop-intent';
-import type { WorkerContext } from './types';
+import type { FlowSignals, WorkerContext } from './types';
 import { updateWriterDisplacedStatus } from './update-writer-displaced-status';
 import type { ResyncStatus, WorkerMessage } from './worker-to-client-message-schema';
 
 /**
  * Runs one resync end to end — the mailbox-inner body: the reconnect recovery queues it as a
  * turn, while the start flow and continuations call it directly from inside their own turns
- * (queueing there would deadlock). Every install re-checks `entryEpoch`, the caller's stop-epoch
- * capture, so a stop raised after the caller began — including during a queue wait — aborts the
- * install. Only a plan covering a real away period broadcasts a `ResyncStatus` progression ending
+ * (queueing there would deadlock). Every install re-checks `signals.stop`, the caller's
+ * entry-captured stop signal, so a stop raised after the caller began — including during a queue
+ * wait — aborts the install; the cancel composite additionally cancels in-flight reads on a worker
+ * shutdown. Only a plan covering a real away period broadcasts a `ResyncStatus` progression ending
  * on `done` or `capped`, so a tab's welcome-back UI always resolves; zero-gap outcomes stay
  * silent so a fresh login never opens it. An outright failure reports the fault and broadcasts
  * `failed`, never a connection-status change, and never rejects — a tab's retry re-signals it.
  * `UNAUTHORIZED` broadcasts `session-expired` instead, with no fault report: the only remedy is
- * a fresh sign-in, so the tab renders that rather than a futile retry.
+ * a fresh sign-in, so the tab renders that rather than a futile retry. An abort — a stop or
+ * shutdown cancelling an in-flight read — settles silently: the stop that raised it already reset
+ * the runtime and broadcast the cleared snapshot, so a `failed` broadcast would flash an error for
+ * a deliberate stop.
  */
 export async function runResyncFlow(
   context: WorkerContext,
   avatarID: string,
   claim: boolean,
-  entryEpoch: number,
+  signals: Readonly<FlowSignals>,
 ): Promise<void> {
   context.setResyncAvatarID(avatarID);
 
@@ -69,16 +73,20 @@ export async function runResyncFlow(
     // the row it minted and the plan attaches it. Offline is the only entry-time signal; every
     // other outcome resolves after the pass, once fetched progress can tell a live intent from a
     // stale one.
-    const startFlush = await flushPendingStart(context, entryEpoch, avatarID);
+    const startFlush = await flushPendingStart(context, signals, avatarID);
 
     if (startFlush.outcome === 'undelivered') {
       context.updateConnectivity(false);
     }
 
-    const result = await runResyncPass(context, avatarID, claim, entryEpoch);
+    const result = await runResyncPass(context, avatarID, claim, signals);
 
-    await applyStartFlush(context, avatarID, claim, entryEpoch, startFlush, result);
+    await applyStartFlush(context, avatarID, claim, signals, startFlush, result);
   } catch (error) {
+    if (isAbortError(error, signals.cancel)) {
+      return;
+    }
+
     if (error instanceof ORPCError && error.code === 'UNAUTHORIZED') {
       emitResyncStatus(context, { avatarID, kind: 'session-expired' });
     } else {
@@ -96,7 +104,7 @@ async function runResyncPass(
   context: WorkerContext,
   avatarID: string,
   claim: boolean,
-  entryEpoch: number,
+  signals: Readonly<FlowSignals>,
 ): Promise<ResyncResult> {
   const result = await runResync({
     avatarID,
@@ -121,7 +129,7 @@ async function runResyncPass(
       const cached = await readFailureActionCache();
 
       if (context.isFailureActionDirty() && cached?.avatarID === avatarID) {
-        await flushFailureAction(context, avatarID);
+        await flushFailureAction(context, avatarID, signals.cancel);
 
         return;
       }
@@ -132,11 +140,12 @@ async function runResyncPass(
         toActivityFailureAction(progress.failureAction),
       );
     },
+    signal: signals.cancel,
     submitter: context.getSubmitter(),
   });
 
   await sweepStaleActivities(context, result);
-  await applyResyncResult(context, result, entryEpoch);
+  await applyResyncResult(context, result, signals);
 
   return result;
 }
@@ -154,22 +163,22 @@ async function applyStartFlush(
   context: WorkerContext,
   avatarID: string,
   claim: boolean,
-  entryEpoch: number,
+  signals: Readonly<FlowSignals>,
   startFlush: Readonly<PendingStartFlushResult>,
   result: Readonly<ResyncResult>,
 ): Promise<void> {
   if (startFlush.outcome === 'delivered') {
-    await stopBackUninstalledRow(context, startFlush.started, entryEpoch);
+    await stopBackUninstalledRow(context, startFlush.started, signals);
 
     return;
   }
 
   if (startFlush.outcome === 'blocked') {
-    const retryFlush = await flushPendingStart(context, entryEpoch, avatarID);
+    const retryFlush = await flushPendingStart(context, signals, avatarID);
 
     if (retryFlush.outcome === 'delivered') {
-      await runResyncPass(context, avatarID, claim, entryEpoch);
-      await stopBackUninstalledRow(context, retryFlush.started, entryEpoch);
+      await runResyncPass(context, avatarID, claim, signals);
+      await stopBackUninstalledRow(context, retryFlush.started, signals);
     } else if (retryFlush.outcome === 'undelivered') {
       context.updateConnectivity(false);
     }
@@ -208,9 +217,9 @@ async function applyStartFlush(
 async function stopBackUninstalledRow(
   context: WorkerContext,
   started: Readonly<ActivityData>,
-  entryEpoch: number,
+  signals: Readonly<FlowSignals>,
 ): Promise<void> {
-  if (!hasStopIntervened(context, entryEpoch)) {
+  if (!signals.stop.aborted) {
     return;
   }
 
@@ -229,10 +238,16 @@ function toActivityFailureAction(failureAction: ContractFailureAction): Activity
  * Delivers a dirty local failure-action value to the server as the offline outbox's one entry:
  * best-effort, so a delivery failure leaves it dirty for the next resync's reconcile to retry.
  */
-async function flushFailureAction(context: WorkerContext, avatarID: string): Promise<void> {
+async function flushFailureAction(
+  context: WorkerContext,
+  avatarID: string,
+  cancelSignal: AbortSignal,
+): Promise<void> {
   const failureAction = context.getFailureAction();
 
-  const [error] = await safe(context.getClient().updateFailureAction({ avatarID, failureAction }));
+  const [error] = await safe(
+    context.getClient().updateFailureAction({ avatarID, failureAction }, { signal: cancelSignal }),
+  );
 
   if (error !== null) {
     return;
@@ -311,7 +326,7 @@ function pickLatestActivityID(result: Readonly<ResyncResult>): string | undefine
 async function applyResyncResult(
   context: WorkerContext,
   result: Readonly<ResyncResult>,
-  entryEpoch: number,
+  signals: Readonly<FlowSignals>,
 ): Promise<void> {
   // A fetched row that is no longer active moots any recorded displacement for it: the run is
   // over, so neither a queued eviction settlement nor a lingering notice should tell the player
@@ -327,7 +342,7 @@ async function applyResyncResult(
   }
 
   if (result.report !== undefined) {
-    await applyFastForward(context, result.report, entryEpoch);
+    await applyFastForward(context, result.report, signals);
 
     return;
   }
@@ -345,7 +360,7 @@ async function applyResyncResult(
   }
 
   if (result.plan.kind === 'attach-live') {
-    await applyAttachLive(context, result.plan, result.progress, entryEpoch);
+    await applyAttachLive(context, result.plan, result.progress, signals);
   }
 }
 
@@ -367,7 +382,7 @@ async function applyAttachLive(
   context: WorkerContext,
   plan: Extract<ResyncPlan, { kind: 'attach-live' }>,
   progress: ResyncResult['progress'],
-  entryEpoch: number,
+  signals: Readonly<FlowSignals>,
 ): Promise<void> {
   if (context.getSimulation().activity?.id === plan.context.activityID) {
     return;
@@ -389,7 +404,7 @@ async function applyAttachLive(
 
     simulation.startActivity(input.avatar, input.activity);
 
-    await setLiveSimulationOrStopBack(context, progress.activity, simulation, entryEpoch);
+    await setLiveSimulationOrStopBack(context, progress.activity, simulation, signals);
 
     return;
   }
@@ -411,18 +426,13 @@ async function applyAttachLive(
     previousNextSeed: reconstruction.lastCheckpoint.nextSeed,
   });
 
-  await setLiveSimulationOrStopBack(
-    context,
-    progress.activity,
-    reconstruction.simulation,
-    entryEpoch,
-  );
+  await setLiveSimulationOrStopBack(context, progress.activity, reconstruction.simulation, signals);
 }
 
 async function applyFastForward(
   context: WorkerContext,
   report: FastForwardReport,
-  entryEpoch: number,
+  signals: Readonly<FlowSignals>,
 ): Promise<void> {
   // The progression already broadcast `fast-forwarding`, so it must still resolve — with the
   // displaced outcome, not `done`, since the tallies past the confirmed head never persisted.
@@ -434,7 +444,7 @@ async function applyFastForward(
   }
 
   if (report.activity.status === 'active' && !report.finalRowTerminal) {
-    await applyFastForwardAttach(context, report, entryEpoch);
+    await applyFastForwardAttach(context, report, signals);
   }
 
   emitResyncStatus(context, {
@@ -455,7 +465,7 @@ async function applyFastForward(
 async function applyFastForwardAttach(
   context: WorkerContext,
   report: FastForwardReport,
-  entryEpoch: number,
+  signals: Readonly<FlowSignals>,
 ): Promise<void> {
   const input = buildSimulationInput(report.activity, {
     failureAction: context.getFailureAction(),
@@ -473,7 +483,7 @@ async function applyFastForwardAttach(
 
     simulation.startActivity(input.avatar, input.activity);
 
-    await setLiveSimulationOrStopBack(context, report.activity, simulation, entryEpoch);
+    await setLiveSimulationOrStopBack(context, report.activity, simulation, signals);
 
     return;
   }
@@ -502,12 +512,7 @@ async function applyFastForwardAttach(
     startChainIndex: report.activity.startChainIndex,
   });
 
-  await setLiveSimulationOrStopBack(
-    context,
-    report.activity,
-    reconstruction.simulation,
-    entryEpoch,
-  );
+  await setLiveSimulationOrStopBack(context, report.activity, reconstruction.simulation, signals);
 }
 
 function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {
@@ -528,9 +533,9 @@ async function setLiveSimulationOrStopBack(
   context: WorkerContext,
   activity: Readonly<ActivityData>,
   simulation: Simulation,
-  entryEpoch: number,
+  signals: Readonly<FlowSignals>,
 ): Promise<void> {
-  if (hasStopIntervened(context, entryEpoch)) {
+  if (signals.stop.aborted) {
     await submitStopIntent(context, activity);
 
     return;
