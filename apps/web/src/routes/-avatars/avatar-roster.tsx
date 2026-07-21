@@ -117,6 +117,8 @@ export function AvatarRoster(props: AvatarRosterProps) {
           : 'Something went wrong selecting that avatar';
 
       setMessage(rejectionMessage);
+    } catch {
+      setMessage('Something went wrong selecting that avatar');
     } finally {
       setIsPending(false);
     }

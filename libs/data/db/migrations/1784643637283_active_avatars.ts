@@ -3,10 +3,16 @@ import { sql } from 'kysely';
 
 /**
  * Creates the `active_avatars` table: one row per user naming the avatar the account plays as.
- * Deleting the avatar cascades the row away — dropping the selection — and deleting the user
- * removes it with the account.
+ * The composite foreign key onto `avatars (id, user_id)` makes a cross-user selection
+ * unrepresentable, and deleting the avatar cascades the row away — dropping the selection;
+ * deleting the user removes it with the account.
  */
 export async function up(db: Kysely<unknown>): Promise<void> {
+  await db.schema
+    .alterTable('avatars')
+    .addUniqueConstraint('avatars_id_user_id_unique', ['id', 'user_id'])
+    .execute();
+
   await db.schema
     .createTable('active_avatars')
     .addColumn('user_id', 'text', (col) => col.primaryKey())
@@ -21,10 +27,10 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       (fk) => fk.onDelete('cascade').onUpdate('cascade'),
     )
     .addForeignKeyConstraint(
-      'active_avatars_avatar_id_avatars_id_fk',
-      ['avatar_id'],
+      'active_avatars_avatar_id_user_id_avatars_fk',
+      ['avatar_id', 'user_id'],
       'avatars',
-      ['id'],
+      ['id', 'user_id'],
       (fk) => fk.onDelete('cascade').onUpdate('cascade'),
     )
     .execute();
@@ -32,4 +38,5 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 
 export async function down(db: Kysely<unknown>): Promise<void> {
   await db.schema.dropTable('active_avatars').execute();
+  await db.schema.alterTable('avatars').dropConstraint('avatars_id_user_id_unique').execute();
 }
