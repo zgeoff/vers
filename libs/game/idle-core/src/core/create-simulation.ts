@@ -138,7 +138,8 @@ export function createSimulation(): Simulation {
       return null;
     }
 
-    const prevState = getSnapshot(state);
+    const shouldNotify = listeners.updated.length > 0;
+    const prevState = shouldNotify ? getSnapshot(state) : null;
 
     const next = await _generator.next(timestep);
 
@@ -148,9 +149,7 @@ export function createSimulation(): Simulation {
       _generator = null;
     }
 
-    const currentState = getSnapshot(state);
-
-    if (!deepEqual(prevState, currentState)) {
+    if (shouldNotify && !deepEqual(prevState, getSnapshot(state))) {
       for (const listener of listeners.updated) {
         listener(state);
       }

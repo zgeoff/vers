@@ -189,3 +189,30 @@ test('it calls an event listener when the failure action updates', () => {
 
   expect(listenerSpy).toHaveBeenCalledExactlyOnceWith(simulation.state);
 });
+
+test('it produces an identical checkpoint stream with and without an updated listener', async () => {
+  const avatarData = createMockAvatarData();
+  const activityData = createMockActivityInput();
+  const withoutListener = createSimulation();
+
+  withoutListener.startActivity(avatarData, activityData);
+
+  const checkpointsWithoutListener = [
+    await withoutListener.run(1),
+    await withoutListener.run(5000),
+    await withoutListener.run(10_000),
+  ];
+
+  const withListener = createSimulation();
+
+  withListener.addEventListener('updated', () => {});
+  withListener.startActivity(avatarData, activityData);
+
+  const checkpointsWithListener = [
+    await withListener.run(1),
+    await withListener.run(5000),
+    await withListener.run(10_000),
+  ];
+
+  expect(checkpointsWithListener).toStrictEqual(checkpointsWithoutListener);
+});
