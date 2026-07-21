@@ -1,7 +1,6 @@
 import { ORPCError, isDefinedError, safe } from '@orpc/client';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
 import { fromPromise } from 'xstate';
-import { FLUSH_STALL_THRESHOLD } from './constants';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import { removeConfirmedCheckpoints } from './remove-confirmed-checkpoints';
 import { removeQueuedCheckpoints } from './remove-queued-checkpoints';
@@ -18,12 +17,7 @@ export type FlushOutcome =
   | { readonly appendedHead: number; readonly type: 'capped' }
   | { readonly appendedHead: number; readonly type: 'conflict' }
   | { readonly appendedHead: number; readonly type: 'success' }
-  | {
-      readonly consecutiveFlushFailures: number;
-      readonly reason: string;
-      readonly traceID: string;
-      readonly type: 'transport-failure';
-    }
+  | { readonly reason: string; readonly traceID: string; readonly type: 'transport-failure' }
   | {
       readonly appendedHead: number | undefined;
       readonly error: unknown;
@@ -39,14 +33,10 @@ export type FlushOutcome =
 interface FlushAttemptInput {
   readonly activityID: string;
   readonly client: Pick<ActivityServiceClient, 'trackActivityProgress'>;
-  readonly consecutiveFlushFailures: number;
   readonly expectedHead: number;
   readonly onAcked: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onCapped: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onEvicted: ((activityID: string) => void) | undefined;
-  readonly onFlushStalled:
-    | ((activityID: string, reason: string, traceID: string) => void)
-    | undefined;
   readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
   readonly onServerContact: (() => void) | undefined;
 }
@@ -95,18 +85,7 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
         const reason =
           error instanceof ORPCError ? `${error.code}: ${error.message}` : String(error);
 
-        const consecutiveFlushFailures = input.consecutiveFlushFailures + 1;
-
-        if (consecutiveFlushFailures === FLUSH_STALL_THRESHOLD) {
-          input.onFlushStalled?.(input.activityID, reason, trace.traceID);
-        }
-
-        return {
-          consecutiveFlushFailures,
-          reason,
-          traceID: trace.traceID,
-          type: 'transport-failure',
-        };
+        return { reason, traceID: trace.traceID, type: 'transport-failure' };
       }
 
       serverAnswered = true;

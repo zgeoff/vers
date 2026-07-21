@@ -1,6 +1,7 @@
 import type { ActorRef, Snapshot } from 'xstate';
-import { assign, raise, setup } from 'xstate';
+import { assign, emit, enqueueActions, raise, setup } from 'xstate';
 import { buildMachineTypes } from './build-machine-types';
+import { FLUSH_STALL_THRESHOLD } from './constants';
 import type { FlushOutcome } from './run-checkpoint-flush-attempt';
 import { runCheckpointFlushAttempt } from './run-checkpoint-flush-attempt';
 import { subscribeToShutdownAbort } from './subscribe-to-shutdown-abort';
@@ -16,12 +17,7 @@ interface CheckpointActivityContext {
   readonly onAcked: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onCapped: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onEvicted: ((activityID: string) => void) | undefined;
-  readonly onFlushStalled:
-    | ((activityID: string, reason: string, traceID: string) => void)
-    | undefined;
-  readonly onHeld: ((activityID: string) => void) | undefined;
   readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
-  readonly onRetryFailed: ((activityID: string, error: unknown) => void) | undefined;
   readonly onServerContact: (() => void) | undefined;
   readonly parentRef: ActorRef<Snapshot<unknown>, CheckpointActivitySettledEvent> | undefined;
   readonly retryAttempt: number;
@@ -45,12 +41,7 @@ export interface CheckpointActivityInput {
   readonly onAcked: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onCapped: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onEvicted: ((activityID: string) => void) | undefined;
-  readonly onFlushStalled:
-    | ((activityID: string, reason: string, traceID: string) => void)
-    | undefined;
-  readonly onHeld: ((activityID: string) => void) | undefined;
   readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
-  readonly onRetryFailed: ((activityID: string, error: unknown) => void) | undefined;
   readonly onServerContact: (() => void) | undefined;
 
   /**
@@ -85,7 +76,11 @@ export interface CheckpointActivitySettledEvent {
 type FlushSettledEvent =
   | { readonly appendedHead: number; readonly type: 'SETTLED_CONFLICT' }
   | { readonly appendedHead: number; readonly type: 'SETTLED_SUCCESS' }
-  | { readonly consecutiveFlushFailures: number; readonly type: 'SETTLED_TRANSPORT_FAILURE' }
+  | {
+      readonly reason: string;
+      readonly traceID: string;
+      readonly type: 'SETTLED_TRANSPORT_FAILURE';
+    }
   | {
       readonly appendedHead: number | undefined;
       readonly error: unknown;
@@ -105,6 +100,21 @@ type CheckpointActivityEvent =
   | { readonly isTerminal: boolean; readonly type: 'QUEUED'; readonly version: number };
 
 /**
+ * The machine's outward notifications, subscribed via `actor.on(…)` — telemetry and
+ * connectivity signals whose delivery nothing in the flush sequence waits on. Callbacks the
+ * flush attempt must await before its outcome settles stay in the construction input instead.
+ */
+export type CheckpointActivityEmittedEvent =
+  | { readonly activityID: string; readonly error: unknown; readonly type: 'retryFailed' }
+  | { readonly activityID: string; readonly type: 'held' }
+  | {
+      readonly activityID: string;
+      readonly reason: string;
+      readonly traceID: string;
+      readonly type: 'flushStalled';
+    };
+
+/**
  * One activity's flush lifecycle: `idle` (nothing pending) → `scheduled` (a non-terminal
  * checkpoint armed the shared progress window) → `flushing` (one attempt in flight) →, on
  * failure, `retrying` (exponential backoff) until the batch lands, is rejected outright
@@ -121,6 +131,7 @@ export const checkpointActivityMachine = setup({
   },
   types: buildMachineTypes<{
     context: CheckpointActivityContext;
+    emitted: CheckpointActivityEmittedEvent;
     events: CheckpointActivityEvent;
     input: CheckpointActivityInput;
   }>(),
@@ -135,10 +146,7 @@ export const checkpointActivityMachine = setup({
     onAcked: args.input.onAcked,
     onCapped: args.input.onCapped,
     onEvicted: args.input.onEvicted,
-    onFlushStalled: args.input.onFlushStalled,
-    onHeld: args.input.onHeld,
     onInvalid: args.input.onInvalid,
-    onRetryFailed: args.input.onRetryFailed,
     onServerContact: args.input.onServerContact,
     parentRef: args.input.parentRef,
     retryAttempt: 0,
@@ -160,12 +168,10 @@ export const checkpointActivityMachine = setup({
         input: (args) => ({
           activityID: args.context.activityID,
           client: args.context.client,
-          consecutiveFlushFailures: args.context.consecutiveFlushFailures,
           expectedHead: args.context.expectedHead,
           onAcked: args.context.onAcked,
           onCapped: args.context.onCapped,
           onEvicted: args.context.onEvicted,
-          onFlushStalled: args.context.onFlushStalled,
           onInvalid: args.context.onInvalid,
           onServerContact: args.context.onServerContact,
         }),
@@ -185,9 +191,11 @@ export const checkpointActivityMachine = setup({
         },
         SETTLED_CALLBACK_FAILED: {
           actions: [
-            (args) => {
-              args.context.onRetryFailed?.(args.context.activityID, args.event.error);
-            },
+            emit((args) => ({
+              activityID: args.context.activityID,
+              error: args.event.error,
+              type: 'retryFailed',
+            })),
             assign({
               consecutiveFlushFailures: 0,
               expectedHead: (args) => args.event.appendedHead ?? args.context.expectedHead,
@@ -239,8 +247,19 @@ export const checkpointActivityMachine = setup({
           },
         ],
         SETTLED_TRANSPORT_FAILURE: {
-          actions: assign({
-            consecutiveFlushFailures: (args) => args.event.consecutiveFlushFailures,
+          actions: enqueueActions((args) => {
+            const consecutiveFlushFailures = args.context.consecutiveFlushFailures + 1;
+
+            args.enqueue.assign({ consecutiveFlushFailures });
+
+            if (consecutiveFlushFailures === FLUSH_STALL_THRESHOLD) {
+              args.enqueue.emit({
+                activityID: args.context.activityID,
+                reason: args.event.reason,
+                traceID: args.event.traceID,
+                type: 'flushStalled',
+              });
+            }
           }),
           target: 'retrying',
         },
@@ -280,9 +299,7 @@ export const checkpointActivityMachine = setup({
         guard: (args) => args.context.flushPending,
         target: 'flushing',
       },
-      entry: (args) => {
-        args.context.onHeld?.(args.context.activityID);
-      },
+      entry: emit((args) => ({ activityID: args.context.activityID, type: 'held' })),
       invoke: {
         input: (args) => ({ signal: args.context.signal }),
         src: 'subscribeToShutdownAbort',
@@ -331,44 +348,43 @@ function emitSettlementToParent(args: Readonly<{ context: CheckpointActivityCont
  * fields the receiving transition acts on.
  */
 function buildFlushSettledEvent(outcome: FlushOutcome): FlushSettledEvent {
-  switch (outcome.type) {
-    case 'callback-failed': {
-      return {
-        appendedHead: outcome.appendedHead,
-        error: outcome.error,
-        type: 'SETTLED_CALLBACK_FAILED',
-      };
-    }
-    case 'capped':
-    case 'not-found':
-    case 'terminal': {
-      return { sessionEvicted: false, type: 'SETTLED_EVICTION' };
-    }
-    case 'conflict': {
-      return { appendedHead: outcome.appendedHead, type: 'SETTLED_CONFLICT' };
-    }
-    case 'empty': {
-      return { type: 'SETTLED_EMPTY' };
-    }
-    case 'held-defined-error': {
-      return { type: 'SETTLED_HELD_ERROR' };
-    }
-    case 'invalid': {
-      return { type: 'SETTLED_INVALID' };
-    }
-    case 'session-evicted': {
-      return { sessionEvicted: true, type: 'SETTLED_EVICTION' };
-    }
-    case 'success': {
-      return { appendedHead: outcome.appendedHead, type: 'SETTLED_SUCCESS' };
-    }
-    case 'transport-failure': {
-      return {
-        consecutiveFlushFailures: outcome.consecutiveFlushFailures,
-        type: 'SETTLED_TRANSPORT_FAILURE',
-      };
-    }
+  if (outcome.type === 'callback-failed') {
+    return {
+      appendedHead: outcome.appendedHead,
+      error: outcome.error,
+      type: 'SETTLED_CALLBACK_FAILED',
+    };
   }
+
+  if (outcome.type === 'capped' || outcome.type === 'not-found' || outcome.type === 'terminal') {
+    return { sessionEvicted: false, type: 'SETTLED_EVICTION' };
+  }
+
+  if (outcome.type === 'conflict') {
+    return { appendedHead: outcome.appendedHead, type: 'SETTLED_CONFLICT' };
+  }
+
+  if (outcome.type === 'empty') {
+    return { type: 'SETTLED_EMPTY' };
+  }
+
+  if (outcome.type === 'held-defined-error') {
+    return { type: 'SETTLED_HELD_ERROR' };
+  }
+
+  if (outcome.type === 'invalid') {
+    return { type: 'SETTLED_INVALID' };
+  }
+
+  if (outcome.type === 'session-evicted') {
+    return { sessionEvicted: true, type: 'SETTLED_EVICTION' };
+  }
+
+  if (outcome.type === 'success') {
+    return { appendedHead: outcome.appendedHead, type: 'SETTLED_SUCCESS' };
+  }
+
+  return { reason: outcome.reason, traceID: outcome.traceID, type: 'SETTLED_TRANSPORT_FAILURE' };
 }
 
 /**

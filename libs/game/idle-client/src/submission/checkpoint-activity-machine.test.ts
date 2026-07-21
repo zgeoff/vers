@@ -44,17 +44,28 @@ function setupTest(
       onAcked,
       onCapped,
       onEvicted,
-      onFlushStalled,
-      onHeld,
       onInvalid,
-      onRetryFailed,
       onServerContact,
       retryTimings: config.retryTimings ?? { maxTimeout: 300_000, minTimeout: 10_000 },
       scheduleProgressFlush,
       signal: config.signal,
       terminalQueued: config.terminalQueued ?? false,
     },
-  }).start();
+  });
+
+  actor.on('flushStalled', (emitted) => {
+    onFlushStalled(emitted.activityID, emitted.reason, emitted.traceID);
+  });
+
+  actor.on('held', (emitted) => {
+    onHeld(emitted.activityID);
+  });
+
+  actor.on('retryFailed', (emitted) => {
+    onRetryFailed(emitted.activityID, emitted.error);
+  });
+
+  actor.start();
 
   return {
     actor,

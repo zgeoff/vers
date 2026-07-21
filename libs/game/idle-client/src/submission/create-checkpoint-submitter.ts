@@ -290,10 +290,7 @@ export function createCheckpointSubmitter(
       onAcked: options.onAcked,
       onCapped: options.onCapped,
       onEvicted: options.onEvicted,
-      onFlushStalled: options.onFlushStalled,
-      onHeld: options.onHeld,
       onInvalid: options.onInvalid,
-      onRetryFailed: options.onRetryFailed,
       onServerContact: options.onServerContact,
       retryTimings,
       scheduleProgressFlush: makeScheduleProgressFlush(context.activityID),
@@ -305,6 +302,19 @@ export function createCheckpointSubmitter(
     const child = findChild(context.activityID);
 
     invariant(child !== undefined, 'expected the just-spawned child to be reachable by its id');
+
+    // wired before any event can start a flush, so no emission is ever missed
+    child.on('flushStalled', (emitted) => {
+      options.onFlushStalled?.(emitted.activityID, emitted.reason, emitted.traceID);
+    });
+
+    child.on('held', (emitted) => {
+      options.onHeld?.(emitted.activityID);
+    });
+
+    child.on('retryFailed', (emitted) => {
+      options.onRetryFailed?.(emitted.activityID, emitted.error);
+    });
 
     child.subscribe((snapshot) => {
       if (snapshot.status === 'done') {
