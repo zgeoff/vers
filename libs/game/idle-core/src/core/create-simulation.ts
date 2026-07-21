@@ -67,7 +67,7 @@ export function createSimulation(): Simulation {
     updated: [],
   };
 
-  const startActivity = async (avatarData: AvatarData, activityData: ActivityInput) => {
+  const startActivity = (avatarData: AvatarData, activityData: ActivityInput) => {
     const isSameActivity = _activityData?.id === activityData.id;
     const isSameAvatar = _avatar?.id === avatarData.id;
 
@@ -76,7 +76,7 @@ export function createSimulation(): Simulation {
     }
 
     if (_generator) {
-      await stopActivity();
+      stopActivity();
     }
 
     _activityData = activityData;
@@ -93,12 +93,12 @@ export function createSimulation(): Simulation {
   };
 
   // cleans up our activity and notifies listeners
-  const stopActivity = async () => {
+  const stopActivity = () => {
     _activity = null;
 
     if (!_done) {
       // @ts-expect-error - we're not passing a return value during cleanup
-      await _generator?.return();
+      _generator?.return();
     }
 
     _done = true;
@@ -133,15 +133,14 @@ export function createSimulation(): Simulation {
     }
   };
 
-  const run = async (timestep: number): Promise<ActivityCheckpoint | null> => {
+  const run = (timestep: number): ActivityCheckpoint | null => {
     if (!_generator) {
       return null;
     }
 
     const shouldNotify = listeners.updated.length > 0;
     const prevState = shouldNotify ? getSnapshot(state) : null;
-
-    const next = await _generator.next(timestep);
+    const next = _generator.next(timestep);
 
     _done = next.done ?? false;
 
@@ -197,9 +196,7 @@ export function createSimulation(): Simulation {
     restartActivity,
     run,
     setFailureAction,
-    startActivity: (avatarData: AvatarData, activityData: ActivityInput) => {
-      void startActivity(avatarData, activityData);
-    },
+    startActivity,
     stopActivity,
   };
 }

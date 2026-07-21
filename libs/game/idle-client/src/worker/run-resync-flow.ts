@@ -476,7 +476,7 @@ async function applyHeadAttach(
     return;
   }
 
-  const reconstruction = await runReconstruction({
+  const reconstruction = runReconstruction({
     activity: input.activity,
     appendedHead: submission.appendedHead,
     avatar: input.avatar,

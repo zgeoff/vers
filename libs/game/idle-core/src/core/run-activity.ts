@@ -13,8 +13,7 @@ import { createFailedCheckpoint } from './utils/create-failed-checkpoint';
 import { createProgressCheckpoint } from './utils/create-progress-checkpoint';
 import { createStartedCheckpoint } from './utils/create-started-checkpoint';
 
-// oxlint-disable-next-line typescript/require-await -- callers drive this generator with awaited next()/return() calls, so it must satisfy the AsyncGenerator contract even though its own body has no await
-export async function* runActivity(
+export function* runActivity(
   executor: ActivityExecutor,
   activity: Activity,
   avatar: Avatar,

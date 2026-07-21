@@ -94,7 +94,7 @@ export interface Activity {
   setLevelUp: (levelUp: ActivityLevelUp) => void;
 }
 
-export type ActivityCheckpointGenerator = AsyncGenerator<
+export type ActivityCheckpointGenerator = Generator<
   ActivityCheckpoint | null,
   ActivityCheckpoint,
   number

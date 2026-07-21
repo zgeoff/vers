@@ -16,7 +16,7 @@ test('it broadcasts a simulation update once the installed simulation reports on
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
   for (let tick = 0; tick < 20; tick += 1) {
-    await simulation.run(500);
+    simulation.run(500);
   }
 
   await waitFor(() => {

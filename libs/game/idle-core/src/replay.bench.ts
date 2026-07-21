@@ -37,7 +37,7 @@ bench('replay driver · 1 simulated hour', async () => {
   await driver.advanceToDuration(SIMULATED_HOUR_MS);
 });
 
-bench('live loop with updated listener · 1 simulated hour', async () => {
+bench('live loop with updated listener · 1 simulated hour', () => {
   const input = buildSimulationInput(SOURCE, {
     failureAction: ActivityFailureAction.Retry,
   });
@@ -48,7 +48,7 @@ bench('live loop with updated listener · 1 simulated hour', async () => {
   simulation.startActivity(input.avatar, input.activity);
 
   while (simulation.elapsed < SIMULATED_HOUR_MS) {
-    const checkpoint = await simulation.run(SIMULATION_TIMESTEP_MS);
+    const checkpoint = simulation.run(SIMULATION_TIMESTEP_MS);
 
     if (checkpoint && (isFailedCheckpoint(checkpoint) || isCompletedCheckpoint(checkpoint))) {
       simulation.restartActivity();
