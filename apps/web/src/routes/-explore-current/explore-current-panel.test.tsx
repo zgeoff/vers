@@ -3,7 +3,11 @@ import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { ClientMessage } from '@vers/idle-client';
-import { ClientMessageType, isStartActivityMessage } from '@vers/idle-client';
+import {
+  ClientMessageType,
+  advanceWriterGeneration,
+  isStartActivityMessage,
+} from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import * as db from '@vers/mock-services/db';
@@ -12,7 +16,6 @@ import { createMockWorldMapNode } from '@vers/worldmap-client/test-utils';
 import invariant from 'tiny-invariant';
 import { orpc } from '../../lib/rpc/orpc';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
-import { removeSharedWorker } from '../../test-utils/remove-shared-worker';
 import { render } from '../../test-utils/render';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -20,13 +23,13 @@ import { ExploreCurrentPanel } from './explore-current-panel';
 
 test('it shows a spinner and sends initialize before the worker reports its state', () => {
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: false,
-    worker,
+    transport,
   });
 
   const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
@@ -35,19 +38,46 @@ test('it shows a spinner and sends initialize before the worker reports its stat
   expect(rendered.queryByTestId('world-map-node-codex-stub')).not.toBeInTheDocument();
 });
 
-test('it reports the simulation as unavailable when SharedWorker is unsupported', () => {
-  removeSharedWorker();
+test('it re-sends the start intent against a promoted writer', async () => {
+  const signedIn = await createSignedInUser();
+
+  await db.avatarCollection.create({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+
+  const calls: Array<ClientMessage> = [];
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
-    initialized: false,
-    worker: undefined,
+    initialized: true,
+    transport,
   });
 
-  const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    render(<ExploreCurrentPanel orpc={orpc} />);
 
-  expect(rendered.getByRole('status')).toHaveTextContent(/activity simulation is unavailable/i);
+    await waitFor(() => {
+      expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
+    });
+
+    const first = calls.find((call) => isStartActivityMessage(call));
+
+    invariant(first !== undefined, 'expected a start intent');
+
+    // a promoted writer never answers the dead writer's request; the panel re-raises its intent
+    advanceWriterGeneration();
+
+    await waitFor(() => {
+      expect(calls.filter((call) => isStartActivityMessage(call))).toHaveLength(2);
+    });
+
+    const [, second] = calls.filter((call) => isStartActivityMessage(call));
+
+    invariant(second !== undefined, 'expected a re-raised start intent');
+    expect(second.requestID).not.toBe(first.requestID);
+  });
 });
 
 test('it sends one start intent for the selected node once initialized', async () => {
@@ -57,13 +87,13 @@ test('it sends one start intent for the selected node once initialized', async (
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -90,13 +120,13 @@ test('it renders the node and its codex fragment once the worker reports the sta
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -121,7 +151,7 @@ test('it renders the node and its codex fragment once the worker reports the sta
         requestID: sent.requestID,
         status: { activity: started, kind: 'started' },
       },
-      worker,
+      transport,
     });
 
     const codex = await rendered.findByTestId('world-map-node-codex-stub');
@@ -138,13 +168,13 @@ test('it treats an attached report as ready once the simulation carries that row
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -166,7 +196,7 @@ test('it treats an attached report as ready once the simulation carries that row
         requestID: sent.requestID,
         status: { activityID: 'activity_attached', kind: 'attached' },
       },
-      worker,
+      transport,
     });
 
     const codex = await rendered.findByTestId('world-map-node-codex-stub');
@@ -183,13 +213,13 @@ test('it ignores a start report answering another request', async () => {
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -204,7 +234,7 @@ test('it ignores a start report answering another request', async () => {
       failureAction: ActivityFailureAction.Abort,
       initialized: true,
       startReport: { requestID: 'someone-elses-request', status: { kind: 'failed' } },
-      worker,
+      transport,
     });
 
     expect(rendered.queryByTestId('start-activity-retry')).not.toBeInTheDocument();
@@ -220,14 +250,14 @@ test('it offers a retry on a failed report and sends a fresh intent on demand', 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
   const user = userEvent.setup();
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -246,7 +276,7 @@ test('it offers a retry on a failed report and sends a fresh intent on demand', 
       failureAction: ActivityFailureAction.Abort,
       initialized: true,
       startReport: { requestID: first.requestID, status: { kind: 'failed' } },
-      worker,
+      transport,
     });
 
     const retry = await rendered.findByTestId('start-activity-retry');
@@ -271,14 +301,14 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
   const user = userEvent.setup();
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -302,7 +332,7 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
         requestID: sent.requestID,
         status: { activity: started, kind: 'started' },
       },
-      worker,
+      transport,
     });
 
     const checkbox = await rendered.findByLabelText('Auto-retry on failure');
@@ -326,13 +356,13 @@ test('it keeps its own outcome when a later report answers another tab', async (
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -356,7 +386,7 @@ test('it keeps its own outcome when a later report answers another tab', async (
         requestID: sent.requestID,
         status: { activity: started, kind: 'started' },
       },
-      worker,
+      transport,
     });
 
     await rendered.findByTestId('world-map-node-codex-stub');
@@ -367,7 +397,7 @@ test('it keeps its own outcome when a later report answers another tab', async (
       failureAction: ActivityFailureAction.Abort,
       initialized: true,
       startReport: { requestID: 'another-tabs-request', status: { kind: 'failed' } },
-      worker,
+      transport,
     });
 
     expect(rendered.getByTestId('world-map-node-codex-stub')).toBeVisible();

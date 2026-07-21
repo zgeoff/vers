@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { advanceWriterGeneration } from '../state/advance-writer-generation';
 import { setCheckpointFlushStall } from '../state/set-checkpoint-flush-stall';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setConnectionStatus } from '../state/set-connection-status';
@@ -9,7 +10,7 @@ import { setResyncStatus } from '../state/set-resync-status';
 import { setRewardSlotLedger } from '../state/set-reward-slot-ledger';
 import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
-import { setSimulationWorker } from '../state/set-simulation-worker';
+import { setSimulationTransport } from '../state/set-simulation-transport';
 import { setStartReport } from '../state/set-start-report';
 import { setWriterDisplacedActivityID } from '../state/set-writer-displaced-activity-id';
 import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
@@ -28,122 +29,123 @@ import type {
   StartStatusMessage,
   WorkerMessage,
   WriterDisplacedMessage,
+  WriterReadyMessage,
 } from '../types';
 import { WorkerMessageType } from '../types';
-import { createDisconnectMessage } from './create-disconnect-message';
+import { createChannelTransport } from './create-channel-transport';
+import { createSharedWorkerTransport } from './create-shared-worker-transport';
+import { isWebLocksSupported } from './is-web-locks-supported';
+import { pickTransportKind } from './pick-transport-kind';
 
-let hasRegisteredDisconnectListener = false;
-
-export function useSimulationWorker() {
-  const existingWorker = useIdleStore((state) => state.worker);
+export function useSimulationTransport() {
+  const existingTransport = useIdleStore((state) => state.transport);
 
   useEffect(() => {
-    // Browsers without SharedWorker (Android Chrome, older Safari) would throw on construction;
-    // the worker stays undefined and every consumer degrades to its no-worker branch.
-    if (typeof SharedWorker === 'undefined') {
+    // read the store imperatively, not the render closure: sibling consumers mount in one commit,
+    // and a store write during the effect flush does not re-render them before their own queued
+    // effects run — each would see a stale null and construct its own transport (and, on the
+    // fallback path, its own election worker). The imperative read also absorbs StrictMode's
+    // double-invoke, since the first run commits to the store synchronously.
+    if (useIdleStore.getState().transport !== null) {
       return;
     }
 
-    const worker =
-      existingWorker ??
-      // oxlint-disable-next-line unicorn/relative-url-style -- Vite's worker-import-meta-url plugin resolves this specifier as a relative file reference only with the leading './'; a bare specifier resolves to the same URL at runtime but Vite's static analysis would treat it as a bare package import and skip bundling it
-      new SharedWorker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+    const kind = pickTransportKind({
+      hasSharedWorker: typeof SharedWorker !== 'undefined',
+      hasWebLocks: isWebLocksSupported(),
+    });
 
-    setSimulationWorker(worker);
-
-    // oxlint-disable-next-line unicorn/prefer-add-event-listener -- assigning onmessage starts MessagePort delivery; addEventListener also needs an explicit port.start()
-    worker.port.onmessage = handleWorkerMessage;
-
-    // Registered once for the page's lifetime, never from this effect's own cleanup: the effect's
-    // `[existingWorker]` dependency re-runs right after the first mount creates a worker (the store
-    // update it triggers changes `existingWorker`'s identity), and a cleanup-based send would fire
-    // on that transition and disconnect the connection it just made.
-    if (!hasRegisteredDisconnectListener) {
-      hasRegisteredDisconnectListener = true;
-
-      window.addEventListener('pagehide', handlePageHide);
+    if (kind === 'none') {
+      return;
     }
-  }, [existingWorker]);
 
-  return existingWorker;
+    const transport =
+      kind === 'shared-worker' ? createSharedWorkerTransport() : createChannelTransport();
+
+    // a page-lifetime subscription: the transport lives in the store until the page dies, so
+    // nothing ever detaches it
+    transport.subscribe(handleWorkerMessage);
+
+    setSimulationTransport(transport);
+  }, [existingTransport]);
+
+  return existingTransport;
 }
 
-function handlePageHide() {
-  const worker = useIdleStore.getState().worker;
-
-  worker?.port.postMessage(createDisconnectMessage());
-}
-
-function handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
-  if (isInitialStateMessage(event.data)) {
+function handleWorkerMessage(message: WorkerMessage) {
+  if (isInitialStateMessage(message)) {
     setSimulationInitialized(true);
   }
 
-  if (isInitialStateMessage(event.data) || isUpdateMessage(event.data)) {
-    setSimulationSnapshot(event.data.state);
+  if (isInitialStateMessage(message) || isUpdateMessage(message)) {
+    setSimulationSnapshot(message.state);
   }
 
-  if (isInitialStateMessage(event.data)) {
-    setRewardSlotLedger(event.data.rewardSlotLedger);
+  if (isInitialStateMessage(message)) {
+    setRewardSlotLedger(message.rewardSlotLedger);
   }
 
-  if (isActivityCompletedMessage(event.data)) {
-    setLastCompletedActivityID(event.data.activityID);
+  if (isActivityCompletedMessage(message)) {
+    setLastCompletedActivityID(message.activityID);
   }
 
-  if (isCheckpointFlushStalledMessage(event.data)) {
+  if (isCheckpointFlushStalledMessage(message)) {
     setCheckpointFlushStall({
-      activityID: event.data.activityID,
-      reason: event.data.reason,
-      traceID: event.data.traceID,
+      activityID: message.activityID,
+      reason: message.reason,
+      traceID: message.traceID,
     });
   }
 
-  if (isCheckpointStreamInvalidMessage(event.data)) {
+  if (isCheckpointStreamInvalidMessage(message)) {
     setCheckpointStreamError({
-      activityID: event.data.activityID,
-      reason: event.data.reason,
-      ...(event.data.traceID === undefined ? {} : { traceID: event.data.traceID }),
+      activityID: message.activityID,
+      reason: message.reason,
+      ...(message.traceID === undefined ? {} : { traceID: message.traceID }),
     });
   }
 
-  if (isOfflineCapStatusMessage(event.data)) {
+  if (isOfflineCapStatusMessage(message)) {
     setOfflineCapStatus({
-      halted: event.data.halted,
-      remainingMs: event.data.remainingMs,
+      halted: message.halted,
+      remainingMs: message.remainingMs,
     });
   }
 
-  if (isResyncStatusMessage(event.data)) {
-    setResyncStatus(event.data.status);
+  if (isResyncStatusMessage(message)) {
+    setResyncStatus(message.status);
   }
 
-  if (isConnectionStatusMessage(event.data)) {
-    setConnectionStatus(event.data.online);
+  if (isConnectionStatusMessage(message)) {
+    setConnectionStatus(message.online);
   }
 
-  if (isFailureActionStatusMessage(event.data)) {
-    setFailureAction(event.data.failureAction);
+  if (isFailureActionStatusMessage(message)) {
+    setFailureAction(message.failureAction);
   }
 
-  if (isRewardSlotsRecordedMessage(event.data)) {
+  if (isRewardSlotsRecordedMessage(message)) {
     updateRewardSlotLedger({
-      activityID: event.data.activityID,
-      count: event.data.rewardSlotCount,
-      version: event.data.version,
+      activityID: message.activityID,
+      count: message.rewardSlotCount,
+      version: message.version,
     });
   }
 
-  if (isStartStatusMessage(event.data)) {
-    setStartReport({ requestID: event.data.requestID, status: event.data.status });
+  if (isStartStatusMessage(message)) {
+    setStartReport({ requestID: message.requestID, status: message.status });
   }
 
-  if (isInitialStateMessage(event.data)) {
-    setWriterDisplacedActivityID(event.data.writerDisplacedActivityID);
+  if (isInitialStateMessage(message)) {
+    setWriterDisplacedActivityID(message.writerDisplacedActivityID);
   }
 
-  if (isWriterDisplacedMessage(event.data)) {
-    setWriterDisplacedActivityID(event.data.activityID);
+  if (isWriterDisplacedMessage(message)) {
+    setWriterDisplacedActivityID(message.activityID);
+  }
+
+  if (isWriterReadyMessage(message)) {
+    advanceWriterGeneration();
   }
 }
 
@@ -201,4 +203,8 @@ function isStartStatusMessage(message: WorkerMessage): message is StartStatusMes
 
 function isWriterDisplacedMessage(message: WorkerMessage): message is WriterDisplacedMessage {
   return message.type === WorkerMessageType.WriterDisplaced;
+}
+
+function isWriterReadyMessage(message: WorkerMessage): message is WriterReadyMessage {
+  return message.type === WorkerMessageType.WriterReady;
 }

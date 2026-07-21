@@ -1,8 +1,11 @@
+import type { SimulationTransport } from '@vers/idle-client';
 import { createInitializeMessage } from '@vers/idle-client';
 
 /**
- * Sends the one-time message a freshly connected worker needs before it reports simulation state.
+ * Sends the message a freshly connected worker needs before it reports simulation state. Callers
+ * on the fallback transport re-send until the initial state arrives — a post can race the writer
+ * election and be lost.
  */
-export function sendIdleInitialize(worker: Pick<SharedWorker, 'port'>): void {
-  worker.port.postMessage(createInitializeMessage());
+export function sendIdleInitialize(transport: SimulationTransport): void {
+  transport.post(createInitializeMessage());
 }

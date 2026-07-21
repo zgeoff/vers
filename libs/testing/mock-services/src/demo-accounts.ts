@@ -47,4 +47,11 @@ export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
     password: 'password123',
     username: 'e2e-avatar-satellite',
   },
+  {
+    avatarName: 'Web Locks Test Avatar',
+    email: 'e2e-web-locks@vers.test',
+    name: 'Web Locks Demo Account',
+    password: 'password123',
+    username: 'e2e-web-locks',
+  },
 ];

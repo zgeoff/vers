@@ -18,11 +18,12 @@ import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
 import { runReconnectRecovery } from './run-reconnect-recovery';
 import { runSimulation } from './run-simulation';
-import type { WorkerContext } from './types';
+import type { WorkerConnection, WorkerContext } from './types';
 import { withLifecycleTurn } from './with-lifecycle-turn';
 
 export interface WorkerRuntime {
-  readonly connections: ReadonlySet<MessagePort>;
+  readonly registerConnection: (connection: WorkerConnection) => void;
+  readonly connections: ReadonlySet<WorkerConnection>;
   readonly handleConnect: (event: MessageEvent) => void;
   readonly stop: () => void;
 
@@ -60,7 +61,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   const timestep = options.timestep ?? SIMULATION_TIMESTEP_MS;
   const now = options.now ?? (() => performance.now());
 
-  const connections = new Set<MessagePort>();
+  const connections = new Set<WorkerConnection>();
 
   const client = options.client ?? createActivityServiceClient();
 
@@ -206,8 +207,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       rewardSlotLedgerActivityID = activityID;
       rewardSlotLedger = [entry];
     },
-    removeConnection: (port) => {
-      connections.delete(port);
+    removeConnection: (connection) => {
+      connections.delete(connection);
     },
     resetRewardSlotLedger: () => {
       rewardSlotLedgerActivityID = null;
@@ -267,30 +268,26 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   };
 
   // cache our listeners so we can message them later
-  const handleConnect = (event: MessageEvent) => {
-    const [port] = event.ports;
+  const registerConnection = (connection: WorkerConnection) => {
+    connections.add(connection);
+    connection.start?.();
 
-    invariant(port, 'port is required');
-
-    connections.add(port);
-    port.start();
-
-    port.addEventListener('message', (messageEvent: MessageEvent<ClientMessage>) => {
+    connection.addEventListener('message', (messageEvent: MessageEvent<ClientMessage>) => {
       void (async () => {
         try {
           await failureActionSeeded;
-          await handleClientMessage(context, port, messageEvent);
+          await handleClientMessage(context, connection, messageEvent);
         } catch (error) {
           reportWorkerFault('message-routing', error);
         }
       })();
     });
 
-    // Chrome fires 'close' when the peer disconnects (shipped 2024); Firefox/Safari support is
-    // unconfirmed and Bun fires no 'close' event at all, so this leg runs untested in every test
-    // suite — the explicit Disconnect message handled above is the reliable path.
-    port.addEventListener('close', () => {
-      connections.delete(port);
+    // Chrome fires 'close' when a MessagePort's peer disconnects (shipped 2024); Firefox/Safari
+    // support is unconfirmed, Bun fires no 'close' event at all, and broadcast channels never
+    // fire one — the explicit Disconnect message handled above is the reliable path.
+    connection.addEventListener('close', () => {
+      connections.delete(connection);
     });
 
     // ensure we're only running one loop per worker
@@ -299,6 +296,13 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
       scheduleTick();
     }
+  };
+
+  const handleConnect = (event: MessageEvent) => {
+    const [port] = event.ports;
+
+    invariant(port, 'port is required');
+    registerConnection(port);
   };
 
   // a fixed timestep keeps updates consistent: the worker isn't tied to UI updates and has no requestAnimationFrame
@@ -358,7 +362,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     self.removeEventListener('offline', handleOffline);
   };
 
-  return { [Symbol.dispose]: stop, connections, handleConnect, stop };
+  return { [Symbol.dispose]: stop, connections, handleConnect, registerConnection, stop };
 }
 
 function wait(ms: number) {

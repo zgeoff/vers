@@ -34,13 +34,13 @@ test('it claims the run back with a claiming report on continue-here', async () 
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   setWriterDisplacedActivityID('activity_1');

@@ -12,13 +12,13 @@ import { GameSimulationMount } from './game-simulation-mount';
 
 test('it sends the initialize message once a worker connects that has not reported state yet', () => {
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: false,
-    worker,
+    transport,
   });
 
   render(<GameSimulationMount />);
@@ -27,13 +27,13 @@ test('it sends the initialize message once a worker connects that has not report
 
 test('it sends nothing once the worker has already reported its state and no avatar is known', () => {
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   render(<GameSimulationMount />);
@@ -47,7 +47,7 @@ test('it sends nothing before a worker has connected', () => {
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: false,
-    worker: undefined,
+    transport: undefined,
   });
 
   render(<GameSimulationMount />);
@@ -60,7 +60,7 @@ test('it renders without error when the worker reports a stopped checkpoint stre
     checkpointStreamError: { activityID: 'activity_1', reason: 'broken-chain-link' },
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker: undefined,
+    transport: undefined,
   });
 
   const rendered = render(<GameSimulationMount />);
@@ -73,13 +73,13 @@ test('it sends initialize then reports online once the active avatar resolves', 
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -97,13 +97,13 @@ test('it sends initialize then reports online once the active avatar resolves', 
 
 test('it never reports online without a known avatar', async () => {
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   await withRequestContext({}, () => {
@@ -122,13 +122,13 @@ test('it reports online only once across re-renders', async () => {
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -156,13 +156,13 @@ test('it reports online again when the browser comes back online', async () => {
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -190,7 +190,7 @@ test('it renders without error when the worker reports a stalled checkpoint flus
     checkpointFlushStall: { activityID: 'activity_1', reason: 'network down', traceID: 'trace_1' },
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker: undefined,
+    transport: undefined,
   });
 
   const rendered = render(<GameSimulationMount />);
