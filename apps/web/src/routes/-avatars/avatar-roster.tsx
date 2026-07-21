@@ -1,7 +1,14 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
+import { useServerFn } from '@tanstack/react-start';
 import type { AvatarData } from '@vers/contract-avatar';
+import { AVATAR_MODE_CAP } from '@vers/contract-avatar';
 import { Heading, Text } from '@vers/design-system';
-import { css } from '@vers/styled-system/css';
+import { css, cx } from '@vers/styled-system/css';
+import { useState } from 'react';
+import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
+import { avatarSelect } from './avatar-select';
+import type { AvatarSelectResult } from './types';
 
 const screen = css({
   alignItems: 'center',
@@ -31,10 +38,13 @@ const card = css({
   gap: '2',
   minHeight: 'tileMin',
   padding: '5',
+  textAlign: 'left',
   transitionDuration: 'fast',
   transitionProperty: '[border-color]',
   _hover: { borderColor: 'border.strong' },
 });
+
+const activeCard = css({ borderColor: 'border.strong' });
 
 const createSlot = css({
   alignItems: 'center',
@@ -55,26 +65,105 @@ const createSlot = css({
 
 const cardName = css({ fontSize: 'lg', fontWeight: 'semibold' });
 const cardMeta = css({ color: 'text.muted', fontSize: 'sm' });
+const cardActiveMark = css({ color: 'text.primary', fontSize: 'sm' });
+
+const rejection = css({
+  borderColor: 'border.danger',
+  borderWidth: '[1px]',
+  color: 'text.danger',
+  fontSize: 'sm',
+  padding: '3',
+});
+
+interface AvatarRosterProps {
+  readonly roster: {
+    readonly activeAvatarID: null | string;
+    readonly avatars: ReadonlyArray<AvatarData>;
+  };
+}
 
 /**
- * The pre-shell roster: pick an avatar to enter the game as, or take the empty slot to create one.
+ * The roster sheet: pick an avatar to persist as active and enter the game as, or take the empty
+ * slot to create one. A selection a live activity rejects renders inline, naming the run's owner.
  */
-export function AvatarRoster(props: Readonly<{ avatars: ReadonlyArray<AvatarData> }>) {
+export function AvatarRoster(props: AvatarRosterProps) {
+  const avatarSelectFn = useServerFn(avatarSelect);
+  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
+  const [message, setMessage] = useState<null | string>(null);
+
+  const handleSelect = async (avatarID: string) => {
+    setIsPending(true);
+    setMessage(null);
+
+    try {
+      // a successful pick ends in a redirect that useServerFn already navigated to, resolving
+      // this call with no value
+      const result: AvatarSelectResult | undefined = await avatarSelectFn({ data: { avatarID } });
+
+      if (result === undefined) {
+        // the selection changed server-side; the cached roster still names the previous avatar
+        // until it refetches
+        void queryClient.invalidateQueries({
+          queryKey: buildActiveAvatarQueryOptions().queryKey,
+        });
+
+        return;
+      }
+
+      const rejectionMessage =
+        result.status === 'activity-locked'
+          ? `${result.owningAvatarName} is out on an activity — finish or stop it to switch`
+          : 'Something went wrong selecting that avatar';
+
+      setMessage(rejectionMessage);
+    } catch {
+      setMessage('Something went wrong selecting that avatar');
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const isAtCap = (['trade', 'self_found'] as const).every(
+    (mode) =>
+      props.roster.avatars.filter((avatar) => avatar.mode === mode).length >= AVATAR_MODE_CAP,
+  );
+
   return (
     <main className={screen}>
       <Heading level={1}>Choose your avatar</Heading>
+      {message !== null && (
+        <Text className={rejection} role="alert">
+          {message}
+        </Text>
+      )}
       <div className={grid}>
-        {props.avatars.map((avatar) => (
-          <Link key={avatar.id} className={card} to="/explore">
-            <span className={cardName}>{avatar.name}</span>
-            <span className={cardMeta}>
-              Level {avatar.level} · {avatar.mode === 'self_found' ? 'Self-Found' : 'Trade'}
-            </span>
+        {props.roster.avatars.map((avatar) => {
+          const isActive = avatar.id === props.roster.activeAvatarID;
+
+          return (
+            <button
+              key={avatar.id}
+              className={cx(card, isActive && activeCard)}
+              disabled={isPending}
+              type="button"
+              onClick={() => {
+                void handleSelect(avatar.id);
+              }}
+            >
+              <span className={cardName}>{avatar.name}</span>
+              <span className={cardMeta}>
+                Level {avatar.level} · {avatar.mode === 'self_found' ? 'Self-Found' : 'Trade'}
+              </span>
+              {isActive && <span className={cardActiveMark}>Active</span>}
+            </button>
+          );
+        })}
+        {!isAtCap && (
+          <Link className={createSlot} to="/avatars/create">
+            <Text>+ Create avatar</Text>
           </Link>
-        ))}
-        <Link className={createSlot} to="/avatars/create">
-          <Text>+ Create avatar</Text>
-        </Link>
+        )}
       </div>
     </main>
   );

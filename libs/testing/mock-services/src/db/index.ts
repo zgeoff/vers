@@ -1,3 +1,4 @@
+export { activeAvatarCollection } from './active-avatar-collection';
 export { activityCollection } from './activity-collection';
 export { avatarCollection, AvatarRowSchema } from './avatar-collection';
 export { avatarItemCollection } from './avatar-item-collection';

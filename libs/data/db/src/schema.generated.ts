@@ -28,6 +28,13 @@ export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export type VerificationType = '2fa' | '2fa-setup' | 'change-email' | 'onboarding';
 
+export interface ActiveAvatars {
+  avatarId: string;
+  createdAt: Generated<Timestamp>;
+  updatedAt: Generated<Timestamp>;
+  userId: string;
+}
+
 export interface Activities {
   appendedAt: Timestamp | null;
   appendedHead: Generated<number>;
@@ -193,6 +200,7 @@ export interface Verifications {
 }
 
 export interface DB {
+  activeAvatars: ActiveAvatars;
   activities: Activities;
   activityChains: ActivityChains;
   activityCheckpoints: ActivityCheckpoints;

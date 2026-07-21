@@ -4,16 +4,17 @@ import { avatarClient } from '../rpc/clients/avatar-client';
 import { findActiveAvatar } from './find-active-avatar';
 
 /**
- * The per-screen gate for avatar-dependent routes: redirects a caller with no avatar to the create
- * sheet, so the screen can assume an active avatar exists.
+ * The per-screen gate for avatar-dependent routes: a caller with no avatars goes to the create
+ * sheet, one with avatars but no selection goes to the roster to pick, so the screen can assume
+ * an active avatar exists.
  */
 export const requireActiveAvatar = createServerFn({ method: 'GET' }).handler(async () => {
-  const avatars = await avatarClient.getAvatars({});
+  const roster = await avatarClient.getAvatars({});
 
-  const avatar = findActiveAvatar(avatars);
+  const avatar = findActiveAvatar(roster);
 
   if (avatar === null) {
-    throw redirect({ href: '/avatars/create' });
+    throw redirect({ href: roster.avatars.length === 0 ? '/avatars/create' : '/avatars' });
   }
 
   return { avatar };

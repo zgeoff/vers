@@ -3,6 +3,14 @@ import * as z from 'zod';
 import { AvatarDataSchema } from './avatar-data-schema';
 import { AvatarModeSchema } from './avatar-mode-schema';
 import { AvatarNameSchema } from './avatar-name-schema';
+import { AvatarRosterSchema } from './avatar-roster-schema';
+
+const LimitReachedDataSchema = z.object({ cap: z.int(), mode: AvatarModeSchema });
+
+const SwitchLockedDataSchema = z.object({
+  owningAvatarID: z.string(),
+  owningAvatarName: z.string(),
+});
 
 /**
  * The avatar service's API: every procedure is authed and owner-scoped by `actingUserId`.
@@ -15,6 +23,11 @@ export const avatarContract = {
     .errors(
       defineErrors({
         CONFLICT: { data: z.object({}), message: 'An avatar with that name already exists' },
+        LIMIT_REACHED: {
+          data: LimitReachedDataSchema,
+          message: 'The avatar limit for this mode is reached',
+          status: 409,
+        },
       }),
     ),
 
@@ -38,9 +51,31 @@ export const avatarContract = {
     .output(AvatarDataSchema.nullable()),
 
   getAvatars: authedRoute
-    .route({ method: 'GET', path: '/avatars', summary: 'List avatars owned by the caller' })
+    .route({
+      method: 'GET',
+      path: '/avatars',
+      summary: 'List avatars owned by the caller with the active selection',
+    })
     .input(z.object({}))
-    .output(z.array(AvatarDataSchema)),
+    .output(AvatarRosterSchema),
+
+  selectAvatar: authedRoute
+    .route({
+      method: 'POST',
+      path: '/avatars/{id}/select',
+      summary: 'Make an avatar owned by the caller the active one',
+    })
+    .input(z.object({ id: z.string() }))
+    .output(z.object({ activeAvatarID: z.string() }))
+    .errors(
+      defineErrors({
+        CONFLICT: {
+          data: SwitchLockedDataSchema,
+          message: 'A live activity holds the active avatar',
+        },
+        NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
+      }),
+    ),
 
   /**
    * `name` is the only user-editable field by design: `level`/`xp` are server-owned progression.

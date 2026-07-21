@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
 import { ActivityFailureAction } from '@vers/idle-core';
-import * as db from '@vers/mock-services/db';
+import { createActiveAvatar } from '../../test-utils/create-active-avatar';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { render } from '../../test-utils/render';
@@ -58,7 +58,7 @@ test('it calls nothing before a worker has connected', () => {
 
 test('it calls initialize then reports online once the active avatar resolves', async () => {
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
   const client = createStubWorkerClient();
 
@@ -106,7 +106,7 @@ test('it never reports online without a known avatar', async () => {
 
 test('it reports online only once across re-renders', async () => {
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
   const client = createStubWorkerClient();
 
@@ -139,7 +139,7 @@ test('it reports online only once across re-renders', async () => {
 
 test('it reports online again when the browser comes back online', async () => {
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
   const client = createStubWorkerClient();
 

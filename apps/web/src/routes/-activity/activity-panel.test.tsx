@@ -4,6 +4,7 @@ import { setSimulationSnapshot } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot, createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
 import * as db from '@vers/mock-services/db';
+import { createActiveAvatar } from '../../test-utils/create-active-avatar';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { render } from '../../test-utils/render';
@@ -21,7 +22,7 @@ test('it renders the engagement title with no settling indicator by default', ()
 
 test('it shows the settling indicator while appended progress is still settling', async () => {
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
   await db.activityCollection.create({
     appendedHead: 3,
@@ -41,7 +42,7 @@ test('it shows the settling indicator while appended progress is still settling'
 
 test('it shows no settling indicator once the appended progress is fully verified', async () => {
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
   await db.activityCollection.create({
     appendedHead: 2,
@@ -63,7 +64,7 @@ test('it shows no settling indicator once the appended progress is fully verifie
 
 test('it hands END RUN to the worker and never awaits the server', async () => {
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
   const activity = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
 
   const client = createStubWorkerClient();

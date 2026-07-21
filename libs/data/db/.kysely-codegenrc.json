@@ -2,6 +2,7 @@
   "overrides": {
     "columns": {
       "activities.build_snapshot": "import('./types').Json",
+      "activities.encounter_node": "import('./types').Json",
       "activity_checkpoints.payload": "import('./types').Json",
       "avatar_items.affixes": "import('./types').Json"
     }

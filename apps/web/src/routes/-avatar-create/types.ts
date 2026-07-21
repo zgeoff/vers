@@ -3,6 +3,6 @@
  * `/avatar` instead of a value here.
  */
 export interface AvatarCreateResult {
-  readonly fieldErrors: Readonly<Partial<Record<'name', string>>>;
+  readonly fieldErrors: Readonly<Partial<Record<'mode' | 'name', string>>>;
   readonly status: 'invalid-fields';
 }
