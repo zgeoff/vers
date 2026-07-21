@@ -1,61 +1,18 @@
-import { ORPCError, isDefinedError, safe } from '@orpc/client';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
-import { buildTraceparent, createTraceContext } from '@vers/trace';
-import pRetry from 'p-retry';
+import invariant from 'tiny-invariant';
+import { createActor, waitFor } from 'xstate';
 import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
+import type { CheckpointActivityChildRef } from './checkpoint-submitter-machine';
+import { checkpointSubmitterMachine } from './checkpoint-submitter-machine';
 import {
   ENTROPY_SOURCE_SERVER_KEY,
-  FLUSH_STALL_THRESHOLD,
   PROGRESS_FLUSH_INTERVAL_MS,
   RETRY_BACKOFF_CAP_MS,
 } from './constants';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
-import { removeConfirmedCheckpoints } from './remove-confirmed-checkpoints';
-import { removeQueuedCheckpoints } from './remove-queued-checkpoints';
 import type { ActivityServiceClient, ActivitySubmissionContext } from './types';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
-
-interface ActivityState {
-  consecutiveFlushFailures: number;
-  expectedHead: number;
-  flushPending: boolean;
-
-  /**
-   * The running flush attempt's promise, set when `flush` starts and cleared when it settles — so
-   * a caller that must observe that attempt's outcome (rather than start a fresh one) can await it
-   * instead of racing a concurrent request against the in-flight batch.
-   */
-  flushRunning: Promise<void> | undefined;
-  flushScheduled: boolean;
-
-  /**
-   * Whether the most recent flush attempt held its batch for retry — a transport failure or an
-   * undeclared server error. Valid only once the attempt (and any fold-in re-flush it chained)
-   * has fully settled.
-   */
-  held: boolean;
-  inFlight: boolean;
-  invalid: boolean;
-  nextVersion: number;
-  prevHash: string;
-  previousNextSeed: string;
-
-  /**
-   * The one retry loop running for this activity, present only while a held batch is being
-   * retried. Aborting it supersedes the loop; the next held batch starts a fresh backoff
-   * sequence from a fresh controller.
-   */
-  retryController: AbortController | undefined;
-  startChainIndex: number;
-
-  /**
-   * Set once a `Completed`/`Failed` checkpoint sits at the queue's tail — enqueued by a live
-   * submission or hydrated from a previous worker lifetime's durable rows — a fully confirmed
-   * flush after this point drains the activity for good, so its state is safe to evict.
-   */
-  terminalQueued: boolean;
-}
 
 export interface CheckpointSubmitter {
   /**
@@ -199,6 +156,24 @@ interface CreateCheckpointSubmitterOptions {
 }
 
 /**
+ * One activity's cursor for building the next `CheckpointBatchEntry` to write — the only piece of
+ * an activity's submission state this adapter keeps for itself; flush sequencing, backoff, and
+ * eviction live in the spawned `checkpointActivityMachine` child this activity's registration
+ * spawns.
+ */
+interface WriteCursor {
+  nextVersion: number;
+  prevHash: string;
+  previousNextSeed: string;
+  readonly startChainIndex: number;
+}
+
+const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set([
+  ActivityCheckpointType.Completed,
+  ActivityCheckpointType.Failed,
+]);
+
+/**
  * Owns a worker's outbound checkpoint submissions: mapping, the durable queue, and one serialized
  * in-flight batch per activity. Response handling follows the activity service's response
  * contract: a fresh head on success or `CONFLICT` advances the cursor and confirms the queue up to
@@ -221,9 +196,15 @@ interface CreateCheckpointSubmitterOptions {
 export function createCheckpointSubmitter(
   options: Readonly<CreateCheckpointSubmitterOptions>,
 ): CheckpointSubmitter {
-  const activityStates = new Map<string, ActivityState>();
+  const writeCursors = new Map<string, WriteCursor>();
   const registrations = new Map<string, Promise<void>>();
-  const evictedActivityIDs = new Set<string>();
+
+  const parentActor = createActor(checkpointSubmitterMachine).start();
+
+  const retryTimings = options.retryTimings ?? {
+    maxTimeout: RETRY_BACKOFF_CAP_MS,
+    minTimeout: PROGRESS_FLUSH_INTERVAL_MS,
+  };
 
   const scheduleFlush: (flush: () => Promise<void>) => void =
     options.scheduleFlush ??
@@ -233,318 +214,126 @@ export function createCheckpointSubmitter(
       }, PROGRESS_FLUSH_INTERVAL_MS);
     });
 
-  const retryTimings = options.retryTimings ?? {
-    maxTimeout: RETRY_BACKOFF_CAP_MS,
-    minTimeout: PROGRESS_FLUSH_INTERVAL_MS,
-  };
+  const getChild = (activityID: string): CheckpointActivityChildRef | undefined =>
+    parentActor.getSnapshot().context.children.get(activityID);
 
   /**
-   * Starts a per-activity backoff loop for a held batch, unless one is already running — at most
-   * one retry is ever pending per activity, so retry chains never multiply into a request storm
-   * during an outage. `p-retry` runs its first attempt immediately with no delay, so that attempt
-   * is a placeholder that always throws, making the first real retry wait out the base backoff
-   * instead of re-flushing in the same tick. The loop ends silently on abort — a superseding
-   * `flushHeld` or worker shutdown.
+   * Builds the per-activity closure the child's `scheduled` state calls to arm the shared
+   * progress window through `options.scheduleFlush` (or its real-timer default) — a no-op once
+   * the activity has already left `scheduled` by the time the window elapses, so a superseded
+   * timer never re-sends a batch the queue has moved past.
    */
-  const startRetryLoopIfNeeded = (
-    activityID: string,
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cursor this function reads and later clears in place
-    state: ActivityState,
-  ): void => {
-    options.onHeld?.(activityID);
+  const buildScheduleProgressFlush =
+    (activityID: string): (() => void) =>
+    () => {
+      scheduleFlush(async () => {
+        const child = getChild(activityID);
 
-    if (state.retryController !== undefined) {
-      return;
-    }
-
-    const retryController = new AbortController();
-
-    state.retryController = retryController;
-
-    const signal =
-      options.signal === undefined
-        ? retryController.signal
-        : AbortSignal.any([retryController.signal, options.signal]);
-
-    void (async () => {
-      try {
-        await pRetry(
-          async (attemptNumber) => {
-            if (attemptNumber === 1) {
-              throw new BatchStillHeldError('checkpoint batch is already held for retry');
-            }
-
-            await flush(activityID);
-
-            // an attempt landing while another flush was already in flight only marked it
-            // pending and returned immediately — wait for the whole chain, including any
-            // fold-in re-flush, to settle before reading the outcome, never ending the loop
-            // while rows remain
-            while (state.flushRunning !== undefined) {
-              await state.flushRunning;
-            }
-
-            if (state.held) {
-              throw new BatchStillHeldError('checkpoint batch is still held for retry');
-            }
-          },
-          {
-            factor: 2,
-            maxTimeout: retryTimings.maxTimeout,
-            minTimeout: retryTimings.minTimeout,
-            randomize: false,
-            retries: Number.POSITIVE_INFINITY,
-            signal,
-          },
-        );
-      } catch (error) {
-        // the loop's own abort — a superseding flushHeld or worker shutdown — ends it silently;
-        // anything else is unexpected, and the batch stays held for a later flush to restart
-        if (!signal.aborted) {
-          options.onRetryFailed?.(activityID, error);
+        if (child === undefined || !child.getSnapshot().matches('scheduled')) {
+          return;
         }
-      } finally {
-        if (state.retryController === retryController) {
-          state.retryController = undefined;
-        }
-      }
-    })();
-  };
+
+        child.send({ type: 'FLUSH_DUE' });
+
+        await waitFor(child, (snapshot) => !snapshot.matches('flushing'));
+      });
+    };
 
   /**
-   * Discards an activity's tracked state entirely, both the cursor and its memoized registration
-   * — the server accepts nothing further for it, so a later re-registration harmlessly re-seeds
-   * an empty queue instead of resolving a stale registration or reusing a stale cursor. Aborts a
-   * running retry loop rather than waiting for its next backoff tick to find the state gone.
+   * Reads an activity's durable queue tail to seed its write cursor and spawns its
+   * `checkpointActivityMachine` child, tombstoning through `onInvalid` (no `traceID`, since
+   * nothing left this worker) if the read itself fails. The queue read here is the one this
+   * worker lifetime shares: every later `registerActivity` call for the activity resolves this
+   * same seeding instead of re-reading.
    */
-  const removeActivityState = (activityID: string): void => {
-    activityStates.get(activityID)?.retryController?.abort();
-    activityStates.delete(activityID);
-    registrations.delete(activityID);
-  };
-
-  const flush = async (activityID: string): Promise<void> => {
-    const state = activityStates.get(activityID);
-
-    if (state === undefined || state.invalid) {
-      return;
-    }
-
-    if (state.inFlight) {
-      state.flushPending = true;
-
-      return;
-    }
-
-    state.inFlight = true;
-
-    // Retained so a caller that must observe this exact attempt settle — rather than start a
-    // fresh one or fold into a scheduled retry — can await it directly.
-    const attempt = runFlushAttempt(activityID, state);
-
-    state.flushRunning = attempt;
-
-    try {
-      await attempt;
-    } finally {
-      state.flushRunning = undefined;
-    }
-  };
-
-  const runFlushAttempt = async (
-    activityID: string,
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cursor this function bumps in place as the attempt settles
-    state: ActivityState,
-  ): Promise<void> => {
-    let serverAnswered = false;
-
-    try {
-      const rows = await readQueuedCheckpoints(activityID);
-
-      if (rows.length === 0) {
-        state.held = false;
-
-        return;
-      }
-
-      const trace = createTraceContext();
-
-      const [error, result] = await safe(
-        options.client.trackActivityProgress(
-          {
-            activityID,
-            checkpoints: rows,
-            expectedHead: state.expectedHead,
-          },
-          { context: { traceparent: buildTraceparent(trace) } },
-        ),
-      );
-
-      if (error === null) {
-        state.consecutiveFlushFailures = 0;
-        state.held = false;
-        serverAnswered = true;
-
-        await removeConfirmedCheckpoints(activityID, result.appendedHead);
-
-        state.expectedHead = result.appendedHead;
-        options.onAcked?.(activityID, result.appendedHead);
-
-        if (state.terminalQueued && result.appendedHead >= state.nextVersion - 1) {
-          removeActivityState(activityID);
-        }
-
-        return;
-      }
-
-      if (!isDefinedError(error)) {
-        state.consecutiveFlushFailures += 1;
-
-        if (state.consecutiveFlushFailures === FLUSH_STALL_THRESHOLD) {
-          const reason =
-            error instanceof ORPCError ? `${error.code}: ${error.message}` : String(error);
-
-          options.onFlushStalled?.(activityID, reason, trace.traceID);
-        }
-
-        state.held = true;
-
-        startRetryLoopIfNeeded(activityID, state);
-
-        return;
-      }
-
-      // a defined contract outcome ends the stall streak, whatever it decides for the stream —
-      // and proves the server answered, whatever it decided
-      state.consecutiveFlushFailures = 0;
-      serverAnswered = true;
-
-      if (error.code === 'ACTIVITY_CAPPED') {
-        state.invalid = true;
-        state.held = false;
-
-        await removeQueuedCheckpoints(activityID);
-
-        removeActivityState(activityID);
-        options.onCapped?.(activityID, error.data.appendedHead);
-
-        return;
-      }
-
-      if (error.code === 'ACTIVITY_TERMINAL') {
-        state.invalid = true;
-        state.held = false;
-
-        await removeQueuedCheckpoints(activityID);
-
-        removeActivityState(activityID);
-
-        if (error.data.status === 'capped') {
-          options.onCapped?.(activityID, error.data.appendedHead);
-        }
-
-        return;
-      }
-
-      if (error.code === 'SESSION_EVICTED') {
-        state.invalid = true;
-        state.held = false;
-
-        await removeQueuedCheckpoints(activityID);
-
-        removeActivityState(activityID);
-
-        evictedActivityIDs.add(activityID);
-        options.onEvicted?.(activityID);
-
-        return;
-      }
-
-      if (error.code === 'CONFLICT') {
-        await removeConfirmedCheckpoints(activityID, error.data.appendedHead);
-
-        state.expectedHead = error.data.appendedHead;
-        state.flushPending = true;
-        state.held = false;
-
-        return;
-      }
-
-      if (error.code === 'CHECKPOINT_INVALID') {
-        state.invalid = true;
-        state.held = false;
-
-        options.onInvalid(activityID, error.data.reason, trace.traceID);
-
-        return;
-      }
-
-      if (error.code === 'NOT_FOUND') {
-        state.invalid = true;
-        state.held = false;
-
-        await removeQueuedCheckpoints(activityID);
-
-        removeActivityState(activityID);
-
-        return;
-      }
-
-      state.held = true;
-
-      startRetryLoopIfNeeded(activityID, state);
-    } finally {
-      state.inFlight = false;
-
-      // deferred until the answered branch has settled the queue and cursor, so a recovery the
-      // callback triggers never plans against rows the response already confirmed or discarded
-      if (serverAnswered) {
-        options.onServerContact?.();
-      }
-
-      if (state.flushPending) {
-        state.flushPending = false;
-
-        await flush(activityID);
-      }
-    }
-  };
-
-  const createActivityState = async (
+  const createActivityRegistration = async (
     context: Readonly<ActivitySubmissionContext>,
   ): Promise<void> => {
-    const state: ActivityState = {
-      consecutiveFlushFailures: 0,
-      expectedHead: context.appendedHead,
-      flushPending: false,
-      flushRunning: undefined,
-      flushScheduled: false,
-      held: false,
-      inFlight: false,
-      invalid: false,
+    let rows;
+
+    try {
+      rows = await readQueuedCheckpoints(context.activityID);
+    } catch (error) {
+      options.onInvalid(context.activityID, `pending-checkpoint read failed: ${String(error)}`);
+
+      return;
+    }
+
+    const lastRow = rows.at(-1);
+
+    const cursor: WriteCursor = {
       nextVersion: context.appendedHead + 1,
       prevHash: context.lastHash,
       previousNextSeed: context.previousNextSeed ?? '',
-      retryController: undefined,
       startChainIndex: context.startChainIndex,
-      terminalQueued: false,
     };
 
-    activityStates.set(context.activityID, state);
+    let terminalQueued = false;
+    let latestQueuedVersion: number | undefined;
 
-    try {
-      await loadPendingCheckpoints(context.activityID, state);
-    } catch (error) {
-      state.invalid = true;
-
-      options.onInvalid(context.activityID, `pending-checkpoint read failed: ${String(error)}`);
+    if (lastRow !== undefined) {
+      cursor.nextVersion = lastRow.version + 1;
+      cursor.prevHash = lastRow.hash;
+      cursor.previousNextSeed = lastRow.payload.nextSeed;
+      terminalQueued = TERMINAL_CHECKPOINT_TYPES.has(lastRow.payload.type);
+      latestQueuedVersion = lastRow.version;
     }
+
+    writeCursors.set(context.activityID, cursor);
+
+    parentActor.send({
+      activityID: context.activityID,
+      client: options.client,
+      expectedHead: context.appendedHead,
+      latestQueuedVersion,
+      onAcked: options.onAcked,
+      onCapped: options.onCapped,
+      onEvicted: options.onEvicted,
+      onFlushStalled: options.onFlushStalled,
+      onHeld: options.onHeld,
+      onInvalid: options.onInvalid,
+      onRetryFailed: options.onRetryFailed,
+      onServerContact: options.onServerContact,
+      retryTimings,
+      scheduleProgressFlush: buildScheduleProgressFlush(context.activityID),
+      signal: options.signal,
+      terminalQueued,
+      type: 'REGISTER',
+    });
+
+    const child = getChild(context.activityID);
+
+    invariant(child !== undefined, 'expected the just-spawned child to be reachable by its id');
+
+    child.subscribe((snapshot) => {
+      if (snapshot.status === 'done') {
+        writeCursors.delete(context.activityID);
+        registrations.delete(context.activityID);
+      }
+    });
+  };
+
+  /**
+   * Delivers an activity's queued checkpoints now, superseding its shared progress-window timer,
+   * by sending its child a `FLUSH_NOW` and waiting until it leaves `flushing` — out any attempt
+   * already in flight, then exactly one attempt of its own. A no-op for an unregistered activity.
+   */
+  const flushNow = async (activityID: string): Promise<void> => {
+    const child = getChild(activityID);
+
+    if (child === undefined) {
+      return;
+    }
+
+    child.send({ type: 'FLUSH_NOW' });
+
+    await waitFor(child, (snapshot) => !snapshot.matches('flushing'));
   };
 
   const registerActivity = async (context: Readonly<ActivitySubmissionContext>): Promise<void> => {
     // a fresh registration supersedes any recorded eviction: the caller re-attaches only after
     // taking the writer back, so the stream is live again for this session
-    evictedActivityIDs.delete(context.activityID);
+    parentActor.send({ activityID: context.activityID, type: 'REMOVE_EVICTION' });
 
     const existing = registrations.get(context.activityID);
 
@@ -552,12 +341,12 @@ export function createCheckpointSubmitter(
       return existing;
     }
 
-    const registration = createActivityState(context);
+    const seeding = createActivityRegistration(context);
 
-    registrations.set(context.activityID, registration);
+    registrations.set(context.activityID, seeding);
 
-    await registration;
-    await flush(context.activityID);
+    await seeding;
+    await flushNow(context.activityID);
   };
 
   const submit = async (
@@ -575,52 +364,34 @@ export function createCheckpointSubmitter(
     // a concurrent flush can drain a terminal checkpoint and evict the activity while this
     // submission awaits its registration — the checkpoint is dropped exactly like one for a
     // never-attached activity
-    const state = activityStates.get(activityID);
+    const cursor = writeCursors.get(activityID);
+    const child = getChild(activityID);
 
-    if (state === undefined || state.invalid) {
+    if (cursor === undefined || child === undefined || child.getSnapshot().matches('invalid')) {
       return undefined;
     }
 
     const entry = buildCheckpointBatchEntry({
       checkpoint,
       entropySource: ENTROPY_SOURCE_SERVER_KEY,
-      prevHash: state.prevHash,
-      previousNextSeed: state.previousNextSeed,
-      startChainIndex: state.startChainIndex,
-      version: state.nextVersion,
+      prevHash: cursor.prevHash,
+      previousNextSeed: cursor.previousNextSeed,
+      startChainIndex: cursor.startChainIndex,
+      version: cursor.nextVersion,
     });
 
     await writeQueuedCheckpoint(activityID, entry);
 
-    state.prevHash = entry.hash;
-    state.previousNextSeed = entry.payload.nextSeed;
-    state.nextVersion += 1;
+    cursor.prevHash = entry.hash;
+    cursor.previousNextSeed = entry.payload.nextSeed;
+    cursor.nextVersion += 1;
 
-    const isTerminal =
-      checkpoint.type === ActivityCheckpointType.Completed ||
-      checkpoint.type === ActivityCheckpointType.Failed;
+    const isTerminal = TERMINAL_CHECKPOINT_TYPES.has(checkpoint.type);
+
+    child.send({ isTerminal, type: 'QUEUED', version: entry.version });
 
     if (isTerminal) {
-      state.flushScheduled = false;
-      state.terminalQueued = true;
-
-      await flush(activityID);
-
-      return entry.version;
-    }
-
-    if (!state.flushScheduled) {
-      state.flushScheduled = true;
-
-      scheduleFlush(async () => {
-        if (!state.flushScheduled) {
-          return;
-        }
-
-        state.flushScheduled = false;
-
-        await flush(activityID);
-      });
+      await waitFor(child, (snapshot) => !snapshot.matches('flushing'));
     }
 
     return entry.version;
@@ -628,73 +399,23 @@ export function createCheckpointSubmitter(
 
   const flushHeld = async (): Promise<void> => {
     await Promise.allSettled(
-      [...activityStates.entries()]
-        .filter(([, state]) => !state.invalid)
-        .map(([activityID, state]) => {
-          state.retryController?.abort();
-          state.retryController = undefined;
+      [...writeCursors.keys()]
+        .map((activityID) => getChild(activityID))
+        .filter((child) => child !== undefined)
+        .map((child) => {
+          child.send({ type: 'FLUSH_HELD' });
 
-          return flush(activityID);
+          return waitFor(child, (snapshot) => !snapshot.matches('flushing'));
         }),
     );
   };
 
-  const flushNow = async (activityID: string): Promise<void> => {
-    const state = activityStates.get(activityID);
-
-    if (state === undefined || state.invalid) {
-      return;
-    }
-
-    state.flushScheduled = false;
-
-    if (state.flushRunning !== undefined) {
-      await state.flushRunning;
-    }
-
-    await flush(activityID);
-  };
-
-  const isEvicted = (activityID: string): boolean => evictedActivityIDs.has(activityID);
+  const isEvicted = (activityID: string): boolean =>
+    parentActor.getSnapshot().context.evictedActivityIDs.has(activityID);
 
   const removeEviction = (activityID: string): void => {
-    evictedActivityIDs.delete(activityID);
+    parentActor.send({ activityID, type: 'REMOVE_EVICTION' });
   };
 
   return { flushHeld, flushNow, isEvicted, registerActivity, removeEviction, submit };
-}
-
-/**
- * The marker a held-batch retry loop's wrapped attempt throws to drive `p-retry`'s next backoff
- * step — a plain subclass so it is neither `p-retry`'s own `AbortError` (which would end the loop)
- * nor a `TypeError` (which `p-retry` treats as a network-abort signal rather than a retry cause).
- */
-class BatchStillHeldError extends Error {
-  constructor(message: string) {
-    super(message);
-
-    this.name = 'BatchStillHeldError';
-  }
-}
-
-const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set([
-  ActivityCheckpointType.Completed,
-  ActivityCheckpointType.Failed,
-]);
-
-async function loadPendingCheckpoints(
-  activityID: string,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cursor this function seeds in place from the durable queue
-  state: ActivityState,
-): Promise<void> {
-  const rows = await readQueuedCheckpoints(activityID);
-
-  const lastRow = rows.at(-1);
-
-  if (lastRow !== undefined) {
-    state.nextVersion = lastRow.version + 1;
-    state.prevHash = lastRow.hash;
-    state.previousNextSeed = lastRow.payload.nextSeed;
-    state.terminalQueued = TERMINAL_CHECKPOINT_TYPES.has(lastRow.payload.type);
-  }
 }
