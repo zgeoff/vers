@@ -412,3 +412,42 @@ test('it reports a callback failure and holds the batch without starting a retry
 
   expect(ctx.actor.getSnapshot().matches('idle')).toBeTrue();
 });
+
+test('it resets the backoff attempt counter once a retried batch lands, so a later outage starts at the base window', async () => {
+  let shouldFail = true;
+
+  const ctx = setupTest({
+    activityID: 'backoff-reset-machine-activity',
+    retryTimings: { maxTimeout: 20, minTimeout: 5 },
+  });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(() => {
+      if (shouldFail) {
+        return HttpResponse.error();
+      }
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'backoff-reset-machine-activity',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: false, type: 'QUEUED', version: 1 });
+  ctx.actor.send({ type: 'FLUSH_DUE' });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().context.retryAttempt).toBeGreaterThan(0);
+  });
+
+  shouldFail = false;
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('idle')).toBeTrue();
+  });
+
+  expect(ctx.actor.getSnapshot().context.retryAttempt).toBe(0);
+});

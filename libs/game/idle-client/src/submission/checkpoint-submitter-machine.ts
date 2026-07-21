@@ -20,13 +20,13 @@ type CheckpointSubmitterEvent =
   | { readonly activityID: string; readonly type: 'REMOVE_EVICTION' };
 
 /**
- * Spawns one `checkpointActivityMachine` child per registered activity, keyed by activity id in
- * this machine's own child id (so `stopChild` can free it) and in `context.children` (so the
- * adapter can address a specific child directly). Owns `evictedActivityIDs`: the answer to
- * `isEvicted` survives a child's eviction stop, since a stopped actor's own state is no longer
- * queryable. Eviction cleanup order — settle the child, then stop it and drop it from
- * `context.children` in the same transition — lets the adapter's own cleanup (write cursor,
- * registration memo), reacting to that same settlement, find the child already gone.
+ * Spawns one activity child per registered activity, keyed by activity id both as the machine's
+ * own child id (so the machine can stop it by id) and in `context.children` (so the adapter can
+ * address a specific child directly). Owns `evictedActivityIDs`: the eviction answer must survive
+ * a child's eviction stop, since a stopped actor's own state is no longer queryable. Eviction
+ * cleanup order — settle the child, then stop it and drop it from `context.children` in the same
+ * transition — lets the adapter's own cleanup (write cursor, registration memo), reacting to that
+ * same settlement, find the child already gone.
  */
 export const checkpointSubmitterMachine = setup({
   actors: { checkpointActivityMachine },

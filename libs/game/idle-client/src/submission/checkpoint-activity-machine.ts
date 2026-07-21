@@ -26,7 +26,11 @@ type FlushOutcome =
       readonly traceID: string;
       readonly type: 'transport-failure';
     }
-  | { readonly error: unknown; readonly type: 'callback-failed' }
+  | {
+      readonly appendedHead: number | undefined;
+      readonly error: unknown;
+      readonly type: 'callback-failed';
+    }
   | { readonly reason: string; readonly type: 'invalid' }
   | { readonly type: 'empty' }
   | { readonly type: 'held-defined-error' }
@@ -59,6 +63,7 @@ interface FlushAttemptInput {
 const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptInput>(async (args) => {
   const input = args.input;
   let serverAnswered = false;
+  let settledHead: number | undefined;
 
   try {
     const rows = await readQueuedCheckpoints(input.activityID);
@@ -81,6 +86,7 @@ const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptInput>(a
 
       await removeConfirmedCheckpoints(input.activityID, result.appendedHead);
 
+      settledHead = result.appendedHead;
       input.onAcked?.(input.activityID, result.appendedHead);
 
       return { appendedHead: result.appendedHead, type: 'success' };
@@ -150,7 +156,7 @@ const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptInput>(a
 
     return { type: 'held-defined-error' };
   } catch (error) {
-    return { error, type: 'callback-failed' };
+    return { appendedHead: settledHead, error, type: 'callback-failed' };
   } finally {
     if (serverAnswered) {
       input.onServerContact?.();
@@ -162,7 +168,7 @@ const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptInput>(a
  * Bridges an external `AbortSignal` into the machine while `retrying` is active — sending
  * `SIGNAL_ABORTED` once, then detaching. Never sent at all when no signal was configured.
  */
-const listenForShutdownAbort = fromCallback<
+const subscribeToShutdownAbort = fromCallback<
   { type: 'SIGNAL_ABORTED' },
   { readonly signal: AbortSignal | undefined }
 >((args) => {
@@ -311,7 +317,7 @@ function buildRetryBackoffMS(
  * macrostep as the attempt's completion, as an immediate re-flush.
  */
 export const checkpointActivityMachine = setup({
-  actors: { listenForShutdownAbort, runCheckpointFlushAttempt },
+  actors: { subscribeToShutdownAbort, runCheckpointFlushAttempt },
   delays: {
     retryDelay: (args: Readonly<{ context: CheckpointActivityContext }>) =>
       buildRetryBackoffMS(args.context.retryTimings, args.context.retryAttempt),
@@ -410,19 +416,25 @@ export const checkpointActivityMachine = setup({
                 args.event.output.type === 'conflict'
                   ? args.event.output.appendedHead
                   : args.context.expectedHead,
+              retryAttempt: 0,
             }),
             guard: (args) => args.event.output.type === 'conflict',
             reenter: true,
             target: 'flushing',
           },
           {
-            actions: assign({
-              consecutiveFlushFailures: (args) =>
-                args.event.output.type === 'transport-failure'
-                  ? args.event.output.consecutiveFlushFailures
-                  : args.context.consecutiveFlushFailures,
-              flushPending: false,
-            }),
+            actions: [
+              (args) => {
+                args.context.onHeld?.(args.context.activityID);
+              },
+              assign({
+                consecutiveFlushFailures: (args) =>
+                  args.event.output.type === 'transport-failure'
+                    ? args.event.output.consecutiveFlushFailures
+                    : args.context.consecutiveFlushFailures,
+                flushPending: false,
+              }),
+            ],
             guard: (args) =>
               args.event.output.type === 'transport-failure' && args.context.flushPending,
             reenter: true,
@@ -439,7 +451,12 @@ export const checkpointActivityMachine = setup({
             target: 'retrying',
           },
           {
-            actions: assign({ consecutiveFlushFailures: 0, flushPending: false }),
+            actions: [
+              (args) => {
+                args.context.onHeld?.(args.context.activityID);
+              },
+              assign({ consecutiveFlushFailures: 0, flushPending: false }),
+            ],
             guard: (args) =>
               args.event.output.type === 'held-defined-error' && args.context.flushPending,
             reenter: true,
@@ -457,7 +474,15 @@ export const checkpointActivityMachine = setup({
                   args.context.onRetryFailed?.(args.context.activityID, args.event.output.error);
                 }
               },
-              assign({ consecutiveFlushFailures: 0, flushPending: false }),
+              assign({
+                consecutiveFlushFailures: 0,
+                expectedHead: (args) =>
+                  args.event.output.type === 'callback-failed' &&
+                  args.event.output.appendedHead !== undefined
+                    ? args.event.output.appendedHead
+                    : args.context.expectedHead,
+                flushPending: false,
+              }),
             ],
             guard: (args) =>
               args.event.output.type === 'callback-failed' && args.context.flushPending,
@@ -471,7 +496,14 @@ export const checkpointActivityMachine = setup({
                   args.context.onRetryFailed?.(args.context.activityID, args.event.output.error);
                 }
               },
-              assign({ consecutiveFlushFailures: 0 }),
+              assign({
+                consecutiveFlushFailures: 0,
+                expectedHead: (args) =>
+                  args.event.output.type === 'callback-failed' &&
+                  args.event.output.appendedHead !== undefined
+                    ? args.event.output.appendedHead
+                    : args.context.expectedHead,
+              }),
             ],
             guard: (args) => args.event.output.type === 'callback-failed',
             target: 'idle',
@@ -484,6 +516,7 @@ export const checkpointActivityMachine = setup({
                   ? args.event.output.appendedHead
                   : args.context.expectedHead,
               flushPending: false,
+              retryAttempt: 0,
             }),
             guard: (args) => args.event.output.type === 'success' && args.context.flushPending,
             reenter: true,
@@ -496,6 +529,7 @@ export const checkpointActivityMachine = setup({
                 args.event.output.type === 'success'
                   ? args.event.output.appendedHead
                   : args.context.expectedHead,
+              retryAttempt: 0,
             }),
             guard: (args) => args.event.output.type === 'success',
             target: 'idle',
@@ -550,7 +584,7 @@ export const checkpointActivityMachine = setup({
       },
       invoke: {
         input: (args) => ({ signal: args.context.signal }),
-        src: 'listenForShutdownAbort',
+        src: 'subscribeToShutdownAbort',
       },
       on: {
         FLUSH_HELD: { actions: assign({ retryAttempt: 0 }), reenter: true, target: 'flushing' },

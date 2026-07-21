@@ -214,7 +214,7 @@ export function createCheckpointSubmitter(
       }, PROGRESS_FLUSH_INTERVAL_MS);
     });
 
-  const getChild = (activityID: string): CheckpointActivityChildRef | undefined =>
+  const findChild = (activityID: string): CheckpointActivityChildRef | undefined =>
     parentActor.getSnapshot().context.children.get(activityID);
 
   /**
@@ -223,11 +223,11 @@ export function createCheckpointSubmitter(
    * the activity has already left `scheduled` by the time the window elapses, so a superseded
    * timer never re-sends a batch the queue has moved past.
    */
-  const buildScheduleProgressFlush =
+  const makeScheduleProgressFlush =
     (activityID: string): (() => void) =>
     () => {
       scheduleFlush(async () => {
-        const child = getChild(activityID);
+        const child = findChild(activityID);
 
         if (child === undefined || !child.getSnapshot().matches('scheduled')) {
           return;
@@ -295,13 +295,13 @@ export function createCheckpointSubmitter(
       onRetryFailed: options.onRetryFailed,
       onServerContact: options.onServerContact,
       retryTimings,
-      scheduleProgressFlush: buildScheduleProgressFlush(context.activityID),
+      scheduleProgressFlush: makeScheduleProgressFlush(context.activityID),
       signal: options.signal,
       terminalQueued,
       type: 'REGISTER',
     });
 
-    const child = getChild(context.activityID);
+    const child = findChild(context.activityID);
 
     invariant(child !== undefined, 'expected the just-spawned child to be reachable by its id');
 
@@ -319,7 +319,7 @@ export function createCheckpointSubmitter(
    * already in flight, then exactly one attempt of its own. A no-op for an unregistered activity.
    */
   const flushNow = async (activityID: string): Promise<void> => {
-    const child = getChild(activityID);
+    const child = findChild(activityID);
 
     if (child === undefined) {
       return;
@@ -365,7 +365,7 @@ export function createCheckpointSubmitter(
     // submission awaits its registration — the checkpoint is dropped exactly like one for a
     // never-attached activity
     const cursor = writeCursors.get(activityID);
-    const child = getChild(activityID);
+    const child = findChild(activityID);
 
     if (cursor === undefined || child === undefined || child.getSnapshot().matches('invalid')) {
       return undefined;
@@ -400,7 +400,7 @@ export function createCheckpointSubmitter(
   const flushHeld = async (): Promise<void> => {
     await Promise.allSettled(
       [...writeCursors.keys()]
-        .map((activityID) => getChild(activityID))
+        .map((activityID) => findChild(activityID))
         .filter((child) => child !== undefined)
         .map((child) => {
           child.send({ type: 'FLUSH_HELD' });
