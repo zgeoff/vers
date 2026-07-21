@@ -691,3 +691,264 @@ test('it reports a reward mismatch when the stored reward slots are malformed', 
 
   expect(verdict).toStrictEqual({ kind: 'divergence', reason: 'reward-mismatch', version: 1 });
 });
+
+test('it reports a reward mismatch when the stored payload has no rewards field', () => {
+  const seed = 'aa'.repeat(16);
+  const nextSeed = 'bb'.repeat(16);
+  const replayed = [{ nextSeed, rewards: { xp: 0 }, seed, time: 0, type: 'started' }];
+
+  const hash = buildCheckpointHash({
+    chainIndex: 1,
+    entropySource: 'server-key',
+    nextSeed,
+    prevHash: 'root-hash',
+    seed,
+    time: 0,
+    type: 'started',
+    version: 1,
+  });
+
+  const stored: Array<StoredCheckpoint> = [
+    {
+      hash,
+      payload: {
+        chainIndex: 1,
+        entropySource: 'server-key',
+        nextSeed,
+        seed,
+        time: 0,
+        type: 'started',
+      },
+      prevHash: 'root-hash',
+      version: 1,
+    },
+  ];
+
+  const verdict = compareReplaySegment(stored, replayed, {
+    prevHash: 'root-hash',
+    seed,
+    startChainIndex: 0,
+  });
+
+  expect(verdict).toStrictEqual({ kind: 'divergence', reason: 'reward-mismatch', version: 1 });
+});
+
+test('it reports a reward mismatch when the stored rewards.xp is not a finite number', () => {
+  const seed = 'aa'.repeat(16);
+  const nextSeed = 'bb'.repeat(16);
+  const replayed = [{ nextSeed, rewards: { xp: 0 }, seed, time: 0, type: 'started' }];
+
+  const hash = buildCheckpointHash({
+    chainIndex: 1,
+    entropySource: 'server-key',
+    nextSeed,
+    prevHash: 'root-hash',
+    seed,
+    time: 0,
+    type: 'started',
+    version: 1,
+  });
+
+  const stored: Array<StoredCheckpoint> = [
+    {
+      hash,
+      payload: {
+        chainIndex: 1,
+        entropySource: 'server-key',
+        nextSeed,
+        rewards: { xp: Number.NaN },
+        seed,
+        time: 0,
+        type: 'started',
+      },
+      prevHash: 'root-hash',
+      version: 1,
+    },
+  ];
+
+  const verdict = compareReplaySegment(stored, replayed, {
+    prevHash: 'root-hash',
+    seed,
+    startChainIndex: 0,
+  });
+
+  expect(verdict).toStrictEqual({ kind: 'divergence', reason: 'reward-mismatch', version: 1 });
+});
+
+test('it reports a reward mismatch when the stored levelUp field is not an object', () => {
+  const seed = 'aa'.repeat(16);
+  const nextSeed = 'bb'.repeat(16);
+
+  const replayed = [
+    { levelUp: { from: 1, to: 2 }, nextSeed, rewards: { xp: 0 }, seed, time: 0, type: 'progress' },
+  ];
+
+  const hash = buildCheckpointHash({
+    chainIndex: 1,
+    entropySource: 'server-key',
+    nextSeed,
+    prevHash: 'root-hash',
+    seed,
+    time: 0,
+    type: 'progress',
+    version: 1,
+  });
+
+  const stored: Array<StoredCheckpoint> = [
+    {
+      hash,
+      payload: {
+        chainIndex: 1,
+        entropySource: 'server-key',
+        levelUp: 'not-an-object',
+        nextSeed,
+        rewards: { xp: 0 },
+        seed,
+        time: 0,
+        type: 'progress',
+      },
+      prevHash: 'root-hash',
+      version: 1,
+    },
+  ];
+
+  const verdict = compareReplaySegment(stored, replayed, {
+    prevHash: 'root-hash',
+    seed,
+    startChainIndex: 0,
+  });
+
+  expect(verdict).toStrictEqual({ kind: 'divergence', reason: 'reward-mismatch', version: 1 });
+});
+
+test('it reports a reward mismatch when the stored levelUp fields are non-numeric', () => {
+  const seed = 'aa'.repeat(16);
+  const nextSeed = 'bb'.repeat(16);
+
+  const replayed = [
+    { levelUp: { from: 1, to: 2 }, nextSeed, rewards: { xp: 0 }, seed, time: 0, type: 'progress' },
+  ];
+
+  const hash = buildCheckpointHash({
+    chainIndex: 1,
+    entropySource: 'server-key',
+    nextSeed,
+    prevHash: 'root-hash',
+    seed,
+    time: 0,
+    type: 'progress',
+    version: 1,
+  });
+
+  const stored: Array<StoredCheckpoint> = [
+    {
+      hash,
+      payload: {
+        chainIndex: 1,
+        entropySource: 'server-key',
+        levelUp: { from: '1', to: 2 },
+        nextSeed,
+        rewards: { xp: 0 },
+        seed,
+        time: 0,
+        type: 'progress',
+      },
+      prevHash: 'root-hash',
+      version: 1,
+    },
+  ];
+
+  const verdict = compareReplaySegment(stored, replayed, {
+    prevHash: 'root-hash',
+    seed,
+    startChainIndex: 0,
+  });
+
+  expect(verdict).toStrictEqual({ kind: 'divergence', reason: 'reward-mismatch', version: 1 });
+});
+
+test('it reports a reward mismatch when a stored reward slot has a negative ordinal', () => {
+  const seed = 'aa'.repeat(16);
+  const nextSeed = 'bb'.repeat(16);
+  const replayed = [{ nextSeed, rewards: { xp: 0 }, seed, time: 0, type: 'started' }];
+
+  const hash = buildCheckpointHash({
+    chainIndex: 1,
+    entropySource: 'server-key',
+    nextSeed,
+    prevHash: 'root-hash',
+    seed,
+    time: 0,
+    type: 'started',
+    version: 1,
+  });
+
+  const stored: Array<StoredCheckpoint> = [
+    {
+      hash,
+      payload: {
+        chainIndex: 1,
+        entropySource: 'server-key',
+        nextSeed,
+        rewards: { xp: 0 },
+        rewardSlots: [{ context: { nodeTier: 1 }, ordinal: -1 }],
+        seed,
+        time: 0,
+        type: 'started',
+      },
+      prevHash: 'root-hash',
+      version: 1,
+    },
+  ];
+
+  const verdict = compareReplaySegment(stored, replayed, {
+    prevHash: 'root-hash',
+    seed,
+    startChainIndex: 0,
+  });
+
+  expect(verdict).toStrictEqual({ kind: 'divergence', reason: 'reward-mismatch', version: 1 });
+});
+
+test('it reports a reward mismatch when a stored reward slot has a nodeTier below the minimum', () => {
+  const seed = 'aa'.repeat(16);
+  const nextSeed = 'bb'.repeat(16);
+  const replayed = [{ nextSeed, rewards: { xp: 0 }, seed, time: 0, type: 'started' }];
+
+  const hash = buildCheckpointHash({
+    chainIndex: 1,
+    entropySource: 'server-key',
+    nextSeed,
+    prevHash: 'root-hash',
+    seed,
+    time: 0,
+    type: 'started',
+    version: 1,
+  });
+
+  const stored: Array<StoredCheckpoint> = [
+    {
+      hash,
+      payload: {
+        chainIndex: 1,
+        entropySource: 'server-key',
+        nextSeed,
+        rewards: { xp: 0 },
+        rewardSlots: [{ context: { nodeTier: 0 }, ordinal: 0 }],
+        seed,
+        time: 0,
+        type: 'started',
+      },
+      prevHash: 'root-hash',
+      version: 1,
+    },
+  ];
+
+  const verdict = compareReplaySegment(stored, replayed, {
+    prevHash: 'root-hash',
+    seed,
+    startChainIndex: 0,
+  });
+
+  expect(verdict).toStrictEqual({ kind: 'divergence', reason: 'reward-mismatch', version: 1 });
+});
