@@ -27,7 +27,16 @@ export async function runAvatarCreate(formData: FormData): Promise<AvatarCreateR
   );
 
   if (error) {
-    // only the declared name conflict is normal flow; any other failure — transport, or a defined
+    if (isDefinedError(error) && error.code === 'LIMIT_REACHED') {
+      const modeLabel = error.data.mode === 'self_found' ? 'Self-Found' : 'Trade';
+
+      return {
+        fieldErrors: { mode: `You already hold ${error.data.cap} ${modeLabel} avatars` },
+        status: 'invalid-fields',
+      };
+    }
+
+    // only the declared errors are normal flow; any other failure — transport, or a defined
     // error the conflict message would misreport — is logged
     if (!isDefinedError(error) || error.code !== 'CONFLICT') {
       logger.error({ err: error }, 'avatar creation failed');

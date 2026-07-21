@@ -1,4 +1,4 @@
-import type { AvatarData } from '@vers/contract-avatar';
+import type { AvatarRoster } from '@vers/contract-avatar';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { MissingSessionPayload } from '../types';
@@ -15,9 +15,9 @@ interface GetAvatarsOpts {
 }
 
 /**
- * Lists every avatar owned by the acting user.
+ * Lists every avatar owned by the acting user together with the persisted active selection.
  */
-export async function getAvatars(db: Kysely<DB>, opts: GetAvatarsOpts): Promise<Array<AvatarData>> {
+export async function getAvatars(db: Kysely<DB>, opts: GetAvatarsOpts): Promise<AvatarRoster> {
   if (opts.context.actingUserId === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
@@ -28,5 +28,14 @@ export async function getAvatars(db: Kysely<DB>, opts: GetAvatarsOpts): Promise<
     .where('userId', '=', opts.context.actingUserId)
     .execute();
 
-  return rows.map((row) => toAvatarData(row));
+  const active = await db
+    .selectFrom('activeAvatars')
+    .select(['avatarId'])
+    .where('userId', '=', opts.context.actingUserId)
+    .executeTakeFirst();
+
+  return {
+    activeAvatarID: active?.avatarId ?? null,
+    avatars: rows.map((row) => toAvatarData(row)),
+  };
 }

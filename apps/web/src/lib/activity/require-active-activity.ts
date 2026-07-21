@@ -5,17 +5,17 @@ import { activityClient } from '../rpc/clients/activity-client';
 import { avatarClient } from '../rpc/clients/avatar-client';
 
 /**
- * The per-screen gate for the engagement view: redirects a caller with no avatar to the create
- * sheet and a caller with no running activity back to explore, so the screen can assume a live
- * activity to render.
+ * The per-screen gate for the engagement view: redirects a caller with no active avatar to the
+ * create sheet or roster, and a caller with no running activity back to explore, so the screen
+ * can assume a live activity to render.
  */
 export const requireActiveActivity = createServerFn({ method: 'GET' }).handler(async () => {
-  const avatars = await avatarClient.getAvatars({});
+  const roster = await avatarClient.getAvatars({});
 
-  const avatar = findActiveAvatar(avatars);
+  const avatar = findActiveAvatar(roster);
 
   if (avatar === null) {
-    throw redirect({ href: '/avatars/create' });
+    throw redirect({ href: roster.avatars.length === 0 ? '/avatars/create' : '/avatars' });
   }
 
   const activity = await activityClient.getCurrentActivity({ avatarID: avatar.id });

@@ -6,11 +6,11 @@ import type { StartStatus } from '@vers/idle-client';
 import { advanceWriterGeneration } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
-import * as db from '@vers/mock-services/db';
 import { setSelectedNode } from '@vers/worldmap-client';
 import { createMockWorldMapNode } from '@vers/worldmap-client/test-utils';
 import invariant from 'tiny-invariant';
 import { orpc } from '../../lib/rpc/orpc';
+import { createActiveAvatar } from '../../test-utils/create-active-avatar';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { render } from '../../test-utils/render';
@@ -40,7 +40,7 @@ test('it shows a spinner and calls initialize before the worker reports its stat
 test('it re-sends the start intent against a promoted writer', async () => {
   const signedIn = await createSignedInUser();
 
-  await db.avatarCollection.create({ userID: signedIn.userID });
+  await createActiveAvatar({ userID: signedIn.userID });
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
@@ -74,7 +74,7 @@ test('it re-sends the start intent against a promoted writer', async () => {
 
 test('it sends one start call for the selected node once initialized', async () => {
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
@@ -106,7 +106,7 @@ test('it sends one start call for the selected node once initialized', async () 
 
 test('it renders the node and its codex fragment once the worker reports the start', async () => {
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
@@ -149,7 +149,7 @@ test('it renders the node and its codex fragment once the worker reports the sta
 test('it treats an attached report as ready once the simulation carries that row', async () => {
   const signedIn = await createSignedInUser();
 
-  await db.avatarCollection.create({ userID: signedIn.userID });
+  await createActiveAvatar({ userID: signedIn.userID });
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
@@ -189,7 +189,7 @@ test('it treats an attached report as ready once the simulation carries that row
 test('it offers a retry on a failed report and sends a fresh call on demand', async () => {
   const signedIn = await createSignedInUser();
 
-  await db.avatarCollection.create({ userID: signedIn.userID });
+  await createActiveAvatar({ userID: signedIn.userID });
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
@@ -224,7 +224,7 @@ test('it offers a retry on a failed report and sends a fresh call on demand', as
 
 test('it renders the auto-retry checkbox unchecked by default and dispatches the toggle', async () => {
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
@@ -277,7 +277,7 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
 test('it ignores a start reply for a node the selection has left behind', async () => {
   const signedIn = await createSignedInUser();
 
-  await db.avatarCollection.create({ userID: signedIn.userID });
+  await createActiveAvatar({ userID: signedIn.userID });
 
   setSelectedNode(createMockWorldMapNode({ id: 'node-a' }));
 

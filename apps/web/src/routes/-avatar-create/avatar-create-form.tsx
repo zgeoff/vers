@@ -123,6 +123,11 @@ export function AvatarCreateForm() {
               moved to another avatar. A player who never trades loses nothing by staying Trade.
             </Text>
           )}
+          {fieldErrors.mode !== undefined && (
+            <Text className={modeWarningStyles} role="alert">
+              {fieldErrors.mode}
+            </Text>
+          )}
         </div>
         <StatusButton
           disabled={isPending}

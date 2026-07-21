@@ -22,9 +22,9 @@ test('it lists only the acting user avatars', async () => {
   await client.createAvatar({ name: 'OwnerAvatarOne' });
   await client.createAvatar({ name: 'OwnerAvatarTwo' });
 
-  const avatars = await client.getAvatars({});
+  const roster = await client.getAvatars({});
 
-  expect(avatars.map((avatar) => avatar.name)).toIncludeSameMembers([
+  expect(roster.avatars.map((avatar) => avatar.name)).toIncludeSameMembers([
     'OwnerAvatarOne',
     'OwnerAvatarTwo',
   ]);
@@ -40,9 +40,42 @@ test('it excludes avatars owned by another user', async () => {
 
   const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
 
-  const avatars = await client.getAvatars({});
+  const roster = await client.getAvatars({});
 
-  expect(avatars).toBeEmpty();
+  expect(roster).toStrictEqual({ activeAvatarID: null, avatars: [] });
+});
+
+test('it answers null active selection when avatars exist but none is selected', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
+
+  const avatar = await client.createAvatar({ name: 'Lingering' });
+
+  await ctx.db.deleteFrom('activeAvatars').where('userId', '=', viewer.user.id).execute();
+
+  const roster = await client.getAvatars({});
+
+  expect(roster.avatars.map((entry) => entry.id)).toEqual([avatar.id]);
+  expect(roster.activeAvatarID).toBeNull();
+});
+
+test('it drops the active selection when the active avatar is deleted', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-avatar', db: ctx.db });
+
+  const client = buildRPCTestClient<AvatarContract>(ctx.app, { token: viewer.token });
+
+  const avatar = await client.createAvatar({ name: 'Ephemeral' });
+
+  await client.deleteAvatar({ id: avatar.id });
+
+  const roster = await client.getAvatars({});
+
+  expect(roster.activeAvatarID).toBeNull();
 });
 
 test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {

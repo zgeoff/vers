@@ -8,5 +8,8 @@ export const getAvatars = os.getAvatars.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  return db.avatarCollection.findMany((q) => q.where({ userID: actingUserId }));
+  const avatars = db.avatarCollection.findMany((q) => q.where({ userID: actingUserId }));
+  const active = db.activeAvatarCollection.findFirst((q) => q.where({ userID: actingUserId }));
+
+  return { activeAvatarID: active?.avatarID ?? null, avatars };
 });

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { Heading, Text } from '@vers/design-system';
 import { ScreenPanel } from '../../components/screen-panel';
+import { findActiveAvatar } from '../../lib/avatar/find-active-avatar';
 import type { OrpcQueryUtils } from '../../lib/rpc/orpc';
 
 interface RespitePanelProps {
@@ -22,9 +23,9 @@ export function RespitePanel(props: RespitePanelProps) {
     return <Text data-testid="respite-error">{message}</Text>;
   }
 
-  const [avatar] = query.data;
+  const avatar = findActiveAvatar(query.data);
 
-  if (avatar === undefined) {
+  if (avatar === null) {
     return (
       <>
         <Heading level={1}>Destiny Awaits a Vessel</Heading>

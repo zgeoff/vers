@@ -32,9 +32,15 @@ async function createStackSeed(): Promise<void> {
         .executeTakeFirstOrThrow();
 
       if (account.avatarName !== null) {
-        await db
+        const avatar = await db
           .insertInto('avatars')
           .values({ id: crypto.randomUUID(), name: account.avatarName, userId: user.id })
+          .returning('id')
+          .executeTakeFirstOrThrow();
+
+        await db
+          .insertInto('activeAvatars')
+          .values({ avatarId: avatar.id, userId: user.id })
           .execute();
       }
     }

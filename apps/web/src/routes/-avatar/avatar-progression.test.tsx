@@ -3,6 +3,7 @@ import { waitFor } from '@testing-library/react';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot, createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
 import * as db from '@vers/mock-services/db';
+import { createActiveAvatar } from '../../test-utils/create-active-avatar';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { render } from '../../test-utils/render';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
@@ -22,7 +23,7 @@ test('it renders nothing without a signed-in avatar', async () => {
 test('it renders the settled row with no settling marker when nothing is pending', async () => {
   const signedIn = await createSignedInUser();
 
-  await db.avatarCollection.create({ level: 5, userID: signedIn.userID, xp: 900 });
+  await createActiveAvatar({ level: 5, userID: signedIn.userID, xp: 900 });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(<AvatarProgression />);
@@ -37,7 +38,7 @@ test('it renders the settled row with no settling marker when nothing is pending
 
 test('it sums a pending entry onto the settled xp and shows the settling marker', async () => {
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ level: 1, userID: signedIn.userID, xp: 400 });
+  const avatar = await createActiveAvatar({ level: 1, userID: signedIn.userID, xp: 400 });
 
   const activity = await db.activityCollection.create({
     appendedHead: 1,
@@ -74,7 +75,7 @@ test('it sums a pending entry onto the settled xp and shows the settling marker'
 
 test('it shows the optimistic sim overlay and the settling marker while an activity is current', async () => {
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ level: 3, userID: signedIn.userID, xp: 450 });
+  const avatar = await createActiveAvatar({ level: 3, userID: signedIn.userID, xp: 450 });
 
   const activity = await db.activityCollection.create({
     avatarID: avatar.id,

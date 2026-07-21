@@ -53,6 +53,15 @@ export async function runResyncFlow(
   claim: boolean,
   signals: Readonly<FlowSignals>,
 ): Promise<void> {
+  const heldActivity = context.getActivity();
+
+  // a held run can only belong to another avatar when the account's active avatar changed under
+  // a live activity (the switch guard is best-effort against a concurrent start); never install
+  // on top of it — reset first so no snapshot of the old avatar outlives the switch
+  if (heldActivity !== null && heldActivity.avatarID !== avatarID) {
+    resetSimulation(context);
+  }
+
   context.setResyncAvatarID(avatarID);
 
   try {

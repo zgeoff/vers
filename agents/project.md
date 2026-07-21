@@ -24,6 +24,7 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 | `restart`   | return a long-running resource to service from its initial state                       | `restartActivity`       |
 | `roll`      | consume typed draws from a roll stream to produce an outcome, advancing its cursor     | `rollItemFromStream`    |
 | `schedule`  | enqueue an event or callback for deferred execution                                    | `scheduleEvent`         |
+| `select`    | persist the caller's choice among owned alternatives as the new state                  | `selectAvatar`          |
 | `serve`     | answer a request for a static resource, else defer                                     | `serveClientAssets`     |
 | `submit`    | accept a payload into a durable outbound queue and schedule its delivery               | `submit`                |
 | `sweep`     | bulk-remove stale or orphaned resources found by a scan, returning the set removed     | `sweepDevDBs`           |

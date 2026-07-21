@@ -5,12 +5,12 @@ import { readAvatars } from '../../lib/avatar/read-avatars';
 export const Route = createFileRoute('/_game/avatars')({
   component: AvatarsPage,
   head: () => ({ meta: [{ title: 'vers | Avatars' }] }),
-  loader: async () => ({ avatars: await readAvatars() }),
+  loader: async () => ({ roster: await readAvatars() }),
   staticData: { presentation: 'ambient' },
 });
 
 function AvatarsPage() {
   const data = Route.useLoaderData();
 
-  return <AvatarRoster avatars={data.avatars} />;
+  return <AvatarRoster roster={data.roster} />;
 }
