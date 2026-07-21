@@ -6,14 +6,14 @@ import { HttpResponse } from 'msw';
 import { server } from '../mocks/node';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { ClientMessageType } from '../types';
 import type {
   DisconnectMessage,
   InitializeMessage,
   ReportOnlineMessage,
   SetFailureActionMessage,
   StartActivityMessage,
-} from '../types';
-import { ClientMessageType } from '../types';
+} from './client-to-worker-message-schema';
 import { handleClientMessage } from './handle-client-message';
 
 test('it installs a simulation on an initialize message', async () => {
@@ -109,4 +109,13 @@ test('it routes a start activity message and claims the request', async () => {
   await handleClientMessage(context, channel.port2, event);
 
   expect(context.getStartRequestID()).toBe('request_1');
+});
+
+test('it throws on a message a bug on either end of the boundary could produce', async () => {
+  const context = createStubWorkerContext();
+
+  const channel = new MessageChannel();
+  const event = new MessageEvent('message', { data: { type: 'set_activity' } });
+
+  await expect(handleClientMessage(context, channel.port2, event)).toReject();
 });

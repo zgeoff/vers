@@ -2,11 +2,7 @@ import { expect, test } from 'bun:test';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ClientMessage } from '@vers/idle-client';
-import {
-  ClientMessageType,
-  isReportOnlineMessage,
-  setWriterDisplacedActivityID,
-} from '@vers/idle-client';
+import { ClientMessageType, setWriterDisplacedActivityID } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
@@ -53,7 +49,7 @@ test('it claims the run back with a claiming report on continue-here', async () 
     await waitFor(async () => {
       await user.click(screen.getByRole('button', { name: 'Continue here' }));
 
-      expect(calls.filter((call) => isReportOnlineMessage(call))).toStrictEqual([
+      expect(calls.filter((call) => call.type === ClientMessageType.ReportOnline)).toStrictEqual([
         { avatarID: avatar.id, claim: true, type: ClientMessageType.ReportOnline },
       ]);
     });

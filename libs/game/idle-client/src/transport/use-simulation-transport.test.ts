@@ -6,21 +6,21 @@ import { createElement } from 'react';
 import invariant from 'tiny-invariant';
 import { setSimulationTransport } from '../state/set-simulation-transport';
 import { useIdleStore } from '../state/use-idle-store';
+import type { SimulationTransport } from '../types';
+import { ClientMessageType, WorkerMessageType } from '../types';
+import type { ClientMessage } from '../worker/client-to-worker-message-schema';
 import type {
   ActivityCompletedMessage,
   CheckpointFlushStalledMessage,
   CheckpointStreamInvalidMessage,
-  ClientMessage,
   ConnectionStatusMessage,
   InitialStateMessage,
   ResyncStatusMessage,
   RewardSlotsRecordedMessage,
-  SimulationTransport,
   SimulationUpdateMessage,
   WriterDisplacedMessage,
   WriterReadyMessage,
-} from '../types';
-import { ClientMessageType, WorkerMessageType } from '../types';
+} from '../worker/worker-to-client-message-schema';
 import { useSimulationTransport } from './use-simulation-transport';
 
 /**

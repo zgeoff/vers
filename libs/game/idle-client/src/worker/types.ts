@@ -2,12 +2,9 @@ import type { ActivityData } from '@vers/contract-activity';
 import type { ActivityFailureAction, Simulation } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
-import type {
-  ClientMessage,
-  RewardSlotLedgerEntry,
-  RewardSlotLedgerSnapshot,
-  WorkerMessage,
-} from '../types';
+import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
+import type { ClientMessage } from './client-to-worker-message-schema';
+import type { WorkerMessage } from './worker-to-client-message-schema';
 
 /**
  * The runtime's structural view of one client connection: a `MessagePort` satisfies it, and so

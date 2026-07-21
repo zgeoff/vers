@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
 import type { ClientMessage } from '@vers/idle-client';
-import { ClientMessageType, isReportOnlineMessage } from '@vers/idle-client';
+import { ClientMessageType } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
@@ -145,7 +145,7 @@ test('it reports online only once across re-renders', async () => {
     rendered.refresh();
     rendered.refresh();
 
-    const onlineReports = calls.filter((call) => isReportOnlineMessage(call));
+    const onlineReports = calls.filter((call) => call.type === ClientMessageType.ReportOnline);
 
     expect(onlineReports).toHaveLength(1);
   });
@@ -179,7 +179,7 @@ test('it reports online again when the browser comes back online', async () => {
     globalThis.dispatchEvent(new Event('online'));
 
     await waitFor(() => {
-      expect(calls.filter((call) => isReportOnlineMessage(call))).toHaveLength(2);
+      expect(calls.filter((call) => call.type === ClientMessageType.ReportOnline)).toHaveLength(2);
     });
   });
 });

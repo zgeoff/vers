@@ -1,7 +1,8 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { waitFor } from '@vers/test-utils';
-import type { ClientMessage, WorkerMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
+import type { ClientMessage } from '../worker/client-to-worker-message-schema';
+import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
 import { CLIENT_TO_WORKER_CHANNEL, WORKER_TO_CLIENT_CHANNEL } from './constants';
 import { createChannelTransport } from './create-channel-transport';
 

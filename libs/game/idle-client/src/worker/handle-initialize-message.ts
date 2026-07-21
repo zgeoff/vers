@@ -1,7 +1,7 @@
-import type { InitializeMessage } from '../types';
-import { createFailureActionStatusMessage } from './create-failure-action-status-message';
-import { createInitialStateMessage } from './create-initial-state-message';
+import { WorkerMessageType } from '../types';
+import type { InitializeMessage } from './client-to-worker-message-schema';
 import type { WorkerContext } from './types';
+import type { WorkerMessage } from './worker-to-client-message-schema';
 
 /**
  * Answers an initialize with the worker's current state, broadcasting the snapshot and the
@@ -10,13 +10,17 @@ import type { WorkerContext } from './types';
  * tab reflects it even before any simulation snapshot carries one.
  */
 export function handleInitializeMessage(context: WorkerContext, _message: InitializeMessage) {
-  const initialStateMessage = createInitialStateMessage(
-    context.getSimulation().getSnapshot(),
-    context.getRewardSlotLedger(),
-    context.getWriterDisplacedActivityID(),
-  );
+  const initialStateMessage = {
+    rewardSlotLedger: context.getRewardSlotLedger(),
+    state: context.getSimulation().getSnapshot(),
+    type: WorkerMessageType.InitialState,
+    writerDisplacedActivityID: context.getWriterDisplacedActivityID(),
+  } satisfies WorkerMessage;
 
-  const failureActionStatusMessage = createFailureActionStatusMessage(context.getFailureAction());
+  const failureActionStatusMessage = {
+    failureAction: context.getFailureAction(),
+    type: WorkerMessageType.FailureActionStatus,
+  } satisfies WorkerMessage;
 
   for (const connection of context.connections) {
     connection.postMessage(initialStateMessage);

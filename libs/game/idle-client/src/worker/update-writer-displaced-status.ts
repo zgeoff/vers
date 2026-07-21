@@ -1,5 +1,6 @@
-import { createWriterDisplacedMessage } from './create-writer-displaced-message';
+import { WorkerMessageType } from '../types';
 import type { WorkerContext } from './types';
+import type { WorkerMessage } from './worker-to-client-message-schema';
 
 /**
  * Records which activity another session displaced this device from (`null` when the displacement
@@ -17,7 +18,10 @@ export function updateWriterDisplacedStatus(
 
   context.setWriterDisplacedActivityID(activityID);
 
-  const message = createWriterDisplacedMessage(activityID);
+  const message = {
+    activityID,
+    type: WorkerMessageType.WriterDisplaced,
+  } satisfies WorkerMessage;
 
   for (const connection of context.connections) {
     connection.postMessage(message);

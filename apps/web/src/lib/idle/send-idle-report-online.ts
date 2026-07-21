@@ -1,5 +1,5 @@
-import type { SimulationTransport } from '@vers/idle-client';
-import { createReportOnlineMessage } from '@vers/idle-client';
+import type { ClientMessage, SimulationTransport } from '@vers/idle-client';
+import { ClientMessageType } from '@vers/idle-client';
 
 /**
  * `claim` marks a deliberate presence that may take over as an active run's writer — a page load,
@@ -11,5 +11,9 @@ export function sendIdleReportOnline(
   avatarID: string,
   claim: boolean,
 ): void {
-  transport.post(createReportOnlineMessage(avatarID, claim));
+  transport.post({
+    avatarID,
+    claim,
+    type: ClientMessageType.ReportOnline,
+  } satisfies ClientMessage);
 }

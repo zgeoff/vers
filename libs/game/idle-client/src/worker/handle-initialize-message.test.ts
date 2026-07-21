@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import type { InitializeMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
+import type { InitializeMessage } from './client-to-worker-message-schema';
 import { handleInitializeMessage } from './handle-initialize-message';
 
 test('it initializes the simulation', () => {

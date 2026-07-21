@@ -1,8 +1,7 @@
 import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
-import type { StartActivityMessage, StartStatus } from '../types';
-import { ClientMessageType } from '../types';
-import { createStartStatusMessage } from './create-start-status-message';
+import { ClientMessageType, WorkerMessageType } from '../types';
+import type { StartActivityMessage } from './client-to-worker-message-schema';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { hasStopIntervened } from './has-stop-intervened';
 import { reportWorkerFault } from './report-worker-fault';
@@ -10,6 +9,7 @@ import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 import { withLifecycleTurn } from './with-lifecycle-turn';
+import type { StartStatus, WorkerMessage } from './worker-to-client-message-schema';
 
 /**
  * Begins a run entirely inside the worker, broadcasting the outcome as a start status keyed by
@@ -214,7 +214,11 @@ function emitStartStatus(
   requestID: string,
   status: Readonly<StartStatus>,
 ): void {
-  const message = createStartStatusMessage(requestID, status);
+  const message = {
+    requestID,
+    status,
+    type: WorkerMessageType.StartStatus,
+  } satisfies WorkerMessage;
 
   for (const connection of context.connections) {
     connection.postMessage(message);

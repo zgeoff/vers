@@ -1,5 +1,5 @@
-import type { SimulationTransport } from '@vers/idle-client';
-import { createStopActivityMessage } from '@vers/idle-client';
+import type { ClientMessage, SimulationTransport } from '@vers/idle-client';
+import { ClientMessageType } from '@vers/idle-client';
 
 /**
  * Tells the worker to end the named run. The worker halts the local simulation immediately and
@@ -11,5 +11,9 @@ export function sendIdleStopActivity(
   avatarID: string,
   activityID: string,
 ): void {
-  transport.post(createStopActivityMessage(avatarID, activityID));
+  transport.post({
+    activityID,
+    avatarID,
+    type: ClientMessageType.StopActivity,
+  } satisfies ClientMessage);
 }

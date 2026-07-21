@@ -1,5 +1,5 @@
-import type { SimulationTransport } from '@vers/idle-client';
-import { createStartActivityMessage } from '@vers/idle-client';
+import type { ClientMessage, SimulationTransport } from '@vers/idle-client';
+import { ClientMessageType } from '@vers/idle-client';
 
 interface SendIdleStartActivityInput {
   readonly avatarID: string;
@@ -16,5 +16,11 @@ export function sendIdleStartActivity(
   transport: SimulationTransport,
   input: Readonly<SendIdleStartActivityInput>,
 ): void {
-  transport.post(createStartActivityMessage(input));
+  transport.post({
+    avatarID: input.avatarID,
+    requestID: input.requestID,
+    scopeID: input.scopeID,
+    scopeType: input.scopeType,
+    type: ClientMessageType.StartActivity,
+  } satisfies ClientMessage);
 }

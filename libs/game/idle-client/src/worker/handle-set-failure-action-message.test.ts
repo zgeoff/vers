@@ -6,8 +6,8 @@ import { server } from '../mocks/node';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import type { SetFailureActionMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
+import type { SetFailureActionMessage } from './client-to-worker-message-schema';
 import { handleSetFailureActionMessage } from './handle-set-failure-action-message';
 
 interface SetupTestConfig {
