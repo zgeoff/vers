@@ -115,18 +115,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     }
   };
 
-  const emitConnectionStatus = (online: boolean) => {
-    emitWorkerMessage({ online, type: WorkerMessageType.ConnectionStatus });
-  };
-
   const updateConnectivity = (online: boolean) => {
-    if (connectivityOnline === online) {
-      return;
-    }
-
     connectivityOnline = online;
-
-    emitConnectionStatus(online);
   };
 
   const submitter = createCheckpointSubmitter({
@@ -164,20 +154,22 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       scheduleReconnectRecovery();
     },
     onFlushStalled: (activityID, reason, traceID) => {
-      emitWorkerMessage({
-        activityID,
-        reason,
-        traceID,
-        type: WorkerMessageType.CheckpointFlushStalled,
-      });
+      reportWorkerFault(
+        'checkpoint-flush',
+        new Error(`checkpoint flush stalled for activity ${activityID}: ${reason}`),
+        { traceID },
+      );
     },
     onInvalid: (activityID, reason, traceID) => {
-      emitWorkerMessage({
-        activityID,
-        reason,
-        type: WorkerMessageType.CheckpointStreamInvalid,
-        ...(traceID === undefined ? {} : { traceID }),
-      });
+      const tags = traceID === undefined ? undefined : { traceID };
+
+      reportWorkerFault(
+        'checkpoint-stream',
+        new Error(`checkpoint stream rejected for activity ${activityID}: ${reason}`),
+        tags,
+      );
+
+      emitWorkerMessage({ activityID, type: WorkerMessageType.CheckpointStreamInvalid });
     },
   });
 

@@ -109,14 +109,11 @@ test('it skips the catch-up while a run is live', async () => {
 
   // posted on the worker's own port after the recovery settles, this arrives after anything the
   // recovery broadcast on the same channel — an empty prefix proves no resync ran
-  ctx.connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
+  ctx.connection.port.postMessage({ type: WorkerMessageType.WriterReady });
 
   await ctx.connection.waitForMessages(1);
 
-  expect(ctx.connection.received).toStrictEqual([
-    { online: true, type: WorkerMessageType.ConnectionStatus },
-  ]);
-
+  expect(ctx.connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
   expect(ctx.context.getResyncAvatarID()).toBeNull();
 });
 
@@ -126,14 +123,11 @@ test('it skips the catch-up when no source names an avatar', async () => {
 
   await runReconnectRecovery(ctx.context);
 
-  ctx.connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
+  ctx.connection.port.postMessage({ type: WorkerMessageType.WriterReady });
 
   await ctx.connection.waitForMessages(1);
 
-  expect(ctx.connection.received).toStrictEqual([
-    { online: true, type: WorkerMessageType.ConnectionStatus },
-  ]);
-
+  expect(ctx.connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
   expect(ctx.context.getResyncAvatarID()).toBeNull();
 });
 

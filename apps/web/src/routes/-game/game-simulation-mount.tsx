@@ -1,6 +1,5 @@
-import * as Sentry from '@sentry/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { setCheckpointFlushStall, useResyncStatus, useWriterGeneration } from '@vers/idle-client';
+import { useResyncStatus, useWriterGeneration } from '@vers/idle-client';
 import { useEffect, useRef } from 'react';
 import { buildAvatarProgressionQueryOptions } from '../../lib/activity/build-avatar-progression-query-options';
 import { buildCurrentActivityQueryOptions } from '../../lib/activity/build-current-activity-query-options';
@@ -53,47 +52,6 @@ export function GameSimulationMount() {
       }
     };
   }, [idleWorkerHandle.transport, idleWorkerHandle.initialized]);
-
-  useEffect(() => {
-    const streamError = idleWorkerHandle.checkpointStreamError;
-
-    if (streamError === undefined) {
-      return;
-    }
-
-    Sentry.withScope((scope) => {
-      if (streamError.traceID !== undefined) {
-        scope.setTag('traceID', streamError.traceID);
-      }
-
-      Sentry.captureException(
-        new Error(
-          `checkpoint stream rejected for activity ${streamError.activityID}: ${streamError.reason}`,
-        ),
-      );
-    });
-  }, [idleWorkerHandle.checkpointStreamError]);
-
-  useEffect(() => {
-    const flushStall = idleWorkerHandle.checkpointFlushStall;
-
-    if (flushStall === undefined) {
-      return;
-    }
-
-    Sentry.withScope((scope) => {
-      scope.setTag('traceID', flushStall.traceID);
-
-      Sentry.captureException(
-        new Error(
-          `checkpoint flush stalled for activity ${flushStall.activityID}: ${flushStall.reason}`,
-        ),
-      );
-    });
-
-    // consume the one-shot report so a later remount doesn't re-deliver it
-    setCheckpointFlushStall(null);
-  }, [idleWorkerHandle.checkpointFlushStall]);
 
   // reports once per writer generation, only once the worker has reported its initial state and
   // an active avatar is known — a connectivity signal, not a resync command: the worker decides

@@ -49,7 +49,7 @@ test('it installs the first entry when the ledger has no activity and the messag
 
 test('it ignores a message while the stream for that activity is rejected', () => {
   useIdleStore.setState({
-    checkpointStreamError: { activityID: 'activity_1', reason: 'broken-chain-link' },
+    checkpointStreamError: { activityID: 'activity_1' },
     rewardSlotLedger: [],
     rewardSlotLedgerActivityID: 'activity_1',
   });

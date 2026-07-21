@@ -1,6 +1,8 @@
 import { sentryHandle } from './sentry-handle';
 
 export type WorkerFaultSite =
+  | 'checkpoint-flush'
+  | 'checkpoint-stream'
   | 'continuation'
   | 'eviction'
   | 'message-routing'
@@ -17,7 +19,11 @@ export type WorkerFaultSite =
  * `startErrorReporting` never ran (no DSN configured), so this is safe to call unconditionally
  * from every swallow point.
  */
-export function reportWorkerFault(site: WorkerFaultSite, error: unknown): void {
+export function reportWorkerFault(
+  site: WorkerFaultSite,
+  error: unknown,
+  tags?: Readonly<Record<string, string>>,
+): void {
   const sentry = sentryHandle.current;
 
   if (sentry === undefined) {
@@ -26,6 +32,11 @@ export function reportWorkerFault(site: WorkerFaultSite, error: unknown): void {
 
   sentry.withScope((scope) => {
     scope.setTag('site', site);
+
+    for (const [key, value] of Object.entries(tags ?? {})) {
+      scope.setTag(key, value);
+    }
+
     sentry.captureException(error);
   });
 }

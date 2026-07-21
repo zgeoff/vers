@@ -14,7 +14,6 @@ import type { ActivityServiceClient } from '../submission/types';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
-import { WorkerMessageType } from '../types';
 import { runContinuation } from './run-continuation';
 
 interface SetupTestConfig {
@@ -105,7 +104,7 @@ test('it hands a foreign-claim CONFLICT to a resync that attaches the conflictin
   });
 });
 
-test('it stops the simulation and broadcasts offline on a transport failure', async () => {
+test('it stops the simulation and marks connectivity offline on a transport failure', async () => {
   server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
 
   const connection = createTestConnection();
@@ -122,12 +121,7 @@ test('it stops the simulation and broadcasts offline on a transport failure', as
 
   expect(simulation.activity).toBeNull();
   expect(submitter.registerActivity).not.toHaveBeenCalled();
-
-  await connection.waitForMessages(1);
-
-  expect(connection.received).toStrictEqual([
-    { online: false, type: WorkerMessageType.ConnectionStatus },
-  ]);
+  expect(context.getConnectivityOnline()).toBeFalse();
 });
 
 test('it records a durable start intent on a transport failure', async () => {

@@ -555,9 +555,13 @@ function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>
 }
 
 function emitDivergence(context: WorkerContext, activityID: string): void {
+  reportWorkerFault(
+    'checkpoint-stream',
+    new Error(`checkpoint stream rejected for activity ${activityID}: reconstruction-divergence`),
+  );
+
   const message = {
     activityID,
-    reason: 'reconstruction-divergence',
     type: WorkerMessageType.CheckpointStreamInvalid,
   } satisfies WorkerMessage;
 

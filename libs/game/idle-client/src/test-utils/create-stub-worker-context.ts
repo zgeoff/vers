@@ -7,7 +7,6 @@ import { resolveServiceURL } from '@vers/mock-services';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry } from '../types';
-import { WorkerMessageType } from '../types';
 import type { WorkerConnection, WorkerContext } from '../worker/types';
 import { createStubSubmitter } from './create-stub-submitter';
 
@@ -19,9 +18,17 @@ interface CreateStubWorkerContextOptions {
   readonly submitter?: Readonly<CheckpointSubmitter>;
 }
 
+export interface StubWorkerContext extends WorkerContext {
+  /**
+   * Reads the connectivity flag the stub's `updateConnectivity` tracks — the flows under test
+   * broadcast nothing on a connectivity change, so this probe is their only observable.
+   */
+  readonly getConnectivityOnline: () => boolean;
+}
+
 export function createStubWorkerContext(
   options: Readonly<CreateStubWorkerContextOptions> = {},
-): WorkerContext {
+): StubWorkerContext {
   const connections = new Set(options.connections);
 
   const client: ActivityServiceClient =
@@ -52,6 +59,7 @@ export function createStubWorkerContext(
     connections,
     getActivity: () => activity,
     getClient: () => client,
+    getConnectivityOnline: () => connectivityOnline,
     getFailureAction: () => failureAction,
     getRemainingBudgetMs: () => options.remainingBudgetMs ?? Number.MAX_SAFE_INTEGER,
     getResyncAvatarID: () => resyncAvatarID,
@@ -120,15 +128,7 @@ export function createStubWorkerContext(
       writerDisplacedActivityID = activityID;
     },
     updateConnectivity: (online) => {
-      if (connectivityOnline === online) {
-        return;
-      }
-
       connectivityOnline = online;
-
-      for (const port of connections) {
-        port.postMessage({ online, type: WorkerMessageType.ConnectionStatus });
-      }
     },
   };
 }

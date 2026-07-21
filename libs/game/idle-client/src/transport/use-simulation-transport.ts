@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
 import { advanceWriterGeneration } from '../state/advance-writer-generation';
-import { setCheckpointFlushStall } from '../state/set-checkpoint-flush-stall';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
-import { setConnectionStatus } from '../state/set-connection-status';
 import { setFailureAction } from '../state/set-failure-action';
 import { setLastCompletedActivityID } from '../state/set-last-completed-activity-id';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
@@ -77,23 +75,8 @@ function handleWorkerMessage(message: WorkerMessage) {
       break;
     }
 
-    case WorkerMessageType.CheckpointFlushStalled: {
-      setCheckpointFlushStall({
-        activityID: message.activityID,
-        reason: message.reason,
-        traceID: message.traceID,
-      });
-
-      break;
-    }
-
     case WorkerMessageType.CheckpointStreamInvalid: {
-      setCheckpointStreamError({
-        activityID: message.activityID,
-        reason: message.reason,
-        ...(message.traceID === undefined ? {} : { traceID: message.traceID }),
-      });
-
+      setCheckpointStreamError({ activityID: message.activityID });
       break;
     }
 
@@ -108,11 +91,6 @@ function handleWorkerMessage(message: WorkerMessage) {
 
     case WorkerMessageType.ResyncStatus: {
       setResyncStatus(message.status);
-      break;
-    }
-
-    case WorkerMessageType.ConnectionStatus: {
-      setConnectionStatus(message.online);
       break;
     }
 

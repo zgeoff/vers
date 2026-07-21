@@ -12,35 +12,11 @@ test('it accepts a well-formed activity-completed message', () => {
   });
 });
 
-test('it accepts a well-formed checkpoint-flush-stalled message', () => {
+test('it accepts a well-formed checkpoint-stream-invalid message', () => {
   const message = {
     activityID: 'activity_1',
-    reason: 'network down',
-    traceID: 'trace_1',
-    type: WorkerMessageType.CheckpointFlushStalled,
-  };
-
-  expect(workerToClientMessageSchema.safeParse(message)).toMatchObject({
-    data: message,
-    success: true,
-  });
-});
-
-test('it accepts a checkpoint-stream-invalid message with no trace id', () => {
-  const message = {
-    activityID: 'activity_1',
-    reason: 'broken-chain-link',
     type: WorkerMessageType.CheckpointStreamInvalid,
   };
-
-  expect(workerToClientMessageSchema.safeParse(message)).toMatchObject({
-    data: message,
-    success: true,
-  });
-});
-
-test('it accepts a well-formed connection-status message', () => {
-  const message = { online: false, type: WorkerMessageType.ConnectionStatus };
 
   expect(workerToClientMessageSchema.safeParse(message)).toMatchObject({
     data: message,
