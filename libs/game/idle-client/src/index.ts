@@ -40,12 +40,32 @@ export { useWriterDisplacedActivityID } from './state/use-writer-displaced-activ
 export { useWriterGeneration } from './state/use-writer-generation';
 export type { ActivitySubmissionContext } from './submission/types';
 export * from './types';
-export { createInitializeMessage } from './worker/create-initialize-message';
+
+export type {
+  ClientMessage,
+  DisconnectMessage,
+  InitializeMessage,
+  ReportOnlineMessage,
+  SetFailureActionMessage,
+  StartActivityMessage,
+  StopActivityMessage,
+} from './worker/client-to-worker-message-schema';
+
 export { OFFLINE_CAP_WARNING_MS } from './worker/offline-cap-warning-ms';
-export { createReportOnlineMessage } from './worker/create-report-online-message';
-export { createStartActivityMessage } from './worker/create-start-activity-message';
-export { createStopActivityMessage } from './worker/create-stop-activity-message';
-export { createSetFailureActionMessage } from './worker/create-set-failure-action-message';
-export { isReportOnlineMessage } from './worker/is-report-online-message';
-export { isStartActivityMessage } from './worker/is-start-activity-message';
 export { useSimulationTransport } from './transport/use-simulation-transport';
+
+export type {
+  ActivityCompletedMessage,
+  CheckpointFlushStalledMessage,
+  CheckpointStreamInvalidMessage,
+  ConnectionStatusMessage,
+  FailureActionStatusMessage,
+  InitialStateMessage,
+  OfflineCapStatusMessage,
+  ResyncStatusMessage,
+  RewardSlotsRecordedMessage,
+  SimulationUpdateMessage,
+  StartStatusMessage,
+  WorkerMessage,
+  WriterDisplacedMessage,
+} from './worker/worker-to-client-message-schema';

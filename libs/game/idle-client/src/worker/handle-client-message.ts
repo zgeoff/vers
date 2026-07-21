@@ -1,44 +1,59 @@
-import type { ClientMessage } from '../types';
+import { ClientMessageType } from '../types';
+import type { ClientMessage } from './client-to-worker-message-schema';
+import { clientToWorkerMessageSchema } from './client-to-worker-message-schema';
 import { handleDisconnectMessage } from './handle-disconnect-message';
 import { handleInitializeMessage } from './handle-initialize-message';
 import { handleReportOnlineMessage } from './handle-report-online-message';
 import { handleSetFailureActionMessage } from './handle-set-failure-action-message';
 import { handleStartActivityMessage } from './handle-start-activity-message';
 import { handleStopActivityMessage } from './handle-stop-activity-message';
-import { isDisconnectMessage } from './is-disconnect-message';
-import { isInitializeMessage } from './is-initialize-message';
-import { isReportOnlineMessage } from './is-report-online-message';
-import { isSetFailureActionMessage } from './is-set-failure-action-message';
-import { isStartActivityMessage } from './is-start-activity-message';
-import { isStopActivityMessage } from './is-stop-activity-message';
 import type { WorkerConnection, WorkerContext } from './types';
 
+/**
+ * Parses the raw event data once against the client-to-worker contract — only a bug on either end
+ * of the shared-worker boundary can produce a malformed message, so a parse failure throws rather
+ * than recovering.
+ */
 export async function handleClientMessage(
   context: WorkerContext,
   connection: WorkerConnection,
-  event: MessageEvent<ClientMessage>,
+  event: MessageEvent<unknown>,
 ): Promise<void> {
-  if (isInitializeMessage(event.data)) {
-    handleInitializeMessage(context, event.data);
-  }
+  const message: ClientMessage = clientToWorkerMessageSchema.parse(event.data);
 
-  if (isSetFailureActionMessage(event.data)) {
-    await handleSetFailureActionMessage(context, event.data);
-  }
+  switch (message.type) {
+    case ClientMessageType.Disconnect: {
+      handleDisconnectMessage(context, connection);
+      break;
+    }
 
-  if (isStartActivityMessage(event.data)) {
-    await handleStartActivityMessage(context, event.data);
-  }
+    case ClientMessageType.Initialize: {
+      handleInitializeMessage(context, message);
+      break;
+    }
 
-  if (isStopActivityMessage(event.data)) {
-    await handleStopActivityMessage(context, event.data);
-  }
+    case ClientMessageType.ReportOnline: {
+      await handleReportOnlineMessage(context, message);
 
-  if (isReportOnlineMessage(event.data)) {
-    await handleReportOnlineMessage(context, event.data);
-  }
+      break;
+    }
 
-  if (isDisconnectMessage(event.data)) {
-    handleDisconnectMessage(context, connection);
+    case ClientMessageType.SetFailureAction: {
+      await handleSetFailureActionMessage(context, message);
+
+      break;
+    }
+
+    case ClientMessageType.StartActivity: {
+      await handleStartActivityMessage(context, message);
+
+      break;
+    }
+
+    case ClientMessageType.StopActivity: {
+      await handleStopActivityMessage(context, message);
+
+      break;
+    }
   }
 }

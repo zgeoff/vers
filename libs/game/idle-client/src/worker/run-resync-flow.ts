@@ -19,11 +19,7 @@ import { readPendingStartIntent } from '../submission/read-pending-start-intent'
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
-import type { ResyncStatus } from '../types';
-import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
-import { createFailureActionStatusMessage } from './create-failure-action-status-message';
-import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
-import { createResyncStatusMessage } from './create-resync-status-message';
+import { WorkerMessageType } from '../types';
 import type { PendingStartFlushResult } from './flush-pending-start';
 import { flushPendingStart } from './flush-pending-start';
 import { flushPendingStop } from './flush-pending-stop';
@@ -34,6 +30,7 @@ import { resetSimulation } from './reset-simulation';
 import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
 import { updateWriterDisplacedStatus } from './update-writer-displaced-status';
+import type { ResyncStatus, WorkerMessage } from './worker-to-client-message-schema';
 
 /**
  * Runs one resync end to end — the mailbox-inner body: the reconnect recovery queues it as a
@@ -550,7 +547,7 @@ async function setLiveSimulationOrStopBack(
 }
 
 function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>): void {
-  const message = createResyncStatusMessage(status);
+  const message = { status, type: WorkerMessageType.ResyncStatus } satisfies WorkerMessage;
 
   for (const connection of context.connections) {
     connection.postMessage(message);
@@ -558,7 +555,11 @@ function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>
 }
 
 function emitDivergence(context: WorkerContext, activityID: string): void {
-  const message = createCheckpointStreamInvalidMessage(activityID, 'reconstruction-divergence');
+  const message = {
+    activityID,
+    reason: 'reconstruction-divergence',
+    type: WorkerMessageType.CheckpointStreamInvalid,
+  } satisfies WorkerMessage;
 
   for (const connection of context.connections) {
     connection.postMessage(message);
@@ -569,7 +570,10 @@ function emitFailureActionStatus(
   context: WorkerContext,
   failureAction: ActivityFailureAction,
 ): void {
-  const message = createFailureActionStatusMessage(failureAction);
+  const message = {
+    failureAction,
+    type: WorkerMessageType.FailureActionStatus,
+  } satisfies WorkerMessage;
 
   for (const connection of context.connections) {
     connection.postMessage(message);
@@ -577,7 +581,11 @@ function emitFailureActionStatus(
 }
 
 function emitCapStatus(context: WorkerContext, remainingMs: number, halted: boolean): void {
-  const message = createOfflineCapStatusMessage(remainingMs, halted);
+  const message = {
+    halted,
+    remainingMs,
+    type: WorkerMessageType.OfflineCapStatus,
+  } satisfies WorkerMessage;
 
   for (const connection of context.connections) {
     connection.postMessage(message);

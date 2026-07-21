@@ -1,5 +1,5 @@
-import type { SimulationTransport } from '@vers/idle-client';
-import { createInitializeMessage } from '@vers/idle-client';
+import type { ClientMessage, SimulationTransport } from '@vers/idle-client';
+import { ClientMessageType } from '@vers/idle-client';
 
 /**
  * Sends the message a freshly connected worker needs before it reports simulation state. Callers
@@ -7,5 +7,5 @@ import { createInitializeMessage } from '@vers/idle-client';
  * election and be lost.
  */
 export function sendIdleInitialize(transport: SimulationTransport): void {
-  transport.post(createInitializeMessage());
+  transport.post({ type: ClientMessageType.Initialize } satisfies ClientMessage);
 }

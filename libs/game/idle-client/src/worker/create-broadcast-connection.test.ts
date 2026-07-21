@@ -1,9 +1,10 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { waitFor } from '@vers/test-utils';
 import { CLIENT_TO_WORKER_CHANNEL, WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
-import type { ClientMessage, WorkerMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
+import type { ClientMessage } from './client-to-worker-message-schema';
 import { createBroadcastConnection } from './create-broadcast-connection';
+import type { WorkerMessage } from './worker-to-client-message-schema';
 
 test('it fans posts out on the worker-to-client channel', async () => {
   const connection = createBroadcastConnection();

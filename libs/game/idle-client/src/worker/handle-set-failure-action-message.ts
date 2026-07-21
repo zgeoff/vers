@@ -1,8 +1,9 @@
 import { safe } from '@orpc/client';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
-import type { SetFailureActionMessage } from '../types';
-import { createFailureActionStatusMessage } from './create-failure-action-status-message';
+import { WorkerMessageType } from '../types';
+import type { SetFailureActionMessage } from './client-to-worker-message-schema';
 import type { WorkerContext } from './types';
+import type { WorkerMessage } from './worker-to-client-message-schema';
 
 /**
  * Applies a tab's failure-action change. The synchronous in-memory effects land first, before any
@@ -23,7 +24,10 @@ export async function handleSetFailureActionMessage(
   context.setFailureActionDirty(true);
   context.getSimulation().setFailureAction(message.failureAction);
 
-  const statusMessage = createFailureActionStatusMessage(message.failureAction);
+  const statusMessage = {
+    failureAction: message.failureAction,
+    type: WorkerMessageType.FailureActionStatus,
+  } satisfies WorkerMessage;
 
   for (const connection of context.connections) {
     connection.postMessage(statusMessage);

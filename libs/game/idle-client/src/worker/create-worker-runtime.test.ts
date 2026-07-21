@@ -14,10 +14,10 @@ import { createFastClock } from '../test-utils/create-fast-clock';
 import type { TestConnection } from '../test-utils/create-test-connection';
 import { createTestConnection } from '../test-utils/create-test-connection';
 import { makeFailFirstMatchHandler } from '../test-utils/make-fail-first-match-handler';
-import type { SimulationUpdateMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
+import type { SimulationUpdateMessage } from './worker-to-client-message-schema';
 
 function createConnection(runtime: WorkerRuntime): TestConnection {
   const connection = createTestConnection();

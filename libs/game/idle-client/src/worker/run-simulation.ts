@@ -1,13 +1,12 @@
 import type { Simulation } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
-import { createActivityCompletedMessage } from './create-activity-completed-message';
-import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
-import { createRewardSlotsRecordedMessage } from './create-reward-slots-recorded-message';
+import { WorkerMessageType } from '../types';
 import { OFFLINE_CAP_WARNING_MS } from './offline-cap-warning-ms';
 import { pickPostTerminalAction } from './pick-post-terminal-action';
 import { runContinuation } from './run-continuation';
 import type { WorkerContext } from './types';
 import { withLifecycleTurn } from './with-lifecycle-turn';
+import type { WorkerMessage } from './worker-to-client-message-schema';
 
 /**
  * Advances the simulation one tick, submits any checkpoint it yields, and resolves what follows a
@@ -92,7 +91,10 @@ export async function runSimulation(
 }
 
 function emitActivityCompleted(context: WorkerContext, activityID: string) {
-  const message = createActivityCompletedMessage(activityID);
+  const message = {
+    activityID,
+    type: WorkerMessageType.ActivityCompleted,
+  } satisfies WorkerMessage;
 
   for (const connection of context.connections) {
     connection.postMessage(message);
@@ -105,7 +107,12 @@ function emitRewardSlotsRecorded(
   version: number,
   rewardSlotCount: number,
 ) {
-  const message = createRewardSlotsRecordedMessage(activityID, version, rewardSlotCount);
+  const message = {
+    activityID,
+    rewardSlotCount,
+    type: WorkerMessageType.RewardSlotsRecorded,
+    version,
+  } satisfies WorkerMessage;
 
   for (const connection of context.connections) {
     connection.postMessage(message);
@@ -113,7 +120,11 @@ function emitRewardSlotsRecorded(
 }
 
 function emitCapStatus(context: WorkerContext, remainingMs: number, halted: boolean) {
-  const message = createOfflineCapStatusMessage(remainingMs, halted);
+  const message = {
+    halted,
+    remainingMs,
+    type: WorkerMessageType.OfflineCapStatus,
+  } satisfies WorkerMessage;
 
   for (const connection of context.connections) {
     connection.postMessage(message);

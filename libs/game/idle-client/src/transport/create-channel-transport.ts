@@ -1,4 +1,6 @@
-import type { SimulationTransport, WorkerMessage } from '../types';
+import type { SimulationTransport } from '../types';
+import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
+import { workerToClientMessageSchema } from '../worker/worker-to-client-message-schema';
 import { CLIENT_TO_WORKER_CHANNEL, WORKER_TO_CLIENT_CHANNEL } from './constants';
 
 interface CreateChannelTransportOptions {
@@ -14,7 +16,9 @@ interface CreateChannelTransportOptions {
  * posts client messages on the client-to-worker channel, and relays writer broadcasts from the
  * worker-to-client channel. It never sends the disconnect message: the writer's one connection is
  * the broadcast bridge shared by every tab, and a disconnect would sever them all. A post while no
- * writer holds the lock is lost — the writer-ready re-handshake is the recovery.
+ * writer holds the lock is lost — the writer-ready re-handshake is the recovery. Incoming events
+ * parse once against the worker-to-client contract — only a bug on either end of the boundary can
+ * produce a malformed message, so a parse failure throws rather than recovering.
  */
 export function createChannelTransport(
   options: CreateChannelTransportOptions = {},
@@ -27,9 +31,11 @@ export function createChannelTransport(
   const workerToClient = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
   const listeners = new Set<(message: WorkerMessage) => void>();
 
-  workerToClient.addEventListener('message', (event: MessageEvent<WorkerMessage>) => {
+  workerToClient.addEventListener('message', (event: MessageEvent<unknown>) => {
+    const message = workerToClientMessageSchema.parse(event.data);
+
     for (const listener of listeners) {
-      listener(event.data);
+      listener(message);
     }
   });
 

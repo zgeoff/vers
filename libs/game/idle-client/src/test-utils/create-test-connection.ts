@@ -1,6 +1,7 @@
 import { expect } from 'bun:test';
 import { waitFor } from '@vers/test-utils';
-import type { ClientMessage, WorkerMessage } from '../types';
+import type { ClientMessage } from '../worker/client-to-worker-message-schema';
+import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
 
 export interface TestConnection {
   /**

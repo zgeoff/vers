@@ -1,4 +1,4 @@
-import type { ReportOnlineMessage } from '../types';
+import type { ReportOnlineMessage } from './client-to-worker-message-schema';
 import { reportWorkerFault } from './report-worker-fault';
 import { runReconnectRecovery } from './run-reconnect-recovery';
 import type { WorkerContext } from './types';
