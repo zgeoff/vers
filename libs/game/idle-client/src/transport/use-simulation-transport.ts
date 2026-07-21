@@ -46,23 +46,38 @@ export function useSimulationTransport() {
     setWorkerClient(client);
   }, [existingClient]);
 
-  // every mounted consumer keeps its own subscription: broadcasts apply idempotent state writes,
-  // so redundant delivery across sibling consumers costs nothing, and cleaning up on unmount keeps
-  // a consumer that unmounts and remounts (a route transition away from and back to the game
-  // shell) from accumulating stale listeners
   useEffect(() => {
-    const channel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
-
-    channel.addEventListener('message', (event: MessageEvent<unknown>) => {
-      handleWorkerMessage(workerToClientMessageSchema.parse(event.data));
-    });
+    subscribeToWorkerBroadcasts();
 
     return () => {
-      channel.close();
+      unsubscribeFromWorkerBroadcasts();
     };
   }, []);
 
   return existingClient;
+}
+
+let broadcastChannel: BroadcastChannel | null = null;
+let broadcastSubscriberCount = 0;
+
+/**
+ * Attaches the worker-broadcast listener behind a shared count, so however many components mount
+ * `useSimulationTransport` in the same commit, exactly one listener is live on the channel — a
+ * duplicate would apply every broadcast once per mounted consumer, and `updateRewardSlotLedger`
+ * appends while `advanceWriterGeneration` increments, so repeated delivery is not idempotent.
+ */
+function subscribeToWorkerBroadcasts() {
+  broadcastSubscriberCount += 1;
+
+  if (broadcastChannel !== null) {
+    return;
+  }
+
+  broadcastChannel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
+
+  broadcastChannel.addEventListener('message', (event: MessageEvent<unknown>) => {
+    handleWorkerMessage(workerToClientMessageSchema.parse(event.data));
+  });
 }
 
 function handleWorkerMessage(message: WorkerMessage) {
@@ -121,4 +136,21 @@ function handleWorkerMessage(message: WorkerMessage) {
       break;
     }
   }
+}
+
+/**
+ * Detaches the listener `subscribeToWorkerBroadcasts` attached once its last caller unmounts, so a
+ * route transition away from and back to the game shell reconnects instead of layering a second
+ * listener onto a channel a stale reference kept open.
+ */
+function unsubscribeFromWorkerBroadcasts() {
+  broadcastSubscriberCount -= 1;
+
+  if (broadcastSubscriberCount > 0 || broadcastChannel === null) {
+    return;
+  }
+
+  broadcastChannel.close();
+
+  broadcastChannel = null;
 }

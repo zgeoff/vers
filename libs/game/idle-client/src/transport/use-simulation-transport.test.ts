@@ -108,6 +108,47 @@ test('it constructs one client for sibling consumers mounting in the same commit
   rendered.unmount();
 });
 
+test('it applies a broadcast once even with several consumers mounted', async () => {
+  registerSharedWorkerStub();
+
+  useIdleStore.setState({ checkpointStreamError: null });
+
+  const rendered = render(
+    createElement(
+      'div',
+      null,
+      createElement(TransportConsumer),
+      createElement(TransportConsumer),
+      createElement(TransportConsumer),
+    ),
+  );
+
+  emitWorkerMessage({
+    state: {
+      activity: createMockActivitySnapshot({ id: 'activity_1' }),
+      failureAction: ActivityFailureAction.Retry,
+    },
+    type: WorkerMessageType.SimulationUpdate,
+  } satisfies SimulationUpdateMessage);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().activity?.id).toBe('activity_1');
+  });
+
+  emitWorkerMessage({
+    activityID: 'activity_1',
+    rewardSlotCount: 2,
+    type: WorkerMessageType.RewardSlotsRecorded,
+    version: 1,
+  } satisfies RewardSlotsRecordedMessage);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 2, version: 1 }]);
+  });
+
+  rendered.unmount();
+});
+
 test('it returns the existing client instead of creating a new one', () => {
   const client = createTestClient().client;
 
