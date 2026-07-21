@@ -14,7 +14,7 @@ test('it calculates the damage for an enemy attack', () => {
   });
 
   const ctx = createMockSimulationContext();
-  const enemy = createEnemy(enemyData, ctx);
+  const enemy = createEnemy('test-enemy', enemyData, ctx);
   const damage = rollEnemyAttackDamage(enemy, ctx);
 
   expect(damage).toBe(10);

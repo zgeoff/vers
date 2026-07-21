@@ -8,7 +8,7 @@ import { handleReceiveEnemyDamage } from './handle-receive-enemy-damage';
 test('it reduces the life of the entity by the amount of damage received', () => {
   const ctx = createMockSimulationContext();
   const data = createMockEnemyData({ life: 100 });
-  const enemy = createEnemy(data, ctx);
+  const enemy = createEnemy('test-enemy', data, ctx);
 
   handleReceiveEnemyDamage(10, enemy);
 
@@ -18,7 +18,7 @@ test('it reduces the life of the entity by the amount of damage received', () =>
 test('it sets the status to dead if the life is 0 or less', () => {
   const ctx = createMockSimulationContext();
   const data = createMockEnemyData({ life: 100 });
-  const enemy = createEnemy(data, ctx);
+  const enemy = createEnemy('test-enemy', data, ctx);
 
   handleReceiveEnemyDamage(100, enemy);
 
@@ -28,7 +28,7 @@ test('it sets the status to dead if the life is 0 or less', () => {
 test('it does not reduce the life below 0', () => {
   const ctx = createMockSimulationContext();
   const data = createMockEnemyData({ life: 10 });
-  const enemy = createEnemy(data, ctx);
+  const enemy = createEnemy('test-enemy', data, ctx);
 
   handleReceiveEnemyDamage(100, enemy);
 

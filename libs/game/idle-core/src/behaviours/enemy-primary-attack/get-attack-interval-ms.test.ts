@@ -14,7 +14,7 @@ test('it calculates the primary attack interval', () => {
   });
 
   const ctx = createMockSimulationContext();
-  const enemy = createEnemy(enemyData, ctx);
+  const enemy = createEnemy('test-enemy', enemyData, ctx);
   const interval = getAttackIntervalMS(enemy);
 
   expect(interval).toBe(1818); // 1000ms / 0.55 = 1818ms

@@ -3,7 +3,9 @@ import type { EnemyData, SimulationContext, Wave, WaveSnapshot } from '../../typ
 
 /**
  * Builds a wave from its already-resolved enemy data verbatim — `index` names this wave's position
- * within its encounter's ordered wave list, giving each wave a stable, deterministic id.
+ * within its encounter's ordered wave list, giving each wave a stable, deterministic id. Each
+ * enemy's id derives from that wave id plus its position within the wave, keeping enemy identity
+ * deterministic too.
  */
 export function createWave(
   index: number,
@@ -11,7 +13,11 @@ export function createWave(
   ctx: SimulationContext,
 ): Wave {
   const id = `wave-${index}`;
-  const enemies = enemyData.map((data) => createEnemy(data, ctx));
+
+  const enemies = enemyData.map((data, enemyIndex) =>
+    createEnemy(`${id}-enemy-${enemyIndex}`, data, ctx),
+  );
+
   const getRemainingEnemies = () => enemies.filter((enemy) => enemy.isAlive);
 
   const getSnapshot = (): WaveSnapshot => ({

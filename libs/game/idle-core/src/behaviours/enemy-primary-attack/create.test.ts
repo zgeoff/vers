@@ -15,7 +15,7 @@ test('it creates a behaviour with the correct values', () => {
   });
 
   const ctx = createMockSimulationContext();
-  const enemy = createEnemy(enemyData, ctx);
+  const enemy = createEnemy('test-enemy', enemyData, ctx);
   const behaviour = create(enemy);
 
   expect(behaviour.lastAttackTime).toBe(0);
@@ -25,7 +25,7 @@ test('it creates a behaviour with the correct values', () => {
 test('it exposes a method for getting the state', () => {
   const enemyData = createMockEnemyData();
   const ctx = createMockSimulationContext();
-  const enemy = createEnemy(enemyData, ctx);
+  const enemy = createEnemy('test-enemy', enemyData, ctx);
   const behaviour = create(enemy);
 
   expect(behaviour.getState()).toStrictEqual({
@@ -36,7 +36,7 @@ test('it exposes a method for getting the state', () => {
 test('it exposes a method for setting the state', () => {
   const enemyData = createMockEnemyData();
   const ctx = createMockSimulationContext();
-  const enemy = createEnemy(enemyData, ctx);
+  const enemy = createEnemy('test-enemy', enemyData, ctx);
   const behaviour = create(enemy);
 
   behaviour.setState((draft) => {
@@ -73,7 +73,7 @@ test('it handles the reset event', () => {
   });
 
   const ctx = createMockSimulationContext();
-  const enemy = createEnemy(enemyData, ctx);
+  const enemy = createEnemy('test-enemy', enemyData, ctx);
   const behaviour = create(enemy);
 
   behaviour.setState((draft) => {
