@@ -1,9 +1,13 @@
 const isDebugEnabled = false;
 
 export const logger = {
-  debug: (message: string) => {
+  /**
+   * Invokes `buildMessage` only when debug logging is enabled, so callers can defer string
+   * construction to the call site instead of paying for it on every invocation.
+   */
+  debug: (buildMessage: () => string) => {
     if (isDebugEnabled) {
-      console.log(message);
+      console.log(buildMessage());
     }
   },
   info: (message: string) => {

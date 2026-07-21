@@ -93,7 +93,7 @@ test('it calls all registered handlers when handling a tick', () => {
   };
 
   avatar.registerBehaviour(behaviour);
-  avatar.handleTick(combatExecutor, ctx);
+  avatar.handleTick(combatExecutor);
 
   expect(handlerSpy).toHaveBeenCalledWith(avatar, combatExecutor, ctx);
 });
@@ -120,7 +120,7 @@ test('it allows removing behaviours', () => {
 
   avatar.registerBehaviour(behaviour);
   avatar.removeBehaviour(BehaviourID.Test);
-  avatar.handleTick(combatExecutor, ctx);
+  avatar.handleTick(combatExecutor);
 
   expect(handlerSpy).not.toHaveBeenCalled();
 });

@@ -22,7 +22,6 @@ const DEFAULT_BEHAVIOUR_FACTORIES = [createEnemyPrimaryAttackBehaviour];
 
 export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
   const id = createId();
-  const label = createLogLabel('enemy', id);
   let state = getInitialState(data);
 
   const getSnapshot = (): EnemySnapshot => {
@@ -103,7 +102,9 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
     receiveDamage: (amount: number) => {
       handleReceiveEnemyDamage(amount, enemy);
 
-      logger.debug(`${label} <-- ${amount} damage (${state.life} life remains)`);
+      logger.debug(
+        () => `${createLogLabel('enemy', id)} <-- ${amount} damage (${state.life} life remains)`,
+      );
     },
   };
 

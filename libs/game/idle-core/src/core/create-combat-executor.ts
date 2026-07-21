@@ -16,6 +16,7 @@ export function createCombatExecutor(
 ): CombatExecutor {
   let elapsed = 0;
   let scheduledEvents: Array<CombatEvent> = [];
+  const sortEvents = createEventSorter(avatar);
 
   const getSnapshot = (): CombatExecutorSnapshot => ({
     elapsed,
@@ -26,9 +27,9 @@ export function createCombatExecutor(
   };
 
   const applyEvents = () => {
-    const sortEvents = createEventSorter(avatar);
-
-    scheduledEvents.sort(sortEvents);
+    if (scheduledEvents.length >= 2) {
+      scheduledEvents.sort(sortEvents);
+    }
 
     scheduledEvents.forEach((event: CombatEvent) => {
       handleEvent(event, avatar, activity, ctx);
@@ -58,10 +59,10 @@ export function createCombatExecutor(
   const run = (delta: number) => {
     elapsed += delta;
 
-    avatar.handleTick(executor, ctx);
+    avatar.handleTick(executor);
 
     activity.currentWave?.enemies.forEach((enemy) => {
-      enemy.handleTick(executor, ctx);
+      enemy.handleTick(executor);
     });
 
     applyEvents();
