@@ -51,7 +51,7 @@ test('it exposes a method for setting the state', () => {
 test('it leaves a previously captured state object unchanged after a later setState call', () => {
   const enemyData = createMockEnemyData();
   const ctx = createMockSimulationContext();
-  const enemy = createEnemy(enemyData, ctx);
+  const enemy = createEnemy('test-enemy', enemyData, ctx);
   const behaviour = create(enemy);
   const capturedState = behaviour.getState();
 
