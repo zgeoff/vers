@@ -1,8 +1,10 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
 import type { AvatarMode } from '@vers/contract-avatar';
 import { Field, Heading, StatusButton, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { useState } from 'react';
+import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { sendAnalyticsEvent } from '../../lib/send-analytics-event';
 import { avatarCreate } from './avatar-create';
 import type { AvatarCreateResult } from './types';
@@ -44,6 +46,7 @@ const modeWarningStyles = css({
 
 export function AvatarCreateForm() {
   const avatarCreateFn = useServerFn(avatarCreate);
+  const queryClient = useQueryClient();
   const [fieldErrors, setFieldErrors] = useState<AvatarCreateResult['fieldErrors']>({});
   const [isPending, setIsPending] = useState(false);
   const [mode, setMode] = useState<AvatarMode>('trade');
@@ -61,6 +64,12 @@ export function AvatarCreateForm() {
 
       if (result === undefined) {
         sendAnalyticsEvent('avatar-created');
+
+        // the create auto-selected the newcomer server-side; the cached roster still names the
+        // previous avatar until it refetches
+        void queryClient.invalidateQueries({
+          queryKey: buildActiveAvatarQueryOptions().queryKey,
+        });
 
         return;
       }

@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import type { AvatarData } from '@vers/contract-avatar';
@@ -5,6 +6,7 @@ import { AVATAR_MODE_CAP } from '@vers/contract-avatar';
 import { Heading, Text } from '@vers/design-system';
 import { css, cx } from '@vers/styled-system/css';
 import { useState } from 'react';
+import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { avatarSelect } from './avatar-select';
 import type { AvatarSelectResult } from './types';
 
@@ -86,6 +88,7 @@ interface AvatarRosterProps {
  */
 export function AvatarRoster(props: AvatarRosterProps) {
   const avatarSelectFn = useServerFn(avatarSelect);
+  const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
   const [message, setMessage] = useState<null | string>(null);
 
@@ -99,6 +102,12 @@ export function AvatarRoster(props: AvatarRosterProps) {
       const result: AvatarSelectResult | undefined = await avatarSelectFn({ data: { avatarID } });
 
       if (result === undefined) {
+        // the selection changed server-side; the cached roster still names the previous avatar
+        // until it refetches
+        void queryClient.invalidateQueries({
+          queryKey: buildActiveAvatarQueryOptions().queryKey,
+        });
+
         return;
       }
 
