@@ -24,8 +24,9 @@ test('it signs up, creates an avatar, and can navigate the shell to settings and
 
   await expect(page.locator('canvas').first()).toBeVisible();
 
-  // the game canvas's initial scene setup blocks the main thread for a variable stretch, long
-  // enough that a click fired mid-block is silently dropped — retry until the nav visibly opens
+  // a click fired while the main thread is blocked is silently dropped — the game shell's
+  // hydration always costs a variable stretch, and the canvas's scene setup adds more in suites
+  // that run with the renderer flag on — so retry until the nav visibly opens
   await expect(async () => {
     await page.getByRole('link', { exact: true, name: 'Settings' }).click();
 
@@ -131,18 +132,23 @@ async function runSignUpIntoGame(page: Page, journey: Readonly<SignUpJourney>): 
 
   const nameField = page.getByLabel('Name', { exact: true });
 
-  // the create-avatar form is plain client state (no Conform action) that mounts after hydration;
-  // a fill landing on the still-server-rendered markup gets discarded when hydration takes over —
-  // retry until the typed value survives
+  // the create-avatar form's client mount replaces the server-rendered markup, so a name typed
+  // before the swap passes a value assertion yet submits as an empty form — and gating on the
+  // root hydration marker instead would serialize on the whole game shell, which can take far
+  // longer than the form needs. So the whole fill-and-submit cycle retries on the navigation
+  // outcome: an empty submit is rejected server-side without creating anything, which makes the
+  // retry safe, and the URL guard keeps a slow success from being submitted twice.
   await expect(async () => {
-    await nameField.fill(journey.avatarName);
+    if (new URL(page.url()).pathname !== '/explore') {
+      await nameField.fill(journey.avatarName);
 
-    await expect(nameField).toHaveValue(journey.avatarName, { timeout: 1000 });
-  }).toPass({ timeout: 15_000 });
+      await expect(nameField).toHaveValue(journey.avatarName, { timeout: 1000 });
 
-  await page.getByRole('button', { name: 'Create Avatar' }).click();
+      await page.getByRole('button', { name: 'Create Avatar' }).click();
+    }
 
-  await expect(page).toHaveURL(/\/explore$/, { timeout: 20_000 });
+    await expect(page).toHaveURL(/\/explore$/, { timeout: 5000 });
+  }).toPass({ timeout: 20_000 });
 }
 
 /**
