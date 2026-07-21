@@ -18,6 +18,7 @@ import { readFailureActionCache } from '../submission/read-failure-action-cache'
 import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
+import type { ActivitySubmissionContext } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import { WorkerMessageType } from '../types';
 import type { PendingStartFlushResult } from './flush-pending-start';
@@ -142,7 +143,13 @@ async function runResyncPass(
     submitter: context.getSubmitter(),
   });
 
-  await sweepStaleActivities(context, result);
+  try {
+    await sweepStaleCheckpoints(pickKeepActivityIDs(context, result));
+  } catch (error) {
+    // a stranded row costs nothing but disk until the next sweep
+    reportWorkerFault('resync', error);
+  }
+
   await applyResyncResult(context, result, signals);
 
   return result;
@@ -278,31 +285,22 @@ async function updateFailureActionFromServer(
 }
 
 /**
- * Sweeps every queued checkpoint outside the resync's determined latest activity and whichever
- * activity is live at sweep time (its queue is its running writer's pipeline, never stranded
- * work). Nothing else is worth keeping: a worker restart has no delivery path for a stranded row
- * and the server settles rewards authoritatively. Failure only reports the fault — a stranded
- * row costs nothing but disk until the next sweep.
+ * The activities whose queued checkpoints survive the post-resync sweep: the resync's determined
+ * latest activity and whichever activity is live at sweep time (its queue is its running writer's
+ * pipeline, never stranded work). Nothing else is worth keeping: a worker restart has no delivery
+ * path for a stranded row and the server settles rewards authoritatively.
  */
-async function sweepStaleActivities(
+function pickKeepActivityIDs(
   context: WorkerContext,
   result: Readonly<ResyncResult>,
-): Promise<Array<string>> {
-  try {
-    const keepActivityIDs = [
-      ...new Set(
-        [pickLatestActivityID(result), context.getSimulation().activity?.id].filter(
-          (activityID): activityID is string => activityID !== undefined,
-        ),
+): Array<string> {
+  return [
+    ...new Set(
+      [pickLatestActivityID(result), context.getSimulation().activity?.id].filter(
+        (activityID): activityID is string => activityID !== undefined,
       ),
-    ];
-
-    return await sweepStaleCheckpoints(keepActivityIDs);
-  } catch (error) {
-    reportWorkerFault('resync', error);
-
-    return [];
-  }
+    ),
+  ];
 }
 
 function pickLatestActivityID(result: Readonly<ResyncResult>): string | undefined {
@@ -391,40 +389,9 @@ async function applyAttachLive(
     'an attach-live plan always carries the progress it was decided from',
   );
 
-  const input = buildSimulationInput(progress.activity, {
-    failureAction: context.getFailureAction(),
+  await applyHeadAttach(context, progress.activity, plan.context, signals, {
+    skipTerminalHead: false,
   });
-
-  if (plan.context.appendedHead === 0) {
-    await context.getSubmitter().registerActivity(plan.context);
-
-    const simulation = createSimulation();
-
-    simulation.startActivity(input.avatar, input.activity);
-
-    await setLiveSimulationOrStopBack(context, progress.activity, simulation, signals);
-
-    return;
-  }
-
-  const reconstruction = await runReconstruction({
-    activity: input.activity,
-    appendedHead: plan.context.appendedHead,
-    avatar: input.avatar,
-  });
-
-  if ('divergence' in reconstruction) {
-    emitDivergence(context, plan.context.activityID);
-
-    return;
-  }
-
-  await context.getSubmitter().registerActivity({
-    ...plan.context,
-    previousNextSeed: reconstruction.lastCheckpoint.nextSeed,
-  });
-
-  await setLiveSimulationOrStopBack(context, progress.activity, reconstruction.simulation, signals);
 }
 
 async function applyFastForward(
@@ -442,7 +409,18 @@ async function applyFastForward(
   }
 
   if (report.activity.status === 'active' && !report.finalRowTerminal) {
-    await applyFastForwardAttach(context, report, signals);
+    await applyHeadAttach(
+      context,
+      report.activity,
+      {
+        activityID: report.activity.id,
+        appendedHead: report.appendedHead,
+        lastHash: report.activity.lastHash,
+        startChainIndex: report.activity.startChainIndex,
+      },
+      signals,
+      { skipTerminalHead: true },
+    );
   }
 
   emitResyncStatus(context, {
@@ -452,65 +430,65 @@ async function applyFastForward(
   });
 }
 
+interface HeadAttachOptions {
+  /**
+   * Skip the attach when the reconstructed head is itself a terminal checkpoint — a row adopted
+   * mid-stream with nothing left to submit.
+   */
+  readonly skipTerminalHead: boolean;
+}
+
 /**
- * Attaches the fast-forward's final row live, chaining onto its confirmed head: a checkpoint-0
- * simulation when nothing is confirmed yet, otherwise one reconstructed to the head so the
- * registered cursor's `previousNextSeed` matches what the engine emits next. The caller filters
- * fast-forward-closed streams via the report's terminal flag; the reconstruction's terminal
- * check covers a row adopted mid-stream whose confirmed head is already terminal, skipping an
- * attach with nothing left to submit.
+ * Attaches an activity live, chained onto the confirmed head the submission context names: a
+ * zero head starts a checkpoint-0 simulation, a nonzero head reconstructs to the head first so
+ * the registered cursor's `previousNextSeed` matches what the engine emits next. A reconstruction
+ * divergence broadcasts the invalid stream and attaches nothing.
  */
-async function applyFastForwardAttach(
+async function applyHeadAttach(
   context: WorkerContext,
-  report: FastForwardReport,
+  activity: Readonly<ActivityData>,
+  submission: Readonly<ActivitySubmissionContext>,
   signals: Readonly<FlowSignals>,
+  options: HeadAttachOptions,
 ): Promise<void> {
-  const input = buildSimulationInput(report.activity, {
+  const input = buildSimulationInput(activity, {
     failureAction: context.getFailureAction(),
   });
 
-  if (report.appendedHead === 0) {
-    await context.getSubmitter().registerActivity({
-      activityID: report.activity.id,
-      appendedHead: 0,
-      lastHash: report.activity.lastHash,
-      startChainIndex: report.activity.startChainIndex,
-    });
+  if (submission.appendedHead === 0) {
+    await context.getSubmitter().registerActivity(submission);
 
     const simulation = createSimulation();
 
     simulation.startActivity(input.avatar, input.activity);
 
-    await setLiveSimulationOrStopBack(context, report.activity, simulation, signals);
+    await setLiveSimulationOrStopBack(context, activity, simulation, signals);
 
     return;
   }
 
   const reconstruction = await runReconstruction({
     activity: input.activity,
-    appendedHead: report.appendedHead,
+    appendedHead: submission.appendedHead,
     avatar: input.avatar,
   });
 
   if ('divergence' in reconstruction) {
-    emitDivergence(context, report.activity.id);
+    emitDivergence(context, activity.id);
 
     return;
   }
 
-  if (isTerminalCheckpoint(reconstruction.lastCheckpoint)) {
+  if (options.skipTerminalHead && isTerminalCheckpoint(reconstruction.lastCheckpoint)) {
     return;
   }
 
   await context.getSubmitter().registerActivity({
-    activityID: report.activity.id,
-    appendedHead: report.appendedHead,
-    lastHash: report.activity.lastHash,
+    ...submission,
     previousNextSeed: reconstruction.lastCheckpoint.nextSeed,
-    startChainIndex: report.activity.startChainIndex,
   });
 
-  await setLiveSimulationOrStopBack(context, report.activity, reconstruction.simulation, signals);
+  await setLiveSimulationOrStopBack(context, activity, reconstruction.simulation, signals);
 }
 
 function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {

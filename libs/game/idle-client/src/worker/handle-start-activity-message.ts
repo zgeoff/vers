@@ -1,3 +1,4 @@
+import type { ORPCError } from '@orpc/client';
 import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import { handleSetActivityMessage } from './handle-set-activity-message';
@@ -71,16 +72,7 @@ async function runStart(
   // a pure unwind: no row has been minted yet, so there is nothing to compensate
   signals.cancel.throwIfAborted();
 
-  // start calls mint a server row and run unsigned: the response is the only handle on the minted
-  // row, and the stop-back compensation needs it
-  const [error, started] = await safe(
-    context.getClient().startActivity({
-      avatarID: input.avatarID,
-      scopeID: input.scopeID,
-      scopeType: input.scopeType,
-      startKey: token,
-    }),
-  );
+  const [error, started] = await tryStartActivity(context, input, token);
 
   if (error === null) {
     return setLiveStartedRow(context, token, started, signals);
@@ -130,14 +122,7 @@ async function runStart(
     return { kind: 'failed' };
   }
 
-  const [retryError, retried] = await safe(
-    context.getClient().startActivity({
-      avatarID: input.avatarID,
-      scopeID: input.scopeID,
-      scopeType: input.scopeType,
-      startKey: token,
-    }),
-  );
+  const [retryError, retried] = await tryStartActivity(context, input, token);
 
   if (retryError !== null) {
     if (!isDefinedError(retryError)) {
@@ -155,6 +140,33 @@ function isSuperseded(context: WorkerContext, token: string): boolean {
 }
 
 /**
+ * One start-activity mint, deliberately unsigned: the response is the only handle on the minted
+ * row, and the stop-back compensation needs it.
+ */
+function tryStartActivity(
+  context: WorkerContext,
+  input: Readonly<StartActivityInput>,
+  token: string,
+) {
+  return safe(
+    context.getClient().startActivity({
+      avatarID: input.avatarID,
+      scopeID: input.scopeID,
+      scopeType: input.scopeType,
+      startKey: token,
+    }),
+  );
+}
+
+/**
+ * Whether a stop attempt achieved all a stop can: the call succeeded, or `NOT_FOUND` says the row
+ * already left `active`.
+ */
+function isStopSettled(error: Error | null | ORPCError<string, unknown>): boolean {
+  return error === null || (isDefinedError(error) && error.code === 'NOT_FOUND');
+}
+
+/**
  * Stops the different-scope row a replace-flow start conflicts with, reporting whether the row is
  * closed to further appends. A stop rejected with SESSION_EVICTED means another session's writer
  * owns the run — the player's start here is a deliberate act that supersedes it, so this session
@@ -169,7 +181,7 @@ async function stopConflictingRow(
 ): Promise<boolean> {
   const [stopError] = await safe(context.getClient().stopActivity({ activityID, avatarID }));
 
-  if (stopError === null || (isDefinedError(stopError) && stopError.code === 'NOT_FOUND')) {
+  if (isStopSettled(stopError)) {
     return true;
   }
 
@@ -199,7 +211,7 @@ async function stopConflictingRow(
 
   const [retryError] = await safe(context.getClient().stopActivity({ activityID, avatarID }));
 
-  if (retryError === null || (isDefinedError(retryError) && retryError.code === 'NOT_FOUND')) {
+  if (isStopSettled(retryError)) {
     return true;
   }
 
