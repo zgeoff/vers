@@ -1,4 +1,3 @@
-import { produce } from 'immer';
 import type {
   Avatar,
   AvatarWeaponAttackBehaviour,
@@ -17,7 +16,11 @@ export function create(entity: Avatar): AvatarWeaponAttackBehaviour {
   const getState = (): AvatarWeaponAttackBehaviourState => state;
 
   const setState = (setStateFn: SetEntityStateFn<AvatarWeaponAttackBehaviourState>): void => {
-    state = produce(state, setStateFn);
+    const nextState = { ...state };
+
+    setStateFn(nextState);
+
+    state = nextState;
   };
 
   const handleReset = (): void => {

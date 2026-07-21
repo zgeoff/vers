@@ -48,6 +48,21 @@ test('it exposes a method for setting the state', () => {
   });
 });
 
+test('it leaves a previously captured state object unchanged after a later setState call', () => {
+  const enemyData = createMockEnemyData();
+  const ctx = createMockSimulationContext();
+  const enemy = createEnemy(enemyData, ctx);
+  const behaviour = create(enemy);
+  const capturedState = behaviour.getState();
+
+  behaviour.setState((draft) => {
+    draft.lastAttackTime = 2000;
+  });
+
+  expect(capturedState).toStrictEqual({ lastAttackTime: 0 });
+  expect(behaviour.getState()).toStrictEqual({ lastAttackTime: 2000 });
+});
+
 test('it handles the reset event', () => {
   const enemyData = createMockEnemyData({
     primaryAttack: {

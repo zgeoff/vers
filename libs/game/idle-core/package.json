@@ -14,15 +14,14 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@faker-js/faker": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
     "@vers/game-utils": "workspace:*",
     "@vers/utils": "workspace:*",
     "fast-equals": "catalog:",
-    "immer": "catalog:",
     "tiny-invariant": "catalog:"
   },
   "devDependencies": {
+    "@faker-js/faker": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@zgeoff/bun-test-extended": "catalog:",
