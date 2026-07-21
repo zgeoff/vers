@@ -185,6 +185,9 @@
           // a response resolver's request context: wraps the live fetch Request; no readonly form
           { "from": "package", "name": "ResponseResolverInfo", "package": "msw" },
           { "from": "package", "name": "Collection", "package": "@msw/data" },
+          // a live actor handle: subscription and mailbox state xstate mutates internally, no
+          // readonly form
+          { "from": "package", "name": "ActorRef", "package": "xstate" },
           {
             "from": "package",
             "name": ["CryptoKey", "Request", "Response", "AbortSignal"],

@@ -554,9 +554,9 @@
         "@vers/styled-system": "workspace:*",
         "@vers/trace": "workspace:*",
         "idb": "catalog:",
-        "p-retry": "catalog:",
         "react": "catalog:",
         "tiny-invariant": "catalog:",
+        "xstate": "catalog:",
         "zod": "catalog:",
         "zustand": "catalog:",
       },
@@ -1296,6 +1296,7 @@
     "turbo": "2.10.3",
     "typescript": "7.0.2",
     "vite": "8.1.4",
+    "xstate": "5.32.4",
     "yaml": "2.9.0",
     "zod": "4.4.3",
     "zustand": "5.0.14",
@@ -4600,6 +4601,8 @@
     "wsl-utils": ["wsl-utils@0.1.0", "", { "dependencies": { "is-wsl": "^3.1.0" } }, "sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw=="],
 
     "xmlbuilder2": ["xmlbuilder2@4.0.3", "", { "dependencies": { "@oozcitak/dom": "^2.0.2", "@oozcitak/infra": "^2.0.2", "@oozcitak/util": "^10.0.0", "js-yaml": "^4.1.1" } }, "sha512-bx8Q1STctnNaaDymWnkfQLKofs0mGNN7rLLapJlGuV3VlvegD7Ls4ggMjE3aUSWItCCzU0PEv45lI87iSigiCA=="],
+
+    "xstate": ["xstate@5.32.4", "", {}, "sha512-E5WtDB8DBs2ZWliz2Ry9XfbSZTbBRcK/cwefBot04qQ/L5SLP16xpnTDU4/ZFXuXFhNxi7JP2RhuoGwBnM+S4A=="],
 
     "xtend": ["xtend@4.0.2", "", {}, "sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ=="],
 
