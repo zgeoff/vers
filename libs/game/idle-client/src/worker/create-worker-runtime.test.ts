@@ -526,6 +526,7 @@ test('it cancels an in-flight resync read on stop() without stopping the row bac
   const row = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
 
   invariant(row !== undefined, 'expected the seeded row to survive shutdown');
+
   expect(row.status).toBe('active');
 
   const pendingStop = await readPendingStopIntent();
