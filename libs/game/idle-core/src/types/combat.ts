@@ -25,7 +25,6 @@ export interface CombatExecutor extends ActivityExecutor {
 }
 
 interface ICombatEvent {
-  readonly id: string;
   readonly source: string;
   readonly time: number;
   readonly type: CombatEventType;
@@ -47,3 +46,9 @@ export interface EnemyAttackEvent extends ICombatEvent {
 export type CombatEvent = AvatarAttackEvent | EnemyAttackEvent;
 
 export type AttackEvent = AvatarAttackEvent | EnemyAttackEvent;
+
+/**
+ * A combat event once the executor has assigned it its schedule-order sequence number, used to
+ * break same-time ties deterministically regardless of scan or draw order.
+ */
+export type ScheduledCombatEvent = CombatEvent & { readonly sequence: number };

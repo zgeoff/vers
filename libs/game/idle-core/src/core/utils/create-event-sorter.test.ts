@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createAvatar } from '../../entities/create-avatar';
 import { createMockAvatarData } from '../../test-utils/factories/create-mock-avatar-data';
 import { createMockSimulationContext } from '../../test-utils/factories/create-mock-simulation-context';
-import type { AvatarAttackEvent, EnemyAttackEvent } from '../../types';
+import type { ScheduledCombatEvent } from '../../types';
 import { CombatEventType } from '../../types';
 import { createEventSorter } from './create-event-sorter';
 
@@ -11,15 +11,15 @@ test('it sorts events by time', () => {
   const data = createMockAvatarData();
   const avatar = createAvatar(data, ctx);
 
-  const event1: EnemyAttackEvent = {
-    id: 'event-1',
+  const event1: ScheduledCombatEvent = {
+    sequence: 0,
     source: 'enemy-1',
     time: 100,
     type: CombatEventType.EnemyAttack,
   };
 
-  const event2: EnemyAttackEvent = {
-    id: 'event-2',
+  const event2: ScheduledCombatEvent = {
+    sequence: 1,
     source: 'enemy-2',
     time: 50,
     type: CombatEventType.EnemyAttack,
@@ -38,22 +38,22 @@ test('it prioritizes avatar events when time is equal', () => {
   const data = createMockAvatarData();
   const avatar = createAvatar(data, ctx);
 
-  const avatarEvent: AvatarAttackEvent = {
-    id: 'event-1',
+  const avatarEvent: ScheduledCombatEvent = {
+    sequence: 0,
     source: avatar.id,
     time: 100,
     type: CombatEventType.AvatarAttack,
   };
 
-  const enemyEvent2: EnemyAttackEvent = {
-    id: 'event-2',
+  const enemyEvent2: ScheduledCombatEvent = {
+    sequence: 1,
     source: 'enemy-1',
     time: 100,
     type: CombatEventType.EnemyAttack,
   };
 
-  const enemyEvent3: EnemyAttackEvent = {
-    id: 'event-3',
+  const enemyEvent3: ScheduledCombatEvent = {
+    sequence: 2,
     source: 'enemy-2',
     time: 100,
     type: CombatEventType.EnemyAttack,
@@ -67,20 +67,20 @@ test('it prioritizes avatar events when time is equal', () => {
   expect(events).toStrictEqual([avatarEvent, enemyEvent2, enemyEvent3]);
 });
 
-test('it breaks same-source ties by id, independent of scheduling order', () => {
+test('it breaks same-source ties by sequence, in schedule order regardless of array order', () => {
   const ctx = createMockSimulationContext();
   const data = createMockAvatarData();
   const avatar = createAvatar(data, ctx);
 
-  const enemyA: EnemyAttackEvent = {
-    id: 'event-a',
+  const enemyA: ScheduledCombatEvent = {
+    sequence: 0,
     source: 'enemy-1',
     time: 100,
     type: CombatEventType.EnemyAttack,
   };
 
-  const enemyB: EnemyAttackEvent = {
-    id: 'event-b',
+  const enemyB: ScheduledCombatEvent = {
+    sequence: 1,
     source: 'enemy-1',
     time: 100,
     type: CombatEventType.EnemyAttack,

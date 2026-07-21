@@ -1,11 +1,12 @@
 import { expect, test } from 'bun:test';
+import invariant from 'tiny-invariant';
 import { createAvatar } from '../entities/create-avatar';
 import { createMockActivityInput } from '../test-utils/factories/create-mock-activity-input';
 import { createMockAvatarData } from '../test-utils/factories/create-mock-avatar-data';
 import { createMockEnemyData } from '../test-utils/factories/create-mock-enemy-data';
 import { createMockSimulationContext } from '../test-utils/factories/create-mock-simulation-context';
-import type { EquipmentWeapon } from '../types';
-import { EquipmentSlot } from '../types';
+import type { EnemyAttackEvent, EquipmentWeapon } from '../types';
+import { CombatEventType, EquipmentSlot } from '../types';
 import { createActivity } from './create-activity';
 import { createCombatExecutor } from './create-combat-executor';
 
@@ -77,6 +78,17 @@ test('it processes a tick with a single scheduled event', () => {
   expect(avatar.life).toBe(160);
 });
 
+test('it applies same-time enemy events in schedule order, not enemy array order', () => {
+  // scheduling the lethal hit first means the avatar dies before the weak enemy's event is
+  // handled, so that event's damage roll never draws from the rng; scheduling the weak hit first
+  // lets it draw before the avatar dies to the lethal hit — the two schedule orders must consume
+  // a different number of draws, even though both scenarios use the same enemy array order
+  const stateWhenLethalActsFirst = buildFinalRngState('lethal');
+  const stateWhenWeakActsFirst = buildFinalRngState('weak');
+
+  expect(stateWhenLethalActsFirst).not.toBe(stateWhenWeakActsFirst);
+});
+
 test('it returns the expected combat executor state for a client app', () => {
   const ctx = createMockSimulationContext();
   const activity = createActivity(createMockActivityInput(), ctx);
@@ -88,3 +100,59 @@ test('it returns the expected combat executor state for a client app', () => {
     elapsed: 0,
   });
 });
+
+/**
+ * Runs a two-enemy tick where one enemy's hit is lethal on its own and the other's isn't,
+ * scheduling `firstToAct`'s attack event ahead of the other's, then returns the rng's final
+ * state — letting a caller compare draw counts across schedule orders.
+ */
+function buildFinalRngState(firstToAct: 'lethal' | 'weak'): string {
+  const enemyDataLethal = createMockEnemyData({
+    life: 100,
+    primaryAttack: { maxDamage: 150, minDamage: 150, speed: 1 },
+  });
+
+  const enemyDataWeak = createMockEnemyData({
+    life: 100,
+    primaryAttack: { maxDamage: 10, minDamage: 1, speed: 1 },
+  });
+
+  const avatarData = createMockAvatarData({ life: 100 });
+
+  const activityData = createMockActivityInput({
+    encounter: { waves: [[enemyDataLethal, enemyDataWeak]] },
+  });
+
+  const ctx = createMockSimulationContext();
+  const avatar = createAvatar(avatarData, ctx);
+  const activity = createActivity(activityData, ctx);
+  const combatExecutor = createCombatExecutor(activity, avatar, ctx);
+  const [lethalEnemy, weakEnemy] = activity.currentWave?.enemies ?? [];
+
+  invariant(lethalEnemy && weakEnemy, 'both enemies are required');
+
+  const lethalEvent: EnemyAttackEvent = {
+    source: lethalEnemy.id,
+    time: 0,
+    type: CombatEventType.EnemyAttack,
+  };
+
+  const weakEvent: EnemyAttackEvent = {
+    source: weakEnemy.id,
+    time: 0,
+    type: CombatEventType.EnemyAttack,
+  };
+
+  const orderedEvents =
+    firstToAct === 'lethal' ? [lethalEvent, weakEvent] : [weakEvent, lethalEvent];
+
+  orderedEvents.forEach((event) => {
+    combatExecutor.scheduleEvent(event);
+  });
+
+  // a zero delta leaves both entities' own attack timers unready, so only our manually
+  // scheduled events are applied this tick
+  combatExecutor.run(0);
+
+  return ctx.rng.getState();
+}

@@ -34,6 +34,13 @@ determine every tick. The engine `@vers/idle-core` and world map encounter deriv
 process that replays submitted checkpoints — import them and compute byte-identical results from the
 same inputs.
 
+Purity rests on three invariants. Every random draw comes from the seeded `rng` stream, never
+`Math.random` or a wall-clock read. Every entity's id derives from its position in the input — an
+enemy's from its wave index and slot within the wave — never from a randomly minted value. Combat
+events resolve into one total order: ascending time, the avatar's own events before others' at an
+equal timestamp, then the monotonic sequence number the combat executor stamps on each event as it's
+scheduled — never an event id or the scan order that discovered the event that tick.
+
 The client does all real-time simulation. One writer per browser profile runs the fixed-timestep
 loop; every other tab is a pure viewer, rendering the writer's **sim snapshot** — the engine's
 serializable `*Snapshot` projection from `getSnapshot()`, distinct from the server-authored **build

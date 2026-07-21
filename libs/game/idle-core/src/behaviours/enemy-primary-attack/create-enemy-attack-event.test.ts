@@ -8,12 +8,11 @@ import { createEnemyAttackEvent } from './create-enemy-attack-event';
 test('it creates an enemy attack event', () => {
   const enemyData = createMockEnemyData();
   const ctx = createMockSimulationContext();
-  const enemy = createEnemy(enemyData, ctx);
+  const enemy = createEnemy('test-enemy', enemyData, ctx);
   const time = 1000;
   const event = createEnemyAttackEvent(enemy, time);
 
   expect(event).toStrictEqual({
-    id: expect.toBeString(),
     source: enemy.id,
     time,
     type: CombatEventType.EnemyAttack,

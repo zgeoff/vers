@@ -5,6 +5,7 @@ import type {
   CombatEvent,
   CombatExecutor,
   CombatExecutorSnapshot,
+  ScheduledCombatEvent,
   SimulationContext,
 } from '../types';
 import { handleEvent } from './handle-event';
@@ -15,15 +16,18 @@ export function createCombatExecutor(
   ctx: SimulationContext,
 ): CombatExecutor {
   let elapsed = 0;
-  let scheduledEvents: Array<CombatEvent> = [];
+  let nextSequence = 0;
+  let scheduledEvents: Array<ScheduledCombatEvent> = [];
   const sortEvents = createEventSorter(avatar);
 
   const getSnapshot = (): CombatExecutorSnapshot => ({
     elapsed,
   });
 
+  // stamps a monotonic sequence number so same-time ties resolve in schedule order, independent of
+  // the scan order that discovered the event this tick
   const scheduleEvent = (event: CombatEvent) => {
-    scheduledEvents.push(event);
+    scheduledEvents.push({ ...event, sequence: nextSequence++ });
   };
 
   const applyEvents = () => {
@@ -31,7 +35,7 @@ export function createCombatExecutor(
       scheduledEvents.sort(sortEvents);
     }
 
-    scheduledEvents.forEach((event: CombatEvent) => {
+    scheduledEvents.forEach((event: ScheduledCombatEvent) => {
       handleEvent(event, avatar, activity, ctx);
     });
 

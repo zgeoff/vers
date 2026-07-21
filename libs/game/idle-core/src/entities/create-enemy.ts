@@ -1,4 +1,3 @@
-import { createId } from '@paralleldrive/cuid2';
 import { createEnemyPrimaryAttackBehaviour } from '../behaviours/enemy-primary-attack';
 import type {
   BehaviourID,
@@ -20,8 +19,12 @@ import { rollEnemyAttackDamage } from './utils/roll-enemy-attack-damage';
 
 const DEFAULT_BEHAVIOUR_FACTORIES = [createEnemyPrimaryAttackBehaviour];
 
-export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
-  const id = createId();
+/**
+ * `id` must be deterministic — it becomes an attack event's `source` and is matched back to the
+ * enemy that owns it when the event is handled, so a random id would make replays diverge on
+ * scheduling order.
+ */
+export function createEnemy(id: string, data: EnemyData, ctx: SimulationContext): Enemy {
   let state = getInitialState(data);
 
   const getSnapshot = (): EnemySnapshot => {

@@ -31,7 +31,6 @@ test('it applies damage from the enemy to the avatar', () => {
   const enemy = activity.currentWave!.nextLivingEnemy!;
 
   const event: EnemyAttackEvent = {
-    id: 'event-1',
     source: enemy.id,
     time: 100,
     type: CombatEventType.EnemyAttack,
@@ -67,7 +66,6 @@ test('it does nothing if the enemy is dead', () => {
   enemy.receiveDamage(100);
 
   const event: EnemyAttackEvent = {
-    id: 'event-1',
     source: enemy.id,
     time: 100,
     type: CombatEventType.EnemyAttack,
@@ -105,7 +103,6 @@ test('it correctly resolves the correct event source', () => {
   const firstEnemy = activity.currentWave!.nextLivingEnemy!;
 
   const event: EnemyAttackEvent = {
-    id: 'event-1',
     source: firstEnemy.id,
     time: 100,
     type: CombatEventType.EnemyAttack,
