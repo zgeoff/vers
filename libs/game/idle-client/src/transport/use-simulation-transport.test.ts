@@ -11,9 +11,7 @@ import { ClientMessageType, WorkerMessageType } from '../types';
 import type { ClientMessage } from '../worker/client-to-worker-message-schema';
 import type {
   ActivityCompletedMessage,
-  CheckpointFlushStalledMessage,
   CheckpointStreamInvalidMessage,
-  ConnectionStatusMessage,
   InitialStateMessage,
   ResyncStatusMessage,
   RewardSlotsRecordedMessage,
@@ -236,8 +234,6 @@ test('it reports a checkpoint stream error from worker messages', async () => {
 
   const message: CheckpointStreamInvalidMessage = {
     activityID: 'activity_1',
-    reason: 'broken-chain-link',
-    traceID: 'trace_1',
     type: WorkerMessageType.CheckpointStreamInvalid,
   };
 
@@ -246,39 +242,6 @@ test('it reports a checkpoint stream error from worker messages', async () => {
   await waitFor(() => {
     expect(useIdleStore.getState().checkpointStreamError).toStrictEqual({
       activityID: 'activity_1',
-      reason: 'broken-chain-link',
-      traceID: 'trace_1',
-    });
-  });
-
-  hook.unmount();
-});
-
-test('it records a flush stall report from worker messages', async () => {
-  registerSharedWorkerStub();
-
-  const hook = renderHook(() => useSimulationTransport());
-
-  hook.rerender();
-
-  const worker = getStubSharedWorker();
-
-  worker.channel.port2.start();
-
-  const message: CheckpointFlushStalledMessage = {
-    activityID: 'activity_1',
-    reason: 'network down',
-    traceID: 'trace_1',
-    type: WorkerMessageType.CheckpointFlushStalled,
-  };
-
-  worker.channel.port2.postMessage(message);
-
-  await waitFor(() => {
-    expect(useIdleStore.getState().checkpointFlushStall).toStrictEqual({
-      activityID: 'activity_1',
-      reason: 'network down',
-      traceID: 'trace_1',
     });
   });
 
@@ -334,31 +297,6 @@ test('it maps a resync status message onto the store', async () => {
       kind: 'fast-forwarding',
       levelUps: 1,
     });
-  });
-
-  hook.unmount();
-});
-
-test('it maps a connection status message onto the store', async () => {
-  registerSharedWorkerStub();
-
-  const hook = renderHook(() => useSimulationTransport());
-
-  hook.rerender();
-
-  const worker = getStubSharedWorker();
-
-  worker.channel.port2.start();
-
-  const message: ConnectionStatusMessage = {
-    online: false,
-    type: WorkerMessageType.ConnectionStatus,
-  };
-
-  worker.channel.port2.postMessage(message);
-
-  await waitFor(() => {
-    expect(useIdleStore.getState().connectionOnline).toBeFalse();
   });
 
   hook.unmount();

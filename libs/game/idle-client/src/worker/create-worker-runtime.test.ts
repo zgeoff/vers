@@ -240,11 +240,22 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
   });
 
   // both this activity's terminal append and its continuation's own startActivity call fail once,
-  // standing in for the device going offline right as the run completes
+  // standing in for the device going offline right as the run completes; the flag scripts the
+  // handler sequence and doubles as the only observable that the append actually failed
+  let appendFailed = false;
+
   server.use(
     http.post(
       `${resolveServiceURL('activity')}/rpc/trackActivityProgress`,
-      makeFailFirstMatchHandler((input) => input['activityID'] === activity.id),
+      makeFailFirstMatchHandler((input) => {
+        if (input['activityID'] !== activity.id) {
+          return false;
+        }
+
+        appendFailed = true;
+
+        return true;
+      }),
     ),
     http.post(
       `${resolveServiceURL('activity')}/rpc/startActivity`,
@@ -274,10 +285,7 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
       // idle frame, so the wait just re-arms the next one until it lands on a live tick
       clock.jump(65_000);
 
-      expect(connection.received).toPartiallyContain({
-        online: false,
-        type: WorkerMessageType.ConnectionStatus,
-      });
+      expect(appendFailed).toBeTrue();
     },
 
     // the tick loop paces itself on real timers between each of the many timesteps this jump
@@ -360,29 +368,6 @@ test("it resumes the held start intent's avatar on reconnect over an earlier ava
     invariant(minted !== undefined, 'expected the reconnect to resume the pending avatar');
 
     expect(minted.id).not.toBe(source.id);
-  });
-});
-
-test('it broadcasts connection status only when the tracked connectivity transitions', async () => {
-  using runtime = createWorkerRuntime();
-
-  const connection = createConnection(runtime);
-
-  connection.post({ type: ClientMessageType.Initialize });
-
-  await connection.waitForMessages(1);
-
-  globalThis.dispatchEvent(new Event('offline'));
-  globalThis.dispatchEvent(new Event('offline'));
-  globalThis.dispatchEvent(new Event('online'));
-
-  await waitFor(() => {
-    expect(
-      connection.received.filter((message) => message.type === WorkerMessageType.ConnectionStatus),
-    ).toStrictEqual([
-      { online: false, type: WorkerMessageType.ConnectionStatus },
-      { online: true, type: WorkerMessageType.ConnectionStatus },
-    ]);
   });
 });
 

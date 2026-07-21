@@ -37,9 +37,7 @@ export interface SetActivityMessage {
 
 export enum WorkerMessageType {
   ActivityCompleted = 'activity_completed',
-  CheckpointFlushStalled = 'checkpoint_flush_stalled',
   CheckpointStreamInvalid = 'checkpoint_stream_invalid',
-  ConnectionStatus = 'connection_status',
   FailureActionStatus = 'failure_action_status',
   InitialState = 'initial_state',
   OfflineCapStatus = 'offline_cap_status',
@@ -70,19 +68,11 @@ export interface StartReport {
 }
 
 /**
- * The latest flush-stall report as tabs hold it — telemetry for the error backend, with the
- * stream still live and retrying.
+ * The activity whose checkpoint stream the worker reported dead — optimistic reward state for it
+ * is discarded and never repopulates from checkpoints still in flight.
  */
-export interface CheckpointFlushStall {
-  readonly activityID: string;
-  readonly reason: string;
-  readonly traceID: string;
-}
-
 export interface CheckpointStreamError {
   readonly activityID: string;
-  readonly reason: string;
-  readonly traceID?: string;
 }
 
 export interface OfflineCapStatus {

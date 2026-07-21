@@ -61,11 +61,9 @@ test('it skips entirely once a registration has superseded the eviction', async 
 
   // posted on the worker's own port after the call settles, this arrives after anything the call
   // broadcast on the same channel — an empty prefix proves it stayed silent
-  connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
+  connection.port.postMessage({ type: WorkerMessageType.WriterReady });
 
   await connection.waitForMessages(1);
 
-  expect(connection.received).toStrictEqual([
-    { online: true, type: WorkerMessageType.ConnectionStatus },
-  ]);
+  expect(connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
 });

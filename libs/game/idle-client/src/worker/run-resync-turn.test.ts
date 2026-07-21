@@ -84,14 +84,11 @@ test('it broadcasts nothing for an avatar with no activity history', async () =>
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
   // handler broadcast on the same channel — an empty prefix proves the resync stayed silent
-  ctx.connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
+  ctx.connection.port.postMessage({ type: WorkerMessageType.WriterReady });
 
   await ctx.connection.waitForMessages(1);
 
-  expect(ctx.connection.received).toStrictEqual([
-    { online: true, type: WorkerMessageType.ConnectionStatus },
-  ]);
-
+  expect(ctx.connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
   expect(ctx.context.getSimulation().activity).toBeNull();
 });
 
@@ -315,13 +312,11 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
   // handler broadcast on the same channel — an empty prefix proves the resync stayed silent
-  ctx.connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
+  ctx.connection.port.postMessage({ type: WorkerMessageType.WriterReady });
 
   await ctx.connection.waitForMessages(1);
 
-  expect(ctx.connection.received).toStrictEqual([
-    { online: true, type: WorkerMessageType.ConnectionStatus },
-  ]);
+  expect(ctx.connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
 
   const simulation = ctx.context.getSimulation();
 
@@ -343,7 +338,23 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
   expect(landed.map((row) => row.payload.seed)).toStrictEqual([lastConfirmed.nextSeed]);
 });
 
-test('it reports a divergence via the checkpoint-stream-error channel and skips registration', async () => {
+test('it reports a divergence fault, broadcasts the dead stream, and skips registration', async () => {
+  const previousHandle = sentryHandle.current;
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
@@ -370,13 +381,11 @@ test('it reports a divergence via the checkpoint-stream-error channel and skips 
   await ctx.connection.waitForMessages(1);
 
   expect(ctx.connection.received).toStrictEqual([
-    {
-      activityID: activity.id,
-      reason: 'reconstruction-divergence',
-      type: WorkerMessageType.CheckpointStreamInvalid,
-    },
+    { activityID: activity.id, type: WorkerMessageType.CheckpointStreamInvalid },
   ]);
 
+  expect(recorded).toHaveLength(1);
+  expect(recorded[0]?.tags).toMatchObject({ site: 'checkpoint-stream' });
   expect(ctx.context.getSimulation().activity).toBeNull();
 });
 
@@ -510,13 +519,11 @@ test('it attaches a fresh login live without broadcasting any catch-up status', 
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
   // handler broadcast on the same channel — an empty prefix proves the resync stayed silent
-  ctx.connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
+  ctx.connection.port.postMessage({ type: WorkerMessageType.WriterReady });
 
   await ctx.connection.waitForMessages(1);
 
-  expect(ctx.connection.received).toStrictEqual([
-    { online: true, type: WorkerMessageType.ConnectionStatus },
-  ]);
+  expect(ctx.connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
 
   const simulation = ctx.context.getSimulation();
 
@@ -790,16 +797,14 @@ test('it clears a stale start intent silently when the budget is spent and anoth
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
   // handler broadcast on the same channel — its lone presence proves no cap-halt rode along
-  ctx.connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
+  ctx.connection.port.postMessage({ type: WorkerMessageType.WriterReady });
 
   await ctx.connection.waitForMessages(1);
 
-  expect(ctx.connection.received).toStrictEqual([
-    { online: true, type: WorkerMessageType.ConnectionStatus },
-  ]);
+  expect(ctx.connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
 });
 
-test('it keeps the start intent and reports offline when the drain fails on transport', async () => {
+test('it keeps the start intent and marks connectivity offline when the drain fails on transport', async () => {
   const viewer = await createViewer();
 
   const stopped = await db.activityCollection.create({
@@ -820,12 +825,15 @@ test('it keeps the start intent and reports offline when the drain fails on tran
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
+  expect(ctx.context.getConnectivityOnline()).toBeFalse();
+
+  // posted on the worker's own port after the turn settles, this arrives after anything the turn
+  // broadcast on the same channel — an empty prefix proves it stayed silent
+  ctx.connection.port.postMessage({ type: WorkerMessageType.WriterReady });
+
   await ctx.connection.waitForMessages(1);
 
-  expect(ctx.connection.received).toStrictEqual([
-    { online: false, type: WorkerMessageType.ConnectionStatus },
-  ]);
-
+  expect(ctx.connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
   expect(ctx.context.getSimulation().activity).toBeNull();
 
   const heldIntent = await readPendingStartIntent();
@@ -1040,9 +1048,9 @@ test('it reports a fault to the error backend and broadcasts a failed status whe
   await runResyncTurn(context, 'avatar-with-held-tail', false);
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
-  // handler broadcast on the same channel — a single failed status proves no connection-status
-  // change rode along with it
-  connection.port.postMessage({ online: true, type: WorkerMessageType.ConnectionStatus });
+  // handler broadcast on the same channel — a single failed status ahead of it proves nothing
+  // else rode along
+  connection.port.postMessage({ type: WorkerMessageType.WriterReady });
 
   await connection.waitForMessages(2);
 
@@ -1051,7 +1059,7 @@ test('it reports a fault to the error backend and broadcasts a failed status whe
       status: { avatarID: 'avatar-with-held-tail', kind: 'failed' },
       type: WorkerMessageType.ResyncStatus,
     },
-    { online: true, type: WorkerMessageType.ConnectionStatus },
+    { type: WorkerMessageType.WriterReady },
   ]);
 
   await waitFor(() => {

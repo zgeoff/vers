@@ -1,27 +1,18 @@
 import {
   useActivity,
   useAvatar,
-  useCheckpointFlushStall,
-  useCheckpointStreamError,
   useFailureAction,
   useLastCompletedActivityID,
   useSimulationInitialized,
   useSimulationTransport,
   useStartReport,
 } from '@vers/idle-client';
-import type {
-  CheckpointFlushStall,
-  CheckpointStreamError,
-  SimulationTransport,
-  StartReport,
-} from '@vers/idle-client';
+import type { SimulationTransport, StartReport } from '@vers/idle-client';
 import type { ActivityFailureAction, ActivitySnapshot, AvatarSnapshot } from '@vers/idle-core';
 
 interface IdleWorkerHandle {
   readonly activity: ActivitySnapshot | undefined;
   readonly avatar: AvatarSnapshot | undefined;
-  readonly checkpointFlushStall: CheckpointFlushStall | undefined;
-  readonly checkpointStreamError: CheckpointStreamError | undefined;
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
   readonly lastCompletedActivityID: string | undefined;
@@ -41,16 +32,12 @@ export function useIdleWorkerHandle(): IdleWorkerHandle {
   const activity = useActivity();
   const avatar = useAvatar();
   const failureAction = useFailureAction();
-  const checkpointStreamError = useCheckpointStreamError();
-  const checkpointFlushStall = useCheckpointFlushStall();
   const lastCompletedActivityID = useLastCompletedActivityID();
   const startReport = useStartReport();
 
   return {
     activity: activity ?? undefined,
     avatar: avatar ?? undefined,
-    checkpointFlushStall: checkpointFlushStall ?? undefined,
-    checkpointStreamError: checkpointStreamError ?? undefined,
     failureAction,
     initialized,
     lastCompletedActivityID: lastCompletedActivityID ?? undefined,

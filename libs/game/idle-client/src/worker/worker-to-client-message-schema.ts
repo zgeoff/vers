@@ -60,13 +60,6 @@ const resyncStatusMessageSchema = z
   })
   .readonly();
 
-const connectionStatusMessageSchema = z
-  .object({
-    online: z.boolean(),
-    type: z.literal(WorkerMessageType.ConnectionStatus),
-  })
-  .readonly();
-
 const failureActionStatusMessageSchema = z
   .object({
     failureAction: z.enum(ActivityFailureAction),
@@ -74,20 +67,14 @@ const failureActionStatusMessageSchema = z
   })
   .readonly();
 
-const checkpointFlushStalledMessageSchema = z
-  .object({
-    activityID: z.string(),
-    reason: z.string(),
-    traceID: z.string(),
-    type: z.literal(WorkerMessageType.CheckpointFlushStalled),
-  })
-  .readonly();
-
+/**
+ * The named activity's checkpoint stream is dead — nothing submitted past its confirmed head will
+ * persist. Diagnostics go to the error backend from the worker; tabs act on this only by
+ * discarding optimistic reward state for the activity.
+ */
 const checkpointStreamInvalidMessageSchema = z
   .object({
     activityID: z.string(),
-    reason: z.string(),
-    traceID: z.string().exactOptional(),
     type: z.literal(WorkerMessageType.CheckpointStreamInvalid),
   })
   .readonly();
@@ -150,9 +137,7 @@ const writerReadyMessageSchema = z
  */
 export const workerToClientMessageSchema = z.discriminatedUnion('type', [
   activityCompletedMessageSchema,
-  checkpointFlushStalledMessageSchema,
   checkpointStreamInvalidMessageSchema,
-  connectionStatusMessageSchema,
   failureActionStatusMessageSchema,
   initialStateMessageSchema,
   offlineCapStatusMessageSchema,
@@ -168,11 +153,7 @@ export type WorkerMessage = z.infer<typeof workerToClientMessageSchema>;
 
 export type ActivityCompletedMessage = z.infer<typeof activityCompletedMessageSchema>;
 
-export type CheckpointFlushStalledMessage = z.infer<typeof checkpointFlushStalledMessageSchema>;
-
 export type CheckpointStreamInvalidMessage = z.infer<typeof checkpointStreamInvalidMessageSchema>;
-
-export type ConnectionStatusMessage = z.infer<typeof connectionStatusMessageSchema>;
 
 export type FailureActionStatusMessage = z.infer<typeof failureActionStatusMessageSchema>;
 
