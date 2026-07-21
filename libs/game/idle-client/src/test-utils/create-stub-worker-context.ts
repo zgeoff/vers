@@ -15,6 +15,14 @@ interface CreateStubWorkerContextOptions {
   readonly connections?: ReadonlyArray<WorkerConnection>;
   readonly failureAction?: ActivityFailureAction;
   readonly remainingBudgetMs?: number;
+
+  /**
+   * The runtime-lifetime shutdown controller a real worker's `stop()` aborts. A test that needs to
+   * simulate shutdown — permanent, unlike a stop scope's own reset-on-advance — creates its own
+   * controller, passes it here, and aborts it directly.
+   */
+  readonly shutdownController?: AbortController;
+
   readonly submitter?: Readonly<CheckpointSubmitter>;
 }
 
@@ -45,8 +53,8 @@ export function createStubWorkerContext(
   let failureAction: ActivityFailureAction = options.failureAction ?? ActivityFailureAction.Abort;
   let failureActionDirty = false;
   let failureActionPushInFlight = false;
+  const shutdownController = options.shutdownController ?? new AbortController();
 
-  const shutdownController = new AbortController();
   let stopController = new AbortController();
 
   let cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);

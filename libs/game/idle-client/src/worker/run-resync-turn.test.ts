@@ -1190,6 +1190,47 @@ test('it abandons the install when a stop lands mid-resync', async () => {
   expect(ctx.context.getActivity()).toBeNull();
 });
 
+test('it settles silently, broadcasting neither a failed status nor a fault, when a stop aborts the in-flight progress fetch', async () => {
+  const previousHandle = sentryHandle.current;
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
+
+  // the stop lands while the progress fetch is in flight, aborting the cancel signal the fetch
+  // carries — unlike the deviation above, the handler never answers, so the fetch itself rejects
+  // rather than the flow noticing the stop only after a normal reply
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => {
+      ctx.context.advanceStopScope();
+
+      return new Promise(() => {});
+    }),
+  );
+
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
+
+  expect(ctx.context.getSimulation().activity).toBeNull();
+  expect(ctx.connection.received).toStrictEqual([]);
+  expect(recorded).toStrictEqual([]);
+  expect(ctx.context.isResyncInFlight()).toBe(false);
+});
+
 test('it stops back a drain-minted row when a stop lands during its attach', async () => {
   const viewer = await createViewer();
 

@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
+import type { ErrorEvent } from '@sentry/browser';
 import { createSimulation } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
@@ -14,6 +15,8 @@ import { createTestConnection } from '../test-utils/create-test-connection';
 import { ClientMessageType, WorkerMessageType } from '../types';
 import type { StartActivityMessage } from './client-to-worker-message-schema';
 import { handleStartActivityMessage } from './handle-start-activity-message';
+import { sentryHandle } from './sentry-handle';
+import { startErrorReporting } from './start-error-reporting';
 
 interface SetupTestConfig {
   readonly userID: string;
@@ -304,6 +307,64 @@ test('it stops the minted row back when a stop lands mid-start', async () => {
     status: { kind: 'failed' },
     type: WorkerMessageType.StartStatus,
   });
+});
+
+test('it emits failed without reporting a fault when a worker shutdown aborts the entry check before any row mints', async () => {
+  const previousHandle = sentryHandle.current;
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  const connection = createTestConnection();
+
+  const shutdownController = new AbortController();
+
+  // shutdown is permanent, unlike a stop scope's reset-on-advance — aborting it before the flow
+  // ever runs is how a worker reload's abort reaches this entry check
+  shutdownController.abort();
+
+  const context = createStubWorkerContext({
+    connections: [connection.port],
+    shutdownController,
+    submitter: createStubSubmitter(),
+  });
+
+  const message: StartActivityMessage = {
+    avatarID: 'avatar_1',
+    requestID: 'request_start',
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  };
+
+  await handleStartActivityMessage(context, message);
+
+  const minted = db.activityCollection.findMany((q) => q.where({ avatarID: 'avatar_1' }));
+
+  expect(minted).toStrictEqual([]);
+
+  await connection.waitForMessages(1);
+
+  expect(connection.received).toStrictEqual([
+    {
+      requestID: message.requestID,
+      status: { kind: 'failed' },
+      type: WorkerMessageType.StartStatus,
+    },
+  ]);
+
+  expect(recorded).toStrictEqual([]);
 });
 
 test('it abandons a superseded request without touching the fresher claim', async () => {

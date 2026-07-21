@@ -1,11 +1,14 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
+import type { ErrorEvent } from '@sentry/browser';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
+import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
 import { http } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
+import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
@@ -17,6 +20,8 @@ import { makeFailFirstMatchHandler } from '../test-utils/make-fail-first-match-h
 import { ClientMessageType, WorkerMessageType } from '../types';
 import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
+import { sentryHandle } from './sentry-handle';
+import { startErrorReporting } from './start-error-reporting';
 import type { SimulationUpdateMessage } from './worker-to-client-message-schema';
 
 function createConnection(runtime: WorkerRuntime): TestConnection {
@@ -439,4 +444,91 @@ test('it recovers a stop parked offline once a flush answer proves the connectio
     // spans, so a loaded runner can need several times the default budget to land a live tick
     { timeoutMs: 5000 },
   );
+});
+
+test('it cancels an in-flight resync read on stop() without stopping the row back or reporting a fault', async () => {
+  const previousHandle = sentryHandle.current;
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
+
+  let notifyReadStarted: (() => void) | undefined;
+
+  const readStarted = new Promise<void>((resolve) => {
+    notifyReadStarted = resolve;
+  });
+
+  // hangs forever on its own — only stop()'s abort settles the call the runtime is waiting on
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => {
+      notifyReadStarted?.();
+
+      return new Promise(() => {});
+    }),
+  );
+
+  using runtime = createWorkerRuntime({ client });
+
+  const connection = createConnection(runtime);
+
+  connection.post({ type: ClientMessageType.Initialize });
+
+  await connection.waitForMessages(1);
+
+  connection.post({
+    avatarID: viewer.avatar.id,
+    claim: false,
+    type: ClientMessageType.ReportOnline,
+  });
+
+  await readStarted;
+
+  runtime.stop();
+
+  // a start queued behind the resync's lifecycle turn only runs once that turn settles, proving
+  // the cancelled read didn't strand it hanging on the mailbox
+  connection.post({
+    avatarID: 'stop-cancel-avatar',
+    requestID: 'start-after-stop',
+    scopeID: 'scope-after-stop',
+    scopeType: 'world_map_node',
+    type: ClientMessageType.StartActivity,
+  });
+
+  await waitFor(() => {
+    expect(connection.received).toPartiallyContain({
+      requestID: 'start-after-stop',
+      type: WorkerMessageType.StartStatus,
+    });
+  });
+
+  expect(recorded).toStrictEqual([]);
+
+  const row = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
+
+  invariant(row !== undefined, 'expected the seeded row to survive shutdown');
+  expect(row.status).toBe('active');
+
+  const pendingStop = await readPendingStopIntent();
+
+  expect(pendingStop).toBeUndefined();
 });
