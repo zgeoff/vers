@@ -4,14 +4,11 @@ import { setCheckpointStreamError } from './set-checkpoint-stream-error';
 import { useIdleStore } from './use-idle-store';
 
 test('it updates the checkpoint stream error state', () => {
-  setCheckpointStreamError({ activityID: 'activity_1', reason: 'broken-chain-link' });
+  setCheckpointStreamError({ activityID: 'activity_1' });
 
   const hook = renderHook(() => useIdleStore((state) => state.checkpointStreamError));
 
-  expect(hook.result.current).toStrictEqual({
-    activityID: 'activity_1',
-    reason: 'broken-chain-link',
-  });
+  expect(hook.result.current).toStrictEqual({ activityID: 'activity_1' });
 });
 
 test('it clears the reward-slot ledger when the stream is rejected', () => {
@@ -20,12 +17,11 @@ test('it clears the reward-slot ledger when the stream is rejected', () => {
     rewardSlotLedger: [{ count: 2, version: 1 }],
   });
 
-  setCheckpointStreamError({ activityID: 'activity_1', reason: 'broken-chain-link' });
+  setCheckpointStreamError({ activityID: 'activity_1' });
 
   expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([]);
 
   expect(useIdleStore.getState().checkpointStreamError).toStrictEqual({
     activityID: 'activity_1',
-    reason: 'broken-chain-link',
   });
 });

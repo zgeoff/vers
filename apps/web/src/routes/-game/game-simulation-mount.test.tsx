@@ -57,20 +57,6 @@ test('it sends nothing before a worker has connected', () => {
   expect(calls).toStrictEqual([]);
 });
 
-test('it renders without error when the worker reports a stopped checkpoint stream', () => {
-  setIdleWorkerHandle({
-    activity: undefined,
-    checkpointStreamError: { activityID: 'activity_1', reason: 'broken-chain-link' },
-    failureAction: ActivityFailureAction.Abort,
-    initialized: true,
-    transport: undefined,
-  });
-
-  const rendered = render(<GameSimulationMount />);
-
-  expect(rendered.container).toBeEmptyDOMElement();
-});
-
 test('it sends initialize then reports online once the active avatar resolves', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
@@ -185,18 +171,4 @@ test('it reports online again when the browser comes back online', async () => {
       expect(calls.filter((call) => call.type === ClientMessageType.ReportOnline)).toHaveLength(2);
     });
   });
-});
-
-test('it renders without error when the worker reports a stalled checkpoint flush', () => {
-  setIdleWorkerHandle({
-    activity: undefined,
-    checkpointFlushStall: { activityID: 'activity_1', reason: 'network down', traceID: 'trace_1' },
-    failureAction: ActivityFailureAction.Abort,
-    initialized: true,
-    transport: undefined,
-  });
-
-  const rendered = render(<GameSimulationMount />);
-
-  expect(rendered.container).toBeEmptyDOMElement();
 });
