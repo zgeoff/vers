@@ -86,7 +86,7 @@ test('it shows the optimistic sim overlay and the settling marker while an activ
     avatar: createMockAvatarSnapshot({ level: 4 }),
     failureAction: ActivityFailureAction.Retry,
     initialized: true,
-    worker: undefined,
+    transport: undefined,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {

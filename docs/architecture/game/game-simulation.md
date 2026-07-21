@@ -35,12 +35,44 @@ process that replays submitted checkpoints — import them and compute byte-iden
 same inputs.
 
 The client does all real-time simulation. One writer per browser profile runs the fixed-timestep
-loop: a SharedWorker, with leader election where SharedWorker is unavailable. Other tabs are pure
-viewers. Viewer tabs render the writer's **sim snapshot**: the engine's serializable `*Snapshot`
-projection from `getSnapshot()`. That snapshot is separate from the server-authored **build
-snapshot**, which pins an avatar's build as a simulation input. On returning from offline, the
-client fast-forwards the simulation from the last verified checkpoint. The server never simulates on
-the request path. It replays asynchronously to decide whether to trust what the client submitted.
+loop; every other tab is a pure viewer, rendering the writer's **sim snapshot** — the engine's
+serializable `*Snapshot` projection from `getSnapshot()`, distinct from the server-authored **build
+snapshot** that pins an avatar's build as a simulation input. On returning from offline, the client
+fast-forwards the simulation from the last verified checkpoint. The server never simulates on the
+request path; it replays asynchronously to decide whether to trust what the client submitted.
+
+### Writer election
+
+The writer is a SharedWorker where the browser has one. Where it doesn't (Android Chrome, older
+Safari), every tab spawns a dedicated worker and the workers race one exclusive Web Locks request
+for the writer lock. The winner boots the same worker runtime, reaches every tab over a pair of
+BroadcastChannels — one per direction, so a tab never receives another tab's client messages — and
+announces itself with a writer-ready broadcast.
+
+The granted lock callback never settles, so the browser releases the lock only when the writer's tab
+dies. The next queued worker then boots exactly as a reloaded worker would, seeding from the durable
+checkpoint queue and pending intents. A frozen background tab's worker keeps the lock while paused:
+the writer stalls until the tab thaws or the browser discards it, and the offline-progress design
+absorbs the stall — the next report-online resyncs and fast-forwards.
+
+Tabs treat the writer-ready broadcast as a fresh worker. Each re-sends its initialize and
+report-online handshake, a pending start intent re-raises under a new request id, and viewers
+briefly render catch-up state until the new writer's resync completes. Initialize is send-and-retry
+until answered — a post while no worker holds the lock reaches nothing. A succession re-report never
+claims the writer, so a dying background tab's promotion cannot take a run from a device the player
+is actively driving.
+
+One-shot intents posted inside the handoff — it spans only lock release plus runtime boot — are
+accepted losses, each with a visible recovery:
+
+- a stop: the run reads still-active and the player stops it again
+- a continue-here claim: the displaced notice returns with the next initial-state broadcast and the
+  player claims again
+- a failure-action toggle: the control reverts to the durable cached value
+
+The handoff needs no server-side writer coordination: the append path's head-row guarded update plus
+deterministic-content dedupe makes a dying writer's late append and its successor's identical
+checkpoints converge instead of interleaving.
 
 ## Server-authored inputs
 
@@ -147,7 +179,7 @@ directly, because they lag verification by design.
 
 ## Activity lifecycle
 
-The SharedWorker owns every lifecycle transition — start, stop, continuation, resync. A tab
+The writer worker owns every lifecycle transition — start, stop, continuation, resync. A tab
 expresses intent in one message and correlates the worker's broadcast outcome by request id; no tab
 calls the activity service for lifecycle work itself, so the tabs and the worker can never disagree
 about which run exists.
@@ -184,7 +216,7 @@ Four processes move simulation results around, each with one name:
 
 ### Resync and reconstruction
 
-A resync executes in the SharedWorker, since only the worker holds the one live simulation a plan
+A resync executes in the writer worker, since only the worker holds the one live simulation a plan
 might attach to. A tab triggers it with the avatar id alone, and the worker derives everything else
 from the confirmed activity row. A negligible gap attaches to the live simulation directly.
 Reconstruction recovers the submission cursor — the chain-link hash and seed the next checkpoint

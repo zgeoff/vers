@@ -8,11 +8,11 @@ import type { ActivitySnapshot, AvatarSnapshot } from '@vers/idle-core';
 import { ActivityFailureAction } from '@vers/idle-core';
 
 /**
- * A duck-typed stand-in for `SharedWorker`: only the one channel the app ever writes to, typed to
- * the worker protocol so recorded messages narrow through the exported guards.
+ * A duck-typed stand-in for the simulation transport: only the one channel the app ever writes
+ * to, typed to the worker protocol so recorded messages narrow through the exported guards.
  */
-interface StubSimulationWorker {
-  readonly port: { readonly postMessage: (message: ClientMessage) => void };
+interface StubSimulationTransport {
+  readonly post: (message: ClientMessage) => void;
 }
 
 export interface StubIdleWorkerHandle {
@@ -24,7 +24,7 @@ export interface StubIdleWorkerHandle {
   readonly initialized: boolean;
   readonly lastCompletedActivityID?: string | undefined;
   readonly startReport?: StartReport | undefined;
-  readonly worker: StubSimulationWorker | undefined;
+  readonly transport: StubSimulationTransport | undefined;
 }
 
 const DEFAULT_HANDLE: StubIdleWorkerHandle = {
@@ -32,7 +32,7 @@ const DEFAULT_HANDLE: StubIdleWorkerHandle = {
   avatar: undefined,
   failureAction: ActivityFailureAction.Abort,
   initialized: false,
-  worker: undefined,
+  transport: undefined,
 };
 
 let current: StubIdleWorkerHandle = DEFAULT_HANDLE;
@@ -42,7 +42,7 @@ const listeners = new Set<() => void>();
 /**
  * The external store behind the mocked worker-handle read: `set` notifies subscribers, so a
  * mid-test handle change re-renders subscribed components the way a real worker report does.
- * Defaults to no worker, matching a caller that hasn't mounted one yet.
+ * Defaults to no transport, matching a caller that hasn't mounted one yet.
  */
 export const idleWorkerHandleStub = {
   get: (): StubIdleWorkerHandle => current,

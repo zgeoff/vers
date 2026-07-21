@@ -6,10 +6,15 @@ import {
   useFailureAction,
   useLastCompletedActivityID,
   useSimulationInitialized,
-  useSimulationWorker,
+  useSimulationTransport,
   useStartReport,
 } from '@vers/idle-client';
-import type { CheckpointFlushStall, CheckpointStreamError, StartReport } from '@vers/idle-client';
+import type {
+  CheckpointFlushStall,
+  CheckpointStreamError,
+  SimulationTransport,
+  StartReport,
+} from '@vers/idle-client';
 import type { ActivityFailureAction, ActivitySnapshot, AvatarSnapshot } from '@vers/idle-core';
 
 interface IdleWorkerHandle {
@@ -21,16 +26,17 @@ interface IdleWorkerHandle {
   readonly initialized: boolean;
   readonly lastCompletedActivityID: string | undefined;
   readonly startReport: StartReport | undefined;
-  readonly worker: SharedWorker | undefined;
+  readonly transport: SimulationTransport | undefined;
 }
 
 /**
- * The app's one read boundary onto `lib-idle-client`'s SharedWorker mount: every consumer reads
- * simulation state through this hook, so tests can stub the worker handle here. `happy-dom` has no
- * `SharedWorker` implementation, so this module is replaced under `bun test`.
+ * The app's one read boundary onto the simulation transport mount: every consumer reads
+ * simulation state through this hook, so tests can stub the worker handle here. The test DOM can
+ * host neither a SharedWorker nor a dedicated election worker, so this module is replaced under
+ * `bun test`.
  */
 export function useIdleWorkerHandle(): IdleWorkerHandle {
-  const worker = useSimulationWorker();
+  const transport = useSimulationTransport();
   const initialized = useSimulationInitialized();
   const activity = useActivity();
   const avatar = useAvatar();
@@ -49,6 +55,6 @@ export function useIdleWorkerHandle(): IdleWorkerHandle {
     initialized,
     lastCompletedActivityID: lastCompletedActivityID ?? undefined,
     startReport: startReport ?? undefined,
-    worker: worker ?? undefined,
+    transport: transport ?? undefined,
   };
 }

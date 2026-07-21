@@ -67,8 +67,8 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
         <Text>Catching up didn’t finish. Your progress is safe.</Text>
         <Button
           onClick={() => {
-            if (idleWorkerHandle.worker !== undefined) {
-              sendIdleReportOnline(idleWorkerHandle.worker, resyncStatus.avatarID, true);
+            if (idleWorkerHandle.transport !== undefined) {
+              sendIdleReportOnline(idleWorkerHandle.transport, resyncStatus.avatarID, true);
             }
 
             setResyncStatus(null);

@@ -29,14 +29,6 @@ faker.seed(1);
 
 registerHappyDOM();
 
-// happy-dom ships no `SharedWorker`; define a placeholder so the app's support check reports the
-// supported path real browsers take. The worker handle is mocked, so nothing constructs it. Tests
-// covering the unsupported path remove it locally.
-function SharedWorkerPlaceholder(): void {
-  throw new Error('SharedWorker placeholder is not constructable under bun test');
-}
-
-Reflect.set(globalThis, 'SharedWorker', SharedWorkerPlaceholder);
 expect.extend(jestDOMMatchers);
 
 // installs the zustand `create` wrapper before any store module below imports it, so every

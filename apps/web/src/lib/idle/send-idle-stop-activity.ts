@@ -1,3 +1,4 @@
+import type { SimulationTransport } from '@vers/idle-client';
 import { createStopActivityMessage } from '@vers/idle-client';
 
 /**
@@ -6,9 +7,9 @@ import { createStopActivityMessage } from '@vers/idle-client';
  * intent on later reconnects — so the caller never awaits the server and the stop works offline.
  */
 export function sendIdleStopActivity(
-  worker: Pick<SharedWorker, 'port'>,
+  transport: SimulationTransport,
   avatarID: string,
   activityID: string,
 ): void {
-  worker.port.postMessage(createStopActivityMessage(avatarID, activityID));
+  transport.post(createStopActivityMessage(avatarID, activityID));
 }

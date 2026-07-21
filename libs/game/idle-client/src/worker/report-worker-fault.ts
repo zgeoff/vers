@@ -5,6 +5,7 @@ export type WorkerFaultSite =
   | 'eviction'
   | 'message-routing'
   | 'preference-seed'
+  | 'writer-election'
   | 'reconnect'
   | 'resync'
   | 'start'

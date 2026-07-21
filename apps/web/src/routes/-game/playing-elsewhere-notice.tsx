@@ -42,11 +42,11 @@ export function PlayingElsewhereNotice() {
           // The displaced state clears only once the claim is actually sent — clearing without
           // sending would dismiss the player's one recovery notice with nothing claimed. A click
           // before the worker or avatar id resolves leaves the notice open for the next try.
-          if (idleWorkerHandle.worker === undefined || avatarID === undefined) {
+          if (idleWorkerHandle.transport === undefined || avatarID === undefined) {
             return;
           }
 
-          sendIdleReportOnline(idleWorkerHandle.worker, avatarID, true);
+          sendIdleReportOnline(idleWorkerHandle.transport, avatarID, true);
           setWriterDisplacedActivityID(null);
         }}
       >

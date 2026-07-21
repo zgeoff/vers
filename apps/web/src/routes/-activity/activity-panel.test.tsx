@@ -67,14 +67,14 @@ test('it hands END RUN to the worker and never awaits the server', async () => {
   const activity = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
 
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: createMockActivitySnapshot(),
     avatar: createMockAvatarSnapshot(),
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   setSimulationSnapshot({

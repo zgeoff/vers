@@ -12,7 +12,7 @@ function setActiveActivity(): void {
     activity: createMockActivitySnapshot(),
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker: undefined,
+    transport: undefined,
   });
 }
 

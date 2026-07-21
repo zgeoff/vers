@@ -8,12 +8,12 @@ import type { CheckpointSubmitter } from '../submission/create-checkpoint-submit
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry } from '../types';
 import { WorkerMessageType } from '../types';
-import type { WorkerContext } from '../worker/types';
+import type { WorkerConnection, WorkerContext } from '../worker/types';
 import { createStubSubmitter } from './create-stub-submitter';
 
 interface CreateStubWorkerContextOptions {
   readonly client?: ActivityServiceClient;
-  readonly connections?: ReadonlyArray<MessagePort>;
+  readonly connections?: ReadonlyArray<WorkerConnection>;
   readonly failureAction?: ActivityFailureAction;
   readonly remainingBudgetMs?: number;
   readonly submitter?: Readonly<CheckpointSubmitter>;
@@ -79,8 +79,8 @@ export function createStubWorkerContext(
       rewardSlotLedgerActivityID = activityID;
       rewardSlotLedger = [entry];
     },
-    removeConnection: (port) => {
-      connections.delete(port);
+    removeConnection: (connection) => {
+      connections.delete(connection);
     },
     resetRewardSlotLedger: () => {
       rewardSlotLedgerActivityID = null;
