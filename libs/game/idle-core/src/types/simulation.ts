@@ -43,10 +43,10 @@ export interface Simulation {
   addEventListener: (eventName: SimulationEventName, listener: SimulationListener) => void;
   getSnapshot: () => SimulationSnapshot;
   restartActivity: () => void;
-  run: (time: number) => Promise<ActivityCheckpoint | null>;
+  run: (time: number) => ActivityCheckpoint | null;
   setFailureAction: (action: ActivityFailureAction) => void;
   startActivity: (avatarData: AvatarData, activityData: ActivityInput) => void;
-  stopActivity: () => Promise<void>;
+  stopActivity: () => void;
 }
 
 export interface SimulationContext {
