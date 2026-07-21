@@ -153,6 +153,7 @@ test('it delivers the targeted server stop and releases the intent', async () =>
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
 
   invariant(stopped !== undefined, 'expected the targeted row to survive');
+
   expect(stopped.status).toBe('stopped');
   expect(submitter.flushNow).toHaveBeenCalledExactlyOnceWith(row.id);
 
@@ -208,6 +209,7 @@ test('it halts nothing but still delivers when no simulation is installed', asyn
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
 
   invariant(stopped !== undefined, 'expected the targeted row to survive');
+
   expect(stopped.status).toBe('stopped');
 });
 

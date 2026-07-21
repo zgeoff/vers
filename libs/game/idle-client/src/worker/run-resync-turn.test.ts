@@ -418,6 +418,7 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
   );
 
   invariant(minted !== undefined, 'expected the fast-forward to mint an active continuation');
+
   expect(minted.id).not.toBe(activity.id);
 
   const simulation = ctx.context.getSimulation();
@@ -590,6 +591,7 @@ test('it flushes a dirty local failure action to the server during resync, clear
   const updatedAvatar = db.avatarCollection.findFirst((q) => q.where({ id: viewer.avatar.id }));
 
   invariant(updatedAvatar !== undefined, 'expected the seeded avatar to still exist');
+
   expect(updatedAvatar.failureAction).toBe('retry');
 });
 
@@ -661,6 +663,7 @@ test("it starts a fresh row, installs a live simulation with the worker's failur
   );
 
   invariant(minted !== undefined, 'expected the drained intent to mint a fresh row');
+
   expect(minted.scopeID).toBe(stopped.scopeID);
 
   const simulation = ctx.context.getSimulation();
@@ -714,6 +717,7 @@ test('it attaches the foreign row that races in ahead of the continuation', asyn
   );
 
   invariant(racing !== undefined, 'expected the racing row to survive');
+
   expect(installed.activity?.id).toBe(racing.id);
 
   const heldIntent = await readPendingStartIntent();
@@ -953,6 +957,7 @@ test('it stops back an attach-live row when a stop lands during its registration
   const stoppedBack = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
 
   invariant(stoppedBack !== undefined, 'expected the targeted row to survive');
+
   expect(stoppedBack.status).toBe('stopped');
 });
 
@@ -989,6 +994,7 @@ test('it delivers a blocked intent after the pass closes its source row and atta
   );
 
   invariant(minted !== undefined, 'expected the retried intent to mint a fresh row');
+
   expect(minted.id).not.toBe(source.id);
 
   const installed = ctx.context.getSimulation();
@@ -1138,6 +1144,7 @@ test('it delivers the held stop before planning, leaving the stopped run cleared
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
 
   invariant(stopped !== undefined, 'expected the targeted row to survive');
+
   expect(stopped.status).toBe('stopped');
 
   const intent = await readPendingStopIntent();

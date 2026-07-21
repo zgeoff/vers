@@ -9,6 +9,7 @@ test('it records the displacement and broadcasts it to every connection', async 
   const context = createStubWorkerContext({ connections: [connection.port] });
 
   updateWriterDisplacedStatus(context, 'activity-1');
+
   expect(context.getWriterDisplacedActivityID()).toBe('activity-1');
 
   await connection.waitForMessages(1);

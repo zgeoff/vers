@@ -8,5 +8,6 @@ test('it falls back to the dev port when no env var is set', () => {
 
 test('it prefers the service env var', () => {
   updateEnv('ACTIVITY_SERVICE_URL', 'http://activity.internal:9000');
+
   expect(resolveServiceURL('activity')).toBe('http://activity.internal:9000');
 });

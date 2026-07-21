@@ -17,6 +17,7 @@ test('it applies a whole snapshot in one update', () => {
   });
 
   unsubscribe();
+
   expect(notifications).toBe(1);
   expect(useIdleStore.getState().combat).toStrictEqual({ elapsed: 1000 });
   expect(useIdleStore.getState().failureAction).toBe(ActivityFailureAction.Retry);
@@ -31,6 +32,7 @@ test('it clears fields the snapshot omits', () => {
   });
 
   setSimulationSnapshot({ failureAction: ActivityFailureAction.Abort });
+
   expect(useIdleStore.getState().activity).toBeNull();
   expect(useIdleStore.getState().avatar).toBeNull();
   expect(useIdleStore.getState().combat).toBeNull();

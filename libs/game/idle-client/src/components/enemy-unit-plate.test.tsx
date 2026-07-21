@@ -13,6 +13,7 @@ test('it renders the enemy identity, life, and swing timer', () => {
   });
 
   render(<EnemyUnitPlate enemy={enemy} />);
+
   expect(screen.getByText('Rift Shade')).toBeInTheDocument();
   expect(screen.getByText('LV 3')).toBeInTheDocument();
   expect(screen.getByText(makeNodeTextMatcher('12 / 30'))).toBeInTheDocument();
@@ -23,5 +24,6 @@ test('it marks a defeated enemy', () => {
   const enemy = createMockEnemySnapshot({ isAlive: false, life: 0 });
 
   render(<EnemyUnitPlate enemy={enemy} />);
+
   expect(screen.getByText('DEFEATED')).toBeInTheDocument();
 });

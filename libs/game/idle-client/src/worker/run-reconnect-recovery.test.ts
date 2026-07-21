@@ -46,6 +46,7 @@ test("it resyncs the held start intent's avatar over the reported one", async ()
   );
 
   invariant(minted !== undefined, "expected the drain to mint the intent avatar's next row");
+
   expect(minted.id).not.toBe(source.id);
   expect(ctx.context.getResyncAvatarID()).toBe(avatar.id);
 });
@@ -151,6 +152,7 @@ test('it delivers a stop raised offline even when no resync follows', async () =
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
 
   invariant(stopped !== undefined, 'expected the targeted row to survive');
+
   expect(stopped.status).toBe('stopped');
 
   const intent = await readPendingStopIntent();

@@ -13,6 +13,7 @@ test('it renders the avatar identity, life, and swing timer', () => {
   });
 
   render(<AvatarUnitPlate avatar={avatar} />);
+
   expect(screen.getByText('Vanguard')).toBeInTheDocument();
   expect(screen.getByText('LV 5')).toBeInTheDocument();
   expect(screen.getByText(makeNodeTextMatcher('80 / 100'))).toBeInTheDocument();
@@ -23,6 +24,7 @@ test('it prefers the display name over the sim-reported name', () => {
   const avatar = createMockAvatarSnapshot({ name: 'avatar_1' });
 
   render(<AvatarUnitPlate avatar={avatar} displayName="Aria" />);
+
   expect(screen.getByText('Aria')).toBeInTheDocument();
   expect(screen.queryByText('avatar_1')).not.toBeInTheDocument();
 });

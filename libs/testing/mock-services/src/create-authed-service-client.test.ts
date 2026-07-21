@@ -50,6 +50,7 @@ test("it mints a client whose calls carry the user's bearer token to the service
   const result = await client.echoAuthorization({});
 
   invariant(result.authorization !== null, 'expected the call to carry an authorization header');
+
   expect(result.authorization).toStartWith('Bearer ');
 
   const payload = jose.decodeJwt(result.authorization.slice('Bearer '.length));

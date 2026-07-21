@@ -110,6 +110,7 @@ test('it parses a service-specific envShape variable onto env', async () => {
 
   expectTypeOf(service.env.PORT).toEqualTypeOf<number>();
   expectTypeOf(service.env.CUSTOM_GREETING).toEqualTypeOf<string>();
+
   expect(service.env.CUSTOM_GREETING).toBe('hi there');
 });
 
@@ -469,6 +470,7 @@ test('it reports the OTel span trace id as x-trace-id when no traceparent came i
 
   invariant(result.traceID !== null, 'expected an active span inside the handler');
   invariant(response !== undefined, 'expected the RPC response to be captured');
+
   expect(result.traceID).toMatch(/^[0-9a-f]{32}$/);
   expect(response.headers.get('x-trace-id')).toBe(result.traceID);
 });

@@ -12,5 +12,6 @@ test('it replaces the stored resync status wholesale, including clearing it', ()
   });
 
   setResyncStatus(null);
+
   expect(useIdleStore.getState().resyncStatus).toBeNull();
 });

@@ -11,6 +11,7 @@ import { ActivityRewardsPanel } from './activity-rewards-panel';
 test('it renders nothing without an active activity', () => {
   // no activity id means the query never runs, so this needs no session or MSW override
   renderWithRouter(<ActivityRewardsPanel activityID={undefined} orpc={orpc} />);
+
   expect(screen.queryByTestId('activity-rewards-panel')).not.toBeInTheDocument();
 });
 

@@ -20,6 +20,7 @@ test('it clears the displaced live simulation and broadcasts the displacement', 
   context.setSimulation(createSimulation());
 
   applyEviction(context, activity.id);
+
   expect(context.getActivity()).toBeNull();
   expect(context.getWriterDisplacedActivityID()).toBe(activity.id);
 
@@ -41,6 +42,7 @@ test('it leaves an unrelated live run untouched while still recording the displa
   context.setActivity(liveActivity);
 
   applyEviction(context, 'some-other-activity');
+
   expect(context.getActivity()).toStrictEqual(liveActivity);
   expect(context.getWriterDisplacedActivityID()).toBe('some-other-activity');
 });
@@ -53,6 +55,7 @@ test('it skips entirely once a registration has superseded the eviction', async 
   context.setActivity(activity);
 
   applyEviction(context, activity.id);
+
   expect(context.getActivity()).toStrictEqual(activity);
   expect(context.getWriterDisplacedActivityID()).toBeNull();
 

@@ -11,6 +11,7 @@ test('it reduces the life of the entity by the amount of damage received', () =>
   const enemy = createEnemy(data, ctx);
 
   handleReceiveEnemyDamage(10, enemy);
+
   expect(enemy.life).toBe(90);
 });
 
@@ -20,6 +21,7 @@ test('it sets the status to dead if the life is 0 or less', () => {
   const enemy = createEnemy(data, ctx);
 
   handleReceiveEnemyDamage(100, enemy);
+
   expect(enemy.status).toBe(EntityStatus.Dead);
 });
 
@@ -29,5 +31,6 @@ test('it does not reduce the life below 0', () => {
   const enemy = createEnemy(data, ctx);
 
   handleReceiveEnemyDamage(100, enemy);
+
   expect(enemy.life).toBe(0);
 });

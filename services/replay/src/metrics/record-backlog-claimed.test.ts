@@ -42,6 +42,7 @@ test('it records one drain cycle backlog count', async () => {
     .find((metric) => metric.descriptor.name === 'vers.replay.backlog_claimed');
 
   invariant(histogram?.dataPointType === DataPointType.HISTOGRAM, 'expected a histogram metric');
+
   expect(histogram.dataPoints[0]?.value.sum).toBe(4);
 });
 

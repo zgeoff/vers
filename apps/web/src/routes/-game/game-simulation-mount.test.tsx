@@ -22,6 +22,7 @@ test('it sends the initialize message once a worker connects that has not report
   });
 
   render(<GameSimulationMount />);
+
   expect(calls).toStrictEqual([{ type: ClientMessageType.Initialize }]);
 });
 
@@ -37,6 +38,7 @@ test('it sends nothing once the worker has already reported its state and no ava
   });
 
   render(<GameSimulationMount />);
+
   expect(calls).toStrictEqual([]);
 });
 
@@ -51,6 +53,7 @@ test('it sends nothing before a worker has connected', () => {
   });
 
   render(<GameSimulationMount />);
+
   expect(calls).toStrictEqual([]);
 });
 

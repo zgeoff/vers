@@ -42,6 +42,7 @@ test('it records one verified append lag reading', async () => {
     .find((metric) => metric.descriptor.name === 'vers.replay.verification_lag');
 
   invariant(histogram?.dataPointType === DataPointType.HISTOGRAM, 'expected a histogram metric');
+
   expect(histogram.dataPoints[0]?.value.sum).toBe(12.5);
 });
 

@@ -26,6 +26,7 @@ test('it logs one structured line at info when a page request completes', async 
 
   expect(response.status).toBe(200);
   expect(lines).toHaveLength(1);
+
   invariant(lines[0], 'one line was logged');
 
   expect(lines[0]).toStrictEqual({
@@ -63,7 +64,9 @@ test('it excludes the query string from the logged path', async () => {
   );
 
   expect(lines).toHaveLength(1);
+
   invariant(lines[0], 'one line was logged');
+
   expect(lines[0].fields).toContainEntry(['path', '/login']);
 });
 
@@ -90,7 +93,9 @@ test('it logs a client error response at warn', async () => {
   );
 
   expect(lines).toHaveLength(1);
+
   invariant(lines[0], 'one line was logged');
+
   expect(lines[0].level).toBe('warn');
   expect(lines[0].fields).toContainEntry(['status', 404]);
 });
@@ -118,7 +123,9 @@ test('it logs a server error response at error', async () => {
   );
 
   expect(lines).toHaveLength(1);
+
   invariant(lines[0], 'one line was logged');
+
   expect(lines[0].level).toBe('error');
   expect(lines[0].fields).toContainEntry(['status', 500]);
 });
@@ -146,7 +153,9 @@ test('it logs a served static asset at debug', async () => {
   );
 
   expect(lines).toHaveLength(1);
+
   invariant(lines[0], 'one line was logged');
+
   expect(lines[0].level).toBe('debug');
 });
 
@@ -173,7 +182,9 @@ test('it logs a missing asset at warn rather than debug', async () => {
   );
 
   expect(lines).toHaveLength(1);
+
   invariant(lines[0], 'one line was logged');
+
   expect(lines[0].level).toBe('warn');
 });
 
@@ -206,6 +217,7 @@ test('it logs at error and rethrows when the handler throws', async () => {
   await expect(pending).toReject();
 
   expect(lines).toHaveLength(1);
+
   invariant(lines[0], 'one line was logged');
 
   expect(lines[0]).toStrictEqual({

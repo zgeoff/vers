@@ -76,6 +76,7 @@ test('it re-sends the start intent against a promoted writer', async () => {
     const [, second] = calls.filter((call) => isStartActivityMessage(call));
 
     invariant(second !== undefined, 'expected a re-raised start intent');
+
     expect(second.requestID).not.toBe(first.requestID);
   });
 });
@@ -290,6 +291,7 @@ test('it offers a retry on a failed report and sends a fresh intent on demand', 
     const [, second] = calls.filter((call) => isStartActivityMessage(call));
 
     invariant(second !== undefined, 'expected a second start intent');
+
     expect(second.requestID).not.toBe(first.requestID);
   });
 });

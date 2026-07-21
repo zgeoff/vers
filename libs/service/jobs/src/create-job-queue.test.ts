@@ -434,5 +434,6 @@ test('it runs each drained job inside its own trace context', async () => {
 
   invariant(firstTraceID !== undefined, 'the first job ran inside a trace context');
   invariant(secondTraceID !== undefined, 'the second job ran inside a trace context');
+
   expect(firstTraceID).not.toBe(secondTraceID);
 });
