@@ -7,7 +7,8 @@ import type { WorkerContext } from './types';
  * strictly one at a time. Only public entrypoints queue — a flow needing a sub-flow calls its
  * inner function directly, since a turn awaiting a turn queued behind itself deadlocks. The turn
  * never rejects (a throw would strand the queue); an escaping error reports as a fault under
- * `site`. Stops never queue — queued flows observe them through the stop epoch.
+ * `site`. Stops never queue — queued flows observe them through the stop signal captured at
+ * entry.
  */
 export async function withLifecycleTurn(
   context: WorkerContext,

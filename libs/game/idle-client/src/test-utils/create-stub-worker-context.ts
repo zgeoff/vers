@@ -15,6 +15,13 @@ interface CreateStubWorkerContextOptions {
   readonly connections?: ReadonlyArray<WorkerConnection>;
   readonly failureAction?: ActivityFailureAction;
   readonly remainingBudgetMs?: number;
+
+  /**
+   * The runtime-lifetime shutdown controller. A test that simulates worker teardown passes its
+   * own controller and aborts it directly.
+   */
+  readonly shutdownController?: AbortController;
+
   readonly submitter?: Readonly<CheckpointSubmitter>;
 }
 
@@ -45,7 +52,11 @@ export function createStubWorkerContext(
   let failureAction: ActivityFailureAction = options.failureAction ?? ActivityFailureAction.Abort;
   let failureActionDirty = false;
   let failureActionPushInFlight = false;
-  let stopEpoch = 0;
+  const shutdownController = options.shutdownController ?? new AbortController();
+
+  let stopController = new AbortController();
+
+  let cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);
   let startRequestID: null | string = null;
   let lifecycleTail: Readonly<Promise<void>> = Promise.resolve();
   let queuedClaimResync: null | string = null;
@@ -53,11 +64,16 @@ export function createStubWorkerContext(
   let connectivityOnline = true;
 
   return {
-    advanceStopEpoch: () => {
-      stopEpoch += 1;
+    advanceStopScope: () => {
+      stopController.abort();
+
+      stopController = new AbortController();
+
+      cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);
     },
     connections,
     getActivity: () => activity,
+    getCancelSignal: () => cancelSignal,
     getClient: () => client,
     getConnectivityOnline: () => connectivityOnline,
     getFailureAction: () => failureAction,
@@ -71,7 +87,7 @@ export function createStubWorkerContext(
     getLifecycleTail: () => lifecycleTail,
     getQueuedClaimResync: () => queuedClaimResync,
     getStartRequestID: () => startRequestID,
-    getStopEpoch: () => stopEpoch,
+    getStopSignal: () => stopController.signal,
     getSubmitter: () => submitter,
     getWriterDisplacedActivityID: () => writerDisplacedActivityID,
     isFailureActionDirty: () => failureActionDirty,

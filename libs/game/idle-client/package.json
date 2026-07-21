@@ -21,6 +21,7 @@
     "@vers/styled-system": "workspace:*",
     "@vers/trace": "workspace:*",
     "idb": "catalog:",
+    "p-retry": "catalog:",
     "react": "catalog:",
     "tiny-invariant": "catalog:",
     "zod": "catalog:",
