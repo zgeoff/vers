@@ -15,7 +15,9 @@ interface GetAvatarsOpts {
 }
 
 /**
- * Lists every avatar owned by the acting user together with the persisted active selection.
+ * Lists every avatar owned by the acting user together with the persisted active selection. One
+ * joined statement, so the list and the selection come from the same snapshot and the answer can
+ * never name an avatar it doesn't list.
  */
 export async function getAvatars(db: Kysely<DB>, opts: GetAvatarsOpts): Promise<AvatarRoster> {
   if (opts.context.actingUserId === null) {
@@ -24,18 +26,18 @@ export async function getAvatars(db: Kysely<DB>, opts: GetAvatarsOpts): Promise<
 
   const rows = await db
     .selectFrom('avatars')
-    .selectAll()
-    .where('userId', '=', opts.context.actingUserId)
+    .leftJoin('activeAvatars', (join) =>
+      join
+        .onRef('activeAvatars.avatarId', '=', 'avatars.id')
+        .onRef('activeAvatars.userId', '=', 'avatars.userId'),
+    )
+    .selectAll('avatars')
+    .select('activeAvatars.avatarId as selectedAvatarId')
+    .where('avatars.userId', '=', opts.context.actingUserId)
     .execute();
 
-  const active = await db
-    .selectFrom('activeAvatars')
-    .select(['avatarId'])
-    .where('userId', '=', opts.context.actingUserId)
-    .executeTakeFirst();
-
   return {
-    activeAvatarID: active?.avatarId ?? null,
+    activeAvatarID: rows.find((row) => row.selectedAvatarId !== null)?.id ?? null,
     avatars: rows.map((row) => toAvatarData(row)),
   };
 }

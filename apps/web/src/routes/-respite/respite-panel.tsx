@@ -25,13 +25,25 @@ export function RespitePanel(props: RespitePanelProps) {
 
   const avatar = findActiveAvatar(query.data);
 
-  if (avatar === null) {
+  // no avatars at all → forge one; avatars but no selection (the active one was deleted, or the
+  // cached roster went stale) → the roster, where an existing avatar can be picked
+  if (avatar === null && query.data.avatars.length === 0) {
     return (
       <>
         <Heading level={1}>Destiny Awaits a Vessel</Heading>
         <Text>What is an Arbiter without a champion?</Text>
         <Text>Call forth your Avatar and guide their path across the World.</Text>
         <Link to="/avatars/create">Awaken your Avatar</Link>
+      </>
+    );
+  }
+
+  if (avatar === null) {
+    return (
+      <>
+        <Heading level={1}>Destiny Awaits a Vessel</Heading>
+        <Text>Your champions await your word.</Text>
+        <Link to="/avatars">Choose your Avatar</Link>
       </>
     );
   }
