@@ -187,7 +187,7 @@
           { "from": "package", "name": "Collection", "package": "@msw/data" },
           // a live actor handle: subscription and mailbox state xstate mutates internally, no
           // readonly form
-          { "from": "package", "name": "AnyActorRef", "package": "xstate" },
+          { "from": "package", "name": "ActorRef", "package": "xstate" },
           {
             "from": "package",
             "name": ["CryptoKey", "Request", "Response", "AbortSignal"],

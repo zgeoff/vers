@@ -159,7 +159,8 @@ interface CreateCheckpointSubmitterOptions {
  * One activity's cursor for building the next `CheckpointBatchEntry` to write — the only piece of
  * an activity's submission state this adapter keeps for itself; flush sequencing, backoff, and
  * eviction live in the spawned `checkpointActivityMachine` child this activity's registration
- * spawns.
+ * spawns. The chain fields advance in place as each accepted submission links onto the last, so
+ * they are deliberately not `readonly`.
  */
 interface WriteCursor {
   nextVersion: number;

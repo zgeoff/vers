@@ -71,7 +71,7 @@ export const checkpointSubmitterMachine = setup({
                   args.event.activityID,
                   args.spawn('checkpointActivityMachine', {
                     id: args.event.activityID,
-                    input: args.event,
+                    input: { ...args.event, parentRef: args.self },
                   }),
                 ],
               ]),

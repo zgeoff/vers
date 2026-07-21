@@ -1,6 +1,6 @@
 import { ORPCError, isDefinedError, safe } from '@orpc/client';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
-import type { AnyActorRef } from 'xstate';
+import type { ActorRef, Snapshot } from 'xstate';
 import { assign, fromCallback, fromPromise, setup } from 'xstate';
 import { buildMachineTypes } from './build-machine-types';
 import { FLUSH_STALL_THRESHOLD } from './constants';
@@ -212,6 +212,7 @@ interface CheckpointActivityContext {
   readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
   readonly onRetryFailed: ((activityID: string, error: unknown) => void) | undefined;
   readonly onServerContact: (() => void) | undefined;
+  readonly parentRef: ActorRef<Snapshot<unknown>, CheckpointActivitySettledEvent> | undefined;
   readonly retryAttempt: number;
   readonly retryTimings: { readonly maxTimeout: number; readonly minTimeout: number };
   readonly scheduleProgressFlush: () => void;
@@ -240,6 +241,12 @@ export interface CheckpointActivityInput {
   readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
   readonly onRetryFailed: ((activityID: string, error: unknown) => void) | undefined;
   readonly onServerContact: (() => void) | undefined;
+
+  /**
+   * The spawning machine's own ref, receiving this activity's settlement event. A machine driven
+   * standalone — a test, or any future host — omits it, and settlement is simply not reported.
+   */
+  readonly parentRef?: ActorRef<Snapshot<unknown>, CheckpointActivitySettledEvent>;
   readonly retryTimings: { readonly maxTimeout: number; readonly minTimeout: number };
   readonly scheduleProgressFlush: () => void;
   readonly signal: AbortSignal | undefined;
@@ -266,14 +273,12 @@ type CheckpointActivityEvent =
   | { readonly isTerminal: boolean; readonly type: 'QUEUED'; readonly version: number };
 
 /**
- * Notifies the spawning parent, when there is one, that this activity has settled into
- * `evicted`. A machine driven standalone — outside a `checkpointSubmitterMachine` — has no
- * parent to notify, so this is a no-op rather than `sendParent`'s unconditional throw.
+ * Notifies the parent ref handed in at spawn, when there is one, that this activity has settled
+ * into `evicted`. A machine started without a parent ref reports settlement nowhere — a no-op,
+ * not an error.
  */
-function emitSettlementToParent(
-  args: Readonly<{ context: CheckpointActivityContext; self: AnyActorRef }>,
-): void {
-  args.self._parent?.send({
+function emitSettlementToParent(args: Readonly<{ context: CheckpointActivityContext }>): void {
+  args.context.parentRef?.send({
     activityID: args.context.activityID,
     sessionEvicted: args.context.sessionEvicted,
     type: 'CHILD_SETTLED',
@@ -343,6 +348,7 @@ export const checkpointActivityMachine = setup({
     onInvalid: args.input.onInvalid,
     onRetryFailed: args.input.onRetryFailed,
     onServerContact: args.input.onServerContact,
+    parentRef: args.input.parentRef,
     retryAttempt: 0,
     retryTimings: args.input.retryTimings,
     scheduleProgressFlush: args.input.scheduleProgressFlush,
