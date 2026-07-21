@@ -173,9 +173,9 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 **Effectful** — touches the world (filesystem, streams, processes, registries):
 
 | Prefix      | Contract                                                                               | Example                 |
-| ----------- | --------------------------------------------------------------------------------------- | ----------------------- |
+| ----------- | -------------------------------------------------------------------------------------- | ----------------------- |
 | `advance`   | step a stateful cursor, clock, or simulation forward in place, optionally to a target  | `advanceToDuration`     |
-| `broadcast` | post one message to every connected client on whichever transport carries it          | `broadcast`             |
+| `broadcast` | post one message to every connected client on whichever transport carries it           | `broadcast`             |
 | `flush`     | attempt delivery of the durable outbound backlog, removing entries confirmed received  | `flush`                 |
 | `park`      | set a work item aside in a parked status for later resumption                          | `parkActivity`          |
 | `record`    | durably note that an event occurred (counter, log, audit row)                          | `recordFailedAttempt`   |
