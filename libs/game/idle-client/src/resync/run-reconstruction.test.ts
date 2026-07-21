@@ -14,7 +14,7 @@ test('it reconstructs a simulation to the confirmed head, matching the original 
 
   const targetHead = attempt.checkpoints.length - 1;
 
-  const result = await runReconstruction({
+  const result = runReconstruction({
     activity,
     appendedHead: targetHead,
     avatar,
@@ -33,7 +33,7 @@ test('it reconstructs a simulation to the confirmed head, matching the original 
   let nextCheckpoint = null;
 
   while (nextCheckpoint === null) {
-    nextCheckpoint = await result.simulation.run(SIMULATION_TIMESTEP_MS);
+    nextCheckpoint = result.simulation.run(SIMULATION_TIMESTEP_MS);
   }
 
   expect(nextCheckpoint).toStrictEqual(expectedNextCheckpoint);
@@ -45,7 +45,7 @@ test('it reports a divergence when the local engine terminates before the confir
 
   const attempt = await runAttempt(activity, avatar, { maxDurationMs: 120_000 });
 
-  const result = await runReconstruction({
+  const result = runReconstruction({
     activity,
     appendedHead: attempt.checkpoints.length + 5,
     avatar,

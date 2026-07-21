@@ -28,8 +28,7 @@ export async function handleStopActivityMessage(
   }
 
   context.advanceStopScope();
-
-  await context.getSimulation().stopActivity();
+  context.getSimulation().stopActivity();
 
   resetSimulation(context);
 

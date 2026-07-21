@@ -25,7 +25,7 @@ export async function runSimulation(
     return;
   }
 
-  const checkpoint = await simulation.run(timestep);
+  const checkpoint = simulation.run(timestep);
 
   if (!checkpoint) {
     return;
@@ -60,7 +60,7 @@ export async function runSimulation(
   });
 
   if (action === 'stop') {
-    await simulation.stopActivity();
+    simulation.stopActivity();
 
     return;
   }
