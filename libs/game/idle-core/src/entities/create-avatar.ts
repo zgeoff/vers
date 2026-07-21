@@ -25,7 +25,6 @@ interface ResetConfig {
 }
 
 export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
-  const label = createLogLabel('avatar', data.id);
   let state = getInitialState(data);
   let currentLevel = data.level;
 
@@ -128,7 +127,10 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     receiveDamage: (amount: number) => {
       handleReceiveAvatarDamage(amount, avatar);
 
-      logger.debug(`${label} <-- ${amount} damage (${state.life} life remains)`);
+      logger.debug(
+        () =>
+          `${createLogLabel('avatar', data.id)} <-- ${amount} damage (${state.life} life remains)`,
+      );
     },
     reset,
     updateLevel: (level: number) => {

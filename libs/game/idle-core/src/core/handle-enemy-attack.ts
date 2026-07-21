@@ -6,10 +6,12 @@ export function handleEnemyAttack(event: EnemyAttackEvent, avatar: Avatar, activ
   const enemy = activity.currentWave?.enemies.find((candidate) => candidate.id === event.source);
 
   if (enemy?.isAlive === true && avatar.isAlive) {
-    const label = createLogLabel('enemy', event.source);
     const damage = enemy.rollAttackDamage();
 
-    logger.debug(`${label} --> ${damage} damage to ${avatar.id}`);
+    logger.debug(
+      () => `${createLogLabel('enemy', event.source)} --> ${damage} damage to ${avatar.id}`,
+    );
+
     avatar.receiveDamage(damage);
   }
 }

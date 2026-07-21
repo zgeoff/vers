@@ -23,10 +23,11 @@ export async function* runActivity(
   const timestep = yield createStartedCheckpoint(ctx);
   const label = `[activity:${activity.type}]`;
 
-  logger.debug(`${label} starting activity with ${activity.waves.length} waves`);
+  logger.debug(() => `${label} starting activity with ${activity.waves.length} waves`);
 
   logger.debug(
-    `${label} starting combat with first wave of ${activity.currentWave?.enemies.length} enemies`,
+    () =>
+      `${label} starting combat with first wave of ${activity.currentWave?.enemies.length} enemies`,
   );
 
   while (avatar.isAlive && activity.isWavesRemaining) {
@@ -56,7 +57,7 @@ export async function* runActivity(
       }
 
       yield checkpoint;
-      logger.debug(`${label} moving to next wave`);
+      logger.debug(() => `${label} moving to next wave`);
 
       // move to the next wave
       executor.reset();
