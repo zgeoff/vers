@@ -164,13 +164,8 @@ async function runFrontierInProcess(
 
   const confirmDriver = buildFreshDriver(segment);
 
-  const confirmDuration = buildSegmentDuration(
-    segment.activity.appendedTimeMs,
-    segment.checkpoints.length,
-  );
-
   const confirmAdvance = await confirmDriver.advanceToDuration(
-    confirmDuration,
+    duration,
     stopAtState,
     segment.checkpoints.length,
   );
