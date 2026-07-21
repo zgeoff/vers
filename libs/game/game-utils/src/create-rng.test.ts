@@ -15,7 +15,7 @@ test('it generates a deterministic sequence of integers with the given seed', ()
 
 test('it generates a deterministic array of integers with the given seed', () => {
   const rng = createRNG(buildStateFromSeed(35_131_234));
-  const series = rng.getSeries(0, 100, 20);
+  const series = Array.from({ length: 20 }, () => rng.getInt(0, 100));
 
   expect(series).toHaveLength(20);
   expect(series).toSatisfyAll((value: number) => typeof value === 'number');
@@ -39,9 +39,9 @@ test('it resumes a mid-stream snapshot with the exact subsequent draw sequence',
   original.getInt(0, 1000);
 
   const midStreamState = original.getState();
-  const expectedContinuation = original.getSeries(0, 1000, 10);
+  const expectedContinuation = Array.from({ length: 10 }, () => original.getInt(0, 1000));
   const resumed = createRNG(midStreamState);
-  const actualContinuation = resumed.getSeries(0, 1000, 10);
+  const actualContinuation = Array.from({ length: 10 }, () => resumed.getInt(0, 1000));
 
   expect(actualContinuation).toStrictEqual(expectedContinuation);
 });

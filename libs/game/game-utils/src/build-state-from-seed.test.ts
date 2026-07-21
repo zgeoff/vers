@@ -10,8 +10,10 @@ test('it derives a deterministic state from a numeric seed', () => {
 test('it produces a reproducible draw sequence from a seed-derived state', () => {
   const first = createRNG(buildStateFromSeed(555));
   const second = createRNG(buildStateFromSeed(555));
+  const firstSeries = Array.from({ length: 10 }, () => first.getInt(0, 100));
+  const secondSeries = Array.from({ length: 10 }, () => second.getInt(0, 100));
 
-  expect(first.getSeries(0, 100, 10)).toStrictEqual(second.getSeries(0, 100, 10));
+  expect(firstSeries).toStrictEqual(secondSeries);
 });
 
 test('it scrambles seed zero to a valid non-zero state', () => {
