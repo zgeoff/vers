@@ -118,6 +118,7 @@
       "kysely-postgres-js": "3.0.0",
       "lefthook": "2.1.9",
       "lru-cache": "11.5.2",
+      "mitata": "1.0.34",
       "msw": "2.14.6",
       "ora": "9.4.1",
       "oxfmt": "0.57.0",
