@@ -15,6 +15,7 @@ MC4CAQAwBQYDK2VwBCIEIBMom57erggdVdDCIdRWS+NKMykK+I5BUKpuHziAq+0W
 -----END PRIVATE KEY-----`;
 
 GlobalRegistrator.register();
+
 expect.extend(jestDOMMatchers);
 
 // installs the zustand `create` wrapper before any store module below imports it; bun runs every

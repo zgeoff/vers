@@ -40,11 +40,13 @@ test('it schedules attacks on the tick event', () => {
   combatExecutor.run(1000);
 
   handleTick(avatar, behaviour, combatExecutor);
+
   expect(wave?.remaining).toBe(1);
 
   combatExecutor.run(1);
 
   handleTick(avatar, behaviour, combatExecutor);
+
   expect(wave?.remaining).toBe(0);
   expect(behaviour.state.lastAttackTime).toBe(1000);
 });

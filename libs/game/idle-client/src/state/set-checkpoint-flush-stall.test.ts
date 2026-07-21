@@ -15,6 +15,7 @@ test('it records the flush stall report', () => {
 test('it clears a consumed flush stall report', () => {
   setCheckpointFlushStall({ activityID: 'activity_1', reason: 'network down', traceID: 'trace_1' });
   setCheckpointFlushStall(null);
+
   expect(useIdleStore.getState().checkpointFlushStall).toBeNull();
 });
 
@@ -25,5 +26,6 @@ test('it leaves the reward-slot ledger untouched when a flush stalls', () => {
   });
 
   setCheckpointFlushStall({ activityID: 'activity_1', reason: 'network down', traceID: 'trace_1' });
+
   expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 2, version: 1 }]);
 });

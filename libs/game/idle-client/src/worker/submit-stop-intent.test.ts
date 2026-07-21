@@ -22,6 +22,7 @@ test('it delivers the targeted stop and leaves no intent held', async () => {
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
 
   invariant(stopped !== undefined, 'expected the targeted row to survive');
+
   expect(stopped.status).toBe('stopped');
 
   const intent = await readPendingStopIntent();

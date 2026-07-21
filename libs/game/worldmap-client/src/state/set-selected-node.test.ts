@@ -22,5 +22,6 @@ test('it clears the object reference when a node is selected without one', () =>
   const node = createMockWorldMapNode({ id: 'node2', position: [0, 0] });
 
   setSelectedNode(node);
+
   expect(useWorldmapStore.getState().selectedObject3D).toBeNull();
 });

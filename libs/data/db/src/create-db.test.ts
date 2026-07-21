@@ -63,6 +63,7 @@ test('it emits a db.select client span carrying the compiled sql with placeholde
   const [span] = ctx.exporter.getFinishedSpans();
 
   invariant(span, 'expected the query span to be exported');
+
   expect(span.name).toBe('db.select');
   expect(span.kind).toBe(SpanKind.CLIENT);
   expect(span.attributes['db.system']).toBe('postgresql');
@@ -126,6 +127,7 @@ test('it parents the query span to the active context', async () => {
 
   invariant(querySpan, 'expected the query span to be exported');
   invariant(parentSpan, 'expected the parent span to be exported');
+
   expect(querySpan.parentSpanContext?.spanId).toBe(parentSpan.spanContext().spanId);
 });
 

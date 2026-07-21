@@ -115,6 +115,7 @@ test('it returns a fresh encounter and weapon on every call, never a shared refe
   const secondEnemy = second.activity.encounter.waves[0]?.[0];
 
   invariant(firstEnemy && secondEnemy, 'derived encounters must open with a populated wave');
+
   expect(firstEnemy).not.toBe(secondEnemy);
 
   expect(first.avatar.paperdoll[EquipmentSlot.MainHand]).not.toBe(

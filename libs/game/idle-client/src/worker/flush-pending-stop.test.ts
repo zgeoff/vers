@@ -45,6 +45,7 @@ test('it flushes the queue, stops the row, and releases the intent', async () =>
   const row = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
 
   invariant(row !== undefined, 'expected the targeted row to survive');
+
   expect(row.status).toBe('stopped');
 
   const intent = await readPendingStopIntent();
@@ -95,6 +96,7 @@ test('it never touches a row other than the targeted one', async () => {
   const survivor = db.activityCollection.findFirst((q) => q.where({ id: newer.id }));
 
   invariant(survivor !== undefined, 'expected the newer row to survive');
+
   expect(survivor.status).toBe('active');
 });
 
@@ -166,5 +168,6 @@ test('it releases a stop another writer superseded, leaving the row active', asy
   const row = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
 
   invariant(row !== undefined, 'expected the targeted row to survive');
+
   expect(row.status).toBe('active');
 });

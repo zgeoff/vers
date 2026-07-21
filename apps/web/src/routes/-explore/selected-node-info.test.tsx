@@ -8,6 +8,7 @@ import { SelectedNodeInfo } from './selected-node-info';
 test('it renders nothing with no node selected', () => {
   setSelectedNode(null);
   renderWithRouter(<SelectedNodeInfo />);
+
   expect(screen.queryByTestId('selected-node-id')).not.toBeInTheDocument();
 });
 

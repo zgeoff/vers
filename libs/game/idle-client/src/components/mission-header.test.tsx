@@ -19,6 +19,7 @@ test('it reports the encounter name, cleared waves, enemies left, and banked xp'
   });
 
   render(<MissionHeader activity={activity} />);
+
   expect(screen.getByText('World Map Encounter')).toBeInTheDocument();
 
   expect(

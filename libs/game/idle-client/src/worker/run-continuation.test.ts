@@ -52,6 +52,7 @@ test('it adopts a fresh server-started row for the same scope and registers from
   );
 
   invariant(minted !== undefined, 'expected the continuation to mint an active row');
+
   expect(minted.scopeID).toBe(previousActivity.scopeID);
   expect(simulation.activity?.id).toBe(minted.id);
   expect(context.getActivity()).toStrictEqual(minted);
@@ -268,6 +269,7 @@ test('it stops the row it started when a stop lands mid-flight', async () => {
   const row = db.activityCollection.findFirst((q) => q.where({ id: started.id }));
 
   invariant(row !== undefined, 'expected the started row to survive');
+
   expect(row.status).toBe('stopped');
 
   const intent = await readPendingStopIntent();

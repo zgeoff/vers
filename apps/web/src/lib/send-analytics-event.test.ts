@@ -11,6 +11,7 @@ test('it forwards the event to the tracker on the page', () => {
   });
 
   sendAnalyticsEvent('signup-complete');
+
   expect(track).toHaveBeenCalledExactlyOnceWith('signup-complete');
 });
 

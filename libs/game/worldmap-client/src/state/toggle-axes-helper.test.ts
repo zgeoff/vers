@@ -7,11 +7,13 @@ test('it toggles axes helper visibility', () => {
   const hook = renderHook(() => useIsAxesHelperVisible());
 
   expect(hook.result.current).toBeFalse();
+
   toggleAxesHelper();
 
   hook.rerender();
 
   expect(hook.result.current).toBeTrue();
+
   toggleAxesHelper();
 
   hook.rerender();

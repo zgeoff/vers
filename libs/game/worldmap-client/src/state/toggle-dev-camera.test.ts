@@ -7,11 +7,13 @@ test('it toggles dev camera state from false to true', () => {
   const hook = renderHook(() => useIsDevCameraActive());
 
   expect(hook.result.current).toBeFalse();
+
   toggleDevCamera();
 
   hook.rerender();
 
   expect(hook.result.current).toBeTrue();
+
   toggleDevCamera();
 
   hook.rerender();

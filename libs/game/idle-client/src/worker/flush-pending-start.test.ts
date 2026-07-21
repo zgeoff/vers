@@ -48,6 +48,7 @@ test('it mints the continued row and releases the intent', async () => {
 
   invariant(minted !== undefined, 'expected the delivery to mint an active row');
   invariant(result.outcome === 'delivered', 'expected the flush to deliver');
+
   expect(result.started.id).toBe(minted.id);
   expect(minted.scopeID).toBe(source.scopeID);
   expect(context.getSimulation().activity).toBeNull();
@@ -126,6 +127,7 @@ test('it releases a stale intent when a different claim owns the avatar', async 
   const survivor = db.activityCollection.findFirst((q) => q.where({ id: foreign.id }));
 
   invariant(survivor !== undefined, 'expected the foreign claim to survive');
+
   expect(survivor.status).toBe('active');
 });
 
@@ -299,6 +301,7 @@ test('it stops the minted row back when a stop lands while the start is in fligh
   );
 
   invariant(minted !== undefined, 'expected the minted row to survive');
+
   expect(minted.status).toBe('stopped');
 
   const heldStop = await readPendingStopIntent();
