@@ -75,35 +75,32 @@ export const checkpointSubmitterMachine = setup({
                   }),
                 ],
               ]),
-            evictedActivityIDs: (args) => {
-              if (!args.context.evictedActivityIDs.has(args.event.activityID)) {
-                return args.context.evictedActivityIDs;
-              }
-
-              const next = new Set(args.context.evictedActivityIDs);
-
-              next.delete(args.event.activityID);
-
-              return next;
-            },
+            evictedActivityIDs: (args) =>
+              buildEvictionsWithout(args.context.evictedActivityIDs, args.event.activityID),
           }),
         },
         REMOVE_EVICTION: {
           actions: assign({
-            evictedActivityIDs: (args) => {
-              if (!args.context.evictedActivityIDs.has(args.event.activityID)) {
-                return args.context.evictedActivityIDs;
-              }
-
-              const next = new Set(args.context.evictedActivityIDs);
-
-              next.delete(args.event.activityID);
-
-              return next;
-            },
+            evictedActivityIDs: (args) =>
+              buildEvictionsWithout(args.context.evictedActivityIDs, args.event.activityID),
           }),
         },
       },
     },
   },
 });
+
+function buildEvictionsWithout(
+  evictedActivityIDs: ReadonlySet<string>,
+  activityID: string,
+): ReadonlySet<string> {
+  if (!evictedActivityIDs.has(activityID)) {
+    return evictedActivityIDs;
+  }
+
+  const next = new Set(evictedActivityIDs);
+
+  next.delete(activityID);
+
+  return next;
+}

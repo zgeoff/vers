@@ -410,14 +410,11 @@ export function createCheckpointSubmitter(
 
   const flushHeld = async (): Promise<void> => {
     await Promise.allSettled(
-      [...writeCursors.keys()]
-        .map((activityID) => findChild(activityID))
-        .filter((child) => child !== undefined)
-        .map((child) => {
-          child.send({ type: 'FLUSH_HELD' });
+      [...parentActor.getSnapshot().context.children.values()].map((child) => {
+        child.send({ type: 'FLUSH_HELD' });
 
-          return waitFor(child, (snapshot) => !snapshot.matches('flushing'));
-        }),
+        return waitFor(child, (snapshot) => !snapshot.matches('flushing'));
+      }),
     );
   };
 

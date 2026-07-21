@@ -181,6 +181,8 @@
           // a structural MessagePort union: no readonly form, the same DOM callback shape as
           // MessagePort/EventListenerOrEventListenerObject below
           { "from": "package", "name": "SupportedMessagePort", "package": "@orpc/client" },
+          // an Error subclass: the same mutable message/stack state as lib Error below
+          { "from": "package", "name": "ORPCError", "package": "@orpc/client" },
           { "from": "package", "name": "SetupServer", "package": "msw" },
           // a response resolver's request context: wraps the live fetch Request; no readonly form
           { "from": "package", "name": "ResponseResolverInfo", "package": "msw" },
