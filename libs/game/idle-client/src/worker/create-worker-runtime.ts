@@ -7,12 +7,9 @@ import { createActivityServiceClient } from '../submission/create-activity-servi
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import type { ActivityServiceClient } from '../submission/types';
-import type { ClientMessage, RewardSlotLedgerEntry, WorkerMessage } from '../types';
+import { WorkerMessageType } from '../types';
+import type { RewardSlotLedgerEntry } from '../types';
 import { applyEviction } from './apply-eviction';
-import { createCheckpointFlushStalledMessage } from './create-checkpoint-flush-stalled-message';
-import { createCheckpointStreamInvalidMessage } from './create-checkpoint-stream-invalid-message';
-import { createConnectionStatusMessage } from './create-connection-status-message';
-import { createOfflineCapStatusMessage } from './create-offline-cap-status-message';
 import { handleClientMessage } from './handle-client-message';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
@@ -20,6 +17,7 @@ import { runReconnectRecovery } from './run-reconnect-recovery';
 import { runSimulation } from './run-simulation';
 import type { WorkerConnection, WorkerContext } from './types';
 import { withLifecycleTurn } from './with-lifecycle-turn';
+import type { WorkerMessage } from './worker-to-client-message-schema';
 
 export interface WorkerRuntime {
   readonly registerConnection: (connection: WorkerConnection) => void;
@@ -118,7 +116,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   };
 
   const emitConnectionStatus = (online: boolean) => {
-    emitWorkerMessage(createConnectionStatusMessage(online));
+    emitWorkerMessage({ online, type: WorkerMessageType.ConnectionStatus });
   };
 
   const updateConnectivity = (online: boolean) => {
@@ -137,7 +135,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       lastAckAt = Date.now();
     },
     onCapped: () => {
-      emitWorkerMessage(createOfflineCapStatusMessage(0, true));
+      emitWorkerMessage({ halted: true, remainingMs: 0, type: WorkerMessageType.OfflineCapStatus });
     },
 
     // Deferred to a lifecycle turn rather than acted on inline: the callback fires from inside a
@@ -166,10 +164,20 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       scheduleReconnectRecovery();
     },
     onFlushStalled: (activityID, reason, traceID) => {
-      emitWorkerMessage(createCheckpointFlushStalledMessage(activityID, reason, traceID));
+      emitWorkerMessage({
+        activityID,
+        reason,
+        traceID,
+        type: WorkerMessageType.CheckpointFlushStalled,
+      });
     },
     onInvalid: (activityID, reason, traceID) => {
-      emitWorkerMessage(createCheckpointStreamInvalidMessage(activityID, reason, traceID));
+      emitWorkerMessage({
+        activityID,
+        reason,
+        type: WorkerMessageType.CheckpointStreamInvalid,
+        ...(traceID === undefined ? {} : { traceID }),
+      });
     },
   });
 
@@ -272,7 +280,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     connections.add(connection);
     connection.start?.();
 
-    connection.addEventListener('message', (messageEvent: MessageEvent<ClientMessage>) => {
+    connection.addEventListener('message', (messageEvent: MessageEvent<unknown>) => {
       void (async () => {
         try {
           await failureActionSeeded;

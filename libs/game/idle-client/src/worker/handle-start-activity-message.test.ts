@@ -11,8 +11,8 @@ import type { ActivityServiceClient } from '../submission/types';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createTestConnection } from '../test-utils/create-test-connection';
-import type { StartActivityMessage } from '../types';
 import { ClientMessageType, WorkerMessageType } from '../types';
+import type { StartActivityMessage } from './client-to-worker-message-schema';
 import { handleStartActivityMessage } from './handle-start-activity-message';
 
 interface SetupTestConfig {

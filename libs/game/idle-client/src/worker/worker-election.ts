@@ -1,8 +1,9 @@
+import { WorkerMessageType } from '../types';
 import { createBroadcastConnection } from './create-broadcast-connection';
 import { createWorkerRuntime } from './create-worker-runtime';
-import { createWriterReadyMessage } from './create-writer-ready-message';
 import { startErrorReporting } from './start-error-reporting';
 import { startWriterElection } from './start-writer-election';
+import type { WorkerMessage } from './worker-to-client-message-schema';
 
 // reporting boots in the background: a fault before init resolves is dropped rather than delaying
 // the first connection
@@ -18,6 +19,6 @@ startWriterElection({
     runtime.registerConnection(connection);
 
     // announced after the connection registers, so a tab's re-sent handshake finds the runtime already listening
-    connection.postMessage(createWriterReadyMessage());
+    connection.postMessage({ type: WorkerMessageType.WriterReady } satisfies WorkerMessage);
   },
 });

@@ -1,9 +1,10 @@
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
-import type { StopActivityMessage } from '../types';
-import { createSimulationUpdateMessage } from './create-simulation-update-message';
+import { WorkerMessageType } from '../types';
+import type { StopActivityMessage } from './client-to-worker-message-schema';
 import { resetSimulation } from './reset-simulation';
 import { submitStopIntent } from './submit-stop-intent';
 import type { WorkerContext } from './types';
+import type { WorkerMessage } from './worker-to-client-message-schema';
 
 /**
  * Ends a run entirely inside the worker: the local halt lands first and needs no network — the
@@ -38,7 +39,10 @@ export async function handleStopActivityMessage(
 }
 
 function emitClearedSnapshot(context: WorkerContext): void {
-  const message = createSimulationUpdateMessage({ failureAction: context.getFailureAction() });
+  const message = {
+    state: { failureAction: context.getFailureAction() },
+    type: WorkerMessageType.SimulationUpdate,
+  } satisfies WorkerMessage;
 
   for (const connection of context.connections) {
     connection.postMessage(message);

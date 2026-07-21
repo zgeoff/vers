@@ -15,23 +15,8 @@ import { setStartReport } from '../state/set-start-report';
 import { setWriterDisplacedActivityID } from '../state/set-writer-displaced-activity-id';
 import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
 import { useIdleStore } from '../state/use-idle-store';
-import type {
-  ActivityCompletedMessage,
-  CheckpointFlushStalledMessage,
-  CheckpointStreamInvalidMessage,
-  ConnectionStatusMessage,
-  FailureActionStatusMessage,
-  InitialStateMessage,
-  OfflineCapStatusMessage,
-  ResyncStatusMessage,
-  RewardSlotsRecordedMessage,
-  SimulationUpdateMessage,
-  StartStatusMessage,
-  WorkerMessage,
-  WriterDisplacedMessage,
-  WriterReadyMessage,
-} from '../types';
 import { WorkerMessageType } from '../types';
+import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
 import { createChannelTransport } from './create-channel-transport';
 import { createSharedWorkerTransport } from './create-shared-worker-transport';
 import { isWebLocksSupported } from './is-web-locks-supported';
@@ -73,138 +58,92 @@ export function useSimulationTransport() {
 }
 
 function handleWorkerMessage(message: WorkerMessage) {
-  if (isInitialStateMessage(message)) {
-    setSimulationInitialized(true);
+  switch (message.type) {
+    case WorkerMessageType.InitialState: {
+      setSimulationInitialized(true);
+      setSimulationSnapshot(message.state);
+      setRewardSlotLedger(message.rewardSlotLedger);
+      setWriterDisplacedActivityID(message.writerDisplacedActivityID);
+      break;
+    }
+
+    case WorkerMessageType.SimulationUpdate: {
+      setSimulationSnapshot(message.state);
+      break;
+    }
+
+    case WorkerMessageType.ActivityCompleted: {
+      setLastCompletedActivityID(message.activityID);
+      break;
+    }
+
+    case WorkerMessageType.CheckpointFlushStalled: {
+      setCheckpointFlushStall({
+        activityID: message.activityID,
+        reason: message.reason,
+        traceID: message.traceID,
+      });
+
+      break;
+    }
+
+    case WorkerMessageType.CheckpointStreamInvalid: {
+      setCheckpointStreamError({
+        activityID: message.activityID,
+        reason: message.reason,
+        ...(message.traceID === undefined ? {} : { traceID: message.traceID }),
+      });
+
+      break;
+    }
+
+    case WorkerMessageType.OfflineCapStatus: {
+      setOfflineCapStatus({
+        halted: message.halted,
+        remainingMs: message.remainingMs,
+      });
+
+      break;
+    }
+
+    case WorkerMessageType.ResyncStatus: {
+      setResyncStatus(message.status);
+      break;
+    }
+
+    case WorkerMessageType.ConnectionStatus: {
+      setConnectionStatus(message.online);
+      break;
+    }
+
+    case WorkerMessageType.FailureActionStatus: {
+      setFailureAction(message.failureAction);
+      break;
+    }
+
+    case WorkerMessageType.RewardSlotsRecorded: {
+      updateRewardSlotLedger({
+        activityID: message.activityID,
+        count: message.rewardSlotCount,
+        version: message.version,
+      });
+
+      break;
+    }
+
+    case WorkerMessageType.StartStatus: {
+      setStartReport({ requestID: message.requestID, status: message.status });
+      break;
+    }
+
+    case WorkerMessageType.WriterDisplaced: {
+      setWriterDisplacedActivityID(message.activityID);
+      break;
+    }
+
+    case WorkerMessageType.WriterReady: {
+      advanceWriterGeneration();
+      break;
+    }
   }
-
-  if (isInitialStateMessage(message) || isUpdateMessage(message)) {
-    setSimulationSnapshot(message.state);
-  }
-
-  if (isInitialStateMessage(message)) {
-    setRewardSlotLedger(message.rewardSlotLedger);
-  }
-
-  if (isActivityCompletedMessage(message)) {
-    setLastCompletedActivityID(message.activityID);
-  }
-
-  if (isCheckpointFlushStalledMessage(message)) {
-    setCheckpointFlushStall({
-      activityID: message.activityID,
-      reason: message.reason,
-      traceID: message.traceID,
-    });
-  }
-
-  if (isCheckpointStreamInvalidMessage(message)) {
-    setCheckpointStreamError({
-      activityID: message.activityID,
-      reason: message.reason,
-      ...(message.traceID === undefined ? {} : { traceID: message.traceID }),
-    });
-  }
-
-  if (isOfflineCapStatusMessage(message)) {
-    setOfflineCapStatus({
-      halted: message.halted,
-      remainingMs: message.remainingMs,
-    });
-  }
-
-  if (isResyncStatusMessage(message)) {
-    setResyncStatus(message.status);
-  }
-
-  if (isConnectionStatusMessage(message)) {
-    setConnectionStatus(message.online);
-  }
-
-  if (isFailureActionStatusMessage(message)) {
-    setFailureAction(message.failureAction);
-  }
-
-  if (isRewardSlotsRecordedMessage(message)) {
-    updateRewardSlotLedger({
-      activityID: message.activityID,
-      count: message.rewardSlotCount,
-      version: message.version,
-    });
-  }
-
-  if (isStartStatusMessage(message)) {
-    setStartReport({ requestID: message.requestID, status: message.status });
-  }
-
-  if (isInitialStateMessage(message)) {
-    setWriterDisplacedActivityID(message.writerDisplacedActivityID);
-  }
-
-  if (isWriterDisplacedMessage(message)) {
-    setWriterDisplacedActivityID(message.activityID);
-  }
-
-  if (isWriterReadyMessage(message)) {
-    advanceWriterGeneration();
-  }
-}
-
-function isInitialStateMessage(message: WorkerMessage): message is InitialStateMessage {
-  return message.type === WorkerMessageType.InitialState;
-}
-
-function isUpdateMessage(message: WorkerMessage): message is SimulationUpdateMessage {
-  return message.type === WorkerMessageType.SimulationUpdate;
-}
-
-function isActivityCompletedMessage(message: WorkerMessage): message is ActivityCompletedMessage {
-  return message.type === WorkerMessageType.ActivityCompleted;
-}
-
-function isCheckpointFlushStalledMessage(
-  message: WorkerMessage,
-): message is CheckpointFlushStalledMessage {
-  return message.type === WorkerMessageType.CheckpointFlushStalled;
-}
-
-function isCheckpointStreamInvalidMessage(
-  message: WorkerMessage,
-): message is CheckpointStreamInvalidMessage {
-  return message.type === WorkerMessageType.CheckpointStreamInvalid;
-}
-
-function isOfflineCapStatusMessage(message: WorkerMessage): message is OfflineCapStatusMessage {
-  return message.type === WorkerMessageType.OfflineCapStatus;
-}
-
-function isResyncStatusMessage(message: WorkerMessage): message is ResyncStatusMessage {
-  return message.type === WorkerMessageType.ResyncStatus;
-}
-
-function isConnectionStatusMessage(message: WorkerMessage): message is ConnectionStatusMessage {
-  return message.type === WorkerMessageType.ConnectionStatus;
-}
-
-function isFailureActionStatusMessage(
-  message: WorkerMessage,
-): message is FailureActionStatusMessage {
-  return message.type === WorkerMessageType.FailureActionStatus;
-}
-
-function isRewardSlotsRecordedMessage(
-  message: WorkerMessage,
-): message is RewardSlotsRecordedMessage {
-  return message.type === WorkerMessageType.RewardSlotsRecorded;
-}
-
-function isStartStatusMessage(message: WorkerMessage): message is StartStatusMessage {
-  return message.type === WorkerMessageType.StartStatus;
-}
-
-function isWriterDisplacedMessage(message: WorkerMessage): message is WriterDisplacedMessage {
-  return message.type === WorkerMessageType.WriterDisplaced;
-}
-
-function isWriterReadyMessage(message: WorkerMessage): message is WriterReadyMessage {
-  return message.type === WorkerMessageType.WriterReady;
 }

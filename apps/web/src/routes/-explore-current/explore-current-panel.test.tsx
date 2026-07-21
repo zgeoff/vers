@@ -2,12 +2,8 @@ import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
-import type { ClientMessage } from '@vers/idle-client';
-import {
-  ClientMessageType,
-  advanceWriterGeneration,
-  isStartActivityMessage,
-} from '@vers/idle-client';
+import type { ClientMessage, StartActivityMessage } from '@vers/idle-client';
+import { ClientMessageType, advanceWriterGeneration } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import * as db from '@vers/mock-services/db';
@@ -20,6 +16,10 @@ import { render } from '../../test-utils/render';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ExploreCurrentPanel } from './explore-current-panel';
+
+function isStartActivityMessage(message: Readonly<ClientMessage>): message is StartActivityMessage {
+  return message.type === ClientMessageType.StartActivity;
+}
 
 test('it shows a spinner and sends initialize before the worker reports its state', () => {
   const calls: Array<ClientMessage> = [];

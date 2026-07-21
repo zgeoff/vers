@@ -555,6 +555,7 @@
         "idb": "catalog:",
         "react": "catalog:",
         "tiny-invariant": "catalog:",
+        "zod": "catalog:",
         "zustand": "catalog:",
       },
       "devDependencies": {
@@ -572,7 +573,6 @@
         "msw": "catalog:",
         "typescript": "catalog:",
         "vite": "catalog:",
-        "zod": "catalog:",
       },
     },
     "libs/game/idle-core": {

@@ -23,6 +23,7 @@
     "idb": "catalog:",
     "react": "catalog:",
     "tiny-invariant": "catalog:",
+    "zod": "catalog:",
     "zustand": "catalog:"
   },
   "devDependencies": {
@@ -39,7 +40,6 @@
     "happy-dom": "catalog:",
     "msw": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:",
-    "zod": "catalog:"
+    "vite": "catalog:"
   }
 }
