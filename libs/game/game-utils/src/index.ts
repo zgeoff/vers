@@ -1,6 +1,5 @@
 export { buildEncounter } from './build-encounter';
 export { buildStateFromSeed } from './build-state-from-seed';
-export { mergeSeeds } from './merge-seeds';
 export { createRNG } from './create-rng';
 export { createSeed } from './create-seed';
 export { CURRENT_CONTENT_VERSION } from './current-content-version';
