@@ -1,8 +1,8 @@
-import type { SimulationTransport } from '../types';
+import type { WorkerClient } from '../transport/types';
 
 export interface WorkerSlice {
+  client: null | WorkerClient;
   initialized: boolean;
-  transport: null | SimulationTransport;
 
   /**
    * Counts fallback writer promotions, ticking on every writer-ready broadcast. Effects that must
@@ -11,12 +11,20 @@ export interface WorkerSlice {
    * fresh one. Stays 0 for the SharedWorker transport's whole life.
    */
   writerGeneration: number;
+
+  /**
+   * Aborts every in-flight RPC call keyed to the current writer generation — a writer death or
+   * succession bumps the generation and replaces this with a fresh controller, so a call awaiting
+   * a writer that will never answer aborts instead of hanging forever.
+   */
+  writerAbortController: AbortController;
 }
 
 export function createWorkerSlice(): WorkerSlice {
   return {
+    client: null,
     initialized: false,
-    transport: null,
+    writerAbortController: new AbortController(),
     writerGeneration: 0,
   };
 }

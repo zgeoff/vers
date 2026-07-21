@@ -5,31 +5,30 @@ import { setFailureAction } from '../state/set-failure-action';
 import { setLastCompletedActivityID } from '../state/set-last-completed-activity-id';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
 import { setResyncStatus } from '../state/set-resync-status';
-import { setRewardSlotLedger } from '../state/set-reward-slot-ledger';
-import { setSimulationInitialized } from '../state/set-simulation-initialized';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
-import { setSimulationTransport } from '../state/set-simulation-transport';
-import { setStartReport } from '../state/set-start-report';
+import { setWorkerClient } from '../state/set-worker-client';
 import { setWriterDisplacedActivityID } from '../state/set-writer-displaced-activity-id';
 import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
 import { useIdleStore } from '../state/use-idle-store';
 import { WorkerMessageType } from '../types';
 import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
-import { createChannelTransport } from './create-channel-transport';
-import { createSharedWorkerTransport } from './create-shared-worker-transport';
+import { workerToClientMessageSchema } from '../worker/worker-to-client-message-schema';
+import { WORKER_TO_CLIENT_CHANNEL } from './constants';
+import { createSharedWorkerClient } from './create-shared-worker-client';
+import { createWebLocksClient } from './create-web-locks-client';
 import { isWebLocksSupported } from './is-web-locks-supported';
 import { pickTransportKind } from './pick-transport-kind';
 
 export function useSimulationTransport() {
-  const existingTransport = useIdleStore((state) => state.transport);
+  const existingClient = useIdleStore((state) => state.client);
 
   useEffect(() => {
     // read the store imperatively, not the render closure: sibling consumers mount in one commit,
     // and a store write during the effect flush does not re-render them before their own queued
-    // effects run — each would see a stale null and construct its own transport (and, on the
+    // effects run — each would see a stale null and construct its own client (and, on the
     // fallback path, its own election worker). The imperative read also absorbs StrictMode's
     // double-invoke, since the first run commits to the store synchronously.
-    if (useIdleStore.getState().transport !== null) {
+    if (useIdleStore.getState().client !== null) {
       return;
     }
 
@@ -42,29 +41,32 @@ export function useSimulationTransport() {
       return;
     }
 
-    const transport =
-      kind === 'shared-worker' ? createSharedWorkerTransport() : createChannelTransport();
+    const client = kind === 'shared-worker' ? createSharedWorkerClient() : createWebLocksClient();
 
-    // a page-lifetime subscription: the transport lives in the store until the page dies, so
-    // nothing ever detaches it
-    transport.subscribe(handleWorkerMessage);
+    setWorkerClient(client);
+  }, [existingClient]);
 
-    setSimulationTransport(transport);
-  }, [existingTransport]);
+  // every mounted consumer keeps its own subscription: broadcasts apply idempotent state writes,
+  // so redundant delivery across sibling consumers costs nothing, and cleaning up on unmount keeps
+  // a consumer that unmounts and remounts (a route transition away from and back to the game
+  // shell) from accumulating stale listeners
+  useEffect(() => {
+    const channel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
 
-  return existingTransport;
+    channel.addEventListener('message', (event: MessageEvent<unknown>) => {
+      handleWorkerMessage(workerToClientMessageSchema.parse(event.data));
+    });
+
+    return () => {
+      channel.close();
+    };
+  }, []);
+
+  return existingClient;
 }
 
 function handleWorkerMessage(message: WorkerMessage) {
   switch (message.type) {
-    case WorkerMessageType.InitialState: {
-      setSimulationInitialized(true);
-      setSimulationSnapshot(message.state);
-      setRewardSlotLedger(message.rewardSlotLedger);
-      setWriterDisplacedActivityID(message.writerDisplacedActivityID);
-      break;
-    }
-
     case WorkerMessageType.SimulationUpdate: {
       setSimulationSnapshot(message.state);
       break;
@@ -106,11 +108,6 @@ function handleWorkerMessage(message: WorkerMessage) {
         version: message.version,
       });
 
-      break;
-    }
-
-    case WorkerMessageType.StartStatus: {
-      setStartReport({ requestID: message.requestID, status: message.status });
       break;
     }
 

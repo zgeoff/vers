@@ -1,56 +1,37 @@
-import type { SimulationTransport } from '../types';
-import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
-import { workerToClientMessageSchema } from '../worker/worker-to-client-message-schema';
-import { CLIENT_TO_WORKER_CHANNEL, WORKER_TO_CLIENT_CHANNEL } from './constants';
+import { createBroadcastPort } from './create-broadcast-port';
+import { createWorkerClient } from './create-worker-client';
+import type { WorkerClient } from './types';
 
-interface CreateChannelTransportOptions {
+interface CreateWebLocksClientOptions {
   /**
-   * Overrides the production election-worker construction — a test's only way to keep the
-   * transport from booting a real dedicated worker.
+   * Overrides the production election-worker construction — a test's only way to keep this from
+   * booting a real dedicated worker.
    */
   readonly createWorker?: () => void;
 }
 
 /**
- * The fallback transport for browsers without SharedWorker: spawns this tab's election worker,
- * posts client messages on the client-to-worker channel, and relays writer broadcasts from the
- * worker-to-client channel. It never sends the disconnect message: the writer's one connection is
- * the broadcast bridge shared by every tab, and a disconnect would sever them all. A post while no
- * writer holds the lock is lost — the writer-ready re-handshake is the recovery. Incoming events
- * parse once against the worker-to-client contract — only a bug on either end of the boundary can
- * produce a malformed message, so a parse failure throws rather than recovering.
+ * The fallback path for browsers without `SharedWorker`: spawns this tab's election worker, then
+ * builds an RPC client over a `createBroadcastPort` bridge to whichever tab's worker wins the
+ * write lock. A `pagehide` listener sends the explicit disconnect — the demux gives every tab its
+ * own virtual port, so unlike the old broadcast-connection bridge this never severs another tab. A
+ * call issued while no writer holds the lock hangs until the caller aborts it; the writer-ready
+ * broadcast is the re-handshake signal callers key their own abort/retry on.
  */
-export function createChannelTransport(
-  options: CreateChannelTransportOptions = {},
-): SimulationTransport {
+export function createWebLocksClient(
+  options: Readonly<CreateWebLocksClientOptions> = {},
+): WorkerClient {
   const createWorker = options.createWorker ?? createElectionWorker;
 
   createWorker();
 
-  const clientToWorker = new BroadcastChannel(CLIENT_TO_WORKER_CHANNEL);
-  const workerToClient = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
-  const listeners = new Set<(message: WorkerMessage) => void>();
+  const client = createWorkerClient(createBroadcastPort());
 
-  workerToClient.addEventListener('message', (event: MessageEvent<unknown>) => {
-    const message = workerToClientMessageSchema.parse(event.data);
-
-    for (const listener of listeners) {
-      listener(message);
-    }
+  window.addEventListener('pagehide', () => {
+    void client.disconnect({});
   });
 
-  return {
-    post: (message) => {
-      clientToWorker.postMessage(message);
-    },
-    subscribe: (listener) => {
-      listeners.add(listener);
-
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-  };
+  return client;
 }
 
 function createElectionWorker(): Worker {

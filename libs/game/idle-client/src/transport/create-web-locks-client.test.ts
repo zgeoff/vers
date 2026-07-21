@@ -1,62 +1,58 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { waitFor } from '@vers/test-utils';
-import { ClientMessageType, WorkerMessageType } from '../types';
-import type { ClientMessage } from '../worker/client-to-worker-message-schema';
-import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
-import { CLIENT_TO_WORKER_CHANNEL, WORKER_TO_CLIENT_CHANNEL } from './constants';
-import { createChannelTransport } from './create-channel-transport';
+import { RPC_CLIENT_TO_WORKER_CHANNEL } from './constants';
+import { createWebLocksClient } from './create-web-locks-client';
 
-test('it posts client messages on the client-to-worker channel', async () => {
-  const transport = createChannelTransport({ createWorker: () => {} });
+test('it envelopes an RPC call on the client-to-worker channel with a per-tab id', async () => {
+  const client = createWebLocksClient({ createWorker: () => {} });
 
-  const workerSide = new BroadcastChannel(CLIENT_TO_WORKER_CHANNEL);
+  const workerSide = new BroadcastChannel(RPC_CLIENT_TO_WORKER_CHANNEL);
 
   onTestFinished(() => {
     workerSide.close();
   });
 
-  const received: Array<ClientMessage> = [];
+  const received: Array<{ readonly data: unknown; readonly tabID: string }> = [];
 
-  workerSide.addEventListener('message', (event: MessageEvent<ClientMessage>) => {
+  workerSide.addEventListener(
+    'message',
+    (event: MessageEvent<{ data: unknown; tabID: string }>) => {
+      received.push(event.data);
+    },
+  );
+
+  // no writer answers in this test — the call is left pending, only the outbound frame matters
+  void client.initialize({});
+
+  await waitFor(() => {
+    expect(received).toHaveLength(1);
+  });
+
+  expect(typeof received[0]?.tabID).toBe('string');
+});
+
+test('it mints a distinct tab id for each client', async () => {
+  const first = createWebLocksClient({ createWorker: () => {} });
+  const second = createWebLocksClient({ createWorker: () => {} });
+
+  const workerSide = new BroadcastChannel(RPC_CLIENT_TO_WORKER_CHANNEL);
+
+  onTestFinished(() => {
+    workerSide.close();
+  });
+
+  const received: Array<{ readonly tabID: string }> = [];
+
+  workerSide.addEventListener('message', (event: MessageEvent<{ tabID: string }>) => {
     received.push(event.data);
   });
 
-  transport.post({ type: ClientMessageType.Initialize });
+  void first.initialize({});
+  void second.initialize({});
 
   await waitFor(() => {
-    expect(received).toStrictEqual([{ type: ClientMessageType.Initialize }]);
-  });
-});
-
-test('it relays writer broadcasts to subscribers until they detach', async () => {
-  const transport = createChannelTransport({ createWorker: () => {} });
-
-  const writerSide = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
-
-  onTestFinished(() => {
-    writerSide.close();
+    expect(received).toHaveLength(2);
   });
 
-  const received: Array<WorkerMessage> = [];
-
-  const unsubscribe = transport.subscribe((message) => {
-    received.push(message);
-  });
-
-  writerSide.postMessage({ type: WorkerMessageType.WriterReady });
-
-  await waitFor(() => {
-    expect(received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
-  });
-
-  unsubscribe();
-
-  writerSide.postMessage({ type: WorkerMessageType.WriterReady });
-
-  // deliver through the channel's async hop before asserting nothing new arrived
-  await new Promise((resolve) => {
-    setTimeout(resolve, 20);
-  });
-
-  expect(received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
+  expect(received[0]?.tabID).not.toBe(received[1]?.tabID);
 });

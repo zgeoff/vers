@@ -17,9 +17,9 @@ export { setFailureAction } from './state/set-failure-action';
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
 export { setRewardSlotLedger } from './state/set-reward-slot-ledger';
+export { setSimulationInitialized } from './state/set-simulation-initialized';
 export { setSimulationSnapshot } from './state/set-simulation-snapshot';
-export { setStartReport } from './state/set-start-report';
-export { setSimulationTransport } from './state/set-simulation-transport';
+export { setWorkerClient } from './state/set-worker-client';
 export { setWriterDisplacedActivityID } from './state/set-writer-displaced-activity-id';
 export { updateRewardSlotLedger } from './state/update-reward-slot-ledger';
 export { useOfflineCapStatus } from './state/use-offline-cap-status';
@@ -30,22 +30,12 @@ export { useFailureAction } from './state/use-failure-action';
 export { useLastCompletedActivityID } from './state/use-last-completed-activity-id';
 export { useRewardSlotLedger } from './state/use-reward-slot-ledger';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
-export { useStartReport } from './state/use-start-report';
+export { useWriterAbortSignal } from './state/use-writer-abort-signal';
 export { useWriterDisplacedActivityID } from './state/use-writer-displaced-activity-id';
 export { useWriterGeneration } from './state/use-writer-generation';
 export type { ActivitySubmissionContext } from './submission/types';
+export type { WorkerClient } from './transport/types';
 export * from './types';
-
-export type {
-  ClientMessage,
-  DisconnectMessage,
-  InitializeMessage,
-  ReportOnlineMessage,
-  SetFailureActionMessage,
-  StartActivityMessage,
-  StopActivityMessage,
-} from './worker/client-to-worker-message-schema';
-
 export { OFFLINE_CAP_WARNING_MS } from './worker/offline-cap-warning-ms';
 export { useSimulationTransport } from './transport/use-simulation-transport';
 
@@ -53,12 +43,10 @@ export type {
   ActivityCompletedMessage,
   CheckpointStreamInvalidMessage,
   FailureActionStatusMessage,
-  InitialStateMessage,
   OfflineCapStatusMessage,
   ResyncStatusMessage,
   RewardSlotsRecordedMessage,
   SimulationUpdateMessage,
-  StartStatusMessage,
   WorkerMessage,
   WriterDisplacedMessage,
 } from './worker/worker-to-client-message-schema';
