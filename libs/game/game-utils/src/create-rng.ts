@@ -14,12 +14,8 @@ export function createRNG(state: string): RNG {
   const gen = xoroshiro128plusFromState(decodeState(state));
   const getInt = (min: number, max: number) => uniformInt(gen, min, max);
 
-  const getSeries = (min: number, max: number, count: number) =>
-    Array.from({ length: count }, () => getInt(min, max));
-
   return {
     getInt,
-    getSeries,
     getState: () => encodeState(gen.getState()),
   };
 }
