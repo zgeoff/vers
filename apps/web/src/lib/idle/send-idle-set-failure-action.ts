@@ -1,15 +1,11 @@
-import type { ClientMessage, SimulationTransport } from '@vers/idle-client';
-import { ClientMessageType } from '@vers/idle-client';
+import type { WorkerClient } from '@vers/idle-client';
 import type { ActivityFailureAction } from '@vers/idle-core';
 
-export function sendIdleSetFailureAction(
-  transport: SimulationTransport,
+export async function sendIdleSetFailureAction(
+  client: WorkerClient,
   avatarID: string,
   failureAction: ActivityFailureAction,
-): void {
-  transport.post({
-    avatarID,
-    failureAction,
-    type: ClientMessageType.SetFailureAction,
-  } satisfies ClientMessage);
+  signal: AbortSignal,
+): Promise<void> {
+  await client.setFailureAction({ avatarID, failureAction }, { signal });
 }

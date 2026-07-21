@@ -1,98 +1,94 @@
 import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
-import type { ClientMessage } from '@vers/idle-client';
-import { ClientMessageType } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
+import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { render } from '../../test-utils/render';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { GameSimulationMount } from './game-simulation-mount';
 
-test('it sends the initialize message once a worker connects that has not reported state yet', () => {
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+test('it calls initialize once a worker connects that has not reported state yet', () => {
+  const client = createStubWorkerClient();
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: false,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   render(<GameSimulationMount />);
 
-  expect(calls).toStrictEqual([{ type: ClientMessageType.Initialize }]);
+  expect(client.initialize).toHaveBeenCalledExactlyOnceWith({}, expect.anything());
 });
 
-test('it sends nothing once the worker has already reported its state and no avatar is known', () => {
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+test('it calls nothing once the worker has already reported its state and no avatar is known', () => {
+  const client = createStubWorkerClient();
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   render(<GameSimulationMount />);
 
-  expect(calls).toStrictEqual([]);
+  expect(client.initialize).not.toHaveBeenCalled();
+  expect(client.reportOnline).not.toHaveBeenCalled();
 });
 
-test('it sends nothing before a worker has connected', () => {
-  const calls: Array<ClientMessage> = [];
-
+test('it calls nothing before a worker has connected', () => {
   setIdleWorkerHandle({
     activity: undefined,
+    client: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: false,
-    transport: undefined,
+    writerAbortSignal: new AbortController().signal,
   });
 
   render(<GameSimulationMount />);
-
-  expect(calls).toStrictEqual([]);
 });
 
-test('it sends initialize then reports online once the active avatar resolves', async () => {
+test('it calls initialize then reports online once the active avatar resolves', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const client = createStubWorkerClient();
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     render(<GameSimulationMount />);
 
     await waitFor(() => {
-      expect(calls).toContainEqual({
-        avatarID: avatar.id,
-        claim: true,
-        type: ClientMessageType.ReportOnline,
-      });
+      expect(client.reportOnline).toHaveBeenCalledExactlyOnceWith(
+        { avatarID: avatar.id, claim: true },
+        expect.anything(),
+      );
     });
   });
 });
 
 test('it never reports online without a known avatar', async () => {
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const client = createStubWorkerClient();
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   await withRequestContext({}, () => {
@@ -100,9 +96,7 @@ test('it never reports online without a known avatar', async () => {
 
     rendered.refresh();
 
-    expect(calls).not.toContainEqual(
-      expect.objectContaining({ type: ClientMessageType.ReportOnline }),
-    );
+    expect(client.reportOnline).not.toHaveBeenCalled();
   });
 });
 
@@ -110,33 +104,30 @@ test('it reports online only once across re-renders', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const client = createStubWorkerClient();
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(<GameSimulationMount />);
 
     await waitFor(() => {
-      expect(calls).toContainEqual({
-        avatarID: avatar.id,
-        claim: true,
-        type: ClientMessageType.ReportOnline,
-      });
+      expect(client.reportOnline).toHaveBeenCalledExactlyOnceWith(
+        { avatarID: avatar.id, claim: true },
+        expect.anything(),
+      );
     });
 
     rendered.refresh();
     rendered.refresh();
 
-    const onlineReports = calls.filter((call) => call.type === ClientMessageType.ReportOnline);
-
-    expect(onlineReports).toHaveLength(1);
+    expect(client.reportOnline).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -144,31 +135,30 @@ test('it reports online again when the browser comes back online', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const client = createStubWorkerClient();
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     render(<GameSimulationMount />);
 
     await waitFor(() => {
-      expect(calls).toContainEqual({
-        avatarID: avatar.id,
-        claim: true,
-        type: ClientMessageType.ReportOnline,
-      });
+      expect(client.reportOnline).toHaveBeenCalledExactlyOnceWith(
+        { avatarID: avatar.id, claim: true },
+        expect.anything(),
+      );
     });
 
     globalThis.dispatchEvent(new Event('online'));
 
     await waitFor(() => {
-      expect(calls.filter((call) => call.type === ClientMessageType.ReportOnline)).toHaveLength(2);
+      expect(client.reportOnline).toHaveBeenCalledTimes(2);
     });
   });
 });

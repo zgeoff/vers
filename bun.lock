@@ -545,6 +545,7 @@
       "dependencies": {
         "@orpc/client": "catalog:",
         "@orpc/contract": "catalog:",
+        "@orpc/server": "catalog:",
         "@sentry/browser": "catalog:",
         "@vers/client-test-utils": "workspace:*",
         "@vers/contract-activity": "workspace:*",

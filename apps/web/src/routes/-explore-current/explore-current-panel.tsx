@@ -16,20 +16,15 @@ import type { OrpcQueryUtils } from '../../lib/rpc/orpc';
 import { ActivityRewardsPanel } from './activity-rewards-panel';
 import { ApproachingCapWarning } from './approaching-cap-warning';
 
-interface StartAttempt {
-  readonly requestID: string;
-  readonly scopeID: string;
-}
-
 interface ExploreCurrentPanelProps {
   readonly orpc: OrpcQueryUtils;
 }
 
 /**
- * The world map node detail view: a spinner until the worker reports the requested start, then
+ * The world map node detail view: a spinner until the worker answers the requested start, then
  * the encounter, its auto-retry toggle, and its codex slot. The worker owns the whole start; the
- * panel sends the intent and correlates the report against its own attempt, so another tab's
- * outcome never reads as this one's. A failed start renders a retry action.
+ * panel awaits the call directly and renders its own outcome, so another tab's run never reads as
+ * this one's. A failed start renders a retry action.
  */
 export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   const idleWorkerHandle = useIdleWorkerHandle();
@@ -39,12 +34,12 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   const avatarID = avatarQuery.data?.id;
   const isAutoRetryChecked = idleWorkerHandle.failureAction === ActivityFailureAction.Retry;
 
-  // one start attempt per selected node, correlated by request id
-  const [attempt, setAttempt] = useState<StartAttempt | undefined>(undefined);
+  // one start call per selected node, latched by scope id
+  const [attemptScopeID, setAttemptScopeID] = useState<string | undefined>(undefined);
   const attemptGeneration = useRef(writerGeneration);
 
-  // latched locally on correlation: the store holds only the latest broadcast, and another tab's
-  // report can overwrite it at any time
+  // latched locally once the call resolves: the store holds only the latest broadcast state,
+  // never a start outcome, so this is the panel's only record of its own attempt
   const [report, setReport] = useState<StartStatus | undefined>(undefined);
 
   // the exploration commits when the encounter view opens for a node — independent of worker
@@ -61,8 +56,8 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     emitProductEvent('node_explored', { nodeID: selectedNode.id });
   }, [selectedNode]);
 
-  // a promoted writer never answers a dead writer's start request; re-arming the attempt makes
-  // the send effect below re-raise it against the new writer
+  // a promoted writer never answers a dead writer's call — its abort settles that call, and
+  // re-arming the attempt here makes the send effect below re-raise it against the new writer
   useEffect(() => {
     if (attemptGeneration.current === writerGeneration) {
       return;
@@ -70,46 +65,56 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
 
     attemptGeneration.current = writerGeneration;
 
-    setAttempt(undefined);
+    setAttemptScopeID(undefined);
     setReport(undefined);
   }, [writerGeneration]);
 
   useEffect(() => {
-    if (idleWorkerHandle.transport === undefined) {
+    const client = idleWorkerHandle.client;
+
+    if (client === undefined) {
       return;
     }
+
+    const signal = idleWorkerHandle.writerAbortSignal;
 
     if (!idleWorkerHandle.initialized) {
-      sendIdleInitialize(idleWorkerHandle.transport);
+      void sendIdleInitialize(client, signal);
 
       return;
     }
 
-    if (avatarID === undefined || selectedNode === null || attempt?.scopeID === selectedNode.id) {
+    if (avatarID === undefined || selectedNode === null || attemptScopeID === selectedNode.id) {
       return;
     }
 
-    const requestID = crypto.randomUUID();
-
-    setAttempt({ requestID, scopeID: selectedNode.id });
+    setAttemptScopeID(selectedNode.id);
     setReport(undefined);
 
-    sendIdleStartActivity(idleWorkerHandle.transport, {
-      avatarID,
-      requestID,
-      scopeID: selectedNode.id,
-      scopeType: 'world_map_node',
-    });
-  }, [idleWorkerHandle.transport, idleWorkerHandle.initialized, avatarID, selectedNode, attempt]);
+    void (async () => {
+      try {
+        const status = await sendIdleStartActivity(
+          client,
+          { avatarID, scopeID: selectedNode.id, scopeType: 'world_map_node' },
+          signal,
+        );
 
-  // only the requesting tab's attempt matches, so the started event fires exactly once
-  const startReport = idleWorkerHandle.startReport;
-
-  useEffect(() => {
-    if (attempt !== undefined && startReport?.requestID === attempt.requestID) {
-      setReport(startReport.status);
-    }
-  }, [attempt, startReport]);
+        if (!signal.aborted) {
+          setReport(status);
+        }
+      } catch {
+        // an aborted call rejects — the writer-generation re-arm effect already resets the
+        // attempt, so there is nothing left to report here
+      }
+    })();
+  }, [
+    idleWorkerHandle.client,
+    idleWorkerHandle.initialized,
+    idleWorkerHandle.writerAbortSignal,
+    avatarID,
+    selectedNode,
+    attemptScopeID,
+  ]);
 
   useEffect(() => {
     if (report?.kind !== 'started') {
@@ -126,7 +131,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
 
   const isActivityReady =
     expectedActivityID !== undefined &&
-    attempt?.scopeID === selectedNode?.id &&
+    attemptScopeID === selectedNode?.id &&
     idleWorkerHandle.activity?.id === expectedActivityID;
 
   if (report?.kind === 'failed') {
@@ -134,7 +139,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
       <Button
         data-testid="start-activity-retry"
         onClick={() => {
-          setAttempt(undefined);
+          setAttemptScopeID(undefined);
           setReport(undefined);
         }}
       >
@@ -154,7 +159,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
           checked: isAutoRetryChecked,
           id: 'auto-retry-on-failure',
           onClick: () => {
-            if (idleWorkerHandle.transport === undefined || avatarID === undefined) {
+            if (idleWorkerHandle.client === undefined || avatarID === undefined) {
               return;
             }
 
@@ -162,7 +167,12 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
               ? ActivityFailureAction.Abort
               : ActivityFailureAction.Retry;
 
-            sendIdleSetFailureAction(idleWorkerHandle.transport, avatarID, nextFailureAction);
+            void sendIdleSetFailureAction(
+              idleWorkerHandle.client,
+              avatarID,
+              nextFailureAction,
+              idleWorkerHandle.writerAbortSignal,
+            );
           },
         }}
         errors={[]}

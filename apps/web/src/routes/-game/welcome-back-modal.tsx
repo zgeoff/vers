@@ -2,6 +2,7 @@ import { Button, Dialog, Text } from '@vers/design-system';
 import { setResyncStatus, useResyncStatus } from '@vers/idle-client';
 import type { ResyncStatus } from '@vers/idle-client';
 import { getLoginPathWithRedirect } from '../../lib/auth/get-login-path-with-redirect';
+import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
 import { sendIdleReportOnline } from '../../lib/idle/send-idle-report-online';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 
@@ -67,8 +68,15 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
         <Text>Catching up didn’t finish. Your progress is safe.</Text>
         <Button
           onClick={() => {
-            if (idleWorkerHandle.transport !== undefined) {
-              sendIdleReportOnline(idleWorkerHandle.transport, resyncStatus.avatarID, true);
+            if (idleWorkerHandle.client !== undefined) {
+              runIgnoringRejection(
+                sendIdleReportOnline(
+                  idleWorkerHandle.client,
+                  resyncStatus.avatarID,
+                  true,
+                  idleWorkerHandle.writerAbortSignal,
+                ),
+              );
             }
 
             setResyncStatus(null);

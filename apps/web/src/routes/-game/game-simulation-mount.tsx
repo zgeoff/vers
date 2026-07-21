@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { buildAvatarProgressionQueryOptions } from '../../lib/activity/build-avatar-progression-query-options';
 import { buildCurrentActivityQueryOptions } from '../../lib/activity/build-current-activity-query-options';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
+import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
 import { sendIdleReportOnline } from '../../lib/idle/send-idle-report-online';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
@@ -29,21 +30,23 @@ export function GameSimulationMount() {
   const lastReportedGeneration = useRef<number | undefined>(undefined);
   const lastWorkerActivityID = useRef(idleWorkerHandle.activity?.id);
 
-  // send-and-retry until the worker answers with its initial state: on the fallback transport a
-  // post can land while no writer holds the lock (first load, a join mid-election, a succession
-  // gap) and is silently lost, and a writer promotion resets `initialized` to re-enter this loop
+  // call-and-retry until the worker answers with its initial state: on the web-locks path a call
+  // can go out while no writer holds the lock (first load, a join mid-election, a succession gap)
+  // and hang until the writer generation's own abort settles it, and a writer promotion resets
+  // `initialized` to re-enter this loop
   useEffect(() => {
-    const transport = idleWorkerHandle.transport;
-    const needsHandshake = transport !== undefined && !idleWorkerHandle.initialized;
+    const client = idleWorkerHandle.client;
+    const needsHandshake = client !== undefined && !idleWorkerHandle.initialized;
+    const signal = idleWorkerHandle.writerAbortSignal;
 
     const timer = needsHandshake
       ? setInterval(() => {
-          sendIdleInitialize(transport);
+          runIgnoringRejection(sendIdleInitialize(client, signal));
         }, INITIALIZE_RETRY_MS)
       : undefined;
 
     if (needsHandshake) {
-      sendIdleInitialize(transport);
+      runIgnoringRejection(sendIdleInitialize(client, signal));
     }
 
     return () => {
@@ -51,14 +54,14 @@ export function GameSimulationMount() {
         clearInterval(timer);
       }
     };
-  }, [idleWorkerHandle.transport, idleWorkerHandle.initialized]);
+  }, [idleWorkerHandle.client, idleWorkerHandle.initialized, idleWorkerHandle.writerAbortSignal]);
 
   // reports once per writer generation, only once the worker has reported its initial state and
   // an active avatar is known — a connectivity signal, not a resync command: the worker decides
   // whether a catch-up follows, and an activity started fresh goes through SetActivity
   useEffect(() => {
     if (
-      idleWorkerHandle.transport === undefined ||
+      idleWorkerHandle.client === undefined ||
       !idleWorkerHandle.initialized ||
       avatarID === undefined ||
       lastReportedGeneration.current === writerGeneration
@@ -75,14 +78,27 @@ export function GameSimulationMount() {
 
     lastReportedGeneration.current = writerGeneration;
 
-    sendIdleReportOnline(idleWorkerHandle.transport, avatarID, claim);
-  }, [idleWorkerHandle.transport, idleWorkerHandle.initialized, avatarID, writerGeneration]);
+    runIgnoringRejection(
+      sendIdleReportOnline(
+        idleWorkerHandle.client,
+        avatarID,
+        claim,
+        idleWorkerHandle.writerAbortSignal,
+      ),
+    );
+  }, [
+    idleWorkerHandle.client,
+    idleWorkerHandle.initialized,
+    idleWorkerHandle.writerAbortSignal,
+    avatarID,
+    writerGeneration,
+  ]);
 
   // fires once per page load under the same gate as the resync: a live worker and a known avatar
   // is the point the player is actually in the game
   useEffect(() => {
     if (
-      idleWorkerHandle.transport === undefined ||
+      idleWorkerHandle.client === undefined ||
       !idleWorkerHandle.initialized ||
       avatarID === undefined ||
       hasSentSessionStart
@@ -93,7 +109,7 @@ export function GameSimulationMount() {
     hasSentSessionStart = true;
 
     emitProductEvent('session_started', {});
-  }, [idleWorkerHandle.transport, idleWorkerHandle.initialized, avatarID]);
+  }, [idleWorkerHandle.client, idleWorkerHandle.initialized, avatarID]);
 
   useEffect(() => {
     const completedActivityID = idleWorkerHandle.lastCompletedActivityID;
@@ -111,12 +127,13 @@ export function GameSimulationMount() {
   // SharedWorker, so this is the reconnect signal there. The worker's flushes are idempotent and
   // its resync single-flights, so a duplicate relay is harmless
   useEffect(() => {
-    const transport = idleWorkerHandle.transport;
+    const client = idleWorkerHandle.client;
+    const signal = idleWorkerHandle.writerAbortSignal;
 
     const handleOnline = () => {
       // an automatic reconnect never claims the writer — the run may be live on another device
-      if (transport !== undefined && avatarID !== undefined) {
-        sendIdleReportOnline(transport, avatarID, false);
+      if (client !== undefined && avatarID !== undefined) {
+        runIgnoringRejection(sendIdleReportOnline(client, avatarID, false, signal));
       }
     };
 
@@ -125,7 +142,7 @@ export function GameSimulationMount() {
     return () => {
       globalThis.removeEventListener('online', handleOnline);
     };
-  }, [idleWorkerHandle.transport, avatarID]);
+  }, [idleWorkerHandle.client, idleWorkerHandle.writerAbortSignal, avatarID]);
 
   // a live sim that rolls into a continuation switches activity rows mid-session; the server rows
   // anchor optimistic progression, so any switch (or stop) refetches them
