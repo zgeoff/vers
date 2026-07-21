@@ -9,6 +9,7 @@
     "./test-utils": "./src/test-utils/index.ts"
   },
   "scripts": {
+    "bench": "bun src/replay.bench.ts",
     "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -25,6 +26,7 @@
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@zgeoff/bun-test-extended": "catalog:",
+    "mitata": "catalog:",
     "typescript": "catalog:"
   }
 }

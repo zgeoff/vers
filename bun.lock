@@ -593,6 +593,7 @@
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@zgeoff/bun-test-extended": "catalog:",
+        "mitata": "catalog:",
         "typescript": "catalog:",
       },
     },
@@ -1270,6 +1271,7 @@
     "kysely-postgres-js": "3.0.0",
     "lefthook": "2.1.9",
     "lru-cache": "11.5.2",
+    "mitata": "1.0.34",
     "msw": "2.14.6",
     "ora": "9.4.1",
     "oxfmt": "0.57.0",
@@ -3871,6 +3873,8 @@
     "minipass-sized": ["minipass-sized@2.0.0", "", { "dependencies": { "minipass": "^7.1.2" } }, "sha512-zSsHhto5BcUVM2m1LurnXY6M//cGhVaegT71OfOXoprxT6o780GZd792ea6FfrQkuU4usHZIUczAQMRUE2plzA=="],
 
     "minizlib": ["minizlib@3.1.0", "", { "dependencies": { "minipass": "^7.1.2" } }, "sha512-KZxYo1BUkWD2TVFLr0MQoM8vUUigWD3LlD83a/75BqC+4qE0Hb1Vo5v1FgcfaNXvfXzr+5EhQ6ing/CaBijTlw=="],
+
+    "mitata": ["mitata@1.0.34", "", {}, "sha512-Mc3zrtNBKIMeHSCQ0XqRLo1vbdIx1wvFV9c8NJAiyho6AjNfMY8bVhbS12bwciUdd1t4rj8099CH3N3NFahaUA=="],
 
     "mkdirp": ["mkdirp@3.0.1", "", { "bin": { "mkdirp": "dist/cjs/src/bin.js" } }, "sha512-+NsyUUAZDmo6YVHzL/stxSu3t9YS1iljliy3BSDrXJ/dkn1KYdmtZODGGjLcc9XLgVVpH4KshHB8XmZgMhaBXg=="],
 
