@@ -1,7 +1,11 @@
+import type { ActivityData } from '@vers/contract-activity';
 import { buildSimulationInput } from '@vers/idle-core';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
-import type { SetActivityMessage } from '../types';
 import type { WorkerContext } from './types';
+
+interface SetActivityMessage {
+  readonly activity: ActivityData;
+}
 
 export async function handleSetActivityMessage(
   context: WorkerContext,

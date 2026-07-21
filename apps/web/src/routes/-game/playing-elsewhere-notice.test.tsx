@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ClientMessage } from '@vers/idle-client';
-import { ClientMessageType, setWriterDisplacedActivityID } from '@vers/idle-client';
+import { setWriterDisplacedActivityID } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
+import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { render } from '../../test-utils/render';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -31,14 +31,14 @@ test('it claims the run back with a claiming report on continue-here', async () 
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const client = createStubWorkerClient();
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   setWriterDisplacedActivityID('activity_1');
@@ -51,9 +51,10 @@ test('it claims the run back with a claiming report on continue-here', async () 
     await waitFor(async () => {
       await user.click(screen.getByRole('button', { name: 'Continue here' }));
 
-      expect(calls.filter((call) => call.type === ClientMessageType.ReportOnline)).toStrictEqual([
-        { avatarID: avatar.id, claim: true, type: ClientMessageType.ReportOnline },
-      ]);
+      expect(client.reportOnline).toHaveBeenCalledExactlyOnceWith(
+        { avatarID: avatar.id, claim: true },
+        expect.anything(),
+      );
     });
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

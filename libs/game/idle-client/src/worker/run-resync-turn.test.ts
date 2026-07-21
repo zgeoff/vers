@@ -28,8 +28,8 @@ import { writePendingStartIntent } from '../submission/write-pending-start-inten
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
+import type { StubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import { createTestConnection } from '../test-utils/create-test-connection';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockStartedCheckpoint } from '../test-utils/factories/create-mock-started-checkpoint';
 import { WorkerMessageType } from '../types';
@@ -37,6 +37,28 @@ import { runResyncTurn } from './run-resync-turn';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
 import type { WorkerContext } from './types';
+import type { WorkerMessage } from './worker-to-client-message-schema';
+
+/**
+ * A port-like probe over a stub context's captured broadcasts: `received` reads them live,
+ * `waitForMessages` polls until the given count has arrived, and `port.postMessage` feeds a
+ * sentinel through the same capture the assertions read.
+ */
+function collectBroadcasts(context: StubWorkerContext) {
+  return {
+    port: {
+      postMessage: (message: WorkerMessage) => {
+        context.broadcast(message);
+      },
+    },
+    received: context.getBroadcasts(),
+    waitForMessages: async (count: number) => {
+      await waitFor(() => {
+        expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(count);
+      });
+    },
+  };
+}
 
 interface SetupTestConfig {
   readonly failureAction?: ActivityFailureAction;
@@ -63,15 +85,14 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
     },
   });
 
-  const connection = createTestConnection();
-
   const context = createStubWorkerContext({
     client,
-    connections: [connection.port],
     submitter,
     ...(config.failureAction === undefined ? {} : { failureAction: config.failureAction }),
     ...(config.remainingBudgetMs !== undefined && { remainingBudgetMs: config.remainingBudgetMs }),
   });
+
+  const connection = collectBroadcasts(context);
 
   return { client, connection, context, flush: () => capturedFlush?.() ?? Promise.resolve() };
 }
@@ -1031,10 +1052,7 @@ test('it reports a fault to the error backend and broadcasts a failed status whe
     disableDefaultIntegrations: true,
   });
 
-  const connection = createTestConnection();
-
   const context = createStubWorkerContext({
-    connections: [connection.port],
     submitter: {
       flushHeld: () => Promise.reject(new Error('held flush exploded')),
       flushNow: () => Promise.resolve(),
@@ -1044,6 +1062,8 @@ test('it reports a fault to the error backend and broadcasts a failed status whe
       removeEviction: () => {},
     },
   });
+
+  const connection = collectBroadcasts(context);
 
   await runResyncTurn(context, 'avatar-with-held-tail', false);
 
@@ -1343,11 +1363,8 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
     releaseHeldFlush = resolve;
   });
 
-  const connection = createTestConnection();
-
   const context = createStubWorkerContext({
     client,
-    connections: [connection.port],
     submitter: {
       flushHeld: () => heldFlush,
       flushNow: () => Promise.resolve(),
@@ -1358,6 +1375,7 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
     },
   });
 
+  const connection = collectBroadcasts(context);
   const resume = mock<(input: unknown) => void>();
 
   server.use(

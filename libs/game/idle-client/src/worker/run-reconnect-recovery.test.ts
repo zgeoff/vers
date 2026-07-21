@@ -8,17 +8,15 @@ import type { ActivityServiceClient } from '../submission/types';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import { createTestConnection } from '../test-utils/create-test-connection';
 import { WorkerMessageType } from '../types';
 import { runReconnectRecovery } from './run-reconnect-recovery';
 
 async function setupTest(userID: string) {
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', userID);
 
-  const connection = createTestConnection();
-  const context = createStubWorkerContext({ client, connections: [connection.port] });
+  const context = createStubWorkerContext({ client });
 
-  return { connection, context };
+  return { context };
 }
 
 test("it resyncs the held start intent's avatar over the reported one", async () => {
@@ -63,9 +61,7 @@ test('it resyncs the reported avatar when no intent is held', async () => {
 
   await runReconnectRecovery(ctx.context, viewer.avatar.id);
 
-  await ctx.connection.waitForMessages(1);
-
-  expect(ctx.connection.received).toStrictEqual([
+  expect(ctx.context.getBroadcasts()).toStrictEqual([
     { status: { kind: 'capped' }, type: WorkerMessageType.ResyncStatus },
   ]);
 
@@ -86,9 +82,7 @@ test('it falls back to the avatar of the last resync without a report', async ()
 
   await runReconnectRecovery(ctx.context);
 
-  await ctx.connection.waitForMessages(1);
-
-  expect(ctx.connection.received).toStrictEqual([
+  expect(ctx.context.getBroadcasts()).toStrictEqual([
     { status: { kind: 'capped' }, type: WorkerMessageType.ResyncStatus },
   ]);
 });
@@ -107,13 +101,7 @@ test('it skips the catch-up while a run is live', async () => {
 
   await runReconnectRecovery(ctx.context, viewer.avatar.id);
 
-  // posted on the worker's own port after the recovery settles, this arrives after anything the
-  // recovery broadcast on the same channel — an empty prefix proves no resync ran
-  ctx.connection.port.postMessage({ type: WorkerMessageType.WriterReady });
-
-  await ctx.connection.waitForMessages(1);
-
-  expect(ctx.connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
+  expect(ctx.context.getBroadcasts()).toStrictEqual([]);
   expect(ctx.context.getResyncAvatarID()).toBeNull();
 });
 
@@ -123,11 +111,7 @@ test('it skips the catch-up when no source names an avatar', async () => {
 
   await runReconnectRecovery(ctx.context);
 
-  ctx.connection.port.postMessage({ type: WorkerMessageType.WriterReady });
-
-  await ctx.connection.waitForMessages(1);
-
-  expect(ctx.connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
+  expect(ctx.context.getBroadcasts()).toStrictEqual([]);
   expect(ctx.context.getResyncAvatarID()).toBeNull();
 });
 

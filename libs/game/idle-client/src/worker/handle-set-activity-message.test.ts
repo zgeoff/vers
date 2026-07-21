@@ -3,8 +3,6 @@ import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import type { SetActivityMessage } from '../types';
-import { ClientMessageType } from '../types';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 
 test('it starts the activity on the simulation', async () => {
@@ -15,9 +13,8 @@ test('it starts the activity on the simulation', async () => {
   context.setSimulation(simulation);
 
   const activity = createMockActivityData();
-  const message: SetActivityMessage = { activity, type: ClientMessageType.SetActivity };
 
-  await handleSetActivityMessage(context, message);
+  await handleSetActivityMessage(context, { activity });
 
   expect(simulation.activity?.id).toBe(activity.id);
 });
@@ -35,9 +32,7 @@ test('it registers the row against the submitter, seeded from its own chain-link
     startChainIndex: 3,
   });
 
-  const message: SetActivityMessage = { activity, type: ClientMessageType.SetActivity };
-
-  await handleSetActivityMessage(context, message);
+  await handleSetActivityMessage(context, { activity });
 
   expect(submitter.registerActivity).toHaveBeenCalledExactlyOnceWith({
     activityID: 'activity_1',
@@ -53,9 +48,8 @@ test('it remembers the row as the live simulation source', async () => {
   context.setSimulation(createSimulation());
 
   const activity = createMockActivityData();
-  const message: SetActivityMessage = { activity, type: ClientMessageType.SetActivity };
 
-  await handleSetActivityMessage(context, message);
+  await handleSetActivityMessage(context, { activity });
 
   expect(context.getActivity()).toStrictEqual(activity);
 });

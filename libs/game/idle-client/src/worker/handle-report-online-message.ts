@@ -1,7 +1,11 @@
-import type { ReportOnlineMessage } from './client-to-worker-message-schema';
 import { reportWorkerFault } from './report-worker-fault';
 import { runReconnectRecovery } from './run-reconnect-recovery';
 import type { WorkerContext } from './types';
+
+interface ReportOnlineInput {
+  readonly avatarID: string;
+  readonly claim: boolean;
+}
 
 /**
  * A tab's connectivity report: marks the connection online, then runs the reconnect recovery with
@@ -11,12 +15,12 @@ import type { WorkerContext } from './types';
  */
 export async function handleReportOnlineMessage(
   context: WorkerContext,
-  message: ReportOnlineMessage,
+  input: Readonly<ReportOnlineInput>,
 ): Promise<void> {
   context.updateConnectivity(true);
 
   try {
-    await runReconnectRecovery(context, message.avatarID, message.claim);
+    await runReconnectRecovery(context, input.avatarID, input.claim);
   } catch (error) {
     reportWorkerFault('reconnect', error);
   }

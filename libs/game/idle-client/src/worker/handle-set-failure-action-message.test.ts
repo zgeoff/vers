@@ -6,8 +6,7 @@ import { server } from '../mocks/node';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import { ClientMessageType, WorkerMessageType } from '../types';
-import type { SetFailureActionMessage } from './client-to-worker-message-schema';
+import { WorkerMessageType } from '../types';
 import { handleSetFailureActionMessage } from './handle-set-failure-action-message';
 
 interface SetupTestConfig {
@@ -33,13 +32,10 @@ test('it forwards the change to a live simulation instead of dropping it', async
 
   context.setSimulation(simulation);
 
-  const message: SetFailureActionMessage = {
+  await handleSetFailureActionMessage(context, {
     avatarID: viewer.avatar.id,
     failureAction: ActivityFailureAction.Retry,
-    type: ClientMessageType.SetFailureAction,
-  };
-
-  await handleSetFailureActionMessage(context, message);
+  });
 
   expect(simulation.failureAction).toBe(ActivityFailureAction.Retry);
 });
@@ -50,15 +46,26 @@ test('it applies the change with no live simulation instead of warning and dropp
 
   const context = createStubWorkerContext({ client: ctx.client });
 
-  const message: SetFailureActionMessage = {
+  await handleSetFailureActionMessage(context, {
     avatarID: viewer.avatar.id,
     failureAction: ActivityFailureAction.Retry,
-    type: ClientMessageType.SetFailureAction,
-  };
-
-  await handleSetFailureActionMessage(context, message);
+  });
 
   expect(context.getFailureAction()).toBe(ActivityFailureAction.Retry);
+});
+
+test('it answers with the applied failure action', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const context = createStubWorkerContext({ client: ctx.client });
+
+  const result = await handleSetFailureActionMessage(context, {
+    avatarID: viewer.avatar.id,
+    failureAction: ActivityFailureAction.Retry,
+  });
+
+  expect(result).toStrictEqual({ failureAction: ActivityFailureAction.Retry });
 });
 
 test('it clears the dirty flag once the server push succeeds', async () => {
@@ -67,13 +74,10 @@ test('it clears the dirty flag once the server push succeeds', async () => {
 
   const context = createStubWorkerContext({ client: ctx.client });
 
-  const message: SetFailureActionMessage = {
+  await handleSetFailureActionMessage(context, {
     avatarID: viewer.avatar.id,
     failureAction: ActivityFailureAction.Retry,
-    type: ClientMessageType.SetFailureAction,
-  };
-
-  await handleSetFailureActionMessage(context, message);
+  });
 
   expect(context.isFailureActionDirty()).toBeFalse();
 
@@ -98,13 +102,10 @@ test('it keeps the dirty flag when the server push fails', async () => {
 
   const context = createStubWorkerContext({ client: ctx.client });
 
-  const message: SetFailureActionMessage = {
+  await handleSetFailureActionMessage(context, {
     avatarID: viewer.avatar.id,
     failureAction: ActivityFailureAction.Retry,
-    type: ClientMessageType.SetFailureAction,
-  };
-
-  await handleSetFailureActionMessage(context, message);
+  });
 
   expect(context.isFailureActionDirty()).toBeTrue();
 
@@ -121,28 +122,14 @@ test('it broadcasts the effective failure action to every connection', async () 
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  const channel = new MessageChannel();
+  const context = createStubWorkerContext({ client: ctx.client });
 
-  const context = createStubWorkerContext({ client: ctx.client, connections: [channel.port2] });
-
-  channel.port1.start();
-
-  const received = new Promise<MessageEvent>((resolve) => {
-    channel.port1.addEventListener('message', resolve, { once: true });
-  });
-
-  const message: SetFailureActionMessage = {
+  await handleSetFailureActionMessage(context, {
     avatarID: viewer.avatar.id,
     failureAction: ActivityFailureAction.Retry,
-    type: ClientMessageType.SetFailureAction,
-  };
-
-  await handleSetFailureActionMessage(context, message);
-
-  const event = await received;
-
-  expect(event.data).toStrictEqual({
-    failureAction: ActivityFailureAction.Retry,
-    type: WorkerMessageType.FailureActionStatus,
   });
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    { failureAction: ActivityFailureAction.Retry, type: WorkerMessageType.FailureActionStatus },
+  ]);
 });

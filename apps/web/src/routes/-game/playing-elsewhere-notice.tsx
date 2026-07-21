@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button, Dialog, Text } from '@vers/design-system';
 import { setWriterDisplacedActivityID, useWriterDisplacedActivityID } from '@vers/idle-client';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
+import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
 import { sendIdleReportOnline } from '../../lib/idle/send-idle-report-online';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 
@@ -42,11 +43,19 @@ export function PlayingElsewhereNotice() {
           // The displaced state clears only once the claim is actually sent — clearing without
           // sending would dismiss the player's one recovery notice with nothing claimed. A click
           // before the worker or avatar id resolves leaves the notice open for the next try.
-          if (idleWorkerHandle.transport === undefined || avatarID === undefined) {
+          if (idleWorkerHandle.client === undefined || avatarID === undefined) {
             return;
           }
 
-          sendIdleReportOnline(idleWorkerHandle.transport, avatarID, true);
+          runIgnoringRejection(
+            sendIdleReportOnline(
+              idleWorkerHandle.client,
+              avatarID,
+              true,
+              idleWorkerHandle.writerAbortSignal,
+            ),
+          );
+
           setWriterDisplacedActivityID(null);
         }}
       >

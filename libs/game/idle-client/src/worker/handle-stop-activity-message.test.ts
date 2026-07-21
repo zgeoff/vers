@@ -14,8 +14,7 @@ import type { ActivityServiceClient } from '../submission/types';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import { createTestConnection } from '../test-utils/create-test-connection';
-import { ClientMessageType, WorkerMessageType } from '../types';
+import { WorkerMessageType } from '../types';
 import { handleStopActivityMessage } from './handle-stop-activity-message';
 
 test('it halts the live simulation and clears the runtime', async () => {
@@ -39,7 +38,6 @@ test('it halts the live simulation and clears the runtime', async () => {
   await handleStopActivityMessage(context, {
     activityID: activity.id,
     avatarID: activity.avatarID,
-    type: ClientMessageType.StopActivity,
   });
 
   expect(simulation.activity).toBeNull();
@@ -62,7 +60,6 @@ test('it replaces the stopped simulation with a fresh empty one', async () => {
   await handleStopActivityMessage(context, {
     activityID: activity.id,
     avatarID: activity.avatarID,
-    type: ClientMessageType.StopActivity,
   });
 
   const replacement = context.getSimulation();
@@ -75,13 +72,7 @@ test('it replaces the stopped simulation with a fresh empty one', async () => {
 });
 
 test('it broadcasts a cleared snapshot to every connection', async () => {
-  const connection = createTestConnection();
-
-  const context = createStubWorkerContext({
-    connections: [connection.port],
-    submitter: createStubSubmitter(),
-  });
-
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
   const simulation = createSimulation();
   const activity = createMockActivityData();
 
@@ -92,12 +83,9 @@ test('it broadcasts a cleared snapshot to every connection', async () => {
   await handleStopActivityMessage(context, {
     activityID: activity.id,
     avatarID: activity.avatarID,
-    type: ClientMessageType.StopActivity,
   });
 
-  await connection.waitForMessages(1);
-
-  expect(connection.received).toPartiallyContain({
+  expect(context.getBroadcasts()).toPartiallyContain({
     state: { failureAction: ActivityFailureAction.Abort },
     type: WorkerMessageType.SimulationUpdate,
   });
@@ -113,7 +101,6 @@ test('it resets the reward-slot ledger', async () => {
   await handleStopActivityMessage(context, {
     activityID: activity.id,
     avatarID: activity.avatarID,
-    type: ClientMessageType.StopActivity,
   });
 
   expect(context.getRewardSlotLedger()).toStrictEqual({ activityID: null, entries: [] });
@@ -130,7 +117,6 @@ test('it aborts a signal captured before the stop, leaving one captured after un
   await handleStopActivityMessage(context, {
     activityID: activity.id,
     avatarID: activity.avatarID,
-    type: ClientMessageType.StopActivity,
   });
 
   expect(beforeStop.aborted).toBeTrue();
@@ -145,11 +131,7 @@ test('it delivers the targeted server stop and releases the intent', async () =>
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client, submitter });
 
-  await handleStopActivityMessage(context, {
-    activityID: row.id,
-    avatarID: viewer.avatar.id,
-    type: ClientMessageType.StopActivity,
-  });
+  await handleStopActivityMessage(context, { activityID: row.id, avatarID: viewer.avatar.id });
 
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
 
@@ -177,7 +159,6 @@ test('it keeps the intent held when delivery fails, with the local halt already 
   await handleStopActivityMessage(context, {
     activityID: activity.id,
     avatarID: activity.avatarID,
-    type: ClientMessageType.StopActivity,
   });
 
   expect(simulation.activity).toBeNull();
@@ -199,11 +180,7 @@ test('it halts nothing but still delivers when no simulation is installed', asyn
   const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
   const beforeStop = context.getStopSignal();
 
-  await handleStopActivityMessage(context, {
-    activityID: row.id,
-    avatarID: viewer.avatar.id,
-    type: ClientMessageType.StopActivity,
-  });
+  await handleStopActivityMessage(context, { activityID: row.id, avatarID: viewer.avatar.id });
 
   expect(beforeStop.aborted).toBeTrue();
 
@@ -229,7 +206,6 @@ test('it ignores a stop naming an older activity than the live one', async () =>
   await handleStopActivityMessage(context, {
     activityID: 'activity_older',
     avatarID: live.avatarID,
-    type: ClientMessageType.StopActivity,
   });
 
   expect(context.getSimulation()).toBe(simulation);

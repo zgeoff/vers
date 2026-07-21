@@ -6,7 +6,6 @@ import { pickPostTerminalAction } from './pick-post-terminal-action';
 import { runContinuation } from './run-continuation';
 import type { WorkerContext } from './types';
 import { withLifecycleTurn } from './with-lifecycle-turn';
-import type { WorkerMessage } from './worker-to-client-message-schema';
 
 /**
  * Advances the simulation one tick, submits any checkpoint it yields, and resolves what follows a
@@ -91,14 +90,7 @@ export async function runSimulation(
 }
 
 function emitActivityCompleted(context: WorkerContext, activityID: string) {
-  const message = {
-    activityID,
-    type: WorkerMessageType.ActivityCompleted,
-  } satisfies WorkerMessage;
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
-  }
+  context.broadcast({ activityID, type: WorkerMessageType.ActivityCompleted });
 }
 
 function emitRewardSlotsRecorded(
@@ -107,26 +99,14 @@ function emitRewardSlotsRecorded(
   version: number,
   rewardSlotCount: number,
 ) {
-  const message = {
+  context.broadcast({
     activityID,
     rewardSlotCount,
     type: WorkerMessageType.RewardSlotsRecorded,
     version,
-  } satisfies WorkerMessage;
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
-  }
+  });
 }
 
 function emitCapStatus(context: WorkerContext, remainingMs: number, halted: boolean) {
-  const message = {
-    halted,
-    remainingMs,
-    type: WorkerMessageType.OfflineCapStatus,
-  } satisfies WorkerMessage;
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
-  }
+  context.broadcast({ halted, remainingMs, type: WorkerMessageType.OfflineCapStatus });
 }

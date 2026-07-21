@@ -1,5 +1,6 @@
+import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
-import { createBroadcastConnection } from './create-broadcast-connection';
+import { createWorkerDemux } from './create-worker-demux';
 import { createWorkerRuntime } from './create-worker-runtime';
 import { startErrorReporting } from './start-error-reporting';
 import { startWriterElection } from './start-writer-election';
@@ -14,11 +15,13 @@ startWriterElection({
   onElected: () => {
     void startErrorReporting(dsn, { environment: import.meta.env.MODE });
     const runtime = createWorkerRuntime();
-    const connection = createBroadcastConnection();
 
-    runtime.registerConnection(connection);
+    createWorkerDemux({ upgrade: runtime.upgrade });
 
-    // announced after the connection registers, so a tab's re-sent handshake finds the runtime already listening
-    connection.postMessage({ type: WorkerMessageType.WriterReady } satisfies WorkerMessage);
+    const channel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
+
+    // announced after the demux is ready to serve, so a tab's re-sent handshake finds it already
+    // listening
+    channel.postMessage({ type: WorkerMessageType.WriterReady } satisfies WorkerMessage);
   },
 });

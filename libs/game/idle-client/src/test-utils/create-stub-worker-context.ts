@@ -7,12 +7,13 @@ import { resolveServiceURL } from '@vers/mock-services';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry } from '../types';
-import type { WorkerConnection, WorkerContext } from '../worker/types';
+import type { WorkerContext } from '../worker/types';
+import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
 import { createStubSubmitter } from './create-stub-submitter';
 
 interface CreateStubWorkerContextOptions {
+  readonly broadcast?: (message: WorkerMessage) => void;
   readonly client?: ActivityServiceClient;
-  readonly connections?: ReadonlyArray<WorkerConnection>;
   readonly failureAction?: ActivityFailureAction;
   readonly remainingBudgetMs?: number;
 
@@ -31,13 +32,16 @@ export interface StubWorkerContext extends WorkerContext {
    * broadcast nothing on a connectivity change, so this probe is their only observable.
    */
   readonly getConnectivityOnline: () => boolean;
+
+  /**
+   * Every message `broadcast` recorded, in arrival order.
+   */
+  readonly getBroadcasts: () => ReadonlyArray<WorkerMessage>;
 }
 
 export function createStubWorkerContext(
   options: Readonly<CreateStubWorkerContextOptions> = {},
 ): StubWorkerContext {
-  const connections = new Set(options.connections);
-
   const client: ActivityServiceClient =
     options.client ??
     createORPCClient(new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }));
@@ -57,11 +61,12 @@ export function createStubWorkerContext(
   let stopController = new AbortController();
 
   let cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);
-  let startRequestID: null | string = null;
+  let startToken: null | string = null;
   let lifecycleTail: Readonly<Promise<void>> = Promise.resolve();
   let queuedClaimResync: null | string = null;
   let writerDisplacedActivityID: null | string = null;
   let connectivityOnline = true;
+  const broadcasts: Array<WorkerMessage> = [];
 
   return {
     advanceStopScope: () => {
@@ -71,8 +76,12 @@ export function createStubWorkerContext(
 
       cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);
     },
-    connections,
+    broadcast: (message) => {
+      broadcasts.push(message);
+      options.broadcast?.(message);
+    },
     getActivity: () => activity,
+    getBroadcasts: () => broadcasts,
     getCancelSignal: () => cancelSignal,
     getClient: () => client,
     getConnectivityOnline: () => connectivityOnline,
@@ -86,7 +95,7 @@ export function createStubWorkerContext(
     getSimulation: () => simulation,
     getLifecycleTail: () => lifecycleTail,
     getQueuedClaimResync: () => queuedClaimResync,
-    getStartRequestID: () => startRequestID,
+    getStartToken: () => startToken,
     getStopSignal: () => stopController.signal,
     getSubmitter: () => submitter,
     getWriterDisplacedActivityID: () => writerDisplacedActivityID,
@@ -102,9 +111,6 @@ export function createStubWorkerContext(
 
       rewardSlotLedgerActivityID = activityID;
       rewardSlotLedger = [entry];
-    },
-    removeConnection: (connection) => {
-      connections.delete(connection);
     },
     resetRewardSlotLedger: () => {
       rewardSlotLedgerActivityID = null;
@@ -134,8 +140,8 @@ export function createStubWorkerContext(
     setLifecycleTail: (flow) => {
       lifecycleTail = flow;
     },
-    setStartRequestID: (requestID) => {
-      startRequestID = requestID;
+    setStartToken: (token) => {
+      startToken = token;
     },
     setSimulation: (newSimulation) => {
       simulation = newSimulation;

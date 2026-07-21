@@ -14,37 +14,63 @@ import { writeFailureActionCache } from '../submission/write-failure-action-cach
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { createFastClock } from '../test-utils/create-fast-clock';
-import type { TestConnection } from '../test-utils/create-test-connection';
-import { createTestConnection } from '../test-utils/create-test-connection';
+import { createTestClient } from '../test-utils/create-test-client';
 import { makeFailFirstMatchHandler } from '../test-utils/make-fail-first-match-handler';
-import { ClientMessageType, WorkerMessageType } from '../types';
+import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
+import { WorkerMessageType } from '../types';
 import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
-import type { SimulationUpdateMessage } from './worker-to-client-message-schema';
 
-function createConnection(runtime: WorkerRuntime): TestConnection {
-  const connection = createTestConnection();
+/**
+ * Records every broadcast the runtime posts, in arrival order — the state channel a
+ * `MessagePort`-based test client never sees, since it now rides `BroadcastChannel` regardless of
+ * transport.
+ */
+function collectBroadcasts() {
+  const channel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
 
-  runtime.handleConnect(new MessageEvent('connect', { ports: [connection.port] }));
+  onTestFinished(() => {
+    channel.close();
+  });
 
-  return connection;
+  const received: Array<unknown> = [];
+
+  channel.addEventListener('message', (event: MessageEvent<unknown>) => {
+    received.push(event.data);
+  });
+
+  return {
+    received,
+    waitForMessages: async (count: number) => {
+      await waitFor(() => {
+        expect(received.length).toBeGreaterThanOrEqual(count);
+      });
+    },
+  };
 }
 
-test('it replies with the initial state to an initialize message', async () => {
+function createConnectedTestClient(runtime: WorkerRuntime) {
+  const testClient = createTestClient();
+
+  runtime.handleConnect(new MessageEvent('connect', { ports: [testClient.port] }));
+
+  return testClient.client;
+}
+
+test('it answers initialize with the current state', async () => {
   using runtime = createWorkerRuntime();
 
-  const connection = createConnection(runtime);
+  const client = createConnectedTestClient(runtime);
 
-  connection.post({ type: ClientMessageType.Initialize });
+  const result = await client.initialize({});
 
-  await connection.waitForMessages(1);
-
-  expect(connection.received[0]?.type).toBe(WorkerMessageType.InitialState);
+  expect(result.writerDisplacedActivityID).toBeNull();
+  expect(result.rewardSlotLedger).toStrictEqual({ activityID: null, entries: [] });
 });
 
-test('it seeds the boot state from the device-local failure-action cache before the first message runs', async () => {
+test('it seeds the boot state from the device-local failure-action cache before the first call runs', async () => {
   await writeFailureActionCache({
     avatarID: 'seeded-avatar',
     dirty: true,
@@ -53,16 +79,11 @@ test('it seeds the boot state from the device-local failure-action cache before 
 
   using runtime = createWorkerRuntime();
 
-  const connection = createConnection(runtime);
+  const client = createConnectedTestClient(runtime);
 
-  connection.post({ type: ClientMessageType.Initialize });
+  const result = await client.initialize({});
 
-  await connection.waitForMessages(2);
-
-  expect(connection.received[1]).toStrictEqual({
-    failureAction: ActivityFailureAction.Retry,
-    type: WorkerMessageType.FailureActionStatus,
-  });
+  expect(result.state.failureAction).toBe(ActivityFailureAction.Retry);
 });
 
 test('it retains the cached dirty flag across boot so the next resync flushes it to the server', async () => {
@@ -84,13 +105,9 @@ test('it retains the cached dirty flag across boot so the next resync flushes it
 
   using runtime = createWorkerRuntime({ client });
 
-  const connection = createConnection(runtime);
+  const testClient = createConnectedTestClient(runtime);
 
-  connection.post({
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.ReportOnline,
-  });
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
   await waitFor(() => {
     const updatedAvatar = db.avatarCollection.findFirst((q) => q.where({ id: viewer.avatar.id }));
@@ -105,61 +122,52 @@ test('it broadcasts a simulation update once a started run installs', async () =
 
   using runtime = createWorkerRuntime({ client });
 
-  const connection = createConnection(runtime);
+  const broadcasts = collectBroadcasts();
+  const testClient = createConnectedTestClient(runtime);
 
-  connection.post({ type: ClientMessageType.Initialize });
+  await testClient.initialize({});
 
-  await connection.waitForMessages(2);
-
-  connection.post({
+  const status = await testClient.startActivity({
     avatarID: viewer.avatar.id,
-    requestID: 'start_1',
     scopeID: 'esaxrt',
     scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
   });
 
-  await waitFor(() => {
-    expect(connection.received).toPartiallyContain({
-      type: WorkerMessageType.SimulationUpdate,
-    });
-  });
+  expect(status.kind).toBe('started');
+
+  await broadcasts.waitForMessages(1);
+
+  expect(broadcasts.received).toPartiallyContain({ type: WorkerMessageType.SimulationUpdate });
 });
 
-test('it stops broadcasting to a connection after it disconnects', async () => {
+test('it closes the connection on disconnect so no further call it makes is answered', async () => {
   using runtime = createWorkerRuntime();
 
-  const survivor = createConnection(runtime);
-  const leaving = createConnection(runtime);
+  const client = createConnectedTestClient(runtime);
 
-  survivor.post({ type: ClientMessageType.Initialize });
+  await client.disconnect({});
 
-  await survivor.waitForMessages(2);
-
-  expect(runtime.connections.size).toBe(2);
-
-  const leavingReceivedCount = leaving.received.length;
-
-  leaving.post({ type: ClientMessageType.Disconnect });
-
-  await waitFor(() => {
-    expect(runtime.connections.size).toBe(1);
+  // the close itself is deferred a macrotask past the disconnect call's own answer, so this
+  // outlasts that race before proving the connection is dead
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50);
   });
 
-  survivor.post({
-    avatarID: 'avatar_1',
-    failureAction: ActivityFailureAction.Retry,
-    type: ClientMessageType.SetFailureAction,
+  const answered = (async () => {
+    await client.initialize({});
+
+    return 'answered' as const;
+  })();
+
+  const timedOut = new Promise<'timed-out'>((resolve) => {
+    setTimeout(() => {
+      resolve('timed-out');
+    }, 100);
   });
 
-  await waitFor(() => {
-    expect(survivor.received).toPartiallyContain({
-      failureAction: ActivityFailureAction.Retry,
-      type: WorkerMessageType.FailureActionStatus,
-    });
-  });
+  const raced = await Promise.race([answered, timedOut]);
 
-  expect(leaving.received).toHaveLength(leavingReceivedCount);
+  expect(raced).toBe('timed-out');
 });
 
 test('it resumes into a fresh row once a same-row CONFLICT resync drains a held terminal append', async () => {
@@ -190,17 +198,10 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
 
   using runtime = createWorkerRuntime({ client, now: clock.now });
 
-  const connection = createConnection(runtime);
+  const testClient = createConnectedTestClient(runtime);
 
-  connection.post({ type: ClientMessageType.Initialize });
-
-  await connection.waitForMessages(1);
-
-  connection.post({
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.ReportOnline,
-  });
+  await testClient.initialize({});
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
   await waitFor(
     () => {
@@ -272,17 +273,10 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
 
   using runtime = createWorkerRuntime({ client, now: clock.now });
 
-  const connection = createConnection(runtime);
+  const testClient = createConnectedTestClient(runtime);
 
-  connection.post({ type: ClientMessageType.Initialize });
-
-  await connection.waitForMessages(1);
-
-  connection.post({
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.ReportOnline,
-  });
+  await testClient.initialize({});
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
   await waitFor(
     () => {
@@ -338,17 +332,14 @@ test("it resumes the held start intent's avatar on reconnect over an earlier ava
 
   using runtime = createWorkerRuntime({ client });
 
-  const connection = createConnection(runtime);
+  const broadcasts = collectBroadcasts();
+  const testClient = createConnectedTestClient(runtime);
 
   // the worker remembers this avatar as its last resync target once the report's recovery runs
-  connection.post({
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.ReportOnline,
-  });
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
   await waitFor(() => {
-    expect(connection.received).toPartiallyContain({
+    expect(broadcasts.received).toPartiallyContain({
       status: { kind: 'capped' },
       type: WorkerMessageType.ResyncStatus,
     });
@@ -394,25 +385,22 @@ test('it recovers a stop parked offline once a flush answer proves the connectio
 
   using runtime = createWorkerRuntime({ client, now: clock.now });
 
-  const connection = createConnection(runtime);
+  const broadcasts = collectBroadcasts();
+  const testClient = createConnectedTestClient(runtime);
 
-  connection.post({ type: ClientMessageType.Initialize });
-
-  await connection.waitForMessages(1);
-
-  connection.post({
-    avatarID: viewer.avatar.id,
-    claim: true,
-    type: ClientMessageType.ReportOnline,
-  });
+  await testClient.initialize({});
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: true });
 
   // small re-armed jumps drive live ticks until the attach's simulation broadcasts, staying far
   // short of the encounter's 60s completion so no flush traffic lands before the offline window
   await waitFor(() => {
     clock.jump(1000);
 
-    const update = connection.received.findLast(
-      (message): message is SimulationUpdateMessage =>
+    const update = broadcasts.received.findLast(
+      (message): message is { state: { activity?: { id: string } }; type: string } =>
+        typeof message === 'object' &&
+        message !== null &&
+        'type' in message &&
         message.type === WorkerMessageType.SimulationUpdate,
     );
 
@@ -488,39 +476,28 @@ test('it cancels an in-flight resync read on stop() without stopping the row bac
 
   using runtime = createWorkerRuntime({ client });
 
-  const connection = createConnection(runtime);
+  const testClient = createConnectedTestClient(runtime);
 
-  connection.post({ type: ClientMessageType.Initialize });
+  await testClient.initialize({});
 
-  await connection.waitForMessages(1);
-
-  connection.post({
-    avatarID: viewer.avatar.id,
-    claim: false,
-    type: ClientMessageType.ReportOnline,
-  });
+  // not awaited — the call's own resync read is what the mock above hangs, and only stop()'s
+  // abort settles it
+  void testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
   await readStarted;
 
   runtime.stop();
 
-  // a start queued behind the resync's lifecycle turn only runs once that turn settles, proving
-  // the cancelled read didn't strand it hanging on the mailbox
-  connection.post({
+  // a start queued behind the resync's lifecycle turn only runs once that turn settles — its own
+  // entry check sees the now-permanently-aborted cancel signal and answers failed, proving the
+  // cancelled read didn't strand it hanging on the mailbox
+  const status = await testClient.startActivity({
     avatarID: 'stop-cancel-avatar',
-    requestID: 'start-after-stop',
     scopeID: 'scope-after-stop',
     scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
   });
 
-  await waitFor(() => {
-    expect(connection.received).toPartiallyContain({
-      requestID: 'start-after-stop',
-      type: WorkerMessageType.StartStatus,
-    });
-  });
-
+  expect(status.kind).toBe('failed');
   expect(recorded).toStrictEqual([]);
 
   const row = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));

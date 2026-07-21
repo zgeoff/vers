@@ -84,9 +84,10 @@ test('it shows the optimistic sim overlay and the settling marker while an activ
   setIdleWorkerHandle({
     activity: createMockActivitySnapshot({ id: activity.id, rewards: { xp: 25 } }),
     avatar: createMockAvatarSnapshot({ level: 4 }),
+    client: undefined,
     failureAction: ActivityFailureAction.Retry,
     initialized: true,
-    transport: undefined,
+    writerAbortSignal: new AbortController().signal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
