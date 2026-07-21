@@ -1,6 +1,5 @@
 import type { CheckpointPayload, EntropySource, RewardSlot } from '@vers/contract-activity';
-import { RewardSlotSchema, buildCheckpointHash } from '@vers/contract-activity';
-import * as z from 'zod';
+import { buildCheckpointHash } from '@vers/contract-activity';
 import { TERMINAL_CHECKPOINT_TYPES } from './types';
 import type { CompareVerdict, ReplayedCheckpoint, RewardFact, StoredCheckpoint } from './types';
 
@@ -109,7 +108,21 @@ export function compareReplaySegment(
   };
 }
 
-const RewardsSchema = z.object({ xp: z.number() });
+/**
+ * A plain, non-array object — the shape every structural guard below narrows a raw payload field
+ * onto before reading its own fields.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * A number the hash chain would accept: finite, excluding the `NaN`/`Infinity` values `typeof`
+ * alone lets through.
+ */
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
 
 /**
  * A stored checkpoint's `rewards` field rides outside the hashed subset, so
@@ -117,12 +130,10 @@ const RewardsSchema = z.object({ xp: z.number() });
  * append path does, reporting undefined for a missing or malformed shape rather than throwing.
  */
 function findPayloadRewardsXP(payload: Readonly<CheckpointPayload>): number | undefined {
-  const parsed = RewardsSchema.safeParse(payload['rewards']);
+  const rewards = payload['rewards'];
 
-  return parsed.success ? parsed.data.xp : undefined;
+  return isRecord(rewards) && isFiniteNumber(rewards['xp']) ? rewards['xp'] : undefined;
 }
-
-const LevelUpSchema = z.object({ from: z.number(), to: z.number() });
 
 /**
  * A stored checkpoint's `levelUp` field rides outside the hashed subset like `rewards`, and is
@@ -131,9 +142,13 @@ const LevelUpSchema = z.object({ from: z.number(), to: z.number() });
 function findPayloadLevelUp(
   payload: Readonly<CheckpointPayload>,
 ): { from: number; to: number } | undefined {
-  const parsed = LevelUpSchema.safeParse(payload['levelUp']);
+  const levelUp = payload['levelUp'];
 
-  return parsed.success ? parsed.data : undefined;
+  if (!isRecord(levelUp) || !isFiniteNumber(levelUp['from']) || !isFiniteNumber(levelUp['to'])) {
+    return undefined;
+  }
+
+  return { from: levelUp['from'], to: levelUp['to'] };
 }
 
 function hasMatchingLevelUp(
@@ -152,7 +167,22 @@ type ParsedRewardSlots =
   | { readonly kind: 'malformed' }
   | { readonly kind: 'present'; readonly slots: ReadonlyArray<RewardSlot> };
 
-const RewardSlotsSchema = z.array(RewardSlotSchema);
+/**
+ * A safe, non-negative integer — the shape a reward slot's `ordinal` and `context.nodeTier` fields
+ * must satisfy, floored at the given minimum.
+ */
+function isSafeIntAtLeast(value: unknown, min: number): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= min;
+}
+
+function isRewardSlot(value: unknown): value is RewardSlot {
+  return (
+    isRecord(value) &&
+    isSafeIntAtLeast(value['ordinal'], 0) &&
+    isRecord(value['context']) &&
+    isSafeIntAtLeast(value['context']['nodeTier'], 1)
+  );
+}
 
 /**
  * A stored checkpoint's `rewardSlots` field rides outside the hashed subset like `rewards`. An
@@ -161,13 +191,16 @@ const RewardSlotsSchema = z.array(RewardSlotSchema);
  * distinct rather than both collapsing to empty.
  */
 function parsePayloadRewardSlots(payload: Readonly<CheckpointPayload>): ParsedRewardSlots {
-  if (payload['rewardSlots'] === undefined) {
+  const rewardSlots = payload['rewardSlots'];
+
+  if (rewardSlots === undefined) {
     return { kind: 'absent' };
   }
 
-  const parsed = RewardSlotsSchema.safeParse(payload['rewardSlots']);
-
-  return parsed.success ? { kind: 'present', slots: parsed.data } : { kind: 'malformed' };
+  return Array.isArray(rewardSlots) &&
+    rewardSlots.every((slot): slot is RewardSlot => isRewardSlot(slot))
+    ? { kind: 'present', slots: rewardSlots }
+    : { kind: 'malformed' };
 }
 
 /**
