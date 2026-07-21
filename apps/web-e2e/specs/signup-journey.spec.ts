@@ -24,8 +24,9 @@ test('it signs up, creates an avatar, and can navigate the shell to settings and
 
   await expect(page.locator('canvas').first()).toBeVisible();
 
-  // the game canvas's initial scene setup blocks the main thread for a variable stretch, long
-  // enough that a click fired mid-block is silently dropped — retry until the nav visibly opens
+  // a click fired while the main thread is blocked is silently dropped — the game shell's
+  // hydration always costs a variable stretch, and the canvas's scene setup adds more in suites
+  // that run with the renderer flag on — so retry until the nav visibly opens
   await expect(async () => {
     await page.getByRole('link', { exact: true, name: 'Settings' }).click();
 
@@ -147,7 +148,7 @@ async function runSignUpIntoGame(page: Page, journey: Readonly<SignUpJourney>): 
     }
 
     await expect(page).toHaveURL(/\/explore$/, { timeout: 5000 });
-  }).toPass({ timeout: 30_000 });
+  }).toPass({ timeout: 20_000 });
 }
 
 /**
