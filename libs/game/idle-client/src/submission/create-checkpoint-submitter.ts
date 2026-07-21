@@ -16,19 +16,6 @@ import { removeQueuedCheckpoints } from './remove-queued-checkpoints';
 import type { ActivityServiceClient, ActivitySubmissionContext } from './types';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
-/**
- * The marker a held-batch retry loop's wrapped attempt throws to drive `p-retry`'s next backoff
- * step — a plain subclass so it is neither `p-retry`'s own `AbortError` (which would end the loop)
- * nor a `TypeError` (which `p-retry` treats as a network-abort signal rather than a retry cause).
- */
-class BatchStillHeldError extends Error {
-  constructor(message: string) {
-    super(message);
-
-    this.name = 'BatchStillHeldError';
-  }
-}
-
 interface ActivityState {
   consecutiveFlushFailures: number;
   expectedHead: number;
@@ -176,6 +163,13 @@ interface CreateCheckpointSubmitterOptions {
   readonly onHeld?: (activityID: string) => void;
 
   /**
+   * Called once a held batch's retry loop dies on an unexpected failure — anything but its own
+   * abort — so the caller can report the fault. The batch stays held; a later flush failure
+   * starts a fresh loop.
+   */
+  readonly onRetryFailed?: (activityID: string, error: unknown) => void;
+
+  /**
    * Called each time a flush attempt gets any answer from the activity service — a success or a
    * defined contract outcome alike — proving the connection is up. A stream-ending rejection is
    * often the first response after an outage and may also be the last traffic the activity ever
@@ -303,9 +297,12 @@ export function createCheckpointSubmitter(
             signal,
           },
         );
-      } catch {
-        // ends silently: the only rejection an infinite-retry loop can produce is the signal's
-        // own abort reason
+      } catch (error) {
+        // the loop's own abort — a superseding flushHeld or worker shutdown — ends it silently;
+        // anything else is unexpected, and the batch stays held for a later flush to restart
+        if (!signal.aborted) {
+          options.onRetryFailed?.(activityID, error);
+        }
       } finally {
         if (state.retryController === retryController) {
           state.retryController = undefined;
@@ -665,6 +662,19 @@ export function createCheckpointSubmitter(
   };
 
   return { flushHeld, flushNow, isEvicted, registerActivity, removeEviction, submit };
+}
+
+/**
+ * The marker a held-batch retry loop's wrapped attempt throws to drive `p-retry`'s next backoff
+ * step — a plain subclass so it is neither `p-retry`'s own `AbortError` (which would end the loop)
+ * nor a `TypeError` (which `p-retry` treats as a network-abort signal rather than a retry cause).
+ */
+class BatchStillHeldError extends Error {
+  constructor(message: string) {
+    super(message);
+
+    this.name = 'BatchStillHeldError';
+  }
 }
 
 const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set([

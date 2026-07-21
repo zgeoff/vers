@@ -18,6 +18,7 @@ import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 function setupTest(
   config: Readonly<{
+    onAcked?: (activityID: string, appendedHead: number) => void;
     onServerContact?: () => void;
     retryTimings?: Readonly<{ maxTimeout: number; minTimeout: number }>;
     scheduleFlush?: (flush: () => Promise<void>) => void;
@@ -39,6 +40,7 @@ function setupTest(
   const onFlushStalled = mock<(activityID: string, reason: string, traceID: string) => void>();
   const onInvalid = mock<(activityID: string, reason: string, traceID?: string) => void>();
   const onHeld = mock<(activityID: string) => void>();
+  const onRetryFailed = mock<(activityID: string, error: unknown) => void>();
   const onServerContact = mock<() => void>();
 
   const submitter = createCheckpointSubmitter({
@@ -49,6 +51,7 @@ function setupTest(
     onFlushStalled,
     onHeld,
     onInvalid,
+    onRetryFailed,
     onServerContact,
     ...config,
   });
@@ -61,6 +64,7 @@ function setupTest(
     onFlushStalled,
     onHeld,
     onInvalid,
+    onRetryFailed,
     onServerContact,
     submitter,
   };
@@ -640,6 +644,73 @@ test('it holds the queue and retries in the background identically on UNAUTHORIZ
 
   await waitFor(async () => {
     const remaining = await readQueuedCheckpoints('unauthorized-backoff-activity');
+
+    expect(remaining).toStrictEqual([]);
+  });
+});
+
+test('it reports an unexpected retry-loop failure and starts a fresh loop on the next held batch', async () => {
+  let transportShouldFail = true;
+  let ackShouldThrow = true;
+  let confirmedHead = 1;
+
+  const ackFailure = new TypeError('ack callback exploded');
+
+  const ctx = setupTest({
+    // scripts the unexpected failure: the first acknowledged flush throws from inside the retry
+    // loop's attempt, which p-retry treats as terminal rather than another backoff step
+    onAcked: () => {
+      if (ackShouldThrow) {
+        throw ackFailure;
+      }
+    },
+    retryTimings: { maxTimeout: 20, minTimeout: 5 },
+  });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(() => {
+      if (transportShouldFail) {
+        return HttpResponse.error();
+      }
+
+      return { appendedHead: confirmedHead };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'retry-loop-failure-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('retry-loop-failure-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onHeld).toHaveBeenCalledExactlyOnceWith('retry-loop-failure-activity');
+
+  transportShouldFail = false;
+
+  await waitFor(() => {
+    expect(ctx.onRetryFailed).toHaveBeenCalledExactlyOnceWith(
+      'retry-loop-failure-activity',
+      ackFailure,
+    );
+  });
+
+  // the dead loop's controller is cleared, so the next held batch starts a fresh loop that
+  // drains once the transport recovers
+  ackShouldThrow = false;
+  transportShouldFail = true;
+  confirmedHead = 2;
+
+  await ctx.submitter.submit('retry-loop-failure-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onHeld).toHaveBeenCalledTimes(2);
+
+  transportShouldFail = false;
+
+  await waitFor(async () => {
+    const remaining = await readQueuedCheckpoints('retry-loop-failure-activity');
 
     expect(remaining).toStrictEqual([]);
   });

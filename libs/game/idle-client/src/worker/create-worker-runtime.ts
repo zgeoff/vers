@@ -166,6 +166,12 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
         { traceID },
       );
     },
+    onRetryFailed: (activityID, error) => {
+      reportWorkerFault(
+        'checkpoint-flush',
+        new Error(`checkpoint retry loop failed for activity ${activityID}`, { cause: error }),
+      );
+    },
     onInvalid: (activityID, reason, traceID) => {
       const tags = traceID === undefined ? undefined : { traceID };
 
