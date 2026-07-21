@@ -1,31 +1,24 @@
-import type { ClientMessage, StartReport } from '@vers/idle-client';
+import type { WorkerClient } from '@vers/idle-client';
 import type { ActivitySnapshot, AvatarSnapshot } from '@vers/idle-core';
 import { ActivityFailureAction } from '@vers/idle-core';
-
-/**
- * A duck-typed stand-in for the simulation transport: only the one channel the app ever writes
- * to, typed to the worker protocol so recorded messages narrow through the exported guards.
- */
-interface StubSimulationTransport {
-  readonly post: (message: ClientMessage) => void;
-}
 
 export interface StubIdleWorkerHandle {
   readonly activity: ActivitySnapshot | undefined;
   readonly avatar?: AvatarSnapshot | undefined;
+  readonly client: undefined | WorkerClient;
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
   readonly lastCompletedActivityID?: string | undefined;
-  readonly startReport?: StartReport | undefined;
-  readonly transport: StubSimulationTransport | undefined;
+  readonly writerAbortSignal: AbortSignal;
 }
 
 const DEFAULT_HANDLE: StubIdleWorkerHandle = {
   activity: undefined,
   avatar: undefined,
+  client: undefined,
   failureAction: ActivityFailureAction.Abort,
   initialized: false,
-  transport: undefined,
+  writerAbortSignal: new AbortController().signal,
 };
 
 let current: StubIdleWorkerHandle = DEFAULT_HANDLE;
@@ -35,7 +28,7 @@ const listeners = new Set<() => void>();
 /**
  * The external store behind the mocked worker-handle read: `set` notifies subscribers, so a
  * mid-test handle change re-renders subscribed components the way a real worker report does.
- * Defaults to no transport, matching a caller that hasn't mounted one yet.
+ * Defaults to no client, matching a caller that hasn't mounted one yet.
  */
 export const idleWorkerHandleStub = {
   get: (): StubIdleWorkerHandle => current,

@@ -1,11 +1,26 @@
-import type { ClientMessage, SimulationTransport } from '@vers/idle-client';
-import { ClientMessageType } from '@vers/idle-client';
+import type { WorkerClient } from '@vers/idle-client';
+import {
+  setRewardSlotLedger,
+  setSimulationInitialized,
+  setSimulationSnapshot,
+  setWriterDisplacedActivityID,
+} from '@vers/idle-client';
 
 /**
- * Sends the message a freshly connected worker needs before it reports simulation state. Callers
- * on the fallback transport re-send until the initial state arrives — a post can race the writer
- * election and be lost.
+ * Asks the worker for its current state and applies the answer to the shared store — the only
+ * caller of `initialize`, so no other path routes this response.
  */
-export function sendIdleInitialize(transport: SimulationTransport): void {
-  transport.post({ type: ClientMessageType.Initialize } satisfies ClientMessage);
+export async function sendIdleInitialize(client: WorkerClient, signal: AbortSignal): Promise<void> {
+  const result = await client.initialize({}, { signal });
+
+  // the call can settle in the same tick its writer is replaced; the answer is the dead writer's
+  // state, and applying it would mark a fresh writer's connection initialized with stale state
+  if (signal.aborted) {
+    return;
+  }
+
+  setSimulationInitialized(true);
+  setSimulationSnapshot(result.state);
+  setRewardSlotLedger(result.rewardSlotLedger);
+  setWriterDisplacedActivityID(result.writerDisplacedActivityID);
 }

@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ClientMessage } from '@vers/idle-client';
-import { ClientMessageType, setResyncStatus } from '@vers/idle-client';
+import { setResyncStatus } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
+import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { WelcomeBackModal } from './welcome-back-modal';
 
@@ -70,14 +70,14 @@ test('it offers a sign-in link back to this page when the session expired mid ca
 
 test('it retries by reporting online and clearing the failed status', async () => {
   const user = userEvent.setup();
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const client = createStubWorkerClient();
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   setResyncStatus({ avatarID: 'avatar_1', kind: 'failed' });
@@ -85,9 +85,10 @@ test('it retries by reporting online and clearing the failed status', async () =
 
   await user.click(screen.getByRole('button', { name: 'Try again' }));
 
-  expect(calls).toStrictEqual([
-    { avatarID: 'avatar_1', claim: true, type: ClientMessageType.ReportOnline },
-  ]);
+  expect(client.reportOnline).toHaveBeenCalledExactlyOnceWith(
+    { avatarID: 'avatar_1', claim: true },
+    expect.anything(),
+  );
 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });

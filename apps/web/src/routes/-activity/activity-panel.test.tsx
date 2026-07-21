@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
-import type { ClientMessage } from '@vers/idle-client';
-import { ClientMessageType, setSimulationSnapshot } from '@vers/idle-client';
+import { setSimulationSnapshot } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot, createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
 import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
+import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { render } from '../../test-utils/render';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
@@ -66,15 +66,15 @@ test('it hands END RUN to the worker and never awaits the server', async () => {
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
   const activity = await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
 
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const client = createStubWorkerClient();
 
   setIdleWorkerHandle({
     activity: createMockActivitySnapshot(),
     avatar: createMockAvatarSnapshot(),
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   setSimulationSnapshot({
@@ -91,13 +91,10 @@ test('it hands END RUN to the worker and never awaits the server', async () => {
     endRunButton.click();
 
     await waitFor(() => {
-      expect(calls).toStrictEqual([
-        {
-          activityID: activity.id,
-          avatarID: avatar.id,
-          type: ClientMessageType.StopActivity,
-        },
-      ]);
+      expect(client.stopActivity).toHaveBeenCalledExactlyOnceWith(
+        { activityID: activity.id, avatarID: avatar.id },
+        expect.anything(),
+      );
     });
   });
 });

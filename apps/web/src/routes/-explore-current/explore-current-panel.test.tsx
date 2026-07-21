@@ -2,8 +2,8 @@ import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
-import type { ClientMessage, StartActivityMessage } from '@vers/idle-client';
-import { ClientMessageType, advanceWriterGeneration } from '@vers/idle-client';
+import type { StartStatus } from '@vers/idle-client';
+import { advanceWriterGeneration } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import * as db from '@vers/mock-services/db';
@@ -12,29 +12,28 @@ import { createMockWorldMapNode } from '@vers/worldmap-client/test-utils';
 import invariant from 'tiny-invariant';
 import { orpc } from '../../lib/rpc/orpc';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
+import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { render } from '../../test-utils/render';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ExploreCurrentPanel } from './explore-current-panel';
 
-function isStartActivityMessage(message: Readonly<ClientMessage>): message is StartActivityMessage {
-  return message.type === ClientMessageType.StartActivity;
-}
+test('it shows a spinner and calls initialize before the worker reports its state', () => {
+  const client = createStubWorkerClient();
 
-test('it shows a spinner and sends initialize before the worker reports its state', () => {
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const writerAbortSignal = new AbortController().signal;
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: false,
-    transport,
+    writerAbortSignal,
   });
 
   const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
 
-  expect(calls).toStrictEqual([{ type: ClientMessageType.Initialize }]);
+  expect(client.initialize).toHaveBeenCalledExactlyOnceWith({}, { signal: writerAbortSignal });
   expect(rendered.queryByTestId('world-map-node-codex-stub')).not.toBeInTheDocument();
 });
 
@@ -45,71 +44,62 @@ test('it re-sends the start intent against a promoted writer', async () => {
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const client = createStubWorkerClient({
+    startActivity: () => new Promise(() => {}),
+  });
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     render(<ExploreCurrentPanel orpc={orpc} />);
 
     await waitFor(() => {
-      expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
     });
 
-    const first = calls.find((call) => isStartActivityMessage(call));
-
-    invariant(first !== undefined, 'expected a start intent');
-
-    // a promoted writer never answers the dead writer's request; the panel re-raises its intent
+    // a promoted writer never answers the dead writer's call; the panel re-raises its intent
     advanceWriterGeneration();
 
     await waitFor(() => {
-      expect(calls.filter((call) => isStartActivityMessage(call))).toHaveLength(2);
+      expect(client.startActivity).toHaveBeenCalledTimes(2);
     });
-
-    const [, second] = calls.filter((call) => isStartActivityMessage(call));
-
-    invariant(second !== undefined, 'expected a re-raised start intent');
-
-    expect(second.requestID).not.toBe(first.requestID);
   });
 });
 
-test('it sends one start intent for the selected node once initialized', async () => {
+test('it sends one start call for the selected node once initialized', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const client = createStubWorkerClient({
+    startActivity: () => new Promise(() => {}),
+  });
+
+  const writerAbortSignal = new AbortController().signal;
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     render(<ExploreCurrentPanel orpc={orpc} />);
 
     await waitFor(() => {
-      expect(calls).toStrictEqual([
-        {
-          avatarID: avatar.id,
-          requestID: expect.toBeString(),
-          scopeID: 'a9lp75',
-          scopeType: 'world_map_node',
-          type: ClientMessageType.StartActivity,
-        },
-      ]);
+      expect(client.startActivity).toHaveBeenCalledExactlyOnceWith(
+        { avatarID: avatar.id, scopeID: 'a9lp75', scopeType: 'world_map_node' },
+        { signal: writerAbortSignal },
+      );
     });
   });
 });
@@ -120,39 +110,34 @@ test('it renders the node and its codex fragment once the worker reports the sta
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
+
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ activity: started, kind: 'started' }),
+  });
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
 
     await waitFor(() => {
-      expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
     });
 
-    const sent = calls.find((call) => isStartActivityMessage(call));
-
-    invariant(sent !== undefined, 'expected a start intent');
-
-    const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
-
-    // the worker answering the intent is one setter call — mounted components re-render on it
+    // the worker answering the call is one setter call — mounted components re-render on it
     setIdleWorkerHandle({
       activity: createMockActivitySnapshot({ id: started.id }),
+      client,
       failureAction: ActivityFailureAction.Abort,
       initialized: true,
-      startReport: {
-        requestID: sent.requestID,
-        status: { activity: started, kind: 'started' },
-      },
-      transport,
+      writerAbortSignal: new AbortController().signal,
     });
 
     const codex = await rendered.findByTestId('world-map-node-codex-stub');
@@ -168,36 +153,31 @@ test('it treats an attached report as ready once the simulation carries that row
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ activityID: 'activity_attached', kind: 'attached' }),
+  });
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
 
     await waitFor(() => {
-      expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
     });
-
-    const sent = calls.find((call) => isStartActivityMessage(call));
-
-    invariant(sent !== undefined, 'expected a start intent');
 
     setIdleWorkerHandle({
       activity: createMockActivitySnapshot({ id: 'activity_attached' }),
+      client,
       failureAction: ActivityFailureAction.Abort,
       initialized: true,
-      startReport: {
-        requestID: sent.requestID,
-        status: { activityID: 'activity_attached', kind: 'attached' },
-      },
-      transport,
+      writerAbortSignal: new AbortController().signal,
     });
 
     const codex = await rendered.findByTestId('world-map-node-codex-stub');
@@ -206,93 +186,39 @@ test('it treats an attached report as ready once the simulation carries that row
   });
 });
 
-test('it ignores a start report answering another request', async () => {
+test('it offers a retry on a failed report and sends a fresh call on demand', async () => {
   const signedIn = await createSignedInUser();
 
   await db.avatarCollection.create({ userID: signedIn.userID });
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
-
-  setIdleWorkerHandle({
-    activity: undefined,
-    failureAction: ActivityFailureAction.Abort,
-    initialized: true,
-    transport,
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ kind: 'failed' }),
   });
 
-  await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
-
-    await waitFor(() => {
-      expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
-    });
-
-    setIdleWorkerHandle({
-      activity: undefined,
-      failureAction: ActivityFailureAction.Abort,
-      initialized: true,
-      startReport: { requestID: 'someone-elses-request', status: { kind: 'failed' } },
-      transport,
-    });
-
-    expect(rendered.queryByTestId('start-activity-retry')).not.toBeInTheDocument();
-    expect(rendered.queryByTestId('world-map-node-codex-stub')).not.toBeInTheDocument();
-  });
-});
-
-test('it offers a retry on a failed report and sends a fresh intent on demand', async () => {
-  const signedIn = await createSignedInUser();
-
-  await db.avatarCollection.create({ userID: signedIn.userID });
-
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
-
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
   const user = userEvent.setup();
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
 
-    await waitFor(() => {
-      expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
-    });
-
-    const first = calls.find((call) => isStartActivityMessage(call));
-
-    invariant(first !== undefined, 'expected a start intent');
-
-    setIdleWorkerHandle({
-      activity: undefined,
-      failureAction: ActivityFailureAction.Abort,
-      initialized: true,
-      startReport: { requestID: first.requestID, status: { kind: 'failed' } },
-      transport,
-    });
-
     const retry = await rendered.findByTestId('start-activity-retry');
+
+    expect(client.startActivity).toHaveBeenCalledTimes(1);
 
     await user.click(retry);
 
     await waitFor(() => {
-      expect(calls.filter((call) => isStartActivityMessage(call))).toHaveLength(2);
+      expect(client.startActivity).toHaveBeenCalledTimes(2);
     });
-
-    const [, second] = calls.filter((call) => isStartActivityMessage(call));
-
-    invariant(second !== undefined, 'expected a second start intent');
-
-    expect(second.requestID).not.toBe(first.requestID);
   });
 });
 
@@ -302,39 +228,37 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
 
   setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
 
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
+
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ activity: started, kind: 'started' }),
+  });
+
   const user = userEvent.setup();
+
+  const writerAbortSignal = new AbortController().signal;
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
 
     await waitFor(() => {
-      expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
     });
-
-    const sent = calls.find((call) => isStartActivityMessage(call));
-
-    invariant(sent !== undefined, 'expected a start intent');
-
-    const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
 
     setIdleWorkerHandle({
       activity: createMockActivitySnapshot({ id: started.id }),
+      client,
       failureAction: ActivityFailureAction.Abort,
       initialized: true,
-      startReport: {
-        requestID: sent.requestID,
-        status: { activity: started, kind: 'started' },
-      },
-      transport,
+      writerAbortSignal,
     });
 
     const checkbox = await rendered.findByLabelText('Auto-retry on failure');
@@ -343,66 +267,60 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
 
     await user.click(checkbox);
 
-    expect(calls).toContainEqual({
-      avatarID: avatar.id,
-      failureAction: ActivityFailureAction.Retry,
-      type: ClientMessageType.SetFailureAction,
-    });
+    expect(client.setFailureAction).toHaveBeenCalledExactlyOnceWith(
+      { avatarID: avatar.id, failureAction: ActivityFailureAction.Retry },
+      { signal: writerAbortSignal },
+    );
   });
 });
 
-test('it keeps its own outcome when a later report answers another tab', async () => {
+test('it ignores a start reply for a node the selection has left behind', async () => {
   const signedIn = await createSignedInUser();
-  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  await db.avatarCollection.create({ userID: signedIn.userID });
 
-  const calls: Array<ClientMessage> = [];
-  const transport = { post: (message: ClientMessage) => calls.push(message) };
+  setSelectedNode(createMockWorldMapNode({ id: 'node-a' }));
+
+  const startResolvers: Array<(status: StartStatus) => void> = [];
+
+  const client = createStubWorkerClient({
+    startActivity: () =>
+      new Promise((resolve) => {
+        startResolvers.push(resolve);
+      }),
+  });
 
   setIdleWorkerHandle({
     activity: undefined,
+    client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport,
+    writerAbortSignal: new AbortController().signal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
 
     await waitFor(() => {
-      expect(calls.some((call) => isStartActivityMessage(call))).toBeTrue();
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
     });
 
-    const sent = calls.find((call) => isStartActivityMessage(call));
+    setSelectedNode(createMockWorldMapNode({ id: 'node-b' }));
 
-    invariant(sent !== undefined, 'expected a start intent');
-
-    const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
-
-    setIdleWorkerHandle({
-      activity: createMockActivitySnapshot({ id: started.id }),
-      failureAction: ActivityFailureAction.Abort,
-      initialized: true,
-      startReport: {
-        requestID: sent.requestID,
-        status: { activity: started, kind: 'started' },
-      },
-      transport,
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(2);
     });
 
-    await rendered.findByTestId('world-map-node-codex-stub');
+    const [staleResolve] = startResolvers;
 
-    // another tab's broadcast replaces the shared slot — this tab already latched its own outcome
-    setIdleWorkerHandle({
-      activity: createMockActivitySnapshot({ id: started.id }),
-      failureAction: ActivityFailureAction.Abort,
-      initialized: true,
-      startReport: { requestID: 'another-tabs-request', status: { kind: 'failed' } },
-      transport,
-    });
+    invariant(staleResolve !== undefined, 'expected the first start call to be captured');
 
-    expect(rendered.getByTestId('world-map-node-codex-stub')).toBeVisible();
-    expect(rendered.queryByTestId('start-activity-retry')).not.toBeInTheDocument();
+    // the first node's failed reply lands only after the selection moved on — it must not render
+    // as the new node's outcome
+    staleResolve({ kind: 'failed' });
+
+    await expect(
+      rendered.findByTestId('start-activity-retry', undefined, { timeout: 100 }),
+    ).toReject();
   });
 });

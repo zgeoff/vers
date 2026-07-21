@@ -10,9 +10,10 @@ import { NavRail } from './nav-rail';
 function setActiveActivity(): void {
   idleWorkerHandleStub.set({
     activity: createMockActivitySnapshot(),
+    client: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    transport: undefined,
+    writerAbortSignal: new AbortController().signal,
   });
 }
 

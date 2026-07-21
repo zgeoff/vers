@@ -1,74 +1,30 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import { ClientMessageType, WorkerMessageType } from '../types';
-import type { InitializeMessage } from './client-to-worker-message-schema';
 import { handleInitializeMessage } from './handle-initialize-message';
 
-test('it initializes the simulation', () => {
+test('it answers with the current simulation snapshot', () => {
   const context = createStubWorkerContext();
+  const result = handleInitializeMessage(context);
 
-  const message: InitializeMessage = {
-    type: ClientMessageType.Initialize,
-  };
-
-  handleInitializeMessage(context, message);
-});
-
-test('it sends an initial state message to all connections', async () => {
-  const channel = new MessageChannel();
-
-  const context = createStubWorkerContext({ connections: [channel.port2] });
-
-  channel.port1.start();
-
-  const received = new Promise<MessageEvent>((resolve) => {
-    channel.port1.addEventListener('message', resolve, { once: true });
-  });
-
-  const message: InitializeMessage = {
-    type: ClientMessageType.Initialize,
-  };
-
-  handleInitializeMessage(context, message);
-
-  const event = await received;
-
-  const simulation = context.getSimulation();
-
-  expect(event.data).toStrictEqual({
+  expect(result).toStrictEqual({
     rewardSlotLedger: { activityID: null, entries: [] },
-    state: simulation?.getSnapshot(),
-    type: WorkerMessageType.InitialState,
+    state: context.getSimulation().getSnapshot(),
     writerDisplacedActivityID: null,
   });
 });
 
-test('it sends the retained reward-slot ledger to a connection that initializes mid-run', async () => {
-  const channel = new MessageChannel();
-
-  const context = createStubWorkerContext({ connections: [channel.port2] });
+test('it answers with the retained reward-slot ledger for a mid-run call', () => {
+  const context = createStubWorkerContext();
 
   context.setSimulation(createSimulation());
   context.recordRewardSlots('activity_1', { count: 2, version: 1 });
-  channel.port1.start();
 
-  const received = new Promise<MessageEvent>((resolve) => {
-    channel.port1.addEventListener('message', resolve, { once: true });
-  });
+  const result = handleInitializeMessage(context);
 
-  const message: InitializeMessage = {
-    type: ClientMessageType.Initialize,
-  };
-
-  handleInitializeMessage(context, message);
-
-  const event = await received;
-
-  expect(event.data).toStrictEqual({
+  expect(result).toStrictEqual({
     rewardSlotLedger: { activityID: 'activity_1', entries: [{ count: 2, version: 1 }] },
     state: context.getSimulation().getSnapshot(),
-    type: WorkerMessageType.InitialState,
     writerDisplacedActivityID: null,
   });
 });
@@ -79,40 +35,18 @@ test('it does not create a new simulation if one already exists', () => {
 
   context.setSimulation(existingSimulation);
 
-  const message: InitializeMessage = {
-    type: ClientMessageType.Initialize,
-  };
-
-  handleInitializeMessage(context, message);
+  handleInitializeMessage(context);
 
   expect(context.getSimulation()).toBe(existingSimulation);
 });
 
-test('it carries a held displacement in the initial state for a late-connecting tab', async () => {
-  const channel = new MessageChannel();
-
-  const context = createStubWorkerContext({ connections: [channel.port2] });
+test('it carries a held displacement in the answer', () => {
+  const context = createStubWorkerContext();
 
   context.setSimulation(createSimulation());
   context.setWriterDisplacedActivityID('activity_9');
-  channel.port1.start();
 
-  const received = new Promise<MessageEvent>((resolve) => {
-    channel.port1.addEventListener('message', resolve, { once: true });
-  });
+  const result = handleInitializeMessage(context);
 
-  const message: InitializeMessage = {
-    type: ClientMessageType.Initialize,
-  };
-
-  handleInitializeMessage(context, message);
-
-  const event = await received;
-
-  expect(event.data).toStrictEqual({
-    rewardSlotLedger: { activityID: null, entries: [] },
-    state: context.getSimulation().getSnapshot(),
-    type: WorkerMessageType.InitialState,
-    writerDisplacedActivityID: 'activity_9',
-  });
+  expect(result.writerDisplacedActivityID).toBe('activity_9');
 });

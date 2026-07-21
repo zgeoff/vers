@@ -13,7 +13,6 @@ import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import { createTestConnection } from '../test-utils/create-test-connection';
 import { runContinuation } from './run-continuation';
 import type { WorkerContext } from './types';
 
@@ -108,9 +107,8 @@ test('it hands a foreign-claim CONFLICT to a resync that attaches the conflictin
 test('it stops the simulation and marks connectivity offline on a transport failure', async () => {
   server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
 
-  const connection = createTestConnection();
   const submitter = createStubSubmitter();
-  const context = createStubWorkerContext({ connections: [connection.port], submitter });
+  const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
   const previousActivity = createMockActivityData();
 

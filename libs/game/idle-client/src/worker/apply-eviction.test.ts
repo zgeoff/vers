@@ -3,17 +3,15 @@ import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import { createTestConnection } from '../test-utils/create-test-connection';
 import { WorkerMessageType } from '../types';
 import { applyEviction } from './apply-eviction';
 
-test('it clears the displaced live simulation and broadcasts the displacement', async () => {
-  const connection = createTestConnection();
+test('it clears the displaced live simulation and broadcasts the displacement', () => {
   const submitter = createStubSubmitter();
 
   submitter.isEvicted = () => true;
 
-  const context = createStubWorkerContext({ connections: [connection.port], submitter });
+  const context = createStubWorkerContext({ submitter });
   const activity = createMockActivityData();
 
   context.setActivity(activity);
@@ -24,9 +22,7 @@ test('it clears the displaced live simulation and broadcasts the displacement', 
   expect(context.getActivity()).toBeNull();
   expect(context.getWriterDisplacedActivityID()).toBe(activity.id);
 
-  await connection.waitForMessages(1);
-
-  expect(connection.received).toStrictEqual([
+  expect(context.getBroadcasts()).toStrictEqual([
     { activityID: activity.id, type: WorkerMessageType.WriterDisplaced },
   ]);
 });
@@ -47,9 +43,8 @@ test('it leaves an unrelated live run untouched while still recording the displa
   expect(context.getWriterDisplacedActivityID()).toBe('some-other-activity');
 });
 
-test('it skips entirely once a registration has superseded the eviction', async () => {
-  const connection = createTestConnection();
-  const context = createStubWorkerContext({ connections: [connection.port] });
+test('it skips entirely once a registration has superseded the eviction', () => {
+  const context = createStubWorkerContext();
   const activity = createMockActivityData();
 
   context.setActivity(activity);
@@ -58,12 +53,5 @@ test('it skips entirely once a registration has superseded the eviction', async 
 
   expect(context.getActivity()).toStrictEqual(activity);
   expect(context.getWriterDisplacedActivityID()).toBeNull();
-
-  // posted on the worker's own port after the call settles, this arrives after anything the call
-  // broadcast on the same channel — an empty prefix proves it stayed silent
-  connection.port.postMessage({ type: WorkerMessageType.WriterReady });
-
-  await connection.waitForMessages(1);
-
-  expect(connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
+  expect(context.getBroadcasts()).toStrictEqual([]);
 });

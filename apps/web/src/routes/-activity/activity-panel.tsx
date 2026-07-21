@@ -8,6 +8,7 @@ import { ScreenLayout } from '../../components/screen-layout';
 import { buildCurrentActivityQueryOptions } from '../../lib/activity/build-current-activity-query-options';
 import { useActivityRewards } from '../../lib/activity/use-activity-rewards';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
+import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
 import { sendIdleStopActivity } from '../../lib/idle/send-idle-stop-activity';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { activityClient } from '../../lib/rpc/clients/activity-client';
@@ -58,12 +59,19 @@ export function ActivityPanel() {
     avatarID === undefined || activityID === undefined
       ? undefined
       : () => {
-          const transport = idleWorkerHandle.transport;
+          const client = idleWorkerHandle.client;
 
-          if (transport === undefined) {
+          if (client === undefined) {
             void safe(activityClient.stopActivity({ activityID, avatarID }));
           } else {
-            sendIdleStopActivity(transport, avatarID, activityID);
+            runIgnoringRejection(
+              sendIdleStopActivity(
+                client,
+                avatarID,
+                activityID,
+                idleWorkerHandle.writerAbortSignal,
+              ),
+            );
           }
 
           void navigate({ to: '/explore' });

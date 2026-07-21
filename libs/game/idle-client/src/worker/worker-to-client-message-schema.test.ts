@@ -36,20 +36,6 @@ test('it accepts a well-formed failure-action-status message', () => {
   });
 });
 
-test('it accepts a well-formed initial-state message', () => {
-  const message = {
-    rewardSlotLedger: { activityID: null, entries: [{ count: 2, version: 1 }] },
-    state: { failureAction: ActivityFailureAction.Abort },
-    type: WorkerMessageType.InitialState,
-    writerDisplacedActivityID: null,
-  };
-
-  expect(workerToClientMessageSchema.safeParse(message)).toMatchObject({
-    data: message,
-    success: true,
-  });
-});
-
 test('it accepts a well-formed offline-cap-status message', () => {
   const message = { halted: true, remainingMs: 0, type: WorkerMessageType.OfflineCapStatus };
 
@@ -97,19 +83,6 @@ test('it accepts a well-formed simulation-update message', () => {
   });
 });
 
-test('it accepts a well-formed start-status message', () => {
-  const message = {
-    requestID: 'request_1',
-    status: { activityID: 'activity_1', kind: 'attached' },
-    type: WorkerMessageType.StartStatus,
-  };
-
-  expect(workerToClientMessageSchema.safeParse(message)).toMatchObject({
-    data: message,
-    success: true,
-  });
-});
-
 test('it accepts a well-formed writer-displaced message', () => {
   const message = { activityID: 'activity_1', type: WorkerMessageType.WriterDisplaced };
 
@@ -139,12 +112,10 @@ test('it rejects a resync-status message with an undeclared status kind', () => 
   );
 });
 
-test('it rejects an initial-state message whose nested snapshot is malformed', () => {
+test('it rejects a simulation-update message whose nested snapshot is malformed', () => {
   const result = workerToClientMessageSchema.safeParse({
-    rewardSlotLedger: { activityID: null, entries: [] },
     state: { failureAction: 'ignore' },
-    type: WorkerMessageType.InitialState,
-    writerDisplacedActivityID: null,
+    type: WorkerMessageType.SimulationUpdate,
   });
 
   expect(result.success).toBeFalse();
