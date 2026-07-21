@@ -40,7 +40,7 @@ test('it reports the error tagged with its capture site', async () => {
   expect(recorded[0]?.exception?.values?.[0]?.value).toBe('resync exploded');
 });
 
-test('it forwards extra tags beside the capture site', async () => {
+test('it forwards extra tags and keeps the capture site over a colliding tag', async () => {
   const previousHandle = sentryHandle.current;
   const recorded: Array<Readonly<ErrorEvent>> = [];
 
@@ -57,7 +57,10 @@ test('it forwards extra tags beside the capture site', async () => {
     disableDefaultIntegrations: true,
   });
 
-  reportWorkerFault('checkpoint-flush', new Error('flush stalled'), { traceID: 'trace_1' });
+  reportWorkerFault('checkpoint-flush', new Error('flush stalled'), {
+    site: 'not-the-capture-site',
+    traceID: 'trace_1',
+  });
 
   await waitFor(() => {
     expect(recorded).toHaveLength(1);

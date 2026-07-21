@@ -31,12 +31,12 @@ export function reportWorkerFault(
   }
 
   sentry.withScope((scope) => {
-    scope.setTag('site', site);
-
     for (const [key, value] of Object.entries(tags ?? {})) {
       scope.setTag(key, value);
     }
 
+    // set last so a caller's tags can never overwrite the capture site
+    scope.setTag('site', site);
     sentry.captureException(error);
   });
 }
