@@ -26,9 +26,9 @@ type RunReconstructionResult =
  * that reaches its terminal checkpoint before matching the confirmed count can never reproduce the
  * rest of the server's stream, so that's reported as a divergence rather than a result to attach.
  */
-export async function runReconstruction(
+export function runReconstruction(
   options: Readonly<RunReconstructionOptions>,
-): Promise<RunReconstructionResult> {
+): RunReconstructionResult {
   invariant(
     options.appendedHead >= 1,
     'reconstruction requires at least one confirmed checkpoint to target',
@@ -49,7 +49,7 @@ export async function runReconstruction(
   let lastCheckpoint: ActivityCheckpoint | undefined;
 
   while (count < options.appendedHead) {
-    const checkpoint = await simulation.run(timestepMs);
+    const checkpoint = simulation.run(timestepMs);
 
     if (checkpoint === null) {
       continue;

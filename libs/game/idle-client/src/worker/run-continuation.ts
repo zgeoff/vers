@@ -66,7 +66,7 @@ export async function runContinuation(
       await parkContinuation(activity, signals);
     }
 
-    await stopAndReset(context, simulation);
+    stopAndReset(context, simulation);
 
     // called inner-to-inner: this flow already holds the mailbox turn, and queueing a resync
     // behind itself would deadlock. An automatic continuation never claims the writer — the
@@ -76,7 +76,7 @@ export async function runContinuation(
     return;
   }
 
-  await stopAndReset(context, simulation);
+  stopAndReset(context, simulation);
 
   if (!isDefinedError(error)) {
     if (!signals.stop.aborted) {
@@ -110,8 +110,8 @@ async function startContinuationFrom(
  * still owns the runtime; a concurrent stop may have installed its own replacement, which must
  * not be evicted.
  */
-async function stopAndReset(context: WorkerContext, simulation: Simulation): Promise<void> {
-  await simulation.stopActivity();
+function stopAndReset(context: WorkerContext, simulation: Simulation): void {
+  simulation.stopActivity();
 
   if (context.getSimulation() === simulation) {
     resetSimulation(context);

@@ -348,7 +348,7 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
   let checkpoint: ActivityCheckpoint | null = null;
 
   while (checkpoint === null) {
-    checkpoint = await simulation.run(SIMULATION_TIMESTEP_MS);
+    checkpoint = simulation.run(SIMULATION_TIMESTEP_MS);
   }
 
   await ctx.context.getSubmitter().submit(activity.id, checkpoint);
@@ -460,7 +460,7 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
   let checkpoint: ActivityCheckpoint | null = null;
 
   while (checkpoint === null) {
-    checkpoint = await simulation.run(SIMULATION_TIMESTEP_MS);
+    checkpoint = simulation.run(SIMULATION_TIMESTEP_MS);
   }
 
   // proves the fresh continuation's registration actually happened: an unregistered activity's
@@ -508,7 +508,7 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
   let checkpoint: ActivityCheckpoint | null = null;
 
   while (checkpoint === null) {
-    checkpoint = await simulation.run(SIMULATION_TIMESTEP_MS);
+    checkpoint = simulation.run(SIMULATION_TIMESTEP_MS);
   }
 
   await ctx.context.getSubmitter().submit(activity.id, checkpoint);

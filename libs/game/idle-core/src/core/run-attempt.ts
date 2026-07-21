@@ -34,6 +34,7 @@ interface RunAttemptResult {
  * the caller's. The result is committed only when its terminal landed at or under
  * `maxDurationMs`; the tick that crosses the budget contributes nothing.
  */
+// oxlint-disable-next-line typescript/require-await -- kept async so cross-package callers can keep awaiting this driver-facing API; the engine step itself is synchronous
 export async function runAttempt(
   activity: ActivityInput,
   avatar: AvatarData,
@@ -47,7 +48,7 @@ export async function runAttempt(
   const checkpoints: Array<ActivityCheckpoint> = [];
 
   while (simulation.elapsed < config.maxDurationMs) {
-    const checkpoint = await simulation.run(timestepMs);
+    const checkpoint = simulation.run(timestepMs);
 
     if (simulation.elapsed > config.maxDurationMs) {
       break;
@@ -68,7 +69,7 @@ export async function runAttempt(
     }
   }
 
-  await simulation.stopActivity();
+  simulation.stopActivity();
 
   return { checkpoints: [], elapsed: simulation.elapsed, outcome: 'exceeded-budget' };
 }

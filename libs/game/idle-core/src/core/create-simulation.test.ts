@@ -37,19 +37,18 @@ test('it calls an event listener when starting an activity', () => {
   expect(listenerSpy).toHaveBeenCalledExactlyOnceWith(simulation.state);
 });
 
-test('it stops an activity', async () => {
+test('it stops an activity', () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityInput();
   const simulation = createSimulation();
 
   simulation.startActivity(avatarData, activityData);
-
-  await simulation.stopActivity();
+  simulation.stopActivity();
 
   expect(simulation.activity).toBeNull();
 });
 
-test('it calls an event listener when stopping an activity', async () => {
+test('it calls an event listener when stopping an activity', () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityInput();
   const simulation = createSimulation();
@@ -57,8 +56,7 @@ test('it calls an event listener when stopping an activity', async () => {
 
   simulation.addEventListener('stopped', listenerSpy);
   simulation.startActivity(avatarData, activityData);
-
-  await simulation.stopActivity();
+  simulation.stopActivity();
 
   expect(listenerSpy).toHaveBeenCalledExactlyOnceWith(simulation.state);
 });
@@ -105,14 +103,14 @@ test('it resets the avatar when restarting an activity', () => {
   expect(simulation.state.avatar?.life).toBe(100);
 });
 
-test('it runs an activity and returns checkpoints', async () => {
+test('it runs an activity and returns checkpoints', () => {
   const avatarData = createMockAvatarData();
   const simulation = createSimulation();
   const activityData = createMockActivityInput();
 
   simulation.startActivity(avatarData, activityData);
 
-  const firstCheckpoint = await simulation.run(100);
+  const firstCheckpoint = simulation.run(100);
 
   expect(firstCheckpoint).toStrictEqual({
     nextSeed: expect.toBeString(),
@@ -123,7 +121,7 @@ test('it runs an activity and returns checkpoints', async () => {
     type: ActivityCheckpointType.Started,
   });
 
-  const secondCheckpoint = await simulation.run(10_000);
+  const secondCheckpoint = simulation.run(10_000);
 
   expect(secondCheckpoint).toStrictEqual({
     nextSeed: expect.toBeString(),
@@ -136,7 +134,7 @@ test('it runs an activity and returns checkpoints', async () => {
   expect(simulation.elapsed).toBe(10_100);
 });
 
-test('it calls an event listener when the state updates', async () => {
+test('it calls an event listener when the state updates', () => {
   const avatarData = createMockAvatarData();
   const simulation = createSimulation();
   const activityData = createMockActivityInput();
@@ -146,10 +144,10 @@ test('it calls an event listener when the state updates', async () => {
   simulation.startActivity(avatarData, activityData);
 
   // skip our initialisation state
-  await simulation.run(1);
+  simulation.run(1);
 
   // run long enough for an attack cycle to occur
-  await simulation.run(5000);
+  simulation.run(5000);
 
   expect(listenerSpy).toHaveBeenCalledExactlyOnceWith(simulation.state);
 });
@@ -190,7 +188,7 @@ test('it calls an event listener when the failure action updates', () => {
   expect(listenerSpy).toHaveBeenCalledExactlyOnceWith(simulation.state);
 });
 
-test('it produces an identical checkpoint stream with and without an updated listener', async () => {
+test('it produces an identical checkpoint stream with and without an updated listener', () => {
   const avatarData = createMockAvatarData();
   const activityData = createMockActivityInput();
   const withoutListener = createSimulation();
@@ -198,9 +196,9 @@ test('it produces an identical checkpoint stream with and without an updated lis
   withoutListener.startActivity(avatarData, activityData);
 
   const checkpointsWithoutListener = [
-    await withoutListener.run(1),
-    await withoutListener.run(5000),
-    await withoutListener.run(10_000),
+    withoutListener.run(1),
+    withoutListener.run(5000),
+    withoutListener.run(10_000),
   ];
 
   const withListener = createSimulation();
@@ -209,9 +207,9 @@ test('it produces an identical checkpoint stream with and without an updated lis
   withListener.startActivity(avatarData, activityData);
 
   const checkpointsWithListener = [
-    await withListener.run(1),
-    await withListener.run(5000),
-    await withListener.run(10_000),
+    withListener.run(1),
+    withListener.run(5000),
+    withListener.run(10_000),
   ];
 
   expect(checkpointsWithListener).toStrictEqual(checkpointsWithoutListener);
