@@ -145,10 +145,10 @@ export interface WorkerContext {
   readonly setWriterDisplacedActivityID: (activityID: null | string) => void;
 
   /**
-   * Moves the worker's tracked connectivity to the given state, broadcasting the connection
-   * status to every tab only on an actual transition — every path that learns the connection's
-   * state (native online/offline events, a tab's report, a flush outcome) routes through here, so
-   * per-batch outcomes never spam repeat broadcasts.
+   * Moves the worker's tracked connectivity to the given state — worker-internal, driving only
+   * the reconnect-recovery decision; nothing is broadcast to tabs. Every path that learns the
+   * connection's state (native online/offline events, a tab's report, a flush outcome) routes
+   * through here.
    */
   readonly updateConnectivity: (online: boolean) => void;
 }
