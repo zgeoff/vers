@@ -43,7 +43,6 @@ test('it applies damage to the first living enemy', () => {
   firstEnemy?.receiveDamage(100);
 
   const event: AvatarAttackEvent = {
-    id: 'event-1',
     source: avatar.id,
     time: 100,
     type: CombatEventType.AvatarAttack,

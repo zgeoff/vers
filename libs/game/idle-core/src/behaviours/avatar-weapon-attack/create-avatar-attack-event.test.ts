@@ -13,7 +13,6 @@ test('it creates an avatar attack event', () => {
   const event = createAvatarAttackEvent(avatar, time);
 
   expect(event).toStrictEqual({
-    id: expect.toBeString(),
     source: avatar.id,
     time,
     type: CombatEventType.AvatarAttack,

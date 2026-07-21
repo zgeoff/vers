@@ -18,6 +18,13 @@ test('it derives its id from its wave index', () => {
   expect(wave.id).toBe('wave-3');
 });
 
+test('it derives each enemy id from the wave id and the enemy position within the wave', () => {
+  const ctx = createMockSimulationContext();
+  const wave = createWave(2, [createMockEnemyData(), createMockEnemyData()], ctx);
+
+  expect(wave.enemies.map((enemy) => enemy.id)).toStrictEqual(['wave-2-enemy-0', 'wave-2-enemy-1']);
+});
+
 test('it returns the correct remaining count as enemies are killed', () => {
   const enemyData = createMockEnemyData({
     life: 100,

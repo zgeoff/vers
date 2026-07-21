@@ -15,9 +15,9 @@ import { createEnemy } from './create-enemy';
 test('it creates an enemy with correct initial values', () => {
   const ctx = createMockSimulationContext();
   const data = createMockEnemyData();
-  const enemy = createEnemy(data, ctx);
+  const enemy = createEnemy('test-enemy', data, ctx);
 
-  expect(enemy.id).toBeString();
+  expect(enemy.id).toBe('test-enemy');
   expect(enemy.level).toBe(data.level);
   expect(enemy.name).toBe(data.name);
   expect(enemy.type).toBe(EntityType.Enemy);
@@ -30,7 +30,7 @@ test('it creates an enemy with correct initial values', () => {
 test('it exposes a method for setting the enemy state', () => {
   const ctx = createMockSimulationContext();
   const data = createMockEnemyData();
-  const enemy = createEnemy(data, ctx);
+  const enemy = createEnemy('test-enemy', data, ctx);
 
   enemy.setState((draftState) => {
     draftState.life = 9999;
@@ -46,7 +46,7 @@ test('it reduces life and updates status when killed', () => {
     life: 100,
   });
 
-  const enemy = createEnemy(data, ctx);
+  const enemy = createEnemy('test-enemy', data, ctx);
 
   enemy.receiveDamage(10);
 
@@ -127,7 +127,7 @@ test('it allows removing behaviours', () => {
 test('it returns the expected enemy state for a client app', () => {
   const ctx = createMockSimulationContext();
   const data = createMockEnemyData();
-  const enemy = createEnemy(data, ctx);
+  const enemy = createEnemy('test-enemy', data, ctx);
   const state = enemy.getSnapshot();
 
   expect(state).toStrictEqual({

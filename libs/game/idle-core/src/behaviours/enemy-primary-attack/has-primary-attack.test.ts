@@ -14,7 +14,7 @@ test('it returns true when enemy has a primary attack', () => {
   });
 
   const ctx = createMockSimulationContext();
-  const enemy = createEnemy(enemyData, ctx);
+  const enemy = createEnemy('test-enemy', enemyData, ctx);
   const result = hasPrimaryAttack(enemy);
 
   expect(result).toBeTrue();

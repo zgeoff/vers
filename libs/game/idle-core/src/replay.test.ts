@@ -298,6 +298,55 @@ test('it replays a failed attempt to an identical checkpoint stream', async () =
   `);
 });
 
+/**
+ * This seed/difficulty/level combination's wave lands two enemies' attacks on the exact same
+ * tick, and the first one applied kills the avatar before the second's damage roll draws from
+ * the rng — the scenario `create-event-sorter.ts`'s executor-assigned sequence exists to order
+ * deterministically. Reordering that tick's application changes how many draws the run consumes,
+ * so this fixture's `nextSeed` pins the executor's schedule-order tie-break at the replay level,
+ * not just the unit level.
+ */
+test('it replays a same-tick multi-enemy avatar-death stream to an identical checkpoint stream', async () => {
+  const input = buildSimulationInput({
+    avatarID: 'avatar-golden-divergence',
+    buildSnapshot: { level: 2, xp: 0 },
+    contentVersion: '1',
+    encounterNode: { difficulty: 8 },
+    id: 'activity-golden-divergence',
+    seed: buildStateFromSeed(4),
+  });
+
+  const result = await runAttempt(input.activity, input.avatar, { maxDurationMs: 600_000 });
+
+  expect(result).toMatchInlineSnapshot(`
+    {
+      "checkpoints": [
+        {
+          "nextSeed": "fffffffffffffffb0000000400000000",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 0,
+          },
+          "seed": "fffffffffffffffb0000000400000000",
+          "time": 0,
+          "type": "started",
+        },
+        {
+          "nextSeed": "cae74db90a879eb757eb51948b1b6fdb",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 0,
+          },
+          "time": 10000,
+          "type": "failed",
+        },
+      ],
+      "elapsed": 10100,
+      "outcome": "failed",
+    }
+  `);
+});
+
 test('it replays a retrying multi-attempt stream to an identical checkpoint stream', async () => {
   const input = buildSimulationInput(
     {

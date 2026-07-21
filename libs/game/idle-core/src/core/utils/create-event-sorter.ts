@@ -1,12 +1,12 @@
-import type { Avatar, CombatEvent } from '../../types';
+import type { Avatar, ScheduledCombatEvent } from '../../types';
 
 /**
  * Orders combat events into a deterministic total order: ascending time, then the avatar's own
- * events before others' at an equal timestamp, then by event id so same-source ties resolve the
- * same way regardless of the order the events were scheduled in.
+ * events before others' at an equal timestamp, then by the executor-assigned sequence number so
+ * same-source ties resolve in the order the events were scheduled.
  */
 export function createEventSorter(avatar: Avatar) {
-  return (a: CombatEvent, b: CombatEvent) => {
+  return (a: ScheduledCombatEvent, b: ScheduledCombatEvent) => {
     const timeDiff = a.time - b.time;
 
     if (timeDiff !== 0) {
@@ -20,14 +20,6 @@ export function createEventSorter(avatar: Avatar) {
       return aIsAvatar ? -1 : 1;
     }
 
-    if (a.id < b.id) {
-      return -1;
-    }
-
-    if (a.id > b.id) {
-      return 1;
-    }
-
-    return 0;
+    return a.sequence - b.sequence;
   };
 }
