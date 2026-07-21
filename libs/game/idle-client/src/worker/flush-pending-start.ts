@@ -36,8 +36,8 @@ export async function flushPendingStart(
     return { outcome: 'capped' };
   }
 
-  // a row-minting call: aborting it client-side would lose the only handle on whether the server
-  // still mints the row, so it runs unsigned and settles for the compensation below to target
+  // runs unsigned: the response is the only handle on the minted row, and the stop-back
+  // compensation needs it
   const [error, started] = await safe(
     context.getClient().startActivity({
       avatarID: intent.avatarID,

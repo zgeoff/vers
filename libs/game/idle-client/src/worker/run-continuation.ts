@@ -34,10 +34,10 @@ export async function runContinuation(
 
   const signals: FlowSignals = { cancel: context.getCancelSignal(), stop: context.getStopSignal() };
 
-  // a row-minting call, keyed by the terminal row it succeeds: aborting it client-side would lose
-  // the only handle on whether the server still mints the row, so it runs unsigned and settles
-  // for the compensation below to target it. A retried delivery dedupes onto the first attempt's
-  // row, while the next continuation carries a new key and conflicts as a distinct intent
+  // Runs unsigned — the response is the only handle on the minted row, and the stop-back
+  // compensation needs it. Keyed by the terminal row it succeeds: a retried delivery dedupes onto
+  // the first attempt's row, while the next continuation carries a new key and conflicts as a
+  // distinct intent.
   const [error, started] = await safe(
     context.getClient().startActivity({
       avatarID: activity.avatarID,

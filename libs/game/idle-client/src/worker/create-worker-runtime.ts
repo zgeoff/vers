@@ -77,8 +77,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let failureActionDirty = false;
   let failureActionPushInFlight = false;
 
-  // the shutdown controller lives for the runtime's whole lifetime; the stop controller is
-  // replaced on every player stop, and the cancel composite is recomputed alongside it
+  // the cancel composite is rebuilt once per stop scope, never per read — each `AbortSignal.any`
+  // registers a dependent on the long-lived shutdown signal that only collects with it
   const shutdownController = new AbortController();
   let stopController = new AbortController();
 

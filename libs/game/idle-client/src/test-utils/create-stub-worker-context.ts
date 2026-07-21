@@ -17,9 +17,8 @@ interface CreateStubWorkerContextOptions {
   readonly remainingBudgetMs?: number;
 
   /**
-   * The runtime-lifetime shutdown controller a real worker's `stop()` aborts. A test that needs to
-   * simulate shutdown — permanent, unlike a stop scope's own reset-on-advance — creates its own
-   * controller, passes it here, and aborts it directly.
+   * The runtime-lifetime shutdown controller. A test that simulates worker teardown passes its
+   * own controller and aborts it directly.
    */
   readonly shutdownController?: AbortController;
 

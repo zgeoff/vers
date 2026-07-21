@@ -23,11 +23,10 @@ export interface WorkerConnection {
 }
 
 /**
- * The two cancellation causes a lifecycle flow captures once at entry and threads through every
- * subsequent await: `stop` is the player-stop-only cause every compensation branch tests, since a
- * shutdown must never trigger a stop-back compensation for a run that should survive a worker
- * reload; `cancel` additionally folds in worker shutdown, for cancelling in-flight reads that no
- * compensation can carry a minted row through.
+ * The cancellation signals a lifecycle flow captures once at entry: `stop` carries the player-stop
+ * cause alone and is what compensation branches test — a run must survive a worker reload, so
+ * shutdown never triggers a stop-back. `cancel` folds in worker shutdown and cancels in-flight
+ * reads.
  */
 export interface FlowSignals {
   readonly cancel: AbortSignal;
@@ -43,7 +42,7 @@ export interface FlowSignals {
 export interface WorkerContext {
   /**
    * Marks a player-raised stop: aborts the current stop scope's signal and installs a fresh one.
-   * Every async flow that installs a simulation or starts a server row captures `getStopSignal` at
+   * Every async flow that installs a simulation or starts a server row captures the stop signal at
    * entry and re-checks it after each await, abandoning its install when a stop landed in between —
    * an in-flight resync or continuation must never revive a run the player just ended.
    */
@@ -109,10 +108,8 @@ export interface WorkerContext {
 
   /**
    * The composite of the current stop scope's signal and the runtime-lifetime shutdown signal,
-   * cached once per stop scope — recomputed only inside `advanceStopScope`, never per call, since
-   * minting a fresh `AbortSignal.any` on every read would pile up dependent-signal registrations
-   * on the long-lived shutdown signal. Threaded into cancellation-safe request options; a pure
-   * unwind with nothing to compensate may `throwIfAborted()` on it directly.
+   * stable within a stop scope. Threaded into cancellation-safe request options; a pure unwind
+   * with nothing to compensate may `throwIfAborted()` on it directly.
    */
   readonly getCancelSignal: () => AbortSignal;
 

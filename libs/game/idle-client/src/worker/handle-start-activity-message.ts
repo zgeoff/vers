@@ -18,8 +18,7 @@ import type { StartStatus, WorkerMessage } from './worker-to-client-message-sche
  * targeted, and retries. The claim is taken at arrival and re-checked after every await — a
  * fresher request can land while this turn runs, and a superseded flow reports `failed`, leaving
  * its minted row to the fresher flow's recovery. A stop landing mid-start stops the minted row
- * back durably. An abort — a stop or shutdown cancelling the entry check before any row is
- * minted — settles as `failed` too, without a fault report.
+ * back durably. An abort settles as `failed` without a fault report.
  */
 export async function handleStartActivityMessage(
   context: WorkerContext,
@@ -59,11 +58,11 @@ async function runStart(
     return { kind: 'failed' };
   }
 
-  // a pure unwind with nothing to compensate yet — no row is minted below this point
+  // a pure unwind: no row has been minted yet, so there is nothing to compensate
   signals.cancel.throwIfAborted();
 
-  // a row-minting call: aborting it client-side would lose the only handle on whether the server
-  // still mints the row, so it runs unsigned and settles for the compensation below to target it
+  // start calls mint a server row and run unsigned: the response is the only handle on the minted
+  // row, and the stop-back compensation needs it
   const [error, started] = await safe(
     context.getClient().startActivity({
       avatarID: message.avatarID,
@@ -115,7 +114,6 @@ async function runStart(
     return { kind: 'failed' };
   }
 
-  // a row-minting call, excluded from the signal for the same reason as the first attempt above
   const [retryError, retried] = await safe(
     context.getClient().startActivity({
       avatarID: message.avatarID,

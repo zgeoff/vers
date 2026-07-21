@@ -44,9 +44,8 @@ interface ActivityState {
 
   /**
    * Whether the most recent flush attempt held its batch for retry — a transport failure or an
-   * undeclared server error. A held-batch retry loop's wrapped attempt reads this once `flush`
-   * (and any fold-in re-flush it chained) has fully settled, to decide whether to throw and drive
-   * another backoff step or return and end the loop.
+   * undeclared server error. Valid only once the attempt (and any fold-in re-flush it chained)
+   * has fully settled.
    */
   held: boolean;
   inFlight: boolean;
@@ -57,8 +56,8 @@ interface ActivityState {
 
   /**
    * The one retry loop running for this activity, present only while a held batch is being
-   * retried. Aborting it supersedes the loop — a fresh backoff sequence starts from a fresh
-   * controller, replacing the generation-bump scheme a numeric epoch would need.
+   * retried. Aborting it supersedes the loop; the next held batch starts a fresh backoff
+   * sequence from a fresh controller.
    */
   retryController: AbortController | undefined;
   startChainIndex: number;
@@ -193,9 +192,8 @@ interface CreateCheckpointSubmitterOptions {
   readonly scheduleFlush?: (flush: () => Promise<void>) => void;
 
   /**
-   * Overrides a held batch's retry backoff timings — test-only, so a suite can assert the retry
-   * loop's observable behavior (a held batch re-flushing, a superseding `flushHeld`) without
-   * waiting out `RETRY_BACKOFF_CAP_MS` in real time.
+   * Overrides a held batch's retry backoff timings — test-only, so a suite can drive the retry
+   * loop without waiting out real backoff delays.
    */
   readonly retryTimings?: { readonly maxTimeout: number; readonly minTimeout: number };
 
@@ -248,15 +246,11 @@ export function createCheckpointSubmitter(
 
   /**
    * Starts a per-activity backoff loop for a held batch, unless one is already running — at most
-   * one retry is ever pending per activity, so a failure while a loop runs reports held and defers
-   * to it, keeping retry chains from multiplying into a request storm during an outage. `p-retry`
-   * runs its first attempt immediately with no delay, so that attempt is a placeholder that always
-   * throws — the triggering failure already happened, and this keeps the first real retry waiting
-   * out the base backoff instead of re-flushing in the same tick. Every attempt after that
-   * re-flushes and, once any fold-in re-flush it triggers has fully settled, throws to drive the
-   * next backoff step while the batch stays held, or returns to end the loop once it doesn't. The
-   * loop ends silently on abort — a superseding `flushHeld` or worker shutdown — with no unhandled
-   * rejection.
+   * one retry is ever pending per activity, so retry chains never multiply into a request storm
+   * during an outage. `p-retry` runs its first attempt immediately with no delay, so that attempt
+   * is a placeholder that always throws, making the first real retry wait out the base backoff
+   * instead of re-flushing in the same tick. The loop ends silently on abort — a superseding
+   * `flushHeld` or worker shutdown.
    */
   const startRetryLoopIfNeeded = (
     activityID: string,

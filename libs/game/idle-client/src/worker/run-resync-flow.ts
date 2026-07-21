@@ -43,10 +43,8 @@ import type { ResyncStatus, WorkerMessage } from './worker-to-client-message-sch
  * silent so a fresh login never opens it. An outright failure reports the fault and broadcasts
  * `failed`, never a connection-status change, and never rejects — a tab's retry re-signals it.
  * `UNAUTHORIZED` broadcasts `session-expired` instead, with no fault report: the only remedy is
- * a fresh sign-in, so the tab renders that rather than a futile retry. An abort — a stop or
- * shutdown cancelling an in-flight read — settles silently: the stop that raised it already reset
- * the runtime and broadcast the cleared snapshot, so a `failed` broadcast would flash an error for
- * a deliberate stop.
+ * a fresh sign-in, so the tab renders that rather than a futile retry. An abort settles silently
+ * — broadcasting `failed` would flash an error for a deliberate stop.
  */
 export async function runResyncFlow(
   context: WorkerContext,
