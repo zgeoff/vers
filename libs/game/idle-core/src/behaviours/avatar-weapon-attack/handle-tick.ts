@@ -11,8 +11,6 @@ export function handleTick(
   behaviour: AvatarWeaponAttackBehaviour,
   executor: CombatExecutor,
 ): void {
-  const label = createLogLabel('avatar', entity.id);
-
   // loop to allow high APS to function correctly w/ server simulation batching
   while (isAttackReady(entity, behaviour.state, executor)) {
     const time = getNextAttackTime(entity, behaviour.state);
@@ -24,6 +22,6 @@ export function handleTick(
       draft.lastAttackTime = time;
     });
 
-    logger.debug(`${label} scheduled attack at ${event.time}`);
+    logger.debug(() => `${createLogLabel('avatar', entity.id)} scheduled attack at ${event.time}`);
   }
 }

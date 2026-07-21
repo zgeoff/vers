@@ -53,6 +53,30 @@ test('it processes events', () => {
   expect(avatar.life).toBe(60);
 });
 
+test('it processes a tick with a single scheduled event', () => {
+  const enemyData = createMockEnemyData({
+    life: 100,
+    primaryAttack: {
+      maxDamage: 40,
+      minDamage: 40,
+      speed: 1,
+    },
+  });
+
+  // default avatar weapon speed (0.8, 1.25s interval) keeps the avatar from attacking within this
+  // 1s tick, so only the enemy's attack is scheduled
+  const avatarData = createMockAvatarData({ life: 200 });
+  const activityData = createMockActivityInput({ encounter: { waves: [[enemyData]] } });
+  const ctx = createMockSimulationContext();
+  const avatar = createAvatar(avatarData, ctx);
+  const activity = createActivity(activityData, ctx);
+  const combatExecutor = createCombatExecutor(activity, avatar, ctx);
+
+  combatExecutor.run(1000);
+
+  expect(avatar.life).toBe(160);
+});
+
 test('it returns the expected combat executor state for a client app', () => {
   const ctx = createMockSimulationContext();
   const activity = createActivity(createMockActivityInput(), ctx);

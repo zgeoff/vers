@@ -2,7 +2,6 @@ import type { AvatarBehaviour, Behaviour, BehaviourID, EnemyBehaviour } from './
 import type { CombatExecutor } from './combat';
 import type { SetEntityStateFn } from './core';
 import type { EquipmentSlot, EquipmentWeapon } from './equipment';
-import type { SimulationContext } from './simulation';
 
 export interface AvatarData {
   id: string;
@@ -41,7 +40,7 @@ interface IEntity<State extends object, EntitySnapshot extends object> {
   // oxlint-disable-next-line typescript/method-signature-style -- subtypes narrow the behaviour param; method syntax keeps the bivariant check that permits it
   registerBehaviour(behaviour: Behaviour): void;
   getSnapshot: () => EntitySnapshot;
-  handleTick: (combatExecutor: CombatExecutor, ctx: SimulationContext) => void;
+  handleTick: (combatExecutor: CombatExecutor) => void;
   removeBehaviour: (id: BehaviourID) => void;
   setState: (setStateFn: SetEntityStateFn<State>) => void;
 
