@@ -488,16 +488,16 @@ test('it cancels an in-flight resync read on stop() without stopping the row bac
 
   runtime.stop();
 
-  // a start queued behind the resync's lifecycle turn only runs once that turn settles, proving
-  // the cancelled read didn't strand it hanging on the mailbox
+  // a start queued behind the resync's lifecycle turn only runs once that turn settles — its own
+  // entry check sees the now-permanently-aborted cancel signal and answers failed, proving the
+  // cancelled read didn't strand it hanging on the mailbox
   const status = await testClient.startActivity({
     avatarID: 'stop-cancel-avatar',
     scopeID: 'scope-after-stop',
     scopeType: 'world_map_node',
   });
 
-  expect(status.kind).not.toBe('failed');
-
+  expect(status.kind).toBe('failed');
   expect(recorded).toStrictEqual([]);
 
   const row = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
