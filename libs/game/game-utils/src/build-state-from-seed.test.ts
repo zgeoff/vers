@@ -14,6 +14,21 @@ test('it produces a reproducible draw sequence from a seed-derived state', () =>
   const secondSeries = Array.from({ length: 10 }, () => second.getInt(0, 100));
 
   expect(firstSeries).toStrictEqual(secondSeries);
+
+  expect(firstSeries).toMatchInlineSnapshot(`
+    [
+      84,
+      62,
+      70,
+      32,
+      71,
+      53,
+      23,
+      79,
+      60,
+      34,
+    ]
+  `);
 });
 
 test('it scrambles seed zero to a valid non-zero state', () => {

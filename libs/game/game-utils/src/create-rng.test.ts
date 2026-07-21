@@ -17,8 +17,30 @@ test('it generates a deterministic array of integers with the given seed', () =>
   const rng = createRNG(buildStateFromSeed(35_131_234));
   const series = Array.from({ length: 20 }, () => rng.getInt(0, 100));
 
-  expect(series).toHaveLength(20);
-  expect(series).toSatisfyAll((value: number) => typeof value === 'number');
+  expect(series).toMatchInlineSnapshot(`
+    [
+      33,
+      33,
+      42,
+      31,
+      100,
+      76,
+      47,
+      95,
+      23,
+      43,
+      28,
+      65,
+      95,
+      67,
+      35,
+      18,
+      90,
+      0,
+      34,
+      65,
+    ]
+  `);
 });
 
 test('it round-trips a snapshotted state back to the identical string', () => {
