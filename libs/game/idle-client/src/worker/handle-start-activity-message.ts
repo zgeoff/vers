@@ -1,7 +1,5 @@
 import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
-import { ClientMessageType, WorkerMessageType } from '../types';
-import type { StartActivityMessage } from './client-to-worker-message-schema';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { isAbortError } from './is-abort-error';
 import { reportWorkerFault } from './report-worker-fault';
@@ -9,22 +7,34 @@ import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
 import type { FlowSignals, WorkerContext } from './types';
 import { withLifecycleTurn } from './with-lifecycle-turn';
-import type { StartStatus, WorkerMessage } from './worker-to-client-message-schema';
+import type { StartStatus } from './worker-contract';
+
+interface StartActivityInput {
+  readonly avatarID: string;
+  readonly scopeID: string;
+  readonly scopeType: string;
+}
 
 /**
- * Begins a run entirely inside the worker, broadcasting the outcome as a start status keyed by
- * the request id. A same-scope `CONFLICT` resyncs onto the running row, reporting `attached`
- * only once the runtime holds it; a different-scope `CONFLICT` flushes that row, stops it
- * targeted, and retries. The claim is taken at arrival and re-checked after every await — a
- * fresher request can land while this turn runs, and a superseded flow reports `failed`, leaving
- * its minted row to the fresher flow's recovery. A stop landing mid-start stops the minted row
- * back durably. An abort settles as `failed` without a fault report.
+ * Begins a run entirely inside the worker, answering with the outcome directly. A same-scope
+ * `CONFLICT` resyncs onto the running row, answering `attached` only once the runtime holds it; a
+ * different-scope `CONFLICT` flushes that row, stops it targeted, and retries. The call mints a
+ * fresh worker-internal token at entry and re-checks it after every await — a fresher call can
+ * land while this turn runs, and a superseded flow answers `failed`, leaving its minted row to the
+ * fresher flow's recovery. A stop landing mid-start stops the minted row back durably. An abort
+ * settles as `failed` without a fault report.
  */
 export async function handleStartActivityMessage(
   context: WorkerContext,
-  message: StartActivityMessage,
-): Promise<void> {
-  context.setStartRequestID(message.requestID);
+  input: Readonly<StartActivityInput>,
+): Promise<StartStatus> {
+  const token = crypto.randomUUID();
+
+  context.setStartToken(token);
+
+  // withLifecycleTurn discards its callback's return value, so the outcome is captured here and
+  // returned once the turn settles rather than threaded through it
+  let status: StartStatus = { kind: 'failed' };
 
   await withLifecycleTurn(context, 'start', async () => {
     const signals: FlowSignals = {
@@ -32,29 +42,29 @@ export async function handleStartActivityMessage(
       stop: context.getStopSignal(),
     };
 
-    // failures settle as a failed status rather than escaping into the mailbox's fault report —
-    // a tab is always waiting on this request id
+    // failures settle as a failed status rather than escaping into the mailbox's fault report
     try {
-      const status = await runStart(context, message, signals);
-
-      emitStartStatus(context, message.requestID, status);
+      status = await runStart(context, input, token, signals);
     } catch (error) {
       if (!isAbortError(error, signals.cancel)) {
         reportWorkerFault('start', error);
       }
 
-      emitStartStatus(context, message.requestID, { kind: 'failed' });
+      status = { kind: 'failed' };
     }
   });
+
+  return status;
 }
 
 async function runStart(
   context: WorkerContext,
-  message: StartActivityMessage,
+  input: Readonly<StartActivityInput>,
+  token: string,
   signals: Readonly<FlowSignals>,
 ): Promise<StartStatus> {
   // a queued flow may be stale before it ever runs
-  if (isSuperseded(context, message)) {
+  if (isSuperseded(context, token)) {
     return { kind: 'failed' };
   }
 
@@ -65,15 +75,15 @@ async function runStart(
   // row, and the stop-back compensation needs it
   const [error, started] = await safe(
     context.getClient().startActivity({
-      avatarID: message.avatarID,
-      scopeID: message.scopeID,
-      scopeType: message.scopeType,
-      startKey: message.requestID,
+      avatarID: input.avatarID,
+      scopeID: input.scopeID,
+      scopeType: input.scopeType,
+      startKey: token,
     }),
   );
 
   if (error === null) {
-    return setLiveStartedRow(context, message, started, signals);
+    return setLiveStartedRow(context, token, started, signals);
   }
 
   if (!isDefinedError(error) || error.code !== 'CONFLICT') {
@@ -90,8 +100,8 @@ async function runStart(
   // the requested scope is already running — a resync attaches its confirmed stream, claiming
   // the writer since the player's start is a deliberate attach; called inner-to-inner, since
   // queueing a turn from inside this turn would deadlock the mailbox
-  if (row.scopeType === message.scopeType && row.scopeID === message.scopeID) {
-    await runResyncFlow(context, message.avatarID, true, signals);
+  if (row.scopeType === input.scopeType && row.scopeID === input.scopeID) {
+    await runResyncFlow(context, input.avatarID, true, signals);
 
     // a resync can be skipped, gated, or abandoned without installing; reporting attached anyway
     // would leave the tab waiting forever on a run that never arrives
@@ -102,24 +112,24 @@ async function runStart(
     return { activityID: row.id, kind: 'attached' };
   }
 
-  // a superseded request must not stop a row the fresher selection may be attaching to
-  if (isSuperseded(context, message)) {
+  // a superseded call must not stop a row the fresher selection may be attaching to
+  if (isSuperseded(context, token)) {
     return { kind: 'failed' };
   }
 
   // replace flow: earned checkpoints land before the stop closes the row to appends
   await context.getSubmitter().flushNow(row.id);
 
-  if (!(await stopConflictingRow(context, row.id, message.avatarID))) {
+  if (!(await stopConflictingRow(context, row.id, input.avatarID))) {
     return { kind: 'failed' };
   }
 
   const [retryError, retried] = await safe(
     context.getClient().startActivity({
-      avatarID: message.avatarID,
-      scopeID: message.scopeID,
-      scopeType: message.scopeType,
-      startKey: message.requestID,
+      avatarID: input.avatarID,
+      scopeID: input.scopeID,
+      scopeType: input.scopeType,
+      startKey: token,
     }),
   );
 
@@ -131,11 +141,11 @@ async function runStart(
     return { kind: 'failed' };
   }
 
-  return setLiveStartedRow(context, message, retried, signals);
+  return setLiveStartedRow(context, token, retried, signals);
 }
 
-function isSuperseded(context: WorkerContext, message: StartActivityMessage): boolean {
-  return context.getStartRequestID() !== message.requestID;
+function isSuperseded(context: WorkerContext, token: string): boolean {
+  return context.getStartToken() !== token;
 }
 
 /**
@@ -196,7 +206,7 @@ async function stopConflictingRow(
 
 async function setLiveStartedRow(
   context: WorkerContext,
-  message: StartActivityMessage,
+  token: string,
   row: Readonly<ActivityData>,
   signals: Readonly<FlowSignals>,
 ): Promise<StartStatus> {
@@ -207,33 +217,17 @@ async function setLiveStartedRow(
     return { kind: 'failed' };
   }
 
-  if (isSuperseded(context, message)) {
+  if (isSuperseded(context, token)) {
     return { kind: 'failed' };
   }
 
-  await handleSetActivityMessage(context, { activity: row, type: ClientMessageType.SetActivity });
+  await handleSetActivityMessage(context, { activity: row });
 
-  // the install's registration await is this flow's last yield; a request that arrived during it
+  // the install's registration await is this flow's last yield; a call that arrived during it
   // owns the claim, and its queued flow will replace this install
-  if (isSuperseded(context, message)) {
+  if (isSuperseded(context, token)) {
     return { kind: 'failed' };
   }
 
   return { activity: row, kind: 'started' };
-}
-
-function emitStartStatus(
-  context: WorkerContext,
-  requestID: string,
-  status: Readonly<StartStatus>,
-): void {
-  const message = {
-    requestID,
-    status,
-    type: WorkerMessageType.StartStatus,
-  } satisfies WorkerMessage;
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
-  }
 }

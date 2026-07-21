@@ -12,10 +12,10 @@ import invariant from 'tiny-invariant';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import { createTestConnection } from '../test-utils/create-test-connection';
 import { WorkerMessageType } from '../types';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
+import type { WorkerMessage } from './worker-to-client-message-schema';
 
 interface SetupTestConfig {
   readonly userID: string;
@@ -286,13 +286,7 @@ test('it skips the continuation when a fresher activity replaced this row mid-su
 });
 
 test('it halts at the boundary instead of continuing once the offline budget is spent', async () => {
-  const connection = createTestConnection();
-
-  const context = createStubWorkerContext({
-    connections: [connection.port],
-    remainingBudgetMs: 0,
-  });
-
+  const context = createStubWorkerContext({ remainingBudgetMs: 0 });
   const simulation = createSimulation();
   const startedSpy = mock<SimulationListener>();
   const stoppedSpy = mock<SimulationListener>();
@@ -310,9 +304,7 @@ test('it halts at the boundary instead of continuing once the offline budget is 
   expect(startedSpy).not.toHaveBeenCalled();
   expect(stoppedSpy).not.toHaveBeenCalled();
 
-  await connection.waitForMessages(1);
-
-  expect(connection.received).toPartiallyContain({
+  expect(context.getBroadcasts()).toPartiallyContain({
     halted: true,
     remainingMs: 0,
     type: 'offline_cap_status',
@@ -336,16 +328,6 @@ test('it stops an aborted failure even when the budget is spent', async () => {
 });
 
 test('it broadcasts a reward-slot ledger message for each submitted checkpoint that earns slots', async () => {
-  const channel = new MessageChannel();
-
-  const received: Array<unknown> = [];
-
-  channel.port2.addEventListener('message', (event) => {
-    received.push(event.data);
-  });
-
-  channel.port2.start();
-
   let nextVersion = 1;
 
   const submitter: CheckpointSubmitter = {
@@ -363,7 +345,7 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
     removeEviction: () => {},
   };
 
-  const context = createStubWorkerContext({ connections: [channel.port1], submitter });
+  const context = createStubWorkerContext({ submitter });
   const simulation = createSimulation();
   const avatar = createMockAvatarData();
 
@@ -382,18 +364,14 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
 
   await runSimulationSteps(context, simulation, 100, 700);
 
-  // MessagePort delivery is a queued task; yield once so every broadcast lands
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
-
-  const rewardMessages = received.filter(
-    (message): message is { rewardSlotCount: number; type: string; version: number } =>
-      typeof message === 'object' &&
-      message !== null &&
-      'type' in message &&
-      message.type === 'reward_slots_recorded',
-  );
+  const rewardMessages = context
+    .getBroadcasts()
+    .filter(
+      (
+        message,
+      ): message is Extract<WorkerMessage, { type: WorkerMessageType.RewardSlotsRecorded }> =>
+        message.type === WorkerMessageType.RewardSlotsRecorded,
+    );
 
   expect(rewardMessages.length).toBeGreaterThan(0);
   expect(rewardMessages.every((message) => message.rewardSlotCount > 0)).toBeTrue();
@@ -404,19 +382,9 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
 });
 
 test('it never broadcasts a ledger message for a checkpoint the submitter dropped', async () => {
-  const channel = new MessageChannel();
-
-  const received: Array<unknown> = [];
-
-  channel.port2.addEventListener('message', (event) => {
-    received.push(event.data);
-  });
-
-  channel.port2.start();
-
   // the default mock context's submitter always resolves `undefined`, standing in for a
   // dropped checkpoint (an unattached or already-invalid activity)
-  const context = createStubWorkerContext({ connections: [channel.port1] });
+  const context = createStubWorkerContext();
   const simulation = createSimulation();
   const avatar = createMockAvatarData();
 
@@ -435,29 +403,15 @@ test('it never broadcasts a ledger message for a checkpoint the submitter droppe
 
   await runSimulationSteps(context, simulation, 100, 700);
 
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
-
-  const rewardMessages = received.filter(
-    (message): message is { type: string } =>
-      typeof message === 'object' &&
-      message !== null &&
-      'type' in message &&
-      message.type === 'reward_slots_recorded',
-  );
+  const rewardMessages = context
+    .getBroadcasts()
+    .filter((message) => message.type === WorkerMessageType.RewardSlotsRecorded);
 
   expect(rewardMessages).toStrictEqual([]);
 });
 
 test('it broadcasts an activity completed message when an activity completes', async () => {
-  const connection = createTestConnection();
-
-  const context = createStubWorkerContext({
-    connections: [connection.port],
-    remainingBudgetMs: 0,
-  });
-
+  const context = createStubWorkerContext({ remainingBudgetMs: 0 });
   const simulation = createSimulation();
   const avatar = createMockAvatarData();
 
@@ -476,11 +430,9 @@ test('it broadcasts an activity completed message when an activity completes', a
 
   await runSimulationSteps(context, simulation, 100, 700);
 
-  await connection.waitForMessages(1);
-
-  const completedMessages = connection.received.filter(
-    (message) => message.type === WorkerMessageType.ActivityCompleted,
-  );
+  const completedMessages = context
+    .getBroadcasts()
+    .filter((message) => message.type === WorkerMessageType.ActivityCompleted);
 
   expect(completedMessages).toStrictEqual([
     { activityID: activity.id, type: WorkerMessageType.ActivityCompleted },
@@ -488,8 +440,7 @@ test('it broadcasts an activity completed message when an activity completes', a
 });
 
 test('it never broadcasts an activity completed message for a failed activity', async () => {
-  const connection = createTestConnection();
-  const context = createStubWorkerContext({ connections: [connection.port] });
+  const context = createStubWorkerContext();
   const simulation = createSimulation();
 
   // life of 1 dies on the very first hit taken, forcing a failed checkpoint
@@ -500,14 +451,9 @@ test('it never broadcasts an activity completed message for a failed activity', 
 
   await runSimulationSteps(context, simulation, 100, 50);
 
-  // MessagePort delivery is a queued task; yield once so every broadcast lands
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
-
-  const completedMessages = connection.received.filter(
-    (message) => message.type === WorkerMessageType.ActivityCompleted,
-  );
+  const completedMessages = context
+    .getBroadcasts()
+    .filter((message) => message.type === WorkerMessageType.ActivityCompleted);
 
   expect(completedMessages).toStrictEqual([]);
 });

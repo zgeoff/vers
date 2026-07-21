@@ -3,12 +3,10 @@ import { createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { waitFor } from '@vers/test-utils';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import { createTestConnection } from '../test-utils/create-test-connection';
 import { registerSimulationListeners } from './register-simulation-listeners';
 
 test('it broadcasts a simulation update once the installed simulation reports one', async () => {
-  const connection = createTestConnection();
-  const context = createStubWorkerContext({ connections: [connection.port] });
+  const context = createStubWorkerContext();
   const simulation = createSimulation();
 
   context.setSimulation(simulation);
@@ -22,6 +20,6 @@ test('it broadcasts a simulation update once the installed simulation reports on
   }
 
   await waitFor(() => {
-    expect(connection.received).toPartiallyContain({ type: 'simulation_update' });
+    expect(context.getBroadcasts()).toPartiallyContain({ type: 'simulation_update' });
   });
 });

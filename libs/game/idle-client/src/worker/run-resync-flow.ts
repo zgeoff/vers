@@ -30,7 +30,7 @@ import { resetSimulation } from './reset-simulation';
 import { submitStopIntent } from './submit-stop-intent';
 import type { FlowSignals, WorkerContext } from './types';
 import { updateWriterDisplacedStatus } from './update-writer-displaced-status';
-import type { ResyncStatus, WorkerMessage } from './worker-to-client-message-schema';
+import type { ResyncStatus } from './worker-to-client-message-schema';
 
 /**
  * Runs one resync end to end — the mailbox-inner body: the reconnect recovery queues it as a
@@ -550,11 +550,7 @@ async function setLiveSimulationOrStopBack(
 }
 
 function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>): void {
-  const message = { status, type: WorkerMessageType.ResyncStatus } satisfies WorkerMessage;
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
-  }
+  context.broadcast({ status, type: WorkerMessageType.ResyncStatus });
 }
 
 function emitDivergence(context: WorkerContext, activityID: string): void {
@@ -563,38 +559,16 @@ function emitDivergence(context: WorkerContext, activityID: string): void {
     new Error(`checkpoint stream rejected for activity ${activityID}: reconstruction-divergence`),
   );
 
-  const message = {
-    activityID,
-    type: WorkerMessageType.CheckpointStreamInvalid,
-  } satisfies WorkerMessage;
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
-  }
+  context.broadcast({ activityID, type: WorkerMessageType.CheckpointStreamInvalid });
 }
 
 function emitFailureActionStatus(
   context: WorkerContext,
   failureAction: ActivityFailureAction,
 ): void {
-  const message = {
-    failureAction,
-    type: WorkerMessageType.FailureActionStatus,
-  } satisfies WorkerMessage;
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
-  }
+  context.broadcast({ failureAction, type: WorkerMessageType.FailureActionStatus });
 }
 
 function emitCapStatus(context: WorkerContext, remainingMs: number, halted: boolean): void {
-  const message = {
-    halted,
-    remainingMs,
-    type: WorkerMessageType.OfflineCapStatus,
-  } satisfies WorkerMessage;
-
-  for (const connection of context.connections) {
-    connection.postMessage(message);
-  }
+  context.broadcast({ halted, remainingMs, type: WorkerMessageType.OfflineCapStatus });
 }

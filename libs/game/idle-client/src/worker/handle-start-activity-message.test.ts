@@ -11,9 +11,7 @@ import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import { createTestConnection } from '../test-utils/create-test-connection';
-import { ClientMessageType, WorkerMessageType } from '../types';
-import type { StartActivityMessage } from './client-to-worker-message-schema';
+import { WorkerMessageType } from '../types';
 import { handleStartActivityMessage } from './handle-start-activity-message';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
@@ -23,7 +21,7 @@ interface SetupTestConfig {
 }
 
 /**
- * Builds an authed client acting as the given user, so start intents hit the same mint, conflict,
+ * Builds an authed client acting as the given user, so start calls hit the same mint, conflict,
  * and duplicate-start logic the real service applies to the rows the test seeds in the mock db.
  */
 async function setupTest(config: Readonly<SetupTestConfig>) {
@@ -32,30 +30,20 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
   return { client };
 }
 
-test('it mints a row, installs it, and broadcasts the started status', async () => {
+test('it mints a row, installs it, and answers with the started status', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  const connection = createTestConnection();
   const submitter = createStubSubmitter();
-
-  const context = createStubWorkerContext({
-    client: ctx.client,
-    connections: [connection.port],
-    submitter,
-  });
+  const context = createStubWorkerContext({ client: ctx.client, submitter });
 
   context.setSimulation(createSimulation());
 
-  const message: StartActivityMessage = {
+  const result = await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
-  };
-
-  await handleStartActivityMessage(context, message);
+  });
 
   const minted = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: viewer.avatar.id, status: 'active' }),
@@ -64,7 +52,6 @@ test('it mints a row, installs it, and broadcasts the started status', async () 
   invariant(minted !== undefined, 'expected the start to mint an active row');
 
   expect(minted.scopeID).toBe('a9lp75');
-  expect(minted.startKey).toBe(message.requestID);
   expect(context.getSimulation()?.activity?.id).toBe(minted.id);
   expect(context.getActivity()?.id).toBe(minted.id);
 
@@ -75,19 +62,9 @@ test('it mints a row, installs it, and broadcasts the started status', async () 
     startChainIndex: minted.startChainIndex,
   });
 
-  await connection.waitForMessages(1);
+  invariant(result.kind === 'started', 'expected a started status');
 
-  const report = connection.received.find(
-    (received) => received.type === WorkerMessageType.StartStatus,
-  );
-
-  invariant(report?.type === WorkerMessageType.StartStatus, 'expected a start status broadcast');
-
-  expect(report.requestID).toBe(message.requestID);
-
-  invariant(report.status.kind === 'started', 'expected a started status');
-
-  expect(report.status.activity.id).toBe(minted.id);
+  expect(result.activity.id).toBe(minted.id);
 });
 
 test('it installs a simulation even when none was initialized yet', async () => {
@@ -98,10 +75,8 @@ test('it installs a simulation even when none was initialized yet', async () => 
 
   await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
   });
 
   const minted = db.activityCollection.findFirst((q) =>
@@ -111,59 +86,6 @@ test('it installs a simulation even when none was initialized yet', async () => 
   invariant(minted !== undefined, 'expected the start to mint an active row');
 
   expect(context.getSimulation()?.activity?.id).toBe(minted.id);
-});
-
-test('it answers a duplicate delivery with the row the first attempt minted', async () => {
-  const viewer = await createViewer();
-  const ctx = await setupTest({ userID: viewer.user.id });
-
-  const connection = createTestConnection();
-
-  const context = createStubWorkerContext({
-    client: ctx.client,
-    connections: [connection.port],
-    submitter: createStubSubmitter(),
-  });
-
-  context.setSimulation(createSimulation());
-
-  const message: StartActivityMessage = {
-    avatarID: viewer.avatar.id,
-    requestID: 'request_start',
-    scopeID: 'a9lp75',
-    scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
-  };
-
-  // the first delivery already minted the row, keyed by this same request
-  const existing = await db.activityCollection.create({
-    avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
-    scopeType: 'world_map_node',
-    startKey: message.requestID,
-    status: 'active',
-  });
-
-  await handleStartActivityMessage(context, message);
-
-  const rows = db.activityCollection.findMany((q) => q.where({ avatarID: viewer.avatar.id }));
-
-  expect(rows).toHaveLength(1);
-  expect(context.getSimulation()?.activity?.id).toBe(existing.id);
-
-  await connection.waitForMessages(1);
-
-  const report = connection.received.find(
-    (received) => received.type === WorkerMessageType.StartStatus,
-  );
-
-  invariant(report?.type === WorkerMessageType.StartStatus, 'expected a start status broadcast');
-
-  expect(report.requestID).toBe(message.requestID);
-
-  invariant(report.status.kind === 'started', 'expected a started status');
-
-  expect(report.status.activity.id).toBe(existing.id);
 });
 
 test('it resyncs onto the already-active row when the same scope conflicts', async () => {
@@ -178,33 +100,19 @@ test('it resyncs onto the already-active row when the same scope conflicts', asy
     status: 'active',
   });
 
-  const connection = createTestConnection();
-
   const context = createStubWorkerContext({
     client: ctx.client,
-    connections: [connection.port],
     submitter: createStubSubmitter(),
   });
 
-  const message: StartActivityMessage = {
+  const result = await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
-  };
-
-  await handleStartActivityMessage(context, message);
+  });
 
   expect(context.getSimulation()?.activity?.id).toBe(running.id);
-
-  await connection.waitForMessages(1);
-
-  expect(connection.received).toContainEqual({
-    requestID: message.requestID,
-    status: { activityID: running.id, kind: 'attached' },
-    type: WorkerMessageType.StartStatus,
-  });
+  expect(result).toStrictEqual({ activityID: running.id, kind: 'attached' });
 });
 
 test('it flushes and stops a different scope before starting the requested one', async () => {
@@ -225,10 +133,8 @@ test('it flushes and stops a different scope before starting the requested one',
 
   await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
   });
 
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: previous.id }));
@@ -252,30 +158,20 @@ test('it stops the minted row back when a stop lands mid-start', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  const connection = createTestConnection();
-
   const context = createStubWorkerContext({
     client: ctx.client,
-    connections: [connection.port],
     submitter: createStubSubmitter(),
   });
 
   context.setSimulation(createSimulation());
 
-  const message: StartActivityMessage = {
-    avatarID: viewer.avatar.id,
-    requestID: 'request_start',
-    scopeID: 'a9lp75',
-    scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
-  };
-
-  // the stop lands while the start call is in flight
+  // the stop lands while the start call is in flight; the mock ignores the call's own token and
+  // always answers with this pre-minted row, standing in for the service's real answer
   const minted = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
-    startKey: message.requestID,
+    startKey: 'seed-key',
     status: 'active',
   });
 
@@ -287,7 +183,11 @@ test('it stops the minted row back when a stop lands mid-start', async () => {
     }),
   );
 
-  await handleStartActivityMessage(context, message);
+  const result = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
 
   const row = db.activityCollection.findFirst((q) => q.where({ id: minted.id }));
 
@@ -299,17 +199,10 @@ test('it stops the minted row back when a stop lands mid-start', async () => {
   const intent = await readPendingStopIntent();
 
   expect(intent).toBeUndefined();
-
-  await connection.waitForMessages(1);
-
-  expect(connection.received).toContainEqual({
-    requestID: message.requestID,
-    status: { kind: 'failed' },
-    type: WorkerMessageType.StartStatus,
-  });
+  expect(result).toStrictEqual({ kind: 'failed' });
 });
 
-test('it emits failed without reporting a fault when a worker shutdown aborts the entry check before any row mints', async () => {
+test('it answers failed without reporting a fault when a worker shutdown aborts the entry check before any row mints', async () => {
   const previousHandle = sentryHandle.current;
   const recorded: Array<Readonly<ErrorEvent>> = [];
 
@@ -326,8 +219,6 @@ test('it emits failed without reporting a fault when a worker shutdown aborts th
     disableDefaultIntegrations: true,
   });
 
-  const connection = createTestConnection();
-
   const shutdownController = new AbortController();
 
   // shutdown is permanent, unlike a stop scope's reset-on-advance — aborting it before the flow
@@ -335,39 +226,24 @@ test('it emits failed without reporting a fault when a worker shutdown aborts th
   shutdownController.abort();
 
   const context = createStubWorkerContext({
-    connections: [connection.port],
     shutdownController,
     submitter: createStubSubmitter(),
   });
 
-  const message: StartActivityMessage = {
+  const result = await handleStartActivityMessage(context, {
     avatarID: 'avatar_1',
-    requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
-  };
-
-  await handleStartActivityMessage(context, message);
+  });
 
   const minted = db.activityCollection.findMany((q) => q.where({ avatarID: 'avatar_1' }));
 
   expect(minted).toStrictEqual([]);
-
-  await connection.waitForMessages(1);
-
-  expect(connection.received).toStrictEqual([
-    {
-      requestID: message.requestID,
-      status: { kind: 'failed' },
-      type: WorkerMessageType.StartStatus,
-    },
-  ]);
-
+  expect(result).toStrictEqual({ kind: 'failed' });
   expect(recorded).toStrictEqual([]);
 });
 
-test('it abandons a superseded request without touching the fresher claim', async () => {
+test('it abandons a superseded call without touching the fresher claim', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
@@ -375,32 +251,28 @@ test('it abandons a superseded request without touching the fresher claim', asyn
 
   context.setSimulation(createSimulation());
 
-  const message: StartActivityMessage = {
-    avatarID: viewer.avatar.id,
-    requestID: 'request_start',
-    scopeID: 'a9lp75',
-    scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
-  };
-
   const minted = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
-    startKey: message.requestID,
+    startKey: 'seed-key',
     status: 'active',
   });
 
-  // a fresher selection claims the runtime while this request's start call is in flight
+  // a fresher selection claims the runtime while this call is in flight
   server.use(
     mockActivityService.startActivity.handler(() => {
-      context.setStartRequestID('a-fresher-request');
+      context.setStartToken('a-fresher-token');
 
       return minted;
     }),
   );
 
-  await handleStartActivityMessage(context, message);
+  await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
 
   const row = db.activityCollection.findFirst((q) => q.where({ id: minted.id }));
 
@@ -410,35 +282,18 @@ test('it abandons a superseded request without touching the fresher claim', asyn
   expect(context.getActivity()).toBeNull();
 });
 
-test('it broadcasts failed on a transport failure', async () => {
+test('it answers failed on a transport failure', async () => {
   server.use(mockActivityService.startActivity.handler(() => HttpResponse.error()));
 
-  const connection = createTestConnection();
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
 
-  const context = createStubWorkerContext({
-    connections: [connection.port],
-    submitter: createStubSubmitter(),
-  });
-
-  const message: StartActivityMessage = {
+  const result = await handleStartActivityMessage(context, {
     avatarID: 'avatar_1',
-    requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
-  };
+  });
 
-  await handleStartActivityMessage(context, message);
-
-  await connection.waitForMessages(1);
-
-  expect(connection.received).toStrictEqual([
-    {
-      requestID: message.requestID,
-      status: { kind: 'failed' },
-      type: WorkerMessageType.StartStatus,
-    },
-  ]);
+  expect(result).toStrictEqual({ kind: 'failed' });
 });
 
 test('it fails an attach the resync could not install', async () => {
@@ -453,11 +308,8 @@ test('it fails an attach the resync could not install', async () => {
     status: 'active',
   });
 
-  const connection = createTestConnection();
-
   const context = createStubWorkerContext({
     client: ctx.client,
-    connections: [connection.port],
     submitter: createStubSubmitter(),
   });
 
@@ -465,29 +317,19 @@ test('it fails an attach the resync could not install', async () => {
   // promise a row the runtime never installed
   server.use(mockActivityService.getLatestActivityProgress.handler(() => HttpResponse.error()));
 
-  const message: StartActivityMessage = {
+  const result = await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    requestID: 'request_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
-  };
-
-  await handleStartActivityMessage(context, message);
+  });
 
   expect(context.getSimulation().activity).toBeNull();
+  expect(result).toStrictEqual({ kind: 'failed' });
 
-  await connection.waitForMessages(2);
-
-  expect(connection.received).toStrictEqual([
+  expect(context.getBroadcasts()).toStrictEqual([
     {
       status: { avatarID: viewer.avatar.id, kind: 'failed' },
       type: WorkerMessageType.ResyncStatus,
-    },
-    {
-      requestID: message.requestID,
-      status: { kind: 'failed' },
-      type: WorkerMessageType.StartStatus,
     },
   ]);
 });
@@ -500,27 +342,19 @@ test('it runs interleaved starts one at a time, the fresher claim winning', asyn
 
   context.setSimulation(createSimulation());
 
-  const first: StartActivityMessage = {
-    avatarID: viewer.avatar.id,
-    requestID: 'request_first',
-    scopeID: 'esaxrt',
-    scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
-  };
-
-  const second: StartActivityMessage = {
-    avatarID: viewer.avatar.id,
-    requestID: 'request_second',
-    scopeID: 'a9lp75',
-    scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
-  };
-
-  // both messages land before either flow runs — the chain must run them in order, so the first
+  // both calls land before either flow runs — the chain must run them in order, so the first
   // completes fully before the second's conflict recovery replaces its row
   await Promise.all([
-    handleStartActivityMessage(context, first),
-    handleStartActivityMessage(context, second),
+    handleStartActivityMessage(context, {
+      avatarID: viewer.avatar.id,
+      scopeID: 'esaxrt',
+      scopeType: 'world_map_node',
+    }),
+    handleStartActivityMessage(context, {
+      avatarID: viewer.avatar.id,
+      scopeID: 'a9lp75',
+      scopeType: 'world_map_node',
+    }),
   ]);
 
   const active = db.activityCollection.findMany((q) =>
@@ -579,10 +413,8 @@ test('it takes over and stops a different scope another writer owns before start
 
   await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    requestID: 'request_takeover_start',
     scopeID: 'a9lp75',
     scopeType: 'world_map_node',
-    type: ClientMessageType.StartActivity,
   });
 
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: previous.id }));

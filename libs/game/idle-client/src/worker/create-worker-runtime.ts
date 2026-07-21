@@ -1,3 +1,5 @@
+import type { SupportedMessagePort } from '@orpc/client/message-port';
+import { RPCHandler } from '@orpc/server/message-port';
 import type { ActivityData } from '@vers/contract-activity';
 import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
@@ -7,23 +9,28 @@ import { createActivityServiceClient } from '../submission/create-activity-servi
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import type { ActivityServiceClient } from '../submission/types';
+import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
 import type { RewardSlotLedgerEntry } from '../types';
 import { applyEviction } from './apply-eviction';
-import { handleClientMessage } from './handle-client-message';
+import { createWorkerRouter } from './create-worker-router';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
 import { runReconnectRecovery } from './run-reconnect-recovery';
 import { runSimulation } from './run-simulation';
-import type { WorkerConnection, WorkerContext } from './types';
+import type { WorkerCallContext, WorkerContext } from './types';
 import { withLifecycleTurn } from './with-lifecycle-turn';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
 export interface WorkerRuntime {
-  readonly registerConnection: (connection: WorkerConnection) => void;
-  readonly connections: ReadonlySet<WorkerConnection>;
   readonly handleConnect: (event: MessageEvent) => void;
   readonly stop: () => void;
+
+  /**
+   * Upgrades an arbitrary structural port onto the runtime's router — the SharedWorker connect
+   * path's real port, or a web-locks demux's per-tab virtual one.
+   */
+  readonly upgrade: (port: SupportedMessagePort, callContext: WorkerCallContext) => void;
 
   /**
    * Delegates to `stop`, so a test can acquire the runtime with `using` and have teardown run on
@@ -51,23 +58,23 @@ interface CreateWorkerRuntimeOptions {
 }
 
 /**
- * Owns one worker process's connections, simulation, and fixed-timestep tick loop. Production
- * wiring (`worker.ts`) constructs exactly one runtime per worker, holding the
- * one-simulation-per-worker invariant.
+ * Owns one worker process's simulation, RPC router, and fixed-timestep tick loop. Production
+ * wiring (`worker.ts`, `worker-election.ts`) constructs exactly one runtime per worker, holding
+ * the one-simulation-per-worker invariant. The tick loop starts immediately at construction,
+ * decoupled from any connection: the elected web-locks writer must tick even before any tab calls
+ * in.
  */
 export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): WorkerRuntime {
   const timestep = options.timestep ?? SIMULATION_TIMESTEP_MS;
   const now = options.now ?? (() => performance.now());
-
-  const connections = new Set<WorkerConnection>();
-
   const client = options.client ?? createActivityServiceClient();
+
+  const broadcastChannel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
 
   // the worker always holds a simulation — "no run" is an empty one; listeners attach right
   // after the context literal below exists
   let simulation: Simulation = createSimulation();
   let activity: ActivityData | null = null;
-  let running = false;
   let stopped = false;
   let lastFrameTime = now();
   let accumulator = 0;
@@ -83,7 +90,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let stopController = new AbortController();
 
   let cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);
-  let startRequestID: null | string = null;
+  let startToken: null | string = null;
   let lifecycleTail: Readonly<Promise<void>> = Promise.resolve();
   let queuedClaimResync: null | string = null;
   let writerDisplacedActivityID: null | string = null;
@@ -92,10 +99,10 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   // every boot would fire a spurious recovery.
   let connectivityOnline = true;
 
-  // Every client message and the self-triggered reconnect resync await this before running, so a
+  // Every procedure call and the self-triggered reconnect resync await this before running, so a
   // relaunch-while-offline never plans against the enum's Abort default while the real cached
   // preference is still in flight. A failed read falls back to that default rather than rejecting
-  // forever, which would strand every handler that awaits this.
+  // forever, which would strand every caller awaiting it.
   const failureActionSeeded = (async () => {
     try {
       const cached = await readFailureActionCache();
@@ -103,6 +110,11 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       if (cached !== undefined) {
         failureAction = cached.failureAction;
         failureActionDirty = cached.dirty;
+
+        // the idle simulation constructed at startup carries its own default until told
+        // otherwise — an initialize answering before any run starts must see the seeded value
+        // in its snapshot, not the default the simulation booted with
+        simulation.setFailureAction(failureAction);
       }
     } catch (error) {
       reportWorkerFault('preference-seed', error);
@@ -115,10 +127,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let rewardSlotLedgerActivityID: null | string = null;
   let rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry> = [];
 
-  const emitWorkerMessage = (message: WorkerMessage) => {
-    for (const connection of connections) {
-      connection.postMessage(message);
-    }
+  const broadcast = (message: WorkerMessage) => {
+    broadcastChannel.postMessage(message);
   };
 
   const updateConnectivity = (online: boolean) => {
@@ -131,7 +141,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       lastAckAt = Date.now();
     },
     onCapped: () => {
-      emitWorkerMessage({ halted: true, remainingMs: 0, type: WorkerMessageType.OfflineCapStatus });
+      broadcast({ halted: true, remainingMs: 0, type: WorkerMessageType.OfflineCapStatus });
     },
 
     // Deferred to a lifecycle turn rather than acted on inline: the callback fires from inside a
@@ -181,7 +191,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
         tags,
       );
 
-      emitWorkerMessage({ activityID, type: WorkerMessageType.CheckpointStreamInvalid });
+      broadcast({ activityID, type: WorkerMessageType.CheckpointStreamInvalid });
     },
     signal: shutdownController.signal,
   });
@@ -194,7 +204,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
       cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);
     },
-    connections,
+    broadcast,
     getActivity: () => activity,
     getCancelSignal: () => cancelSignal,
     getClient: () => client,
@@ -208,7 +218,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     getSimulation: () => simulation,
     getLifecycleTail: () => lifecycleTail,
     getQueuedClaimResync: () => queuedClaimResync,
-    getStartRequestID: () => startRequestID,
+    getStartToken: () => startToken,
     getStopSignal: () => stopController.signal,
     getSubmitter: () => submitter,
     getWriterDisplacedActivityID: () => writerDisplacedActivityID,
@@ -224,9 +234,6 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
       rewardSlotLedgerActivityID = activityID;
       rewardSlotLedger = [entry];
-    },
-    removeConnection: (connection) => {
-      connections.delete(connection);
     },
     resetRewardSlotLedger: () => {
       rewardSlotLedgerActivityID = null;
@@ -256,8 +263,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     setLifecycleTail: (flow) => {
       lifecycleTail = flow;
     },
-    setStartRequestID: (requestID) => {
-      startRequestID = requestID;
+    setStartToken: (token) => {
+      startToken = token;
     },
     setSimulation: (newSimulation) => {
       simulation = newSimulation;
@@ -269,6 +276,10 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   };
 
   registerSimulationListeners(context, simulation);
+
+  const router = createWorkerRouter(context, failureActionSeeded);
+
+  const handler = new RPCHandler(router);
 
   // Fire-and-forget so event callbacks stay synchronous; the preference seed gates every
   // recovery so a relaunch-while-offline never plans against the enum default. The submitter's
@@ -285,42 +296,24 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     })();
   };
 
-  // cache our listeners so we can message them later
-  const registerConnection = (connection: WorkerConnection) => {
-    connections.add(connection);
-    connection.start?.();
-
-    connection.addEventListener('message', (messageEvent: MessageEvent<unknown>) => {
-      void (async () => {
-        try {
-          await failureActionSeeded;
-          await handleClientMessage(context, connection, messageEvent);
-        } catch (error) {
-          reportWorkerFault('message-routing', error);
-        }
-      })();
-    });
-
-    // Chrome fires 'close' when a MessagePort's peer disconnects (shipped 2024); Firefox/Safari
-    // support is unconfirmed, Bun fires no 'close' event at all, and broadcast channels never
-    // fire one — the explicit Disconnect message handled above is the reliable path.
-    connection.addEventListener('close', () => {
-      connections.delete(connection);
-    });
-
-    // ensure we're only running one loop per worker
-    if (!running) {
-      running = true;
-
-      scheduleTick();
-    }
+  const upgrade = (port: SupportedMessagePort, callContext: WorkerCallContext) => {
+    handler.upgrade(port, { context: callContext });
   };
 
   const handleConnect = (event: MessageEvent) => {
     const [port] = event.ports;
 
     invariant(port, 'port is required');
-    registerConnection(port);
+
+    // oRPC's message-port adapters use addEventListener only and never call start() themselves —
+    // a MessagePort driven that way stays paused until start() runs, so every call would hang
+    port.start();
+
+    upgrade(port, {
+      close: () => {
+        port.close();
+      },
+    });
   };
 
   // a fixed timestep keeps updates consistent: the worker isn't tied to UI updates and has no requestAnimationFrame
@@ -379,9 +372,12 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     shutdownController.abort();
     self.removeEventListener('online', handleOnline);
     self.removeEventListener('offline', handleOffline);
+    broadcastChannel.close();
   };
 
-  return { [Symbol.dispose]: stop, connections, handleConnect, registerConnection, stop };
+  scheduleTick();
+
+  return { [Symbol.dispose]: stop, handleConnect, stop, upgrade };
 }
 
 function wait(ms: number) {

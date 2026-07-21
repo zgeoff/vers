@@ -1,13 +1,15 @@
-import type { WorkerConnection, WorkerContext } from './types';
+import type { WorkerCallContext } from './types';
 
 /**
- * Chrome fires MessagePort's `close` event when its peer disconnects (shipped 2024); Firefox and
- * Safari support is unconfirmed and Bun fires no `close` event at all, so this explicit message is
- * the only disconnect path every environment and test can rely on. Only the SharedWorker transport
- * ever sends it — over the fallback's broadcast bridge, closing the runtime's one connection would
- * sever every tab at once.
+ * Releases whatever the transport holds for the calling connection: the real port on the
+ * `SharedWorker` path, this tab's entry in the web-locks demux's registry on the other. `RPCLink`
+ * has no close-notify of its own, so a tab calls this from its `pagehide` handler as the only
+ * reliable teardown signal every environment delivers. The release is deferred to a macrotask —
+ * closing synchronously here would race this very call's own answer, which still has to go out
+ * over the same connection.
  */
-export function handleDisconnectMessage(context: WorkerContext, connection: WorkerConnection) {
-  context.removeConnection(connection);
-  connection.close();
+export function handleDisconnectMessage(callContext: WorkerCallContext): void {
+  setTimeout(() => {
+    callContext.close();
+  }, 0);
 }
