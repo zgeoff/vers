@@ -1,6 +1,7 @@
 import type { ActorRef, Snapshot } from 'xstate';
-import { assign, setup } from 'xstate';
+import { assign, raise, setup } from 'xstate';
 import { buildMachineTypes } from './build-machine-types';
+import type { FlushOutcome } from './run-checkpoint-flush-attempt';
 import { runCheckpointFlushAttempt } from './run-checkpoint-flush-attempt';
 import { subscribeToShutdownAbort } from './subscribe-to-shutdown-abort';
 import type { ActivityServiceClient } from './types';
@@ -75,7 +76,28 @@ export interface CheckpointActivitySettledEvent {
   readonly type: 'CHILD_SETTLED';
 }
 
+/**
+ * A flush attempt's settled outcome restated as an internal machine event — raised from the
+ * invoke's `onDone` so each variant routes through its own narrowed transition. Outcomes that
+ * stop the stream with the queue discarded collapse into one `SETTLED_EVICTION` variant, since
+ * they differ only in whether the writer was displaced.
+ */
+type FlushSettledEvent =
+  | { readonly appendedHead: number; readonly type: 'SETTLED_CONFLICT' }
+  | { readonly appendedHead: number; readonly type: 'SETTLED_SUCCESS' }
+  | { readonly consecutiveFlushFailures: number; readonly type: 'SETTLED_TRANSPORT_FAILURE' }
+  | {
+      readonly appendedHead: number | undefined;
+      readonly error: unknown;
+      readonly type: 'SETTLED_CALLBACK_FAILED';
+    }
+  | { readonly sessionEvicted: boolean; readonly type: 'SETTLED_EVICTION' }
+  | { readonly type: 'SETTLED_EMPTY' }
+  | { readonly type: 'SETTLED_HELD_ERROR' }
+  | { readonly type: 'SETTLED_INVALID' };
+
 type CheckpointActivityEvent =
+  | FlushSettledEvent
   | { readonly type: 'FLUSH_DUE' }
   | { readonly type: 'FLUSH_HELD' }
   | { readonly type: 'FLUSH_NOW' }
@@ -83,53 +105,13 @@ type CheckpointActivityEvent =
   | { readonly isTerminal: boolean; readonly type: 'QUEUED'; readonly version: number };
 
 /**
- * Notifies the parent ref handed in at spawn, when there is one, that this activity has settled
- * into `evicted`. A machine started without a parent ref reports settlement nowhere — a no-op,
- * not an error.
- */
-function emitSettlementToParent(args: Readonly<{ context: CheckpointActivityContext }>): void {
-  args.context.parentRef?.send({
-    activityID: args.context.activityID,
-    sessionEvicted: args.context.sessionEvicted,
-    type: 'CHILD_SETTLED',
-  } satisfies CheckpointActivitySettledEvent);
-}
-
-/**
- * Applies one `QUEUED` event to context: the latest known queued version always advances, and
- * `terminalQueued` latches true — a hydrated or live terminal checkpoint never un-marks the
- * activity for eviction once its flush drains.
- */
-function buildQueuedContextUpdate(
-  args: Readonly<{
-    context: Readonly<CheckpointActivityContext>;
-    event: Readonly<Extract<CheckpointActivityEvent, { type: 'QUEUED' }>>;
-  }>,
-): Pick<CheckpointActivityContext, 'latestQueuedVersion' | 'terminalQueued'> {
-  return {
-    latestQueuedVersion: args.event.version,
-    terminalQueued: args.context.terminalQueued || args.event.isTerminal,
-  };
-}
-
-/**
- * `min(base * 2^attempt, cap)`, no jitter — parity with `p-retry`'s `factor: 2` backoff: the first
- * retry (`attempt` 0) waits a full base window.
- */
-function buildRetryBackoffMS(
-  retryTimings: Readonly<{ maxTimeout: number; minTimeout: number }>,
-  attempt: number,
-): number {
-  return Math.min(retryTimings.minTimeout * 2 ** attempt, retryTimings.maxTimeout);
-}
-
-/**
  * One activity's flush lifecycle: `idle` (nothing pending) → `scheduled` (a non-terminal
  * checkpoint armed the shared progress window) → `flushing` (one attempt in flight) →, on
  * failure, `retrying` (exponential backoff) until the batch lands, is rejected outright
  * (`invalid`), or the activity is displaced or drained (`evicted`). A flush request arriving in
- * `flushing` never cancels the in-flight attempt — it marks a fold-in flag consumed, in the same
- * macrostep as the attempt's completion, as an immediate re-flush.
+ * `flushing` never cancels the in-flight attempt — it sets `flushPending`, which the transient
+ * re-flush check on `idle` and `retrying` consumes, in the same macrostep as the attempt's
+ * settlement, as an immediate re-flush.
  */
 export const checkpointActivityMachine = setup({
   actors: { subscribeToShutdownAbort, runCheckpointFlushAttempt },
@@ -187,177 +169,9 @@ export const checkpointActivityMachine = setup({
           onInvalid: args.context.onInvalid,
           onServerContact: args.context.onServerContact,
         }),
-        onDone: [
-          {
-            actions: assign({
-              consecutiveFlushFailures: 0,
-              expectedHead: (args) =>
-                args.event.output.type === 'success'
-                  ? args.event.output.appendedHead
-                  : args.context.expectedHead,
-              sessionEvicted: false,
-            }),
-            guard: (args) =>
-              args.event.output.type === 'success' &&
-              args.context.terminalQueued &&
-              args.context.latestQueuedVersion !== undefined &&
-              args.event.output.appendedHead >= args.context.latestQueuedVersion,
-            target: 'evicted',
-          },
-          {
-            actions: assign({
-              consecutiveFlushFailures: 0,
-              expectedHead: (args) =>
-                args.event.output.type === 'capped'
-                  ? args.event.output.appendedHead
-                  : args.context.expectedHead,
-              sessionEvicted: (args) => args.event.output.type === 'session-evicted',
-            }),
-            guard: (args) =>
-              args.event.output.type === 'capped' ||
-              args.event.output.type === 'terminal' ||
-              args.event.output.type === 'session-evicted' ||
-              args.event.output.type === 'not-found',
-            target: 'evicted',
-          },
-          {
-            actions: assign({ consecutiveFlushFailures: 0 }),
-            guard: (args) => args.event.output.type === 'invalid',
-            target: 'invalid',
-          },
-          {
-            actions: assign({
-              consecutiveFlushFailures: 0,
-              expectedHead: (args) =>
-                args.event.output.type === 'conflict'
-                  ? args.event.output.appendedHead
-                  : args.context.expectedHead,
-              retryAttempt: 0,
-            }),
-            guard: (args) => args.event.output.type === 'conflict',
-            reenter: true,
-            target: 'flushing',
-          },
-          {
-            actions: [
-              (args) => {
-                args.context.onHeld?.(args.context.activityID);
-              },
-              assign({
-                consecutiveFlushFailures: (args) =>
-                  args.event.output.type === 'transport-failure'
-                    ? args.event.output.consecutiveFlushFailures
-                    : args.context.consecutiveFlushFailures,
-                flushPending: false,
-              }),
-            ],
-            guard: (args) =>
-              args.event.output.type === 'transport-failure' && args.context.flushPending,
-            reenter: true,
-            target: 'flushing',
-          },
-          {
-            actions: assign({
-              consecutiveFlushFailures: (args) =>
-                args.event.output.type === 'transport-failure'
-                  ? args.event.output.consecutiveFlushFailures
-                  : args.context.consecutiveFlushFailures,
-            }),
-            guard: (args) => args.event.output.type === 'transport-failure',
-            target: 'retrying',
-          },
-          {
-            actions: [
-              (args) => {
-                args.context.onHeld?.(args.context.activityID);
-              },
-              assign({ consecutiveFlushFailures: 0, flushPending: false }),
-            ],
-            guard: (args) =>
-              args.event.output.type === 'held-defined-error' && args.context.flushPending,
-            reenter: true,
-            target: 'flushing',
-          },
-          {
-            actions: assign({ consecutiveFlushFailures: 0 }),
-            guard: (args) => args.event.output.type === 'held-defined-error',
-            target: 'retrying',
-          },
-          {
-            actions: [
-              (args) => {
-                if (args.event.output.type === 'callback-failed') {
-                  args.context.onRetryFailed?.(args.context.activityID, args.event.output.error);
-                }
-              },
-              assign({
-                consecutiveFlushFailures: 0,
-                expectedHead: (args) =>
-                  args.event.output.type === 'callback-failed' &&
-                  args.event.output.appendedHead !== undefined
-                    ? args.event.output.appendedHead
-                    : args.context.expectedHead,
-                flushPending: false,
-              }),
-            ],
-            guard: (args) =>
-              args.event.output.type === 'callback-failed' && args.context.flushPending,
-            reenter: true,
-            target: 'flushing',
-          },
-          {
-            actions: [
-              (args) => {
-                if (args.event.output.type === 'callback-failed') {
-                  args.context.onRetryFailed?.(args.context.activityID, args.event.output.error);
-                }
-              },
-              assign({
-                consecutiveFlushFailures: 0,
-                expectedHead: (args) =>
-                  args.event.output.type === 'callback-failed' &&
-                  args.event.output.appendedHead !== undefined
-                    ? args.event.output.appendedHead
-                    : args.context.expectedHead,
-              }),
-            ],
-            guard: (args) => args.event.output.type === 'callback-failed',
-            target: 'idle',
-          },
-          {
-            actions: assign({
-              consecutiveFlushFailures: 0,
-              expectedHead: (args) =>
-                args.event.output.type === 'success'
-                  ? args.event.output.appendedHead
-                  : args.context.expectedHead,
-              flushPending: false,
-              retryAttempt: 0,
-            }),
-            guard: (args) => args.event.output.type === 'success' && args.context.flushPending,
-            reenter: true,
-            target: 'flushing',
-          },
-          {
-            actions: assign({
-              consecutiveFlushFailures: 0,
-              expectedHead: (args) =>
-                args.event.output.type === 'success'
-                  ? args.event.output.appendedHead
-                  : args.context.expectedHead,
-              retryAttempt: 0,
-            }),
-            guard: (args) => args.event.output.type === 'success',
-            target: 'idle',
-          },
-          {
-            actions: assign({ flushPending: false }),
-            guard: (args) => args.event.output.type === 'empty' && args.context.flushPending,
-            reenter: true,
-            target: 'flushing',
-          },
-          { target: 'idle' },
-        ],
+        onDone: {
+          actions: raise((args) => buildFlushSettledEvent(args.event.output)),
+        },
         src: 'runCheckpointFlushAttempt',
       },
       on: {
@@ -369,9 +183,75 @@ export const checkpointActivityMachine = setup({
             flushPending: true,
           })),
         },
+        SETTLED_CALLBACK_FAILED: {
+          actions: [
+            (args) => {
+              args.context.onRetryFailed?.(args.context.activityID, args.event.error);
+            },
+            assign({
+              consecutiveFlushFailures: 0,
+              expectedHead: (args) => args.event.appendedHead ?? args.context.expectedHead,
+            }),
+          ],
+          target: 'idle',
+        },
+        SETTLED_CONFLICT: {
+          actions: assign({
+            consecutiveFlushFailures: 0,
+            expectedHead: (args) => args.event.appendedHead,
+            retryAttempt: 0,
+          }),
+          reenter: true,
+          target: 'flushing',
+        },
+        SETTLED_EMPTY: { target: 'idle' },
+        SETTLED_EVICTION: {
+          actions: assign({
+            consecutiveFlushFailures: 0,
+            sessionEvicted: (args) => args.event.sessionEvicted,
+          }),
+          target: 'evicted',
+        },
+        SETTLED_HELD_ERROR: {
+          actions: assign({ consecutiveFlushFailures: 0 }),
+          target: 'retrying',
+        },
+        SETTLED_INVALID: {
+          actions: assign({ consecutiveFlushFailures: 0 }),
+          target: 'invalid',
+        },
+        SETTLED_SUCCESS: [
+          {
+            actions: assign({ consecutiveFlushFailures: 0 }),
+            guard: (args) =>
+              args.context.terminalQueued &&
+              args.context.latestQueuedVersion !== undefined &&
+              args.event.appendedHead >= args.context.latestQueuedVersion,
+            target: 'evicted',
+          },
+          {
+            actions: assign({
+              consecutiveFlushFailures: 0,
+              expectedHead: (args) => args.event.appendedHead,
+              retryAttempt: 0,
+            }),
+            target: 'idle',
+          },
+        ],
+        SETTLED_TRANSPORT_FAILURE: {
+          actions: assign({
+            consecutiveFlushFailures: (args) => args.event.consecutiveFlushFailures,
+          }),
+          target: 'retrying',
+        },
       },
     },
     idle: {
+      always: {
+        actions: assign({ flushPending: false }),
+        guard: (args) => args.context.flushPending,
+        target: 'flushing',
+      },
       on: {
         FLUSH_HELD: { actions: assign({ retryAttempt: 0 }), reenter: true, target: 'flushing' },
         FLUSH_NOW: { reenter: true, target: 'flushing' },
@@ -394,6 +274,11 @@ export const checkpointActivityMachine = setup({
           reenter: true,
           target: 'flushing',
         },
+      },
+      always: {
+        actions: assign({ flushPending: false }),
+        guard: (args) => args.context.flushPending,
+        target: 'flushing',
       },
       entry: (args) => {
         args.context.onHeld?.(args.context.activityID);
@@ -427,3 +312,89 @@ export const checkpointActivityMachine = setup({
     },
   },
 });
+
+/**
+ * Notifies the parent ref handed in at spawn, when there is one, that this activity has settled
+ * into `evicted`. A machine started without a parent ref reports settlement nowhere — a no-op,
+ * not an error.
+ */
+function emitSettlementToParent(args: Readonly<{ context: CheckpointActivityContext }>): void {
+  args.context.parentRef?.send({
+    activityID: args.context.activityID,
+    sessionEvicted: args.context.sessionEvicted,
+    type: 'CHILD_SETTLED',
+  } satisfies CheckpointActivitySettledEvent);
+}
+
+/**
+ * Restates a flush attempt's outcome as its internal `SETTLED_*` machine event, carrying only the
+ * fields the receiving transition acts on.
+ */
+function buildFlushSettledEvent(outcome: FlushOutcome): FlushSettledEvent {
+  switch (outcome.type) {
+    case 'callback-failed': {
+      return {
+        appendedHead: outcome.appendedHead,
+        error: outcome.error,
+        type: 'SETTLED_CALLBACK_FAILED',
+      };
+    }
+    case 'capped':
+    case 'not-found':
+    case 'terminal': {
+      return { sessionEvicted: false, type: 'SETTLED_EVICTION' };
+    }
+    case 'conflict': {
+      return { appendedHead: outcome.appendedHead, type: 'SETTLED_CONFLICT' };
+    }
+    case 'empty': {
+      return { type: 'SETTLED_EMPTY' };
+    }
+    case 'held-defined-error': {
+      return { type: 'SETTLED_HELD_ERROR' };
+    }
+    case 'invalid': {
+      return { type: 'SETTLED_INVALID' };
+    }
+    case 'session-evicted': {
+      return { sessionEvicted: true, type: 'SETTLED_EVICTION' };
+    }
+    case 'success': {
+      return { appendedHead: outcome.appendedHead, type: 'SETTLED_SUCCESS' };
+    }
+    case 'transport-failure': {
+      return {
+        consecutiveFlushFailures: outcome.consecutiveFlushFailures,
+        type: 'SETTLED_TRANSPORT_FAILURE',
+      };
+    }
+  }
+}
+
+/**
+ * Applies one `QUEUED` event to context: the latest known queued version always advances, and
+ * `terminalQueued` latches true — a hydrated or live terminal checkpoint never un-marks the
+ * activity for eviction once its flush drains.
+ */
+function buildQueuedContextUpdate(
+  args: Readonly<{
+    context: Readonly<CheckpointActivityContext>;
+    event: Readonly<Extract<CheckpointActivityEvent, { type: 'QUEUED' }>>;
+  }>,
+): Pick<CheckpointActivityContext, 'latestQueuedVersion' | 'terminalQueued'> {
+  return {
+    latestQueuedVersion: args.event.version,
+    terminalQueued: args.context.terminalQueued || args.event.isTerminal,
+  };
+}
+
+/**
+ * `min(base * 2^attempt, cap)`, no jitter — parity with `p-retry`'s `factor: 2` backoff: the first
+ * retry (`attempt` 0) waits a full base window.
+ */
+function buildRetryBackoffMS(
+  retryTimings: Readonly<{ maxTimeout: number; minTimeout: number }>,
+  attempt: number,
+): number {
+  return Math.min(retryTimings.minTimeout * 2 ** attempt, retryTimings.maxTimeout);
+}
