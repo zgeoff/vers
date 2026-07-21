@@ -49,8 +49,8 @@ export function ActivityPanel() {
       : Math.max(0, activity.appendedHead - verifiedHead);
 
   // The worker owns the stop end to end — local halt, checkpoint flush, durable server delivery —
-  // so navigation never waits on the network and ending a run works offline. Without SharedWorker
-  // support there is no local simulation to halt, and the targeted server stop goes out directly,
+  // so navigation never waits on the network and ending a run works offline. With no transport
+  // mounted there is no local simulation to halt, and the targeted server stop goes out directly,
   // fire-and-forget: a failure must not strand the player on the dead engagement screen.
   const activityID = activity?.id;
 
@@ -58,12 +58,12 @@ export function ActivityPanel() {
     avatarID === undefined || activityID === undefined
       ? undefined
       : () => {
-          const worker = idleWorkerHandle.worker;
+          const transport = idleWorkerHandle.transport;
 
-          if (worker === undefined) {
+          if (transport === undefined) {
             void safe(activityClient.stopActivity({ activityID, avatarID }));
           } else {
-            sendIdleStopActivity(worker, avatarID, activityID);
+            sendIdleStopActivity(transport, avatarID, activityID);
           }
 
           void navigate({ to: '/explore' });

@@ -1,3 +1,4 @@
+import type { SimulationTransport } from '@vers/idle-client';
 import { createStartActivityMessage } from '@vers/idle-client';
 
 interface SendIdleStartActivityInput {
@@ -12,8 +13,8 @@ interface SendIdleStartActivityInput {
  * with a status carrying the same request id for the tab to correlate.
  */
 export function sendIdleStartActivity(
-  worker: Pick<SharedWorker, 'port'>,
+  transport: SimulationTransport,
   input: Readonly<SendIdleStartActivityInput>,
 ): void {
-  worker.port.postMessage(createStartActivityMessage(input));
+  transport.post(createStartActivityMessage(input));
 }

@@ -11,11 +11,11 @@ import { isReportOnlineMessage } from './is-report-online-message';
 import { isSetFailureActionMessage } from './is-set-failure-action-message';
 import { isStartActivityMessage } from './is-start-activity-message';
 import { isStopActivityMessage } from './is-stop-activity-message';
-import type { WorkerContext } from './types';
+import type { WorkerConnection, WorkerContext } from './types';
 
 export async function handleClientMessage(
   context: WorkerContext,
-  port: MessagePort,
+  connection: WorkerConnection,
   event: MessageEvent<ClientMessage>,
 ): Promise<void> {
   if (isInitializeMessage(event.data)) {
@@ -39,6 +39,6 @@ export async function handleClientMessage(
   }
 
   if (isDisconnectMessage(event.data)) {
-    handleDisconnectMessage(context, port);
+    handleDisconnectMessage(context, connection);
   }
 }

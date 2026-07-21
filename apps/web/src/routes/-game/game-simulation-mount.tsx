@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { setCheckpointFlushStall, useResyncStatus } from '@vers/idle-client';
+import { setCheckpointFlushStall, useResyncStatus, useWriterGeneration } from '@vers/idle-client';
 import { useEffect, useRef } from 'react';
 import { buildAvatarProgressionQueryOptions } from '../../lib/activity/build-avatar-progression-query-options';
 import { buildCurrentActivityQueryOptions } from '../../lib/activity/build-current-activity-query-options';
@@ -15,6 +15,7 @@ import { emitProductEvent } from '../../lib/product-events/emit-product-event';
 // completion the worker reported while unmounted
 let hasSentSessionStart = false;
 let lastEmittedCompletionID: string | undefined;
+const INITIALIZE_RETRY_MS = 1000;
 
 /**
  * A side-effect-only sibling to the game layout's outlet; renders nothing.
@@ -24,15 +25,34 @@ export function GameSimulationMount() {
   const queryClient = useQueryClient();
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const resyncStatus = useResyncStatus();
+  const writerGeneration = useWriterGeneration();
   const avatarID = avatarQuery.data?.id;
-  const hasSentOnlineReport = useRef(false);
+  const lastReportedGeneration = useRef<number | undefined>(undefined);
   const lastWorkerActivityID = useRef(idleWorkerHandle.activity?.id);
 
+  // send-and-retry until the worker answers with its initial state: on the fallback transport a
+  // post can land while no writer holds the lock (first load, a join mid-election, a succession
+  // gap) and is silently lost, and a writer promotion resets `initialized` to re-enter this loop
   useEffect(() => {
-    if (idleWorkerHandle.worker !== undefined && !idleWorkerHandle.initialized) {
-      sendIdleInitialize(idleWorkerHandle.worker);
+    const transport = idleWorkerHandle.transport;
+    const needsHandshake = transport !== undefined && !idleWorkerHandle.initialized;
+
+    const timer = needsHandshake
+      ? setInterval(() => {
+          sendIdleInitialize(transport);
+        }, INITIALIZE_RETRY_MS)
+      : undefined;
+
+    if (needsHandshake) {
+      sendIdleInitialize(transport);
     }
-  }, [idleWorkerHandle.worker, idleWorkerHandle.initialized]);
+
+    return () => {
+      if (timer !== undefined) {
+        clearInterval(timer);
+      }
+    };
+  }, [idleWorkerHandle.transport, idleWorkerHandle.initialized]);
 
   useEffect(() => {
     const streamError = idleWorkerHandle.checkpointStreamError;
@@ -75,31 +95,36 @@ export function GameSimulationMount() {
     setCheckpointFlushStall(null);
   }, [idleWorkerHandle.checkpointFlushStall]);
 
-  // reports once per page load, only once the worker has reported its initial state and an
-  // active avatar is known — a connectivity signal, not a resync command: the worker decides
+  // reports once per writer generation, only once the worker has reported its initial state and
+  // an active avatar is known — a connectivity signal, not a resync command: the worker decides
   // whether a catch-up follows, and an activity started fresh goes through SetActivity
   useEffect(() => {
     if (
-      idleWorkerHandle.worker === undefined ||
+      idleWorkerHandle.transport === undefined ||
       !idleWorkerHandle.initialized ||
       avatarID === undefined ||
-      hasSentOnlineReport.current
+      lastReportedGeneration.current === writerGeneration
     ) {
       return;
     }
 
-    hasSentOnlineReport.current = true;
+    // this mount's first report claims — a mount is the player arriving in the game (a page load
+    // or a deliberate navigation back), so a catch-up the worker schedules may take an active
+    // run's writer. A succession re-report while mounted is automatic and must never claim: a
+    // dying background tab's promotion would otherwise steal the writer from a device the player
+    // is actively driving.
+    const claim = lastReportedGeneration.current === undefined;
 
-    // a page load is a deliberate presence: the player opened the game here, so a catch-up the
-    // worker schedules may claim an active run's writer
-    sendIdleReportOnline(idleWorkerHandle.worker, avatarID, true);
-  }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID]);
+    lastReportedGeneration.current = writerGeneration;
+
+    sendIdleReportOnline(idleWorkerHandle.transport, avatarID, claim);
+  }, [idleWorkerHandle.transport, idleWorkerHandle.initialized, avatarID, writerGeneration]);
 
   // fires once per page load under the same gate as the resync: a live worker and a known avatar
   // is the point the player is actually in the game
   useEffect(() => {
     if (
-      idleWorkerHandle.worker === undefined ||
+      idleWorkerHandle.transport === undefined ||
       !idleWorkerHandle.initialized ||
       avatarID === undefined ||
       hasSentSessionStart
@@ -110,7 +135,7 @@ export function GameSimulationMount() {
     hasSentSessionStart = true;
 
     emitProductEvent('session_started', {});
-  }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID]);
+  }, [idleWorkerHandle.transport, idleWorkerHandle.initialized, avatarID]);
 
   useEffect(() => {
     const completedActivityID = idleWorkerHandle.lastCompletedActivityID;
@@ -128,12 +153,12 @@ export function GameSimulationMount() {
   // SharedWorker, so this is the reconnect signal there. The worker's flushes are idempotent and
   // its resync single-flights, so a duplicate relay is harmless
   useEffect(() => {
-    const worker = idleWorkerHandle.worker;
+    const transport = idleWorkerHandle.transport;
 
     const handleOnline = () => {
       // an automatic reconnect never claims the writer — the run may be live on another device
-      if (worker !== undefined && avatarID !== undefined) {
-        sendIdleReportOnline(worker, avatarID, false);
+      if (transport !== undefined && avatarID !== undefined) {
+        sendIdleReportOnline(transport, avatarID, false);
       }
     };
 
@@ -142,7 +167,7 @@ export function GameSimulationMount() {
     return () => {
       globalThis.removeEventListener('online', handleOnline);
     };
-  }, [idleWorkerHandle.worker, avatarID]);
+  }, [idleWorkerHandle.transport, avatarID]);
 
   // a live sim that rolls into a continuation switches activity rows mid-session; the server rows
   // anchor optimistic progression, so any switch (or stop) refetches them

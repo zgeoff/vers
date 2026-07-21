@@ -65,13 +65,13 @@ test('it offers a sign-in link back to this page when the session expired mid ca
 test('it retries by reporting online and clearing the failed status', async () => {
   const user = userEvent.setup();
   const calls: Array<ClientMessage> = [];
-  const worker = { port: { postMessage: (message: ClientMessage) => calls.push(message) } };
+  const transport = { post: (message: ClientMessage) => calls.push(message) };
 
   setIdleWorkerHandle({
     activity: undefined,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    worker,
+    transport,
   });
 
   setResyncStatus({ avatarID: 'avatar_1', kind: 'failed' });

@@ -104,6 +104,7 @@ export enum WorkerMessageType {
   SimulationUpdate = 'simulation_update',
   StartStatus = 'start_status',
   WriterDisplaced = 'writer_displaced',
+  WriterReady = 'writer_ready',
 }
 
 interface IWorkerMessage {
@@ -247,6 +248,16 @@ export interface WriterDisplacedMessage extends IWorkerMessage {
   readonly type: WorkerMessageType.WriterDisplaced;
 }
 
+/**
+ * Broadcast by an elected fallback writer the moment it is ready to serve, first election and
+ * every succession alike; the SharedWorker path never emits it. Tabs respond by resetting their
+ * handshake state and re-sending initialize and report-online, so a promoted writer that booted
+ * with no session context receives it fresh.
+ */
+export interface WriterReadyMessage extends IWorkerMessage {
+  readonly type: WorkerMessageType.WriterReady;
+}
+
 export type WorkerMessage =
   | ActivityCompletedMessage
   | CheckpointFlushStalledMessage
@@ -259,7 +270,18 @@ export type WorkerMessage =
   | RewardSlotsRecordedMessage
   | SimulationUpdateMessage
   | StartStatusMessage
-  | WriterDisplacedMessage;
+  | WriterDisplacedMessage
+  | WriterReadyMessage;
+
+/**
+ * The tab-side handle onto the simulation writer, whichever transport carries it: a SharedWorker
+ * port where the browser has one, or a broadcast-channel bridge to an elected dedicated worker.
+ * `subscribe` fans every worker message to the listener until the returned detach runs.
+ */
+export interface SimulationTransport {
+  readonly post: (message: ClientMessage) => void;
+  readonly subscribe: (listener: (message: WorkerMessage) => void) => () => void;
+}
 
 /**
  * The latest start outcome as tabs hold it, keyed by the request it answers.

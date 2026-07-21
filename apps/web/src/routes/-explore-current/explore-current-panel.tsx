@@ -1,17 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { Button, CheckboxField, Spinner } from '@vers/design-system';
 import type { StartStatus } from '@vers/idle-client';
+import { useWriterGeneration } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { SimulationUnsupportedNotice } from '../../components/simulation-unsupported-notice';
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
 import { sendIdleSetFailureAction } from '../../lib/idle/send-idle-set-failure-action';
 import { sendIdleStartActivity } from '../../lib/idle/send-idle-start-activity';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
-import { useIsSharedWorkerSupported } from '../../lib/platform/use-is-shared-worker-supported';
 import { emitProductEvent } from '../../lib/product-events/emit-product-event';
 import type { OrpcQueryUtils } from '../../lib/rpc/orpc';
 import { ActivityRewardsPanel } from './activity-rewards-panel';
@@ -33,15 +32,16 @@ interface ExploreCurrentPanelProps {
  * outcome never reads as this one's. A failed start renders a retry action.
  */
 export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
-  const isSharedWorkerSupported = useIsSharedWorkerSupported();
   const idleWorkerHandle = useIdleWorkerHandle();
   const selectedNode = useSelectedNode().node;
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
+  const writerGeneration = useWriterGeneration();
   const avatarID = avatarQuery.data?.id;
   const isAutoRetryChecked = idleWorkerHandle.failureAction === ActivityFailureAction.Retry;
 
   // one start attempt per selected node, correlated by request id
   const [attempt, setAttempt] = useState<StartAttempt | undefined>(undefined);
+  const attemptGeneration = useRef(writerGeneration);
 
   // latched locally on correlation: the store holds only the latest broadcast, and another tab's
   // report can overwrite it at any time
@@ -61,13 +61,26 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     emitProductEvent('node_explored', { nodeID: selectedNode.id });
   }, [selectedNode]);
 
+  // a promoted writer never answers a dead writer's start request; re-arming the attempt makes
+  // the send effect below re-raise it against the new writer
   useEffect(() => {
-    if (idleWorkerHandle.worker === undefined) {
+    if (attemptGeneration.current === writerGeneration) {
+      return;
+    }
+
+    attemptGeneration.current = writerGeneration;
+
+    setAttempt(undefined);
+    setReport(undefined);
+  }, [writerGeneration]);
+
+  useEffect(() => {
+    if (idleWorkerHandle.transport === undefined) {
       return;
     }
 
     if (!idleWorkerHandle.initialized) {
-      sendIdleInitialize(idleWorkerHandle.worker);
+      sendIdleInitialize(idleWorkerHandle.transport);
 
       return;
     }
@@ -81,13 +94,13 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     setAttempt({ requestID, scopeID: selectedNode.id });
     setReport(undefined);
 
-    sendIdleStartActivity(idleWorkerHandle.worker, {
+    sendIdleStartActivity(idleWorkerHandle.transport, {
       avatarID,
       requestID,
       scopeID: selectedNode.id,
       scopeType: 'world_map_node',
     });
-  }, [idleWorkerHandle.worker, idleWorkerHandle.initialized, avatarID, selectedNode, attempt]);
+  }, [idleWorkerHandle.transport, idleWorkerHandle.initialized, avatarID, selectedNode, attempt]);
 
   // only the requesting tab's attempt matches, so the started event fires exactly once
   const startReport = idleWorkerHandle.startReport;
@@ -116,10 +129,6 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     attempt?.scopeID === selectedNode?.id &&
     idleWorkerHandle.activity?.id === expectedActivityID;
 
-  if (!isSharedWorkerSupported) {
-    return <SimulationUnsupportedNotice />;
-  }
-
   if (report?.kind === 'failed') {
     return (
       <Button
@@ -145,7 +154,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
           checked: isAutoRetryChecked,
           id: 'auto-retry-on-failure',
           onClick: () => {
-            if (idleWorkerHandle.worker === undefined || avatarID === undefined) {
+            if (idleWorkerHandle.transport === undefined || avatarID === undefined) {
               return;
             }
 
@@ -153,7 +162,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
               ? ActivityFailureAction.Abort
               : ActivityFailureAction.Retry;
 
-            sendIdleSetFailureAction(idleWorkerHandle.worker, avatarID, nextFailureAction);
+            sendIdleSetFailureAction(idleWorkerHandle.transport, avatarID, nextFailureAction);
           },
         }}
         errors={[]}

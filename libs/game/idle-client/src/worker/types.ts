@@ -2,7 +2,28 @@ import type { ActivityData } from '@vers/contract-activity';
 import type { ActivityFailureAction, Simulation } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
-import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
+import type {
+  ClientMessage,
+  RewardSlotLedgerEntry,
+  RewardSlotLedgerSnapshot,
+  WorkerMessage,
+} from '../types';
+
+/**
+ * The runtime's structural view of one client connection: a `MessagePort` satisfies it, and so
+ * does the broadcast-channel bridge an elected fallback writer serves every tab through. `start`
+ * is optional because broadcast channels deliver without an explicit start, and `close` never
+ * fires as an event there — the explicit disconnect message stays the reliable teardown path.
+ */
+export interface WorkerConnection {
+  readonly addEventListener: (
+    type: 'close' | 'message',
+    listener: (event: MessageEvent<ClientMessage>) => void,
+  ) => void;
+  readonly close: () => void;
+  readonly postMessage: (message: WorkerMessage) => void;
+  readonly start?: () => void;
+}
 
 /**
  * Accessors over the runtime's closure state, threaded to every message and simulation event
@@ -19,7 +40,7 @@ export interface WorkerContext {
    */
   readonly advanceStopEpoch: () => void;
 
-  readonly connections: ReadonlySet<MessagePort>;
+  readonly connections: ReadonlySet<WorkerConnection>;
 
   /**
    * The server-authored row the live simulation was last installed from — the scope a terminal
@@ -112,7 +133,7 @@ export interface WorkerContext {
    * activity differs from the one the retained entries belong to.
    */
   readonly recordRewardSlots: (activityID: string, entry: RewardSlotLedgerEntry) => void;
-  readonly removeConnection: (port: MessagePort) => void;
+  readonly removeConnection: (connection: WorkerConnection) => void;
   readonly resetRewardSlotLedger: () => void;
   readonly setActivity: (activity: ActivityData | null) => void;
   readonly setFailureAction: (action: ActivityFailureAction) => void;

@@ -12,6 +12,7 @@ export type {
   ResyncResult,
 } from './resync/types';
 
+export { advanceWriterGeneration } from './state/advance-writer-generation';
 export { setCheckpointFlushStall } from './state/set-checkpoint-flush-stall';
 export { setConnectionStatus } from './state/set-connection-status';
 export { setFailureAction } from './state/set-failure-action';
@@ -20,7 +21,7 @@ export { setResyncStatus } from './state/set-resync-status';
 export { setRewardSlotLedger } from './state/set-reward-slot-ledger';
 export { setSimulationSnapshot } from './state/set-simulation-snapshot';
 export { setStartReport } from './state/set-start-report';
-export { setSimulationWorker } from './state/set-simulation-worker';
+export { setSimulationTransport } from './state/set-simulation-transport';
 export { setWriterDisplacedActivityID } from './state/set-writer-displaced-activity-id';
 export { useConnectionStatus } from './state/use-connection-status';
 export { updateRewardSlotLedger } from './state/update-reward-slot-ledger';
@@ -36,6 +37,7 @@ export { useRewardSlotLedger } from './state/use-reward-slot-ledger';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
 export { useStartReport } from './state/use-start-report';
 export { useWriterDisplacedActivityID } from './state/use-writer-displaced-activity-id';
+export { useWriterGeneration } from './state/use-writer-generation';
 export type { ActivitySubmissionContext } from './submission/types';
 export * from './types';
 export { createInitializeMessage } from './worker/create-initialize-message';
@@ -46,4 +48,4 @@ export { createStopActivityMessage } from './worker/create-stop-activity-message
 export { createSetFailureActionMessage } from './worker/create-set-failure-action-message';
 export { isReportOnlineMessage } from './worker/is-report-online-message';
 export { isStartActivityMessage } from './worker/is-start-activity-message';
-export { useSimulationWorker } from './worker/use-simulation-worker';
+export { useSimulationTransport } from './transport/use-simulation-transport';
