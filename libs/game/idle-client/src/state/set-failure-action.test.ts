@@ -5,7 +5,10 @@ import { useIdleStore } from './use-idle-store';
 
 test('it replaces the stored failure action wholesale', () => {
   setFailureAction(ActivityFailureAction.Retry);
+
   expect(useIdleStore.getState().failureAction).toBe(ActivityFailureAction.Retry);
+
   setFailureAction(ActivityFailureAction.Abort);
+
   expect(useIdleStore.getState().failureAction).toBe(ActivityFailureAction.Abort);
 });

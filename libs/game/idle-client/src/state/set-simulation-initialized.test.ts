@@ -7,6 +7,7 @@ test('it updates the simulation initialized state', () => {
   const hook = renderHook(() => useSimulationInitialized());
 
   expect(hook.result.current).toBeFalse();
+
   setSimulationInitialized(true);
 
   hook.rerender();

@@ -208,6 +208,7 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
       );
 
       invariant(minted !== undefined, 'expected the same-row CONFLICT resync to mint a fresh row');
+
       expect(minted.id).not.toBe(activity.id);
     },
 
@@ -219,6 +220,7 @@ test('it resumes into a fresh row once a same-row CONFLICT resync drains a held 
   const closed = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
 
   invariant(closed !== undefined, 'expected the seeded activity to still exist');
+
   expect(closed.status).toBe('stopped');
 });
 
@@ -291,12 +293,14 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
     );
 
     invariant(minted !== undefined, 'expected the reconnect resync to mint a fresh row');
+
     expect(minted.id).not.toBe(activity.id);
   });
 
   const closed = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
 
   invariant(closed !== undefined, 'expected the seeded activity to still exist');
+
   expect(closed.status).toBe('stopped');
 });
 
@@ -354,6 +358,7 @@ test("it resumes the held start intent's avatar on reconnect over an earlier ava
     );
 
     invariant(minted !== undefined, 'expected the reconnect to resume the pending avatar');
+
     expect(minted.id).not.toBe(source.id);
   });
 });
@@ -441,6 +446,7 @@ test('it recovers a stop parked offline once a flush answer proves the connectio
       const stopped = db.activityCollection.findFirst((q) => q.where({ id: other.id }));
 
       invariant(stopped !== undefined, "expected the parked stop's row to survive");
+
       expect(stopped.status).toBe('stopped');
     },
 

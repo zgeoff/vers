@@ -108,6 +108,7 @@ test('it settles the terminal checkpoint reward into the avatar xp and level on 
   const terminal = fixture.engineCheckpoints.at(-1);
 
   invariant(terminal !== undefined, 'the fixture always ends on a checkpoint');
+
   expect(terminal.rewards.xp).toBeGreaterThan(0);
 
   // a non-zero baseline distinguishes the delta add from an absolute overwrite

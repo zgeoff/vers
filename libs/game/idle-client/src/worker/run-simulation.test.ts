@@ -77,6 +77,7 @@ test('it continues into a fresh server-started row if it fails and the failure a
   );
 
   invariant(minted !== undefined, 'the continuation minted an active row');
+
   expect(startedSpy).toHaveBeenCalled();
   expect(simulation.activity).not.toBeNull();
   expect(minted.scopeID).toBe(sourceRow.scopeID);
@@ -148,6 +149,7 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
     );
 
     invariant(minted !== undefined, 'the continuation minted an active row');
+
     expect(startedSpy).toHaveBeenCalled();
     expect(simulation.activity).not.toBe(startingActivity);
     expect(context.getActivity()).toStrictEqual(minted);

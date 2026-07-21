@@ -34,6 +34,7 @@ test('it is a no-op the second time against an already-current template', async 
   const templateDB = `test_template_provision_${createId()}`;
 
   await createTestTemplate({ baseURI, templateDB });
+
   await expect(createTestTemplate({ baseURI, templateDB })).toResolve();
 });
 

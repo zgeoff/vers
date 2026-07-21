@@ -36,11 +36,13 @@ test('it schedules attacks on the tick event', () => {
   combatExecutor.run(1000);
 
   handleTick(enemy, behaviour, combatExecutor);
+
   expect(avatar.status).toBe(EntityStatus.Alive);
 
   combatExecutor.run(1);
 
   handleTick(enemy, behaviour, combatExecutor);
+
   expect(avatar.status).toBe(EntityStatus.Dead);
   expect(behaviour.state.lastAttackTime).toBe(1000);
 });

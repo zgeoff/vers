@@ -28,6 +28,7 @@ test('it drops a message naming an activity the ledger was not built for', () =>
   });
 
   updateRewardSlotLedger({ activityID: 'activity_2', count: 4, version: 1 });
+
   expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 2, version: 1 }]);
   expect(useIdleStore.getState().rewardSlotLedgerActivityID).toBe('activity_1');
 });
@@ -41,6 +42,7 @@ test('it installs the first entry when the ledger has no activity and the messag
   });
 
   updateRewardSlotLedger({ activityID: 'activity_1', count: 2, version: 1 });
+
   expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 2, version: 1 }]);
   expect(useIdleStore.getState().rewardSlotLedgerActivityID).toBe('activity_1');
 });
@@ -53,5 +55,6 @@ test('it ignores a message while the stream for that activity is rejected', () =
   });
 
   updateRewardSlotLedger({ activityID: 'activity_1', count: 2, version: 1 });
+
   expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([]);
 });

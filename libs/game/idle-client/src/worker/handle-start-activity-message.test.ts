@@ -59,6 +59,7 @@ test('it mints a row, installs it, and broadcasts the started status', async () 
   );
 
   invariant(minted !== undefined, 'expected the start to mint an active row');
+
   expect(minted.scopeID).toBe('a9lp75');
   expect(minted.startKey).toBe(message.requestID);
   expect(context.getSimulation()?.activity?.id).toBe(minted.id);
@@ -78,8 +79,11 @@ test('it mints a row, installs it, and broadcasts the started status', async () 
   );
 
   invariant(report?.type === WorkerMessageType.StartStatus, 'expected a start status broadcast');
+
   expect(report.requestID).toBe(message.requestID);
+
   invariant(report.status.kind === 'started', 'expected a started status');
+
   expect(report.status.activity.id).toBe(minted.id);
 });
 
@@ -102,6 +106,7 @@ test('it installs a simulation even when none was initialized yet', async () => 
   );
 
   invariant(minted !== undefined, 'expected the start to mint an active row');
+
   expect(context.getSimulation()?.activity?.id).toBe(minted.id);
 });
 
@@ -150,8 +155,11 @@ test('it answers a duplicate delivery with the row the first attempt minted', as
   );
 
   invariant(report?.type === WorkerMessageType.StartStatus, 'expected a start status broadcast');
+
   expect(report.requestID).toBe(message.requestID);
+
   invariant(report.status.kind === 'started', 'expected a started status');
+
   expect(report.status.activity.id).toBe(existing.id);
 });
 
@@ -223,6 +231,7 @@ test('it flushes and stops a different scope before starting the requested one',
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: previous.id }));
 
   invariant(stopped !== undefined, 'expected the previous row to survive');
+
   expect(stopped.status).toBe('stopped');
   expect(submitter.flushNow).toHaveBeenCalledExactlyOnceWith(previous.id);
 
@@ -231,6 +240,7 @@ test('it flushes and stops a different scope before starting the requested one',
   );
 
   invariant(minted !== undefined, 'expected the start to mint an active row');
+
   expect(minted.scopeID).toBe('a9lp75');
   expect(context.getSimulation()?.activity?.id).toBe(minted.id);
 });
@@ -279,6 +289,7 @@ test('it stops the minted row back when a stop lands mid-start', async () => {
   const row = db.activityCollection.findFirst((q) => q.where({ id: minted.id }));
 
   invariant(row !== undefined, 'expected the minted row to survive');
+
   expect(row.status).toBe('stopped');
   expect(context.getActivity()).toBeNull();
 
@@ -333,6 +344,7 @@ test('it abandons a superseded request without touching the fresher claim', asyn
   const row = db.activityCollection.findFirst((q) => q.where({ id: minted.id }));
 
   invariant(row !== undefined, 'expected the minted row to survive');
+
   expect(row.status).toBe('active');
   expect(context.getActivity()).toBeNull();
 });
@@ -455,7 +467,9 @@ test('it runs interleaved starts one at a time, the fresher claim winning', asyn
   );
 
   expect(active).toHaveLength(1);
+
   invariant(active[0] !== undefined, 'expected one active row');
+
   expect(active[0].scopeID).toBe('a9lp75');
   expect(context.getActivity()?.id).toBe(active[0].id);
 });
@@ -513,6 +527,7 @@ test('it takes over and stops a different scope another writer owns before start
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: previous.id }));
 
   invariant(stopped !== undefined, 'expected the previous row to survive');
+
   expect(stopped.status).toBe('stopped');
 
   const minted = db.activityCollection.findFirst((q) =>
@@ -520,6 +535,7 @@ test('it takes over and stops a different scope another writer owns before start
   );
 
   invariant(minted !== undefined, 'expected the start to mint an active row');
+
   expect(minted.scopeID).toBe('a9lp75');
   expect(context.getSimulation()?.activity?.id).toBe(minted.id);
 });

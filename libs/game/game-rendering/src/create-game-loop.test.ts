@@ -74,6 +74,7 @@ test('it tolerates unregistering the same callback twice', () => {
   const unregister = gameLoop.registerGameLoopCallback(() => {});
 
   unregister();
+
   expect(unregister).not.toThrow();
 });
 

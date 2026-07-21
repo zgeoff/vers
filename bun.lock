@@ -1245,7 +1245,7 @@
     "@vitejs/plugin-rsc": "0.5.27",
     "@zgeoff/bun-test-extended": "0.0.3",
     "@zgeoff/dbhub": "0.23.4",
-    "@zgeoff/format-codemod": "0.0.6",
+    "@zgeoff/format-codemod": "0.0.8",
     "@zgeoff/oxlint-config": "0.0.6",
     "autoprefixer": "10.5.2",
     "babel-plugin-react-compiler": "1.0.0",
@@ -2825,7 +2825,7 @@
 
     "@zgeoff/dbhub": ["@zgeoff/dbhub@0.23.4", "", { "dependencies": { "@iarna/toml": "2.2.5", "@modelcontextprotocol/sdk": "1.29.0", "dotenv": "16.5.0", "express": "5.2.1", "ssh-config": "5.0.3", "ssh2": "1.16.0", "zod": "3.25.64" }, "optionalDependencies": { "@aws-sdk/rds-signer": "3.1079.0", "@azure/identity": "4.13.1", "mariadb": "3.4.2", "mssql": "11.0.1", "mysql2": "3.14.1", "pg": "8.16.0" }, "bin": { "dbhub": "dist/index.js" } }, "sha512-mA/fQOLJRxmph0XidO9KzPvHJfk+vonVibUT06tKxr9zxQdG3TeloRkqtgpilACLjX2ok23mI6VhZGX5DMoW8w=="],
 
-    "@zgeoff/format-codemod": ["@zgeoff/format-codemod@0.0.6", "", { "dependencies": { "oxc-parser": "0.137.0" }, "bin": { "format-codemod": "dist/cli.js" } }, "sha512-7m2Iiydwn2ekBB+t3LUI4sUPSkb5j3zr/JnqGmBg7u21nJlY2spCz+d56jcdAhqs7bLOixZtkY6Jr9UTP9XhgA=="],
+    "@zgeoff/format-codemod": ["@zgeoff/format-codemod@0.0.8", "", { "dependencies": { "oxc-parser": "0.137.0" }, "bin": { "format-codemod": "dist/cli.js" } }, "sha512-McQm4/N+49SqpRdcoTKV8sGkYmB7BGtECvSgbuoPK22lsgaUCwQ+E1bO5Llyo7izO990xXPNkzMqlOdhttO4gg=="],
 
     "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.0.6", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.71.0" } }, "sha512-svh9vchedZlLgnE1dewvAFLbEoQKYR35aSTKNvnGxkMWdK45XsLOOdSnYxntYOe4RYf9fibNNCuy5MFMCwJqcQ=="],
 

@@ -42,6 +42,7 @@ test('it records one drain cycle duration', async () => {
     .find((metric) => metric.descriptor.name === 'vers.replay.drain_duration');
 
   invariant(histogram?.dataPointType === DataPointType.HISTOGRAM, 'expected a histogram metric');
+
   expect(histogram.dataPoints[0]?.value.sum).toBe(1.5);
 });
 

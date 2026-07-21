@@ -4,6 +4,7 @@ import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
 import { registerZustandReset } from '@vers/client-test-utils';
 
 GlobalRegistrator.register();
+
 expect.extend(jestDOMMatchers);
 
 // installs the zustand `create` wrapper before any store module below imports it; bun runs every

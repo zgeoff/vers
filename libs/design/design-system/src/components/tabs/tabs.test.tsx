@@ -10,6 +10,7 @@ const ITEMS = [
 
 test('it shows the first tab by default', () => {
   render(<Tabs items={ITEMS} />);
+
   expect(screen.getByText('first panel')).toBeVisible();
 });
 
@@ -25,5 +26,6 @@ test('it switches to the selected tab', async () => {
 
 test('it honors a default value', () => {
   render(<Tabs defaultValue="two" items={ITEMS} />);
+
   expect(screen.getByText('second panel')).toBeVisible();
 });

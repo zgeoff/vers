@@ -84,6 +84,7 @@ test('it does not create a new simulation if one already exists', () => {
   };
 
   handleInitializeMessage(context, message);
+
   expect(context.getSimulation()).toBe(existingSimulation);
 });
 

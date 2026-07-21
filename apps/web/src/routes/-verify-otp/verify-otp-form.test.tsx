@@ -127,6 +127,7 @@ test('it auto-submits once when a valid code arrives with the emailed link', asy
     const call = action.mock.calls[0]?.[0];
 
     invariant(call !== undefined, 'expected the auto-submit to dispatch the action');
+
     expect(call.data.get('code')).toBe('TMMPD7');
   });
 });

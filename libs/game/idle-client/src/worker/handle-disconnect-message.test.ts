@@ -8,6 +8,7 @@ test('it removes the port from the connections set', () => {
   const context = createStubWorkerContext({ connections: [channel.port2] });
 
   handleDisconnectMessage(context, channel.port2);
+
   expect(context.connections.has(channel.port2)).toBeFalse();
 });
 

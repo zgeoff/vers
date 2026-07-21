@@ -13,12 +13,14 @@ import { PlayingElsewhereNotice } from './playing-elsewhere-notice';
 
 test('it renders nothing while no displacement is reported', () => {
   render(<PlayingElsewhereNotice />);
+
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
 test('it tells the player their run picked up on another device', () => {
   setWriterDisplacedActivityID('activity_1');
   render(<PlayingElsewhereNotice />);
+
   expect(screen.getByText('Playing on another device')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Continue here' })).toBeInTheDocument();
 });

@@ -294,6 +294,7 @@ test('it reports the final row it left off at, for a caller to attach directly',
   const lastStarted = ctx.startedActivities.at(-1);
 
   invariant(lastStarted !== undefined, 'expected at least one server-started continuation');
+
   expect(report.activity).toStrictEqual(lastStarted);
   expect(report.appendedHead).toBe(0);
 });

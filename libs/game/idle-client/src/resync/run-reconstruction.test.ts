@@ -27,6 +27,7 @@ test('it reconstructs a simulation to the confirmed head, matching the original 
 
   invariant(priorCheckpoint !== undefined, 'expected the prior original checkpoint to exist');
   invariant(expectedNextCheckpoint !== undefined, 'expected the next original checkpoint to exist');
+
   expect(result.lastCheckpoint.nextSeed).toBe(priorCheckpoint.nextSeed);
 
   let nextCheckpoint = null;

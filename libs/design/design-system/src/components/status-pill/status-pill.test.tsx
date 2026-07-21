@@ -4,6 +4,7 @@ import { StatusPill } from './status-pill';
 
 test('it abbreviates the effect name to a glyph and carries the full name for hover', () => {
   render(<StatusPill kind="buff" name="Fortified" />);
+
   expect(screen.getByText('FO')).toBeInTheDocument();
   expect(screen.getByTitle('Fortified')).toBeInTheDocument();
 });
