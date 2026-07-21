@@ -23,7 +23,7 @@ export async function handleStopActivityMessage(
     return;
   }
 
-  context.advanceStopEpoch();
+  context.advanceStopScope();
 
   await context.getSimulation().stopActivity();
 

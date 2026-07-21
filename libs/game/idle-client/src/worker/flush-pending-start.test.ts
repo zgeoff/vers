@@ -16,7 +16,11 @@ import { flushPendingStart } from './flush-pending-start';
 test('it reports none when no intent is held', async () => {
   const context = createStubWorkerContext({ submitter: createStubSubmitter() });
 
-  const result = await flushPendingStart(context, context.getStopEpoch(), 'avatar_1');
+  const result = await flushPendingStart(
+    context,
+    { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+    'avatar_1',
+  );
 
   expect(result).toStrictEqual({ outcome: 'none' });
 });
@@ -40,7 +44,11 @@ test('it mints the continued row and releases the intent', async () => {
     scopeType: source.scopeType,
   });
 
-  const result = await flushPendingStart(context, context.getStopEpoch(), viewer.avatar.id);
+  const result = await flushPendingStart(
+    context,
+    { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+    viewer.avatar.id,
+  );
 
   const minted = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: viewer.avatar.id, status: 'active' }),
@@ -77,7 +85,11 @@ test('it keeps the intent while the source row still reads active', async () => 
     scopeType: source.scopeType,
   });
 
-  const result = await flushPendingStart(context, context.getStopEpoch(), viewer.avatar.id);
+  const result = await flushPendingStart(
+    context,
+    { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+    viewer.avatar.id,
+  );
 
   expect(result).toStrictEqual({ outcome: 'blocked' });
 
@@ -116,7 +128,11 @@ test('it releases a stale intent when a different claim owns the avatar', async 
     scopeType: departed.scopeType,
   });
 
-  const result = await flushPendingStart(context, context.getStopEpoch(), viewer.avatar.id);
+  const result = await flushPendingStart(
+    context,
+    { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+    viewer.avatar.id,
+  );
 
   expect(result).toStrictEqual({ outcome: 'stale' });
 
@@ -141,7 +157,11 @@ test("it leaves another avatar's intent untouched", async () => {
     scopeType: 'mission',
   });
 
-  const result = await flushPendingStart(context, context.getStopEpoch(), 'avatar_resyncing');
+  const result = await flushPendingStart(
+    context,
+    { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+    'avatar_resyncing',
+  );
 
   expect(result).toStrictEqual({ outcome: 'none' });
 
@@ -163,7 +183,11 @@ test('it skips the attempt and keeps the intent when the budget is spent', async
     scopeType: 'mission',
   });
 
-  const result = await flushPendingStart(context, context.getStopEpoch(), 'avatar_1');
+  const result = await flushPendingStart(
+    context,
+    { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+    'avatar_1',
+  );
 
   expect(result).toStrictEqual({ outcome: 'capped' });
 
@@ -189,7 +213,11 @@ test('it keeps the intent on a transport failure', async () => {
     scopeType: 'mission',
   });
 
-  const result = await flushPendingStart(context, context.getStopEpoch(), 'avatar_1');
+  const result = await flushPendingStart(
+    context,
+    { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+    'avatar_1',
+  );
 
   expect(result).toStrictEqual({ outcome: 'undelivered' });
 
@@ -214,7 +242,13 @@ test('it keeps the intent and rethrows when the session is not recognized', asyn
     scopeType: 'mission',
   });
 
-  await expect(flushPendingStart(context, context.getStopEpoch(), 'avatar_1')).toReject();
+  await expect(
+    flushPendingStart(
+      context,
+      { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+      'avatar_1',
+    ),
+  ).toReject();
 
   const heldIntent = await readPendingStartIntent();
 
@@ -242,7 +276,13 @@ test('it releases the intent and rethrows a defined error other than CONFLICT', 
     scopeType: 'mission',
   });
 
-  await expect(flushPendingStart(context, context.getStopEpoch(), 'avatar_1')).toReject();
+  await expect(
+    flushPendingStart(
+      context,
+      { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+      'avatar_1',
+    ),
+  ).toReject();
 
   const heldIntent = await readPendingStartIntent();
 
@@ -269,10 +309,10 @@ test('it stops the minted row back when a stop lands while the start is in fligh
     scopeType: source.scopeType,
   });
 
-  const entryEpoch = context.getStopEpoch();
+  const signals = { cancel: context.getCancelSignal(), stop: context.getStopSignal() };
 
   // the stop lands while the start call is in flight: the deviation mints the row exactly as the
-  // real service would, then advances the epoch as a concurrent stop does
+  // real service would, then advances the stop scope as a concurrent stop does
   server.use(
     mockActivityService.startActivity.handler(async () => {
       const minted = await db.activityCollection.create({
@@ -282,13 +322,13 @@ test('it stops the minted row back when a stop lands while the start is in fligh
         status: 'active',
       });
 
-      context.advanceStopEpoch();
+      context.advanceStopScope();
 
       return minted;
     }),
   );
 
-  const result = await flushPendingStart(context, entryEpoch, viewer.avatar.id);
+  const result = await flushPendingStart(context, signals, viewer.avatar.id);
 
   expect(result).toStrictEqual({ outcome: 'stopped' });
 

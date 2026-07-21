@@ -69,6 +69,12 @@ interface RunResyncOptions {
    */
   readonly onWriterLost?: (activityID: string) => void;
 
+  /**
+   * Cancels the confirmed-progress fetch. The writer claim never takes it — a write furthering
+   * an attach must settle so the caller can act on its outcome.
+   */
+  readonly signal?: AbortSignal;
+
   readonly submitter: CheckpointSubmitter;
 }
 
@@ -181,8 +187,10 @@ async function readLatestProgress(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- carries a callback-bearing client handle, which has no readonly form
   options: Readonly<RunResyncOptions>,
 ): Promise<LatestActivityProgress | null> {
+  const callOptions = options.signal === undefined ? undefined : { signal: options.signal };
+
   const [error, progress] = await safe(
-    options.client.getLatestActivityProgress({ avatarID: options.avatarID }),
+    options.client.getLatestActivityProgress({ avatarID: options.avatarID }, callOptions),
   );
 
   if (error !== null) {
@@ -234,7 +242,8 @@ async function drainQueuedCheckpoints(
  * Takes over as the activity's writer, returning the fresh row the claim stamped — its head is
  * authoritative, since any append in flight from the displaced writer either landed before the
  * claim or was rejected by it. `null` means the row is no longer active, so there is no writer
- * to take.
+ * to take. Carries no cancellation signal: an aborted claim would leave its outcome unknown to
+ * the caller that must settle on it.
  */
 async function claimActivityWriter(
   client: Pick<ActivityServiceClient, 'resumeActivity'>,

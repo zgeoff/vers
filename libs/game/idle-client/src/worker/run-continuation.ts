@@ -4,11 +4,10 @@ import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
-import { hasStopIntervened } from './has-stop-intervened';
 import { resetSimulation } from './reset-simulation';
 import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
-import type { WorkerContext } from './types';
+import type { FlowSignals, WorkerContext } from './types';
 
 /**
  * Starts the next continuation after a terminal checkpoint: a fresh server row for the same
@@ -33,10 +32,12 @@ export async function runContinuation(
     return;
   }
 
-  const entryEpoch = context.getStopEpoch();
+  const signals: FlowSignals = { cancel: context.getCancelSignal(), stop: context.getStopSignal() };
 
-  // keyed by the terminal row it succeeds: a retried delivery dedupes onto the first attempt's
-  // row, while the next continuation carries a new key and conflicts as a distinct intent
+  // Runs unsigned — the response is the only handle on the minted row, and the stop-back
+  // compensation needs it. Keyed by the terminal row it succeeds: a retried delivery dedupes onto
+  // the first attempt's row, while the next continuation carries a new key and conflicts as a
+  // distinct intent.
   const [error, started] = await safe(
     context.getClient().startActivity({
       avatarID: activity.avatarID,
@@ -47,7 +48,7 @@ export async function runContinuation(
   );
 
   if (error === null) {
-    if (hasStopIntervened(context, entryEpoch)) {
+    if (signals.stop.aborted) {
       await submitStopIntent(context, started);
 
       return;
@@ -61,8 +62,8 @@ export async function runContinuation(
   if (isDefinedError(error) && error.code === 'CONFLICT') {
     const row = error.data.activity;
 
-    if (row.id === activity.id && !hasStopIntervened(context, entryEpoch)) {
-      await parkContinuation(context, activity, entryEpoch);
+    if (row.id === activity.id && !signals.stop.aborted) {
+      await parkContinuation(activity, signals);
     }
 
     await stopAndReset(context, simulation);
@@ -70,7 +71,7 @@ export async function runContinuation(
     // called inner-to-inner: this flow already holds the mailbox turn, and queueing a resync
     // behind itself would deadlock. An automatic continuation never claims the writer — the
     // conflicting row may be another device's live run
-    await runResyncFlow(context, row.avatarID, false, entryEpoch);
+    await runResyncFlow(context, row.avatarID, false, signals);
 
     return;
   }
@@ -78,8 +79,8 @@ export async function runContinuation(
   await stopAndReset(context, simulation);
 
   if (!isDefinedError(error)) {
-    if (!hasStopIntervened(context, entryEpoch)) {
-      await parkContinuation(context, activity, entryEpoch);
+    if (!signals.stop.aborted) {
+      await parkContinuation(activity, signals);
     }
 
     context.updateConnectivity(false);
@@ -118,15 +119,14 @@ async function stopAndReset(context: WorkerContext, simulation: Simulation): Pro
 }
 
 /**
- * Parks the durable start intent, then re-checks the stop epoch and compensates: a stop can land
+ * Parks the durable start intent, then re-checks the stop signal and compensates: a stop can land
  * its own unconditional removal in the gap before this write's transaction commits. Readwrite
  * transactions on the store run in creation order, so the compensating remove is ordered after
  * the stop's — a ghost intent never survives to revive the run the player ended.
  */
 async function parkContinuation(
-  context: WorkerContext,
   activity: Readonly<ActivityData>,
-  entryEpoch: number,
+  signals: Readonly<FlowSignals>,
 ): Promise<void> {
   await writePendingStartIntent({
     activityID: activity.id,
@@ -135,7 +135,7 @@ async function parkContinuation(
     scopeType: activity.scopeType,
   });
 
-  if (hasStopIntervened(context, entryEpoch)) {
+  if (signals.stop.aborted) {
     await removePendingStartIntent(activity.id);
   }
 }

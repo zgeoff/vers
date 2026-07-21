@@ -2,9 +2,8 @@ import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
-import { hasStopIntervened } from './has-stop-intervened';
 import { submitStopIntent } from './submit-stop-intent';
-import type { WorkerContext } from './types';
+import type { FlowSignals, WorkerContext } from './types';
 
 export type PendingStartFlushResult =
   | { readonly outcome: 'blocked' | 'capped' | 'none' | 'stale' | 'stopped' | 'undelivered' }
@@ -24,7 +23,7 @@ export type PendingStartFlushResult =
  */
 export async function flushPendingStart(
   context: WorkerContext,
-  entryEpoch: number,
+  signals: Readonly<FlowSignals>,
   avatarID: string,
 ): Promise<PendingStartFlushResult> {
   const intent = await readPendingStartIntent();
@@ -37,6 +36,8 @@ export async function flushPendingStart(
     return { outcome: 'capped' };
   }
 
+  // runs unsigned: the response is the only handle on the minted row, and the stop-back
+  // compensation needs it
   const [error, started] = await safe(
     context.getClient().startActivity({
       avatarID: intent.avatarID,
@@ -47,7 +48,7 @@ export async function flushPendingStart(
   );
 
   if (error === null) {
-    if (hasStopIntervened(context, entryEpoch)) {
+    if (signals.stop.aborted) {
       await submitStopIntent(context, started);
       await removePendingStartIntent(intent.activityID);
 

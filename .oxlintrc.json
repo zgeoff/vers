@@ -204,6 +204,9 @@
               "MouseEvent",
               // a live cancellation handle: addEventListener/aborted state, no readonly form
               "AbortSignal",
+              // the mutable handle behind AbortSignal above: its whole purpose is the `abort()`
+              // call, so it has no readonly form either
+              "AbortController",
               // genuinely immutable, but its members are method signatures, which the
               // rule's default settings treat as mutable (typescript-eslint#8013)
               "ReadonlySet",

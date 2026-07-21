@@ -119,13 +119,13 @@ test('it resets the reward-slot ledger', async () => {
   expect(context.getRewardSlotLedger()).toStrictEqual({ activityID: null, entries: [] });
 });
 
-test('it advances the stop epoch so in-flight installs abandon', async () => {
+test('it aborts a signal captured before the stop, leaving one captured after unaffected', async () => {
   const context = createStubWorkerContext({ submitter: createStubSubmitter() });
   const activity = createMockActivityData();
 
   context.setActivity(activity);
 
-  const entryEpoch = context.getStopEpoch();
+  const beforeStop = context.getStopSignal();
 
   await handleStopActivityMessage(context, {
     activityID: activity.id,
@@ -133,7 +133,8 @@ test('it advances the stop epoch so in-flight installs abandon', async () => {
     type: ClientMessageType.StopActivity,
   });
 
-  expect(context.getStopEpoch()).toBe(entryEpoch + 1);
+  expect(beforeStop.aborted).toBeTrue();
+  expect(context.getStopSignal().aborted).toBeFalse();
 });
 
 test('it delivers the targeted server stop and releases the intent', async () => {
@@ -196,7 +197,7 @@ test('it halts nothing but still delivers when no simulation is installed', asyn
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
-  const entryEpoch = context.getStopEpoch();
+  const beforeStop = context.getStopSignal();
 
   await handleStopActivityMessage(context, {
     activityID: row.id,
@@ -204,7 +205,7 @@ test('it halts nothing but still delivers when no simulation is installed', asyn
     type: ClientMessageType.StopActivity,
   });
 
-  expect(context.getStopEpoch()).toBe(entryEpoch + 1);
+  expect(beforeStop.aborted).toBeTrue();
 
   const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
 
@@ -223,7 +224,7 @@ test('it ignores a stop naming an older activity than the live one', async () =>
   context.setActivity(live);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
-  const entryEpoch = context.getStopEpoch();
+  const beforeStop = context.getStopSignal();
 
   await handleStopActivityMessage(context, {
     activityID: 'activity_older',
@@ -233,7 +234,7 @@ test('it ignores a stop naming an older activity than the live one', async () =>
 
   expect(context.getSimulation()).toBe(simulation);
   expect(context.getActivity()).toStrictEqual(live);
-  expect(context.getStopEpoch()).toBe(entryEpoch);
+  expect(beforeStop.aborted).toBeFalse();
 
   const intent = await readPendingStopIntent();
 

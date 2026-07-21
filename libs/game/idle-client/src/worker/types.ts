@@ -23,6 +23,17 @@ export interface WorkerConnection {
 }
 
 /**
+ * The cancellation signals a lifecycle flow captures once at entry: `stop` carries the player-stop
+ * cause alone and is what compensation branches test — a run must survive a worker reload, so
+ * shutdown never triggers a stop-back. `cancel` folds in worker shutdown and cancels in-flight
+ * reads.
+ */
+export interface FlowSignals {
+  readonly cancel: AbortSignal;
+  readonly stop: AbortSignal;
+}
+
+/**
  * Accessors over the runtime's closure state, threaded to every message and simulation event
  * handler. `connections` is exposed read-only — `removeConnection` is the one mutation a handler
  * needs. `getSubmitter` and `getClient` always return the same instance: both exist for the
@@ -30,12 +41,12 @@ export interface WorkerConnection {
  */
 export interface WorkerContext {
   /**
-   * Marks a player-raised stop: every async flow that installs a simulation or starts a server
-   * row captures the epoch at entry and re-checks it after each await, abandoning its install
-   * when a stop landed in between — an in-flight resync or continuation must never revive a run
-   * the player just ended.
+   * Marks a player-raised stop: aborts the current stop scope's signal and installs a fresh one.
+   * Every async flow that installs a simulation or starts a server row captures the stop signal at
+   * entry and re-checks it after each await, abandoning its install when a stop landed in between —
+   * an in-flight resync or continuation must never revive a run the player just ended.
    */
-  readonly advanceStopEpoch: () => void;
+  readonly advanceStopScope: () => void;
 
   readonly connections: ReadonlySet<WorkerConnection>;
 
@@ -78,7 +89,7 @@ export interface WorkerContext {
   /**
    * The lifecycle mailbox's tail. Starts, resyncs, and continuations queue behind it and run one
    * at a time — interleaved, a stale flow could stop a row a fresher one just attached. Stops
-   * stay concurrent; they bump the epoch queued flows re-check.
+   * stay concurrent; they advance the stop scope queued flows re-check.
    */
   readonly getLifecycleTail: () => Readonly<Promise<void>>;
 
@@ -95,7 +106,19 @@ export interface WorkerContext {
    */
   readonly getQueuedClaimResync: () => null | string;
 
-  readonly getStopEpoch: () => number;
+  /**
+   * The composite of the current stop scope's signal and the runtime-lifetime shutdown signal,
+   * stable within a stop scope. Threaded into cancellation-safe request options; a pure unwind
+   * with nothing to compensate may `throwIfAborted()` on it directly.
+   */
+  readonly getCancelSignal: () => AbortSignal;
+
+  /**
+   * The current stop scope's signal alone — the one every compensation branch tests, since only a
+   * player stop, never a worker shutdown, may stop a minted row back durably.
+   */
+  readonly getStopSignal: () => AbortSignal;
+
   readonly getSubmitter: () => CheckpointSubmitter;
 
   /**
