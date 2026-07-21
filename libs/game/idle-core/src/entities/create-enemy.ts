@@ -1,5 +1,4 @@
 import { createId } from '@paralleldrive/cuid2';
-import { produce } from 'immer';
 import { createEnemyPrimaryAttackBehaviour } from '../behaviours/enemy-primary-attack';
 import type {
   BehaviourID,
@@ -45,9 +44,11 @@ export function createEnemy(data: EnemyData, ctx: SimulationContext): Enemy {
   };
 
   const setState = (setStateFn: SetEntityStateFn<EnemyState>): void => {
-    const nextState = produce(state, setStateFn);
+    const nextState = { ...state };
 
-    state = { ...nextState };
+    setStateFn(nextState);
+
+    state = nextState;
   };
 
   let behaviours: Array<EnemyBehaviour> = [];

@@ -1,4 +1,3 @@
-import { produce } from 'immer';
 import { createAvatarWeaponAttackBehaviour } from '../behaviours/avatar-weapon-attack';
 import type {
   Avatar,
@@ -58,9 +57,11 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
   };
 
   const setState = (setStateFn: SetEntityStateFn<AvatarState>): void => {
-    const nextState = produce(state, setStateFn);
+    const nextState = { ...state };
 
-    state = { ...nextState };
+    setStateFn(nextState);
+
+    state = nextState;
   };
 
   let behaviours: Array<AvatarBehaviour> = [];

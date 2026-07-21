@@ -1,4 +1,3 @@
-import { produce } from 'immer';
 import type {
   CombatExecutor,
   Enemy,
@@ -17,7 +16,11 @@ export function create(entity: Enemy): EnemyPrimaryAttackBehaviour {
   const getState = (): EnemyPrimaryAttackBehaviourState => state;
 
   const setState = (setStateFn: SetEntityStateFn<EnemyPrimaryAttackBehaviourState>): void => {
-    state = produce(state, setStateFn);
+    const nextState = { ...state };
+
+    setStateFn(nextState);
+
+    state = nextState;
   };
 
   const handleReset = (): void => {
