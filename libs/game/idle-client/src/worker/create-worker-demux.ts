@@ -12,8 +12,9 @@ interface VirtualPort {
 }
 
 interface Tab {
-  readonly listeners: Set<EventListenerOrEventListenerObject>;
+  readonly closeListeners: Set<EventListenerOrEventListenerObject>;
   lastSeenAt: number;
+  readonly messageListeners: Set<EventListenerOrEventListenerObject>;
 }
 
 interface CreateWorkerDemuxOptions {
@@ -46,6 +47,8 @@ const DEFAULT_EVICT_AFTER_MS = 5 * 60 * 1000;
  * listener before this handler relays the same frame to it, so no buffering or `start()` concept
  * is needed for correct delivery ordering. Idle tabs are swept on a timer so a tab that never sends
  * an explicit disconnect — there is no such signal over `BroadcastChannel` — does not leak forever.
+ * Removing a tab, by sweep or by its own disconnect, fires the virtual port's close listeners, so
+ * the RPC handler aborts that tab's in-flight calls and drops its per-connection state.
  */
 export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): WorkerDemux {
   const evictAfterMs = options.evictAfterMs ?? DEFAULT_EVICT_AFTER_MS;
@@ -58,14 +61,18 @@ export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): 
   const buildVirtualPort = (
     tabID: string,
 
-    // the set is this function's whole purpose to mutate (registers the router's listener into
-    // it); a Set has no readonly form that still allows add()
+    // the tab's listener sets are this function's whole purpose to mutate (the RPC handler
+    // registers its listeners into them); a Set has no readonly form that still allows add()
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types
-    listeners: Set<EventListenerOrEventListenerObject>,
+    tab: Tab,
   ): VirtualPort => ({
     addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
       if (type === 'message') {
-        listeners.add(listener);
+        tab.messageListeners.add(listener);
+      }
+
+      if (type === 'close') {
+        tab.closeListeners.add(listener);
       }
     },
     postMessage: (data: unknown) => {
@@ -73,19 +80,35 @@ export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): 
     },
   });
 
+  const removeTab = (tabID: string) => {
+    const tab = tabs.get(tabID);
+
+    if (tab === undefined) {
+      return;
+    }
+
+    tabs.delete(tabID);
+
+    const closed = new Event('close');
+
+    for (const listener of tab.closeListeners) {
+      emitToListener(listener, closed);
+    }
+  };
+
   incoming.addEventListener('message', (event: MessageEvent<Envelope>) => {
     const data = event.data.data;
     const tabID = event.data.tabID;
     let tab = tabs.get(tabID);
 
     if (tab === undefined) {
-      tab = { lastSeenAt: now(), listeners: new Set() };
+      tab = { closeListeners: new Set(), lastSeenAt: now(), messageListeners: new Set() };
 
       tabs.set(tabID, tab);
 
-      options.upgrade(buildVirtualPort(tabID, tab.listeners), {
+      options.upgrade(buildVirtualPort(tabID, tab), {
         close: () => {
-          tabs.delete(tabID);
+          removeTab(tabID);
         },
       });
     }
@@ -94,7 +117,7 @@ export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): 
 
     const relayed = new MessageEvent('message', { data });
 
-    for (const listener of tab.listeners) {
+    for (const listener of tab.messageListeners) {
       emitToListener(listener, relayed);
     }
   });
@@ -104,7 +127,7 @@ export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): 
 
     for (const [tabID, tab] of tabs) {
       if (tab.lastSeenAt < cutoff) {
-        tabs.delete(tabID);
+        removeTab(tabID);
       }
     }
   }, evictAfterMs);
@@ -119,10 +142,7 @@ export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): 
   };
 }
 
-function emitToListener(
-  listener: EventListenerOrEventListenerObject,
-  event: MessageEvent<unknown>,
-): void {
+function emitToListener(listener: EventListenerOrEventListenerObject, event: Event): void {
   if (typeof listener === 'function') {
     listener(event);
 

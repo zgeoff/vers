@@ -61,10 +61,11 @@ let broadcastChannel: BroadcastChannel | null = null;
 let broadcastSubscriberCount = 0;
 
 /**
- * Attaches the worker-broadcast listener behind a shared count, so however many components mount
- * `useSimulationTransport` in the same commit, exactly one listener is live on the channel — a
- * duplicate would apply every broadcast once per mounted consumer, and `updateRewardSlotLedger`
- * appends while `advanceWriterGeneration` increments, so repeated delivery is not idempotent.
+ * Attaches the worker-broadcast listener behind a shared count, so however many transport
+ * consumers mount in the same commit, exactly one listener is live on the channel — a duplicate
+ * would apply every broadcast once per mounted consumer, and the reward-ledger and
+ * writer-generation writers append and increment rather than assign, so repeated delivery
+ * double-applies.
  */
 function subscribeToWorkerBroadcasts() {
   broadcastSubscriberCount += 1;

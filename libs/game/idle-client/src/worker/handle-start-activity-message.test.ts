@@ -1,4 +1,4 @@
-import { expect, onTestFinished, test } from 'bun:test';
+import { expect, mock, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/browser';
 import { createSimulation } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
@@ -7,6 +7,7 @@ import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
+import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
@@ -280,6 +281,50 @@ test('it abandons a superseded call without touching the fresher claim', async (
 
   expect(row.status).toBe('active');
   expect(context.getActivity()).toBeNull();
+});
+
+test('it leaves the conflicting row running when a fresher call supersedes during the flush', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const previous = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    scopeID: 'old-node',
+    scopeType: 'world_map_node',
+    status: 'active',
+  });
+
+  // the flush is the replace flow's only yield between the supersession checks; scripting the
+  // fresher claim into it lands the supersession right before the stop would go out
+  const flushEffect = { current: () => {} };
+
+  const submitter: CheckpointSubmitter = {
+    ...createStubSubmitter(),
+    flushNow: mock(() => {
+      flushEffect.current();
+
+      return Promise.resolve();
+    }),
+  };
+
+  const context = createStubWorkerContext({ client: ctx.client, submitter });
+
+  flushEffect.current = () => {
+    context.setStartToken('a-fresher-token');
+  };
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const row = db.activityCollection.findFirst((q) => q.where({ id: previous.id }));
+
+  invariant(row !== undefined, 'expected the conflicting row to survive');
+
+  expect(row.status).toBe('active');
+  expect(result).toStrictEqual({ kind: 'failed' });
 });
 
 test('it answers failed on a transport failure', async () => {

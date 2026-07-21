@@ -12,17 +12,19 @@ import { GameSimulationMount } from './game-simulation-mount';
 test('it calls initialize once a worker connects that has not reported state yet', () => {
   const client = createStubWorkerClient();
 
+  const writerAbortSignal = new AbortController().signal;
+
   setIdleWorkerHandle({
     activity: undefined,
     client,
     failureAction: ActivityFailureAction.Abort,
     initialized: false,
-    writerAbortSignal: new AbortController().signal,
+    writerAbortSignal,
   });
 
   render(<GameSimulationMount />);
 
-  expect(client.initialize).toHaveBeenCalledExactlyOnceWith({}, expect.anything());
+  expect(client.initialize).toHaveBeenCalledExactlyOnceWith({}, { signal: writerAbortSignal });
 });
 
 test('it calls nothing once the worker has already reported its state and no avatar is known', () => {
@@ -60,12 +62,14 @@ test('it calls initialize then reports online once the active avatar resolves', 
 
   const client = createStubWorkerClient();
 
+  const writerAbortSignal = new AbortController().signal;
+
   setIdleWorkerHandle({
     activity: undefined,
     client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    writerAbortSignal: new AbortController().signal,
+    writerAbortSignal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -74,7 +78,7 @@ test('it calls initialize then reports online once the active avatar resolves', 
     await waitFor(() => {
       expect(client.reportOnline).toHaveBeenCalledExactlyOnceWith(
         { avatarID: avatar.id, claim: true },
-        expect.anything(),
+        { signal: writerAbortSignal },
       );
     });
   });
@@ -106,12 +110,14 @@ test('it reports online only once across re-renders', async () => {
 
   const client = createStubWorkerClient();
 
+  const writerAbortSignal = new AbortController().signal;
+
   setIdleWorkerHandle({
     activity: undefined,
     client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    writerAbortSignal: new AbortController().signal,
+    writerAbortSignal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -120,7 +126,7 @@ test('it reports online only once across re-renders', async () => {
     await waitFor(() => {
       expect(client.reportOnline).toHaveBeenCalledExactlyOnceWith(
         { avatarID: avatar.id, claim: true },
-        expect.anything(),
+        { signal: writerAbortSignal },
       );
     });
 
@@ -137,12 +143,14 @@ test('it reports online again when the browser comes back online', async () => {
 
   const client = createStubWorkerClient();
 
+  const writerAbortSignal = new AbortController().signal;
+
   setIdleWorkerHandle({
     activity: undefined,
     client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    writerAbortSignal: new AbortController().signal,
+    writerAbortSignal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -151,7 +159,7 @@ test('it reports online again when the browser comes back online', async () => {
     await waitFor(() => {
       expect(client.reportOnline).toHaveBeenCalledExactlyOnceWith(
         { avatarID: avatar.id, claim: true },
-        expect.anything(),
+        { signal: writerAbortSignal },
       );
     });
 

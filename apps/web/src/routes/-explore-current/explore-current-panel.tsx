@@ -7,6 +7,7 @@ import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
+import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
 import { sendIdleInitialize } from '../../lib/idle/send-idle-initialize';
 import { sendIdleSetFailureAction } from '../../lib/idle/send-idle-set-failure-action';
 import { sendIdleStartActivity } from '../../lib/idle/send-idle-start-activity';
@@ -18,6 +19,11 @@ import { ApproachingCapWarning } from './approaching-cap-warning';
 
 interface ExploreCurrentPanelProps {
   readonly orpc: OrpcQueryUtils;
+}
+
+interface StartAttemptReport {
+  readonly scopeID: string;
+  readonly status: StartStatus;
 }
 
 /**
@@ -39,8 +45,10 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   const attemptGeneration = useRef(writerGeneration);
 
   // latched locally once the call resolves: the store holds only the latest broadcast state,
-  // never a start outcome, so this is the panel's only record of its own attempt
-  const [report, setReport] = useState<StartStatus | undefined>(undefined);
+  // never a start outcome, so this is the panel's only record of its own attempt — tagged with
+  // its scope, since a reply can land after the selection moved on and must not read as the new
+  // node's outcome
+  const [report, setReport] = useState<StartAttemptReport | undefined>(undefined);
 
   // the exploration commits when the encounter view opens for a node — independent of worker
   // readiness, and a retried failed start on the same node never re-reports it
@@ -79,7 +87,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     const signal = idleWorkerHandle.writerAbortSignal;
 
     if (!idleWorkerHandle.initialized) {
-      void sendIdleInitialize(client, signal);
+      runIgnoringRejection(sendIdleInitialize(client, signal));
 
       return;
     }
@@ -88,19 +96,21 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
       return;
     }
 
-    setAttemptScopeID(selectedNode.id);
+    const scopeID = selectedNode.id;
+
+    setAttemptScopeID(scopeID);
     setReport(undefined);
 
     void (async () => {
       try {
         const status = await sendIdleStartActivity(
           client,
-          { avatarID, scopeID: selectedNode.id, scopeType: 'world_map_node' },
+          { avatarID, scopeID, scopeType: 'world_map_node' },
           signal,
         );
 
         if (!signal.aborted) {
-          setReport(status);
+          setReport({ scopeID, status });
         }
       } catch {
         // an aborted call rejects — the writer-generation re-arm effect already resets the
@@ -117,24 +127,27 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   ]);
 
   useEffect(() => {
-    if (report?.kind !== 'started') {
+    if (report?.status.kind !== 'started') {
       return;
     }
 
     emitProductEvent('activity_started', {
-      activityID: report.activity.id,
-      nodeID: report.activity.scopeID,
+      activityID: report.status.activity.id,
+      nodeID: report.status.activity.scopeID,
     });
   }, [report]);
 
-  const expectedActivityID = findExpectedActivityID(report);
+  // a report for a scope the selection has left behind renders nothing — the fresh attempt's own
+  // reply overwrites it
+  const reportedStatus = report?.scopeID === selectedNode?.id ? report?.status : undefined;
+  const expectedActivityID = findExpectedActivityID(reportedStatus);
 
   const isActivityReady =
     expectedActivityID !== undefined &&
     attemptScopeID === selectedNode?.id &&
     idleWorkerHandle.activity?.id === expectedActivityID;
 
-  if (report?.kind === 'failed') {
+  if (reportedStatus?.kind === 'failed') {
     return (
       <Button
         data-testid="start-activity-retry"
@@ -167,11 +180,13 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
               ? ActivityFailureAction.Abort
               : ActivityFailureAction.Retry;
 
-            void sendIdleSetFailureAction(
-              idleWorkerHandle.client,
-              avatarID,
-              nextFailureAction,
-              idleWorkerHandle.writerAbortSignal,
+            runIgnoringRejection(
+              sendIdleSetFailureAction(
+                idleWorkerHandle.client,
+                avatarID,
+                nextFailureAction,
+                idleWorkerHandle.writerAbortSignal,
+              ),
             );
           },
         }}

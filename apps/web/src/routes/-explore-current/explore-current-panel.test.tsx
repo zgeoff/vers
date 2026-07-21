@@ -2,12 +2,14 @@ import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import type { StartStatus } from '@vers/idle-client';
 import { advanceWriterGeneration } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import * as db from '@vers/mock-services/db';
 import { setSelectedNode } from '@vers/worldmap-client';
 import { createMockWorldMapNode } from '@vers/worldmap-client/test-utils';
+import invariant from 'tiny-invariant';
 import { orpc } from '../../lib/rpc/orpc';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
@@ -19,17 +21,19 @@ import { ExploreCurrentPanel } from './explore-current-panel';
 test('it shows a spinner and calls initialize before the worker reports its state', () => {
   const client = createStubWorkerClient();
 
+  const writerAbortSignal = new AbortController().signal;
+
   setIdleWorkerHandle({
     activity: undefined,
     client,
     failureAction: ActivityFailureAction.Abort,
     initialized: false,
-    writerAbortSignal: new AbortController().signal,
+    writerAbortSignal,
   });
 
   const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
 
-  expect(client.initialize).toHaveBeenCalledExactlyOnceWith({}, expect.anything());
+  expect(client.initialize).toHaveBeenCalledExactlyOnceWith({}, { signal: writerAbortSignal });
   expect(rendered.queryByTestId('world-map-node-codex-stub')).not.toBeInTheDocument();
 });
 
@@ -78,12 +82,14 @@ test('it sends one start call for the selected node once initialized', async () 
     startActivity: () => new Promise(() => {}),
   });
 
+  const writerAbortSignal = new AbortController().signal;
+
   setIdleWorkerHandle({
     activity: undefined,
     client,
     failureAction: ActivityFailureAction.Abort,
     initialized: true,
-    writerAbortSignal: new AbortController().signal,
+    writerAbortSignal,
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -92,7 +98,7 @@ test('it sends one start call for the selected node once initialized', async () 
     await waitFor(() => {
       expect(client.startActivity).toHaveBeenCalledExactlyOnceWith(
         { avatarID: avatar.id, scopeID: 'a9lp75', scopeType: 'world_map_node' },
-        expect.anything(),
+        { signal: writerAbortSignal },
       );
     });
   });
@@ -230,6 +236,60 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
 
   const user = userEvent.setup();
 
+  const writerAbortSignal = new AbortController().signal;
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = render(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
+    });
+
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: started.id }),
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      writerAbortSignal,
+    });
+
+    const checkbox = await rendered.findByLabelText('Auto-retry on failure');
+
+    expect(checkbox).not.toBeChecked();
+
+    await user.click(checkbox);
+
+    expect(client.setFailureAction).toHaveBeenCalledExactlyOnceWith(
+      { avatarID: avatar.id, failureAction: ActivityFailureAction.Retry },
+      { signal: writerAbortSignal },
+    );
+  });
+});
+
+test('it ignores a start reply for a node the selection has left behind', async () => {
+  const signedIn = await createSignedInUser();
+
+  await db.avatarCollection.create({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: 'node-a' }));
+
+  const startResolvers: Array<(status: StartStatus) => void> = [];
+
+  const client = createStubWorkerClient({
+    startActivity: () =>
+      new Promise((resolve) => {
+        startResolvers.push(resolve);
+      }),
+  });
+
   setIdleWorkerHandle({
     activity: undefined,
     client,
@@ -245,23 +305,22 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
       expect(client.startActivity).toHaveBeenCalledTimes(1);
     });
 
-    setIdleWorkerHandle({
-      activity: createMockActivitySnapshot({ id: started.id }),
-      client,
-      failureAction: ActivityFailureAction.Abort,
-      initialized: true,
-      writerAbortSignal: new AbortController().signal,
+    setSelectedNode(createMockWorldMapNode({ id: 'node-b' }));
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(2);
     });
 
-    const checkbox = await rendered.findByLabelText('Auto-retry on failure');
+    const [staleResolve] = startResolvers;
 
-    expect(checkbox).not.toBeChecked();
+    invariant(staleResolve !== undefined, 'expected the first start call to be captured');
 
-    await user.click(checkbox);
+    // the first node's failed reply lands only after the selection moved on — it must not render
+    // as the new node's outcome
+    staleResolve({ kind: 'failed' });
 
-    expect(client.setFailureAction).toHaveBeenCalledExactlyOnceWith(
-      { avatarID: avatar.id, failureAction: ActivityFailureAction.Retry },
-      expect.anything(),
-    );
+    await expect(
+      rendered.findByTestId('start-activity-retry', undefined, { timeout: 100 }),
+    ).toReject();
   });
 });

@@ -14,9 +14,9 @@ interface CreateWebLocksClientOptions {
  * The fallback path for browsers without `SharedWorker`: spawns this tab's election worker, then
  * builds an RPC client over a `createBroadcastPort` bridge to whichever tab's worker wins the
  * write lock. A `pagehide` listener sends the explicit disconnect — the demux gives every tab its
- * own virtual port, so unlike the old broadcast-connection bridge this never severs another tab. A
- * call issued while no writer holds the lock hangs until the caller aborts it; the writer-ready
- * broadcast is the re-handshake signal callers key their own abort/retry on.
+ * own virtual port, so the disconnect releases only this tab's port and never severs another
+ * tab's. A call issued while no writer holds the lock hangs until the caller aborts it; the
+ * writer-ready broadcast is the re-handshake signal callers key their own abort/retry on.
  */
 export function createWebLocksClient(
   options: Readonly<CreateWebLocksClientOptions> = {},

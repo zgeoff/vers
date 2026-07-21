@@ -1,6 +1,8 @@
 import { expect, mock, onTestFinished, test } from 'bun:test';
+import { onMessagePortClose } from '@orpc/client/message-port';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { waitFor } from '@vers/test-utils';
+import { RPC_CLIENT_TO_WORKER_CHANNEL } from '../transport/constants';
 import { createBroadcastPort } from '../transport/create-broadcast-port';
 import { createWorkerClient } from '../transport/create-worker-client';
 import { createWorkerDemux } from './create-worker-demux';
@@ -70,5 +72,34 @@ test('it evicts an idle tab and re-upgrades a re-appearing tab id', async () => 
 
   await waitFor(() => {
     expect(upgrade).toHaveBeenCalledTimes(2);
+  });
+});
+
+test('it fires the virtual port close listeners when the sweep evicts an idle tab', async () => {
+  const closes: Array<string> = [];
+
+  const demux = createWorkerDemux({
+    evictAfterMs: 20,
+    upgrade: (port) => {
+      onMessagePortClose(port, () => {
+        closes.push('close');
+      });
+    },
+  });
+
+  onTestFinished(() => {
+    demux.stop();
+  });
+
+  const channel = new BroadcastChannel(RPC_CLIENT_TO_WORKER_CHANNEL);
+
+  onTestFinished(() => {
+    channel.close();
+  });
+
+  channel.postMessage({ data: 'ping', tabID: 'tab-idle' });
+
+  await waitFor(() => {
+    expect(closes).toStrictEqual(['close']);
   });
 });

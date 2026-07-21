@@ -120,6 +120,12 @@ async function runStart(
   // replace flow: earned checkpoints land before the stop closes the row to appends
   await context.getSubmitter().flushNow(row.id);
 
+  // the flush yields — a fresher call landing during it may be attaching to this very row, so
+  // the stop must not proceed on a stale claim
+  if (isSuperseded(context, token)) {
+    return { kind: 'failed' };
+  }
+
   if (!(await stopConflictingRow(context, row.id, input.avatarID))) {
     return { kind: 'failed' };
   }

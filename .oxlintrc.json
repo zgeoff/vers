@@ -200,6 +200,7 @@
               "Headers",
               "FormData",
               "HTMLFormElement",
+              "Event",
               "MessageEvent",
               "MessagePort",
               "EventListenerOrEventListenerObject",

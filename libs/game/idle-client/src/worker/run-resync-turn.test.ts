@@ -40,9 +40,9 @@ import type { WorkerContext } from './types';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
 /**
- * A `createTestConnection`-shaped view over a stub context's captured broadcasts, so the many
- * existing assertions below (`waitForMessages`, `received`, a sentinel post through `port`) read
- * unchanged even though broadcasting is synchronous now.
+ * A port-like probe over a stub context's captured broadcasts: `received` reads them live,
+ * `waitForMessages` polls until the given count has arrived, and `port.postMessage` feeds a
+ * sentinel through the same capture the assertions read.
  */
 function collectBroadcasts(context: StubWorkerContext) {
   return {
