@@ -35,34 +35,44 @@ process that replays submitted checkpoints — import them and compute byte-iden
 same inputs.
 
 The client does all real-time simulation. One writer per browser profile runs the fixed-timestep
-loop: a SharedWorker where the browser has one. Where it doesn't (Android Chrome, older Safari),
-every tab spawns a dedicated worker and the workers race an exclusive Web Locks request for the
-per-origin writer lock: the holder boots the same worker runtime, bridged to every tab over a pair
-of BroadcastChannels (one per direction, so tabs never see each other's client messages), and
-announces itself with a writer-ready broadcast. The granted lock callback never settles, so the
-browser releases the lock only when the writer's tab dies; the next queued worker then promotes
-through the same boot path a worker reload takes — seeding from the durable checkpoint queue and
-pending intents — while tabs respond to the writer-ready broadcast by re-sending their initialize
-and report-online handshake. A tab's initialize is send-and-retry until answered, since a post while
-no writer holds the lock is lost; a start intent re-raises on promotion the same way. Other one-shot
-intents posted inside the succession gap — a stop, a continue-here claim, a failure-action toggle —
-are accepted losses: the window spans only lock handoff plus runtime boot, and each has a visible
-recovery (the run reads still-active and the player stops it again, the notice can be re-actioned,
-the toggle reverts to the cached value). The handoff window is guarded by the append path itself:
-the head-row guarded update plus deterministic-content dedupe means a dying writer's late append and
-its successor's identical checkpoints converge instead of interleaving. A frozen background tab's
-worker keeps the lock while paused, so the writer stalls until the tab thaws or the browser discards
-it; a discard releases the lock and runs succession, and the offline-progress design absorbs the
-stall — the next report-online resyncs and fast-forwards. On promotion, tabs briefly render catch-up
-state while the new writer's resync fast-forwards; that beat is the accepted cost of
-succession-as-reload.
+loop; every other tab is a pure viewer, rendering the writer's **sim snapshot** — the engine's
+serializable `*Snapshot` projection from `getSnapshot()`, distinct from the server-authored **build
+snapshot** that pins an avatar's build as a simulation input. On returning from offline, the client
+fast-forwards the simulation from the last verified checkpoint. The server never simulates on the
+request path; it replays asynchronously to decide whether to trust what the client submitted.
 
-Other tabs are pure viewers. Viewer tabs render the writer's **sim snapshot**: the engine's
-serializable `*Snapshot` projection from `getSnapshot()`. That snapshot is separate from the
-server-authored **build snapshot**, which pins an avatar's build as a simulation input. On returning
-from offline, the client fast-forwards the simulation from the last verified checkpoint. The server
-never simulates on the request path. It replays asynchronously to decide whether to trust what the
-client submitted.
+### Writer election
+
+The writer is a SharedWorker where the browser has one. Where it doesn't (Android Chrome, older
+Safari), every tab spawns a dedicated worker and the workers race one exclusive Web Locks request
+for the writer lock. The winner boots the same worker runtime, reaches every tab over a pair of
+BroadcastChannels — one per direction, so a tab never receives another tab's client messages — and
+announces itself with a writer-ready broadcast.
+
+The granted lock callback never settles, so the browser releases the lock only when the writer's tab
+dies. The next queued worker then boots exactly as a reloaded worker would, seeding from the durable
+checkpoint queue and pending intents. A frozen background tab's worker keeps the lock while paused:
+the writer stalls until the tab thaws or the browser discards it, and the offline-progress design
+absorbs the stall — the next report-online resyncs and fast-forwards.
+
+Tabs treat the writer-ready broadcast as a fresh worker. Each re-sends its initialize and
+report-online handshake, a pending start intent re-raises under a new request id, and viewers
+briefly render catch-up state until the new writer's resync completes. Initialize is send-and-retry
+until answered — a post while no worker holds the lock reaches nothing. A succession re-report never
+claims the writer, so a dying background tab's promotion cannot take a run from a device the player
+is actively driving.
+
+One-shot intents posted inside the handoff — it spans only lock release plus runtime boot — are
+accepted losses, each with a visible recovery:
+
+- a stop: the run reads still-active and the player stops it again
+- a continue-here claim: the displaced notice returns with the next initial-state broadcast and the
+  player claims again
+- a failure-action toggle: the control reverts to the durable cached value
+
+The handoff needs no server-side writer coordination: the append path's head-row guarded update plus
+deterministic-content dedupe makes a dying writer's late append and its successor's identical
+checkpoints converge instead of interleaving.
 
 ## Server-authored inputs
 
