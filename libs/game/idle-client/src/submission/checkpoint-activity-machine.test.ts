@@ -8,6 +8,7 @@ import { HttpResponse } from 'msw';
 import { createActor } from 'xstate';
 import { server } from '../mocks/node';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
+import type { CheckpointActivityEmittedEvent } from './checkpoint-activity-machine';
 import { checkpointActivityMachine } from './checkpoint-activity-machine';
 import type { ActivityServiceClient } from './types';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
@@ -26,14 +27,9 @@ function setupTest(
 
   const client: ActivityServiceClient = createORPCClient(link);
   const onAcked = config.onAcked ?? mock<(activityID: string, appendedHead: number) => void>();
-  const onCapped = mock<(activityID: string, appendedHead: number) => void>();
-  const onEvicted = mock<(activityID: string) => void>();
-  const onFlushStalled = mock<(activityID: string, reason: string, traceID: string) => void>();
-  const onHeld = mock<(activityID: string) => void>();
   const onInvalid = mock<(activityID: string, reason: string, traceID?: string) => void>();
-  const onRetryFailed = mock<(activityID: string, error: unknown) => void>();
-  const onServerContact = mock<() => void>();
   const scheduleProgressFlush = mock<() => void>();
+  const emitted: Array<CheckpointActivityEmittedEvent> = [];
 
   const actor = createActor(checkpointActivityMachine, {
     input: {
@@ -42,10 +38,10 @@ function setupTest(
       expectedHead: 0,
       latestQueuedVersion: config.latestQueuedVersion,
       onAcked,
-      onCapped,
-      onEvicted,
+      onCapped: undefined,
+      onEvicted: undefined,
       onInvalid,
-      onServerContact,
+      onServerContact: undefined,
       retryTimings: config.retryTimings ?? { maxTimeout: 300_000, minTimeout: 10_000 },
       scheduleProgressFlush,
       signal: config.signal,
@@ -53,32 +49,13 @@ function setupTest(
     },
   });
 
-  actor.on('flushStalled', (emitted) => {
-    onFlushStalled(emitted.activityID, emitted.reason, emitted.traceID);
-  });
-
-  actor.on('held', (emitted) => {
-    onHeld(emitted.activityID);
-  });
-
-  actor.on('retryFailed', (emitted) => {
-    onRetryFailed(emitted.activityID, emitted.error);
+  actor.on('*', (event) => {
+    emitted.push(event);
   });
 
   actor.start();
 
-  return {
-    actor,
-    onAcked,
-    onCapped,
-    onEvicted,
-    onFlushStalled,
-    onHeld,
-    onInvalid,
-    onRetryFailed,
-    onServerContact,
-    scheduleProgressFlush,
-  };
+  return { actor, emitted, onAcked, onInvalid, scheduleProgressFlush };
 }
 
 test('it arms the shared progress window and waits for an explicit flush-due event, not a timer', async () => {
@@ -134,7 +111,9 @@ test('it moves to retrying and reports the batch held on a transport failure', a
     expect(ctx.actor.getSnapshot().matches('retrying')).toBeTrue();
   });
 
-  expect(ctx.onHeld).toHaveBeenCalledExactlyOnceWith('transport-failure-machine-activity');
+  expect(ctx.emitted).toStrictEqual([
+    { activityID: 'transport-failure-machine-activity', type: 'held' },
+  ]);
 });
 
 test('it retries on a real backoff timer, driven by tiny retryTimings, until the batch lands', async () => {
@@ -415,10 +394,9 @@ test('it reports a callback failure and holds the batch without starting a retry
   ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 1 });
 
   await waitFor(() => {
-    expect(ctx.onRetryFailed).toHaveBeenCalledExactlyOnceWith(
-      'callback-failed-machine-activity',
-      ackFailure,
-    );
+    expect(ctx.emitted).toStrictEqual([
+      { activityID: 'callback-failed-machine-activity', error: ackFailure, type: 'retryFailed' },
+    ]);
   });
 
   expect(ctx.actor.getSnapshot().matches('idle')).toBeTrue();
