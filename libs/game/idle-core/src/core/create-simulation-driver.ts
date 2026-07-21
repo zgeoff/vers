@@ -33,12 +33,12 @@ export function createSimulationDriver(
 
   let isTerminated = false;
 
-  // oxlint-disable-next-line require-await -- kept async so cross-package callers can keep awaiting this driver-facing API; the engine now steps synchronously with no internal await
+  // oxlint-disable-next-line require-await -- kept async so cross-package callers can keep awaiting this driver-facing API; the engine step itself is synchronous
   const advanceToDuration = async (
     duration: number,
     stopAtState?: string,
     expectedCheckpointCount?: number,
-    // oxlint-disable-next-line typescript/require-await -- kept async so cross-package callers can keep awaiting this driver-facing API; the engine now steps synchronously with no internal await
+    // oxlint-disable-next-line typescript/require-await -- kept async so cross-package callers can keep awaiting this driver-facing API; the engine step itself is synchronous
   ): Promise<SimulationAdvanceResult> => {
     const checkpoints: Array<ActivityCheckpoint> = [];
 

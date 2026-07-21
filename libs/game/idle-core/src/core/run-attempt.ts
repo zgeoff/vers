@@ -34,7 +34,7 @@ interface RunAttemptResult {
  * the caller's. The result is committed only when its terminal landed at or under
  * `maxDurationMs`; the tick that crosses the budget contributes nothing.
  */
-// oxlint-disable-next-line typescript/require-await -- kept async so cross-package callers can keep awaiting this driver-facing API; the engine now steps synchronously with no internal await
+// oxlint-disable-next-line typescript/require-await -- kept async so cross-package callers can keep awaiting this driver-facing API; the engine step itself is synchronous
 export async function runAttempt(
   activity: ActivityInput,
   avatar: AvatarData,
