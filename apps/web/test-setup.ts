@@ -1,9 +1,13 @@
 import '@zgeoff/bun-test-extended';
-import { afterEach, expect, mock } from 'bun:test';
+import { afterEach, expect } from 'bun:test';
 import { faker } from '@faker-js/faker';
 import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
 import { registerZustandReset } from '@vers/client-test-utils';
-import { registerHappyDOM, registerMSWLifecycle } from '@vers/test-utils/bun';
+import {
+  registerBunTestCleanup,
+  registerHappyDOM,
+  registerMSWLifecycle,
+} from '@vers/test-utils/bun';
 import { server } from './src/mocks/node';
 import { registerAvatarViewerMock } from './src/test-utils/register-avatar-viewer-mock';
 import { registerGameCanvasMock } from './src/test-utils/register-game-canvas-mock';
@@ -53,7 +57,4 @@ registerWorldMapNodeCodexSlotMock();
 const reactTestingLibrary = await import('@testing-library/react');
 
 afterEach(reactTestingLibrary.cleanup);
-
-afterEach(() => {
-  mock.restore();
-});
+registerBunTestCleanup();

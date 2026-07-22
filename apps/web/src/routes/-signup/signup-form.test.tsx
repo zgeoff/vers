@@ -13,7 +13,10 @@ function rejectWithResponse(): Promise<Response> {
 test('it shows the error for the email field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
-      <SignupForm lastResult={{ error: { email: ['Email is invalid'] }, status: 'error' }} />,
+      <SignupForm
+        honeypotValidFrom="1700000000000"
+        lastResult={{ error: { email: ['Email is invalid'] }, status: 'error' }}
+      />,
     );
 
     const emailError = await screen.findByText('Email is invalid');
@@ -26,7 +29,7 @@ test('it shows a generic failure message when the server rejects the submission'
   const user = userEvent.setup();
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<SignupForm action={rejectWithResponse} />);
+    renderWithRouter(<SignupForm action={rejectWithResponse} honeypotValidFrom="1700000000000" />);
 
     const emailInput = await screen.findByLabelText('Email');
 
@@ -47,7 +50,7 @@ test('it disables the submit button while the signup request is pending', async 
   const gatedAction = mock(() => deferred.promise);
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<SignupForm action={gatedAction} />);
+    renderWithRouter(<SignupForm action={gatedAction} honeypotValidFrom="1700000000000" />);
 
     const emailInput = await screen.findByLabelText('Email');
 

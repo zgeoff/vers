@@ -13,6 +13,7 @@ import { ForgotPasswordFormSchema } from './forgot-password-form-schema';
 
 interface ForgotPasswordFormProps {
   readonly action?: FormAction;
+  readonly honeypotValidFrom: string;
   readonly lastResult?: SubmissionResult;
 }
 
@@ -45,7 +46,7 @@ export function ForgotPasswordForm(props: ForgotPasswordFormProps) {
         <Text>No worries, we&apos;ll send you reset instructions to your email address.</Text>
       </section>
       <form {...getFormProps(form)} className={formStyles} method="post">
-        <HoneypotInputs />
+        <HoneypotInputs validFrom={props.honeypotValidFrom} />
         <Field
           errors={fields.email.errors ?? []}
           inputProps={{
