@@ -6,3 +6,14 @@
 export type DeepReadonly<T> = T extends (...args: ReadonlyArray<never>) => unknown
   ? T
   : { readonly [K in keyof T]: DeepReadonly<T[K]> };
+
+/**
+ * The per-call context every service client accepts: who the outbound s2s token's `sub` claim
+ * names. Omitting `actingUserID` (the default) derives it from the ambient `en_session` cookie,
+ * proactively re-validating a near-expired session first; an explicit user id mints for that actor
+ * with no cookie read or liveness check, for a flow that already holds it with no cookie session
+ * yet (login, force-logout); explicit `null` mints a verified-anonymous token with no cookie read.
+ */
+export interface ServiceLinkContext {
+  readonly actingUserID?: string | null;
+}
