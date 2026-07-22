@@ -52,6 +52,7 @@ export interface Activities {
   scopeId: string;
   scopeType: string;
   seed: string;
+  settledXp: Generated<number>;
   simVersion: string;
   startChainIndex: Generated<number>;
   startedAt: Generated<Timestamp>;

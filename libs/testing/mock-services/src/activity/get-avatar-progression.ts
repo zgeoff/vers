@@ -16,8 +16,11 @@ const TerminalCheckpointPayloadSchema = z.object({
 /**
  * Returns the avatar's settled xp/level plus one pending entry per terminal-but-unsettled activity
  * — a non-active, non-rejected activity whose `verifiedHead` hasn't caught up to its `appendedHead`
- * — sourced from that activity's tail checkpoint. Seed `checkpointCollection` to assert on a
- * pending entry's `xpDelta`.
+ * — sourced from that activity's tail checkpoint, and an identity entry for the live activity when
+ * one is active. Seed `checkpointCollection` to assert on a pending entry's `xpDelta`. The live
+ * entry always reports nothing settled: the stored row mirrors the public activity shape, which
+ * carries no settled-xp field, so the net a client overlays is asserted against the client's own
+ * projection rather than through this handler.
  */
 export const getAvatarProgression = os.getAvatarProgression.handler((opts) => {
   const actingUserId = opts.context.actingUserId;
@@ -61,5 +64,11 @@ export const getAvatarProgression = os.getAvatarProgression.handler((opts) => {
       return [{ activityID: activity.id, xpDelta: parsed.data.rewards.xp }];
     });
 
-  return { level: avatar.level, pending, xp: avatar.xp };
+  const live = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: opts.input.avatarID, status: 'active' }),
+  );
+
+  const active = live === undefined ? null : { activityID: live.id, settledXP: 0 };
+
+  return { active, level: avatar.level, pending, xp: avatar.xp };
 });
