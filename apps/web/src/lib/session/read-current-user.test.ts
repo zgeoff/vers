@@ -71,3 +71,19 @@ test('it rejects when the service fails in a way that is not a declared unauthor
 
   expect(promise).rejects.toThrow('Internal server error');
 });
+
+test('it rejects when the service declares a contract error other than unauthorized', async () => {
+  const ctx = setupTest();
+
+  const signedIn = await createSignedInUser();
+
+  server.use(
+    ctx.mockUser.getCurrentUser.handler((opts) => {
+      throw opts.errors.FORBIDDEN({ data: {} });
+    }),
+  );
+
+  const promise = withRequestContext({ cookies: signedIn.cookies }, () => readCurrentUser());
+
+  expect(promise).rejects.toMatchObject({ code: 'FORBIDDEN' });
+});
