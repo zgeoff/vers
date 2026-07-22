@@ -20,9 +20,10 @@ export interface DeployTarget {
   /**
    * Marks the target whose deploy the sim-version reconcile runs after —
    * provisioning a per-version provider app and upserting the `sim_versions`
-   * registry row for the engine hash baked into its image.
+   * registry row for the engine hash baked into its image. `region` is the
+   * Fly region a provider machine launches into.
    */
-  readonly simVersionProvider?: boolean;
+  readonly simVersionProvider?: { readonly region: string };
 }
 
 /**
@@ -111,6 +112,10 @@ export interface SimVersionActionInput {
   readonly fleetImage: FleetImage | null;
   readonly providerAppExists: boolean;
   readonly providerMachineExists: boolean;
+  readonly providerMachineID: string | null;
+  readonly providerMachineImageDigest: string | null;
+  readonly providerMachineRegion: string | null;
+  readonly region: string;
   readonly registryRow: SimVersionRow | undefined;
 }
 
@@ -118,11 +123,15 @@ export interface SimVersionActionInput {
  * What already exists of a per-version provider app. `hasMachine` is false
  * whenever `exists` is — an app can outlive its machine (a partial provision
  * or a manual destroy), and a registry row must never point at one that has
- * nothing to wake.
+ * nothing to wake. `machineID`/`machineImageDigest`/`machineRegion` are null
+ * whenever `hasMachine` is.
  */
 export interface ProviderAppState {
   readonly exists: boolean;
   readonly hasMachine: boolean;
+  readonly machineID: string | null;
+  readonly machineImageDigest: string | null;
+  readonly machineRegion: string | null;
 }
 
 interface CreateProviderAppAction {
@@ -139,6 +148,21 @@ interface RunProviderMachineAction {
   readonly kind: 'run-provider-machine';
   readonly app: string;
   readonly image: string;
+  readonly region: string;
+}
+
+/**
+ * Replaces a provider machine whose image has drifted from the fleet's
+ * resolved digest or whose region has drifted from the declared one —
+ * `image` is always the fleet's tag ref, never its digest ref, matching
+ * `RunProviderMachineAction`.
+ */
+interface ReplaceProviderMachineAction {
+  readonly kind: 'replace-provider-machine';
+  readonly app: string;
+  readonly machineID: string;
+  readonly image: string;
+  readonly region: string;
 }
 
 interface UpsertRegistryRowAction {
@@ -150,6 +174,7 @@ export type SimVersionAction =
   | CreateProviderAppAction
   | AllocateFlycastIPAction
   | RunProviderMachineAction
+  | ReplaceProviderMachineAction
   | UpsertRegistryRowAction;
 
 /**

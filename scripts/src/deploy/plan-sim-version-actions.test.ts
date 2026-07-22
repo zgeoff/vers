@@ -6,6 +6,7 @@ import type { FleetImage } from './types';
 
 const ENGINE_HASH = 'a1b2c3d4e5f6'.padEnd(64, '0');
 const PROVIDER_APP = 'vers-replay-a1b2c3d4e5f6';
+const REGION = 'syd';
 
 const fleetImage: FleetImage = {
   digest: 'sha256:current',
@@ -20,6 +21,10 @@ test('it provisions everything for a fresh engine hash', () => {
     fleetImage,
     providerAppExists: false,
     providerMachineExists: false,
+    providerMachineID: null,
+    providerMachineImageDigest: null,
+    providerMachineRegion: null,
+    region: REGION,
     registryRow: undefined,
   });
 
@@ -30,6 +35,7 @@ test('it provisions everything for a fresh engine hash', () => {
       app: PROVIDER_APP,
       image: `${fleetImage.repository}:${fleetImage.tag}`,
       kind: 'run-provider-machine',
+      region: REGION,
     },
     {
       input: {
@@ -43,13 +49,36 @@ test('it provisions everything for a fresh engine hash', () => {
   ]);
 });
 
-test('it takes no action when the registry row is current and the app already exists', () => {
+test('it carries the declared region on a fresh provision', () => {
+  const actions = planSimVersionActions({
+    bunVersion: '1.3.10',
+    engineHash: ENGINE_HASH,
+    fleetImage,
+    providerAppExists: false,
+    providerMachineExists: false,
+    providerMachineID: null,
+    providerMachineImageDigest: null,
+    providerMachineRegion: null,
+    region: REGION,
+    registryRow: undefined,
+  });
+
+  const runAction = actions.find((action) => action.kind === 'run-provider-machine');
+
+  expect(runAction?.kind === 'run-provider-machine' && runAction.region).toBe(REGION);
+});
+
+test('it takes no action when the registry row is current and the machine runs the fleet digest', () => {
   const actions = planSimVersionActions({
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
     providerAppExists: true,
     providerMachineExists: true,
+    providerMachineID: 'machine-1',
+    providerMachineImageDigest: fleetImage.digest,
+    providerMachineRegion: REGION,
+    region: REGION,
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
     }),
@@ -65,6 +94,10 @@ test('it recreates the provider app and refreshes the row when the app is missin
     fleetImage,
     providerAppExists: false,
     providerMachineExists: false,
+    providerMachineID: null,
+    providerMachineImageDigest: null,
+    providerMachineRegion: null,
+    region: REGION,
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
     }),
@@ -77,6 +110,7 @@ test('it recreates the provider app and refreshes the row when the app is missin
       app: PROVIDER_APP,
       image: `${fleetImage.repository}:${fleetImage.tag}`,
       kind: 'run-provider-machine',
+      region: REGION,
     },
     {
       input: {
@@ -97,6 +131,10 @@ test('it only refreshes the registry row when the fleet digest has drifted from 
     fleetImage,
     providerAppExists: true,
     providerMachineExists: true,
+    providerMachineID: 'machine-1',
+    providerMachineImageDigest: fleetImage.digest,
+    providerMachineRegion: REGION,
+    region: REGION,
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@sha256:stale`,
     }),
@@ -122,6 +160,10 @@ test('it relaunches only the machine when the app survives but its machine is go
     fleetImage,
     providerAppExists: true,
     providerMachineExists: false,
+    providerMachineID: null,
+    providerMachineImageDigest: null,
+    providerMachineRegion: null,
+    region: REGION,
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
     }),
@@ -132,6 +174,79 @@ test('it relaunches only the machine when the app survives but its machine is go
       app: PROVIDER_APP,
       image: `${fleetImage.repository}:${fleetImage.tag}`,
       kind: 'run-provider-machine',
+      region: REGION,
+    },
+    {
+      input: {
+        bunVersion: '1.3.10',
+        engineHash: ENGINE_HASH,
+        imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
+        providerURL: `http://${PROVIDER_APP}.flycast`,
+      },
+      kind: 'upsert-registry-row',
+    },
+  ]);
+});
+
+test('it replaces a running machine whose image digest has drifted from the fleet', () => {
+  const actions = planSimVersionActions({
+    bunVersion: '1.3.10',
+    engineHash: ENGINE_HASH,
+    fleetImage,
+    providerAppExists: true,
+    providerMachineExists: true,
+    providerMachineID: 'machine-1',
+    providerMachineImageDigest: 'sha256:stale',
+    providerMachineRegion: REGION,
+    region: REGION,
+    registryRow: createMockSimVersionRow({
+      imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
+    }),
+  });
+
+  expect(actions).toStrictEqual([
+    {
+      app: PROVIDER_APP,
+      image: `${fleetImage.repository}:${fleetImage.tag}`,
+      kind: 'replace-provider-machine',
+      machineID: 'machine-1',
+      region: REGION,
+    },
+    {
+      input: {
+        bunVersion: '1.3.10',
+        engineHash: ENGINE_HASH,
+        imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
+        providerURL: `http://${PROVIDER_APP}.flycast`,
+      },
+      kind: 'upsert-registry-row',
+    },
+  ]);
+});
+
+test('it replaces a running machine sitting outside the declared region even when its image is current', () => {
+  const actions = planSimVersionActions({
+    bunVersion: '1.3.10',
+    engineHash: ENGINE_HASH,
+    fleetImage,
+    providerAppExists: true,
+    providerMachineExists: true,
+    providerMachineID: 'machine-1',
+    providerMachineImageDigest: fleetImage.digest,
+    providerMachineRegion: 'iad',
+    region: REGION,
+    registryRow: createMockSimVersionRow({
+      imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
+    }),
+  });
+
+  expect(actions).toStrictEqual([
+    {
+      app: PROVIDER_APP,
+      image: `${fleetImage.repository}:${fleetImage.tag}`,
+      kind: 'replace-provider-machine',
+      machineID: 'machine-1',
+      region: REGION,
     },
     {
       input: {
@@ -152,6 +267,10 @@ test('it refreshes only the row when the app and machine exist but the row is mi
     fleetImage,
     providerAppExists: true,
     providerMachineExists: true,
+    providerMachineID: 'machine-1',
+    providerMachineImageDigest: fleetImage.digest,
+    providerMachineRegion: REGION,
+    region: REGION,
     registryRow: undefined,
   });
 
@@ -175,6 +294,10 @@ test('it launches the provider machine by tag, never by digest', () => {
     fleetImage,
     providerAppExists: false,
     providerMachineExists: false,
+    providerMachineID: null,
+    providerMachineImageDigest: null,
+    providerMachineRegion: null,
+    region: REGION,
     registryRow: undefined,
   });
 
@@ -184,6 +307,26 @@ test('it launches the provider machine by tag, never by digest', () => {
   expect(runAction?.image).not.toInclude('sha256:');
 });
 
+test('it replaces the provider machine by tag, never by digest', () => {
+  const actions = planSimVersionActions({
+    bunVersion: '1.3.10',
+    engineHash: ENGINE_HASH,
+    fleetImage,
+    providerAppExists: true,
+    providerMachineExists: true,
+    providerMachineID: 'machine-1',
+    providerMachineImageDigest: 'sha256:stale',
+    providerMachineRegion: REGION,
+    region: REGION,
+    registryRow: undefined,
+  });
+
+  const replaceAction = actions.find((action) => action.kind === 'replace-provider-machine');
+
+  expect(replaceAction?.image).toBe(`${fleetImage.repository}:${fleetImage.tag}`);
+  expect(replaceAction?.image).not.toInclude('sha256:');
+});
+
 test('it derives the provider app name and flycast URL from the first 12 hex chars of the engine hash', () => {
   const actions = planSimVersionActions({
     bunVersion: '1.3.10',
@@ -191,6 +334,10 @@ test('it derives the provider app name and flycast URL from the first 12 hex cha
     fleetImage,
     providerAppExists: false,
     providerMachineExists: false,
+    providerMachineID: null,
+    providerMachineImageDigest: null,
+    providerMachineRegion: null,
+    region: REGION,
     registryRow: undefined,
   });
 
@@ -212,6 +359,10 @@ test('it takes no action when the fleet has no single resolved image', () => {
     fleetImage: null,
     providerAppExists: false,
     providerMachineExists: false,
+    providerMachineID: null,
+    providerMachineImageDigest: null,
+    providerMachineRegion: null,
+    region: REGION,
     registryRow: undefined,
   });
 
