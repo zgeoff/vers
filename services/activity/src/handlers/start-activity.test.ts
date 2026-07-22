@@ -1218,13 +1218,18 @@ test('it refuses to adopt while another avatar holds a live run', async () => {
 
   await ctx.db.deleteFrom('activeAvatars').where('userId', '=', viewer.user.id).execute();
 
-  expect(
-    client.startActivity({
-      avatarID: otherAvatar.id,
-      scopeID: 'esaxrt',
-      scopeType: 'world_map_node',
-    }),
-  ).rejects.toMatchObject({
+  const conflictingStart = client.startActivity({
+    avatarID: otherAvatar.id,
+    scopeID: 'esaxrt',
+    scopeType: 'world_map_node',
+  });
+
+  // `.rejects` chains type as synchronous and are ordinarily left unawaited, but the trailing
+  // query below must observe the rejected call's transaction fully settled — draining it here
+  // guarantees that ordering before the shape assertion below runs against the settled promise.
+  await conflictingStart.catch(() => {});
+
+  expect(conflictingStart).rejects.toMatchObject({
     code: 'AVATAR_NOT_ACTIVE',
     data: { activeAvatarID: liveAvatar.id, activeAvatarName: liveAvatar.name },
   });
