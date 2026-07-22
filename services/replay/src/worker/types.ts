@@ -32,7 +32,7 @@ export type ReplayIterationOutcome =
     }
   | {
       readonly kind: 'parked';
-      readonly reason: 'durationCapExceeded' | 'expired' | 'unknownVersion';
+      readonly reason: 'durationCapExceeded' | 'expired' | 'providerUnavailable' | 'unknownVersion';
     }
   | { readonly kind: 'quarantined' }
   | { readonly kind: 'rejected' }

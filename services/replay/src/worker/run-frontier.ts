@@ -9,6 +9,7 @@ import { parkActivity } from '../dispatch/park-activity';
 import { runReplaySegment } from '../dispatch/run-replay-segment';
 import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { recordRejection } from '../metrics/record-rejection';
+import type { RejectionReason } from '../metrics/record-rejection';
 import { recordVerificationLag } from '../metrics/record-verification-lag';
 import { rollRewardItems } from '../mint/roll-reward-items';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
@@ -386,7 +387,7 @@ async function parkFrontier(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
-  reason: 'durationCapExceeded' | 'expired' | 'unknownVersion',
+  reason: 'durationCapExceeded' | 'expired' | 'providerUnavailable' | 'unknownVersion',
 ): Promise<ReplayIterationOutcome> {
   const message = pickParkMessage(reason);
 
@@ -403,9 +404,7 @@ async function parkFrontier(
     message,
   );
 
-  const rejectionReason = reason === 'durationCapExceeded' ? 'elapsed-time' : 'version-park';
-
-  recordRejection(rejectionReason);
+  recordRejection(pickParkRejectionReason(reason));
 
   await parkActivity(trx, segment.activity.id);
 
@@ -414,7 +413,9 @@ async function parkFrontier(
   return { kind: 'parked', reason };
 }
 
-function pickParkMessage(reason: 'durationCapExceeded' | 'expired' | 'unknownVersion'): string {
+function pickParkMessage(
+  reason: 'durationCapExceeded' | 'expired' | 'providerUnavailable' | 'unknownVersion',
+): string {
   if (reason === 'expired') {
     return 'sim version retention expired; parking activity for operator resolution';
   }
@@ -423,7 +424,25 @@ function pickParkMessage(reason: 'durationCapExceeded' | 'expired' | 'unknownVer
     return 'sim version unrecognized; parking activity';
   }
 
+  if (reason === 'providerUnavailable') {
+    return 'sim version provider unavailable; parking activity until the registry sweep retries it';
+  }
+
   return 'replay duration cap exhausted before the expected checkpoint count; parking activity for operator resolution';
+}
+
+function pickParkRejectionReason(
+  reason: 'durationCapExceeded' | 'expired' | 'providerUnavailable' | 'unknownVersion',
+): RejectionReason {
+  if (reason === 'durationCapExceeded') {
+    return 'elapsed-time';
+  }
+
+  if (reason === 'providerUnavailable') {
+    return 'provider-unavailable';
+  }
+
+  return 'version-park';
 }
 
 function buildFreshDriver(segment: Readonly<ReplaySegment>): SimulationDriver {
