@@ -4,15 +4,21 @@ import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 /**
  * Exercises the home route against a live server, past what `bun test` can drive (it resolves
  * package exports without the `react-server` condition, and there's no live request's
- * `AsyncLocalStorage` context). The hero renders its content client-side behind `!query.isPending`,
- * so this checks the served HTML response (200, `text/html`) and the client-rendered signed-out
- * actions, not server-rendered content.
+ * `AsyncLocalStorage` context). The hero's calls to action come from route loader data, so this
+ * checks both the raw served HTML (200, `text/html`, hero copy and links already present) and the
+ * hydrated page.
  */
 test('it serves the home page and renders the signed-out actions', async ({ page, request }) => {
   const rawResponse = await request.get('/');
 
   expect(rawResponse.status()).toBe(200);
   expect(rawResponse.headers()['content-type']).toContain('text/html');
+
+  const html = await rawResponse.text();
+
+  expect(html).toContain('Welcome to vers');
+  expect(html).toContain('href="/login"');
+  expect(html).toContain('href="/signup"');
 
   await page.goto('/');
 
