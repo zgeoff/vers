@@ -104,27 +104,20 @@ immediately starts another builds against what they just earned. A held run is e
 and `quarantined` reach verification only by operator action, so counting one would stamp xp that
 never settles into this run's snapshot and every later one.
 
-Borrowing unsettled xp records where it came from. A new activity's snapshot provenance is the set
-of unverified runs whose remainders it counted, stored per activity at start, and it makes the
-borrowed total answerable to what verification later proves. Chains are scoped per `(avatar, scope)`
-while identity is avatar-global, so provenance is what orders an avatar's chains against each other:
-a chain whose replay frontier borrowed xp is unclaimable until every run it borrowed from has no
-appends left past its own verified cursor. Provenance points at runs that had already ended when the
-borrower started, so the ordering it imposes is acyclic, and it applies transitively — a borrower is
-adjudicated only after its sources, which were themselves adjudicated only after theirs.
+A borrowed remainder records where it came from. An activity's snapshot provenance is the set of
+unverified runs it counted, stored at start. Identity is avatar-global while chains are per-scope,
+so a borrow crosses chains, and provenance is what orders them against each other:
 
-Adjudicating a borrower begins by checking that foundation. A source that rejected leaves the
-borrower playing a level and life the avatar never proved it had, so the borrower is rejected
-outright, without replaying its stream — there is no total left to replay against and no divergence
-to confirm. Every activity that borrowed from the borrower fails the same check when its own turn
-comes, so one rejection reaches the whole dependency graph through the single-chain rejection path,
-with no writer reaching across chains. A source under an operator hold keeps its borrowers waiting
-rather than releasing them: a hold that later rejects would otherwise leave the same unproven total
-in place. Progress on a borrowing chain therefore stalls for as long as the hold lasts.
-
-An activity whose source rejects while it is still running is refused at its next adjudication
-rather than the moment the source falls, since a chain is only ever inspected when it has appends to
-verify.
+- A chain is unclaimable while its replay frontier has a source with appends past its own verified
+  cursor. Provenance points at runs that had already ended when the borrower started, so the
+  ordering is acyclic and holds transitively.
+- A frontier whose source rejected is refused without replaying its stream, there being no proven
+  total left to replay against. Its own borrowers fail the same check in turn, so one rejection
+  reaches every dependent through the single-chain rejection path.
+- A source under an operator hold keeps its borrowers waiting, since a hold that later rejects would
+  leave the same unproven total in place. The borrowing chain stalls until the hold clears.
+- A borrower still running when its source falls is refused at its next adjudication, since a chain
+  is inspected only when it has appends to verify.
 
 `getAvatarProgression` reads the settled row, its pending projection, and the live run's
 settled-so-far in a single statement, so a client display is never torn between them. The pending
@@ -137,9 +130,8 @@ pending projection is display-only.
 
 - The verifier serializes a chain's activities on the chain row, adjudicating one at a time in
   order, so a continuation never confirms against a predecessor that later rejects.
-- A chain is claimable only once every run its replay frontier borrowed xp from has been adjudicated
-  to completion, which orders an avatar's chains against each other without any writer holding more
-  than the one chain row it claimed.
+- A chain waits on the runs its replay frontier borrowed xp from, ordering an avatar's chains
+  against each other while no writer holds more than the one chain row it claimed.
 - The request-path forward-advance and the verifier both acquire the chain row before the activity
   row, a single ordering that admits no cycle.
 - The rejection rewind reads the verified columns inline in its update statement, never through a
