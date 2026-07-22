@@ -6,8 +6,8 @@ import type {
   SimulationContext,
 } from '../types';
 import { logger } from '../utils/logger';
+import { buildKillRewards } from './utils/build-kill-rewards';
 import { buildWaveClearRewardSlots } from './utils/build-wave-clear-reward-slots';
-import { buildWaveClearRewards } from './utils/build-wave-clear-rewards';
 import { createCompletedCheckpoint } from './utils/create-completed-checkpoint';
 import { createFailedCheckpoint } from './utils/create-failed-checkpoint';
 import { createProgressCheckpoint } from './utils/create-progress-checkpoint';
@@ -30,40 +30,53 @@ export function* runActivity(
       `[activity:${activity.type}] starting combat with first wave of ${activity.currentWave?.enemies.length} enemies`,
   );
 
+  // xp this wave has already contributed to the activity's running total; the wave is re-summed
+  // every tick, so this is what turns that cumulative sum into the tick's own delta
+  let creditedWaveXP = 0;
+
   while (avatar.isAlive && activity.isWavesRemaining) {
     executor.run(timestep);
 
-    if (activity.currentWave?.remaining === 0) {
-      const rewards = buildWaveClearRewards(activity.currentWave);
+    const wave = activity.currentWave;
 
-      const rewardSlotContexts = buildWaveClearRewardSlots(
-        activity.currentWave,
-        activity.difficulty,
-      );
+    if (wave === null) {
+      yield null;
+      continue;
+    }
 
-      activity.updateRewards(rewards);
+    const isWaveCleared = wave.remaining === 0;
+    const rewards = buildKillRewards(wave, creditedWaveXP);
 
-      const checkpoint = createProgressCheckpoint(
-        activity,
-        avatar,
-        ctx,
-        rewards,
-        rewardSlotContexts,
-      );
+    // a tick that killed nothing is only worth a checkpoint when it cleared the wave, which owes
+    // one for its reward slots even if the last enemy carried no xp
+    if (rewards.xp === 0 && !isWaveCleared) {
+      yield null;
+      continue;
+    }
 
-      if (checkpoint.levelUp) {
-        activity.setLevelUp(checkpoint.levelUp);
-        avatar.updateLevel(checkpoint.levelUp.to);
-      }
+    creditedWaveXP += rewards.xp;
 
-      yield checkpoint;
+    activity.updateRewards(rewards);
+
+    const rewardSlotContexts = isWaveCleared
+      ? buildWaveClearRewardSlots(wave, activity.difficulty)
+      : [];
+
+    const checkpoint = createProgressCheckpoint(activity, avatar, ctx, rewards, rewardSlotContexts);
+
+    if (checkpoint.levelUp) {
+      activity.setLevelUp(checkpoint.levelUp);
+      avatar.updateLevel(checkpoint.levelUp.to);
+    }
+
+    yield checkpoint;
+
+    if (isWaveCleared) {
       logger.debug(() => `[activity:${activity.type}] moving to next wave`);
-
-      // move to the next wave
       executor.reset();
       activity.advanceWave();
-    } else {
-      yield null;
+
+      creditedWaveXP = 0;
     }
   }
 

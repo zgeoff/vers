@@ -40,6 +40,24 @@ test('it replays a completed attempt to an identical checkpoint stream', async (
           "type": "started",
         },
         {
+          "nextSeed": "6b83819b48c537e589b886b22732be12",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 3750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "697126c4747f39fef72d0758e0e6f056",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 6250,
+          "type": "progress",
+        },
+        {
           "nextSeed": "964b5a51d7ed6a504028276af605916c",
           "rewardSlots": [
             {
@@ -62,9 +80,27 @@ test('it replays a completed attempt to an identical checkpoint stream', async (
             },
           ],
           "rewards": {
-            "xp": 28,
+            "xp": 10,
           },
           "time": 10000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "aef1f1e606ed1ffcbba90c0d6214c917",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 12500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "7b2600f90090cafc51e6e31db6101384",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 15000,
           "type": "progress",
         },
         {
@@ -90,9 +126,27 @@ test('it replays a completed attempt to an identical checkpoint stream', async (
             },
           ],
           "rewards": {
-            "xp": 26,
+            "xp": 8,
           },
           "time": 17500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "afe90d905c45bd58a3598bf90fda0926",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 20000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "6982cba43446b05f3e1678ba79665661",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 22500,
           "type": "progress",
         },
         {
@@ -118,9 +172,27 @@ test('it replays a completed attempt to an identical checkpoint stream', async (
             },
           ],
           "rewards": {
-            "xp": 24,
+            "xp": 8,
           },
           "time": 25000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "41e96917f899a4d5787d035272a532ad",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 27500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "3cdb3331a38413fdad10dd07d6d0a876",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 30000,
           "type": "progress",
         },
         {
@@ -128,6 +200,15 @@ test('it replays a completed attempt to an identical checkpoint stream', async (
             "from": 1,
             "to": 2,
           },
+          "nextSeed": "495a144faa0828bcc55834c2e377c291",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 32500,
+          "type": "progress",
+        },
+        {
           "nextSeed": "cfc222316498a5228501305b2b1253b3",
           "rewardSlots": [
             {
@@ -156,9 +237,54 @@ test('it replays a completed attempt to an identical checkpoint stream', async (
             },
           ],
           "rewards": {
-            "xp": 34,
+            "xp": 8,
           },
           "time": 35000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "a95a8b3c1fcd5e8cd581438f92f35dbc",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 37500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "197697dcd257b681d6b0474e79c736c0",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 41250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "fd720bc8ea40477dca233496d9684e3a",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 45000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "dd0b5bd96201e4ae7a5b607afc33fa58",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 47500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "39e36b40ac04f9e559548841f2338f4e",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 48750,
           "type": "progress",
         },
         {
@@ -202,9 +328,36 @@ test('it replays a completed attempt to an identical checkpoint stream', async (
             },
           ],
           "rewards": {
-            "xp": 54,
+            "xp": 8,
           },
           "time": 51250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "030e86c3106e64cd43d940046b1b7720",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 53750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "5dd17874ebbe7897678c0cc3c22dad5e",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 56250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "b2e85d782f9d6bc9a5d23a5d623640c1",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 58750,
           "type": "progress",
         },
         {
@@ -236,7 +389,7 @@ test('it replays a completed attempt to an identical checkpoint stream', async (
             },
           ],
           "rewards": {
-            "xp": 36,
+            "xp": 10,
           },
           "time": 62500,
           "type": "progress",
@@ -810,6 +963,51 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
           "type": "started",
         },
         {
+          "nextSeed": "a7d69472c9e79ed77e808f2e7b382dee",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 2500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "c4da59ab07158739416d4df1e8bfae35",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 5000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "588895bd63067d9693f10762446592dd",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 7500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "eabf12997e9b90666d9aaf13090ff10c",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 10000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "bb19dab4f099776773738e68dfa979e6",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 12500,
+          "type": "progress",
+        },
+        {
           "nextSeed": "eaf086353e813a8603e71193023882e0",
           "rewardSlots": [
             {
@@ -850,9 +1048,36 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
             },
           ],
           "rewards": {
-            "xp": 52,
+            "xp": 8,
           },
           "time": 15000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "ae2697e6a4bac7e772430c9d9e96ea47",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 18750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "12508a66d1164ce62d462244f80d6015",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 21250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "34f18c5563edc899ac6d565a7590a0c7",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 23750,
           "type": "progress",
         },
         {
@@ -884,9 +1109,18 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
             },
           ],
           "rewards": {
-            "xp": 36,
+            "xp": 10,
           },
           "time": 26250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "1472d7b8541f2512a3c3ae66262ce57d",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 28750,
           "type": "progress",
         },
         {
@@ -894,6 +1128,33 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
             "from": 1,
             "to": 2,
           },
+          "nextSeed": "19949fa0fe7f64e13e2f2dad770670a4",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 32500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "ad240eec886d3953862f083b846b1c72",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 35000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "eb9f22179981d190a3159074b87a5bcd",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 37500,
+          "type": "progress",
+        },
+        {
           "nextSeed": "826452a79a66b918903d2d6927f88e4e",
           "rewardSlots": [
             {
@@ -928,9 +1189,36 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
             },
           ],
           "rewards": {
-            "xp": 46,
+            "xp": 10,
           },
           "time": 41250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "925e242e052187a421ac894bfad4582d",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 45000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "7016c209fc2a5ff9362e82be51c24e77",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 47500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "81d10ea8c7794e614856ecb3703f0f73",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 51250,
           "type": "progress",
         },
         {
@@ -962,7 +1250,7 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
             },
           ],
           "rewards": {
-            "xp": 36,
+            "xp": 8,
           },
           "time": 53750,
           "type": "progress",
@@ -985,6 +1273,51 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
           "seed": "5b525f8d259b9a6668e715a4b15d38ae",
           "time": 0,
           "type": "started",
+        },
+        {
+          "nextSeed": "44c2a402203b4d7c49bbf72307bf981b",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 2500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "8d5095a7456007dae97713af18e5e8bc",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 6250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "980fe3f237ff6b7381c5dea1d4c8e295",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 10000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "d3aec42c5441b18624ccf81c1ddc3869",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 12500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "989eb31c3b408841d8536873b8e4cf36",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 13750,
+          "type": "progress",
         },
         {
           "nextSeed": "1f8b5a200542fd85ea049de64ccc36eb",
@@ -1027,9 +1360,36 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
             },
           ],
           "rewards": {
-            "xp": 52,
+            "xp": 8,
           },
           "time": 16250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "898dc5fae2d2ac77957aa64eb01eab7e",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 20000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "64346aa784babdd0375f26fa2b9ba492",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 22500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "e4818974b463b1b96581e2071183d07e",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 25000,
           "type": "progress",
         },
         {
@@ -1061,9 +1421,18 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
             },
           ],
           "rewards": {
-            "xp": 36,
+            "xp": 10,
           },
           "time": 27500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "a2a1f9ab8b376d90b969c47ace2d8ebe",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 30000,
           "type": "progress",
         },
         {
@@ -1071,6 +1440,33 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
             "from": 1,
             "to": 2,
           },
+          "nextSeed": "f9463a4a8ddc784bddbe5e6e00e4855c",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 33750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "ad1a25c54ad7e78d24ececccc045486a",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 36250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "f5e6db7d4cbc15e2f1e27c44149406a9",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 40000,
+          "type": "progress",
+        },
+        {
           "nextSeed": "06bf46f013f04e4dc6f2bcb01046d682",
           "rewardSlots": [
             {
@@ -1105,9 +1501,36 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
             },
           ],
           "rewards": {
-            "xp": 46,
+            "xp": 10,
           },
           "time": 43750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "92dabe588d0889873c91f9ad47aaca19",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 46250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "343c8de4466bd860e6e806b25bcb698c",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 48750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "8f2dbc279638c0a354d4582b38ba3d11",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 52500,
           "type": "progress",
         },
         {
@@ -1139,7 +1562,7 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
             },
           ],
           "rewards": {
-            "xp": 36,
+            "xp": 8,
           },
           "time": 55000,
           "type": "progress",
@@ -1162,6 +1585,33 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
           "seed": "335c10958e8269acf3160b165678e7fa",
           "time": 0,
           "type": "started",
+        },
+        {
+          "nextSeed": "034928b94509877f8abc24e049cdd89d",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 8,
+          },
+          "time": 2500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "bb0b2224beedefb46a0322f907e4bd4d",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 6250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "bf0d24921835ac699a7618eb95f1d209",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 8750,
+          "type": "progress",
         },
       ],
       "rngState": "bcab53dc82325d3b557d35da5903f12b",
