@@ -184,11 +184,11 @@ tripping.
 
 `vers.web.service_call_retries` and `vers.web.service_call_failures` cover app-web's bounded
 outbound service calls: `service_call_retries` records each retry attempt against a call that failed
-its previous attempt, and `service_call_failures` records a call that never delivered, split by
-`reason` — `timeout` covers every attempt hitting its own per-attempt bound, `transport` covers a
-network failure the bound never had to enforce. A `timeout` burst against one `service` tracks a Fly
-machine's autosuspend resume window; a sustained `transport` run against the same service points at
-a genuinely unreachable machine.
+its previous attempt, and `service_call_failures` records a call whose final attempt still failed,
+split by `reason` — `timeout` when that final attempt hit its own per-attempt bound, `transport`
+when it failed some other way before the bound fired. A `timeout` burst against one `service` tracks
+a Fly machine's autosuspend resume window; a sustained `transport` run against the same service
+points at a genuinely unreachable machine.
 
 The `vers replay poke failed` threshold monitor watches `vers.activity.replay_poke_failed` and
 notifies `vers alarms`. It alerts on the threshold alone, never on no data — the counter emits only

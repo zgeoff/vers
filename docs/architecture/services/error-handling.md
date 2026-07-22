@@ -177,14 +177,21 @@ level. The `AsyncLocalStorage`-bound scope helpers (`withTraceContext`, `findTra
 
 - **Route error boundaries.** The root route mounts `RootErrorScreen` as the last-resort boundary.
   Routes with a meaningful degraded state mount their own `errorComponent` beneath it.
-- **Retry policy.** `buildQueryClient` owns retry for every call the browser makes through the query
-  client. 4xx and defined service errors never retry, since retrying can't change the outcome.
-  Network failures and 5xx retry twice. A per-query `retry` override needs a behavioural reason the
-  default policy can't express.
 
-  A server function that calls a service client directly bypasses `buildQueryClient` entirely, so
-  its service link (`buildServiceLink`) bounds each attempt to a short per-attempt timeout itself
-  and retries only the contract-declared GET/HEAD procedures, which can't double-apply; every other
-  procedure gets a single bounded attempt with no retry. The browser's own call through the
-  `/api/rpc/$service` proxy also gets a single bounded attempt with no retry, since
-  `buildQueryClient` already owns retry for that path.
+### Retry policy
+
+Three lanes carry outbound HTTP traffic between the browser and the services, each owning its own
+retry.
+
+The query client (`buildQueryClient`) owns retry for every call the browser makes through it. 4xx
+and defined service errors never retry, since retrying can't change the outcome; network failures
+and 5xx retry twice. A per-query `retry` override needs a behavioural reason the default policy
+can't express.
+
+A server function's direct service-client call bypasses the query client. Its service link
+(`buildServiceLink`) bounds each attempt to a short per-attempt timeout and retries the procedures
+the contract declares GET or HEAD; every other procedure gets a single bounded attempt with no
+retry.
+
+The browser's call through the `/api/rpc/$service` proxy gets a single bounded attempt with no
+retry: the query client owns retry for that path.

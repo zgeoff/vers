@@ -3,6 +3,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { createTestAccessToken } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import { withTraceContext } from '@vers/service-utils';
+import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import * as jose from 'jose';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, delay, http } from 'msw';
@@ -192,9 +193,31 @@ test('it answers a hung upstream with a 503 after exactly one attempt', async ()
   server.use(http.get('http://localhost:3003/rpc/getUser', resolver));
 
   const outcome = await withRequestContext({}, () =>
-    sendRPCRequest(new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }), 'user'),
+    sendRPCRequest(
+      new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }),
+      'user',
+      20,
+    ),
   );
 
   expect(outcome.value.status).toBe(503);
   expect(resolver).toHaveBeenCalledOnce();
-}, 8000);
+});
+
+test('it answers an immediate upstream transport failure with a 503 recorded under the transport reason', async () => {
+  const inMemoryMetrics = createInMemoryMetrics();
+
+  server.use(http.get('http://localhost:3003/rpc/getUser', () => HttpResponse.error()));
+
+  const outcome = await withRequestContext({}, () =>
+    sendRPCRequest(new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }), 'user'),
+  );
+
+  expect(outcome.value.status).toBe(503);
+
+  const dataPoints = await inMemoryMetrics.readCounterDataPoints('vers.web.service_call_failures');
+
+  expect(dataPoints.map((dataPoint) => dataPoint.attributes['reason'])).toStrictEqual([
+    'transport',
+  ]);
+});

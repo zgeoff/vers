@@ -1,47 +1,17 @@
-import { expect, onTestFinished, test } from 'bun:test';
-import { metrics } from '@opentelemetry/api';
-import {
-  AggregationTemporality,
-  InMemoryMetricExporter,
-  MeterProvider,
-  PeriodicExportingMetricReader,
-} from '@opentelemetry/sdk-metrics';
+import { expect, test } from 'bun:test';
+import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import { recordServiceCallRetry } from './record-service-call-retry';
 
-function setupTest() {
-  const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);
-
-  const provider = new MeterProvider({
-    readers: [new PeriodicExportingMetricReader({ exporter, exportIntervalMillis: 3_600_000 })],
-  });
-
-  metrics.setGlobalMeterProvider(provider);
-
-  onTestFinished(async () => {
-    metrics.disable();
-
-    await provider.shutdown();
-  });
-
-  return { exporter, provider };
-}
-
 test('it counts retry attempts by service', async () => {
-  const ctx = setupTest();
+  const inMemoryMetrics = createInMemoryMetrics();
 
   recordServiceCallRetry('avatar');
   recordServiceCallRetry('avatar');
   recordServiceCallRetry('activity');
 
-  await ctx.provider.forceFlush();
+  const dataPoints = await inMemoryMetrics.readCounterDataPoints('vers.web.service_call_retries');
 
-  const counter = ctx.exporter
-    .getMetrics()
-    .flatMap((resourceMetrics) => resourceMetrics.scopeMetrics)
-    .flatMap((scopeMetrics) => scopeMetrics.metrics)
-    .find((metric) => metric.descriptor.name === 'vers.web.service_call_retries');
-
-  const observed = counter?.dataPoints.map((dataPoint) => ({
+  const observed = dataPoints.map((dataPoint) => ({
     service: dataPoint.attributes['service'],
     value: dataPoint.value,
   }));

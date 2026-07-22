@@ -98,6 +98,43 @@ test('it does not retry a hang-then-succeed sequence for a non-retryable procedu
   expect(resolver).toHaveBeenCalledOnce();
 });
 
+test("it rethrows a caller's own abort during the retry backoff instead of starting another attempt", async () => {
+  const resolver = mock<HttpResponseResolver>(async () => {
+    await delay('infinite');
+
+    return HttpResponse.json({});
+  });
+
+  server.use(http.post('http://bounded.test/rpc/proc', resolver));
+
+  const controller = new AbortController();
+
+  const boundedFetch = makeBoundedFetch({
+    attemptTimeoutsMs: [20, 1000],
+    isRetryable: () => true,
+    retryBackoffMs: 200,
+    service: 'avatar',
+  });
+
+  const promise = boundedFetch(
+    new Request('http://bounded.test/rpc/proc', { method: 'POST', signal: controller.signal }),
+    {},
+    { context: {} },
+    ['proc'],
+    undefined,
+  );
+
+  setTimeout(() => {
+    controller.abort();
+  }, 60);
+
+  expect(promise).rejects.toMatchObject({ name: 'AbortError' });
+
+  await expect(promise).toReject();
+
+  expect(resolver).toHaveBeenCalledOnce();
+});
+
 test("it rethrows a caller's own abort instead of converting it to SERVICE_UNAVAILABLE", () => {
   server.use(
     http.post('http://bounded.test/rpc/proc', async () => {

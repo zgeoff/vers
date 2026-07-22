@@ -60,14 +60,30 @@ async function runAttempt(options: RunAttemptOptions): Promise<Response> {
 
   invariant(bound !== undefined, 'attemptIndex must stay within bounds');
 
-  const timeoutSignal = AbortSignal.timeout(bound);
-  const signal = AbortSignal.any([options.request.signal, timeoutSignal]);
+  const controller = new AbortController();
+
+  const signal = AbortSignal.any([options.request.signal, controller.signal]);
+  let boundFired = false;
+
+  const timer = setTimeout(() => {
+    boundFired = true;
+
+    controller.abort();
+  }, bound);
 
   try {
     // `fetch` disturbs a `Request`'s body even on an aborted attempt, so the original must never
     // reach it directly — a retried attempt clones it fresh, leaving `options.request` untouched.
-    return await fetch(options.request.clone(), { ...options.init, signal });
+    // The timer is cleared the instant `fetch` resolves so the bound never outlives the response
+    // headers — otherwise it stays armed through oRPC's lazy body read and can abort mid-stream.
+    const response = await fetch(options.request.clone(), { ...options.init, signal });
+
+    clearTimeout(timer);
+
+    return response;
   } catch (error) {
+    clearTimeout(timer);
+
     if (options.request.signal.aborted) {
       throw error;
     }
@@ -75,22 +91,49 @@ async function runAttempt(options: RunAttemptOptions): Promise<Response> {
     const isLastAttempt = options.attemptIndex === options.bounds.length - 1;
 
     if (isLastAttempt) {
-      const reason = timeoutSignal.aborted ? 'timeout' : 'transport';
+      const reason = boundFired ? 'timeout' : 'transport';
 
       recordServiceCallFailure(options.service, reason);
       throw new ORPCError('SERVICE_UNAVAILABLE', { cause: error });
     }
 
-    recordServiceCallRetry(options.service);
+    await waitOrAbort(options.retryBackoffMs * (options.attemptIndex + 1), options.request.signal);
 
-    await wait(options.retryBackoffMs * (options.attemptIndex + 1));
+    recordServiceCallRetry(options.service);
 
     return runAttempt({ ...options, attemptIndex: options.attemptIndex + 1 });
   }
 }
 
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
+/**
+ * Waits out `ms`, rethrowing `signal`'s abort reason the instant it aborts instead of running out
+ * the clock — a caller who cancels mid-backoff must not still wait it out.
+ */
+function waitOrAbort(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) {
+    return Promise.reject(normalizeAbortReason(signal.reason));
+  }
+
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+
+      resolve();
+    }, ms);
+
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(normalizeAbortReason(signal.reason));
+    };
+
+    signal.addEventListener('abort', onAbort, { once: true });
   });
+}
+
+/**
+ * `AbortSignal.reason` is typed `any`, so a caller-supplied reason that isn't already an `Error`
+ * (a bare string, `undefined`) needs wrapping before it can reject a promise.
+ */
+function normalizeAbortReason(reason: unknown): Error {
+  return reason instanceof Error ? reason : new Error(String(reason));
 }
