@@ -20,8 +20,8 @@ minimumReleaseAge = 604800
 # @zgeoff/dbhub 0.23.4 (published 2026-07-12) ages past the 7-day gate ~2026-07-19 — remove then (#478)
 # brace-expansion 2.1.2/5.0.7 (published 2026-07-20, patch GHSA-3jxr-9vmj-r5cp) age past the gate ~2026-07-28 — remove then (#735)
 # protobufjs 7.6.5 (published 2026-07-20, patches GHSA-j3f2-48v5-ccww) ages past the gate ~2026-07-28 — remove then (#735)
-# @hono/node-server 2.0.10 (published 2026-07-15, patches GHSA-9mqv-5hh9-4cgg) ages past the gate ~2026-07-22 — remove then (#767)
 # fast-uri 3.1.4 (published 2026-07-19, patches GHSA-v2hh-gcrm-f6hx) ages past the gate ~2026-07-26 — remove then (#765)
+# @hono/node-server 2.0.11 (published 2026-07-21, patches GHSA-9mqv-5hh9-4cgg) ages past the gate ~2026-07-28 — remove then (#766)
 minimumReleaseAgeExcludes = [
   "@zgeoff/format-codemod",
   "@zgeoff/bun-test-extended",
@@ -33,8 +33,8 @@ minimumReleaseAgeExcludes = [
   "vite",
   "brace-expansion",
   "protobufjs",
-  "@hono/node-server",
   "fast-uri",
+  "@hono/node-server",
 ]
 
 [test]
