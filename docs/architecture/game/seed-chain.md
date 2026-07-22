@@ -105,8 +105,11 @@ and `quarantined` reach verification only by operator action, so counting one wo
 never settles into this run's snapshot and every later one.
 
 A borrowed remainder records where it came from. An activity's snapshot provenance is the set of
-unverified runs it counted, stored at start. Identity is avatar-global while chains are per-scope,
-so a borrow crosses chains, and provenance is what orders them against each other:
+unverified runs whose xp moved its total, stored at start; one that moved it by nothing lends
+nothing and is left out. Xp is the only quantity a snapshot borrows ahead of verification, an item
+minting only for a verified segment, so a quantity added to the snapshot widens what provenance
+records. Identity is avatar-global while chains are per-scope, so a borrow crosses chains, and
+provenance is what orders them against each other:
 
 - A chain is unclaimable while its replay frontier has a source with appends past its own verified
   cursor. Provenance points at runs that had already ended when the borrower started, so the
