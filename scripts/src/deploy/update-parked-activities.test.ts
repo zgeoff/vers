@@ -55,6 +55,51 @@ test('it reactivates a parked activity whose stamped sim version is now active',
   expect(row.status).toBe('active');
 });
 
+test('it returns a parked activity to the status it parked from', async () => {
+  await using ctx = await setupTest();
+
+  const activeVersion = await createSimVersionRow(ctx.db, { status: 'active' });
+  const user = await createTestUser(ctx.db);
+
+  const avatar = await ctx.db
+    .insertInto('avatars')
+    .values({ id: 'avatar_restored', name: 'avatar-restored', userId: user.user.id })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  const activity = await ctx.db
+    .insertInto('activities')
+    .values({
+      avatarId: avatar.id,
+      buildSnapshot: { level: 1, xp: 0 },
+      contentVersion: '0.0.0-dev',
+      encounterNode: { difficulty: 1 },
+      id: 'act_restored',
+      lastHash: 'hash_last',
+      parkedFrom: 'stopped',
+      scopeId: 'node_1',
+      scopeType: 'world_map_node',
+      seed: 'seed_1',
+      simVersion: activeVersion.engineHash,
+      startHash: 'hash_start',
+      status: 'parked',
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  const reactivated = await updateParkedActivities(ctx.db);
+
+  expect(reactivated).toStrictEqual([{ id: activity.id }]);
+
+  const row = await ctx.db
+    .selectFrom('activities')
+    .select(['parkedFrom', 'status'])
+    .where('id', '=', activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row).toStrictEqual({ parkedFrom: null, status: 'stopped' });
+});
+
 test('it leaves a parked activity untouched when no sim version is active for its hash', async () => {
   await using ctx = await setupTest();
 
