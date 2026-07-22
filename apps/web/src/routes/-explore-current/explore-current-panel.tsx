@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Button, CheckboxField, Spinner } from '@vers/design-system';
+import { Button, CheckboxField, Spinner, Text } from '@vers/design-system';
 import type { StartStatus } from '@vers/idle-client';
 import { setEngagedActivityID, useEngagedActivityID, useWriterGeneration } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
@@ -36,7 +36,10 @@ interface StartAttemptReport {
  * to the engagement screen, once per activity — latched in `@vers/idle-client`'s store rather than
  * a component ref, so a remount (the browser back button, re-drilling the same node) that re-fires
  * the start call and finds the same activity already live reads it as already engaged rather than
- * bouncing the player back.
+ * bouncing the player back. A start rejected because the account's active avatar changed renders a
+ * distinct notice naming the current one, with a reload action rather than the generic retry — the
+ * route's own data still names the stale avatar, and only a reload re-runs every gate against the
+ * new one.
  */
 export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   const navigate = useNavigate();
@@ -164,6 +167,24 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     setEngagedActivityID(expectedActivityID);
     void navigate({ to: '/activity' });
   }, [isActivityReady, expectedActivityID, engagedActivityID, navigate]);
+
+  if (reportedStatus?.kind === 'failed' && reportedStatus.reason === 'avatar-not-active') {
+    return (
+      <>
+        <Text data-testid="start-activity-avatar-not-active" role="alert">
+          You’re now playing as <strong>{reportedStatus.activeAvatarName}</strong>. Reload to
+          continue as {reportedStatus.activeAvatarName}.
+        </Text>
+        <Button
+          onClick={() => {
+            globalThis.location.reload();
+          }}
+        >
+          Reload
+        </Button>
+      </>
+    );
+  }
 
   if (reportedStatus?.kind === 'failed') {
     return (

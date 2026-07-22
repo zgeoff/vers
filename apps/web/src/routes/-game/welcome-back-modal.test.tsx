@@ -110,3 +110,11 @@ test('it renders nothing when the catch-up ended on another device taking the ru
 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
+
+test('it offers a reload action when the account switched avatars mid catch-up', () => {
+  setResyncStatus({ activeAvatarName: 'Someone Else', kind: 'avatar-switched' });
+  render(<WelcomeBackModal />);
+
+  expect(screen.getByText(/Reload to continue as Someone Else/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument();
+});

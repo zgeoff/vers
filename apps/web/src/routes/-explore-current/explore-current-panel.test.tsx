@@ -535,3 +535,37 @@ test('it does not bounce back to the engagement screen once a remount finds the 
     expect(rendered.router.state.location.pathname).toBe('/');
   });
 });
+
+test('it explains a start rejected because another avatar is active, naming that avatar', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+
+  const client = createStubWorkerClient({
+    startActivity: () =>
+      Promise.resolve({
+        activeAvatarName: 'Someone Else',
+        kind: 'failed',
+        reason: 'avatar-not-active',
+      }),
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    const notice = await rendered.findByTestId('start-activity-avatar-not-active');
+
+    expect(notice).toHaveTextContent('Someone Else');
+    expect(rendered.queryByTestId('start-activity-retry')).not.toBeInTheDocument();
+  });
+});
