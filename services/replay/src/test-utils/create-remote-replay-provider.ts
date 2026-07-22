@@ -23,7 +23,11 @@ export async function createRemoteReplayProvider(
 
   provider.listen(0);
 
-  onTestFinished(() => provider.app.stop());
+  onTestFinished(async () => {
+    await provider.app.stop();
+    await provider.stopTelemetry();
+    await provider.stopDB();
+  });
 
   const port = provider.app.server?.port;
 

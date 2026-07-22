@@ -14,15 +14,6 @@ import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import { runReplaySimulation } from '../handlers/run-replay-simulation';
 
-/**
- * Bounds one provider dispatch, so a provider stuck mid-boot fails the call rather than holding
- * the caller's claim transaction forever. Applied fresh to each of the two dispatches a
- * cross-version segment can make (initial replay, fresh confirm) rather than a shared deadline
- * across both — worst case, a claim transaction that dispatches twice holds the lock for roughly
- * twice this bound.
- */
-const DEFAULT_PROVIDER_DISPATCH_TIMEOUT_MS = 15_000;
-
 export interface RunReplaySegmentDeps {
   readonly db: Kysely<DB>;
 
@@ -35,7 +26,7 @@ export interface RunReplaySegmentDeps {
   readonly simVersion: string;
 
   /**
-   * Overrides `DEFAULT_PROVIDER_DISPATCH_TIMEOUT_MS` for a remote provider dispatch.
+   * Bounds one remote provider dispatch, so tests can wait far less than production's default.
    */
   readonly timeoutMs?: number;
 }
@@ -87,6 +78,15 @@ export async function runReplaySegment(
     return { kind: 'providerUnavailable' };
   }
 }
+
+/**
+ * Bounds one provider dispatch, so a provider stuck mid-boot fails the call rather than holding
+ * the caller's claim transaction forever. Applied fresh to each of the two dispatches a
+ * cross-version segment can make (initial replay, fresh confirm) rather than a shared deadline
+ * across both — worst case, a claim transaction that dispatches twice holds the lock for roughly
+ * twice this bound.
+ */
+const DEFAULT_PROVIDER_DISPATCH_TIMEOUT_MS = 15_000;
 
 /**
  * Calls the registered provider's own `replaySegment` endpoint, minting a short-lived s2s token
