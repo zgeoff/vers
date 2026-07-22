@@ -1,9 +1,13 @@
 import type { ServiceName } from '@vers/service-auth';
 import { findSpanTraceContext, findTraceContext } from '@vers/service-utils';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
+import { recordServiceCallFailure } from '../metrics/record-service-call-failure';
 import { createEdgeServiceToken } from '../rpc/create-edge-service-token';
 import { loadSessionActor } from '../rpc/load-session-actor';
+import { DEFAULT_ATTEMPT_TIMEOUTS_MS } from '../rpc/make-bounded-fetch';
 import { SERVICE_URLS } from '../rpc/service-urls';
+
+const DEFAULT_TIMEOUT_BOUND_MS = Math.max(...DEFAULT_ATTEMPT_TIMEOUTS_MS);
 
 /**
  * Forwards one browser oRPC call to its service, rewriting `/api/rpc/<service>/*` to
@@ -13,7 +17,11 @@ import { SERVICE_URLS } from '../rpc/service-urls';
  * `en_session` cookie — this route's own ambient session is the one thing that does, so it mints
  * and attaches the same s2s token a server-side call would.
  */
-export async function sendRPCRequest(request: Request, service: ServiceName): Promise<Response> {
+export async function sendRPCRequest(
+  request: Request,
+  service: ServiceName,
+  timeoutBoundMs = DEFAULT_TIMEOUT_BOUND_MS,
+): Promise<Response> {
   const incoming = new URL(request.url);
 
   const prefix = `/api/rpc/${service}`;
@@ -60,11 +68,45 @@ export async function sendRPCRequest(request: Request, service: ServiceName): Pr
 
   headers.set('traceparent', buildTraceparent(trace));
 
-  const response = await fetch(target, {
-    headers,
-    method: request.method,
-    ...(body !== undefined && { body }),
-  });
+  // a single attempt, unretried: buildQueryClient already retries network failures and 5xx twice
+  // on this call's way back to the browser, so a second retry layer here would stack attempts
+  const controller = new AbortController();
+
+  const signal = AbortSignal.any([request.signal, controller.signal]);
+  let boundFired = false;
+
+  const timer = setTimeout(() => {
+    boundFired = true;
+
+    controller.abort();
+  }, timeoutBoundMs);
+
+  let response: Response;
+
+  try {
+    // the timer is cleared the instant `fetch` resolves so the bound never outlives the response
+    // headers — otherwise it stays armed through a streamed body read and can truncate it
+    response = await fetch(target, {
+      headers,
+      method: request.method,
+      signal,
+      ...(body !== undefined && { body }),
+    });
+
+    clearTimeout(timer);
+  } catch (error) {
+    clearTimeout(timer);
+
+    if (request.signal.aborted) {
+      throw error;
+    }
+
+    const reason = boundFired ? 'timeout' : 'transport';
+
+    recordServiceCallFailure(service, reason);
+
+    return new Response(null, { status: 503 });
+  }
 
   // fetch responses carry immutable headers, which the server framework must still be able to
   // finalize (merge, drop stale encoding headers) — rewrap into a mutable response. Copy entry by

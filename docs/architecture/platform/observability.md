@@ -135,21 +135,23 @@ in stack state are encrypted by the stack passphrase.
 
 ## Instrument registry
 
-| Instrument                           | Type      | Unit          | Attributes | Meaning                                                                 |
-| ------------------------------------ | --------- | ------------- | ---------- | ----------------------------------------------------------------------- |
-| `vers.replay.verification_lag`       | histogram | `s`           | —          | seconds between an append landing and a drain cycle confirming it       |
-| `vers.replay.wake`                   | counter   | `{wake}`      | —          | wake requests received                                                  |
-| `vers.replay.drain_duration`         | histogram | `s`           | —          | wall-clock duration of one drain cycle                                  |
-| `vers.replay.backlog_claimed`        | histogram | `{chain}`     | —          | chains claimed and adjudicated in one drain cycle                       |
-| `vers.verification.rejections`       | counter   | `{rejection}` | `reason`   | adjudications that rejected or parked an activity, by reason            |
-| `vers.replay.iteration_failures`     | counter   | `{iteration}` | `outcome`  | worker iterations that failed to replay a claimed chain, by outcome     |
-| `vers.keys.derive_rejections`        | counter   | `{rejection}` | `reason`   | deriveAvatarKey calls that refused to derive a key, by reason           |
-| `vers.activity.terminal_transitions` | counter   | `{activity}`  | `status`   | activities that claimed a terminal transition, by status                |
-| `vers.activity.writer_takeovers`     | counter   | `{takeover}`  | —          | successful writer-session claims on active activities                   |
-| `vers.activity.replay_poke_failed`   | counter   | `{poke}`      | —          | replay wake pokes that never delivered after exhausting retries         |
-| `vers.email.delivery_failures`       | counter   | `{email}`     | —          | emails that failed to deliver                                           |
-| `vers.session.failed_attempts`       | counter   | `{attempt}`   | —          | failed step-up verification attempts                                    |
-| `vers.analytics.delivery_failures`   | counter   | `{event}`     | `reason`   | product events that never landed in the Tinybird data source, by reason |
+| Instrument                           | Type      | Unit          | Attributes          | Meaning                                                                          |
+| ------------------------------------ | --------- | ------------- | ------------------- | -------------------------------------------------------------------------------- |
+| `vers.replay.verification_lag`       | histogram | `s`           | —                   | seconds between an append landing and a drain cycle confirming it                |
+| `vers.replay.wake`                   | counter   | `{wake}`      | —                   | wake requests received                                                           |
+| `vers.replay.drain_duration`         | histogram | `s`           | —                   | wall-clock duration of one drain cycle                                           |
+| `vers.replay.backlog_claimed`        | histogram | `{chain}`     | —                   | chains claimed and adjudicated in one drain cycle                                |
+| `vers.verification.rejections`       | counter   | `{rejection}` | `reason`            | adjudications that rejected or parked an activity, by reason                     |
+| `vers.replay.iteration_failures`     | counter   | `{iteration}` | `outcome`           | worker iterations that failed to replay a claimed chain, by outcome              |
+| `vers.keys.derive_rejections`        | counter   | `{rejection}` | `reason`            | deriveAvatarKey calls that refused to derive a key, by reason                    |
+| `vers.activity.terminal_transitions` | counter   | `{activity}`  | `status`            | activities that claimed a terminal transition, by status                         |
+| `vers.activity.writer_takeovers`     | counter   | `{takeover}`  | —                   | successful writer-session claims on active activities                            |
+| `vers.activity.replay_poke_failed`   | counter   | `{poke}`      | —                   | replay wake pokes that never delivered after exhausting retries                  |
+| `vers.email.delivery_failures`       | counter   | `{email}`     | —                   | emails that failed to deliver                                                    |
+| `vers.session.failed_attempts`       | counter   | `{attempt}`   | —                   | failed step-up verification attempts                                             |
+| `vers.analytics.delivery_failures`   | counter   | `{event}`     | `reason`            | product events that never landed in the Tinybird data source, by reason          |
+| `vers.web.service_call_retries`      | counter   | `{retry}`     | `service`           | retry attempts against an outbound service call that failed its previous attempt |
+| `vers.web.service_call_failures`     | counter   | `{call}`      | `service`, `reason` | outbound service calls that never delivered, by service and reason               |
 
 `service-activity` pokes `service-replay`'s `POST /wake` each time an append advances an activity
 past its verified cursor. The handler drains the queue — claiming and adjudicating chains until none
@@ -179,6 +181,14 @@ simulated-time budget. `vers.analytics.delivery_failures` splits by `reason`: `r
 non-2xx response from the Tinybird Events API, `quarantined` covers a row the API accepted but
 failed schema validation on, `unreachable` covers a network failure or the upstream deadline
 tripping.
+
+`vers.web.service_call_retries` and `vers.web.service_call_failures` cover app-web's bounded
+outbound service calls: `service_call_retries` records each retry attempt against a call that failed
+its previous attempt, and `service_call_failures` records a call whose final attempt still failed,
+split by `reason` — `timeout` when that final attempt hit its own per-attempt bound, `transport`
+when it failed some other way before the bound fired. A `timeout` burst against one `service` tracks
+a Fly machine's autosuspend resume window; a sustained `transport` run against the same service
+points at a genuinely unreachable machine.
 
 The `vers replay poke failed` threshold monitor watches `vers.activity.replay_poke_failed` and
 notifies `vers alarms`. It alerts on the threshold alone, never on no data — the counter emits only

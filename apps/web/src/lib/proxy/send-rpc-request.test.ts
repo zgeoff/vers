@@ -3,9 +3,10 @@ import { createId } from '@paralleldrive/cuid2';
 import { createTestAccessToken } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import { withTraceContext } from '@vers/service-utils';
+import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import * as jose from 'jose';
 import type { HttpResponseResolver } from 'msw';
-import { HttpResponse, http } from 'msw';
+import { HttpResponse, delay, http } from 'msw';
 import { server } from '../../mocks/node';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { sendRPCRequest } from './send-rpc-request';
@@ -180,4 +181,43 @@ test('it rethrows a body read failure for a caller that is still connected', asy
   const promise = withRequestContext({}, () => sendRPCRequest(request, 'user'));
 
   expect(promise).rejects.toBeInstanceOf(TypeError);
+});
+
+test('it answers a hung upstream with a 503 after exactly one attempt', async () => {
+  const resolver = mock<HttpResponseResolver>(async () => {
+    await delay('infinite');
+
+    return HttpResponse.json({});
+  });
+
+  server.use(http.get('http://localhost:3003/rpc/getUser', resolver));
+
+  const outcome = await withRequestContext({}, () =>
+    sendRPCRequest(
+      new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }),
+      'user',
+      20,
+    ),
+  );
+
+  expect(outcome.value.status).toBe(503);
+  expect(resolver).toHaveBeenCalledOnce();
+});
+
+test('it answers an immediate upstream transport failure with a 503 recorded under the transport reason', async () => {
+  const inMemoryMetrics = createInMemoryMetrics();
+
+  server.use(http.get('http://localhost:3003/rpc/getUser', () => HttpResponse.error()));
+
+  const outcome = await withRequestContext({}, () =>
+    sendRPCRequest(new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }), 'user'),
+  );
+
+  expect(outcome.value.status).toBe(503);
+
+  const dataPoints = await inMemoryMetrics.readCounterDataPoints('vers.web.service_call_failures');
+
+  expect(dataPoints.map((dataPoint) => dataPoint.attributes['reason'])).toStrictEqual([
+    'transport',
+  ]);
 });
