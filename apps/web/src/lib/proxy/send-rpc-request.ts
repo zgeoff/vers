@@ -5,9 +5,9 @@ import { recordServiceCallFailure } from '../metrics/record-service-call-failure
 import { createEdgeServiceToken } from '../rpc/create-edge-service-token';
 import { loadSessionActor } from '../rpc/load-session-actor';
 import { DEFAULT_ATTEMPT_TIMEOUTS_MS } from '../rpc/make-bounded-fetch';
-import type { ServiceFetchInit } from '../rpc/service-dispatcher';
 import { serviceDispatcher } from '../rpc/service-dispatcher';
 import { SERVICE_URLS } from '../rpc/service-urls';
+import type { ServiceFetchInit } from '../rpc/types';
 
 const DEFAULT_TIMEOUT_BOUND_MS = Math.max(...DEFAULT_ATTEMPT_TIMEOUTS_MS);
 

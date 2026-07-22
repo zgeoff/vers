@@ -5,8 +5,8 @@ import type { ServiceName } from '@vers/service-auth';
 import invariant from 'tiny-invariant';
 import { recordServiceCallFailure } from '../metrics/record-service-call-failure';
 import { recordServiceCallRetry } from '../metrics/record-service-call-retry';
-import type { ServiceFetchInit } from './service-dispatcher';
 import { serviceDispatcher } from './service-dispatcher';
+import type { ServiceFetchInit } from './types';
 
 type BoundFetch = NonNullable<LinkFetchClientOptions<ClientContext>['fetch']>;
 

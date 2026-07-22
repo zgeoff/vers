@@ -1,3 +1,5 @@
+import type { Agent } from 'undici';
+
 /**
  * Recursively marks every property readonly, leaving function shapes untouched. Client return
  * types are zod-inferred and mutable; wrapping them makes cached RPC data immutable at the type
@@ -17,3 +19,10 @@ export type DeepReadonly<T> = T extends (...args: ReadonlyArray<never>) => unkno
 export interface ServiceLinkContext {
   readonly actingUserID?: string | null;
 }
+
+/**
+ * The DOM lib's `RequestInit` carries no `dispatcher` field, though undici's global `fetch` honors
+ * one anyway. Typing a call's init through this alias before passing it to `fetch` attaches a
+ * dispatcher without an excess-property error or a cast.
+ */
+export type ServiceFetchInit = RequestInit & { readonly dispatcher?: Agent };
