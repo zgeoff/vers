@@ -265,7 +265,8 @@ is harmless — dispatch already reports it `expired` — while an app destroyed
 would leave an `active` row pointing at nothing. The sweep finishes by unparking every activity
 whose stamped hash the registry now carries as `active`, so an activity parked while its version was
 unregistered becomes replayable again once a later deploy provisions it, without waiting on the
-client to resync.
+client to resync. Each one returns to the status it parked from — a run that had already stopped or
+capped resumes as itself, never as an appendable `active` row.
 
 The sweep is idempotent: a repeat run tombstones nothing already `pruned`, destroys nothing already
 gone, and unparks nothing already `active`.
