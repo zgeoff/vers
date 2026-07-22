@@ -10,7 +10,7 @@ import { server } from '../mocks/node';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import type { CheckpointActivityEmittedEvent } from './checkpoint-activity-machine';
 import { checkpointActivityMachine } from './checkpoint-activity-machine';
-import { RETRY_BACKOFF_CAP_MS } from './constants';
+import { PROGRESS_FLUSH_INTERVAL_MS, RETRY_BACKOFF_CAP_MS } from './constants';
 import type { ActivityServiceClient } from './types';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
@@ -44,7 +44,7 @@ function setupTest(
       onEvicted: undefined,
       onInvalid,
       onServerContact: undefined,
-      retryTimings: { maxTimeout: 300_000, minTimeout: 10_000 },
+      retryTimings: { maxTimeout: RETRY_BACKOFF_CAP_MS, minTimeout: PROGRESS_FLUSH_INTERVAL_MS },
       scheduleProgressFlush,
       signal: config.signal,
       terminalQueued: config.terminalQueued ?? false,
