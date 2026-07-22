@@ -123,3 +123,17 @@ test('it overlays a live run whole when the settled entry belongs to another act
 
   expect(result).toStrictEqual({ isSettling: true, level: buildLevelFromXP(425), xp: 425 });
 });
+
+test('it adds nothing once the settled row carries the whole live run', () => {
+  const result = buildOptimisticProgression({
+    progression: {
+      active: { activityID: 'activity_1', settledXP: 150 },
+      level: 3,
+      pending: [],
+      xp: 550,
+    },
+    simActivity: { id: 'activity_1', rewards: { xp: 120 } },
+  });
+
+  expect(result).toStrictEqual({ isSettling: true, level: buildLevelFromXP(550), xp: 550 });
+});
