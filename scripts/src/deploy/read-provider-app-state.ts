@@ -5,8 +5,10 @@ import type { ProviderAppState } from './types';
 const appSchema = z.object({ Name: z.string() }).readonly();
 const appsSchema = z.array(appSchema);
 
+// image_ref can be absent while a machine is in a transient state (created, replacing); a missing
+// digest reads as not-current downstream, so the machine is replaced rather than the parse failing
 const machineSchema = z
-  .object({ id: z.string(), image_ref: z.object({ digest: z.string() }).readonly() })
+  .object({ id: z.string(), image_ref: z.object({ digest: z.string() }).readonly().optional() })
   .readonly();
 
 const machinesSchema = z.array(machineSchema);
