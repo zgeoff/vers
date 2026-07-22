@@ -590,7 +590,9 @@ test('it does not re-navigate for the same attempt once a ready state flickers',
 
     await rendered.findByLabelText('Auto-retry on failure');
 
-    expect(navigateSpy).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(navigateSpy).toHaveBeenCalledTimes(1);
+    });
 
     // a resync blip clears the store's activity, then restores the exact same one — the same
     // attempt, never a fresh one — and must not re-fire the navigate the first ready state sent
