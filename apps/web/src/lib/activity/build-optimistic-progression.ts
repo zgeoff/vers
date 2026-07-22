@@ -57,12 +57,16 @@ export function buildOptimisticProgression(
     (entry) => entry.activityID === input.simActivity?.id,
   );
 
-  const overlayApplies = input.simActivity !== undefined && !simIsPending;
+  const liveActivityID = input.progression.active?.activityID;
+  const simIsLive = liveActivityID === input.simActivity?.id;
 
-  const settledForSim =
-    input.progression.active?.activityID === input.simActivity?.id
-      ? (input.progression.active?.settledXP ?? 0)
-      : 0;
+  // A run other than the sim's is live, so the sim is a stale worker snapshot of a run that has
+  // already been displaced — its total belongs to nothing the settled row is still tracking. No
+  // live run at all leaves the overlay standing, covering the window between a terminal append
+  // and the pending entry that replaces it.
+  const simIsStale = liveActivityID !== undefined && !simIsLive;
+  const overlayApplies = input.simActivity !== undefined && !simIsPending && !simIsStale;
+  const settledForSim = simIsLive ? (input.progression.active?.settledXP ?? 0) : 0;
 
   const overlayXP = overlayApplies
     ? Math.max(0, (input.simActivity?.rewards.xp ?? 0) - settledForSim)

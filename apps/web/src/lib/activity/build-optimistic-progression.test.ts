@@ -110,7 +110,7 @@ test('it leaves the display xp unchanged as the settled row absorbs more of the 
   expect(afterSettlement.xp).toBe(beforeSettlement.xp);
 });
 
-test('it overlays a live run whole when the settled entry belongs to another activity', () => {
+test('it ignores a sim overlay for a run displaced by a different live activity', () => {
   const result = buildOptimisticProgression({
     progression: {
       active: { activityID: 'activity_2', settledXP: 90 },
@@ -118,6 +118,15 @@ test('it overlays a live run whole when the settled entry belongs to another act
       pending: [],
       xp: 400,
     },
+    simActivity: { id: 'activity_1', rewards: { xp: 25 } },
+  });
+
+  expect(result).toStrictEqual({ isSettling: false, level: 3, xp: 400 });
+});
+
+test('it keeps overlaying a just-terminal run while no activity is live', () => {
+  const result = buildOptimisticProgression({
+    progression: { active: null, level: 3, pending: [], xp: 400 },
     simActivity: { id: 'activity_1', rewards: { xp: 25 } },
   });
 
