@@ -13,6 +13,7 @@ import type { RejectionReason } from '../metrics/record-rejection';
 import { recordSettledXP } from '../metrics/record-settled-xp';
 import { recordVerificationLag } from '../metrics/record-verification-lag';
 import { rollRewardItems } from '../mint/roll-reward-items';
+import { hasRejectedSnapshotSource } from '../queue/has-rejected-snapshot-source';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
 import { buildSegmentDuration } from '../replay/build-segment-duration';
 import { compareReplaySegment } from '../replay/compare-replay-segment';
@@ -28,12 +29,13 @@ import type { PendingCacheEffect, ReplayIterationOutcome, ReplayWorkerDeps } fro
 import { updateVerifiedAnchorFromPredecessor } from './update-verified-anchor-from-predecessor';
 
 /**
- * Adjudicates one claimed chain's replay frontier: loads its segment, catches the chain's verified
- * anchor up to a forward-exited predecessor it missed, re-derives the activity's seed on its first
- * verified batch, then dispatches by `simVersion` — the in-process incremental cache for this
- * deploy's own engine, the cross-version provider registry for everything else — and turns the
- * resulting verdict into a cursor-only apply, a confirmed rejection, or a park. Runs inside the
- * caller's transaction, alongside the chain claim it composes with.
+ * Adjudicates one claimed chain's replay frontier: loads its segment, refuses it outright when a
+ * run its build snapshot borrowed xp from has been rejected, catches the chain's verified anchor up
+ * to a forward-exited predecessor it missed, re-derives the activity's seed on its first verified
+ * batch, then dispatches by `simVersion` — the in-process incremental cache for this deploy's own
+ * engine, the cross-version provider registry for everything else — and turns the resulting verdict
+ * into a cursor-only apply, a confirmed rejection, or a park. Runs inside the caller's transaction,
+ * alongside the chain claim it composes with.
  */
 export async function runFrontier(
   trx: Transaction<DB>,
@@ -46,6 +48,12 @@ export async function runFrontier(
 
   if (loaded === undefined) {
     return { kind: 'idle' };
+  }
+
+  const unbackedSnapshot = await hasRejectedSnapshotSource(trx, loaded.activity.id);
+
+  if (unbackedSnapshot) {
+    return rejectUnbackedSnapshot(trx, deps, cache, loaded);
   }
 
   const reconciledAnchor = await updateVerifiedAnchorFromPredecessor(trx, loaded);
@@ -355,6 +363,45 @@ async function rejectSegment(
   );
 
   recordRejection('integrity-mismatch');
+
+  await rejectActivity(trx, {
+    activityID: segment.activity.id,
+    avatarID: segment.activity.avatarID,
+    scopeID: segment.activity.scopeID,
+    scopeType: segment.activity.scopeType,
+  });
+
+  cache.remove(segment.activity.id);
+
+  return { kind: 'rejected' };
+}
+
+/**
+ * Refuses an activity whose build snapshot borrowed xp from a run that has since been rejected.
+ * The borrowed total is gone, so there is nothing to replay the stream against and no divergence
+ * to confirm — the rejection follows from the snapshot's foundation rather than from anything the
+ * stream itself did. Rejecting through the same single-chain path voids this activity's own
+ * successors, and every activity that borrowed from this one fails this check in turn, so the
+ * refusal reaches the whole dependency graph without any writer reaching across chains.
+ */
+async function rejectUnbackedSnapshot(
+  trx: Transaction<DB>,
+  deps: Readonly<ReplayWorkerDeps>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
+  cache: ReplayCache,
+  segment: Readonly<ReplaySegment>,
+): Promise<ReplayIterationOutcome> {
+  deps.logger.error(
+    {
+      activityID: segment.activity.id,
+      appendedHead: segment.activity.appendedHead,
+      buildSnapshotXP: segment.activity.buildSnapshot.xp,
+      verifiedHead: segment.verifiedHead,
+    },
+    'build snapshot borrowed xp from a rejected run; rejecting activity',
+  );
+
+  recordRejection('unbacked-snapshot');
 
   await rejectActivity(trx, {
     activityID: segment.activity.id,

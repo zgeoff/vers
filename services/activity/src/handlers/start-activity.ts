@@ -139,9 +139,12 @@ export async function startActivity(
 
       const seed = chain.appendedNextSeed;
 
-      const totalXP = await getOptimisticXP(trx, opts.input.avatarID);
+      const optimistic = await getOptimisticBuild(trx, opts.input.avatarID);
 
-      const buildSnapshot: BuildSnapshot = { level: buildLevelFromXP(totalXP), xp: totalXP };
+      const buildSnapshot: BuildSnapshot = {
+        level: buildLevelFromXP(optimistic.totalXP),
+        xp: optimistic.totalXP,
+      };
 
       const startHash = buildStartHash({
         activityID: id,
@@ -152,7 +155,7 @@ export async function startActivity(
         simVersion,
       });
 
-      return trx
+      const inserted = await trx
         .insertInto('activities')
         .values({
           avatarId: opts.input.avatarID,
@@ -173,6 +176,20 @@ export async function startActivity(
         })
         .returningAll()
         .executeTakeFirstOrThrow();
+
+      if (optimistic.sourceIDs.length > 0) {
+        await trx
+          .insertInto('activitySnapshotSources')
+          .values(
+            optimistic.sourceIDs.map((sourceID) => ({
+              activityId: id,
+              sourceActivityId: sourceID,
+            })),
+          )
+          .execute();
+      }
+
+      return inserted;
     });
 
     return toActivityData(row);
@@ -256,15 +273,26 @@ async function resolveSimVersionStamp(
   throw errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion } });
 }
 
+interface OptimisticBuild {
+  /**
+   * The unverified runs `totalXP` borrows from, holding only those that moved it. Recording them
+   * is what lets the verifier refuse a run whose snapshot counted xp that a later rejection proved
+   * never existed.
+   */
+  readonly sourceIDs: ReadonlyArray<string>;
+
+  readonly totalXP: number;
+}
+
 /**
- * Sums an avatar's settled xp with the unsettled xp of every activity that ended and is still
- * awaiting its verifier — the total a new run's build snapshot is stamped with. A `parked` or
- * `quarantined` activity is left out: both are holds with no path back to verification on their
- * own, so counting them would stamp xp that never settles into this run's snapshot and every later
- * one's. The settled row and the unsettled set are read in one statement, so a concurrent verifier
- * commit can't land its delta in the gap between two separate reads.
+ * An avatar's settled xp plus the unsettled xp of every activity that ended and is still awaiting
+ * its verifier — what a new run's build snapshot is stamped with — beside the runs that xp came
+ * from. A `parked` or `quarantined` activity is left out: both are holds with no path back to
+ * verification on their own, so counting them would stamp xp that never settles into this run's
+ * snapshot and every later one's. The settled row and the unsettled set are read in one statement,
+ * so a concurrent verifier commit can't land its delta in the gap between two separate reads.
  */
-async function getOptimisticXP(trx: Kysely<DB>, avatarID: string): Promise<number> {
+async function getOptimisticBuild(trx: Kysely<DB>, avatarID: string): Promise<OptimisticBuild> {
   const rows = await trx
     .selectFrom('avatars')
     .leftJoin('activities', (join) =>
@@ -309,18 +337,36 @@ async function getOptimisticXP(trx: Kysely<DB>, avatarID: string): Promise<numbe
     'avatar must still exist inside the transaction that starts its activity',
   );
 
-  return rows.reduce(
-    (total, row) =>
-      row.id === null
-        ? total
-        : total +
-          buildUnsettledXP({
-            settledXP: row.settledXp ?? 0,
-            tailPayload: row.payload,
-            unverifiedDeltaSum: row.deltaSum ?? 0,
-          }),
-    settled.xp,
-  );
+  const sourceIDs: Array<string> = [];
+  let totalXP = settled.xp;
+
+  // The left join yields one all-null activity row for an avatar with nothing unsettled, so a null
+  // id marks the absence of a source rather than a source without one.
+  for (const row of rows) {
+    if (row.id === null) {
+      continue;
+    }
+
+    const unsettledXP = buildUnsettledXP({
+      settledXP: row.settledXp ?? 0,
+      tailPayload: row.payload,
+      unverifiedDeltaSum: row.deltaSum ?? 0,
+    });
+
+    // A run that moved the total by nothing is not a dependency: the snapshot is the same value
+    // whether or not it exists, so its later rejection has no bearing on this run's honesty. A
+    // negative contribution still counts — a death penalty lowered the total, which is a borrow
+    // like any other.
+    if (unsettledXP === 0) {
+      continue;
+    }
+
+    sourceIDs.push(row.id);
+
+    totalXP += unsettledXP;
+  }
+
+  return { sourceIDs, totalXP };
 }
 
 /**
