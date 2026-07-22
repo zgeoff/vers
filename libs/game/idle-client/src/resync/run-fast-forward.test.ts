@@ -349,3 +349,51 @@ test('it aborts to displaced when another session takes the writer mid-pass', as
   expect(onProgress).not.toHaveBeenCalled();
   expect(ctx.startedActivities).toStrictEqual([]);
 });
+
+test('it returns the earned report rather than throwing when a continuation start is rejected because the account switched avatars', async () => {
+  const ctx = setupTest();
+  const progress = createMockLatestActivityProgress();
+
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.AVATAR_NOT_ACTIVE({
+        data: { activeAvatarID: 'avatar_active', activeAvatarName: 'Active One' },
+      });
+    }),
+  );
+
+  const report = await runFastForward({
+    budgetMs: 60_000,
+    buildSimulationInput: (activity) => ({
+      activity: createMockActivityInput({
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
+        failureAction: ActivityFailureAction.Retry,
+        id: activity.id,
+        seed: activity.seed,
+      }),
+
+      // life 1 dies on the first hit taken, so the attempt fails and terminates quickly
+      avatar: createMockAvatarData({ life: 1 }),
+    }),
+    client: ctx.client,
+    progress,
+    submitter: ctx.submitter,
+  });
+
+  expect(report).toMatchObject({
+    activeAvatarName: 'Active One',
+    activity: progress.activity,
+    attempts: 1,
+    finalRowTerminal: true,
+    reason: 'avatar-switched',
+  });
+
+  expect(ctx.batches).toHaveLength(1);
+});

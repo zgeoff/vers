@@ -7,6 +7,7 @@ import type { FlowSignals, WorkerContext } from './types';
 
 export type PendingStartFlushResult =
   | { readonly outcome: 'blocked' | 'capped' | 'none' | 'stale' | 'stopped' | 'undelivered' }
+  | { readonly activeAvatarName: string; readonly outcome: 'avatar-switched' }
   | { readonly outcome: 'delivered'; readonly started: Readonly<ActivityData> };
 
 /**
@@ -16,9 +17,11 @@ export type PendingStartFlushResult =
  * resync never attaches. A spent budget skips the attempt (`capped`); whether that is a real
  * halt or a stale intent is the caller's call, from fetched progress. Same-key deliveries dedupe
  * server-side, so a same-row `CONFLICT` means the terminal append hasn't landed (`blocked`) and
- * any other `CONFLICT` is a different claim (`stale`). An auth rejection keeps the intent — the
- * session lapsing says nothing about the continuation — while any other defined rejection is the
- * service declaring it dead; both rethrow into the caller's failure handling. A stop landing
+ * any other `CONFLICT` is a different claim (`stale`). `AVATAR_NOT_ACTIVE` means the account
+ * switched avatars while the intent was held: the intent is dropped and the outcome carries the
+ * account's actual active avatar's name (`avatar-switched`). An auth rejection keeps the intent —
+ * the session lapsing says nothing about the continuation — while any other defined rejection is
+ * the service declaring it dead; both rethrow into the caller's failure handling. A stop landing
  * mid-call has the minted row stopped back durably (`stopped`).
  */
 export async function flushPendingStart(
@@ -66,6 +69,12 @@ export async function flushPendingStart(
 
   if (error.code === 'UNAUTHORIZED' || error.code === 'FORBIDDEN') {
     throw error;
+  }
+
+  if (error.code === 'AVATAR_NOT_ACTIVE') {
+    await removePendingStartIntent(intent.activityID);
+
+    return { activeAvatarName: error.data.activeAvatarName, outcome: 'avatar-switched' };
   }
 
   if (error.code !== 'CONFLICT') {

@@ -4,6 +4,7 @@ import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
+import { WorkerMessageType } from '../types';
 import { resetSimulation } from './reset-simulation';
 import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
@@ -18,10 +19,12 @@ import type { FlowSignals, WorkerContext } from './types';
  * zero cursor would fork the checkpoint chain. The same-row case (terminal append still
  * unacknowledged) and a transport failure both park a durable start intent for a later resync's
  * drain, surviving a worker reload; any other rejection parks nothing — the service answered, so
- * the failure is the activity's, not the connection's. Queued from the tick loop, the entry
- * guard is the staleness check: a turn whose simulation/activity pair lost the runtime while it
- * waited returns untouched. Past the start call only stops can interleave; a row started under
- * one is stopped back durably.
+ * the failure is the activity's, not the connection's. AVATAR_NOT_ACTIVE means the account
+ * switched avatars mid-session: nothing is parked, since this avatar's chain has nowhere to
+ * continue to, and the tab is told which avatar is now active rather than left on a silently
+ * reset runtime. Queued from the tick loop, the entry guard is the staleness check: a turn whose
+ * simulation/activity pair lost the runtime while it waited returns untouched. Past the start
+ * call only stops can interleave; a row started under one is stopped back durably.
  */
 export async function runContinuation(
   context: WorkerContext,
@@ -72,6 +75,17 @@ export async function runContinuation(
     // behind itself would deadlock. An automatic continuation never claims the writer — the
     // conflicting row may be another device's live run
     await runResyncFlow(context, row.avatarID, false, signals);
+
+    return;
+  }
+
+  if (isDefinedError(error) && error.code === 'AVATAR_NOT_ACTIVE') {
+    stopAndReset(context, simulation);
+
+    context.broadcast({
+      status: { activeAvatarName: error.data.activeAvatarName, kind: 'avatar-switched' },
+      type: WorkerMessageType.ResyncStatus,
+    });
 
     return;
   }

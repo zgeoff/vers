@@ -13,6 +13,7 @@ import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { WorkerMessageType } from '../types';
 import { runContinuation } from './run-continuation';
 import type { WorkerContext } from './types';
 
@@ -361,4 +362,32 @@ test('it leaves a replacement simulation installed when uninstalling after a sto
   const heldIntent = await readPendingStartIntent();
 
   expect(heldIntent).toBeUndefined();
+});
+
+test('it broadcasts the avatar-switched status when the continuation avatar is no longer active, rather than resetting to idle silently', async () => {
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.AVATAR_NOT_ACTIVE({
+        data: { activeAvatarID: 'avatar_active', activeAvatarName: 'Active One' },
+      });
+    }),
+  );
+
+  const submitter = createStubSubmitter();
+  const context = createStubWorkerContext({ submitter });
+  const simulation = createSimulation();
+  const previousActivity = createMockActivityData();
+
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  await runContinuation(context, simulation, previousActivity);
+
+  expect(context.getActivity()).toBeNull();
+
+  expect(context.getBroadcasts()).toPartiallyContain({
+    status: { activeAvatarName: 'Active One', kind: 'avatar-switched' },
+    type: WorkerMessageType.ResyncStatus,
+  });
 });

@@ -45,19 +45,26 @@ import type { ResyncStatus } from './worker-to-client-message-schema';
  * `failed`, never a connection-status change, and never rejects — a tab's retry re-signals it.
  * `UNAUTHORIZED` broadcasts `session-expired` instead, with no fault report: the only remedy is
  * a fresh sign-in, so the tab renders that rather than a futile retry. An abort settles silently
- * — broadcasting `failed` would flash an error for a deliberate stop.
+ * — broadcasting `failed` would flash an error for a deliberate stop. When `avatarID` came from a
+ * durable start intent that the account has since switched away from, the pass never runs for it:
+ * `avatar-switched` broadcasts instead, and — given a `fallbackAvatarID` distinct from
+ * `avatarID` — the pass runs for that avatar in the same call, so the account's real active
+ * avatar still gets its catch-up this cycle.
  */
 export async function runResyncFlow(
   context: WorkerContext,
   avatarID: string,
   claim: boolean,
   signals: Readonly<FlowSignals>,
+  fallbackAvatarID?: string,
 ): Promise<void> {
   const heldActivity = context.getActivity();
 
-  // a held run can only belong to another avatar when the account's active avatar changed under
-  // a live activity (the switch guard is best-effort against a concurrent start); never install
-  // on top of it — reset first so no snapshot of the old avatar outlives the switch
+  // The worker's held activity is stale client state, not a live server row: once a run ends
+  // server-side — capped by trackActivityProgress, stopped from another tab, rejected by the
+  // verifier, or parked by replay's dispatch — the account may legitimately switch avatars while
+  // this worker still holds the old row, and the next resync for the new avatar lands here. Never
+  // install on top of it — reset first so no snapshot of the old avatar outlives the switch.
   if (heldActivity !== null && heldActivity.avatarID !== avatarID) {
     resetSimulation(context);
   }
@@ -85,6 +92,30 @@ export async function runResyncFlow(
 
     if (startFlush.outcome === 'undelivered') {
       context.updateConnectivity(false);
+    }
+
+    if (startFlush.outcome === 'avatar-switched') {
+      emitResyncStatus(context, {
+        activeAvatarName: startFlush.activeAvatarName,
+        kind: 'avatar-switched',
+      });
+
+      if (fallbackAvatarID !== undefined && fallbackAvatarID !== avatarID) {
+        context.setResyncAvatarID(fallbackAvatarID);
+
+        const fallbackResult = await runResyncPass(context, fallbackAvatarID, claim, signals);
+
+        await applyStartFlush(
+          context,
+          fallbackAvatarID,
+          claim,
+          signals,
+          { outcome: 'none' },
+          fallbackResult,
+        );
+      }
+
+      return;
     }
 
     const result = await runResyncPass(context, avatarID, claim, signals);
@@ -413,6 +444,25 @@ async function applyFastForward(
   if (report.reason === 'displaced') {
     applyActiveElsewhere(context, report.activity.id);
     emitResyncStatus(context, { activityID: report.activity.id, kind: 'active-elsewhere' });
+
+    return;
+  }
+
+  // The account switched avatars between the closed row's terminal append and the next
+  // continuation's start: the closed row's tallies already persisted, so this resolves rather
+  // than reports a fault — the caller renders it as a normal outcome, not a failed catch-up.
+  if (report.reason === 'avatar-switched') {
+    invariant(
+      report.activeAvatarName !== undefined,
+      'an avatar-switched report must carry the active avatar name',
+    );
+
+    resetSimulation(context);
+
+    emitResyncStatus(context, {
+      activeAvatarName: report.activeAvatarName,
+      kind: 'avatar-switched',
+    });
 
     return;
   }

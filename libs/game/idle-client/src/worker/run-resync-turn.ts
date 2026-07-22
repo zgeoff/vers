@@ -11,12 +11,15 @@ import { withLifecycleTurn } from './with-lifecycle-turn';
  * in-flight flag; the inner flow never touches it, so an inline resync run from inside another
  * lifecycle turn cannot reopen the drop window for a resync still waiting in the queue. The
  * signals are captured at arrival, so a stop or shutdown raised while the turn waits its queue
- * slot still cancels the flow's installs and in-flight reads.
+ * slot still cancels the flow's installs and in-flight reads. `fallbackAvatarID` passes straight
+ * through to the flow, for a caller whose `avatarID` came from a durable intent that may turn out
+ * stale.
  */
 export async function runResyncTurn(
   context: WorkerContext,
   avatarID: string,
   claim: boolean,
+  fallbackAvatarID?: string,
 ): Promise<void> {
   if (context.isResyncInFlight()) {
     if (claim) {
@@ -32,7 +35,7 @@ export async function runResyncTurn(
 
   try {
     await withLifecycleTurn(context, 'resync', () =>
-      runResyncFlow(context, avatarID, claim, signals),
+      runResyncFlow(context, avatarID, claim, signals, fallbackAvatarID),
     );
   } finally {
     context.setResyncInFlight(false);

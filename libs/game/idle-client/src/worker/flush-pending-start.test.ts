@@ -348,3 +348,34 @@ test('it stops the minted row back when a stop lands while the start is in fligh
 
   expect(heldStop).toBeUndefined();
 });
+
+test("it drops the held intent and reports it stale when the intent's avatar is no longer active", async () => {
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.AVATAR_NOT_ACTIVE({
+        data: { activeAvatarID: 'avatar_active', activeAvatarName: 'Active One' },
+      });
+    }),
+  );
+
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+
+  await writePendingStartIntent({
+    activityID: 'activity_1',
+    avatarID: 'avatar_1',
+    scopeID: 'scope_1',
+    scopeType: 'mission',
+  });
+
+  const result = await flushPendingStart(
+    context,
+    { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+    'avatar_1',
+  );
+
+  expect(result).toStrictEqual({ activeAvatarName: 'Active One', outcome: 'avatar-switched' });
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
+});

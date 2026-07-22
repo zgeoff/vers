@@ -32,7 +32,13 @@ const initializeOutputSchema = z
 const startStatusSchema = z.discriminatedUnion('kind', [
   z.object({ activity: ActivityDataSchema, kind: z.literal('started') }).readonly(),
   z.object({ activityID: z.string(), kind: z.literal('attached') }).readonly(),
-  z.object({ kind: z.literal('failed') }).readonly(),
+  z
+    .object({
+      activeAvatarName: z.string().optional(),
+      kind: z.literal('failed'),
+      reason: z.literal('avatar-not-active').optional(),
+    })
+    .readonly(),
 ]);
 
 const ackSchema = z.object({ ok: z.literal(true) }).readonly();
