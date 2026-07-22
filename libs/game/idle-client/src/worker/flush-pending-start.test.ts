@@ -373,7 +373,11 @@ test("it drops the held intent and reports it stale when the intent's avatar is 
     'avatar_1',
   );
 
-  expect(result).toStrictEqual({ activeAvatarName: 'Active One', outcome: 'avatar-switched' });
+  expect(result).toStrictEqual({
+    activeAvatarID: 'avatar_active',
+    activeAvatarName: 'Active One',
+    outcome: 'avatar-switched',
+  });
 
   const heldIntent = await readPendingStartIntent();
 

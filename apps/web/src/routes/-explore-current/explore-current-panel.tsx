@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Button, CheckboxField, Spinner, Text } from '@vers/design-system';
+import { Button, CheckboxField, Spinner } from '@vers/design-system';
 import type { StartStatus } from '@vers/idle-client';
 import { setEngagedActivityID, useEngagedActivityID, useWriterGeneration } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import invariant from 'tiny-invariant';
+import { AvatarSwitchedNotice } from '../../components/avatar-switched-notice';
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
@@ -169,22 +170,11 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   }, [isActivityReady, expectedActivityID, engagedActivityID, navigate]);
 
   if (reportedStatus?.kind === 'failed' && reportedStatus.rejection !== undefined) {
-    const rejection = reportedStatus.rejection;
-
     return (
-      <>
-        <Text data-testid="start-activity-avatar-not-active" role="alert">
-          You’re now playing as <strong>{rejection.activeAvatarName}</strong>. Reload to continue as{' '}
-          {rejection.activeAvatarName}.
-        </Text>
-        <Button
-          onClick={() => {
-            globalThis.location.reload();
-          }}
-        >
-          Reload
-        </Button>
-      </>
+      <AvatarSwitchedNotice
+        activeAvatarName={reportedStatus.rejection.activeAvatarName}
+        testID="start-activity-avatar-not-active"
+      />
     );
   }
 

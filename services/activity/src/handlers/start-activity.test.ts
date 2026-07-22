@@ -1241,4 +1241,12 @@ test('it refuses to adopt while another avatar holds a live run', async () => {
     .executeTakeFirst();
 
   expect(minted).toBeUndefined();
+
+  const selection = await ctx.db
+    .selectFrom('activeAvatars')
+    .selectAll()
+    .where('userId', '=', viewer.user.id)
+    .executeTakeFirst();
+
+  expect(selection).toBeUndefined();
 });

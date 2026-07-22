@@ -390,4 +390,6 @@ test('it broadcasts the avatar-switched status when the continuation avatar is n
     status: { activeAvatarName: 'Active One', attempts: 0, kind: 'avatar-switched', levelUps: 0 },
     type: WorkerMessageType.ResyncStatus,
   });
+
+  expect(context.getConnectivityOnline()).toBeTrue();
 });

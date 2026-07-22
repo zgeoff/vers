@@ -93,36 +93,45 @@ test('it broadcasts avatar-switched, and reports no worker fault, when the held 
   expect(recorded).toStrictEqual([]);
 });
 
-test('it clears the stamped resync avatar when the flow ends on avatar-switched with no fallback', async () => {
+test('it clears the stamped resync avatar when the reported active avatar already matches the one being resynced', async () => {
   const viewer = await createViewer();
-  const otherAvatar = await db.avatarCollection.create({ userID: viewer.user.id });
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
 
   const source = await db.activityCollection.create({
-    avatarID: otherAvatar.id,
+    avatarID: viewer.avatar.id,
     status: 'stopped',
   });
 
   await writePendingStartIntent({
     activityID: source.id,
-    avatarID: otherAvatar.id,
+    avatarID: viewer.avatar.id,
     scopeID: source.scopeID,
     scopeType: source.scopeType,
   });
+
+  // the real service only ever rejects naming a different avatar than the one that asked, but the
+  // flow must still resolve safely if a stale read ever reported the same one back
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.AVATAR_NOT_ACTIVE({
+        data: { activeAvatarID: opts.input.avatarID, activeAvatarName: viewer.avatar.name },
+      });
+    }),
+  );
 
   const signals: FlowSignals = {
     cancel: context.getCancelSignal(),
     stop: context.getStopSignal(),
   };
 
-  await runResyncFlow(context, otherAvatar.id, false, signals);
+  await runResyncFlow(context, viewer.avatar.id, false, signals);
 
   expect(context.getResyncAvatarID()).toBeNull();
 });
 
-test('it runs the pass for the signalled avatar after dropping an inactive avatar intent', async () => {
+test('it runs the fallback pass for the server-reported active avatar and broadcasts avatar-switched last, carrying its tallies', async () => {
   const viewer = await createViewer();
   const otherAvatar = await db.avatarCollection.create({ userID: viewer.user.id });
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
@@ -152,10 +161,22 @@ test('it runs the pass for the signalled avatar after dropping an inactive avata
     stop: context.getStopSignal(),
   };
 
-  await runResyncFlow(context, otherAvatar.id, false, signals, viewer.avatar.id);
+  await runResyncFlow(context, otherAvatar.id, false, signals);
 
-  expect(context.getBroadcasts()).toPartiallyContain({
+  const broadcasts = context.getBroadcasts();
+
+  expect(broadcasts).toPartiallyContain({
     status: { kind: 'capped' },
+    type: WorkerMessageType.ResyncStatus,
+  });
+
+  expect(broadcasts.at(-1)).toStrictEqual({
+    status: {
+      activeAvatarName: viewer.avatar.name,
+      attempts: 0,
+      kind: 'avatar-switched',
+      levelUps: 0,
+    },
     type: WorkerMessageType.ResyncStatus,
   });
 
@@ -215,5 +236,5 @@ test('it broadcasts avatar-switched from a blocked intent retry rather than drop
     type: WorkerMessageType.ResyncStatus,
   });
 
-  expect(context.getResyncAvatarID()).toBeNull();
+  expect(context.getResyncAvatarID()).toBe('avatar_active');
 });

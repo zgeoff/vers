@@ -1,6 +1,7 @@
 import { Button, Dialog, Text } from '@vers/design-system';
 import { setResyncStatus, useResyncStatus } from '@vers/idle-client';
 import type { ResyncStatus } from '@vers/idle-client';
+import { AvatarSwitchedNotice } from '../../components/avatar-switched-notice';
 import { getLoginPathWithRedirect } from '../../lib/auth/get-login-path-with-redirect';
 import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
 import { sendIdleReportOnline } from '../../lib/idle/send-idle-report-online';
@@ -66,25 +67,11 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
 
   if (resyncStatus.kind === 'avatar-switched') {
     return (
-      <>
-        <Text>
-          You’re now playing as <strong>{resyncStatus.activeAvatarName}</strong>. Reload to continue
-          as {resyncStatus.activeAvatarName}.
-        </Text>
-        {resyncStatus.attempts > 0 && (
-          <Text>
-            While you were away: {resyncStatus.attempts} attempts, {resyncStatus.levelUps}{' '}
-            level-ups.
-          </Text>
-        )}
-        <Button
-          onClick={() => {
-            globalThis.location.reload();
-          }}
-        >
-          Reload
-        </Button>
-      </>
+      <AvatarSwitchedNotice
+        activeAvatarName={resyncStatus.activeAvatarName}
+        attempts={resyncStatus.attempts}
+        levelUps={resyncStatus.levelUps}
+      />
     );
   }
 

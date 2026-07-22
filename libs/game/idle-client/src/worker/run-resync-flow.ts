@@ -46,21 +46,20 @@ import type { ResyncStatus } from './worker-to-client-message-schema';
  * `UNAUTHORIZED` broadcasts `session-expired` instead, with no fault report: the only remedy is
  * a fresh sign-in, so the tab renders that rather than a futile retry. An abort settles silently
  * — broadcasting `failed` would flash an error for a deliberate stop. When `avatarID` came from a
- * durable start intent that the account has since switched away from, the pass never runs for it
- * and the stamped resync avatar clears, so a dead intent avatar isn't resynced again next cycle.
- * With no `fallbackAvatarID` distinct from `avatarID`, `avatar-switched` broadcasts as the cycle's
- * terminal status. Given a `fallbackAvatarID` distinct from `avatarID`, the pass runs for that
- * avatar in the same call instead, and only its own terminal status broadcasts: the resync-status
- * channel is single-slot and last-write-wins, so an `avatar-switched` status here would only be
- * overwritten by the fallback pass's own — and the fallback avatar's catch-up, the account's real
- * active avatar, is the correct thing for the player to see this cycle.
+ * durable start intent that the account has since switched away from, the service's own rejection
+ * names the account's actual active avatar — the authoritative recovery target, never a
+ * caller-derived guess that can itself be stale. That reported avatar's own catch-up runs in the
+ * dead intent avatar's place whenever the two differ, and `avatar-switched` broadcasts afterward
+ * as the cycle's terminal status, carrying that pass's tallies so the player sees both the switch
+ * notice and what the catch-up earned; the stamped resync avatar follows the pass onto the
+ * reported avatar. When the reported avatar already matches `avatarID`, no pass runs and the
+ * stamped resync avatar clears instead, so a dead intent avatar isn't resynced again next cycle.
  */
 export async function runResyncFlow(
   context: WorkerContext,
   avatarID: string,
   claim: boolean,
   signals: Readonly<FlowSignals>,
-  fallbackAvatarID?: string,
 ): Promise<void> {
   const heldActivity = context.getActivity();
 
@@ -100,28 +99,7 @@ export async function runResyncFlow(
     }
 
     if (startFlush.outcome === 'avatar-switched') {
-      // No fallback pass follows: this status is the cycle's terminal outcome, so it broadcasts,
-      // and the stamped resync avatar clears — leaving it stamped would resync this same dead
-      // intent avatar again on the next connectivity proof.
-      if (fallbackAvatarID === undefined || fallbackAvatarID === avatarID) {
-        context.setResyncAvatarID(null);
-
-        emitResyncStatus(context, {
-          activeAvatarName: startFlush.activeAvatarName,
-          attempts: 0,
-          kind: 'avatar-switched',
-          levelUps: 0,
-        });
-
-        return;
-      }
-
-      // A fallback pass follows for the account's real active avatar; its own terminal status is
-      // what broadcasts, since the single-slot resync-status channel would only overwrite an
-      // `avatar-switched` status emitted here.
-      context.setResyncAvatarID(fallbackAvatarID);
-
-      await runResyncPass(context, fallbackAvatarID, claim, signals);
+      await runAvatarSwitchedFallback(context, avatarID, claim, signals, startFlush);
 
       return;
     }
@@ -204,11 +182,51 @@ async function runResyncPass(
 }
 
 /**
+ * Runs the server-reported active avatar's own catch-up in the dead intent avatar's place,
+ * whenever the two differ, then broadcasts `avatar-switched` as the terminal status carrying that
+ * pass's tallies — so the player sees both the switch notice and what the catch-up earned. The
+ * stamped resync avatar follows the pass onto the reported avatar. When the two already match, no
+ * pass runs: the reported name broadcasts as-is and the stamped resync avatar clears instead, so a
+ * dead intent avatar isn't resynced again next cycle.
+ */
+async function runAvatarSwitchedFallback(
+  context: WorkerContext,
+  avatarID: string,
+  claim: boolean,
+  signals: Readonly<FlowSignals>,
+  switched: Extract<PendingStartFlushResult, { readonly outcome: 'avatar-switched' }>,
+): Promise<void> {
+  if (switched.activeAvatarID === avatarID) {
+    context.setResyncAvatarID(null);
+
+    emitResyncStatus(context, {
+      activeAvatarName: switched.activeAvatarName,
+      attempts: 0,
+      kind: 'avatar-switched',
+      levelUps: 0,
+    });
+
+    return;
+  }
+
+  context.setResyncAvatarID(switched.activeAvatarID);
+
+  const result = await runResyncPass(context, switched.activeAvatarID, claim, signals);
+
+  emitResyncStatus(context, {
+    activeAvatarName: switched.activeAvatarName,
+    attempts: result.report?.attempts ?? 0,
+    kind: 'avatar-switched',
+    levelUps: result.report?.levelUps ?? 0,
+  });
+}
+
+/**
  * Settles the entry drain's outcome now that fetched progress can adjudicate it. A delivered
  * row a stop kept from installing is stopped back. A `blocked` intent gets one retry — the
  * pass's own queued-checkpoint drain may have closed the source row — and a delivery there earns
- * one bounded second pass to attach the minted row; an `avatar-switched` retry result broadcasts
- * the same terminal status the entry path would, so the account's switch is never dropped
+ * one bounded second pass to attach the minted row; an `avatar-switched` retry result runs the
+ * same server-reported fallback the entry path would, so the account's switch is never dropped
  * silently. A `capped` intent broadcasts the cap halt only while progress names its source row
  * closed; a still-active source keeps silently, and any other row clears the intent without a
  * broadcast, which would otherwise repeat on every resync forever.
@@ -236,14 +254,7 @@ async function applyStartFlush(
     } else if (retryFlush.outcome === 'undelivered') {
       context.updateConnectivity(false);
     } else if (retryFlush.outcome === 'avatar-switched') {
-      context.setResyncAvatarID(null);
-
-      emitResyncStatus(context, {
-        activeAvatarName: retryFlush.activeAvatarName,
-        attempts: 0,
-        kind: 'avatar-switched',
-        levelUps: 0,
-      });
+      await runAvatarSwitchedFallback(context, avatarID, claim, signals, retryFlush);
     }
 
     return;

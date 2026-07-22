@@ -10,12 +10,11 @@ import type { WorkerContext } from './types';
  * avatar comes from the durable start intent first (recorded at the most recent boundary
  * failure), else the reporting tab's session avatar, else the last avatar a resync ran for; with
  * none of the three, there is nothing to catch up. An intent's avatar can be stale — the account
- * switched away from it while the intent was held — so the reporting tab's session avatar or the
- * last resync avatar is carried along as a fallback the resync flow falls back to in the same
- * call, and the account's real active avatar still gets its catch-up this cycle rather than
- * waiting for the next connectivity proof. `claim` carries a reporting tab's deliberate presence
- * into the resync so it may take an active run's writer; the worker's own triggers — a reconnect,
- * a flush answer — never claim.
+ * switched away from it while the intent was held — but the resync flow discovers that itself
+ * from the service's own rejection and catches up the account's real active avatar in the same
+ * call, so nothing needs deriving here. `claim` carries a reporting tab's deliberate presence into
+ * the resync so it may take an active run's writer; the worker's own triggers — a reconnect, a
+ * flush answer — never claim.
  */
 export async function runReconnectRecovery(
   context: WorkerContext,
@@ -30,12 +29,10 @@ export async function runReconnectRecovery(
 
   const heldIntent = await readPendingStartIntent();
 
-  const rememberedAvatarID = signalAvatarID ?? context.getResyncAvatarID() ?? undefined;
-  const avatarID = heldIntent?.avatarID ?? rememberedAvatarID ?? null;
+  const avatarID =
+    heldIntent?.avatarID ?? signalAvatarID ?? context.getResyncAvatarID() ?? undefined;
 
-  if (context.getActivity() === null && avatarID !== null) {
-    const fallbackAvatarID = heldIntent === undefined ? undefined : rememberedAvatarID;
-
-    await runResyncTurn(context, avatarID, claim, fallbackAvatarID);
+  if (context.getActivity() === null && avatarID !== undefined) {
+    await runResyncTurn(context, avatarID, claim);
   }
 }
