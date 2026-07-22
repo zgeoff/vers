@@ -38,6 +38,6 @@ export async function readProviderAppState(app: string): Promise<ProviderAppStat
     exists: true,
     hasMachine: machine !== undefined,
     machineID: machine?.id ?? null,
-    machineImageDigest: machine?.image_ref.digest ?? null,
+    machineImageDigest: machine?.image_ref?.digest ?? null,
   };
 }
