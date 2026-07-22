@@ -29,13 +29,17 @@ process.on('SIGTERM', () => {
  * ever delaying `listen()` or crashing boot on a drain failure.
  */
 async function runBootDrain(): Promise<void> {
-  try {
-    await service.drain();
-  } catch (error) {
-    service.logger.error({ err: error }, 'boot drain failed');
+  // the try/catch lives inside the trace scope so a boot-drain failure report still carries its
+  // trace id
+  await withTraceContext(createTraceContext(), async () => {
+    try {
+      await service.drain();
+    } catch (error) {
+      service.logger.error({ err: error }, 'boot drain failed');
 
-    reportUnexpectedError(error);
-  }
+      reportUnexpectedError(error);
+    }
+  });
 }
 
 async function handleSIGTERM(): Promise<void> {
