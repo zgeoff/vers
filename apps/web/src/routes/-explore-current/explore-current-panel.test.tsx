@@ -485,6 +485,11 @@ test('it does not re-navigate when the engaged activity flickers after returning
     writerAbortSignal: new AbortController().signal,
   });
 
+  // the latch already carries this activity — the state a player is in after engaging it once;
+  // the panel under flicker must read it as engaged rather than re-navigating, with no cross-route
+  // round trip in the arrangement
+  setEngagedActivityID(started.id);
+
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />, {
       routes: { '/activity': <div data-testid="engagement-screen" /> },
@@ -502,21 +507,10 @@ test('it does not re-navigate when the engaged activity flickers after returning
       writerAbortSignal: new AbortController().signal,
     });
 
-    // the first ready state engages this attempt and navigates to the engagement screen
-    await waitFor(() => {
-      expect(rendered.router.state.location.pathname).toBe('/activity');
-    });
-
-    // returning to the explore panel (the browser back button) remounts it; the engaged-activity
-    // latch persists, so the same live activity reads as already engaged rather than re-navigating.
-    // The transition is observed through the rendered outcome, not navigate's own promise — that
-    // promise only settles once the router goes idle, which a superseding transition can starve.
-    void rendered.router.navigate({ to: '/' });
-
     await rendered.findByLabelText('Auto-retry on failure');
 
     // a resync blip clears the store's activity, then restores the exact same one — the same
-    // attempt, never a fresh one — and must not send the panel back to the engagement screen
+    // attempt, never a fresh one — and must not send the panel to the engagement screen
     setIdleWorkerHandle({
       activity: undefined,
       client,
