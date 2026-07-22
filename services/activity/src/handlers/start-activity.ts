@@ -5,6 +5,7 @@ import type { DB } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { findCurrentSimVersion, findSimVersion } from '@vers/sim-registry';
 import type { Kysely } from 'kysely';
+import invariant from 'tiny-invariant';
 import { parseTerminalCheckpointXP } from '../parse-terminal-checkpoint-xp';
 import { resolveEncounterNode } from '../resolve-encounter-node';
 import type {
@@ -136,9 +137,8 @@ export async function startActivity(
 
       const seed = chain.appendedNextSeed;
 
-      const pendingXP = await getPendingXP(trx, opts.input.avatarID);
+      const totalXP = await getOptimisticXP(trx, opts.input.avatarID);
 
-      const totalXP = avatar.xp + pendingXP;
       const buildSnapshot: BuildSnapshot = { level: buildLevelFromXP(totalXP), xp: totalXP };
 
       const startHash = buildStartHash({
@@ -255,26 +255,42 @@ async function resolveSimVersionStamp(
 }
 
 /**
- * Sums the xp delta of an avatar's terminal-but-unsettled activities — a stopped, capped,
- * quarantined, or parked activity whose verified anchor hasn't caught up to its appended tail.
- * Malformed or non-terminal tail payloads contribute nothing.
+ * Sums an avatar's settled xp with the xp delta of its terminal-but-unsettled activities — a
+ * stopped, capped, quarantined, or parked activity whose verified anchor hasn't caught up to its
+ * appended tail. The settled row and the pending set are read in one statement, so a concurrent
+ * verifier commit can't land its delta in the gap between two separate reads. Malformed or
+ * non-terminal tail payloads contribute nothing.
  */
-async function getPendingXP(trx: Kysely<DB>, avatarID: string): Promise<number> {
+async function getOptimisticXP(trx: Kysely<DB>, avatarID: string): Promise<number> {
   const rows = await trx
-    .selectFrom('activities')
-    .innerJoin('activityCheckpoints', (join) =>
+    .selectFrom('avatars')
+    .leftJoin('activities', (join) =>
+      join
+        .onRef('activities.avatarId', '=', 'avatars.id')
+        .on('activities.status', '!=', 'active')
+        .on('activities.status', '!=', 'rejected')
+        .onRef('activities.verifiedHead', '<', 'activities.appendedHead'),
+    )
+    .leftJoin('activityCheckpoints', (join) =>
       join
         .onRef('activityCheckpoints.activityId', '=', 'activities.id')
         .onRef('activityCheckpoints.version', '=', 'activities.appendedHead'),
     )
-    .select('activityCheckpoints.payload')
-    .where('activities.avatarId', '=', avatarID)
-    .where('activities.status', '!=', 'active')
-    .where('activities.status', '!=', 'rejected')
-    .whereRef('activities.verifiedHead', '<', 'activities.appendedHead')
+    .select(['avatars.xp', 'activityCheckpoints.payload'])
+    .where('avatars.id', '=', avatarID)
     .execute();
 
-  return rows.reduce((total, row) => total + (parseTerminalCheckpointXP(row.payload) ?? 0), 0);
+  const [settled] = rows;
+
+  invariant(
+    settled !== undefined,
+    'avatar must still exist inside the transaction that starts its activity',
+  );
+
+  return rows.reduce(
+    (total, row) => total + (parseTerminalCheckpointXP(row.payload) ?? 0),
+    settled.xp,
+  );
 }
 
 /**
