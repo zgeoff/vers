@@ -441,6 +441,23 @@ function findRewardSlotsInvalidReason(payload: Readonly<CheckpointPayload>): str
   return isContiguous ? undefined : 'invalid-reward-slots';
 }
 
+const RewardsSchema = z.looseObject({ xp: z.int().optional() });
+
+/**
+ * A checkpoint's `rewards` field rides outside the hashed subset, so it's validated here rather
+ * than by the payload schema. Absent is valid — a checkpoint that earned nothing carries no key at
+ * all. Present, `xp` must be an integer: readers aggregate it in postgres with an `integer` cast
+ * that fails the whole statement on a fractional or non-numeric value, and the offending
+ * checkpoint would keep failing it on every later read.
+ */
+function findRewardsInvalidReason(payload: Readonly<CheckpointPayload>): string | undefined {
+  if (!('rewards' in payload)) {
+    return undefined;
+  }
+
+  return RewardsSchema.safeParse(payload['rewards']).success ? undefined : 'invalid-rewards';
+}
+
 interface CheckpointBatchInput {
   readonly checkpoints: ReadonlyArray<CheckpointBatchEntry>;
   readonly expectedHead: number;
@@ -460,7 +477,8 @@ interface TrackActivityProgressHead {
  * contiguity from `expectedHead + 1`, each entry's `chainIndex` continuity from
  * `head.startChainIndex`, no run-ending entry before the batch's last — only the last entry claims
  * the activity's terminal transition, so an interior one would store a terminal the settlement rule
- * never reads — each entry's optional `rewardSlots` shape and ordinal contiguity, each
+ * never reads — each entry's optional `rewardSlots` shape and ordinal contiguity, each entry's
+ * optional `rewards.xp` being an integer, each
  * entry's cumulative `time` never regressing — within the batch always, and from the head row's
  * accounted time only when `expectedHead` still matches the head row, since a stale batch predates
  * that value — each entry's hash against its own payload, each entry's chain link to the previous
@@ -494,6 +512,12 @@ function findInvalidReason(
 
     if (rewardSlotsReason !== undefined) {
       return rewardSlotsReason;
+    }
+
+    const rewardsReason = findRewardsInvalidReason(checkpoint.payload);
+
+    if (rewardsReason !== undefined) {
+      return rewardsReason;
     }
 
     // The negated >= also rejects a NaN time, which would otherwise slip through as a 0 delta.
