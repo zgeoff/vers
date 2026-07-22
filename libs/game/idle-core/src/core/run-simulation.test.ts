@@ -44,6 +44,51 @@ test('it runs a simulation to completion with the default configuration', async 
           "type": "started",
         },
         {
+          "nextSeed": "925d40c56a8f10e54ef3e9f98eb38e86",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 3750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "e65fab3e74a44904e05cae86162bc079",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 6250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "4bc36477e8a5f919adcf1ea4b53569e5",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 10000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "9d9e6262c60e3df50aef2a73ed10ef53",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 13750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "1065c3616078be9a030fc807485d3dfe",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 17500,
+          "type": "progress",
+        },
+        {
           "nextSeed": "5468a77edf984ec079995dfd698938b2",
           "rewardSlots": [
             {
@@ -84,9 +129,36 @@ test('it runs a simulation to completion with the default configuration', async 
             },
           ],
           "rewards": {
-            "xp": 60,
+            "xp": 10,
           },
           "time": 21250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "8a820a87275cb857fa968a30e570b8d6",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 23750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "0cfb61579d8e1e40e2f24da942f6dd6e",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 27500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "0675e7603f8155afc8c6a28d0c6d98e9",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 30000,
           "type": "progress",
         },
         {
@@ -94,6 +166,24 @@ test('it runs a simulation to completion with the default configuration', async 
             "from": 1,
             "to": 2,
           },
+          "nextSeed": "651b7bac24e8282ac2345557ee733dc5",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 33750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "ee1f24abfb2e8cf516ee1876f7df5a2b",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 36250,
+          "type": "progress",
+        },
+        {
           "nextSeed": "86c008c1cb5d97968d4554750eefc5d4",
           "rewardSlots": [
             {
@@ -134,9 +224,27 @@ test('it runs a simulation to completion with the default configuration', async 
             },
           ],
           "rewards": {
-            "xp": 60,
+            "xp": 10,
           },
           "time": 38750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "b2e6283e120491eb7aa9dce8e71a5e01",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 41250,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "22bdef44811f50085ecc5e2446812146",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 45000,
           "type": "progress",
         },
         {
@@ -162,9 +270,36 @@ test('it runs a simulation to completion with the default configuration', async 
             },
           ],
           "rewards": {
-            "xp": 30,
+            "xp": 10,
           },
           "time": 48750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "ad82bf95e1470a5e9beb0ece1bdce383",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 52500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "49248a9017d0d3a1d2aea2bd9c601089",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 55000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "c688f22dc55631d58f65a03319fdda6c",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 57500,
           "type": "progress",
         },
         {
@@ -196,7 +331,7 @@ test('it runs a simulation to completion with the default configuration', async 
             },
           ],
           "rewards": {
-            "xp": 40,
+            "xp": 10,
           },
           "time": 61250,
           "type": "progress",
@@ -219,6 +354,51 @@ test('it runs a simulation to completion with the default configuration', async 
           "seed": "664be6d955fc249bfe89a1dbcdfd99cc",
           "time": 0,
           "type": "started",
+        },
+        {
+          "nextSeed": "ccc3c6b398f52bb18c258dfdf86a6b7e",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 3750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "76b07ee326947d7008336ad64949f1b4",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 7500,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "dca28ddc26b704b5d5fe773131dbf5bf",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 10000,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "935fd82a5e083dfd65f59122900f7df6",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 13750,
+          "type": "progress",
+        },
+        {
+          "nextSeed": "c2277040706a943e5c6a48ba9890c928",
+          "rewardSlots": [],
+          "rewards": {
+            "xp": 10,
+          },
+          "time": 16250,
+          "type": "progress",
         },
       ],
       "elapsed": 80000,
@@ -245,15 +425,15 @@ test('it respects duration limit and stops the simulation accordingly', async ()
   });
 
   const config = {
-    // the first wave is killed at ~17 seconds on this seed
-    duration: 10_000,
+    // the first enemy falls at ~3.75 seconds on this seed
+    duration: 3000,
   };
 
   const result = await runSimulation(activity, avatar, config);
 
   expect(result.checkpoints).toHaveLength(1);
   expect(result.checkpoints[0]?.type).toBe(ActivityCheckpointType.Started);
-  expect(result.elapsed).toBe(10_000);
+  expect(result.elapsed).toBe(3000);
 });
 
 test('it stops at the specified rng state if provided', async () => {

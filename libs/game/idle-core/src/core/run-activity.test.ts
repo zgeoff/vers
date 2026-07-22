@@ -442,3 +442,78 @@ test('it keeps xp and a level-up earned on the same tick the avatar dies', () =>
   expect(failedCheckpoint.rewards.xp).toBeLessThan(250);
   expect(buildLevelFromXP(avatar.xp + failedCheckpoint.rewards.xp)).toBe(2);
 });
+
+test('it keeps xp from kills in a wave the avatar dies partway through', () => {
+  const weapon: EquipmentWeapon = {
+    id: 'test-weapon',
+    maxDamage: 9999,
+    minDamage: 9999,
+    name: 'Test Weapon',
+    speed: 1,
+  };
+
+  const avatarData = createMockAvatarData({
+    life: 3,
+    paperdoll: {
+      [EquipmentSlot.MainHand]: weapon,
+    },
+    xp: 0,
+  });
+
+  // the avatar one-shots an enemy per tick while the wave chips it down, so it falls with the
+  // wave part-cleared rather than on a wave boundary
+  const enemyData = createMockEnemyData({
+    life: 1,
+    primaryAttack: {
+      maxDamage: 2,
+      minDamage: 2,
+      speed: 0.5,
+    },
+    xp: 10,
+  });
+
+  const activityData = createMockActivityInput({
+    difficulty: 1,
+    encounter: { waves: [Array.from({ length: 5 }, () => enemyData)] },
+  });
+
+  const ctx = createMockSimulationContext();
+  const activity = createActivity(activityData, ctx);
+  const avatar = createAvatar(avatarData, ctx);
+  const executor = createCombatExecutor(activity, avatar, ctx);
+  const generator = runActivity(executor, activity, avatar, ctx);
+
+  // skip the started checkpoint
+  generator.next(1000);
+
+  const firstKill = generator.next(1000).value;
+  const secondKill = generator.next(1000).value;
+  const failedResult = generator.next(1000);
+
+  invariant(failedResult.done === true, 'the activity must resolve to a failed checkpoint');
+
+  const failedCheckpoint = failedResult.value;
+
+  expect(firstKill).toStrictEqual({
+    nextSeed: expect.toBeString(),
+    rewards: { xp: 10 },
+    rewardSlots: [],
+    time: expect.toBeNumber(),
+    type: ActivityCheckpointType.Progress,
+  });
+
+  expect(secondKill).toStrictEqual({
+    nextSeed: expect.toBeString(),
+    rewards: { xp: 10 },
+    rewardSlots: [],
+    time: expect.toBeNumber(),
+    type: ActivityCheckpointType.Progress,
+  });
+
+  expect(activity.currentWave?.remaining).toBe(3);
+  expect(failedCheckpoint.type).toBe(ActivityCheckpointType.Failed);
+
+  // both kills survive the death, less only the designed failure penalty
+  expect(failedCheckpoint.rewards.xp).toBeGreaterThan(0);
+  expect(failedCheckpoint.rewards.xp).toBeLessThanOrEqual(20);
+});

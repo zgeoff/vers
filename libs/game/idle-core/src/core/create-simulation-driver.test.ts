@@ -107,10 +107,11 @@ test('it advances an idle batch with no boundary-crossing checkpoints', async ()
   expect(first.checkpoints).toHaveLength(1);
   expect(first.checkpoints[0]?.type).toBe(ActivityCheckpointType.Started);
 
-  const second = await driver.advanceToDuration(5000);
+  // short of the first enemy falling, so the batch crosses no checkpoint at all
+  const second = await driver.advanceToDuration(3000);
 
   expect(second.checkpoints).toBeEmpty();
-  expect(driver.elapsed).toBe(5000);
+  expect(driver.elapsed).toBe(3000);
 });
 
 test('it stops at the specified rng state within a later advance', async () => {

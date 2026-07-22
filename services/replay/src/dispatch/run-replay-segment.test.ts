@@ -77,78 +77,370 @@ const DETERMINISTIC_INPUT = createMockReplaySegmentInput({
 const EXPECTED_CHECKPOINTS: Array<ActivityCheckpoint> = [
   {
     nextSeed: 'ffffffff4a5a72e5b5a58d1a00000000',
-    rewards: { xp: 0 },
+    rewards: {
+      xp: 0,
+    },
     rewardSlots: [],
-    seed: 'ffffffff4a5a72e5b5a58d1a00000000',
     time: 0,
+    seed: 'ffffffff4a5a72e5b5a58d1a00000000',
     type: 'started',
   },
   {
+    nextSeed: '925d40c56a8f10e54ef3e9f98eb38e86',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 3750,
+    type: 'progress',
+  },
+  {
+    nextSeed: 'e65fab3e74a44904e05cae86162bc079',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 6250,
+    type: 'progress',
+  },
+  {
+    nextSeed: '4bc36477e8a5f919adcf1ea4b53569e5',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 10_000,
+    type: 'progress',
+  },
+  {
+    nextSeed: '9d9e6262c60e3df50aef2a73ed10ef53',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 13_750,
+    type: 'progress',
+  },
+  {
+    nextSeed: '1065c3616078be9a030fc807485d3dfe',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 17_500,
+    type: 'progress',
+  },
+  {
     nextSeed: '5468a77edf984ec079995dfd698938b2',
-    rewards: { xp: 60 },
+    rewards: {
+      xp: 10,
+    },
     rewardSlots: [
-      { context: { nodeTier: 1 }, ordinal: 0 },
-      { context: { nodeTier: 1 }, ordinal: 1 },
-      { context: { nodeTier: 1 }, ordinal: 2 },
-      { context: { nodeTier: 1 }, ordinal: 3 },
-      { context: { nodeTier: 1 }, ordinal: 4 },
-      { context: { nodeTier: 1 }, ordinal: 5 },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 0,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 1,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 2,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 3,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 4,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 5,
+      },
     ],
     time: 21_250,
     type: 'progress',
   },
   {
-    levelUp: { from: 1, to: 2 },
+    nextSeed: '8a820a87275cb857fa968a30e570b8d6',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 23_750,
+    type: 'progress',
+  },
+  {
+    nextSeed: '0cfb61579d8e1e40e2f24da942f6dd6e',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 27_500,
+    type: 'progress',
+  },
+  {
+    nextSeed: '0675e7603f8155afc8c6a28d0c6d98e9',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 30_000,
+    type: 'progress',
+  },
+  {
+    nextSeed: '651b7bac24e8282ac2345557ee733dc5',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 33_750,
+    levelUp: {
+      from: 1,
+      to: 2,
+    },
+    type: 'progress',
+  },
+  {
+    nextSeed: 'ee1f24abfb2e8cf516ee1876f7df5a2b',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 36_250,
+    type: 'progress',
+  },
+  {
     nextSeed: '86c008c1cb5d97968d4554750eefc5d4',
-    rewards: { xp: 60 },
+    rewards: {
+      xp: 10,
+    },
     rewardSlots: [
-      { context: { nodeTier: 1 }, ordinal: 0 },
-      { context: { nodeTier: 1 }, ordinal: 1 },
-      { context: { nodeTier: 1 }, ordinal: 2 },
-      { context: { nodeTier: 1 }, ordinal: 3 },
-      { context: { nodeTier: 1 }, ordinal: 4 },
-      { context: { nodeTier: 1 }, ordinal: 5 },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 0,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 1,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 2,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 3,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 4,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 5,
+      },
     ],
     time: 38_750,
     type: 'progress',
   },
   {
+    nextSeed: 'b2e6283e120491eb7aa9dce8e71a5e01',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 41_250,
+    type: 'progress',
+  },
+  {
+    nextSeed: '22bdef44811f50085ecc5e2446812146',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 45_000,
+    type: 'progress',
+  },
+  {
     nextSeed: 'f8e88eca342f7fe8bd8ab666f4b8bb62',
-    rewards: { xp: 30 },
+    rewards: {
+      xp: 10,
+    },
     rewardSlots: [
-      { context: { nodeTier: 1 }, ordinal: 0 },
-      { context: { nodeTier: 1 }, ordinal: 1 },
-      { context: { nodeTier: 1 }, ordinal: 2 },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 0,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 1,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 2,
+      },
     ],
     time: 48_750,
     type: 'progress',
   },
   {
+    nextSeed: 'ad82bf95e1470a5e9beb0ece1bdce383',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 52_500,
+    type: 'progress',
+  },
+  {
+    nextSeed: '49248a9017d0d3a1d2aea2bd9c601089',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 55_000,
+    type: 'progress',
+  },
+  {
+    nextSeed: 'c688f22dc55631d58f65a03319fdda6c',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 57_500,
+    type: 'progress',
+  },
+  {
     nextSeed: '664be6d955fc249bfe89a1dbcdfd99cc',
-    rewards: { xp: 40 },
+    rewards: {
+      xp: 10,
+    },
     rewardSlots: [
-      { context: { nodeTier: 1 }, ordinal: 0 },
-      { context: { nodeTier: 1 }, ordinal: 1 },
-      { context: { nodeTier: 1 }, ordinal: 2 },
-      { context: { nodeTier: 1 }, ordinal: 3 },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 0,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 1,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 2,
+      },
+      {
+        context: {
+          nodeTier: 1,
+        },
+        ordinal: 3,
+      },
     ],
     time: 61_250,
     type: 'progress',
   },
   {
     nextSeed: '664be6d955fc249bfe89a1dbcdfd99cc',
-    rewards: { xp: 215 },
+    rewards: {
+      xp: 215,
+    },
     rewardSlots: [],
     time: 61_250,
     type: 'completed',
   },
   {
     nextSeed: '664be6d955fc249bfe89a1dbcdfd99cc',
-    rewards: { xp: 0 },
+    rewards: {
+      xp: 0,
+    },
     rewardSlots: [],
-    seed: '664be6d955fc249bfe89a1dbcdfd99cc',
     time: 0,
+    seed: '664be6d955fc249bfe89a1dbcdfd99cc',
     type: 'started',
+  },
+  {
+    nextSeed: 'ccc3c6b398f52bb18c258dfdf86a6b7e',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 3750,
+    type: 'progress',
+  },
+  {
+    nextSeed: '76b07ee326947d7008336ad64949f1b4',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 7500,
+    type: 'progress',
+  },
+  {
+    nextSeed: 'dca28ddc26b704b5d5fe773131dbf5bf',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 10_000,
+    type: 'progress',
+  },
+  {
+    nextSeed: '935fd82a5e083dfd65f59122900f7df6',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 13_750,
+    type: 'progress',
+  },
+  {
+    nextSeed: 'c2277040706a943e5c6a48ba9890c928',
+    rewards: {
+      xp: 10,
+    },
+    rewardSlots: [],
+    time: 16_250,
+    type: 'progress',
   },
 ];
 
