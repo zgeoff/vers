@@ -34,7 +34,7 @@ test('it returns the settled xp and level with no pending entries for an avatar 
 
   const result = await client.getAvatarProgression({ avatarID: avatar.id });
 
-  expect(result).toStrictEqual({ level: 3, pending: [], xp: 450 });
+  expect(result).toStrictEqual({ active: null, level: 3, pending: [], xp: 450 });
 });
 
 test("it includes a pending entry carrying the terminal checkpoint's rewards.xp for an unverified terminal activity", async () => {
@@ -66,6 +66,7 @@ test("it includes a pending entry carrying the terminal checkpoint's rewards.xp 
   const result = await client.getAvatarProgression({ avatarID: avatar.id });
 
   expect(result).toStrictEqual({
+    active: null,
     level: 1,
     pending: [{ activityID: started.id, xpDelta: 150 }],
     xp: 0,
@@ -106,7 +107,7 @@ test('it excludes a verified activity from pending', async () => {
 
   const result = await client.getAvatarProgression({ avatarID: avatar.id });
 
-  expect(result).toStrictEqual({ level: 1, pending: [], xp: 0 });
+  expect(result).toStrictEqual({ active: null, level: 1, pending: [], xp: 0 });
 });
 
 test('it excludes a rejected activity from pending', async () => {
@@ -143,7 +144,7 @@ test('it excludes a rejected activity from pending', async () => {
 
   const result = await client.getAvatarProgression({ avatarID: avatar.id });
 
-  expect(result).toStrictEqual({ level: 1, pending: [], xp: 0 });
+  expect(result).toStrictEqual({ active: null, level: 1, pending: [], xp: 0 });
 });
 
 test('it excludes an active activity from pending', async () => {
@@ -170,7 +171,42 @@ test('it excludes an active activity from pending', async () => {
 
   const result = await client.getAvatarProgression({ avatarID: avatar.id });
 
-  expect(result).toStrictEqual({ level: 1, pending: [], xp: 0 });
+  expect(result).toStrictEqual({
+    active: { activityID: started.id, settledXP: 0 },
+    level: 1,
+    pending: [],
+    xp: 0,
+  });
+});
+
+test('it reports how much of the live run the settled total already carries', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 90 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ settledXp: 90 })
+    .where('id', '=', started.id)
+    .execute();
+
+  const result = await client.getAvatarProgression({ avatarID: avatar.id });
+
+  expect(result).toStrictEqual({
+    active: { activityID: started.id, settledXP: 90 },
+    level: 1,
+    pending: [],
+    xp: 90,
+  });
 });
 
 test('it skips a pending entry whose tail checkpoint carries no terminal rewards payload', async () => {
@@ -201,7 +237,7 @@ test('it skips a pending entry whose tail checkpoint carries no terminal rewards
 
   const result = await client.getAvatarProgression({ avatarID: avatar.id });
 
-  expect(result).toStrictEqual({ level: 1, pending: [], xp: 0 });
+  expect(result).toStrictEqual({ active: null, level: 1, pending: [], xp: 0 });
 });
 
 test('it returns null for an avatar owned by another caller', async () => {

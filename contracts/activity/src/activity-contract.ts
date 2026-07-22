@@ -34,7 +34,15 @@ const RevealedRewardSchema = z.object({
 
 const PendingXPEntrySchema = z.object({ activityID: z.string(), xpDelta: z.number() });
 
+/**
+ * The live activity's xp already on the settled row, so a client overlaying that run's own running
+ * total subtracts what it would otherwise count twice. Absent while no activity is live, and from
+ * a service deployed before the field existed — both read as nothing settled yet.
+ */
+const ActiveXPEntrySchema = z.object({ activityID: z.string(), settledXP: z.int() });
+
 const AvatarProgressionSchema = z.object({
+  active: ActiveXPEntrySchema.nullish(),
   level: z.int(),
   pending: z.array(PendingXPEntrySchema),
   xp: z.int(),
