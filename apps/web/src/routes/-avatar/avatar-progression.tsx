@@ -24,13 +24,16 @@ export function AvatarProgression() {
     return null;
   }
 
-  // Settled row from the query once it resolves; the avatar row alone with no pending entries
-  // while it's still loading, so the screen shows a total immediately rather than nothing.
-  const settled = progressionQuery.data ?? { level: avatar.level, pending: [], xp: avatar.xp };
+  const settled = progressionQuery.data;
 
   const progression = buildOptimisticProgression({
-    progression: settled,
-    simActivity: idleWorkerHandle.activity,
+    // the avatar row alone while the read is still in flight, so the screen shows a total
+    // immediately rather than nothing
+    progression: settled ?? { level: avatar.level, pending: [], xp: avatar.xp },
+    // that row carries no per-activity settled total for the live overlay to net against, so
+    // projecting the sim on top of it would count the banked part twice and then correct downward
+    // once the read lands
+    simActivity: settled ? idleWorkerHandle.activity : undefined,
   });
 
   return (
