@@ -2,8 +2,10 @@ import { createId } from '@paralleldrive/cuid2';
 import type { ActivityData, BuildSnapshot } from '@vers/contract-activity';
 import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
+import { buildLevelFromXP } from '@vers/idle-core';
 import { findCurrentSimVersion, findSimVersion } from '@vers/sim-registry';
 import type { Kysely } from 'kysely';
+import { parseTerminalCheckpointXP } from '../parse-terminal-checkpoint-xp';
 import { resolveEncounterNode } from '../resolve-encounter-node';
 import type {
   ActiveActivityConflictPayload,
@@ -50,14 +52,17 @@ interface StartActivityOpts {
 }
 
 /**
- * Starts an activity for an avatar owned by the acting user, snapshotting the avatar's current
- * progression as the build the stream plays against, and stamping the acting session as the
- * stream's writer. Resolves the scope node's encounter params server-side and freezes them on the
- * new row, throwing NODE_UNKNOWN when the scope doesn't resolve to a known node. The partial
- * unique index serializes concurrent starts; a duplicate delivery — same key, same scope, never
- * appended, caller already the writer or none stamped — succeeds with the existing row, and every
- * other conflict throws CONFLICT carrying it. A chain whose
- * replay frontier is quarantined admits no new starts until it is adjudicated.
+ * Starts an activity for an avatar owned by the acting user, snapshotting the build the stream
+ * plays against, and stamping the acting session as the stream's writer. The snapshot carries the
+ * avatar's settled xp/level plus the xp of every terminal-but-unsettled activity of its own — a
+ * stopped, capped, quarantined, or parked activity whose verified anchor hasn't caught up to its
+ * appended tail — so a chain of activities started faster than the verifier settles them each
+ * builds against the last one's outcome rather than replaying stale progression. Resolves the scope
+ * node's encounter params server-side and freezes them on the new row, throwing NODE_UNKNOWN when
+ * the scope doesn't resolve to a known node. The partial unique index serializes concurrent starts;
+ * a duplicate delivery — same key, same scope, never appended, caller already the writer or none
+ * stamped — succeeds with the existing row, and every other conflict throws CONFLICT carrying it. A
+ * chain whose replay frontier is quarantined admits no new starts until it is adjudicated.
  */
 export async function startActivity(
   deps: StartActivityDeps,
@@ -103,7 +108,6 @@ export async function startActivity(
 
   const id = `act_${createId()}`;
   const genesisSeed = createGenesisSeed();
-  const buildSnapshot: BuildSnapshot = { level: avatar.level, xp: avatar.xp };
 
   try {
     // One transaction, chain row first: the upsert's write lock is held until commit, so a
@@ -131,6 +135,11 @@ export async function startActivity(
         .executeTakeFirstOrThrow();
 
       const seed = chain.appendedNextSeed;
+
+      const pendingXP = await getPendingXP(trx, opts.input.avatarID);
+
+      const totalXP = avatar.xp + pendingXP;
+      const buildSnapshot: BuildSnapshot = { level: buildLevelFromXP(totalXP), xp: totalXP };
 
       const startHash = buildStartHash({
         activityID: id,
@@ -243,6 +252,29 @@ async function resolveSimVersionStamp(
   }
 
   throw errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion } });
+}
+
+/**
+ * Sums the xp delta of an avatar's terminal-but-unsettled activities — a stopped, capped,
+ * quarantined, or parked activity whose verified anchor hasn't caught up to its appended tail.
+ * Malformed or non-terminal tail payloads contribute nothing.
+ */
+async function getPendingXP(trx: Kysely<DB>, avatarID: string): Promise<number> {
+  const rows = await trx
+    .selectFrom('activities')
+    .innerJoin('activityCheckpoints', (join) =>
+      join
+        .onRef('activityCheckpoints.activityId', '=', 'activities.id')
+        .onRef('activityCheckpoints.version', '=', 'activities.appendedHead'),
+    )
+    .select('activityCheckpoints.payload')
+    .where('activities.avatarId', '=', avatarID)
+    .where('activities.status', '!=', 'active')
+    .where('activities.status', '!=', 'rejected')
+    .whereRef('activities.verifiedHead', '<', 'activities.appendedHead')
+    .execute();
+
+  return rows.reduce((total, row) => total + (parseTerminalCheckpointXP(row.payload) ?? 0), 0);
 }
 
 /**

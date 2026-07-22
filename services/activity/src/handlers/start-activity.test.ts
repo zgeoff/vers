@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
 import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
+import { buildLevelFromXP } from '@vers/idle-core';
 import {
   createAnonymousViewer,
   createServiceToken,
@@ -15,6 +16,7 @@ import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { sql } from 'kysely';
 import { createActivityService } from '../create-activity-service';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
+import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 /**
  * `startActivity` opens its own `db.transaction()` to root the new activity under the chain-row
@@ -52,7 +54,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     appendedAt: null,
     appendedHead: 0,
     avatarID: avatar.id,
-    buildSnapshot: { level: 5, xp: 42 },
+    buildSnapshot: { level: 1, xp: 42 },
     contentVersion: CURRENT_CONTENT_VERSION,
     createdAt: expect.toBeValidDate(),
     encounterNode: { difficulty: 0 },
@@ -764,4 +766,100 @@ test('it conflicts a keyed duplicate naming a different scope', async () => {
       startKey: 'start_request_1',
     }),
   ).rejects.toMatchObject({ code: 'CONFLICT', data: { activity: { id: first.id } } });
+});
+
+test("it includes a stopped-but-unverified terminal activity's xp in a new build snapshot", async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
+    startPrevHash: first.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({ activityID: first.id, checkpoints: batch, expectedHead: 0 });
+
+  const second = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  expect(second.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(150), xp: 150 });
+});
+
+test("it excludes a rejected activity's xp from a new build snapshot", async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
+    startPrevHash: first.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({ activityID: first.id, checkpoints: batch, expectedHead: 0 });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ status: 'rejected' })
+    .where('id', '=', first.id)
+    .execute();
+
+  const second = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  expect(second.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(0), xp: 0 });
+});
+
+test('it stamps the build snapshot from settled xp/level alone when the avatar carries no pending work', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    level: buildLevelFromXP(500),
+    userId: viewer.user.id,
+    xp: 500,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  expect(activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(500), xp: 500 });
 });
