@@ -1,6 +1,6 @@
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
-import * as z from 'zod';
+import { parseTerminalCheckpointXP } from '../parse-terminal-checkpoint-xp';
 import type { MissingSessionPayload } from '../types';
 import { sendReplayWake } from '../wake/send-replay-wake';
 
@@ -77,17 +77,6 @@ export async function getAvatarProgression(
   return { level: settled.level, pending, xp: settled.xp };
 }
 
-/**
- * Checkpoint types whose `rewards.xp` is a run's final earned total rather than one checkpoint's
- * own delta — the shape a pending entry's `xpDelta` displays, matching what the verifier settles.
- */
-const TERMINAL_CHECKPOINT_TYPES = new Set(['completed', 'failed']);
-
-const TerminalCheckpointPayloadSchema = z.object({
-  rewards: z.object({ xp: z.number() }),
-  type: z.string(),
-});
-
 interface PendingCandidateRow {
   readonly id: null | string;
   readonly payload: unknown;
@@ -96,19 +85,18 @@ interface PendingCandidateRow {
 /**
  * Builds a pending entry from a candidate row, or nothing when the row carries no pending activity
  * — a null activity id from the left join, a checkpoint that failed to append past `verifiedHead`
- * at all, or a checkpoint whose payload doesn't parse or isn't a terminal type. Appended data is
- * untrusted, so a malformed or non-terminal payload contributes nothing rather than throwing.
+ * at all, or a checkpoint whose payload doesn't parse or isn't a terminal type.
  */
 function findPendingEntry(row: Readonly<PendingCandidateRow>): Array<PendingXPEntry> {
   if (row.id === null) {
     return [];
   }
 
-  const parsed = TerminalCheckpointPayloadSchema.safeParse(row.payload);
+  const xpDelta = parseTerminalCheckpointXP(row.payload);
 
-  if (!parsed.success || !TERMINAL_CHECKPOINT_TYPES.has(parsed.data.type)) {
+  if (xpDelta === undefined) {
     return [];
   }
 
-  return [{ activityID: row.id, xpDelta: parsed.data.rewards.xp }];
+  return [{ activityID: row.id, xpDelta }];
 }

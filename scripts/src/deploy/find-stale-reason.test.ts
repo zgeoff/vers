@@ -5,12 +5,14 @@ import type { DeployTarget } from './types';
 const affectedTarget: DeployTarget = {
   app: 'vers-service-user',
   configDir: 'services/user',
+  exposure: 'flycast',
   trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
 };
 
 const pathsTarget: DeployTarget = {
   app: 'vers-bugsink',
   configDir: 'apps/bugsink',
+  exposure: 'public',
   trigger: { globs: ['apps/bugsink/**'], kind: 'paths' },
 };
 

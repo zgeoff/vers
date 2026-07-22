@@ -42,6 +42,12 @@ the service's machines and wakes a suspended one on demand. These URLs live in `
 `fly.toml` `[env]`. A service is allocated no public IP, so nothing outside the mesh can reach it.
 Mesh traffic is already encrypted, so services set `force_https = false`.
 
+Each `deploy.config.ts` entry declares its own `exposure`, `public` or `flycast`. The deploy CLI
+allocates a missing private address for a `flycast` entry before its rollout cuts over, and
+`deploy verify` fails an entry that holds a public address or lacks its flycast one
+([fleet verification](#fleet-verification)). A `public` entry's addresses stay a manual
+`fly ips allocate` call ([provision from nothing](#provision-from-nothing)).
+
 ## Secrets
 
 Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.toml` or Dockerfile.
@@ -167,7 +173,9 @@ rollout; the leg reports that and leaves the fleet on the restored release.
 
 `verify-fleet` runs on every green push — even when every deploy leg skipped — and asserts every
 manifest app is online and current, catching an app at zero machines or a fleet behind HEAD. A
-rolled-back app reads stale there by design.
+rolled-back app reads stale there by design. It also checks each app's IP posture against its
+manifest `exposure` ([networking](#networking)): a `flycast` app missing its private address, or
+holding a public one, fails the run.
 
 ### Scheduled machines
 
@@ -326,14 +334,12 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
    done
    ```
 
-2. Give `app-web` public addresses; give each service a private Flycast address and no public IP:
+2. Give `app-web` its public addresses. A service's flycast address is the deploy CLI's to allocate,
+   on its first rollout ([networking](#networking)):
 
    ```sh
    fly ips allocate-v4 --shared -a vers-app-web
    fly ips allocate-v6 -a vers-app-web
-   for svc in activity avatar keys replay session user verification; do
-     fly ips allocate-v6 --private -a "vers-service-$svc"
-   done
    ```
 
 3. Mint the CI deploy token and store it where the vers-infra program reads it (`infra/github.ts`
