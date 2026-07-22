@@ -2,6 +2,16 @@ import type { WorkerClient } from '../transport/types';
 
 export interface WorkerSlice {
   client: null | WorkerClient;
+
+  /**
+   * The activity id a caller has already navigated to the engagement screen for — a device-durable
+   * marker outliving any one component's mount, so a screen remounting into an activity already
+   * live (the browser back button, re-drilling the same node) reads it as already engaged rather
+   * than re-firing the navigation. A fresh activity id, from a genuinely new attempt, never matches
+   * it.
+   */
+  engagedActivityID: null | string;
+
   initialized: boolean;
 
   /**
@@ -23,6 +33,7 @@ export interface WorkerSlice {
 export function createWorkerSlice(): WorkerSlice {
   return {
     client: null,
+    engagedActivityID: null,
     initialized: false,
     writerAbortController: new AbortController(),
     writerGeneration: 0,

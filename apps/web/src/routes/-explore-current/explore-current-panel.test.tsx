@@ -1,4 +1,4 @@
-import { expect, spyOn, test } from 'bun:test';
+import { expect, mock, spyOn, test } from 'bun:test';
 import { useRouter } from '@tanstack/react-router';
 import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -617,5 +617,99 @@ test('it does not re-navigate for the same attempt once a ready state flickers',
     await rendered.findByLabelText('Auto-retry on failure');
 
     expect(navigateSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+test('it does not bounce back to the engagement screen once a remount finds the same activity already live', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+
+  const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
+
+  // the scope never changes across this test's remounts, so every call after the first attaches to
+  // the same already-running row rather than minting a fresh one
+  const startActivity = mock(() =>
+    startActivity.mock.calls.length === 1
+      ? Promise.resolve<StartStatus>({ activity: started, kind: 'started' })
+      : Promise.resolve<StartStatus>({ activityID: started.id, kind: 'attached' }),
+  );
+
+  const client = createStubWorkerClient({ startActivity });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    renderWithRouter(
+      <>
+        <ExploreCurrentPanel orpc={orpc} />
+        <NavigationProbe />
+      </>,
+    );
+
+    await waitFor(() => {
+      expect(latestRouter).toBeDefined();
+    });
+
+    invariant(latestRouter !== undefined, 'expected the navigation probe to capture the router');
+
+    // real navigation this time — not stubbed — so every route change below actually unmounts and
+    // remounts the panel, the path a stubbed navigate would never exercise. The synthetic route
+    // tree renders this same panel at both '/' and '/activity', so arriving at '/activity' is
+    // itself already a remount finding the activity attached — the first place the fix is proven.
+    const router = latestRouter;
+    const navigateSpy = spyOn(router, 'navigate');
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
+    });
+
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: started.id }),
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      writerAbortSignal: new AbortController().signal,
+    });
+
+    await waitFor(() => {
+      expect(navigateSpy).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ to: '/activity' }),
+      );
+    });
+
+    // the panel's own auto-navigate call is proven above — restoring here so the manual return
+    // below (standing in for the browser back button) never counts toward it
+    navigateSpy.mockRestore();
+
+    // returning to the explore screen mid-run remounts the panel, which re-fires its start call
+    // and finds the same activity already attached
+    await router.navigate({ to: '/' });
+
+    const returnNavigateSpy = spyOn(router, 'navigate');
+
+    await waitFor(() => {
+      expect(startActivity.mock.calls.length).toBeGreaterThan(1);
+    });
+
+    // gives the remounted panel's readiness effect a chance to fire before asserting it never did
+    await expect(
+      waitFor(
+        () => {
+          expect(returnNavigateSpy).toHaveBeenCalled();
+        },
+        { timeout: 100 },
+      ),
+    ).toReject();
+
+    expect(returnNavigateSpy).not.toHaveBeenCalled();
+    expect(router.state.location.pathname).toBe('/');
   });
 });

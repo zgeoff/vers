@@ -2,10 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, CheckboxField, Spinner } from '@vers/design-system';
 import type { StartStatus } from '@vers/idle-client';
-import { useWriterGeneration } from '@vers/idle-client';
+import { setEngagedActivityID, useEngagedActivityID, useWriterGeneration } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
+import invariant from 'tiny-invariant';
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
@@ -32,8 +33,10 @@ interface StartAttemptReport {
  * the encounter, its auto-retry toggle, and its codex slot. The worker owns the whole start; the
  * panel awaits the call directly and renders its own outcome, so another tab's run never reads as
  * this one's. A failed start renders a retry action. Once the start goes live the panel navigates
- * to the engagement screen, once per attempt, so returning here mid-run never bounces the player
- * back.
+ * to the engagement screen, once per activity — latched in `@vers/idle-client`'s store rather than
+ * a component ref, so a remount (the browser back button, re-drilling the same node) that re-fires
+ * the start call and finds the same activity already live reads it as already engaged rather than
+ * bouncing the player back.
  */
 export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   const navigate = useNavigate();
@@ -57,10 +60,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   // the exploration commits when the encounter view opens for a node — independent of worker
   // readiness, and a retried failed start on the same node never re-reports it
   const lastExploredNodeID = useRef<string | undefined>(undefined);
-
-  // latches the auto-navigate to the engagement screen by the attempt's scope id, so a render
-  // that finds the same attempt still ready — returning to this screen mid-run — never re-fires it
-  const navigatedScopeID = useRef<string | undefined>(undefined);
+  const engagedActivityID = useEngagedActivityID();
 
   useEffect(() => {
     if (selectedNode === null || lastExploredNodeID.current === selectedNode.id) {
@@ -156,13 +156,14 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     idleWorkerHandle.activity?.id === expectedActivityID;
 
   useEffect(() => {
-    if (!isActivityReady || navigatedScopeID.current === attemptScopeID) {
+    if (!isActivityReady || expectedActivityID === engagedActivityID) {
       return;
     }
 
-    navigatedScopeID.current = attemptScopeID;
+    invariant(expectedActivityID !== undefined, 'an activity ready state carries its activity id');
+    setEngagedActivityID(expectedActivityID);
     void navigate({ to: '/activity' });
-  }, [isActivityReady, attemptScopeID, navigate]);
+  }, [isActivityReady, expectedActivityID, engagedActivityID, navigate]);
 
   if (reportedStatus?.kind === 'failed') {
     return (

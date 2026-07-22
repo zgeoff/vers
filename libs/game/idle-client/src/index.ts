@@ -13,6 +13,7 @@ export type {
 } from './resync/types';
 
 export { advanceWriterGeneration } from './state/advance-writer-generation';
+export { setEngagedActivityID } from './state/set-engaged-activity-id';
 export { setFailureAction } from './state/set-failure-action';
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
@@ -25,6 +26,7 @@ export { updateRewardSlotLedger } from './state/update-reward-slot-ledger';
 export { useOfflineCapStatus } from './state/use-offline-cap-status';
 export { useResyncStatus } from './state/use-resync-status';
 export { useActivity } from './state/use-activity';
+export { useEngagedActivityID } from './state/use-engaged-activity-id';
 export { useAvatar } from './state/use-avatar';
 export { useFailureAction } from './state/use-failure-action';
 export { useLastCompletedActivityID } from './state/use-last-completed-activity-id';
