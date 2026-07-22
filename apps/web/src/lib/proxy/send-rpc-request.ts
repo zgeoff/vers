@@ -1,8 +1,10 @@
 import type { ServiceName } from '@vers/service-auth';
 import { findSpanTraceContext, findTraceContext } from '@vers/service-utils';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
+import { recordServiceCallFailure } from '../metrics/record-service-call-failure';
 import { createEdgeServiceToken } from '../rpc/create-edge-service-token';
 import { loadSessionActor } from '../rpc/load-session-actor';
+import { DEFAULT_ATTEMPT_TIMEOUTS_MS } from '../rpc/make-bounded-fetch';
 import { SERVICE_URLS } from '../rpc/service-urls';
 
 /**
@@ -60,11 +62,28 @@ export async function sendRPCRequest(request: Request, service: ServiceName): Pr
 
   headers.set('traceparent', buildTraceparent(trace));
 
-  const response = await fetch(target, {
-    headers,
-    method: request.method,
-    ...(body !== undefined && { body }),
-  });
+  // a single attempt, unretried: buildQueryClient already retries network failures and 5xx twice
+  // on this call's way back to the browser, so a second retry layer here would stack attempts
+  const timeoutSignal = AbortSignal.timeout(Math.max(...DEFAULT_ATTEMPT_TIMEOUTS_MS));
+  const signal = AbortSignal.any([request.signal, timeoutSignal]);
+  let response: Response;
+
+  try {
+    response = await fetch(target, {
+      headers,
+      method: request.method,
+      signal,
+      ...(body !== undefined && { body }),
+    });
+  } catch (error) {
+    if (request.signal.aborted || !timeoutSignal.aborted) {
+      throw error;
+    }
+
+    recordServiceCallFailure(service, 'timeout');
+
+    return new Response(null, { status: 503 });
+  }
 
   // fetch responses carry immutable headers, which the server framework must still be able to
   // finalize (merge, drop stale encoding headers) — rewrap into a mutable response. Copy entry by

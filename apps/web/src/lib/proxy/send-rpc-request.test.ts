@@ -5,7 +5,7 @@ import * as db from '@vers/mock-services/db';
 import { withTraceContext } from '@vers/service-utils';
 import * as jose from 'jose';
 import type { HttpResponseResolver } from 'msw';
-import { HttpResponse, http } from 'msw';
+import { HttpResponse, delay, http } from 'msw';
 import { server } from '../../mocks/node';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { sendRPCRequest } from './send-rpc-request';
@@ -181,3 +181,20 @@ test('it rethrows a body read failure for a caller that is still connected', asy
 
   expect(promise).rejects.toBeInstanceOf(TypeError);
 });
+
+test('it answers a hung upstream with a 503 after exactly one attempt', async () => {
+  const resolver = mock<HttpResponseResolver>(async () => {
+    await delay('infinite');
+
+    return HttpResponse.json({});
+  });
+
+  server.use(http.get('http://localhost:3003/rpc/getUser', resolver));
+
+  const outcome = await withRequestContext({}, () =>
+    sendRPCRequest(new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }), 'user'),
+  );
+
+  expect(outcome.value.status).toBe(503);
+  expect(resolver).toHaveBeenCalledOnce();
+}, 8000);
