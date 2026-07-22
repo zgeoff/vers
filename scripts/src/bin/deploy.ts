@@ -483,7 +483,7 @@ async function runScheduledMachineReconcile(target: DeployTarget): Promise<void>
  * the `sim_versions` registry row current. A no-op for every other target.
  */
 async function runSimVersionReconcile(target: DeployTarget): Promise<void> {
-  if (target.simVersionProvider !== true) {
+  if (target.simVersionProvider === undefined) {
     return;
   }
 
@@ -503,6 +503,9 @@ async function runSimVersionReconcile(target: DeployTarget): Promise<void> {
     fleetImage,
     providerAppExists: providerAppState.exists,
     providerMachineExists: providerAppState.hasMachine,
+    providerMachineID: providerAppState.machineID,
+    providerMachineImageDigest: providerAppState.machineImageDigest,
+    region: target.simVersionProvider.region,
     registryRow,
   });
 

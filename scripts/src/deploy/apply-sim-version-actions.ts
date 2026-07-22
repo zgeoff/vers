@@ -17,6 +17,13 @@ const PROVIDER_MACHINE_FLAGS = [
 ];
 
 /**
+ * Container command a provider machine runs — the image's `CMD` starts the full-service `server`
+ * binary, which a provider machine's narrowed env would fail to boot; this positional cleanly
+ * replaces it with the provider-mode binary.
+ */
+const PROVIDER_MACHINE_COMMAND = 'provider';
+
+/**
  * Runs the planner's actions against Fly and the shared database, in order —
  * the provider app before its flycast IP, the IP before the machine that
  * needs it, and the registry row last so it never points at an app that
@@ -44,7 +51,14 @@ async function applySimVersionAction(action: SimVersionAction): Promise<void> {
   }
 
   if (action.kind === 'run-provider-machine') {
-    await runProviderMachine(action.app, action.image);
+    await runProviderMachine(action.app, action.image, action.region);
+
+    return;
+  }
+
+  if (action.kind === 'replace-provider-machine') {
+    await runFlyctl(['machine', 'destroy', '--force', action.machineID, '-a', action.app]);
+    await runProviderMachine(action.app, action.image, action.region);
 
     return;
   }
@@ -52,7 +66,7 @@ async function applySimVersionAction(action: SimVersionAction): Promise<void> {
   await upsertRegistryRow(action.input);
 }
 
-async function runProviderMachine(app: string, image: string): Promise<void> {
+async function runProviderMachine(app: string, image: string, region: string): Promise<void> {
   const jwks = requireEnvVar(
     'SERVICE_AUTH_JWKS',
     'a sim-version provider machine must verify inbound s2s calls',
@@ -62,8 +76,11 @@ async function runProviderMachine(app: string, image: string): Promise<void> {
     'machine',
     'run',
     image,
+    PROVIDER_MACHINE_COMMAND,
     '-a',
     app,
+    '--region',
+    region,
     ...PROVIDER_MACHINE_FLAGS,
     '--env',
     `SERVICE_AUTH_JWKS=${jwks}`,
