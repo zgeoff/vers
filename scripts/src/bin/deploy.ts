@@ -8,6 +8,7 @@ import { execa } from 'execa';
 import type { Kysely } from 'kysely';
 import { applyBuild } from '../deploy/apply-build';
 import { applyDeploy } from '../deploy/apply-deploy';
+import { applyIPPostureActions } from '../deploy/apply-ip-posture-actions';
 import { applyRetentionActions } from '../deploy/apply-retention-actions';
 import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-actions';
 import { applySimVersionActions } from '../deploy/apply-sim-version-actions';
@@ -18,6 +19,7 @@ import { checkTarget } from '../deploy/check-target';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
 import { PINNED_BUN_VERSION, loadEngineHash } from '../deploy/load-engine-hash';
+import { planIPPosture } from '../deploy/plan-ip-posture';
 import { planRetentionActions } from '../deploy/plan-retention-actions';
 import { planScheduledMachineActions } from '../deploy/plan-scheduled-machine-actions';
 import { planSimVersionActions } from '../deploy/plan-sim-version-actions';
@@ -26,6 +28,7 @@ import { readChangesSince } from '../deploy/read-changes-since';
 import { readFleetImage } from '../deploy/read-fleet-image';
 import { readFlyEnvKeys } from '../deploy/read-fly-env-keys';
 import { readFlySecretNames } from '../deploy/read-fly-secret-names';
+import { readIPList } from '../deploy/read-ip-list';
 import { readProviderAppState } from '../deploy/read-provider-app-state';
 import { readSimVersionRow } from '../deploy/read-sim-version-row';
 import { runProbes } from '../deploy/run-probes';
@@ -298,7 +301,7 @@ async function withReleaseDB(run: (db: Kysely<DB>) => Promise<void>): Promise<vo
 
 /**
  * One rollout from an already-built image (null for targets that deploy their fly.toml stock
- * image): cut the fleet over, reconcile, probe. Probes
+ * image): ensure the target's IP posture, cut the fleet over, reconcile, probe. Probes
  * passing records the release as the app's next rollback target; probes failing rolls the fleet
  * back to the previous recorded release and leaves the run red either way, so the failure ships
  * forward on a later push instead of a broken release serving meanwhile.
@@ -311,6 +314,7 @@ async function runRollout(
 ): Promise<void> {
   const previous = await findLatestRelease(db, target.app);
 
+  await runIPPostureReconcile(target);
   await applyDeploy(target, sha, image);
   await waitForDeployedSHA(target.app, sha);
   await runScheduledMachineReconcile(target);
@@ -426,6 +430,20 @@ async function setEngineHashEnv(target: DeployTarget): Promise<void> {
 }
 
 /**
+ * Ensures a target's flycast address exists before its image cuts over, so a target that lost or
+ * never got one doesn't sit unreachable on the mesh with nothing but the next verify pass to catch
+ * it. Never releases a public address a flycast target shouldn't hold — that's `deploy verify`'s
+ * finding to report, not an action this reconcile takes on its own.
+ */
+async function runIPPostureReconcile(target: DeployTarget): Promise<void> {
+  const ips = await readIPList(target.app);
+
+  const plan = planIPPosture({ app: target.app, exposure: target.exposure, ips });
+
+  await applyIPPostureActions(plan.actions);
+}
+
+/**
  * Reconciles a target's declared scheduled machines against its fleet,
  * aligning them to the image and SHA the service machines currently agree
  * on. Runs after a rollout's SHA is confirmed and on skipped deploys alike,
@@ -514,10 +532,15 @@ async function runVerify(): Promise<void> {
 
     const changes = state.deployedSHA === null ? null : await readChangesSince(state.deployedSHA);
 
+    const ips = await readIPList(target.app);
+
+    const ipPlan = planIPPosture({ app: target.app, exposure: target.exposure, ips });
+
     const findings = [
       ...checkTarget(target, state, changes),
       ...(await runProbes(target.probes ?? [])),
       ...(await checkParkedApp(target.app, state)),
+      ...ipPlan.violations,
     ];
 
     if (findings.length === 0) {
