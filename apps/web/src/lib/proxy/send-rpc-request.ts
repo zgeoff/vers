@@ -5,7 +5,9 @@ import { recordServiceCallFailure } from '../metrics/record-service-call-failure
 import { createEdgeServiceToken } from '../rpc/create-edge-service-token';
 import { loadSessionActor } from '../rpc/load-session-actor';
 import { DEFAULT_ATTEMPT_TIMEOUTS_MS } from '../rpc/make-bounded-fetch';
+import { serviceDispatcher } from '../rpc/service-dispatcher';
 import { SERVICE_URLS } from '../rpc/service-urls';
+import type { ServiceFetchInit } from '../rpc/types';
 
 const DEFAULT_TIMEOUT_BOUND_MS = Math.max(...DEFAULT_ATTEMPT_TIMEOUTS_MS);
 
@@ -84,14 +86,17 @@ export async function sendRPCRequest(
   let response: Response;
 
   try {
-    // the timer is cleared the instant `fetch` resolves so the bound never outlives the response
-    // headers — otherwise it stays armed through a streamed body read and can truncate it
-    response = await fetch(target, {
+    const requestInit: ServiceFetchInit = {
+      dispatcher: serviceDispatcher,
       headers,
       method: request.method,
       signal,
       ...(body !== undefined && { body }),
-    });
+    };
+
+    // the timer is cleared the instant `fetch` resolves so the bound never outlives the response
+    // headers — otherwise it stays armed through a streamed body read and can truncate it
+    response = await fetch(target, requestInit);
 
     clearTimeout(timer);
   } catch (error) {
