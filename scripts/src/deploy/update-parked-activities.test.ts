@@ -48,11 +48,11 @@ test('it reactivates a parked activity whose stamped sim version is now active',
 
   const row = await ctx.db
     .selectFrom('activities')
-    .select('status')
+    .select(['parkedFrom', 'status'])
     .where('id', '=', activity.id)
     .executeTakeFirstOrThrow();
 
-  expect(row.status).toBe('active');
+  expect(row).toStrictEqual({ parkedFrom: null, status: 'active' });
 });
 
 test('it returns a parked activity to the status it parked from', async () => {
