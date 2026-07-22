@@ -4,10 +4,13 @@ export interface DeployManifest {
   readonly apps: ReadonlyArray<DeployTarget>;
 }
 
+type Exposure = 'public' | 'flycast';
+
 export interface DeployTarget {
   readonly app: string;
   readonly configDir: string;
   readonly dockerfile?: string;
+  readonly exposure: Exposure;
   readonly trigger: DeployTrigger;
   readonly minStartedMachines?: number;
   readonly buildArgsFromEnv?: ReadonlyArray<string>;
@@ -122,8 +125,51 @@ export interface ProviderAppState {
   readonly hasMachine: boolean;
 }
 
+interface CreateProviderAppAction {
+  readonly kind: 'create-provider-app';
+  readonly app: string;
+}
+
+interface AllocateFlycastIPAction {
+  readonly kind: 'allocate-flycast-ip';
+  readonly app: string;
+}
+
+interface RunProviderMachineAction {
+  readonly kind: 'run-provider-machine';
+  readonly app: string;
+  readonly image: string;
+}
+
+interface UpsertRegistryRowAction {
+  readonly kind: 'upsert-registry-row';
+  readonly input: UpsertSimVersionInput;
+}
+
 export type SimVersionAction =
-  | { readonly kind: 'create-provider-app'; readonly app: string }
-  | { readonly kind: 'allocate-flycast-ip'; readonly app: string }
-  | { readonly kind: 'run-provider-machine'; readonly app: string; readonly image: string }
-  | { readonly kind: 'upsert-registry-row'; readonly input: UpsertSimVersionInput };
+  | CreateProviderAppAction
+  | AllocateFlycastIPAction
+  | RunProviderMachineAction
+  | UpsertRegistryRowAction;
+
+/**
+ * An IP address `flyctl ips list` reports for an app, narrowed to whether it's the private
+ * flycast ingress or reachable from outside the mesh.
+ */
+export interface AppIP {
+  readonly address: string;
+  readonly type: 'private' | 'public';
+}
+
+export interface IPPostureEntry {
+  readonly app: string;
+  readonly exposure: Exposure;
+  readonly ips: ReadonlyArray<AppIP>;
+}
+
+export type IPPostureAction = AllocateFlycastIPAction;
+
+export interface IPPosturePlan {
+  readonly actions: ReadonlyArray<IPPostureAction>;
+  readonly violations: ReadonlyArray<string>;
+}

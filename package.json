@@ -56,7 +56,7 @@
       "@playwright/test": "1.61.1",
       "@pulumi/cloudflare": "6.17.0",
       "@pulumi/github": "6.14.0",
-      "@pulumi/pulumi": "3.250.0",
+      "@pulumi/pulumi": "3.253.0",
       "@react-email/components": "1.0.12",
       "@react-hookz/web": "25.2.0",
       "@react-spring/rafz": "10.1.2",
@@ -215,9 +215,10 @@
     "zod": "catalog:"
   },
   "overrides": {
-    "@hono/node-server": "2.0.10",
+    "@hono/node-server": "2.0.11",
     "@opentelemetry/propagator-jaeger": "2.9.0",
     "@opentelemetry/sdk-node": "0.220.0",
+    "@pulumi/pulumi": "3.253.0",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "fast-uri": "3.1.4"
