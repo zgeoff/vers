@@ -10,6 +10,7 @@ import { runReplaySegment } from '../dispatch/run-replay-segment';
 import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { recordRejection } from '../metrics/record-rejection';
 import type { RejectionReason } from '../metrics/record-rejection';
+import { recordSettledXP } from '../metrics/record-settled-xp';
 import { recordVerificationLag } from '../metrics/record-verification-lag';
 import { rollRewardItems } from '../mint/roll-reward-items';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
@@ -20,12 +21,7 @@ import { findSeedDivergence } from '../replay/find-seed-divergence';
 import { isForwardExited } from '../replay/is-forward-exited';
 import { loadReplaySegment } from '../replay/load-replay-segment';
 import { toWireReplaySegmentInput } from '../replay/to-wire-replay-segment-input';
-import type {
-  CompareVerdict,
-  ReplaySegment,
-  ReplayedCheckpoint,
-  RewardFact,
-} from '../replay/types';
+import type { CompareVerdict, ReplaySegment, ReplayedCheckpoint } from '../replay/types';
 import type { ReplayFrontier } from '../types';
 import { rejectActivity } from './reject-activity';
 import type { PendingCacheEffect, ReplayIterationOutcome, ReplayWorkerDeps } from './types';
@@ -152,15 +148,7 @@ async function runFrontierInProcess(
     : compareReplaySegment(unverified, replayed, compareContext);
 
   if (verdict?.kind === 'match') {
-    return applyMatch(
-      trx,
-      deps,
-      segment,
-      replayed,
-      driver,
-      verdict.rewardFacts,
-      verdict.verifiedXPDelta,
-    );
+    return applyMatch(trx, deps, segment, replayed, driver, verdict);
   }
 
   const confirmDriver = buildFreshDriver(segment);
@@ -215,15 +203,7 @@ async function runFrontierCrossVersion(
       : compareReplaySegment(unverified, replayed, compareContext);
 
   if (verdict?.kind === 'match') {
-    return applyMatch(
-      trx,
-      deps,
-      segment,
-      replayed,
-      undefined,
-      verdict.rewardFacts,
-      verdict.verifiedXPDelta,
-    );
+    return applyMatch(trx, deps, segment, replayed, undefined, verdict);
   }
 
   const confirmOutcome = await runReplaySegment(runDeps, job);
@@ -246,15 +226,42 @@ async function runFrontierCrossVersion(
   return rejectSegment(trx, deps, cache, segment, confirmVerdict, 'confirmed-on-fresh-replay');
 }
 
+/**
+ * Settles a matched segment against the activity's running total. A terminal checkpoint carries
+ * the run's final xp rather than its own delta, so it pays only the part no earlier segment
+ * settled and leaves the total sitting at that final figure; every other segment pays the deltas
+ * it verified and adds them on. The two are alternatives — a terminal total already contains the
+ * deltas — so a segment holding both settles once, through the terminal.
+ */
+function buildSettlement(
+  settledXP: number,
+  verdict: Extract<CompareVerdict, { kind: 'match' }>,
+): {
+  readonly settledXP: number;
+  readonly source: 'progress' | 'terminal';
+  readonly xpDelta: number;
+} {
+  if (verdict.terminalXPTotal === undefined) {
+    return { settledXP: settledXP + verdict.xpSum, source: 'progress', xpDelta: verdict.xpSum };
+  }
+
+  return {
+    settledXP: verdict.terminalXPTotal,
+    source: 'terminal',
+    xpDelta: verdict.terminalXPTotal - settledXP,
+  };
+}
+
 async function applyMatch(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
   segment: Readonly<ReplaySegment>,
   replayed: ReadonlyArray<ReplayedCheckpoint>,
   driver: SimulationDriver | undefined,
-  rewardFacts: ReadonlyArray<RewardFact>,
-  verifiedXPDelta: number,
+  verdict: Extract<CompareVerdict, { kind: 'match' }>,
 ): Promise<ReplayIterationOutcome> {
+  const rewardFacts = verdict.rewardFacts;
+  const settlement = buildSettlement(segment.activity.settledXP, verdict);
   const lastReplayed = replayed.at(-1);
   const lastStored = segment.checkpoints.at(-1);
 
@@ -283,6 +290,7 @@ async function applyMatch(
     avatarID: segment.activity.avatarID,
     expectedVerifiedHead: segment.verifiedHead,
     ...(items.length > 0 && { items }),
+    settledXP: settlement.settledXP,
     verifiedHead: lastStored.version,
     ...(advanceChain && {
       chain: {
@@ -292,10 +300,12 @@ async function applyMatch(
         scopeType: segment.activity.scopeType,
       },
     }),
-    xpDelta: verifiedXPDelta,
+    xpDelta: settlement.xpDelta,
   });
 
   if (result.applied) {
+    recordSettledXP(settlement.xpDelta, settlement.source);
+
     const now = Date.now();
 
     for (const checkpoint of segment.checkpoints.slice(segment.verifiedHead, lastStored.version)) {

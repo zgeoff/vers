@@ -839,6 +839,80 @@ test("it excludes a rejected activity's xp from a new build snapshot", async () 
   expect(second.buildSnapshot).toStrictEqual({ level: 1, xp: 0 });
 });
 
+test("it excludes a parked activity's xp from a new build snapshot", async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
+    startPrevHash: first.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({ activityID: first.id, checkpoints: batch, expectedHead: 0 });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ parkedFrom: 'stopped', status: 'parked' })
+    .where('id', '=', first.id)
+    .execute();
+
+  const second = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  expect(second.buildSnapshot).toStrictEqual({ level: 1, xp: 0 });
+});
+
+test("it includes a stopped run's unsettled progress xp in a new build snapshot", async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    count: 2,
+    finalPayloadOverrides: { rewards: { xp: 60 }, type: 'progress' },
+    startPrevHash: first.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({ activityID: first.id, checkpoints: batch, expectedHead: 0 });
+  await client.stopActivity({ avatarID: avatar.id });
+
+  const second = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  expect(second.buildSnapshot).toStrictEqual({ level: 1, xp: 60 });
+});
+
 test('it stamps the build snapshot from settled xp/level alone when the avatar carries no pending work', async () => {
   await using ctx = await setupTest();
 

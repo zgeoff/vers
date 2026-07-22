@@ -42,10 +42,10 @@ test('it matches when the replay reproduces every stored checkpoint byte-for-byt
     startChainIndex: 0,
   });
 
-  expect(verdict).toStrictEqual({ kind: 'match', rewardFacts: [], verifiedXPDelta: 0 });
+  expect(verdict).toStrictEqual({ kind: 'match', rewardFacts: [], xpSum: 0 });
 });
 
-test('it computes the verified xp delta from a terminal checkpoint', () => {
+test("it reports a terminal checkpoint's run total apart from the delta sum", () => {
   const seed = 'aa'.repeat(16);
   const nextSeed = 'bb'.repeat(16);
   const replayed = [{ nextSeed, rewards: { xp: 215 }, seed, time: 0, type: 'completed' }];
@@ -84,7 +84,12 @@ test('it computes the verified xp delta from a terminal checkpoint', () => {
     startChainIndex: 0,
   });
 
-  expect(verdict).toStrictEqual({ kind: 'match', rewardFacts: [], verifiedXPDelta: 215 });
+  expect(verdict).toStrictEqual({
+    kind: 'match',
+    rewardFacts: [],
+    terminalXPTotal: 215,
+    xpSum: 0,
+  });
 });
 
 test('it reports a hash mismatch when the stored nextSeed was tampered', () => {
@@ -493,7 +498,7 @@ test('it chains the seed and hash forward across a multi-checkpoint segment', ()
     startChainIndex: 0,
   });
 
-  expect(verdict).toStrictEqual({ kind: 'match', rewardFacts: [], verifiedXPDelta: 0 });
+  expect(verdict).toStrictEqual({ kind: 'match', rewardFacts: [], xpSum: 40 });
 });
 
 test('it collects a reward fact per matching reward slot, keyed to the checkpoint chain index', () => {
@@ -550,7 +555,7 @@ test('it collects a reward fact per matching reward slot, keyed to the checkpoin
       { chainIndex: 4, nodeTier: 1, ordinal: 0 },
       { chainIndex: 4, nodeTier: 1, ordinal: 1 },
     ],
-    verifiedXPDelta: 0,
+    xpSum: 20,
   });
 });
 
@@ -593,7 +598,7 @@ test('it matches when reward slots are absent from both the stored payload and t
     startChainIndex: 0,
   });
 
-  expect(verdict).toStrictEqual({ kind: 'match', rewardFacts: [], verifiedXPDelta: 0 });
+  expect(verdict).toStrictEqual({ kind: 'match', rewardFacts: [], xpSum: 0 });
 });
 
 test('it reports a reward mismatch when the stored reward slots diverge from the replay', () => {

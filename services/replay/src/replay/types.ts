@@ -46,6 +46,12 @@ export interface ReplaySegment {
     readonly scopeID: string;
     readonly scopeType: string;
     readonly seed: string;
+
+    /**
+     * The xp this activity has already contributed to its avatar's settled row, so a terminal
+     * checkpoint's run total settles only the part no earlier segment paid.
+     */
+    readonly settledXP: number;
     readonly simVersion: string;
     readonly startChainIndex: number;
     readonly status: ActivityStatus;
@@ -101,14 +107,19 @@ type DivergenceReason =
   | 'seed-mismatch';
 
 /**
- * The outcome of comparing a segment's stored checkpoints against a fresh replay. `match` carries
- * the segment's verified xp delta (the terminal checkpoint's reward, when the segment ends on one,
- * else zero) for the caller to fold into its verified-segment apply.
+ * The outcome of comparing a segment's stored checkpoints against a fresh replay. A `match`
+ * reports the segment's xp two ways, because the engine represents them differently: `xpSum` adds
+ * up the per-checkpoint deltas every non-terminal checkpoint carries, while `terminalXPTotal` is
+ * present only when the segment ends on a terminal checkpoint and is the run's final total rather
+ * than a delta. A caller settling against a running per-activity total uses the second when it is
+ * present and the first otherwise — never both, or the deltas the total already contains would
+ * pay twice.
  */
 export type CompareVerdict =
   | {
       readonly kind: 'match';
       readonly rewardFacts: ReadonlyArray<RewardFact>;
-      readonly verifiedXPDelta: number;
+      readonly terminalXPTotal?: number | undefined;
+      readonly xpSum: number;
     }
   | { readonly kind: 'divergence'; readonly reason: DivergenceReason; readonly version: number };

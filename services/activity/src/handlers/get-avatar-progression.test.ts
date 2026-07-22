@@ -209,6 +209,45 @@ test('it reports how much of the live run the settled total already carries', as
   });
 });
 
+test('it includes the unsettled xp of a run stopped before its encounter finished', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    count: 2,
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'progress' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  await client.stopActivity({ avatarID: avatar.id });
+
+  const result = await client.getAvatarProgression({ avatarID: avatar.id });
+
+  expect(result).toStrictEqual({
+    active: null,
+    level: 1,
+    pending: [{ activityID: started.id, xpDelta: 40 }],
+    xp: 0,
+  });
+});
+
 test('it skips a pending entry whose tail checkpoint carries no terminal rewards payload', async () => {
   await using ctx = await setupTest();
 

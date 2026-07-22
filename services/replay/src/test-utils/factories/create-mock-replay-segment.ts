@@ -33,6 +33,7 @@ export function createMockReplaySegment(
     keyVersion: 1,
     scopeID: faker.string.alphanumeric({ casing: 'lower', length: 8 }),
     scopeType: 'world_map_node',
+    settledXP: 0,
     seed: randomSeed,
     simVersion: 'test-engine-hash',
     startChainIndex: 0,
