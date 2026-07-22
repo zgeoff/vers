@@ -4,9 +4,10 @@ import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { findCurrentSimVersion, findSimVersion } from '@vers/sim-registry';
+import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
-import { parseTerminalCheckpointXP } from '../parse-terminal-checkpoint-xp';
+import { buildUnsettledXP } from '../build-unsettled-xp';
 import { resolveEncounterNode } from '../resolve-encounter-node';
 import type {
   ActiveActivityConflictPayload,
@@ -55,10 +56,11 @@ interface StartActivityOpts {
 /**
  * Starts an activity for an avatar owned by the acting user, snapshotting the build the stream
  * plays against, and stamping the acting session as the stream's writer. The snapshot carries the
- * avatar's settled xp/level plus the xp of every terminal-but-unsettled activity of its own — a
- * stopped, capped, quarantined, or parked activity whose verified anchor hasn't caught up to its
- * appended tail — so a chain of activities started faster than the verifier settles them each
- * builds against the last one's outcome rather than replaying stale progression. Resolves the scope
+ * avatar's settled xp/level plus the unsettled xp of every run of its own that ended and still
+ * awaits its verifier, so a chain of activities started faster than the verifier settles them each
+ * builds against the last one's outcome rather than replaying stale progression. A held run —
+ * parked or quarantined — contributes nothing, since it has no path back to verification on its
+ * own and its xp would otherwise ride in this snapshot and every later one permanently. Resolves the scope
  * node's encounter params server-side and freezes them on the new row, throwing NODE_UNKNOWN when
  * the scope doesn't resolve to a known node. The partial unique index serializes concurrent starts;
  * a duplicate delivery — same key, same scope, never appended, caller already the writer or none
@@ -255,11 +257,12 @@ async function resolveSimVersionStamp(
 }
 
 /**
- * Sums an avatar's settled xp with the xp delta of its terminal-but-unsettled activities — a
- * stopped, capped, quarantined, or parked activity whose verified anchor hasn't caught up to its
- * appended tail. The settled row and the pending set are read in one statement, so a concurrent
- * verifier commit can't land its delta in the gap between two separate reads. Malformed or
- * non-terminal tail payloads contribute nothing.
+ * Sums an avatar's settled xp with the unsettled xp of every activity that ended and is still
+ * awaiting its verifier — the total a new run's build snapshot is stamped with. A `parked` or
+ * `quarantined` activity is left out: both are holds with no path back to verification on their
+ * own, so counting them would stamp xp that never settles into this run's snapshot and every later
+ * one's. The settled row and the unsettled set are read in one statement, so a concurrent verifier
+ * commit can't land its delta in the gap between two separate reads.
  */
 async function getOptimisticXP(trx: Kysely<DB>, avatarID: string): Promise<number> {
   const rows = await trx
@@ -267,8 +270,7 @@ async function getOptimisticXP(trx: Kysely<DB>, avatarID: string): Promise<numbe
     .leftJoin('activities', (join) =>
       join
         .onRef('activities.avatarId', '=', 'avatars.id')
-        .on('activities.status', '!=', 'active')
-        .on('activities.status', '!=', 'rejected')
+        .on('activities.status', 'in', ['stopped', 'capped'])
         .onRef('activities.verifiedHead', '<', 'activities.appendedHead'),
     )
     .leftJoin('activityCheckpoints', (join) =>
@@ -276,7 +278,27 @@ async function getOptimisticXP(trx: Kysely<DB>, avatarID: string): Promise<numbe
         .onRef('activityCheckpoints.activityId', '=', 'activities.id')
         .onRef('activityCheckpoints.version', '=', 'activities.appendedHead'),
     )
-    .select(['avatars.xp', 'activityCheckpoints.payload'])
+    .leftJoinLateral(
+      (eb) =>
+        eb
+          .selectFrom('activityCheckpoints as unverified')
+          .select(
+            sql<number>`coalesce(sum((unverified.payload -> 'rewards' ->> 'xp')::integer), 0)::integer`.as(
+              'deltaSum',
+            ),
+          )
+          .whereRef('unverified.activityId', '=', 'activities.id')
+          .whereRef('unverified.version', '>', 'activities.verifiedHead')
+          .as('unsettled'),
+      (join) => join.onTrue(),
+    )
+    .select([
+      'avatars.xp',
+      'activities.id',
+      'activities.settledXp',
+      'activityCheckpoints.payload',
+      'unsettled.deltaSum',
+    ])
     .where('avatars.id', '=', avatarID)
     .execute();
 
@@ -288,7 +310,15 @@ async function getOptimisticXP(trx: Kysely<DB>, avatarID: string): Promise<numbe
   );
 
   return rows.reduce(
-    (total, row) => total + (parseTerminalCheckpointXP(row.payload) ?? 0),
+    (total, row) =>
+      row.id === null
+        ? total
+        : total +
+          buildUnsettledXP({
+            settledXP: row.settledXp ?? 0,
+            tailPayload: row.payload,
+            unverifiedDeltaSum: row.deltaSum ?? 0,
+          }),
     settled.xp,
   );
 }

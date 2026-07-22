@@ -151,7 +151,86 @@ test('it settles the terminal checkpoint reward into the avatar xp and level on 
   expect(avatar.level).toBe(buildLevelFromXP(500 + terminal.rewards.xp));
 });
 
-test('it leaves the avatar xp and level untouched on a matched mid-run segment', async () => {
+test('it settles a run verified in two segments to the terminal total, counting nothing twice', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const terminal = fixture.engineCheckpoints.at(-1);
+
+  invariant(terminal !== undefined, 'the fixture always ends on a checkpoint');
+
+  const totalCheckpoints = fixture.checkpoints.length;
+  const midRunCount = totalCheckpoints - 1;
+
+  expect(midRunCount).toBeGreaterThan(0);
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const midRun = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: midRunCount,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(midRun.kind).toBe('matched');
+
+  const settledMidRun = await ctx.db
+    .selectFrom('activities')
+    .select('settledXp')
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(settledMidRun.settledXp).toBeGreaterThan(0);
+
+  const terminalSegment = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: midRunCount,
+    }),
+  );
+
+  expect(terminalSegment.kind).toBe('matched');
+
+  const avatar = await ctx.db
+    .selectFrom('avatars')
+    .select(['level', 'xp'])
+    .where('id', '=', fixture.activity.avatarId)
+    .executeTakeFirstOrThrow();
+
+  expect(avatar.xp).toBe(terminal.rewards.xp);
+  expect(avatar.level).toBe(buildLevelFromXP(terminal.rewards.xp));
+
+  const settledFinal = await ctx.db
+    .selectFrom('activities')
+    .select('settledXp')
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(settledFinal.settledXp).toBe(terminal.rewards.xp);
+});
+
+test('it settles a matched mid-run segment onto the avatar before the run ends', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
@@ -199,14 +278,28 @@ test('it leaves the avatar xp and level untouched on a matched mid-run segment',
 
   expect(outcome.kind).toBe('matched');
 
+  const midRunXP = fixture.engineCheckpoints
+    .slice(0, midRunCount)
+    .reduce((total, checkpoint) => total + checkpoint.rewards.xp, 0);
+
+  expect(midRunXP).toBeGreaterThan(0);
+
+  const settled = await ctx.db
+    .selectFrom('activities')
+    .select('settledXp')
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(settled.settledXp).toBe(midRunXP);
+
   const avatar = await ctx.db
     .selectFrom('avatars')
     .select(['level', 'xp'])
     .where('id', '=', fixture.activity.avatarId)
     .executeTakeFirstOrThrow();
 
-  expect(avatar.xp).toBe(0);
-  expect(avatar.level).toBe(1);
+  expect(avatar.xp).toBe(midRunXP);
+  expect(avatar.level).toBe(buildLevelFromXP(midRunXP));
 });
 
 test('it settles no additional xp when a stale duplicate frontier misses the already-advanced cursor', async () => {

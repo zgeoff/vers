@@ -43,6 +43,7 @@ test('it anchors a genesis segment on the activity startHash and seed', async ()
     contentVersion: fixture.activity.contentVersion,
     encounterNode: { difficulty: 1 },
     id: fixture.activity.id,
+    settledXP: fixture.activity.settledXp,
     keyVersion: fixture.activity.keyVersion,
     scopeID: fixture.activity.scopeId,
     scopeType: fixture.activity.scopeType,

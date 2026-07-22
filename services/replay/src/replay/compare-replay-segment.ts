@@ -23,7 +23,9 @@ interface CompareContext {
  * from the stored payload — and the recomputed hash must byte-match the stored one. Rewards ride
  * outside the hash, so a checkpoint's `rewards.xp` is compared directly against the replay's own
  * value. The two inputs are positionally aligned: `replayed[i]` is what the engine produced for
- * `stored[i].version`.
+ * `stored[i].version`. A matching segment reports its xp as both a sum of the non-terminal
+ * deltas and, when it ends on one, the terminal checkpoint's own run total — a terminal total
+ * already contains every delta the run emitted, so the two are alternatives, never addends.
  */
 export function compareReplaySegment(
   stored: ReadonlyArray<StoredCheckpoint>,
@@ -101,10 +103,17 @@ export function compareReplaySegment(
   const lastReplayed = replayed.at(-1);
   const isTerminal = lastReplayed !== undefined && TERMINAL_CHECKPOINT_TYPES.has(lastReplayed.type);
 
+  const xpSum = replayed.reduce(
+    (total, checkpoint) =>
+      TERMINAL_CHECKPOINT_TYPES.has(checkpoint.type) ? total : total + checkpoint.rewards.xp,
+    0,
+  );
+
   return {
     kind: 'match',
     rewardFacts,
-    verifiedXPDelta: isTerminal ? (lastReplayed?.rewards.xp ?? 0) : 0,
+    xpSum,
+    ...(isTerminal && { terminalXPTotal: lastReplayed?.rewards.xp ?? 0 }),
   };
 }
 

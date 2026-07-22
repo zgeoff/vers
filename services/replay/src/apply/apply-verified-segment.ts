@@ -2,6 +2,7 @@ import type { DB } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
+import { recordClampedSettlement } from '../metrics/record-clamped-settlement';
 import type { GrantOnce, MintedItem } from '../types';
 import { updateVerifiedChainAnchor } from './update-verified-chain-anchor';
 
@@ -30,6 +31,14 @@ interface ApplyVerifiedSegmentInput {
    * segment never duplicates or re-rolls a row.
    */
   readonly items?: ReadonlyArray<MintedItem>;
+
+  /**
+   * The activity's xp total through the new verified head, written in the cursor's own guarded
+   * update so the two can never disagree. It records what the settlement intended: the identity
+   * write floors at zero, so a debit larger than the avatar's settled total lands smaller than
+   * this.
+   */
+  readonly settledXP: number;
   readonly verifiedHead: number;
 
   /**
@@ -71,7 +80,12 @@ async function applySegmentWrites(
 ): Promise<ApplyVerifiedSegmentResult> {
   const advanced = await trx
     .updateTable('activities')
-    .set({ replayAttempts: 0, verifiedAt: sql`now()`, verifiedHead: input.verifiedHead })
+    .set({
+      replayAttempts: 0,
+      settledXp: input.settledXP,
+      verifiedAt: sql`now()`,
+      verifiedHead: input.verifiedHead,
+    })
     .where('id', '=', input.activityID)
     .where('verifiedHead', '=', input.expectedVerifiedHead)
     .returning('verifiedHead')
@@ -82,12 +96,20 @@ async function applySegmentWrites(
   }
 
   if (input.xpDelta !== undefined && input.xpDelta !== 0) {
+    // `prior` reads the row as it stood before this statement's own write, so the clamp is
+    // detected without a separate read another chain's settlement could land between.
     const settled = await trx
       .updateTable('avatars')
-      .set({ xp: sql`GREATEST(0, xp + ${input.xpDelta})` })
-      .where('id', '=', input.avatarID)
-      .returning('xp')
+      .from('avatars as prior')
+      .set({ xp: sql`GREATEST(0, avatars.xp + ${input.xpDelta})` })
+      .whereRef('prior.id', '=', 'avatars.id')
+      .where('avatars.id', '=', input.avatarID)
+      .returning(['avatars.xp', 'prior.xp as priorXp'])
       .executeTakeFirstOrThrow();
+
+    if (settled.priorXp + input.xpDelta < 0) {
+      recordClampedSettlement();
+    }
 
     await trx
       .updateTable('avatars')

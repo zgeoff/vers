@@ -30,6 +30,7 @@ test('it applies a duplicate segment exactly once', async () => {
     activityID: activity.id,
     avatarID: avatar.id,
     expectedVerifiedHead: 0,
+    settledXP: 50,
     verifiedHead: 5,
     xpDelta: 50,
   });
@@ -38,6 +39,7 @@ test('it applies a duplicate segment exactly once', async () => {
     activityID: activity.id,
     avatarID: avatar.id,
     expectedVerifiedHead: 0,
+    settledXP: 50,
     verifiedHead: 5,
     xpDelta: 50,
   });
@@ -55,11 +57,12 @@ test('it applies a duplicate segment exactly once', async () => {
 
   const cursor = await ctx.db
     .selectFrom('activities')
-    .select(['verifiedAt', 'verifiedHead'])
+    .select(['settledXp', 'verifiedAt', 'verifiedHead'])
     .where('id', '=', activity.id)
     .executeTakeFirstOrThrow();
 
   expect(cursor.verifiedHead).toBe(5);
+  expect(cursor.settledXp).toBe(50);
   expect(cursor.verifiedAt).toBeValidDate();
 });
 
@@ -88,6 +91,7 @@ test('it grants a one-shot reward exactly once across re-farms', async () => {
     avatarID: avatar.id,
     expectedVerifiedHead: 0,
     grants: [grant],
+    settledXP: 0,
     verifiedHead: 3,
   });
 
@@ -96,6 +100,7 @@ test('it grants a one-shot reward exactly once across re-farms', async () => {
     avatarID: avatar.id,
     expectedVerifiedHead: 0,
     grants: [grant],
+    settledXP: 0,
     verifiedHead: 3,
   });
 
@@ -139,6 +144,7 @@ test('it advances the chain anchor forward only', async () => {
       scopeType: chain.scopeType,
     },
     expectedVerifiedHead: 0,
+    settledXP: 0,
     verifiedHead: 1,
   });
 
@@ -166,6 +172,7 @@ test('it advances the chain anchor forward only', async () => {
       scopeType: chain.scopeType,
     },
     expectedVerifiedHead: 1,
+    settledXP: 0,
     verifiedHead: 2,
   });
 
@@ -192,6 +199,7 @@ test('it floors xp at zero on an adverse delta', async () => {
     activityID: activity.id,
     avatarID: avatar.id,
     expectedVerifiedHead: 0,
+    settledXP: 0,
     verifiedHead: 1,
     xpDelta: -50,
   });
@@ -220,6 +228,7 @@ test('it resets the attempt counter on a successful apply', async () => {
     activityID: activity.id,
     avatarID: avatar.id,
     expectedVerifiedHead: 0,
+    settledXP: 0,
     verifiedHead: 1,
   });
 
@@ -259,6 +268,7 @@ test('it mints reward items alongside the verified anchor', async () => {
     avatarID: avatar.id,
     expectedVerifiedHead: 0,
     items: [item],
+    settledXP: 0,
     verifiedHead: 1,
   });
 
@@ -314,6 +324,7 @@ test('it leaves one minted row set across a re-verified double apply', async () 
     avatarID: avatar.id,
     expectedVerifiedHead: 0,
     items: [item],
+    settledXP: 0,
     verifiedHead: 1,
   });
 
@@ -322,6 +333,7 @@ test('it leaves one minted row set across a re-verified double apply', async () 
     avatarID: avatar.id,
     expectedVerifiedHead: 0,
     items: [item],
+    settledXP: 0,
     verifiedHead: 1,
   });
 
