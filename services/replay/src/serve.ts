@@ -25,7 +25,7 @@ process.on('SIGTERM', () => {
 });
 
 /**
- * Self-heals a poke a crash or deploy lost by draining whatever the queue already holds, without
+ * Self-heals a poke that a crash or deploy lost by draining whatever the queue already holds, without
  * ever delaying `listen()` or crashing boot on a drain failure.
  */
 async function runBootDrain(): Promise<void> {
