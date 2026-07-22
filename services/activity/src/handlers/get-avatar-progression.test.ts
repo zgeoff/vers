@@ -19,17 +19,9 @@ async function setupTest() {
 
   await createSimVersionRow(db.db);
 
-  const service = await createActivityService({ db: db.db });
+  const service = await createActivityService({ db: db.db, wakeCoalesceWindowMs: 0 });
 
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
-}
-
-/**
- * The wake poke's module-level coalesce window persists across every test in this process — waiting
- * it out first guarantees this test's own read is what triggers the delivery it asserts on.
- */
-async function waitOutWakeCoalesceWindow(): Promise<void> {
-  await Bun.sleep(1100);
 }
 
 test('it returns the settled xp and level with no pending entries for an avatar with no activities', async () => {
@@ -277,8 +269,6 @@ test('it attempts a wake delivery when a pending entry is present', async () => 
     expectedHead: 0,
   });
 
-  await waitOutWakeCoalesceWindow();
-
   const wakeHandler = mock(() => ({ drained: 0 }));
 
   server.use(mockReplayService.wake.handler(wakeHandler));
@@ -300,9 +290,6 @@ test('it attempts no wake delivery when pending is empty', async () => {
   const avatar = await createAvatarRow(ctx.db, { level: 3, userId: viewer.user.id, xp: 450 });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
-
-  await waitOutWakeCoalesceWindow();
-
   const wakeHandler = mock(() => ({ drained: 0 }));
 
   server.use(mockReplayService.wake.handler(wakeHandler));

@@ -3,9 +3,13 @@ import type { DB } from '@vers/db';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
-import { sendReplayWake } from '../wake/send-replay-wake';
 import { toActivityData } from './to-activity-data';
 import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail';
+
+interface StopActivityDeps {
+  readonly db: Kysely<DB>;
+  readonly sendReplayWake: () => void;
+}
 
 /**
  * oRPC handler opts for the authed `stopActivity` procedure.
@@ -34,7 +38,10 @@ interface StopActivityOpts {
  * predates a writer take-over, and honoring it would kill the run the new writer is driving. The
  * ownership check folds into each statement — a foreign or missing avatar matches no row.
  */
-export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Promise<ActivityData> {
+export async function stopActivity(
+  deps: StopActivityDeps,
+  opts: StopActivityOpts,
+): Promise<ActivityData> {
   const actingUserID = opts.context.actingUserId;
 
   if (actingUserID === null) {
@@ -43,7 +50,7 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
 
   const actingSessionID = opts.context.actingSessionId;
 
-  const outcome = await db.transaction().execute(async (trx) => {
+  const outcome = await deps.db.transaction().execute(async (trx) => {
     // A lockless read to learn which chain the activity belongs to; the guarded update below
     // re-verifies everything it found. Writers that touch both rows acquire the chain row before
     // the activity row, so the chain lock comes first.
@@ -136,7 +143,7 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
   });
 
   if (outcome.kind === 'stopped') {
-    sendReplayWake();
+    deps.sendReplayWake();
   }
 
   return toActivityData(outcome.row);

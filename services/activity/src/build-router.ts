@@ -17,6 +17,7 @@ interface BuildActivityRouterDeps {
   readonly contentVersion: string;
   readonly db: Kysely<DB>;
   readonly keyVersion: number;
+  readonly sendReplayWake: () => void;
   readonly simTimeCapMs: number;
 }
 
@@ -31,7 +32,7 @@ export function buildActivityRouter(deps: BuildActivityRouterDeps) {
   return {
     getActivityRewards: os.getActivityRewards.handler((opts) => getActivityRewards(deps.db, opts)),
     getAvatarProgression: os.getAvatarProgression.handler((opts) =>
-      getAvatarProgression(deps.db, opts),
+      getAvatarProgression({ db: deps.db, sendReplayWake: deps.sendReplayWake }, opts),
     ),
     getCurrentActivity: os.getCurrentActivity.handler((opts) => getCurrentActivity(deps.db, opts)),
     getLatestActivityProgress: os.getLatestActivityProgress.handler((opts) =>
@@ -39,9 +40,14 @@ export function buildActivityRouter(deps: BuildActivityRouterDeps) {
     ),
     resumeActivity: os.resumeActivity.handler((opts) => resumeActivity(deps.db, opts)),
     startActivity: os.startActivity.handler((opts) => startActivity(deps, opts)),
-    stopActivity: os.stopActivity.handler((opts) => stopActivity(deps.db, opts)),
+    stopActivity: os.stopActivity.handler((opts) =>
+      stopActivity({ db: deps.db, sendReplayWake: deps.sendReplayWake }, opts),
+    ),
     trackActivityProgress: os.trackActivityProgress.handler((opts) =>
-      trackActivityProgress({ db: deps.db, simTimeCapMs: deps.simTimeCapMs }, opts),
+      trackActivityProgress(
+        { db: deps.db, sendReplayWake: deps.sendReplayWake, simTimeCapMs: deps.simTimeCapMs },
+        opts,
+      ),
     ),
     updateFailureAction: os.updateFailureAction.handler((opts) =>
       updateFailureAction(deps.db, opts),

@@ -16,14 +16,6 @@ import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 /**
- * The wake poke's module-level coalesce window persists across every test in this process — waiting
- * it out first guarantees this test's own stop is what triggers the delivery it asserts on.
- */
-async function waitOutWakeCoalesceWindow(): Promise<void> {
-  await Bun.sleep(1100);
-}
-
-/**
  * `stopActivity` opens its own `db.transaction()` for the terminal-status claim and the chain's
  * consequent anchor advance, which can't nest under the default rollback-on-dispose isolation —
  * this suite runs against a real, committed schema clone instead.
@@ -33,7 +25,7 @@ async function setupTest() {
 
   await createSimVersionRow(db.db);
 
-  const service = await createActivityService({ db: db.db });
+  const service = await createActivityService({ db: db.db, wakeCoalesceWindowMs: 0 });
 
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
@@ -444,8 +436,6 @@ test('it still succeeds idempotently for a displaced session once the row left a
 
 test('it attempts a wake delivery after a successful stop', async () => {
   await using ctx = await setupTest();
-
-  await waitOutWakeCoalesceWindow();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
