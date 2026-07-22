@@ -5,6 +5,7 @@ import type { DeployTarget } from './types';
 const target: DeployTarget = {
   app: 'vers-service-user',
   configDir: 'services/user',
+  exposure: 'flycast',
   trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
 };
 

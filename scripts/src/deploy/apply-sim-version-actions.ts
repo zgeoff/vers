@@ -3,6 +3,7 @@ import { upsertSimVersion } from '@vers/sim-registry';
 import type { UpsertSimVersionInput } from '@vers/sim-registry';
 import { requireEnvVar } from '../utils/require-env-var';
 import { runFlyctl } from '../utils/run-flyctl';
+import { applyIPPostureActions } from './apply-ip-posture-actions';
 import type { SimVersionAction } from './types';
 
 const PROVIDER_MACHINE_FLAGS = [
@@ -37,7 +38,7 @@ async function applySimVersionAction(action: SimVersionAction): Promise<void> {
   }
 
   if (action.kind === 'allocate-flycast-ip') {
-    await runFlyctl(['ips', 'allocate-v6', '--private', '-a', action.app]);
+    await applyIPPostureActions([action]);
 
     return;
   }
