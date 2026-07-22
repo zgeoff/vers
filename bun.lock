@@ -1162,6 +1162,7 @@
   },
   "overrides": {
     "@hono/node-server": "2.0.11",
+    "@opentelemetry/propagator-jaeger": "2.9.0",
     "@opentelemetry/sdk-node": "0.220.0",
     "@pulumi/pulumi": "3.253.0",
     "@types/react": "19.2.17",

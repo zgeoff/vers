@@ -7,6 +7,7 @@ import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import * as z from 'zod';
 import { recordTerminalTransition } from '../metrics/record-terminal-transition';
+import { parseTerminalCheckpointXP } from '../parse-terminal-checkpoint-xp';
 import type {
   CappedPayload,
   CheckpointInvalidPayload,
@@ -134,7 +135,7 @@ export async function trackActivityProgress(
   const newLastHash = lastCheckpoint?.hash ?? head.lastHash;
   const newTimeMs = lastCheckpoint?.payload.time ?? appendedTimeMs;
   const timeDelta = newTimeMs - appendedTimeMs;
-  const terminalRewardsXP = lastCheckpoint && findTerminalRewardsXP(lastCheckpoint.payload);
+  const terminalRewardsXP = lastCheckpoint && parseTerminalCheckpointXP(lastCheckpoint.payload);
 
   // The budget decision is only meaningful against the head the batch claims to extend; a stale
   // batch falls through to the transaction's guarded update and resolves as CONFLICT.
@@ -548,27 +549,4 @@ function pickAppendRaceOutcome(
   }
 
   return errors.CONFLICT({ data: { appendedHead: current.appendedHead } });
-}
-
-/**
- * Checkpoint types whose `rewards.xp` is a final running total the avatar row settles against.
- */
-const TERMINAL_CHECKPOINT_TYPES = new Set(['completed', 'failed']);
-
-const TerminalRewardsSchema = z.object({ xp: z.number() });
-
-/**
- * The final rewards total a terminal checkpoint's payload carries, or `undefined` when the
- * checkpoint isn't terminal or its `rewards` shape doesn't parse — the latter settles no xp rather
- * than throwing, since the hash chain doesn't cover `rewards` and a malformed value isn't
- * distinguishable here from a stale or non-terminal client payload.
- */
-function findTerminalRewardsXP(payload: Readonly<CheckpointPayload>): number | undefined {
-  if (!TERMINAL_CHECKPOINT_TYPES.has(payload.type)) {
-    return undefined;
-  }
-
-  const parsed = TerminalRewardsSchema.safeParse(payload['rewards']);
-
-  return parsed.success ? parsed.data.xp : undefined;
 }
