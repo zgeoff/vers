@@ -8,7 +8,6 @@ import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import * as z from 'zod';
 import { recordTerminalTransition } from '../metrics/record-terminal-transition';
-import { parseTerminalCheckpointXP } from '../parse-terminal-checkpoint-xp';
 import type {
   CappedPayload,
   CheckpointInvalidPayload,
@@ -136,7 +135,12 @@ export async function trackActivityProgress(
   const newLastHash = lastCheckpoint?.hash ?? head.lastHash;
   const newTimeMs = lastCheckpoint?.payload.time ?? appendedTimeMs;
   const timeDelta = newTimeMs - appendedTimeMs;
-  const terminalRewardsXP = lastCheckpoint && parseTerminalCheckpointXP(lastCheckpoint.payload);
+
+  // The type alone decides, matching the rule a verifier replays against. `rewards` is outside the
+  // hash and the settled figure comes from the replayed checkpoint, so a run that ends still ends
+  // however its client wrote that field.
+  const isTerminalBatch =
+    lastCheckpoint !== undefined && isTerminalCheckpointType(lastCheckpoint.payload.type);
 
   // The budget decision is only meaningful against the head the batch claims to extend; a stale
   // batch falls through to the transaction's guarded update and resolves as CONFLICT.
@@ -205,7 +209,7 @@ export async function trackActivityProgress(
   const appendOutcome = await db.transaction().execute(async (trx) => {
     // Only a terminal batch advances the chain anchor; a batch that never touches the chain row
     // takes part in no lock ordering. When both rows are taken, the chain row comes first.
-    if (terminalRewardsXP !== undefined) {
+    if (isTerminalBatch) {
       await trx
         .selectFrom('activityChains')
         .select('appendedChainIndex')
@@ -224,7 +228,7 @@ export async function trackActivityProgress(
         appendedTimeMs: Math.floor(newTimeMs),
         lastHash: newLastHash,
         ...(actingSessionID !== null && { writerSessionId: actingSessionID }),
-        ...(terminalRewardsXP !== undefined && {
+        ...(isTerminalBatch && {
           status: 'stopped' as const,
           stoppedAt: sql`now()`,
         }),
@@ -260,7 +264,7 @@ export async function trackActivityProgress(
         .execute();
     }
 
-    if (terminalRewardsXP !== undefined && lastCheckpoint !== undefined) {
+    if (isTerminalBatch) {
       await updateAppendedAnchorFromTail(trx, {
         activityId: opts.input.activityID,
         appendedHead: newHead,
@@ -294,8 +298,7 @@ export async function trackActivityProgress(
 
     return {
       appendedHead: updated.appendedHead,
-      kind:
-        terminalRewardsXP !== undefined && lastCheckpoint !== undefined ? 'stopped' : 'appended',
+      kind: isTerminalBatch ? 'stopped' : 'appended',
     } as const;
   });
 

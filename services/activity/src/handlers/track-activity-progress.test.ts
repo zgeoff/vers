@@ -568,6 +568,85 @@ test('it advances the chain anchor to the terminal checkpoint on a failed batch'
   expect(chain.appendedChainIndex).toBe(terminal.payload.chainIndex);
 });
 
+test('it ends a run whose last checkpoint carries no rewards payload', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { type: 'completed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  const activity = await ctx.db
+    .selectFrom('activities')
+    .selectAll()
+    .where('id', '=', started.id)
+    .executeTakeFirstOrThrow();
+
+  const chain = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'a9lp75')
+    .executeTakeFirstOrThrow();
+
+  expect(activity.status).toBe('stopped');
+  expect(chain.appendedChainIndex).toBe(batch[0]!.payload.chainIndex);
+});
+
+test('it ends a run whose last checkpoint carries rewards without an xp figure', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: {}, type: 'failed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  const activity = await ctx.db
+    .selectFrom('activities')
+    .selectAll()
+    .where('id', '=', started.id)
+    .executeTakeFirstOrThrow();
+
+  expect(activity.status).toBe('stopped');
+});
+
 test('it advances the chain anchor when the terminal segment consumed no entropy', async () => {
   await using ctx = await setupTest();
 
