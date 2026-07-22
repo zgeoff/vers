@@ -29,6 +29,10 @@ test('it parses an app with no allocated addresses', () => {
   expect(parseIPList([])).toStrictEqual([]);
 });
 
+test('it parses a null document as no allocated addresses', () => {
+  expect(parseIPList(null)).toStrictEqual([]);
+});
+
 test('it reads every address a multi-homed app carries', () => {
   const json = [
     { Address: '2a09:8280:1::14b:e98a:0', Type: 'v6' },

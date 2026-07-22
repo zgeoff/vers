@@ -6,7 +6,23 @@ test('it plans a flycast allocation for a flycast entry with no private address'
 
   expect(plan).toStrictEqual({
     actions: [{ app: 'vers-service-user', kind: 'allocate-flycast-ip' }],
-    violations: [],
+    violations: ['missing its flycast address'],
+  });
+});
+
+test('it plans an allocation and reports both violations for a flycast entry holding only public addresses', () => {
+  const plan = planIPPosture({
+    app: 'vers-service-replay',
+    exposure: 'flycast',
+    ips: [{ address: '2a09:8280:1::14b:f272:0', type: 'public' }],
+  });
+
+  expect(plan).toStrictEqual({
+    actions: [{ app: 'vers-service-replay', kind: 'allocate-flycast-ip' }],
+    violations: [
+      'missing its flycast address',
+      'public address 2a09:8280:1::14b:f272:0 on a flycast-only app',
+    ],
   });
 });
 

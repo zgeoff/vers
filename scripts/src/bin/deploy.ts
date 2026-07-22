@@ -540,7 +540,6 @@ async function runVerify(): Promise<void> {
       ...checkTarget(target, state, changes),
       ...(await runProbes(target.probes ?? [])),
       ...(await checkParkedApp(target.app, state)),
-      ...(ipPlan.actions.length > 0 ? ['missing its flycast address'] : []),
       ...ipPlan.violations,
     ];
 
