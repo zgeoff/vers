@@ -67,9 +67,13 @@ test('it rejects when the service fails in a way that is not a declared unauthor
     }),
   );
 
-  const promise = withRequestContext({ cookies: signedIn.cookies }, () => readCurrentUser());
+  const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
+    readCurrentUser()
+      .then(() => null)
+      .catch((error: unknown) => (error instanceof Error ? error.message : null)),
+  );
 
-  expect(promise).rejects.toThrow('Internal server error');
+  expect(outcome.value).toBe('Internal server error');
 });
 
 test('it rejects when the service declares a contract error other than unauthorized', async () => {
@@ -83,7 +87,11 @@ test('it rejects when the service declares a contract error other than unauthori
     }),
   );
 
-  const promise = withRequestContext({ cookies: signedIn.cookies }, () => readCurrentUser());
+  const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
+    readCurrentUser()
+      .then(() => null)
+      .catch((error: unknown) => error),
+  );
 
-  expect(promise).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  expect(outcome.value).toMatchObject({ code: 'FORBIDDEN' });
 });
