@@ -102,9 +102,25 @@ A consequential read — a new activity's `buildSnapshot`, a future point spend,
 new run — includes an ended run's unsettled remainder, so a player who finishes one run and
 immediately starts another builds against what they just earned. A held run is excluded: `parked`
 and `quarantined` reach verification only by operator action, so counting one would stamp xp that
-never settles into this run's snapshot and every later one. Chains are scoped per `(avatar, scope)`
-while identity is avatar-global, and a rejection's cascade follows chain membership: a run on
-another scope keeps the snapshot it built from the rejected run's unsettled xp.
+never settles into this run's snapshot and every later one.
+
+A borrowed remainder records where it came from. An activity's snapshot provenance is the set of
+unverified runs whose xp moved its total, stored at start; one that moved it by nothing lends
+nothing and is left out. Xp is the only quantity a snapshot borrows ahead of verification, an item
+minting only for a verified segment, so a quantity added to the snapshot widens what provenance
+records. Identity is avatar-global while chains are per-scope, so a borrow crosses chains, and
+provenance is what orders them against each other:
+
+- A chain is unclaimable while its replay frontier has a source with appends past its own verified
+  cursor. Provenance points at runs that had already ended when the borrower started, so the
+  ordering is acyclic and holds transitively.
+- A frontier whose source rejected is refused without replaying its stream, there being no proven
+  total left to replay against. Its own borrowers fail the same check in turn, so one rejection
+  reaches every dependent through the single-chain rejection path.
+- A source under an operator hold keeps its borrowers waiting, since a hold that later rejects would
+  leave the same unproven total in place. The borrowing chain stalls until the hold clears.
+- A borrower still running when its source falls is refused at its next adjudication, since a chain
+  is inspected only when it has appends to verify.
 
 `getAvatarProgression` reads the settled row, its pending projection, and the live run's
 settled-so-far in a single statement, so a client display is never torn between them. The pending
@@ -117,6 +133,8 @@ pending projection is display-only.
 
 - The verifier serializes a chain's activities on the chain row, adjudicating one at a time in
   order, so a continuation never confirms against a predecessor that later rejects.
+- A chain waits on the runs its replay frontier borrowed xp from, ordering an avatar's chains
+  against each other while no writer holds more than the one chain row it claimed.
 - The request-path forward-advance and the verifier both acquire the chain row before the activity
   row, a single ordering that admits no cycle.
 - The rejection rewind reads the verified columns inline in its update statement, never through a
