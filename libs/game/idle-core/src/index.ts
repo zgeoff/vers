@@ -10,3 +10,4 @@ export { runSimulation } from './core/run-simulation';
 export { SIMULATION_TIMESTEP_MS } from './core/simulation-timestep-ms';
 export * from './progression';
 export * from './types';
+export { isTerminalCheckpointType } from './utils/is-terminal-checkpoint-type';

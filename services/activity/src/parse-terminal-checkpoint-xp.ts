@@ -1,10 +1,5 @@
+import { isTerminalCheckpointType } from '@vers/idle-core';
 import * as z from 'zod';
-
-/**
- * Checkpoint types whose `rewards.xp` is a run's final earned total rather than one checkpoint's
- * own delta.
- */
-const TERMINAL_CHECKPOINT_TYPES = new Set(['completed', 'failed']);
 
 const TerminalCheckpointPayloadSchema = z.object({
   rewards: z.object({ xp: z.number() }),
@@ -20,7 +15,7 @@ const TerminalCheckpointPayloadSchema = z.object({
 export function parseTerminalCheckpointXP(payload: unknown): number | undefined {
   const parsed = TerminalCheckpointPayloadSchema.safeParse(payload);
 
-  if (!parsed.success || !TERMINAL_CHECKPOINT_TYPES.has(parsed.data.type)) {
+  if (!parsed.success || !isTerminalCheckpointType(parsed.data.type)) {
     return undefined;
   }
 

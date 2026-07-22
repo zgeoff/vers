@@ -1,6 +1,7 @@
 import type { CheckpointBatchEntry, CheckpointPayload } from '@vers/contract-activity';
 import { RewardSlotSchema, buildCheckpointHash } from '@vers/contract-activity';
 import type { ActivityStatus, DB, Json } from '@vers/db';
+import { isTerminalCheckpointType } from '@vers/idle-core';
 import type { ServiceContext } from '@vers/service-runtime';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
@@ -454,7 +455,9 @@ interface TrackActivityProgressHead {
 /**
  * Validates a checkpoint batch's internal shape ahead of the transactional head-row compare-and-swap: version
  * contiguity from `expectedHead + 1`, each entry's `chainIndex` continuity from
- * `head.startChainIndex`, each entry's optional `rewardSlots` shape and ordinal contiguity, each
+ * `head.startChainIndex`, no run-ending entry before the batch's last — only the last entry claims
+ * the activity's terminal transition, so an interior one would store a terminal the settlement rule
+ * never reads — each entry's optional `rewardSlots` shape and ordinal contiguity, each
  * entry's cumulative `time` never regressing — within the batch always, and from the head row's
  * accounted time only when `expectedHead` still matches the head row, since a stale batch predates
  * that value — each entry's hash against its own payload, each entry's chain link to the previous
@@ -476,6 +479,12 @@ function findInvalidReason(
 
     if (checkpoint.payload.chainIndex !== head.startChainIndex + checkpoint.version) {
       return 'non-contiguous-chain-index';
+    }
+
+    const isLast = index === input.checkpoints.length - 1;
+
+    if (!isLast && isTerminalCheckpointType(checkpoint.payload.type)) {
+      return 'terminal-not-last';
     }
 
     const rewardSlotsReason = findRewardSlotsInvalidReason(checkpoint.payload);

@@ -759,6 +759,48 @@ test('it rejects a chainIndex that is not startChainIndex plus version with CHEC
   });
 });
 
+test('it rejects a batch that continues past a run-ending checkpoint with CHECKPOINT_INVALID', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const throughCompletion = createMockCheckpointBatch({
+    count: 2,
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  const afterCompletion = createMockCheckpointBatch({
+    startPrevHash: throughCompletion[1]!.hash,
+    startVersion: 3,
+  });
+
+  expect(
+    client.trackActivityProgress({
+      activityID: started.id,
+      checkpoints: [...throughCompletion, ...afterCompletion],
+      expectedHead: 0,
+    }),
+  ).rejects.toMatchObject({
+    code: 'CHECKPOINT_INVALID',
+    data: { reason: 'terminal-not-last' },
+  });
+
+  const current = await client.getCurrentActivity({ avatarID: avatar.id });
+
+  expect(current).toMatchObject({ appendedHead: 0, status: 'active' });
+});
+
 test('it returns the settled head when a terminal batch is resubmitted unchanged', async () => {
   await using ctx = await setupTest();
 
