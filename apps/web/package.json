@@ -34,7 +34,6 @@
     "@tanstack/react-start": "catalog:",
     "@vers/contract-activity": "workspace:*",
     "@vers/contract-avatar": "workspace:*",
-    "@vers/contract-base": "workspace:*",
     "@vers/contract-email": "workspace:*",
     "@vers/contract-session": "workspace:*",
     "@vers/contract-user": "workspace:*",
