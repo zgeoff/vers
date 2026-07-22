@@ -1,10 +1,9 @@
-import { expect, mock, spyOn, test } from 'bun:test';
-import { useRouter } from '@tanstack/react-router';
+import { expect, mock, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { StartStatus } from '@vers/idle-client';
-import { advanceWriterGeneration } from '@vers/idle-client';
+import { advanceWriterGeneration, setEngagedActivityID } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import { setSelectedNode } from '@vers/worldmap-client';
@@ -18,18 +17,6 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ExploreCurrentPanel } from './explore-current-panel';
-
-/**
- * Captures the router instance a `renderWithRouter` tree mounts under, so a test can spy on its
- * `navigate` method — router-aware primitives only ever expose this instance through hooks.
- */
-let latestRouter: ReturnType<typeof useRouter> | undefined;
-
-function NavigationProbe() {
-  latestRouter = useRouter();
-
-  return null;
-}
 
 test('it shows a spinner and calls initialize before the worker reports its state', async () => {
   const client = createStubWorkerClient();
@@ -141,26 +128,15 @@ test('it renders the node and its codex fragment once the worker reports the sta
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const rendered = renderWithRouter(
-      <>
-        <ExploreCurrentPanel orpc={orpc} />
-        <NavigationProbe />
-      </>,
-    );
-
-    await waitFor(() => {
-      expect(latestRouter).toBeDefined();
-    });
-
-    invariant(latestRouter !== undefined, 'expected the navigation probe to capture the router');
-
-    // the navigate this readiness triggers is not this test's concern — stubbed so the panel
-    // stays mounted and its codex assertion below reads this attempt's own outcome
-    spyOn(latestRouter, 'navigate').mockImplementation(() => Promise.resolve());
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
 
     await waitFor(() => {
       expect(client.startActivity).toHaveBeenCalledTimes(1);
     });
+
+    // the panel navigates once a fresh start engages; latching it already-engaged keeps the panel
+    // mounted here so this test reads the ready-state content in place
+    setEngagedActivityID(started.id);
 
     // the worker answering the call is one setter call — mounted components re-render on it
     setIdleWorkerHandle({
@@ -197,26 +173,15 @@ test('it treats an attached report as ready once the simulation carries that row
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const rendered = renderWithRouter(
-      <>
-        <ExploreCurrentPanel orpc={orpc} />
-        <NavigationProbe />
-      </>,
-    );
-
-    await waitFor(() => {
-      expect(latestRouter).toBeDefined();
-    });
-
-    invariant(latestRouter !== undefined, 'expected the navigation probe to capture the router');
-
-    // the navigate this readiness triggers is not this test's concern — stubbed so the panel
-    // stays mounted and its codex assertion below reads this attempt's own outcome
-    spyOn(latestRouter, 'navigate').mockImplementation(() => Promise.resolve());
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
 
     await waitFor(() => {
       expect(client.startActivity).toHaveBeenCalledTimes(1);
     });
+
+    // the panel navigates once a fresh start engages; latching it already-engaged keeps the panel
+    // mounted here so this test reads the ready-state content in place
+    setEngagedActivityID('activity_attached');
 
     setIdleWorkerHandle({
       activity: createMockActivitySnapshot({ id: 'activity_attached' }),
@@ -293,26 +258,15 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const rendered = renderWithRouter(
-      <>
-        <ExploreCurrentPanel orpc={orpc} />
-        <NavigationProbe />
-      </>,
-    );
-
-    await waitFor(() => {
-      expect(latestRouter).toBeDefined();
-    });
-
-    invariant(latestRouter !== undefined, 'expected the navigation probe to capture the router');
-
-    // the navigate this readiness triggers is not this test's concern — stubbed so the panel
-    // stays mounted for the checkbox interaction below
-    spyOn(latestRouter, 'navigate').mockImplementation(() => Promise.resolve());
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
 
     await waitFor(() => {
       expect(client.startActivity).toHaveBeenCalledTimes(1);
     });
+
+    // the panel navigates once a fresh start engages; latching it already-engaged keeps the panel
+    // mounted here so this test reads the ready-state content in place
+    setEngagedActivityID(started.id);
 
     setIdleWorkerHandle({
       activity: createMockActivitySnapshot({ id: started.id }),
@@ -407,20 +361,9 @@ test('it navigates to the engagement screen once the start goes live', async () 
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    renderWithRouter(
-      <>
-        <ExploreCurrentPanel orpc={orpc} />
-        <NavigationProbe />
-      </>,
-    );
-
-    await waitFor(() => {
-      expect(latestRouter).toBeDefined();
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />, {
+      routes: { '/activity': <div data-testid="engagement-screen" /> },
     });
-
-    invariant(latestRouter !== undefined, 'expected the navigation probe to capture the router');
-
-    const navigateSpy = spyOn(latestRouter, 'navigate').mockImplementation(() => Promise.resolve());
 
     await waitFor(() => {
       expect(client.startActivity).toHaveBeenCalledTimes(1);
@@ -435,10 +378,12 @@ test('it navigates to the engagement screen once the start goes live', async () 
     });
 
     await waitFor(() => {
-      expect(navigateSpy).toHaveBeenCalledExactlyOnceWith(
-        expect.objectContaining({ to: '/activity' }),
-      );
+      expect(rendered.router.state.location.pathname).toBe('/activity');
     });
+
+    const engagementScreen = await rendered.findByTestId('engagement-screen');
+
+    expect(engagementScreen).toBeVisible();
   });
 });
 
@@ -462,20 +407,9 @@ test('it navigates once an attached report is ready, without a fresh start call'
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    renderWithRouter(
-      <>
-        <ExploreCurrentPanel orpc={orpc} />
-        <NavigationProbe />
-      </>,
-    );
-
-    await waitFor(() => {
-      expect(latestRouter).toBeDefined();
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />, {
+      routes: { '/activity': <div data-testid="engagement-screen" /> },
     });
-
-    invariant(latestRouter !== undefined, 'expected the navigation probe to capture the router');
-
-    const navigateSpy = spyOn(latestRouter, 'navigate').mockImplementation(() => Promise.resolve());
 
     await waitFor(() => {
       expect(client.startActivity).toHaveBeenCalledTimes(1);
@@ -490,10 +424,11 @@ test('it navigates once an attached report is ready, without a fresh start call'
     });
 
     await waitFor(() => {
-      expect(navigateSpy).toHaveBeenCalledExactlyOnceWith(
-        expect.objectContaining({ to: '/activity' }),
-      );
+      expect(rendered.router.state.location.pathname).toBe('/activity');
     });
+
+    // the attached branch reuses the running row — navigating away never mints a fresh start
+    expect(client.startActivity).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -517,28 +452,18 @@ test('it does not navigate when the start attempt fails', async () => {
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const rendered = renderWithRouter(
-      <>
-        <ExploreCurrentPanel orpc={orpc} />
-        <NavigationProbe />
-      </>,
-    );
-
-    await waitFor(() => {
-      expect(latestRouter).toBeDefined();
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />, {
+      routes: { '/activity': <div data-testid="engagement-screen" /> },
     });
 
-    invariant(latestRouter !== undefined, 'expected the navigation probe to capture the router');
-
-    const navigateSpy = spyOn(latestRouter, 'navigate').mockImplementation(() => Promise.resolve());
-
+    // the retry action rendering is the failed start fully settled — the readiness effect has run
     await rendered.findByTestId('start-activity-retry');
 
-    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(rendered.router.state.location.pathname).toBe('/');
   });
 });
 
-test('it does not re-navigate for the same attempt once a ready state flickers', async () => {
+test('it does not re-navigate when the engaged activity flickers after returning to the panel', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
@@ -550,6 +475,8 @@ test('it does not re-navigate for the same attempt once a ready state flickers',
     startActivity: () => Promise.resolve({ activity: started, kind: 'started' }),
   });
 
+  const readySnapshot = createMockActivitySnapshot({ id: started.id });
+
   setIdleWorkerHandle({
     activity: undefined,
     client,
@@ -559,26 +486,13 @@ test('it does not re-navigate for the same attempt once a ready state flickers',
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const rendered = renderWithRouter(
-      <>
-        <ExploreCurrentPanel orpc={orpc} />
-        <NavigationProbe />
-      </>,
-    );
-
-    await waitFor(() => {
-      expect(latestRouter).toBeDefined();
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />, {
+      routes: { '/activity': <div data-testid="engagement-screen" /> },
     });
-
-    invariant(latestRouter !== undefined, 'expected the navigation probe to capture the router');
-
-    const navigateSpy = spyOn(latestRouter, 'navigate').mockImplementation(() => Promise.resolve());
 
     await waitFor(() => {
       expect(client.startActivity).toHaveBeenCalledTimes(1);
     });
-
-    const readySnapshot = createMockActivitySnapshot({ id: started.id });
 
     setIdleWorkerHandle({
       activity: readySnapshot,
@@ -588,14 +502,18 @@ test('it does not re-navigate for the same attempt once a ready state flickers',
       writerAbortSignal: new AbortController().signal,
     });
 
-    await rendered.findByLabelText('Auto-retry on failure');
-
+    // the first ready state engages this attempt and navigates to the engagement screen
     await waitFor(() => {
-      expect(navigateSpy).toHaveBeenCalledTimes(1);
+      expect(rendered.router.state.location.pathname).toBe('/activity');
     });
 
+    // returning to the explore panel (the browser back button) remounts it; the engaged-activity
+    // latch persists, so the same live activity reads as already engaged rather than re-navigating
+    await rendered.router.navigate({ to: '/' });
+    await rendered.findByLabelText('Auto-retry on failure');
+
     // a resync blip clears the store's activity, then restores the exact same one — the same
-    // attempt, never a fresh one — and must not re-fire the navigate the first ready state sent
+    // attempt, never a fresh one — and must not send the panel back to the engagement screen
     setIdleWorkerHandle({
       activity: undefined,
       client,
@@ -618,7 +536,7 @@ test('it does not re-navigate for the same attempt once a ready state flickers',
 
     await rendered.findByLabelText('Auto-retry on failure');
 
-    expect(navigateSpy).toHaveBeenCalledTimes(1);
+    expect(rendered.router.state.location.pathname).toBe('/');
   });
 });
 
@@ -649,25 +567,9 @@ test('it does not bounce back to the engagement screen once a remount finds the 
   });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    renderWithRouter(
-      <>
-        <ExploreCurrentPanel orpc={orpc} />
-        <NavigationProbe />
-      </>,
-    );
-
-    await waitFor(() => {
-      expect(latestRouter).toBeDefined();
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />, {
+      routes: { '/activity': <div data-testid="engagement-screen" /> },
     });
-
-    invariant(latestRouter !== undefined, 'expected the navigation probe to capture the router');
-
-    // real navigation this time — not stubbed — so every route change below actually unmounts and
-    // remounts the panel, the path a stubbed navigate would never exercise. The synthetic route
-    // tree renders this same panel at both '/' and '/activity', so arriving at '/activity' is
-    // itself already a remount finding the activity attached — the first place the fix is proven.
-    const router = latestRouter;
-    const navigateSpy = spyOn(router, 'navigate');
 
     await waitFor(() => {
       expect(client.startActivity).toHaveBeenCalledTimes(1);
@@ -681,37 +583,30 @@ test('it does not bounce back to the engagement screen once a remount finds the 
       writerAbortSignal: new AbortController().signal,
     });
 
+    // the first ready state engages this attempt and navigates to the engagement screen
     await waitFor(() => {
-      expect(navigateSpy).toHaveBeenCalledExactlyOnceWith(
-        expect.objectContaining({ to: '/activity' }),
-      );
+      expect(rendered.router.state.location.pathname).toBe('/activity');
     });
-
-    // the panel's own auto-navigate call is proven above — restoring here so the manual return
-    // below (standing in for the browser back button) never counts toward it
-    navigateSpy.mockRestore();
 
     // returning to the explore screen mid-run remounts the panel, which re-fires its start call
     // and finds the same activity already attached
-    await router.navigate({ to: '/' });
-
-    const returnNavigateSpy = spyOn(router, 'navigate');
+    await rendered.router.navigate({ to: '/' });
 
     await waitFor(() => {
       expect(startActivity.mock.calls.length).toBeGreaterThan(1);
     });
 
-    // gives the remounted panel's readiness effect a chance to fire before asserting it never did
+    // gives the remounted panel's readiness effect a chance to fire before asserting it never
+    // sent the player back to the engagement screen
     await expect(
       waitFor(
         () => {
-          expect(returnNavigateSpy).toHaveBeenCalled();
+          expect(rendered.router.state.location.pathname).toBe('/activity');
         },
         { timeout: 100 },
       ),
     ).toReject();
 
-    expect(returnNavigateSpy).not.toHaveBeenCalled();
-    expect(router.state.location.pathname).toBe('/');
+    expect(rendered.router.state.location.pathname).toBe('/');
   });
 });
