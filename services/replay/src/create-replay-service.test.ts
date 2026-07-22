@@ -52,5 +52,7 @@ test('it drains a claimable chain through the same deps the wake procedure close
     seed: buildStateFromSeed(3_047_525_658),
   });
 
-  await expect(service.drain()).resolves.toBe(1);
+  const drained = await service.drain();
+
+  expect(drained).toBe(1);
 });
