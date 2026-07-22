@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createChainRow } from '../test-utils/create-chain-row';
+import { createSnapshotSourceRow } from '../test-utils/create-snapshot-source-row';
 import { claimNextChain } from './claim-next-chain';
 
 /**
@@ -191,6 +192,132 @@ test('it skips a chain whose replay frontier is parked', async () => {
     avatarId: chain.avatarId,
     scopeId: chain.scopeId,
     startChainIndex: 3,
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+
+  expect(claimed).toBeUndefined();
+});
+
+test('it skips a chain whose frontier borrowed xp from a run still awaiting its verifier', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  const source = await createActivityRow(ctx.db, {
+    appendedHead: 4,
+    avatarId: chain.avatarId,
+    scopeId: 'scope_lender',
+    status: 'stopped',
+    verifiedHead: 1,
+  });
+
+  const borrower = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+  });
+
+  await createSnapshotSourceRow(ctx.db, {
+    activityID: borrower.id,
+    sourceActivityID: source.id,
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+
+  expect(claimed).toBeUndefined();
+});
+
+test('it claims a chain whose frontier borrowed xp from a fully verified run', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  const source = await createActivityRow(ctx.db, {
+    appendedHead: 4,
+    avatarId: chain.avatarId,
+    scopeId: 'scope_lender',
+    status: 'stopped',
+    verifiedHead: 4,
+  });
+
+  const borrower = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+  });
+
+  await createSnapshotSourceRow(ctx.db, {
+    activityID: borrower.id,
+    sourceActivityID: source.id,
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+
+  expect(claimed).toStrictEqual({
+    avatarID: chain.avatarId,
+    priority: 0,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
+});
+
+test('it claims a chain whose frontier borrowed xp from a rejected run, so the refusal can be applied', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  const source = await createActivityRow(ctx.db, {
+    appendedHead: 4,
+    avatarId: chain.avatarId,
+    scopeId: 'scope_lender',
+    status: 'rejected',
+    verifiedHead: 1,
+  });
+
+  const borrower = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+  });
+
+  await createSnapshotSourceRow(ctx.db, {
+    activityID: borrower.id,
+    sourceActivityID: source.id,
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+
+  expect(claimed).toStrictEqual({
+    avatarID: chain.avatarId,
+    priority: 0,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
+});
+
+test('it skips a chain whose frontier borrowed xp from a run an operator parked', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  const source = await createActivityRow(ctx.db, {
+    appendedHead: 4,
+    avatarId: chain.avatarId,
+    scopeId: 'scope_lender',
+    status: 'parked',
+    verifiedHead: 1,
+  });
+
+  const borrower = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+  });
+
+  await createSnapshotSourceRow(ctx.db, {
+    activityID: borrower.id,
+    sourceActivityID: source.id,
   });
 
   const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));

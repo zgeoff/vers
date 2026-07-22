@@ -6,7 +6,9 @@ import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bu
 import pino from 'pino';
 import invariant from 'tiny-invariant';
 import { createReplayCache } from '../replay/create-replay-cache';
+import { createActivityRow } from '../test-utils/create-activity-row';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
+import { createSnapshotSourceRow } from '../test-utils/create-snapshot-source-row';
 import { runFrontier } from './run-frontier';
 
 async function setupTest() {
@@ -356,4 +358,61 @@ test('it settles no additional xp when a stale duplicate frontier misses the alr
     .executeTakeFirstOrThrow();
 
   expect(afterSecond.xp).toBe(afterFirst.xp);
+});
+
+test('it refuses an activity whose build snapshot borrowed xp from a rejected run', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const source = await createActivityRow(ctx.db, {
+    avatarId: fixture.activity.avatarId,
+    scopeId: 'scope_lender',
+    status: 'rejected',
+  });
+
+  await createSnapshotSourceRow(ctx.db, {
+    activityID: fixture.activity.id,
+    sourceActivityID: source.id,
+  });
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, createReplayCache(), {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome).toStrictEqual({ kind: 'rejected' });
+
+  const activity = await ctx.db
+    .selectFrom('activities')
+    .select(['status', 'verifiedHead'])
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(activity).toStrictEqual({ status: 'rejected', verifiedHead: 0 });
+
+  const avatar = await ctx.db
+    .selectFrom('avatars')
+    .select('xp')
+    .where('id', '=', fixture.activity.avatarId)
+    .executeTakeFirstOrThrow();
+
+  expect(avatar.xp).toBe(0);
 });

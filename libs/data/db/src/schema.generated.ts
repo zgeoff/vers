@@ -88,6 +88,11 @@ export interface ActivityCheckpoints {
   version: number;
 }
 
+export interface ActivitySnapshotSources {
+  activityId: string;
+  sourceActivityId: string;
+}
+
 export interface AvatarGrants {
   avatarId: string;
   createdAt: Generated<Timestamp>;
@@ -206,6 +211,7 @@ export interface DB {
   activities: Activities;
   activityChains: ActivityChains;
   activityCheckpoints: ActivityCheckpoints;
+  activitySnapshotSources: ActivitySnapshotSources;
   avatarGrants: AvatarGrants;
   avatarItems: AvatarItems;
   avatars: Avatars;

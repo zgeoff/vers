@@ -171,6 +171,9 @@ timestamp to the moment the drain confirms it.
 - `provider-unavailable` — a cross-version dispatch's provider timed out, refused the connection, or
   answered with an undefined error; repeated occurrences distinguish a dead provider deploy from
   normal cold-boot latency.
+- `unbacked-snapshot` — the activity's build snapshot borrowed xp from a run that has since been
+  rejected, so the level and life it plays at were never proven; a rise tracks how far one rejection
+  propagates through an avatar's later runs.
 
 Each recording's log line carries the raw numbers behind it (heads, checkpoint counts, sim version).
 

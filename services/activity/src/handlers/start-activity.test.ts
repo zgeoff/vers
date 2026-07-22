@@ -936,3 +936,112 @@ test('it stamps the build snapshot from settled xp/level alone when the avatar c
 
   expect(activity.buildSnapshot).toStrictEqual({ level: 3, xp: 500 });
 });
+
+test('it records the unverified run a new build snapshot borrowed its xp from', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
+    startPrevHash: first.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({ activityID: first.id, checkpoints: batch, expectedHead: 0 });
+
+  const second = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'esaxrt',
+    scopeType: 'world_map_node',
+  });
+
+  const sources = await ctx.db
+    .selectFrom('activitySnapshotSources')
+    .select('sourceActivityId')
+    .where('activityId', '=', second.id)
+    .execute();
+
+  expect(sources).toStrictEqual([{ sourceActivityId: first.id }]);
+});
+
+test('it records no borrowed run when the avatar carries no pending work', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { level: 3, userId: viewer.user.id, xp: 500 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const sources = await ctx.db
+    .selectFrom('activitySnapshotSources')
+    .select('sourceActivityId')
+    .where('activityId', '=', activity.id)
+    .execute();
+
+  expect(sources).toBeEmpty();
+});
+
+test('it records no borrowed run for a parked activity left out of the build snapshot', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
+    startPrevHash: first.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({ activityID: first.id, checkpoints: batch, expectedHead: 0 });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ parkedFrom: 'stopped', status: 'parked' })
+    .where('id', '=', first.id)
+    .execute();
+
+  const second = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'esaxrt',
+    scopeType: 'world_map_node',
+  });
+
+  const sources = await ctx.db
+    .selectFrom('activitySnapshotSources')
+    .select('sourceActivityId')
+    .where('activityId', '=', second.id)
+    .execute();
+
+  expect(sources).toBeEmpty();
+});
