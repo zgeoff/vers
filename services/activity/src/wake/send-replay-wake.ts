@@ -6,6 +6,7 @@ import { createServiceToken, parseServicePrivateKey } from '@vers/service-auth';
 import { buildTracingInterceptor } from '@vers/service-utils/orpc';
 import invariant from 'tiny-invariant';
 import { makeReplayWaker } from './make-replay-waker';
+import { replayClientHandle } from './replay-client-handle';
 
 const WAKE_COALESCE_WINDOW_MS = 1000;
 const MAX_DELIVERY_ATTEMPTS = 3;
@@ -27,12 +28,21 @@ export const sendReplayWake = makeReplayWaker({
   sendWake: (attempt) => sendWakeRequest(attempt.signal),
 }).sendReplayWake;
 
-let clientPromise: Promise<ContractRouterClient<typeof replayContract>> | undefined;
+async function sendWakeRequest(signal: AbortSignal): Promise<unknown> {
+  replayClientHandle.current ??= buildReplayClient();
 
-function sendWakeRequest(signal: AbortSignal): Promise<unknown> {
-  clientPromise ??= buildReplayClient();
+  // A build failure clears the cache so the next wake retries it fresh; a wake-call failure below
+  // leaves an already-resolved handle untouched, since only this await sits inside the catch.
+  let client: ContractRouterClient<typeof replayContract>;
 
-  return clientPromise.then((client) => client.wake({}, { signal }));
+  try {
+    client = await replayClientHandle.current;
+  } catch (error) {
+    replayClientHandle.current = undefined;
+    throw error;
+  }
+
+  return client.wake({}, { signal });
 }
 
 async function buildReplayClient(): Promise<ContractRouterClient<typeof replayContract>> {
