@@ -4,11 +4,9 @@ import { createMockReplaySegmentInput } from '@vers/contract-replay/test-utils';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
-import { updateEnv } from '@vers/test-utils/bun';
 import { http, passthrough } from 'msw';
-import { createReplayService } from '../create-replay-service';
-import type { ReplayService } from '../create-replay-service';
 import { server } from '../mocks/server';
+import { createRemoteReplayProvider } from '../test-utils/create-remote-replay-provider';
 import { runReplaySegment } from './run-replay-segment';
 
 const DETERMINISTIC_INPUT = createMockReplaySegmentInput({
@@ -165,30 +163,6 @@ async function setupTest() {
   };
 }
 
-/**
- * Boots a second replay instance baked with a different engine hash, listening on an ephemeral
- * port, so a remote dispatch has a real provider to round-trip against.
- */
-async function setupRemoteProvider(
-  engineHash: string,
-): Promise<{ provider: ReplayService; url: string }> {
-  updateEnv('SIM_ENGINE_HASH', engineHash);
-
-  const provider = await createReplayService();
-
-  provider.listen(0);
-
-  onTestFinished(() => provider.app.stop());
-
-  const port = provider.app.server?.port;
-
-  if (port === undefined) {
-    throw new Error('provider service did not bind a port');
-  }
-
-  return { provider, url: `http://localhost:${port}` };
-}
-
 test('it replays in-process when the job matches this deploy’s baked hash', async () => {
   await using ctx = await setupTest();
 
@@ -253,7 +227,7 @@ test('it reports expired for a registry row past its retention deadline', async 
 test('it round-trips a remote dispatch over real HTTP with real s2s auth', async () => {
   await using ctx = await setupTest();
 
-  const remote = await setupRemoteProvider(DETERMINISTIC_INPUT.simVersion);
+  const remote = await createRemoteReplayProvider(DETERMINISTIC_INPUT.simVersion);
 
   await createSimVersionRow(ctx.db, {
     engineHash: DETERMINISTIC_INPUT.simVersion,
@@ -275,7 +249,7 @@ test('it round-trips a remote dispatch over real HTTP with real s2s auth', async
 test('it attaches a traceparent to a remote dispatch', async () => {
   await using ctx = await setupTest();
 
-  const remote = await setupRemoteProvider(DETERMINISTIC_INPUT.simVersion);
+  const remote = await createRemoteReplayProvider(DETERMINISTIC_INPUT.simVersion);
 
   await createSimVersionRow(ctx.db, {
     engineHash: DETERMINISTIC_INPUT.simVersion,
@@ -308,10 +282,97 @@ test('it attaches a traceparent to a remote dispatch', async () => {
   expect(observedTraceparent).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/u);
 });
 
+test('it reports providerUnavailable when the provider never responds', async () => {
+  await using ctx = await setupTest();
+
+  const providerServer = Bun.serve({
+    // Never resolves on its own; settles only once the client's own abort reaches the server, so
+    // `stop(true)` in teardown doesn't hang waiting on a handler stuck forever.
+    fetch: (request) =>
+      new Promise<Response>((resolve) => {
+        request.signal.addEventListener('abort', () => {
+          resolve(new Response(null, { status: 499 }));
+        });
+      }),
+    port: 0,
+  });
+
+  onTestFinished(async () => {
+    await providerServer.stop(true);
+  });
+
+  const job = createMockReplaySegmentInput({ simVersion: 'hung-provider-hash' });
+
+  await createSimVersionRow(ctx.db, {
+    engineHash: job.simVersion,
+    providerUrl: `http://localhost:${providerServer.port}`,
+    status: 'active',
+  });
+
+  const outcome = await runReplaySegment(
+    {
+      db: ctx.db,
+      privateKey: ctx.privateKey,
+      simVersion: 'this-dispatcher-hash',
+      timeoutMs: 50,
+    },
+    job,
+  );
+
+  expect(outcome).toStrictEqual({ kind: 'providerUnavailable' });
+});
+
+test('it reports providerUnavailable when the provider connection is refused', async () => {
+  await using ctx = await setupTest();
+
+  const job = createMockReplaySegmentInput({ simVersion: 'unreachable-provider-hash' });
+
+  await createSimVersionRow(ctx.db, {
+    engineHash: job.simVersion,
+    providerUrl: 'http://127.0.0.1:1',
+    status: 'active',
+  });
+
+  const outcome = await runReplaySegment(
+    { db: ctx.db, privateKey: ctx.privateKey, simVersion: 'this-dispatcher-hash' },
+    job,
+  );
+
+  expect(outcome).toStrictEqual({ kind: 'providerUnavailable' });
+});
+
+test('it reports providerUnavailable when the provider answers with a proxy-style 5xx', async () => {
+  await using ctx = await setupTest();
+
+  const providerServer = Bun.serve({
+    fetch: () => new Response('<html><body>502 Bad Gateway</body></html>', { status: 503 }),
+    port: 0,
+  });
+
+  onTestFinished(async () => {
+    await providerServer.stop(true);
+  });
+
+  const job = createMockReplaySegmentInput({ simVersion: 'half-booted-provider-hash' });
+
+  await createSimVersionRow(ctx.db, {
+    engineHash: job.simVersion,
+    providerUrl: `http://localhost:${providerServer.port}`,
+    status: 'active',
+  });
+
+  const outcome = await runReplaySegment(
+    { db: ctx.db, privateKey: ctx.privateKey, simVersion: 'this-dispatcher-hash' },
+    job,
+  );
+
+  expect(outcome).toStrictEqual({ kind: 'providerUnavailable' });
+});
+
 test('it lets a SIM_VERSION_MISMATCH from a resolved provider throw as a misroute', async () => {
   await using ctx = await setupTest();
 
-  const remote = await setupRemoteProvider('providers-actual-hash');
+  const remote = await createRemoteReplayProvider('providers-actual-hash');
 
   const job = createMockReplaySegmentInput({ simVersion: 'stamped-hash-the-provider-disowns' });
 

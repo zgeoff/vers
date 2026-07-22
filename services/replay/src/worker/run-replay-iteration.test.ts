@@ -17,6 +17,7 @@ import { MAX_REPLAY_ATTEMPTS } from '../queue/update-replay-attempts';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
+import { createRemoteReplayProvider } from '../test-utils/create-remote-replay-provider';
 import { runReplayIteration } from './run-replay-iteration';
 
 /**
@@ -669,6 +670,51 @@ test('it parks rather than rejects when the duration cap trips before the expect
   expect(updated.status).toBe('parked');
 });
 
+test('it parks an activity without incrementing its attempt count when the provider is unavailable', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ simVersion: 'unreachable-provider-hash' })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  await createSimVersionRow(ctx.db, {
+    engineHash: 'unreachable-provider-hash',
+    providerUrl: 'http://127.0.0.1:1',
+    retainedUntil: new Date(Date.now() + 86_400_000),
+    status: 'active',
+  });
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const cache = createReplayCache();
+
+  const outcome = await runReplayIteration(deps, cache);
+
+  expect(outcome).toStrictEqual({ kind: 'parked', reason: 'providerUnavailable' });
+
+  const updated = await ctx.db
+    .selectFrom('activities')
+    .select(['replayAttempts', 'status'])
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated.status).toBe('parked');
+  expect(updated.replayAttempts).toBe(0);
+});
+
 test('it evicts and rebuilds from Started when the cached driver no longer matches the loaded segment', async () => {
   await using ctx = await setupTest();
 
@@ -742,15 +788,17 @@ test('it counts a replay error as a failed attempt and quarantines at the attemp
     seed: buildStateFromSeed(3_047_525_658),
   });
 
+  const remote = await createRemoteReplayProvider('providers-actual-hash');
+
   await ctx.db
     .updateTable('activities')
-    .set({ simVersion: 'unreachable-provider-hash' })
+    .set({ simVersion: 'stamped-hash-the-provider-disowns' })
     .where('id', '=', fixture.activity.id)
     .execute();
 
   await createSimVersionRow(ctx.db, {
-    engineHash: 'unreachable-provider-hash',
-    providerUrl: 'http://127.0.0.1:1',
+    engineHash: 'stamped-hash-the-provider-disowns',
+    providerUrl: remote.url,
     retainedUntil: new Date(Date.now() + 86_400_000),
     status: 'active',
   });
@@ -793,15 +841,17 @@ test('it reports an iteration failure exactly once when a frontier was claimed',
     seed: buildStateFromSeed(3_047_525_658),
   });
 
+  const remote = await createRemoteReplayProvider('providers-actual-hash');
+
   await ctx.db
     .updateTable('activities')
-    .set({ simVersion: 'unreachable-provider-hash' })
+    .set({ simVersion: 'stamped-hash-the-provider-disowns' })
     .where('id', '=', fixture.activity.id)
     .execute();
 
   await createSimVersionRow(ctx.db, {
-    engineHash: 'unreachable-provider-hash',
-    providerUrl: 'http://127.0.0.1:1',
+    engineHash: 'stamped-hash-the-provider-disowns',
+    providerUrl: remote.url,
     retainedUntil: new Date(Date.now() + 86_400_000),
     status: 'active',
   });
