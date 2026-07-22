@@ -12,7 +12,13 @@ function rejectWithResponse(): Promise<Response> {
 
 test('it renders the hidden email and reset-token fields', async () => {
   await withRequestContext({}, async () => {
-    renderWithRouter(<ResetPasswordForm email="reset-form@vers.test" resetToken="a-token" />);
+    renderWithRouter(
+      <ResetPasswordForm
+        email="reset-form@vers.test"
+        honeypotValidFrom="1700000000000"
+        resetToken="a-token"
+      />,
+    );
 
     const emailField = await waitFor(() => {
       const field = document.querySelector<HTMLInputElement>('input[name="email"]');
@@ -37,6 +43,7 @@ test('it shows a form-level error message', async () => {
     renderWithRouter(
       <ResetPasswordForm
         email="reset-form@vers.test"
+        honeypotValidFrom="1700000000000"
         lastResult={{
           error: { '': ['This reset link is invalid or has expired.'] },
           status: 'error',
@@ -56,6 +63,7 @@ test('it shows the error for the confirm-password field', async () => {
     renderWithRouter(
       <ResetPasswordForm
         email="reset-form@vers.test"
+        honeypotValidFrom="1700000000000"
         lastResult={{ error: { confirmPassword: ['The passwords must match'] }, status: 'error' }}
         resetToken="a-token"
       />,
@@ -75,6 +83,7 @@ test('it shows a generic failure message when the server rejects the submission'
       <ResetPasswordForm
         action={rejectWithResponse}
         email="reset-form-honeypot@vers.test"
+        honeypotValidFrom="1700000000000"
         resetToken="tok"
       />,
     );
@@ -103,6 +112,7 @@ test('it disables the submit button while the reset request is pending', async (
       <ResetPasswordForm
         action={gatedAction}
         email="reset-form-pending@vers.test"
+        honeypotValidFrom="1700000000000"
         resetToken="tok"
       />,
     );

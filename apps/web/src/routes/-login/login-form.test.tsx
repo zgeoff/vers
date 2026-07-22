@@ -13,7 +13,10 @@ function rejectWithResponse(): Promise<Response> {
 test('it shows a form-level error message', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
-      <LoginForm lastResult={{ error: { '': ['Invalid email or password'] }, status: 'error' }} />,
+      <LoginForm
+        honeypotValidFrom="1700000000000"
+        lastResult={{ error: { '': ['Invalid email or password'] }, status: 'error' }}
+      />,
     );
 
     const alert = await screen.findByRole('alert');
@@ -26,6 +29,7 @@ test('it shows the error for each invalid field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
       <LoginForm
+        honeypotValidFrom="1700000000000"
         lastResult={{
           error: { email: ['Email is invalid'], password: ['Password must be 8+ characters'] },
           status: 'error',
@@ -44,7 +48,7 @@ test('it shows a generic failure message when the server rejects the submission'
   const user = userEvent.setup();
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<LoginForm action={rejectWithResponse} />);
+    renderWithRouter(<LoginForm action={rejectWithResponse} honeypotValidFrom="1700000000000" />);
 
     const emailInput = await screen.findByLabelText('Email');
 
@@ -66,7 +70,7 @@ test('it disables the submit button while the login request is pending', async (
   const gatedAction = mock(() => deferred.promise);
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<LoginForm action={gatedAction} />);
+    renderWithRouter(<LoginForm action={gatedAction} honeypotValidFrom="1700000000000" />);
 
     const emailInput = await screen.findByLabelText('Email');
 
@@ -84,7 +88,7 @@ test('it disables the submit button while the login request is pending', async (
 
 test('it links to signup and forgot password', async () => {
   await withRequestContext({}, async () => {
-    renderWithRouter(<LoginForm />);
+    renderWithRouter(<LoginForm honeypotValidFrom="1700000000000" />);
 
     const signupLink = await screen.findByRole('link', { name: 'Create an account' });
 
@@ -99,7 +103,7 @@ test('it links to signup and forgot password', async () => {
 
 test('it renders the redirect target as a hidden field', async () => {
   await withRequestContext({}, async () => {
-    renderWithRouter(<LoginForm redirectTo="/nexus" />);
+    renderWithRouter(<LoginForm honeypotValidFrom="1700000000000" redirectTo="/nexus" />);
 
     const hiddenInput = await waitFor(() => {
       const input = document.querySelector<HTMLInputElement>('input[name="redirectTo"]');
@@ -117,7 +121,7 @@ test('it renders the redirect target as a hidden field', async () => {
 
 test('it declares a POST submit so a pre-hydration fallback never puts credentials in the URL', async () => {
   await withRequestContext({}, async () => {
-    renderWithRouter(<LoginForm />);
+    renderWithRouter(<LoginForm honeypotValidFrom="1700000000000" />);
 
     const form = await waitFor(() => {
       const element = document.querySelector('form');

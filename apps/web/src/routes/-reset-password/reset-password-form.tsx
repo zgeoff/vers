@@ -14,6 +14,7 @@ import { ResetPasswordFormSchema } from './reset-password-form-schema';
 interface ResetPasswordFormProps {
   readonly action?: FormAction;
   readonly email: string;
+  readonly honeypotValidFrom: string;
   readonly lastResult?: SubmissionResult;
   readonly resetToken: string;
 }
@@ -63,7 +64,7 @@ export function ResetPasswordForm(props: ResetPasswordFormProps) {
         <Text>Please enter your new password</Text>
       </section>
       <form {...getFormProps(form)} className={formStyles} method="post">
-        <HoneypotInputs />
+        <HoneypotInputs validFrom={props.honeypotValidFrom} />
         <input name="email" type="hidden" value={props.email} />
         <input name="resetToken" type="hidden" value={props.resetToken} />
         <Field

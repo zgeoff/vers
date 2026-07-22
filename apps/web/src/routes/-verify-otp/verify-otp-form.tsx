@@ -16,6 +16,7 @@ import { VerifyOTPFormSchema } from './verify-otp-form-schema';
 interface VerifyOTPFormProps {
   readonly action?: FormAction;
   readonly code?: string | undefined;
+  readonly honeypotValidFrom: string;
   readonly lastResult?: SubmissionResult;
   readonly redirectTo?: string | undefined;
   readonly target: string;
@@ -120,7 +121,7 @@ export function VerifyOTPForm(props: VerifyOTPFormProps) {
         <Text>{INSTRUCTION_BY_TYPE[props.type]}</Text>
       </section>
       <form {...getFormProps(form)} className={formStyles} method="post" ref={formRef}>
-        <HoneypotInputs />
+        <HoneypotInputs validFrom={props.honeypotValidFrom} />
         <OTPField
           className={otpField}
           errors={codeErrors}

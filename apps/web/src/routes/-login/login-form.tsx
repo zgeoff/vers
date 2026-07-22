@@ -13,6 +13,7 @@ import { LoginFormSchema } from './login-form-schema';
 
 interface LoginFormProps {
   readonly action?: FormAction;
+  readonly honeypotValidFrom: string;
   readonly lastResult?: SubmissionResult;
   readonly redirectTo?: string | undefined;
 }
@@ -65,7 +66,7 @@ export function LoginForm(props: LoginFormProps) {
         <Text>Please enter your details to login</Text>
       </section>
       <form {...getFormProps(form)} className={formStyles} method="post">
-        <HoneypotInputs />
+        <HoneypotInputs validFrom={props.honeypotValidFrom} />
         <Field
           errors={fields.email.errors ?? []}
           inputProps={{

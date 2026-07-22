@@ -14,6 +14,7 @@ import { OnboardingFormSchema } from './onboarding-form-schema';
 
 interface OnboardingFormProps {
   readonly action?: FormAction;
+  readonly honeypotValidFrom: string;
   readonly lastResult?: SubmissionResult;
 }
 
@@ -77,7 +78,7 @@ export function OnboardingForm(props: OnboardingFormProps) {
         <Text>Please enter your details to create an account</Text>
       </section>
       <form {...getFormProps(form)} className={formStyles} method="post">
-        <HoneypotInputs />
+        <HoneypotInputs validFrom={props.honeypotValidFrom} />
         <Field
           errors={fields.username.errors ?? []}
           inputProps={{
