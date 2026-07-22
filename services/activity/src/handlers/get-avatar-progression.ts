@@ -80,7 +80,7 @@ export async function getAvatarProgression(
         eb
           .selectFrom('activityCheckpoints as unverified')
           .select(
-            sql<number>`coalesce(sum((unverified.payload -> 'rewards' ->> 'xp')::integer), 0)::integer`.as(
+            sql<string>`coalesce(sum((unverified.payload -> 'rewards' ->> 'xp')::integer), 0)`.as(
               'deltaSum',
             ),
           )
@@ -124,7 +124,7 @@ export async function getAvatarProgression(
 }
 
 interface PendingCandidateRow {
-  readonly deltaSum: null | number;
+  readonly deltaSum: null | string;
   readonly id: null | string;
   readonly payload: unknown;
   readonly settledXp: null | number;
@@ -142,7 +142,7 @@ function findPendingEntry(row: Readonly<PendingCandidateRow>): Array<PendingXPEn
   const xpDelta = buildUnsettledXP({
     settledXP: row.settledXp ?? 0,
     tailPayload: row.payload,
-    unverifiedDeltaSum: row.deltaSum ?? 0,
+    unverifiedDeltaSum: Number(row.deltaSum ?? 0),
   });
 
   if (xpDelta === 0) {

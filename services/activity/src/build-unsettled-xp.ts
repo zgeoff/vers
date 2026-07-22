@@ -14,8 +14,9 @@ interface UnsettledXPInput {
   /**
    * Summed `rewards.xp` of every checkpoint past the verified cursor. A terminal tail's own total
    * must be excluded from this sum by the caller's query — it is a run total, not a delta. A
-   * caller summing in postgres casts the aggregate back to `integer`: a bigint sum arrives as a
-   * string and would concatenate here rather than add.
+   * caller summing in postgres leaves the aggregate at `bigint` — narrowing it to `integer` in SQL
+   * overflows once the total passes that ceiling — and converts it to a number here, since the
+   * driver hands a bigint over as a string that would concatenate rather than add.
    */
   readonly unverifiedDeltaSum: number;
 }

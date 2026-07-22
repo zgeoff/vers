@@ -311,7 +311,7 @@ async function getOptimisticBuild(trx: Kysely<DB>, avatarID: string): Promise<Op
         eb
           .selectFrom('activityCheckpoints as unverified')
           .select(
-            sql<number>`coalesce(sum((unverified.payload -> 'rewards' ->> 'xp')::integer), 0)::integer`.as(
+            sql<string>`coalesce(sum((unverified.payload -> 'rewards' ->> 'xp')::integer), 0)`.as(
               'deltaSum',
             ),
           )
@@ -350,7 +350,7 @@ async function getOptimisticBuild(trx: Kysely<DB>, avatarID: string): Promise<Op
     const unsettledXP = buildUnsettledXP({
       settledXP: row.settledXp ?? 0,
       tailPayload: row.payload,
-      unverifiedDeltaSum: row.deltaSum ?? 0,
+      unverifiedDeltaSum: Number(row.deltaSum ?? 0),
     });
 
     // A run that moved the total by nothing is not a dependency: the snapshot is the same value
