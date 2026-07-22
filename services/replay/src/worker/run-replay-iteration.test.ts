@@ -599,6 +599,47 @@ test('it parks an activity stamped with an unknown sim version', async () => {
   expect(updated.status).toBe('parked');
 });
 
+test('it parks a stopped activity, leaving its chain claimable again', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ simVersion: 'never-registered-hash', status: 'stopped' })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const cache = createReplayCache();
+
+  const outcome = await runReplayIteration(deps, cache);
+
+  expect(outcome).toStrictEqual({ kind: 'parked', reason: 'unknownVersion' });
+
+  const updated = await ctx.db
+    .selectFrom('activities')
+    .select(['parkedFrom', 'status'])
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated).toStrictEqual({ parkedFrom: 'stopped', status: 'parked' });
+
+  const next = await runReplayIteration(deps, cache);
+
+  expect(next).toStrictEqual({ kind: 'idle' });
+});
+
 test('it parks an activity stamped with a retention-expired sim version', async () => {
   await using ctx = await setupTest();
 

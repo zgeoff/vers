@@ -47,6 +47,7 @@ export interface Activities {
   id: string;
   keyVersion: Generated<number>;
   lastHash: string;
+  parkedFrom: ActivityStatus | null;
   replayAttempts: Generated<number>;
   scopeId: string;
   scopeType: string;
