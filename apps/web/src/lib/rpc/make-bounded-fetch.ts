@@ -64,7 +64,9 @@ async function runAttempt(options: RunAttemptOptions): Promise<Response> {
   const signal = AbortSignal.any([options.request.signal, timeoutSignal]);
 
   try {
-    return await fetch(options.request, { ...options.init, signal });
+    // `fetch` disturbs a `Request`'s body even on an aborted attempt, so the original must never
+    // reach it directly — a retried attempt clones it fresh, leaving `options.request` untouched.
+    return await fetch(options.request.clone(), { ...options.init, signal });
   } catch (error) {
     if (options.request.signal.aborted) {
       throw error;

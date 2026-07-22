@@ -35,7 +35,7 @@ test('it returns the successful response for a retryable procedure after a hang-
   let callCount = 0;
 
   server.use(
-    http.get('http://bounded.test/rpc/proc', async () => {
+    http.post('http://bounded.test/rpc/proc', async () => {
       callCount += 1;
 
       if (callCount === 1) {
@@ -54,7 +54,10 @@ test('it returns the successful response for a retryable procedure after a hang-
   });
 
   const response = await boundedFetch(
-    new Request('http://bounded.test/rpc/proc', { method: 'GET' }),
+    new Request('http://bounded.test/rpc/proc', {
+      body: JSON.stringify({ json: {} }),
+      method: 'POST',
+    }),
     {},
     { context: {} },
     ['proc'],
