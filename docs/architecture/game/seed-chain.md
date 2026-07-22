@@ -74,9 +74,9 @@ then suspect and never advances the appended anchor.
 A rejection rewinds the appended anchor to the verified anchor in one self-referential statement,
 setting `appended_next_seed = verified_next_seed` and `appended_chain_index = verified_chain_index`
 from the row's own columns. A successor that already rooted past the verified point
-(`start_chain_index > verified_chain_index`) is void. Its forward-advance compare-and-swap can no
-longer match, and settlement clears its optimistic rewards. A quarantine blocks new activity starts
-on the pair. Every other chain scope proceeds.
+(`start_chain_index > verified_chain_index`) is void: its forward-advance compare-and-swap can no
+longer match, and nothing further settles from it. Whatever it settled while verifying stands. A
+quarantine blocks new activity starts on the pair. Every other chain scope proceeds.
 
 Session eviction changes the writer, not the activity. The activity stays `active`, and a new
 session resumes it from the verified anchor. The tail is adjudicated on its own merits. Eviction
@@ -84,21 +84,34 @@ advances nothing.
 
 ## Settlement and reveal
 
-Identity settlement and rolled-reward reveal gate on the verified anchor, never on the appended
-head, so a suspect tail that later rejects settles nothing to claw back. A synced but unverified
-reward holds as a pending item on the client until the verifier settles it.
+Identity settlement and rolled-reward reveal gate on verification, never on the appended head, so
+nothing unproven is paid. Verification's unit is the segment: a stream is adjudicated in pieces as
+it arrives, and each piece settles what it proved. A run stopped, capped, or held part way through
+keeps the xp its verified prefix earned, and an item minted for a verified segment stays minted. A
+rejection voids the chain's unverified remainder and every successor rooted past the verified
+anchor; it reverses no payout. A synced but unverified reward holds as a pending item on the client
+until the verifier settles it.
+
+The xp a checkpoint carries is read two ways. A non-terminal checkpoint's `rewards.xp` is that
+checkpoint's own delta; a terminal one's is the run's final total, containing every delta before it.
+A segment therefore settles either the sum of the deltas it verified or, when it ends on a terminal,
+that total less what earlier segments settled. The per-activity running total moves in the same
+guarded update that advances the verified cursor, so the cursor and the amount cannot disagree.
 
 A consequential read — a new activity's `buildSnapshot`, a future point spend, anything feeding a
-new run — anchors on the settled avatar row, never on an appended-but-unverified total. Chains are
-scoped per `(avatar, scope)`, and a rejection voids only its own chain's successors. Identity is
-avatar-global, so a consequential read of unverified xp would let a rejected run on one chain
-contaminate every other chain the same avatar plays.
+new run — includes an ended run's unsettled remainder, so a player who finishes one run and
+immediately starts another builds against what they just earned. A held run is excluded: `parked`
+and `quarantined` reach verification only by operator action, so counting one would stamp xp that
+never settles into this run's snapshot and every later one. Chains are scoped per `(avatar, scope)`
+while identity is avatar-global, and a rejection's cascade follows chain membership: a run on
+another scope keeps the snapshot it built from the rejected run's unsettled xp.
 
-`getAvatarProgression` reads the settled row and its pending projection in a single statement, so a
-client display is never torn between the two. The pending projection holds one entry per
-terminal-but-unsettled activity, sourced from that activity's own stored checkpoint. The settlement
-apply moves a delta from the pending set into the settled row atomically, so any single read of the
-pair sees the same total before and after. The pending projection is display-only.
+`getAvatarProgression` reads the settled row, its pending projection, and the live run's
+settled-so-far in a single statement, so a client display is never torn between them. The pending
+projection holds one entry per ended-but-unsettled activity, computed as the inverse of what
+verification settles: a settlement moves a delta from the pending set into the settled row without
+changing their sum, and a build snapshot stamped from the pair matches what verification pays. The
+pending projection is display-only.
 
 ## Concurrency
 
