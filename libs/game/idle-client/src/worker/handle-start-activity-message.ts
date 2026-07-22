@@ -80,9 +80,8 @@ async function runStart(
 
   if (isDefinedError(error) && error.code === 'AVATAR_NOT_ACTIVE') {
     return {
-      activeAvatarName: error.data.activeAvatarName,
       kind: 'failed',
-      reason: 'avatar-not-active',
+      rejection: { activeAvatarName: error.data.activeAvatarName, reason: 'avatar-not-active' },
     };
   }
 
@@ -135,9 +134,11 @@ async function runStart(
   if (retryError !== null) {
     if (isDefinedError(retryError) && retryError.code === 'AVATAR_NOT_ACTIVE') {
       return {
-        activeAvatarName: retryError.data.activeAvatarName,
         kind: 'failed',
-        reason: 'avatar-not-active',
+        rejection: {
+          activeAvatarName: retryError.data.activeAvatarName,
+          reason: 'avatar-not-active',
+        },
       };
     }
 

@@ -492,9 +492,8 @@ test("it settles a start rejected for a non-active avatar as failed, carrying th
   });
 
   expect(result).toStrictEqual({
-    activeAvatarName: viewer.avatar.name,
     kind: 'failed',
-    reason: 'avatar-not-active',
+    rejection: { activeAvatarName: viewer.avatar.name, reason: 'avatar-not-active' },
   });
 });
 

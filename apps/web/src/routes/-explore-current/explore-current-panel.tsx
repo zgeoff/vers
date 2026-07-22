@@ -168,12 +168,14 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     void navigate({ to: '/activity' });
   }, [isActivityReady, expectedActivityID, engagedActivityID, navigate]);
 
-  if (reportedStatus?.kind === 'failed' && reportedStatus.reason === 'avatar-not-active') {
+  if (reportedStatus?.kind === 'failed' && reportedStatus.rejection !== undefined) {
+    const rejection = reportedStatus.rejection;
+
     return (
       <>
         <Text data-testid="start-activity-avatar-not-active" role="alert">
-          You’re now playing as <strong>{reportedStatus.activeAvatarName}</strong>. Reload to
-          continue as {reportedStatus.activeAvatarName}.
+          You’re now playing as <strong>{rejection.activeAvatarName}</strong>. Reload to continue as{' '}
+          {rejection.activeAvatarName}.
         </Text>
         <Button
           onClick={() => {

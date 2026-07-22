@@ -546,9 +546,8 @@ test('it explains a start rejected because another avatar is active, naming that
   const client = createStubWorkerClient({
     startActivity: () =>
       Promise.resolve({
-        activeAvatarName: 'Someone Else',
         kind: 'failed',
-        reason: 'avatar-not-active',
+        rejection: { activeAvatarName: 'Someone Else', reason: 'avatar-not-active' },
       }),
   });
 
