@@ -94,6 +94,7 @@
       "devDependencies": {
         "@babel/core": "catalog:",
         "@faker-js/faker": "catalog:",
+        "@opentelemetry/sdk-metrics": "catalog:",
         "@opentelemetry/sdk-trace-node": "catalog:",
         "@pandacss/dev": "catalog:",
         "@rolldown/plugin-babel": "catalog:",
