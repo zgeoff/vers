@@ -14,7 +14,9 @@ function rejectWithResponse(): Promise<Response> {
 
 test('it shows the 2FA heading and instructions for a login verification', async () => {
   await withRequestContext({}, async () => {
-    renderWithRouter(<VerifyOTPForm target="user_1" type="2fa" />);
+    renderWithRouter(
+      <VerifyOTPForm honeypotValidFrom="1700000000000" target="user_1" type="2fa" />,
+    );
 
     const heading = await screen.findByText('Two-factor authentication');
 
@@ -28,7 +30,13 @@ test('it shows the 2FA heading and instructions for a login verification', async
 
 test('it shows the check-your-email heading and instructions for onboarding', async () => {
   await withRequestContext({}, async () => {
-    renderWithRouter(<VerifyOTPForm target="new-user@vers.test" type="onboarding" />);
+    renderWithRouter(
+      <VerifyOTPForm
+        honeypotValidFrom="1700000000000"
+        target="new-user@vers.test"
+        type="onboarding"
+      />,
+    );
 
     const heading = await screen.findByText('Check your email');
 
@@ -46,6 +54,7 @@ test('it shows a form-level error on the code field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
       <VerifyOTPForm
+        honeypotValidFrom="1700000000000"
         lastResult={{ error: { '': ['Invalid or expired code'] }, status: 'error' }}
         target="user_1"
         type="2fa"
@@ -62,7 +71,14 @@ test('it shows a generic failure message for a rejected submission', async () =>
   const user = userEvent.setup();
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<VerifyOTPForm action={rejectWithResponse} target="user_1" type="2fa" />);
+    renderWithRouter(
+      <VerifyOTPForm
+        action={rejectWithResponse}
+        honeypotValidFrom="1700000000000"
+        target="user_1"
+        type="2fa"
+      />,
+    );
 
     const otpInput = await screen.findByTestId('otp-input');
 
@@ -82,7 +98,14 @@ test('it disables the submit button while the verify request is pending', async 
   const gatedAction = mock(() => deferred.promise);
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<VerifyOTPForm action={gatedAction} target="user_1" type="2fa" />);
+    renderWithRouter(
+      <VerifyOTPForm
+        action={gatedAction}
+        honeypotValidFrom="1700000000000"
+        target="user_1"
+        type="2fa"
+      />,
+    );
 
     const otpInput = await screen.findByTestId('otp-input');
 
@@ -103,7 +126,13 @@ test('it pre-fills the OTP field from the code prop', async () => {
     const action = mock<FormAction>(() => Promise.resolve(undefined));
 
     renderWithRouter(
-      <VerifyOTPForm action={action} code="TMMPD7" target="new-user@vers.test" type="onboarding" />,
+      <VerifyOTPForm
+        action={action}
+        code="TMMPD7"
+        honeypotValidFrom="1700000000000"
+        target="new-user@vers.test"
+        type="onboarding"
+      />,
     );
 
     await screen.findByTestId('otp-input');
@@ -117,7 +146,13 @@ test('it auto-submits once when a valid code arrives with the emailed link', asy
     const action = mock<FormAction>(() => Promise.resolve(undefined));
 
     renderWithRouter(
-      <VerifyOTPForm action={action} code="TMMPD7" target="new-user@vers.test" type="onboarding" />,
+      <VerifyOTPForm
+        action={action}
+        code="TMMPD7"
+        honeypotValidFrom="1700000000000"
+        target="new-user@vers.test"
+        type="onboarding"
+      />,
     );
 
     await waitFor(() => {
@@ -137,7 +172,13 @@ test('it auto-submits a rejected code only once instead of looping', async () =>
     const action = mock<FormAction>(() => Promise.resolve(new Response(null, { status: 400 })));
 
     renderWithRouter(
-      <VerifyOTPForm action={action} code="TMMPD7" target="new-user@vers.test" type="onboarding" />,
+      <VerifyOTPForm
+        action={action}
+        code="TMMPD7"
+        honeypotValidFrom="1700000000000"
+        target="new-user@vers.test"
+        type="onboarding"
+      />,
     );
 
     await waitFor(() => {
@@ -152,7 +193,14 @@ test('it does not auto-submit when the link carries no code', async () => {
   await withRequestContext({}, async () => {
     const action = mock<FormAction>(() => Promise.resolve(undefined));
 
-    renderWithRouter(<VerifyOTPForm action={action} target="user_1" type="2fa" />);
+    renderWithRouter(
+      <VerifyOTPForm
+        action={action}
+        honeypotValidFrom="1700000000000"
+        target="user_1"
+        type="2fa"
+      />,
+    );
 
     await screen.findByTestId('otp-input');
 
@@ -165,7 +213,13 @@ test('it pre-fills without auto-submitting when the code is the wrong length', a
     const action = mock<FormAction>(() => Promise.resolve(undefined));
 
     renderWithRouter(
-      <VerifyOTPForm action={action} code="ABC" target="new-user@vers.test" type="onboarding" />,
+      <VerifyOTPForm
+        action={action}
+        code="ABC"
+        honeypotValidFrom="1700000000000"
+        target="new-user@vers.test"
+        type="onboarding"
+      />,
     );
 
     await screen.findByTestId('otp-input');

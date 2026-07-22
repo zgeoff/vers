@@ -14,6 +14,7 @@ import { SignupFormSchema } from './signup-form-schema';
 
 interface SignupFormProps {
   readonly action?: FormAction;
+  readonly honeypotValidFrom: string;
   readonly lastResult?: SubmissionResult;
 }
 
@@ -60,7 +61,7 @@ export function SignupForm(props: SignupFormProps) {
         <Text>Please enter your details to create an account</Text>
       </section>
       <form {...getFormProps(form)} className={formStyles} method="post">
-        <HoneypotInputs />
+        <HoneypotInputs validFrom={props.honeypotValidFrom} />
         <Field
           errors={fields.email.errors ?? []}
           inputProps={{

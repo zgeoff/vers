@@ -14,6 +14,7 @@ test('it shows the error for the email field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
       <ForgotPasswordForm
+        honeypotValidFrom="1700000000000"
         lastResult={{ error: { email: ['Email is invalid'] }, status: 'error' }}
       />,
     );
@@ -28,7 +29,9 @@ test('it shows a generic failure message when the server rejects the submission'
   const user = userEvent.setup();
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<ForgotPasswordForm action={rejectWithResponse} />);
+    renderWithRouter(
+      <ForgotPasswordForm action={rejectWithResponse} honeypotValidFrom="1700000000000" />,
+    );
 
     const emailInput = await screen.findByLabelText('Email');
 
@@ -49,7 +52,7 @@ test('it disables the submit button while the request is pending', async () => {
   const gatedAction = mock(() => deferred.promise);
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<ForgotPasswordForm action={gatedAction} />);
+    renderWithRouter(<ForgotPasswordForm action={gatedAction} honeypotValidFrom="1700000000000" />);
 
     const emailInput = await screen.findByLabelText('Email');
 

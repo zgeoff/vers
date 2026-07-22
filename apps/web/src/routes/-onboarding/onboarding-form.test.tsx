@@ -14,7 +14,7 @@ test('it renders every field the account-creation form collects', async () => {
   await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboarding-form@vers.test' } } },
     async () => {
-      renderWithRouter(<OnboardingForm />);
+      renderWithRouter(<OnboardingForm honeypotValidFrom="1700000000000" />);
 
       const usernameField = await screen.findByLabelText('Username');
 
@@ -34,6 +34,7 @@ test('it shows the error for the username field', async () => {
     async () => {
       renderWithRouter(
         <OnboardingForm
+          honeypotValidFrom="1700000000000"
           lastResult={{
             error: { username: ['A user with that username already exists'] },
             status: 'error',
@@ -54,6 +55,7 @@ test('it shows the error for the confirm-password field', async () => {
     async () => {
       renderWithRouter(
         <OnboardingForm
+          honeypotValidFrom="1700000000000"
           lastResult={{ error: { confirmPassword: ['The passwords must match'] }, status: 'error' }}
         />,
       );
@@ -71,7 +73,9 @@ test('it shows a generic failure message when the server rejects the submission'
   await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboarding-form-honeypot@vers.test' } } },
     async () => {
-      renderWithRouter(<OnboardingForm action={rejectWithResponse} />);
+      renderWithRouter(
+        <OnboardingForm action={rejectWithResponse} honeypotValidFrom="1700000000000" />,
+      );
 
       const usernameField = await screen.findByLabelText('Username');
 
@@ -99,7 +103,7 @@ test('it disables the submit button while the account-creation request is pendin
   await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboarding-form-pending@vers.test' } } },
     async () => {
-      renderWithRouter(<OnboardingForm action={gatedAction} />);
+      renderWithRouter(<OnboardingForm action={gatedAction} honeypotValidFrom="1700000000000" />);
 
       const usernameField = await screen.findByLabelText('Username');
 
