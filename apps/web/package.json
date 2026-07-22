@@ -63,6 +63,7 @@
     "srvx": "catalog:",
     "three": "catalog:",
     "tiny-invariant": "catalog:",
+    "undici": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

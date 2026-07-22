@@ -42,6 +42,12 @@ the service's machines and wakes a suspended one on demand. These URLs live in `
 `fly.toml` `[env]`. A service is allocated no public IP, so nothing outside the mesh can reach it.
 Mesh traffic is already encrypted, so services set `force_https = false`.
 
+An outbound call's pooled connection can hold a keep-alive socket to a flycast origin past the point
+its machine suspends: the socket still looks usable, so a request written onto it neither arrives
+nor triggers the machine's wake. `app-web`'s outbound dispatcher
+(`apps/web/src/lib/rpc/service-dispatcher.ts`) caps the pool's idle keep-alive at 30 seconds, well
+under the suspend window, so a stale socket closes before it can swallow a request.
+
 Each `deploy.config.ts` entry declares its own `exposure`, `public` or `flycast`. The deploy CLI
 allocates a missing private address for a `flycast` entry before its rollout cuts over, and
 `deploy verify` fails an entry that holds a public address or lacks its flycast one

@@ -5,6 +5,8 @@ import type { ServiceName } from '@vers/service-auth';
 import invariant from 'tiny-invariant';
 import { recordServiceCallFailure } from '../metrics/record-service-call-failure';
 import { recordServiceCallRetry } from '../metrics/record-service-call-retry';
+import type { ServiceFetchInit } from './service-dispatcher';
+import { serviceDispatcher } from './service-dispatcher';
 
 type BoundFetch = NonNullable<LinkFetchClientOptions<ClientContext>['fetch']>;
 
@@ -76,7 +78,13 @@ async function runAttempt(options: RunAttemptOptions): Promise<Response> {
     // reach it directly — a retried attempt clones it fresh, leaving `options.request` untouched.
     // The timer is cleared the instant `fetch` resolves so the bound never outlives the response
     // headers — otherwise it stays armed through oRPC's lazy body read and can abort mid-stream.
-    const response = await fetch(options.request.clone(), { ...options.init, signal });
+    const requestInit: ServiceFetchInit = {
+      ...options.init,
+      dispatcher: serviceDispatcher,
+      signal,
+    };
+
+    const response = await fetch(options.request.clone(), requestInit);
 
     clearTimeout(timer);
 
