@@ -17,9 +17,30 @@ const service = await createReplayService();
 
 service.listen();
 
+// oxlint-disable-next-line unicorn/prefer-top-level-await -- the boot drain is deliberately fire-and-forget so it never delays `listen()`
+void runBootDrain();
+
 process.on('SIGTERM', () => {
   void handleSIGTERM();
 });
+
+/**
+ * Self-heals a poke that a crash or deploy lost by draining whatever the queue already holds, without
+ * ever delaying `listen()` or crashing boot on a drain failure.
+ */
+async function runBootDrain(): Promise<void> {
+  // the try/catch lives inside the trace scope so a boot-drain failure report still carries its
+  // trace id
+  await withTraceContext(createTraceContext(), async () => {
+    try {
+      await service.drain();
+    } catch (error) {
+      service.logger.error({ err: error }, 'boot drain failed');
+
+      reportUnexpectedError(error);
+    }
+  });
+}
 
 async function handleSIGTERM(): Promise<void> {
   // the try/catch lives inside the trace scope so a shutdown report still carries its trace id

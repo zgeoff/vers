@@ -6,6 +6,11 @@ import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 import { toActivityData } from './to-activity-data';
 import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail';
 
+interface StopActivityDeps {
+  readonly db: Kysely<DB>;
+  readonly sendReplayWake: () => void;
+}
+
 /**
  * oRPC handler opts for the authed `stopActivity` procedure.
  */
@@ -33,7 +38,10 @@ interface StopActivityOpts {
  * predates a writer take-over, and honoring it would kill the run the new writer is driving. The
  * ownership check folds into each statement — a foreign or missing avatar matches no row.
  */
-export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Promise<ActivityData> {
+export async function stopActivity(
+  deps: StopActivityDeps,
+  opts: StopActivityOpts,
+): Promise<ActivityData> {
   const actingUserID = opts.context.actingUserId;
 
   if (actingUserID === null) {
@@ -42,7 +50,7 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
 
   const actingSessionID = opts.context.actingSessionId;
 
-  const row = await db.transaction().execute(async (trx) => {
+  const outcome = await deps.db.transaction().execute(async (trx) => {
     // A lockless read to learn which chain the activity belongs to; the guarded update below
     // re-verifies everything it found. Writers that touch both rows acquire the chain row before
     // the activity row, so the chain lock comes first.
@@ -65,7 +73,7 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
     }
 
     if (found.status !== 'active') {
-      return found;
+      return { kind: 'idempotent', row: found } as const;
     }
 
     if (found.writerSessionId !== null && found.writerSessionId !== actingSessionID) {
@@ -119,7 +127,7 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
         throw opts.errors.SESSION_EVICTED({ data: {} });
       }
 
-      return settled;
+      return { kind: 'idempotent', row: settled } as const;
     }
 
     await updateAppendedAnchorFromTail(trx, {
@@ -131,8 +139,12 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
       startChainIndex: stopped.startChainIndex,
     });
 
-    return stopped;
+    return { kind: 'stopped', row: stopped } as const;
   });
 
-  return toActivityData(row);
+  if (outcome.kind === 'stopped') {
+    deps.sendReplayWake();
+  }
+
+  return toActivityData(outcome.row);
 }

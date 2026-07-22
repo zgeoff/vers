@@ -7,6 +7,7 @@ import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
 import { buildActivityRouter } from './build-router';
 import { envShape } from './env-shape';
+import { makeSendReplayWake } from './wake/make-send-replay-wake';
 
 const KEY_VERSION = 1;
 
@@ -23,6 +24,12 @@ interface CreateActivityServiceConfig {
    * Injected only in tests, to trip the offline-progress cap without simulating a day.
    */
   readonly simTimeCapMs?: number;
+
+  /**
+   * Injected only in tests, to disable the wake coalesce window so a delivery assertion never waits
+   * it out.
+   */
+  readonly wakeCoalesceWindowMs?: number;
 }
 
 /**
@@ -31,12 +38,20 @@ interface CreateActivityServiceConfig {
 export function createActivityService(
   config: CreateActivityServiceConfig = {},
 ): Promise<Service<typeof envShape>> {
+  const wakeOptions =
+    config.wakeCoalesceWindowMs === undefined
+      ? undefined
+      : { coalesceWindowMs: config.wakeCoalesceWindowMs };
+
+  const sendReplayWake = makeSendReplayWake(wakeOptions);
+
   return createService({
     buildRouter: (runtime) =>
       buildActivityRouter({
         contentVersion: config.contentVersion ?? CURRENT_CONTENT_VERSION,
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
         keyVersion: config.keyVersion ?? KEY_VERSION,
+        sendReplayWake,
         simTimeCapMs: config.simTimeCapMs ?? OFFLINE_PROGRESS_CAP_MS,
       }),
     envShape,
