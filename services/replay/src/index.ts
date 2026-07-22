@@ -1,4 +1,5 @@
 export { applyVerifiedSegment } from './apply/apply-verified-segment';
+export type { ProviderRouter } from './build-provider-router';
 export type { ReplayRouter } from './build-router';
 export { parkActivity } from './dispatch/park-activity';
 export type { RunReplaySegmentDeps, RunReplaySegmentOutcome } from './dispatch/run-replay-segment';

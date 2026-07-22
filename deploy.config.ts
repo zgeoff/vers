@@ -84,7 +84,7 @@ export default defineDeployManifest({
       configDir: 'services/replay',
       dockerfile: 'services/replay/Dockerfile',
       exposure: 'flycast',
-      simVersionProvider: true,
+      simVersionProvider: { region: 'syd' },
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-replay' },
     },
     {
