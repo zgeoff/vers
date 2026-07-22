@@ -2,7 +2,6 @@ import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
 import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
-import { buildLevelFromXP } from '@vers/idle-core';
 import {
   createAnonymousViewer,
   createServiceToken,
@@ -798,7 +797,7 @@ test("it includes a stopped-but-unverified terminal activity's xp in a new build
     scopeType: 'world_map_node',
   });
 
-  expect(second.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(150), xp: 150 });
+  expect(second.buildSnapshot).toStrictEqual({ level: 2, xp: 150 });
 });
 
 test("it excludes a rejected activity's xp from a new build snapshot", async () => {
@@ -837,7 +836,7 @@ test("it excludes a rejected activity's xp from a new build snapshot", async () 
     scopeType: 'world_map_node',
   });
 
-  expect(second.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(0), xp: 0 });
+  expect(second.buildSnapshot).toStrictEqual({ level: 1, xp: 0 });
 });
 
 test('it stamps the build snapshot from settled xp/level alone when the avatar carries no pending work', async () => {
@@ -848,7 +847,7 @@ test('it stamps the build snapshot from settled xp/level alone when the avatar c
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
 
   const avatar = await createAvatarRow(ctx.db, {
-    level: buildLevelFromXP(500),
+    level: 3,
     userId: viewer.user.id,
     xp: 500,
   });
@@ -861,5 +860,5 @@ test('it stamps the build snapshot from settled xp/level alone when the avatar c
     scopeType: 'world_map_node',
   });
 
-  expect(activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(500), xp: 500 });
+  expect(activity.buildSnapshot).toStrictEqual({ level: 3, xp: 500 });
 });
