@@ -2,6 +2,7 @@ export { createDB } from './create-db';
 export { applyMigrations, migrationsFolder } from './apply-migrations';
 
 export type {
+  ActiveAvatars,
   Activities,
   ActivityChains,
   ActivityCheckpoints,

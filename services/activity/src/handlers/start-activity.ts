@@ -8,9 +8,11 @@ import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { buildUnsettledXP } from '../build-unsettled-xp';
+import { recordAvatarNotActiveRejection } from '../metrics/record-avatar-not-active-rejection';
 import { resolveEncounterNode } from '../resolve-encounter-node';
 import type {
   ActiveActivityConflictPayload,
+  AvatarNotActivePayload,
   EmptyErrorPayload,
   MissingSessionPayload,
   SimVersionProblemPayload,
@@ -36,6 +38,7 @@ interface StartActivityOpts {
     readonly actingUserId: null | string;
   };
   readonly errors: {
+    readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
     readonly CHAIN_QUARANTINED: (payload: EmptyErrorPayload) => Error;
     readonly CONFLICT: (payload: ActiveActivityConflictPayload) => Error;
     readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
@@ -66,6 +69,9 @@ interface StartActivityOpts {
  * a duplicate delivery — same key, same scope, never appended, caller already the writer or none
  * stamped — succeeds with the existing row, and every other conflict throws CONFLICT carrying it. A
  * chain whose replay frontier is quarantined admits no new starts until it is adjudicated.
+ * Admission is additionally gated to the account's active avatar under the same per-user advisory
+ * lock `selectAvatar` takes, so the pair serializes; a start for any other avatar throws
+ * AVATAR_NOT_ACTIVE naming the account's actual active avatar.
  */
 export async function startActivity(
   deps: StartActivityDeps,
@@ -113,12 +119,16 @@ export async function startActivity(
   const genesisSeed = createGenesisSeed();
 
   try {
-    // One transaction, chain row first: the upsert's write lock is held until commit, so a
-    // forward exit advancing this chain's anchor either commits before the anchor is read here or
-    // waits behind it — a new activity always roots at the anchor current at insert time. Every
-    // writer that touches both rows acquires the chain row before the activity row, so no
-    // interleaving admits a lock cycle.
+    // One transaction, per-user advisory lock first, chain row second: the advisory lock
+    // serializes this against selectAvatar/createAvatar so start-vs-switch is atomic, and the
+    // chain upsert's write lock is held until commit, so a forward exit advancing this chain's
+    // anchor either commits before the anchor is read here or waits behind it — a new activity
+    // always roots at the anchor current at insert time. Every writer that touches both rows
+    // acquires the chain row before the activity row, and the advisory lock is taken before
+    // either, so no interleaving admits a lock cycle.
     const row = await deps.db.transaction().execute(async (trx) => {
+      await requireActiveAvatar(trx, actingUserID, opts.input.avatarID, opts.errors);
+
       const chain = await trx
         .insertInto('activityChains')
         .values({
@@ -271,6 +281,89 @@ async function resolveSimVersionStamp(
   }
 
   throw errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion } });
+}
+
+/**
+ * Errors `requireActiveAvatar` can throw — a subset of the handler's full error map.
+ */
+interface RequireActiveAvatarErrors {
+  readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
+}
+
+/**
+ * Throws AVATAR_NOT_ACTIVE unless `avatarID` is the account's active avatar, naming whichever
+ * avatar actually is. An account with no selection row — predating the active-avatar migration, or
+ * left without one because its prior selection's avatar was deleted — adopts `avatarID` as active,
+ * unless a different avatar already holds a live run; adopting past a live run would mint a second
+ * one for the account, so that start is refused and the live run's avatar named instead. Takes
+ * the same per-user advisory lock `selectAvatar`/`createAvatar` take, so the read and the
+ * adopt-or-refuse it decides on are atomic against a concurrent selectAvatar, createAvatar, or
+ * startActivity for the same user.
+ */
+async function requireActiveAvatar(
+  trx: Kysely<DB>,
+  userID: string,
+  avatarID: string,
+  errors: RequireActiveAvatarErrors,
+): Promise<void> {
+  await sql`select pg_advisory_xact_lock(hashtext(${userID}))`.execute(trx);
+
+  const selection = await trx
+    .selectFrom('activeAvatars')
+    .innerJoin('avatars', 'avatars.id', 'activeAvatars.avatarId')
+    .select(['avatars.id', 'avatars.name'])
+    .where('activeAvatars.userId', '=', userID)
+    .executeTakeFirst();
+
+  if (selection === undefined) {
+    const liveAvatar = await findLiveActivityAvatar(trx, userID);
+
+    if (liveAvatar !== null && liveAvatar.id !== avatarID) {
+      recordAvatarNotActiveRejection();
+
+      throw errors.AVATAR_NOT_ACTIVE({
+        data: { activeAvatarID: liveAvatar.id, activeAvatarName: liveAvatar.name },
+      });
+    }
+
+    await trx
+      .insertInto('activeAvatars')
+      .values({ avatarId: avatarID, userId: userID })
+      .onConflict((oc) =>
+        oc.column('userId').doUpdateSet({ avatarId: avatarID, updatedAt: sql`now()` }),
+      )
+      .execute();
+
+    return;
+  }
+
+  if (selection.id !== avatarID) {
+    recordAvatarNotActiveRejection();
+
+    throw errors.AVATAR_NOT_ACTIVE({
+      data: { activeAvatarID: selection.id, activeAvatarName: selection.name },
+    });
+  }
+}
+
+/**
+ * Finds the avatar owning the user's live activity, or null when no run is live. At most one
+ * activity per account is live by design, so the first match is the answer. The activity service
+ * cannot import `service-avatar`'s equivalent (`bun run boundaries` denies it), so this mirrors it.
+ */
+async function findLiveActivityAvatar(
+  trx: Kysely<DB>,
+  userID: string,
+): Promise<{ id: string; name: string } | null> {
+  const row = await trx
+    .selectFrom('activities')
+    .innerJoin('avatars', 'avatars.id', 'activities.avatarId')
+    .select(['avatars.id', 'avatars.name'])
+    .where('avatars.userId', '=', userID)
+    .where('activities.status', '=', 'active')
+    .executeTakeFirst();
+
+  return row ?? null;
 }
 
 interface OptimisticBuild {
