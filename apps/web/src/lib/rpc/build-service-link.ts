@@ -1,10 +1,13 @@
 import { RPCLink } from '@orpc/client/fetch';
+import type { AnyContractRouter } from '@orpc/contract';
 import { createIsomorphicFn } from '@tanstack/react-start';
 import type { ServiceName } from '@vers/service-auth';
 import { buildTracingInterceptor } from '@vers/service-utils/orpc';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
+import { buildIsRetryable } from './build-is-retryable';
 import { createEdgeServiceToken } from './create-edge-service-token';
 import { loadSessionActor } from './load-session-actor';
+import { makeBoundedFetch } from './make-bounded-fetch';
 import { SERVICE_URLS } from './service-urls';
 
 /**
@@ -24,13 +27,17 @@ export interface ServiceLinkContext {
  * proxy route (same-origin, so cookies ride along automatically), since services aren't reachable
  * outside the private network.
  */
-export function buildServiceLink(service: ServiceName): RPCLink<ServiceLinkContext> {
+export function buildServiceLink(
+  service: ServiceName,
+  contract: AnyContractRouter,
+): RPCLink<ServiceLinkContext> {
   return (
     createIsomorphicFn()
       .server(
         () =>
           new RPCLink<ServiceLinkContext>({
             clientInterceptors: [buildTracingInterceptor()],
+            fetch: makeBoundedFetch({ isRetryable: buildIsRetryable(contract), service }),
             headers: async (options) => {
               // an explicit acting user (login, force-logout) has no cookie session to name, so the
               // token carries no `sid` claim on that path
