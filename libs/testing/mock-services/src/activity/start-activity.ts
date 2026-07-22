@@ -56,6 +56,29 @@ export const startActivity = os.startActivity.handler(async (opts) => {
     throw opts.errors.NODE_UNKNOWN({ data: {} });
   }
 
+  const active = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: opts.input.avatarID, status: 'active' }),
+  );
+
+  // Mirrors the real duplicate-start idempotency, minus the writer-session leg mock rows lack.
+  if (active !== undefined) {
+    const isDuplicateStart =
+      opts.input.startKey !== undefined &&
+      active.startKey === opts.input.startKey &&
+      active.scopeType === opts.input.scopeType &&
+      active.scopeID === opts.input.scopeID &&
+      active.appendedHead === 0;
+
+    if (isDuplicateStart) {
+      return active;
+    }
+
+    throw opts.errors.CONFLICT({ data: { activity: active } });
+  }
+
+  // Runs only once a conflicting start is ruled out: the real handler's admission check and its
+  // insert share one transaction, so a conflict rolls back any adopt it made — this mock has no
+  // transaction to roll back, so it orders the check after the conflict lookup instead.
   const selection = db.activeAvatarCollection.findFirst((q) => q.where({ userID: actingUserId }));
 
   if (selection === undefined) {
@@ -76,26 +99,6 @@ export const startActivity = os.startActivity.handler(async (opts) => {
     throw opts.errors.AVATAR_NOT_ACTIVE({
       data: { activeAvatarID: activeAvatar.id, activeAvatarName: activeAvatar.name },
     });
-  }
-
-  const active = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: opts.input.avatarID, status: 'active' }),
-  );
-
-  // Mirrors the real duplicate-start idempotency, minus the writer-session leg mock rows lack.
-  if (active !== undefined) {
-    const isDuplicateStart =
-      opts.input.startKey !== undefined &&
-      active.startKey === opts.input.startKey &&
-      active.scopeType === opts.input.scopeType &&
-      active.scopeID === opts.input.scopeID &&
-      active.appendedHead === 0;
-
-    if (isDuplicateStart) {
-      return active;
-    }
-
-    throw opts.errors.CONFLICT({ data: { activity: active } });
   }
 
   const id = `act_${createId()}`;
