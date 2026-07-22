@@ -3,6 +3,7 @@ import { afterEach, expect } from 'bun:test';
 import { faker } from '@faker-js/faker';
 import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
 import { registerZustandReset } from '@vers/client-test-utils';
+import { registerMockDBReset } from '@vers/mock-services/bun';
 import {
   registerBunTestCleanup,
   registerHappyDOM,
@@ -39,6 +40,7 @@ expect.extend(jestDOMMatchers);
 // package's stores (worldmap selection, idle sync state) reset between tests
 registerZustandReset();
 registerMSWLifecycle(server);
+registerMockDBReset();
 registerRequestContextMock();
 registerIdleWorkerHandleMock();
 registerGameCanvasMock();

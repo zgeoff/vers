@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./bun": "./src/bun/index.ts",
     "./db": "./src/db/index.ts",
     "./user": "./src/user/index.ts",
     "./session": "./src/session/index.ts",
