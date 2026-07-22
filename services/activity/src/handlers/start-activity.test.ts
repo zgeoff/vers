@@ -976,6 +976,86 @@ test('it records the unverified run a new build snapshot borrowed its xp from', 
   expect(sources).toStrictEqual([{ sourceActivityId: first.id }]);
 });
 
+test('it records no borrowed run for an unsettled run that moved the total by nothing', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 0 }, type: 'completed' },
+    startPrevHash: first.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({ activityID: first.id, checkpoints: batch, expectedHead: 0 });
+
+  const second = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'esaxrt',
+    scopeType: 'world_map_node',
+  });
+
+  const sources = await ctx.db
+    .selectFrom('activitySnapshotSources')
+    .select('sourceActivityId')
+    .where('activityId', '=', second.id)
+    .execute();
+
+  expect(sources).toBeEmpty();
+  expect(second.buildSnapshot).toStrictEqual({ level: 1, xp: 0 });
+});
+
+test('it records a borrowed run whose death penalty lowered the total', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { level: 2, userId: viewer.user.id, xp: 200 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const first = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: -50 }, type: 'failed' },
+    startPrevHash: first.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({ activityID: first.id, checkpoints: batch, expectedHead: 0 });
+
+  const second = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'esaxrt',
+    scopeType: 'world_map_node',
+  });
+
+  const sources = await ctx.db
+    .selectFrom('activitySnapshotSources')
+    .select('sourceActivityId')
+    .where('activityId', '=', second.id)
+    .execute();
+
+  expect(sources).toStrictEqual([{ sourceActivityId: first.id }]);
+  expect(second.buildSnapshot).toStrictEqual({ level: 2, xp: 150 });
+});
+
 test('it records no borrowed run when the avatar carries no pending work', async () => {
   await using ctx = await setupTest();
 

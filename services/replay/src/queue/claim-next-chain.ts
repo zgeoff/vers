@@ -20,6 +20,8 @@ import type { ClaimedChain } from '../types';
  * other: adjudicating a borrower before its source would settle xp and mint items against a total
  * the source's own rejection could still erase. A source held under an operator park keeps its
  * borrowers waiting, since a hold that later rejects would leave the same unbacked total in place.
+ * A rejected source is deliberately not a barrier, whatever its cursors read: its borrowers must be
+ * claimed to be refused, and blocking them would strand them unadjudicated forever.
  */
 export async function claimNextChain(trx: Transaction<DB>): Promise<ClaimedChain | undefined> {
   const row = await trx

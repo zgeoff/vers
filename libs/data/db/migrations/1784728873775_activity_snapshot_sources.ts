@@ -8,8 +8,9 @@ import type { Kysely } from 'kysely';
  * activity is unclaimable while a source still has appends past its verified cursor, and a source
  * that rejected invalidates it.
  *
- * Edges are only ever walked from the dependent to its sources, so the primary key's leading
- * column serves every read and no reverse index exists.
+ * Edges are only ever walked from the dependent to its sources, which the primary key's leading
+ * column serves. The index on `source_activity_id` carries no read: it keeps the cascade from
+ * scanning the whole table once per activity when an avatar is removed.
  */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
@@ -31,6 +32,12 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       ['id'],
       (fk) => fk.onDelete('cascade').onUpdate('cascade'),
     )
+    .execute();
+
+  await db.schema
+    .createIndex('activity_snapshot_sources_source_activity_id_idx')
+    .on('activity_snapshot_sources')
+    .column('source_activity_id')
     .execute();
 }
 

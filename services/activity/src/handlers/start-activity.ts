@@ -275,8 +275,9 @@ async function resolveSimVersionStamp(
 
 interface OptimisticBuild {
   /**
-   * The unverified runs `totalXP` borrows from. Recording them is what lets the verifier refuse a
-   * run whose snapshot counted xp that a later rejection proved never existed.
+   * The unverified runs `totalXP` borrows from, holding only those that moved it. Recording them
+   * is what lets the verifier refuse a run whose snapshot counted xp that a later rejection proved
+   * never existed.
    */
   readonly sourceIDs: ReadonlyArray<string>;
 
@@ -346,13 +347,23 @@ async function getOptimisticBuild(trx: Kysely<DB>, avatarID: string): Promise<Op
       continue;
     }
 
-    sourceIDs.push(row.id);
-
-    totalXP += buildUnsettledXP({
+    const unsettledXP = buildUnsettledXP({
       settledXP: row.settledXp ?? 0,
       tailPayload: row.payload,
       unverifiedDeltaSum: row.deltaSum ?? 0,
     });
+
+    // A run that moved the total by nothing is not a dependency: the snapshot is the same value
+    // whether or not it exists, so its later rejection has no bearing on this run's honesty. A
+    // negative contribution still counts — a death penalty lowered the total, which is a borrow
+    // like any other.
+    if (unsettledXP === 0) {
+      continue;
+    }
+
+    sourceIDs.push(row.id);
+
+    totalXP += unsettledXP;
   }
 
   return { sourceIDs, totalXP };
