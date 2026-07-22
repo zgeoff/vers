@@ -1,5 +1,4 @@
 import { expect, mock, test } from 'bun:test';
-import { waitFor } from '@vers/test-utils';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, delay, http } from 'msw';
 import { server } from '../../mocks/node';
@@ -78,8 +77,9 @@ test('it does not retry a hang-then-succeed sequence for a non-retryable procedu
   server.use(http.post('http://bounded.test/rpc/proc', resolver));
 
   const boundedFetch = makeBoundedFetch({
-    attemptTimeoutsMs: [20],
+    attemptTimeoutsMs: [20, 1000],
     isRetryable: () => false,
+    retryBackoffMs: 1,
     service: 'avatar',
   });
 
@@ -93,9 +93,9 @@ test('it does not retry a hang-then-succeed sequence for a non-retryable procedu
 
   expect(promise).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
 
-  await waitFor(() => {
-    expect(resolver).toHaveBeenCalledOnce();
-  });
+  await expect(promise).toReject();
+
+  expect(resolver).toHaveBeenCalledOnce();
 });
 
 test("it rethrows a caller's own abort instead of converting it to SERVICE_UNAVAILABLE", () => {
