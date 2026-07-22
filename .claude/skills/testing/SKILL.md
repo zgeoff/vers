@@ -119,6 +119,12 @@ package kind:
   data through the MSW handlers and `@msw/data` store — never by stubbing hooks. Drive client state
   through a package's exported setters (`setSelectedNode`), never raw `setState` pokes; `waitFor`
   the fetch before asserting.
+- Router-aware components mount through `renderWithRouter`, which returns the `router` beside the
+  render utils. Assert a transition on `router.state.location.pathname` — memory history makes every
+  `navigate` a real transition — and declare each destination through the `routes` option so it
+  lands on an explicit marker route instead of the catch-all re-rendering the component under test.
+  Never capture the router through a probe component or a module-level variable, and never stub
+  `navigate` to a no-op.
 
 ## RSC and server functions
 

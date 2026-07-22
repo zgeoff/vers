@@ -6,6 +6,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
+import type { AnyRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
 import { render } from '@testing-library/react';
 import type { FlagKey } from '@vers/flags';
@@ -17,6 +18,20 @@ interface RenderWithRouterOptions {
    * Seeds the `/_game` layout route's context, read via `useRouteContext({ from: '/_game' })`.
    */
   readonly flags?: Readonly<Record<FlagKey, boolean>>;
+  /**
+   * Extra destinations mounted as real routes under the `/_game` layout, each rendering its
+   * element: navigation tests declare where a transition lands so it resolves to an explicit
+   * marker instead of the catch-all re-rendering the component under test.
+   */
+  readonly routes?: Readonly<Record<string, Readonly<ReactElement>>>;
+}
+
+interface RenderWithRouterResult extends ReturnType<typeof render> {
+  /**
+   * The router the tree mounted under: assert `router.state.location.pathname` after a real
+   * transition, or drive one with `router.navigate(...)`.
+   */
+  readonly router: AnyRouter;
 }
 
 /**
@@ -29,7 +44,7 @@ interface RenderWithRouterOptions {
 export function renderWithRouter(
   ui: Readonly<ReactElement>,
   options?: Readonly<RenderWithRouterOptions>,
-): ReturnType<typeof render> {
+): RenderWithRouterResult {
   const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
   const gameRoute = createRoute({
@@ -45,6 +60,14 @@ export function renderWithRouter(
     path: '/',
   });
 
+  const declaredRoutes = Object.entries(options?.routes ?? {}).map(([path, element]) =>
+    createRoute({
+      component: () => element,
+      getParentRoute: () => gameRoute,
+      path,
+    }),
+  );
+
   // catches navigation to any other in-app path a rendered `<Link>` points at (e.g. clicking a
   // nav item), so it resolves instead of 404ing against this synthetic tree's single real route
   const catchAllRoute = createRoute({
@@ -57,10 +80,12 @@ export function renderWithRouter(
 
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: ['/'] }),
-    routeTree: rootRoute.addChildren([gameRoute.addChildren([indexRoute, catchAllRoute])]),
+    routeTree: rootRoute.addChildren([
+      gameRoute.addChildren([indexRoute, ...declaredRoutes, catchAllRoute]),
+    ]),
   });
 
   setupRouterSsrQueryIntegration({ queryClient, router });
 
-  return render(<RouterProvider router={router} />);
+  return { ...render(<RouterProvider router={router} />), router };
 }
