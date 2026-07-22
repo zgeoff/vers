@@ -1,5 +1,5 @@
+import { isTerminalCheckpointType } from '@vers/idle-core';
 import * as z from 'zod';
-import { isTerminalCheckpointType } from './is-terminal-checkpoint-type';
 
 const TerminalCheckpointPayloadSchema = z.object({
   rewards: z.object({ xp: z.number() }),

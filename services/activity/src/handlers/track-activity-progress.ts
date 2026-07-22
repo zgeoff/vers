@@ -1,12 +1,12 @@
 import type { CheckpointBatchEntry, CheckpointPayload } from '@vers/contract-activity';
 import { RewardSlotSchema, buildCheckpointHash } from '@vers/contract-activity';
 import type { ActivityStatus, DB, Json } from '@vers/db';
+import { isTerminalCheckpointType } from '@vers/idle-core';
 import type { ServiceContext } from '@vers/service-runtime';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import * as z from 'zod';
-import { isTerminalCheckpointType } from '../is-terminal-checkpoint-type';
 import { recordTerminalTransition } from '../metrics/record-terminal-transition';
 import { parseTerminalCheckpointXP } from '../parse-terminal-checkpoint-xp';
 import type {
