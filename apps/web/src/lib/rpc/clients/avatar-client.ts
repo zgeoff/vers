@@ -1,8 +1,14 @@
 import { createORPCClient } from '@orpc/client';
 import type { ContractRouterClient } from '@orpc/contract';
-import type { avatarContract } from '@vers/contract-avatar';
-import type { ServiceLinkContext } from '../build-service-link';
+import { createIsomorphicFn } from '@tanstack/react-start';
+import { avatarContract } from '@vers/contract-avatar';
+import { buildProxyServiceLink } from '../build-proxy-service-link';
 import { buildServiceLink } from '../build-service-link';
+import type { ServiceLinkContext } from '../types';
 
 export const avatarClient: ContractRouterClient<typeof avatarContract, ServiceLinkContext> =
-  createORPCClient(buildServiceLink('avatar'));
+  createORPCClient(
+    createIsomorphicFn()
+      .server(() => buildServiceLink('avatar', avatarContract))
+      .client(() => buildProxyServiceLink('avatar'))(),
+  );

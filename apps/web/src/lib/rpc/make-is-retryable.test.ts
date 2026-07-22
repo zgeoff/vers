@@ -1,0 +1,21 @@
+import { expect, test } from 'bun:test';
+import { avatarContract } from '@vers/contract-avatar';
+import { makeIsRetryable } from './make-is-retryable';
+
+test('it allows retry for a GET-declared procedure', () => {
+  const isRetryable = makeIsRetryable(avatarContract);
+
+  expect(isRetryable(['getAvatars'])).toBe(true);
+});
+
+test('it disallows retry for a POST-declared procedure', () => {
+  const isRetryable = makeIsRetryable(avatarContract);
+
+  expect(isRetryable(['createAvatar'])).toBe(false);
+});
+
+test('it disallows retry for a path with no matching procedure', () => {
+  const isRetryable = makeIsRetryable(avatarContract);
+
+  expect(isRetryable(['doesNotExist'])).toBe(false);
+});
