@@ -508,8 +508,11 @@ test('it does not re-navigate when the engaged activity flickers after returning
     });
 
     // returning to the explore panel (the browser back button) remounts it; the engaged-activity
-    // latch persists, so the same live activity reads as already engaged rather than re-navigating
-    await rendered.router.navigate({ to: '/' });
+    // latch persists, so the same live activity reads as already engaged rather than re-navigating.
+    // The transition is observed through the rendered outcome, not navigate's own promise — that
+    // promise only settles once the router goes idle, which a superseding transition can starve.
+    void rendered.router.navigate({ to: '/' });
+
     await rendered.findByLabelText('Auto-retry on failure');
 
     // a resync blip clears the store's activity, then restores the exact same one — the same
@@ -589,8 +592,10 @@ test('it does not bounce back to the engagement screen once a remount finds the 
     });
 
     // returning to the explore screen mid-run remounts the panel, which re-fires its start call
-    // and finds the same activity already attached
-    await rendered.router.navigate({ to: '/' });
+    // and finds the same activity already attached. The transition is observed through the
+    // rendered outcome, not navigate's own promise — that promise only settles once the router
+    // goes idle, which a superseding transition can starve.
+    void rendered.router.navigate({ to: '/' });
 
     await waitFor(() => {
       expect(startActivity.mock.calls.length).toBeGreaterThan(1);
