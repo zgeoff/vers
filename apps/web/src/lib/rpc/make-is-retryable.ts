@@ -8,7 +8,7 @@ import { getContractRouter, isContractProcedure } from '@orpc/contract';
  * correctly gated the moment its contract lands, with no hand-maintained allowlist to fall out of
  * sync.
  */
-export function buildIsRetryable(
+export function makeIsRetryable(
   contract: AnyContractRouter,
 ): (path: ReadonlyArray<string>) => boolean {
   return (path) => {
