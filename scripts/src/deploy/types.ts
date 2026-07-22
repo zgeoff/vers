@@ -125,16 +125,32 @@ export interface ProviderAppState {
   readonly hasMachine: boolean;
 }
 
+interface CreateProviderAppAction {
+  readonly kind: 'create-provider-app';
+  readonly app: string;
+}
+
 interface AllocateFlycastIPAction {
   readonly kind: 'allocate-flycast-ip';
   readonly app: string;
 }
 
+interface RunProviderMachineAction {
+  readonly kind: 'run-provider-machine';
+  readonly app: string;
+  readonly image: string;
+}
+
+interface UpsertRegistryRowAction {
+  readonly kind: 'upsert-registry-row';
+  readonly input: UpsertSimVersionInput;
+}
+
 export type SimVersionAction =
-  | { readonly kind: 'create-provider-app'; readonly app: string }
+  | CreateProviderAppAction
   | AllocateFlycastIPAction
-  | { readonly kind: 'run-provider-machine'; readonly app: string; readonly image: string }
-  | { readonly kind: 'upsert-registry-row'; readonly input: UpsertSimVersionInput };
+  | RunProviderMachineAction
+  | UpsertRegistryRowAction;
 
 /**
  * An IP address `flyctl ips list` reports for an app, narrowed to whether it's the private
