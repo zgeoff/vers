@@ -120,6 +120,9 @@ services:
     environment:
       # canvas-persistence.spec.ts clicks through to the Market nav link, gated behind this flag
       FEATURE_MARKET: 'true'
+      # inert placeholder canvases, matching the dev-mode e2e config — the flag defaults on, and
+      # the live WebGPU/WebGL renderer is neither intended nor reliable on a headless CI runner
+      FEATURE_GAME_RENDERER: 'false'
       ACTIVITY_SERVICE_URL: http://service-activity:3000
       AVATAR_SERVICE_URL: http://service-avatar:3000
       EMAIL_SERVICE_URL: http://service-email:3000
