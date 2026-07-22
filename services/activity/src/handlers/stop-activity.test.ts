@@ -1,5 +1,6 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
+import { mockReplayService } from '@vers/mock-services/replay';
 import {
   createAnonymousViewer,
   createServiceToken,
@@ -8,10 +9,19 @@ import {
   getTestServiceKeyPair,
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
-import { buildRPCTestClient } from '@vers/test-utils';
+import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
+import { server } from '../mocks/server';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
+
+/**
+ * The wake poke's module-level coalesce window persists across every test in this process — waiting
+ * it out first guarantees this test's own stop is what triggers the delivery it asserts on.
+ */
+async function waitOutWakeCoalesceWindow(): Promise<void> {
+  await Bun.sleep(1100);
+}
 
 /**
  * `stopActivity` opens its own `db.transaction()` for the terminal-status claim and the chain's
@@ -430,4 +440,34 @@ test('it still succeeds idempotently for a displaced session once the row left a
   const settled = await clientA.stopActivity({ activityID: started.id, avatarID: avatar.id });
 
   expect(settled.status).toBe('stopped');
+});
+
+test('it attempts a wake delivery after a successful stop', async () => {
+  await using ctx = await setupTest();
+
+  await waitOutWakeCoalesceWindow();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const wakeHandler = mock(() => ({ drained: 0 }));
+
+  server.use(mockReplayService.wake.handler(wakeHandler));
+
+  await client.stopActivity({ avatarID: avatar.id });
+
+  await waitFor(
+    () => {
+      expect(wakeHandler).toHaveBeenCalledOnce();
+    },
+    { timeoutMs: 2000 },
+  );
 });

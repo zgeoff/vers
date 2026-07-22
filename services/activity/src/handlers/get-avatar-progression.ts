@@ -2,6 +2,7 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import * as z from 'zod';
 import type { MissingSessionPayload } from '../types';
+import { sendReplayWake } from '../wake/send-replay-wake';
 
 /**
  * oRPC handler opts for the authed `getAvatarProgression` procedure.
@@ -30,7 +31,9 @@ interface AvatarProgression {
  * — a stopped, capped, quarantined, or parked activity whose verified anchor hasn't caught up to
  * its appended tail. The settled row and the pending set are read in one statement, so a single
  * read always sees the same constant sum a verifier apply moves a delta across: settlement never
- * visibly jumps. Returns null when the avatar doesn't exist or isn't owned by the acting user.
+ * visibly jumps. A non-empty pending set pokes the replay service, so a client polling this while
+ * showing "Settling…" is itself the retry trigger for a poke a crash or deploy lost. Returns null
+ * when the avatar doesn't exist or isn't owned by the acting user.
  */
 export async function getAvatarProgression(
   db: Kysely<DB>,
@@ -66,6 +69,10 @@ export async function getAvatarProgression(
   }
 
   const pending = rows.flatMap((row) => findPendingEntry(row));
+
+  if (pending.length > 0) {
+    sendReplayWake();
+  }
 
   return { level: settled.level, pending, xp: settled.xp };
 }

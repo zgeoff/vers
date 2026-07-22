@@ -3,6 +3,7 @@ import type { DB } from '@vers/db';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
+import { sendReplayWake } from '../wake/send-replay-wake';
 import { toActivityData } from './to-activity-data';
 import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail';
 
@@ -42,7 +43,7 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
 
   const actingSessionID = opts.context.actingSessionId;
 
-  const row = await db.transaction().execute(async (trx) => {
+  const outcome = await db.transaction().execute(async (trx) => {
     // A lockless read to learn which chain the activity belongs to; the guarded update below
     // re-verifies everything it found. Writers that touch both rows acquire the chain row before
     // the activity row, so the chain lock comes first.
@@ -65,7 +66,7 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
     }
 
     if (found.status !== 'active') {
-      return found;
+      return { kind: 'idempotent', row: found } as const;
     }
 
     if (found.writerSessionId !== null && found.writerSessionId !== actingSessionID) {
@@ -119,7 +120,7 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
         throw opts.errors.SESSION_EVICTED({ data: {} });
       }
 
-      return settled;
+      return { kind: 'idempotent', row: settled } as const;
     }
 
     await updateAppendedAnchorFromTail(trx, {
@@ -131,8 +132,12 @@ export async function stopActivity(db: Kysely<DB>, opts: StopActivityOpts): Prom
       startChainIndex: stopped.startChainIndex,
     });
 
-    return stopped;
+    return { kind: 'stopped', row: stopped } as const;
   });
 
-  return toActivityData(row);
+  if (outcome.kind === 'stopped') {
+    sendReplayWake();
+  }
+
+  return toActivityData(outcome.row);
 }
