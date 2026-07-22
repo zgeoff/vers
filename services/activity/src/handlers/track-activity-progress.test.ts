@@ -409,6 +409,63 @@ test('it rejects a batch whose xp reward is not a number with CHECKPOINT_INVALID
   });
 });
 
+test('it rejects a batch whose xp reward exceeds what the database column holds with CHECKPOINT_INVALID', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 2_147_483_648 } },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  expect(
+    client.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
+  ).rejects.toMatchObject({
+    code: 'CHECKPOINT_INVALID',
+    data: { reason: 'invalid-rewards' },
+  });
+});
+
+test('it appends a batch whose xp reward sits at the largest value the database column holds', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 2_147_483_647 } },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  const result = await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  expect(result).toStrictEqual({ appendedHead: 1 });
+});
+
 test('it appends a batch whose rewards carry fields beside xp', async () => {
   await using ctx = await setupTest();
 

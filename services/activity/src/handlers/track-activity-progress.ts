@@ -441,13 +441,13 @@ function findRewardSlotsInvalidReason(payload: Readonly<CheckpointPayload>): str
   return isContiguous ? undefined : 'invalid-reward-slots';
 }
 
-const RewardsSchema = z.looseObject({ xp: z.int().optional() });
+const RewardsSchema = z.looseObject({ xp: z.int32().optional() });
 
 /**
  * A checkpoint's `rewards` field rides outside the hashed subset, so it's validated here rather
  * than by the payload schema. Absent is valid — a checkpoint that earned nothing carries no key at
- * all. Present, `xp` must be an integer: readers aggregate it in postgres with an `integer` cast
- * that fails the whole statement on a fractional or non-numeric value, and the offending
+ * all. Present, `xp` must fit postgres `integer`: readers aggregate it with a cast that fails the
+ * whole statement on a fractional, non-numeric, or out-of-range value, and the offending
  * checkpoint would keep failing it on every later read.
  */
 function findRewardsInvalidReason(payload: Readonly<CheckpointPayload>): string | undefined {
@@ -478,7 +478,7 @@ interface TrackActivityProgressHead {
  * `head.startChainIndex`, no run-ending entry before the batch's last — only the last entry claims
  * the activity's terminal transition, so an interior one would store a terminal the settlement rule
  * never reads — each entry's optional `rewardSlots` shape and ordinal contiguity, each entry's
- * optional `rewards.xp` being an integer, each
+ * optional `rewards.xp` fitting postgres `integer`, each
  * entry's cumulative `time` never regressing — within the batch always, and from the head row's
  * accounted time only when `expectedHead` still matches the head row, since a stale batch predates
  * that value — each entry's hash against its own payload, each entry's chain link to the previous
