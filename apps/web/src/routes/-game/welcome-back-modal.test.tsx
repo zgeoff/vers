@@ -112,9 +112,29 @@ test('it renders nothing when the catch-up ended on another device taking the ru
 });
 
 test('it offers a reload action when the account switched avatars mid catch-up', () => {
-  setResyncStatus({ activeAvatarName: 'Someone Else', kind: 'avatar-switched' });
+  setResyncStatus({
+    activeAvatarName: 'Someone Else',
+    attempts: 0,
+    kind: 'avatar-switched',
+    levelUps: 0,
+  });
+
   render(<WelcomeBackModal />);
 
   expect(screen.getByText(/Reload to continue as Someone Else/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument();
+});
+
+test('it reports the tallies a fast-forward earned before the account switched avatars', () => {
+  setResyncStatus({
+    activeAvatarName: 'Someone Else',
+    attempts: 7,
+    kind: 'avatar-switched',
+    levelUps: 1,
+  });
+
+  render(<WelcomeBackModal />);
+
+  expect(screen.getByText(/Reload to continue as Someone Else/)).toBeInTheDocument();
+  expect(screen.getByText('While you were away: 7 attempts, 1 level-ups.')).toBeInTheDocument();
 });

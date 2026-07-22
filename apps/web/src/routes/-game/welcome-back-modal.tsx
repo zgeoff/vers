@@ -71,6 +71,12 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
           You’re now playing as <strong>{resyncStatus.activeAvatarName}</strong>. Reload to continue
           as {resyncStatus.activeAvatarName}.
         </Text>
+        {resyncStatus.attempts > 0 && (
+          <Text>
+            While you were away: {resyncStatus.attempts} attempts, {resyncStatus.levelUps}{' '}
+            level-ups.
+          </Text>
+        )}
         <Button
           onClick={() => {
             globalThis.location.reload();

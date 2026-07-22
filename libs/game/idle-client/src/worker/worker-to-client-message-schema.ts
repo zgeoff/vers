@@ -24,7 +24,14 @@ const resyncStatusSchema = z.discriminatedUnion('kind', [
   z.object({ attempts: z.int(), kind: z.literal('done'), levelUps: z.int() }).readonly(),
   z.object({ attempts: z.int(), kind: z.literal('fast-forwarding'), levelUps: z.int() }).readonly(),
   z.object({ activityID: z.string(), kind: z.literal('active-elsewhere') }).readonly(),
-  z.object({ activeAvatarName: z.string(), kind: z.literal('avatar-switched') }).readonly(),
+  z
+    .object({
+      activeAvatarName: z.string(),
+      attempts: z.int(),
+      kind: z.literal('avatar-switched'),
+      levelUps: z.int(),
+    })
+    .readonly(),
   z.object({ avatarID: z.string(), kind: z.literal('failed') }).readonly(),
   z.object({ avatarID: z.string(), kind: z.literal('session-expired') }).readonly(),
   z.object({ kind: z.literal('capped') }).readonly(),

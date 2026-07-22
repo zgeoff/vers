@@ -40,13 +40,14 @@ export interface FastForwardProgress {
  * tallies already persisted, `finalRowTerminal` is true, and `activeAvatarName` names who to
  * attach next.
  */
-export interface FastForwardReport extends FastForwardProgress {
-  readonly activeAvatarName?: string;
+export type FastForwardReport = FastForwardProgress & {
   readonly activity: ActivityData;
   readonly appendedHead: number;
   readonly finalRowTerminal: boolean;
-  readonly reason: 'aborted-on-failure' | 'avatar-switched' | 'budget-exhausted' | 'displaced';
-}
+} & (
+    | { readonly activeAvatarName: string; readonly reason: 'avatar-switched' }
+    | { readonly reason: 'aborted-on-failure' | 'budget-exhausted' | 'displaced' }
+  );
 
 /**
  * `progress` is the confirmed snapshot the plan was decided from — `null` only when the avatar has

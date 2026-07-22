@@ -156,7 +156,7 @@ export interface WorkerContext {
   readonly setFailureActionDirty: (dirty: boolean) => void;
   readonly setFailureActionPushInFlight: (inFlight: boolean) => void;
   readonly setQueuedClaimResync: (avatarID: null | string) => void;
-  readonly setResyncAvatarID: (avatarID: string) => void;
+  readonly setResyncAvatarID: (avatarID: null | string) => void;
   readonly setResyncInFlight: (inFlight: boolean) => void;
   readonly setLifecycleTail: (flow: Readonly<Promise<void>>) => void;
   readonly setStartToken: (token: string) => void;

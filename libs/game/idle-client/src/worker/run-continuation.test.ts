@@ -387,7 +387,7 @@ test('it broadcasts the avatar-switched status when the continuation avatar is n
   expect(context.getActivity()).toBeNull();
 
   expect(context.getBroadcasts()).toPartiallyContain({
-    status: { activeAvatarName: 'Active One', kind: 'avatar-switched' },
+    status: { activeAvatarName: 'Active One', attempts: 0, kind: 'avatar-switched', levelUps: 0 },
     type: WorkerMessageType.ResyncStatus,
   });
 });

@@ -356,11 +356,20 @@ test('it drops a held start intent as stale on reconnect and resumes the remembe
 
   globalThis.dispatchEvent(new Event('online'));
 
-  await waitFor(() => {
-    expect(broadcasts.received).toPartiallyContain({
-      status: { activeAvatarName: viewer.avatar.name, kind: 'avatar-switched' },
-      type: WorkerMessageType.ResyncStatus,
-    });
+  // A fallback pass runs for the remembered avatar in the same call, so its own terminal status
+  // — a second `capped` emit for the already-capped row — is what broadcasts; the single-slot
+  // resync-status channel would only overwrite an `avatar-switched` status broadcast here.
+  await waitFor(async () => {
+    const heldIntent = await readPendingStartIntent();
+
+    expect(heldIntent).toBeUndefined();
+  });
+
+  const avatarSwitchedStatus: unknown = expect.objectContaining({ kind: 'avatar-switched' });
+
+  expect(broadcasts.received).not.toPartiallyContain({
+    status: avatarSwitchedStatus,
+    type: WorkerMessageType.ResyncStatus,
   });
 
   const minted = db.activityCollection.findFirst((q) =>
@@ -368,10 +377,6 @@ test('it drops a held start intent as stale on reconnect and resumes the remembe
   );
 
   expect(minted).toBeUndefined();
-
-  const heldIntent = await readPendingStartIntent();
-
-  expect(heldIntent).toBeUndefined();
 });
 
 test('it recovers a stop parked offline once a flush answer proves the connection returned', async () => {

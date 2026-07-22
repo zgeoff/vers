@@ -46,10 +46,14 @@ import type { ResyncStatus } from './worker-to-client-message-schema';
  * `UNAUTHORIZED` broadcasts `session-expired` instead, with no fault report: the only remedy is
  * a fresh sign-in, so the tab renders that rather than a futile retry. An abort settles silently
  * — broadcasting `failed` would flash an error for a deliberate stop. When `avatarID` came from a
- * durable start intent that the account has since switched away from, the pass never runs for it:
- * `avatar-switched` broadcasts instead, and — given a `fallbackAvatarID` distinct from
- * `avatarID` — the pass runs for that avatar in the same call, so the account's real active
- * avatar still gets its catch-up this cycle.
+ * durable start intent that the account has since switched away from, the pass never runs for it
+ * and the stamped resync avatar clears, so a dead intent avatar isn't resynced again next cycle.
+ * With no `fallbackAvatarID` distinct from `avatarID`, `avatar-switched` broadcasts as the cycle's
+ * terminal status. Given a `fallbackAvatarID` distinct from `avatarID`, the pass runs for that
+ * avatar in the same call instead, and only its own terminal status broadcasts: the resync-status
+ * channel is single-slot and last-write-wins, so an `avatar-switched` status here would only be
+ * overwritten by the fallback pass's own — and the fallback avatar's catch-up, the account's real
+ * active avatar, is the correct thing for the player to see this cycle.
  */
 export async function runResyncFlow(
   context: WorkerContext,
@@ -61,10 +65,11 @@ export async function runResyncFlow(
   const heldActivity = context.getActivity();
 
   // The worker's held activity is stale client state, not a live server row: once a run ends
-  // server-side — capped by trackActivityProgress, stopped from another tab, rejected by the
-  // verifier, or parked by replay's dispatch — the account may legitimately switch avatars while
-  // this worker still holds the old row, and the next resync for the new avatar lands here. Never
-  // install on top of it — reset first so no snapshot of the old avatar outlives the switch.
+  // server-side — capped by a checkpoint submission that exhausted its offline budget, stopped
+  // from another tab, rejected by the verifier, or parked by replay's dispatch — the account may
+  // legitimately switch avatars while this worker still holds the old row, and the next resync
+  // for the new avatar lands here. Never install on top of it — reset first so no snapshot of the
+  // old avatar outlives the switch.
   if (heldActivity !== null && heldActivity.avatarID !== avatarID) {
     resetSimulation(context);
   }
@@ -95,25 +100,28 @@ export async function runResyncFlow(
     }
 
     if (startFlush.outcome === 'avatar-switched') {
-      emitResyncStatus(context, {
-        activeAvatarName: startFlush.activeAvatarName,
-        kind: 'avatar-switched',
-      });
+      // No fallback pass follows: this status is the cycle's terminal outcome, so it broadcasts,
+      // and the stamped resync avatar clears — leaving it stamped would resync this same dead
+      // intent avatar again on the next connectivity proof.
+      if (fallbackAvatarID === undefined || fallbackAvatarID === avatarID) {
+        context.setResyncAvatarID(null);
 
-      if (fallbackAvatarID !== undefined && fallbackAvatarID !== avatarID) {
-        context.setResyncAvatarID(fallbackAvatarID);
+        emitResyncStatus(context, {
+          activeAvatarName: startFlush.activeAvatarName,
+          attempts: 0,
+          kind: 'avatar-switched',
+          levelUps: 0,
+        });
 
-        const fallbackResult = await runResyncPass(context, fallbackAvatarID, claim, signals);
-
-        await applyStartFlush(
-          context,
-          fallbackAvatarID,
-          claim,
-          signals,
-          { outcome: 'none' },
-          fallbackResult,
-        );
+        return;
       }
+
+      // A fallback pass follows for the account's real active avatar; its own terminal status is
+      // what broadcasts, since the single-slot resync-status channel would only overwrite an
+      // `avatar-switched` status emitted here.
+      context.setResyncAvatarID(fallbackAvatarID);
+
+      await runResyncPass(context, fallbackAvatarID, claim, signals);
 
       return;
     }
@@ -199,10 +207,11 @@ async function runResyncPass(
  * Settles the entry drain's outcome now that fetched progress can adjudicate it. A delivered
  * row a stop kept from installing is stopped back. A `blocked` intent gets one retry — the
  * pass's own queued-checkpoint drain may have closed the source row — and a delivery there earns
- * one bounded second pass to attach the minted row. A `capped` intent broadcasts the cap halt
- * only while progress names its source row closed; a still-active source keeps silently, and any
- * other row clears the intent without a broadcast, which would otherwise repeat on every resync
- * forever.
+ * one bounded second pass to attach the minted row; an `avatar-switched` retry result broadcasts
+ * the same terminal status the entry path would, so the account's switch is never dropped
+ * silently. A `capped` intent broadcasts the cap halt only while progress names its source row
+ * closed; a still-active source keeps silently, and any other row clears the intent without a
+ * broadcast, which would otherwise repeat on every resync forever.
  */
 async function applyStartFlush(
   context: WorkerContext,
@@ -226,6 +235,15 @@ async function applyStartFlush(
       await stopBackUninstalledRow(context, retryFlush.started, signals);
     } else if (retryFlush.outcome === 'undelivered') {
       context.updateConnectivity(false);
+    } else if (retryFlush.outcome === 'avatar-switched') {
+      context.setResyncAvatarID(null);
+
+      emitResyncStatus(context, {
+        activeAvatarName: retryFlush.activeAvatarName,
+        attempts: 0,
+        kind: 'avatar-switched',
+        levelUps: 0,
+      });
     }
 
     return;
@@ -450,18 +468,19 @@ async function applyFastForward(
 
   // The account switched avatars between the closed row's terminal append and the next
   // continuation's start: the closed row's tallies already persisted, so this resolves rather
-  // than reports a fault — the caller renders it as a normal outcome, not a failed catch-up.
+  // than reports a fault — the caller renders it as a normal outcome, not a failed catch-up. No
+  // further fallback pass follows at this depth, so the stamped resync avatar clears here too —
+  // otherwise the next connectivity proof would resync this same dead avatar again.
   if (report.reason === 'avatar-switched') {
-    invariant(
-      report.activeAvatarName !== undefined,
-      'an avatar-switched report must carry the active avatar name',
-    );
-
     resetSimulation(context);
+
+    context.setResyncAvatarID(null);
 
     emitResyncStatus(context, {
       activeAvatarName: report.activeAvatarName,
+      attempts: report.attempts,
       kind: 'avatar-switched',
+      levelUps: report.levelUps,
     });
 
     return;

@@ -83,7 +83,12 @@ export async function runContinuation(
     stopAndReset(context, simulation);
 
     context.broadcast({
-      status: { activeAvatarName: error.data.activeAvatarName, kind: 'avatar-switched' },
+      status: {
+        activeAvatarName: error.data.activeAvatarName,
+        attempts: 0,
+        kind: 'avatar-switched',
+        levelUps: 0,
+      },
       type: WorkerMessageType.ResyncStatus,
     });
 
