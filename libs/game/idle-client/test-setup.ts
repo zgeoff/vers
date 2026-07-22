@@ -3,6 +3,7 @@ import { afterEach, expect, mock } from 'bun:test';
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
 import { registerZustandReset } from '@vers/client-test-utils';
+import { registerMockDBReset } from '@vers/mock-services/bun';
 import { registerMSWLifecycle } from '@vers/test-utils/bun';
 import { server } from './src/mocks/node';
 import { CHECKPOINT_QUEUE_STORE_NAME, PREFERENCES_STORE_NAME } from './src/submission/constants';
@@ -23,6 +24,7 @@ expect.extend(jestDOMMatchers);
 // files
 registerZustandReset();
 registerMSWLifecycle(server);
+registerMockDBReset();
 
 // dynamic import: RTL reads `document` at import time, so it must load after registration
 const reactTestingLibrary = await import('@testing-library/react');
