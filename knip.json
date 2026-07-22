@@ -60,7 +60,7 @@
       "ignoreDependencies": ["@orpc/contract"]
     },
     "services/replay": {
-      "entry": ["src/serve.ts"]
+      "entry": ["src/serve.ts", "src/serve-provider.ts"]
     },
     "libs/service/service-utils": {
       "ignoreDependencies": ["pino-pretty"]
