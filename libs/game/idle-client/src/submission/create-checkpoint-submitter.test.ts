@@ -6,11 +6,13 @@ import { mockActivityService } from '@vers/mock-services/activity';
 import { waitFor } from '@vers/test-utils';
 import { HttpResponse, http } from 'msw';
 import invariant from 'tiny-invariant';
+import { SimulatedClock } from 'xstate';
 import { server } from '../mocks/node';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
 import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
 import { createMockStartedCheckpoint } from '../test-utils/factories/create-mock-started-checkpoint';
+import { RETRY_BACKOFF_CAP_MS } from './constants';
 import { createCheckpointSubmitter } from './create-checkpoint-submitter';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { ActivityServiceClient } from './types';
@@ -20,11 +22,12 @@ function setupTest(
   config: Readonly<{
     onAcked?: (activityID: string, appendedHead: number) => void;
     onServerContact?: () => void;
-    retryTimings?: Readonly<{ maxTimeout: number; minTimeout: number }>;
     scheduleFlush?: (flush: () => Promise<void>) => void;
     signal?: AbortSignal;
   }> = {},
 ) {
+  const clock = new SimulatedClock();
+
   const link = new RPCLink<{ traceparent?: string }>({
     headers: (options) =>
       options.context?.traceparent === undefined
@@ -45,6 +48,7 @@ function setupTest(
 
   const submitter = createCheckpointSubmitter({
     client,
+    clock,
     onAcked,
     onCapped,
     onEvicted,
@@ -58,6 +62,7 @@ function setupTest(
 
   return {
     client,
+    clock,
     onAcked,
     onCapped,
     onEvicted,
@@ -575,7 +580,7 @@ test('it drops a checkpoint for an activity that was never registered', async ()
 test('it holds the queue on a transport failure and retries it in the background until it lands', async () => {
   let shouldFail = true;
   const track = mock<() => void>();
-  const ctx = setupTest({ retryTimings: { maxTimeout: 20, minTimeout: 5 } });
+  const ctx = setupTest();
 
   server.use(
     mockActivityService.trackActivityProgress.handler(() => {
@@ -606,18 +611,20 @@ test('it holds the queue on a transport failure and retries it in the background
 
   shouldFail = false;
 
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
   await waitFor(async () => {
     const remaining = await readQueuedCheckpoints('transport-failure-activity');
 
     expect(remaining).toStrictEqual([]);
   });
 
-  expect(track.mock.calls.length).toBeGreaterThan(1);
+  expect(track).toHaveBeenCalledTimes(2);
 });
 
 test('it holds the queue and retries in the background identically on UNAUTHORIZED', async () => {
   let shouldFail = true;
-  const ctx = setupTest({ retryTimings: { maxTimeout: 20, minTimeout: 5 } });
+  const ctx = setupTest();
 
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
@@ -642,6 +649,8 @@ test('it holds the queue and retries in the background identically on UNAUTHORIZ
 
   shouldFail = false;
 
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
   await waitFor(async () => {
     const remaining = await readQueuedCheckpoints('unauthorized-backoff-activity');
 
@@ -658,13 +667,12 @@ test('it reports an unexpected retry-loop failure and starts a fresh loop on the
 
   const ctx = setupTest({
     // scripts the unexpected failure: the first acknowledged flush throws from inside the retry
-    // loop's attempt, which p-retry treats as terminal rather than another backoff step
+    // attempt's ack callback, which kills the loop rather than taking another backoff step
     onAcked: () => {
       if (ackShouldThrow) {
         throw ackFailure;
       }
     },
-    retryTimings: { maxTimeout: 20, minTimeout: 5 },
   });
 
   server.use(
@@ -690,6 +698,8 @@ test('it reports an unexpected retry-loop failure and starts a fresh loop on the
 
   transportShouldFail = false;
 
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
   await waitFor(() => {
     expect(ctx.onRetryFailed).toHaveBeenCalledExactlyOnceWith(
       'retry-loop-failure-activity',
@@ -709,6 +719,8 @@ test('it reports an unexpected retry-loop failure and starts a fresh loop on the
 
   transportShouldFail = false;
 
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
   await waitFor(async () => {
     const remaining = await readQueuedCheckpoints('retry-loop-failure-activity');
 
@@ -717,7 +729,7 @@ test('it reports an unexpected retry-loop failure and starts a fresh loop on the
 });
 
 test('it keeps a single retry loop per activity across repeated failures', async () => {
-  const ctx = setupTest({ retryTimings: { maxTimeout: 20, minTimeout: 5 } });
+  const ctx = setupTest();
 
   server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
 
@@ -730,7 +742,7 @@ test('it keeps a single retry loop per activity across repeated failures', async
 
   // each terminal submission flushes and fails immediately, but only the first failure may start
   // a loop — the second reports held again but defers to the running loop instead of starting a
-  // second one
+  // second one; the simulated clock never advances, so no backoff attempt can add a third report
   await ctx.submitter.submit('single-retry-activity', createMockCompletedCheckpoint());
   await ctx.submitter.submit('single-retry-activity', createMockCompletedCheckpoint());
 
@@ -740,7 +752,7 @@ test('it keeps a single retry loop per activity across repeated failures', async
 test('it supersedes a running retry loop when flushHeld runs, delivering exactly once', async () => {
   let shouldFail = true;
   const track = mock<() => void>();
-  const ctx = setupTest({ retryTimings: { maxTimeout: 20, minTimeout: 5 } });
+  const ctx = setupTest();
 
   server.use(
     mockActivityService.trackActivityProgress.handler(() => {
@@ -776,8 +788,10 @@ test('it supersedes a running retry loop when flushHeld runs, delivering exactly
   expect(remaining).toStrictEqual([]);
 
   // the superseded loop never fires a duplicate delivery once its old backoff would have elapsed
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
   await new Promise((resolve) => {
-    setTimeout(resolve, 40);
+    setTimeout(resolve, 0);
   });
 
   expect(track).toHaveBeenCalledTimes(2);
@@ -786,7 +800,7 @@ test('it supersedes a running retry loop when flushHeld runs, delivering exactly
 test('it flushes every held activity immediately and resets their backoff', async () => {
   let shouldFail = true;
   const track = mock<() => void>();
-  const ctx = setupTest({ retryTimings: { maxTimeout: 20, minTimeout: 5 } });
+  const ctx = setupTest();
 
   server.use(
     mockActivityService.trackActivityProgress.handler(() => {
@@ -822,7 +836,7 @@ test('it flushes every held activity immediately and resets their backoff', asyn
 
 test('it resends a held terminal checkpoint via the retry loop and empties the queue', async () => {
   let shouldFail = true;
-  const ctx = setupTest({ retryTimings: { maxTimeout: 20, minTimeout: 5 } });
+  const ctx = setupTest();
 
   server.use(
     mockActivityService.trackActivityProgress.handler(() => {
@@ -849,6 +863,8 @@ test('it resends a held terminal checkpoint via the retry loop and empties the q
 
   shouldFail = false;
 
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
   await waitFor(async () => {
     const remaining = await readQueuedCheckpoints('held-terminal-activity');
 
@@ -860,11 +876,7 @@ test('it ends the retry loop silently once the shutdown signal aborts, with no f
   const shutdownController = new AbortController();
 
   const track = mock<() => void>();
-
-  const ctx = setupTest({
-    retryTimings: { maxTimeout: 20, minTimeout: 5 },
-    signal: shutdownController.signal,
-  });
+  const ctx = setupTest({ signal: shutdownController.signal });
 
   server.use(
     mockActivityService.trackActivityProgress.handler(() => {
@@ -889,8 +901,11 @@ test('it ends the retry loop silently once the shutdown signal aborts, with no f
 
   const callsAtAbort = track.mock.calls.length;
 
+  // an abort that failed to cancel the loop would fire an attempt as soon as the backoff elapses
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
   await new Promise((resolve) => {
-    setTimeout(resolve, 40);
+    setTimeout(resolve, 0);
   });
 
   expect(track.mock.calls.length).toBe(callsAtAbort);
