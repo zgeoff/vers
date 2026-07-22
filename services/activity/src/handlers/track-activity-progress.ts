@@ -16,11 +16,11 @@ import type {
   StaleHeadPayload,
   TerminalStatusPayload,
 } from '../types';
-import { sendReplayWake } from '../wake/send-replay-wake';
 import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail';
 
 interface TrackActivityProgressDeps {
   readonly db: Kysely<DB>;
+  readonly sendReplayWake: () => void;
 
   /**
    * Ceiling on the avatar's accrued simulated-time budget, in milliseconds.
@@ -196,7 +196,8 @@ export async function trackActivityProgress(
     }
 
     recordTerminalTransition('capped');
-    sendReplayWake();
+
+    deps.sendReplayWake();
     throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: capOutcome.appendedHead } });
   }
 
@@ -305,7 +306,7 @@ export async function trackActivityProgress(
   }
 
   if (appendOutcome.kind !== 'resolved') {
-    sendReplayWake();
+    deps.sendReplayWake();
   }
 
   return { appendedHead: appendOutcome.appendedHead };

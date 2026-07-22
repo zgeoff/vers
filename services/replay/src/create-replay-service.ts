@@ -8,6 +8,8 @@ import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { buildReplayRouter } from './build-router';
 import { envShape } from './env-shape';
+import { drainReplayQueue } from './worker/drain-replay-queue';
+import type { ReplayWorkerDeps } from './worker/types';
 
 interface CreateReplayServiceConfig {
   /**
@@ -23,6 +25,13 @@ interface CreateReplayServiceConfig {
  */
 export interface ReplayService extends Service<typeof envShape> {
   readonly db: Kysely<DB>;
+
+  /**
+   * Drains the replay queue to empty, sharing the same deps the `wake` procedure's handler closes
+   * over — the boot entrypoint's self-healing backstop for a poke a crash or deploy lost.
+   */
+  readonly drain: () => Promise<number>;
+
   readonly privateKey: CryptoKey;
 
   /**
@@ -42,44 +51,43 @@ export interface ReplayService extends Service<typeof envShape> {
 export async function createReplayService(
   config: CreateReplayServiceConfig = {},
 ): Promise<ReplayService> {
-  let resolvedDB: Kysely<DB> | undefined;
+  let resolvedDeps: ReplayWorkerDeps | undefined;
   let ownsDB = false;
-  let resolvedPrivateKey: CryptoKey | undefined;
 
   const service = await createService({
     buildRouter: async (runtime) => {
       ownsDB = config.db === undefined;
-      resolvedDB = config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL });
 
-      resolvedPrivateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
+      const db = config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL });
 
-      return buildReplayRouter({
-        db: resolvedDB,
+      const privateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
+
+      resolvedDeps = {
+        db,
         keysServiceURL: runtime.env.KEYS_SERVICE_URL,
         logger: runtime.logger,
-        privateKey: resolvedPrivateKey,
+        privateKey,
         simVersion: runtime.env.SIM_ENGINE_HASH,
-      });
+      };
+
+      return buildReplayRouter(resolvedDeps);
     },
     envShape,
     name: 'service-replay',
   });
 
-  invariant(
-    resolvedDB !== undefined && resolvedPrivateKey !== undefined,
-    'buildRouter always resolves db and privateKey before returning',
-  );
+  invariant(resolvedDeps !== undefined, 'buildRouter always resolves deps before returning');
 
-  const db = resolvedDB;
-  const privateKey = resolvedPrivateKey;
+  const deps = resolvedDeps;
 
   return {
     ...service,
-    db,
-    privateKey,
+    db: deps.db,
+    drain: () => drainReplayQueue(deps),
+    privateKey: deps.privateKey,
     stopDB: async () => {
       if (ownsDB) {
-        await db.destroy();
+        await deps.db.destroy();
       }
     },
   };

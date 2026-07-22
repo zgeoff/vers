@@ -1,7 +1,9 @@
 import { expect, test } from 'bun:test';
+import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { updateEnv } from '@vers/test-utils/bun';
 import { createReplayService } from './create-replay-service';
+import { createHonestActivityFixture } from './test-utils/create-honest-activity-fixture';
 
 test('it boots from env.SIM_ENGINE_HASH', async () => {
   const service = await createReplayService();
@@ -38,4 +40,19 @@ test('it never destroys an injected db when stopped', async () => {
 
   // The injected handle is still usable — a destroyed pool would reject any further query.
   await expect(ctx.db.selectFrom('activities').select('id').limit(1).execute()).toResolve();
+});
+
+test('it drains a claimable chain through the same deps the wake procedure closes over', async () => {
+  await using ctx = await createTestDB({ isolation: 'schema' });
+
+  const service = await createReplayService({ db: ctx.db });
+
+  await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const drained = await service.drain();
+
+  expect(drained).toBe(1);
 });

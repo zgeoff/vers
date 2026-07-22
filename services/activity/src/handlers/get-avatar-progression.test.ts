@@ -1,9 +1,11 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
+import { mockReplayService } from '@vers/mock-services/replay';
 import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
-import { buildRPCTestClient } from '@vers/test-utils';
+import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
+import { server } from '../mocks/server';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
@@ -17,7 +19,7 @@ async function setupTest() {
 
   await createSimVersionRow(db.db);
 
-  const service = await createActivityService({ db: db.db });
+  const service = await createActivityService({ db: db.db, wakeCoalesceWindowMs: 0 });
 
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
@@ -239,4 +241,64 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
     code: 'UNAUTHORIZED',
     data: { reason: 'missing-session' },
   });
+});
+
+test('it attempts a wake delivery when a pending entry is present', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const batch = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  const wakeHandler = mock(() => ({ drained: 0 }));
+
+  server.use(mockReplayService.wake.handler(wakeHandler));
+
+  await client.getAvatarProgression({ avatarID: avatar.id });
+
+  await waitFor(
+    () => {
+      expect(wakeHandler).toHaveBeenCalledOnce();
+    },
+    { timeoutMs: 2000 },
+  );
+});
+
+test('it attempts no wake delivery when pending is empty', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { level: 3, userId: viewer.user.id, xp: 450 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+  const wakeHandler = mock(() => ({ drained: 0 }));
+
+  server.use(mockReplayService.wake.handler(wakeHandler));
+
+  await client.getAvatarProgression({ avatarID: avatar.id });
+
+  // no coalesce window to wait out below: the assertion is that nothing was ever sent, so there is
+  // nothing in flight to await — a fixed pause is the only way to prove an absence
+  await Bun.sleep(300);
+
+  expect(wakeHandler).not.toHaveBeenCalled();
 });
