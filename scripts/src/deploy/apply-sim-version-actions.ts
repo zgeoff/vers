@@ -51,14 +51,17 @@ async function applySimVersionAction(action: SimVersionAction): Promise<void> {
   }
 
   if (action.kind === 'run-provider-machine') {
-    await runProviderMachine(action.app, action.image, action.region);
+    await runProviderMachine(action.app, action.image, action.region, requireProviderJWKS());
 
     return;
   }
 
   if (action.kind === 'replace-provider-machine') {
+    // resolved before the destroy, so a missing secret fails with the old machine still in place
+    const jwks = requireProviderJWKS();
+
     await runFlyctl(['machine', 'destroy', '--force', action.machineID, '-a', action.app]);
-    await runProviderMachine(action.app, action.image, action.region);
+    await runProviderMachine(action.app, action.image, action.region, jwks);
 
     return;
   }
@@ -66,12 +69,19 @@ async function applySimVersionAction(action: SimVersionAction): Promise<void> {
   await upsertRegistryRow(action.input);
 }
 
-async function runProviderMachine(app: string, image: string, region: string): Promise<void> {
-  const jwks = requireEnvVar(
+function requireProviderJWKS(): string {
+  return requireEnvVar(
     'SERVICE_AUTH_JWKS',
     'a sim-version provider machine must verify inbound s2s calls',
   );
+}
 
+async function runProviderMachine(
+  app: string,
+  image: string,
+  region: string,
+  jwks: string,
+): Promise<void> {
   await runFlyctl([
     'machine',
     'run',

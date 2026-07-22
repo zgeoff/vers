@@ -9,7 +9,8 @@ import type { SimVersionAction, SimVersionActionInput } from './types';
  * an existing app with a machine already running the fleet's resolved digest
  * and a registry row that already points at it needs nothing. A missing
  * provider app is always recreated, an app that lost its machine gets a
- * fresh machine, a machine running any other digest is replaced, and every
+ * fresh machine, a machine running any other digest or sitting in any other
+ * region is replaced, and every
  * non-current state refreshes the row — the fleet, not the row or the
  * running machine, is the source of truth. Launching and replacing always
  * target the fleet's tag, never its digest — `flyctl machine run` mangles a
@@ -26,7 +27,10 @@ export function planSimVersionActions(
   const providerApp = buildProviderAppName(input.engineHash);
   const imageRef = `${input.fleetImage.repository}@${input.fleetImage.digest}`;
   const rowIsCurrent = input.registryRow?.imageRef === imageRef;
-  const machineIsCurrent = input.providerMachineImageDigest === input.fleetImage.digest;
+
+  const machineIsCurrent =
+    input.providerMachineImageDigest === input.fleetImage.digest &&
+    input.providerMachineRegion === input.region;
 
   if (rowIsCurrent && input.providerAppExists && input.providerMachineExists && machineIsCurrent) {
     return [];

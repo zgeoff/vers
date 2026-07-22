@@ -505,6 +505,7 @@ async function runSimVersionReconcile(target: DeployTarget): Promise<void> {
     providerMachineExists: providerAppState.hasMachine,
     providerMachineID: providerAppState.machineID,
     providerMachineImageDigest: providerAppState.machineImageDigest,
+    providerMachineRegion: providerAppState.machineRegion,
     region: target.simVersionProvider.region,
     registryRow,
   });

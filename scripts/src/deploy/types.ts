@@ -114,6 +114,7 @@ export interface SimVersionActionInput {
   readonly providerMachineExists: boolean;
   readonly providerMachineID: string | null;
   readonly providerMachineImageDigest: string | null;
+  readonly providerMachineRegion: string | null;
   readonly region: string;
   readonly registryRow: SimVersionRow | undefined;
 }
@@ -122,14 +123,15 @@ export interface SimVersionActionInput {
  * What already exists of a per-version provider app. `hasMachine` is false
  * whenever `exists` is — an app can outlive its machine (a partial provision
  * or a manual destroy), and a registry row must never point at one that has
- * nothing to wake. `machineID`/`machineImageDigest` are null whenever
- * `hasMachine` is.
+ * nothing to wake. `machineID`/`machineImageDigest`/`machineRegion` are null
+ * whenever `hasMachine` is.
  */
 export interface ProviderAppState {
   readonly exists: boolean;
   readonly hasMachine: boolean;
   readonly machineID: string | null;
   readonly machineImageDigest: string | null;
+  readonly machineRegion: string | null;
 }
 
 interface CreateProviderAppAction {
@@ -151,8 +153,9 @@ interface RunProviderMachineAction {
 
 /**
  * Replaces a provider machine whose image has drifted from the fleet's
- * resolved digest — `image` is always the fleet's tag ref, never its digest
- * ref, matching `RunProviderMachineAction`.
+ * resolved digest or whose region has drifted from the declared one —
+ * `image` is always the fleet's tag ref, never its digest ref, matching
+ * `RunProviderMachineAction`.
  */
 interface ReplaceProviderMachineAction {
   readonly kind: 'replace-provider-machine';
