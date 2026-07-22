@@ -71,3 +71,55 @@ test('it leaves the display xp unchanged when a delta moves from pending into th
 
   expect(afterSettlement.xp).toBe(beforeSettlement.xp);
 });
+
+test('it overlays only the part of the live run the settled row does not already carry', () => {
+  const result = buildOptimisticProgression({
+    progression: {
+      active: { activityID: 'activity_1', settledXP: 90 },
+      level: 3,
+      pending: [],
+      xp: 490,
+    },
+    simActivity: { id: 'activity_1', rewards: { xp: 120 } },
+  });
+
+  expect(result).toStrictEqual({ isSettling: true, level: buildLevelFromXP(520), xp: 520 });
+});
+
+test('it leaves the display xp unchanged as the settled row absorbs more of the live run', () => {
+  const beforeSettlement = buildOptimisticProgression({
+    progression: {
+      active: { activityID: 'activity_1', settledXP: 0 },
+      level: 3,
+      pending: [],
+      xp: 400,
+    },
+    simActivity: { id: 'activity_1', rewards: { xp: 120 } },
+  });
+
+  const afterSettlement = buildOptimisticProgression({
+    progression: {
+      active: { activityID: 'activity_1', settledXP: 90 },
+      level: 3,
+      pending: [],
+      xp: 490,
+    },
+    simActivity: { id: 'activity_1', rewards: { xp: 120 } },
+  });
+
+  expect(afterSettlement.xp).toBe(beforeSettlement.xp);
+});
+
+test('it overlays a live run whole when the settled entry belongs to another activity', () => {
+  const result = buildOptimisticProgression({
+    progression: {
+      active: { activityID: 'activity_2', settledXP: 90 },
+      level: 3,
+      pending: [],
+      xp: 400,
+    },
+    simActivity: { id: 'activity_1', rewards: { xp: 25 } },
+  });
+
+  expect(result).toStrictEqual({ isSettling: true, level: buildLevelFromXP(425), xp: 425 });
+});
