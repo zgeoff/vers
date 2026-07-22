@@ -70,8 +70,8 @@ interface StartActivityOpts {
  * stamped — succeeds with the existing row, and every other conflict throws CONFLICT carrying it. A
  * chain whose replay frontier is quarantined admits no new starts until it is adjudicated.
  * Admission is additionally gated to the account's active avatar under the same per-user advisory
- * lock `selectAvatar` takes, so the pair serializes; a start for any other avatar throws
- * AVATAR_NOT_ACTIVE naming the account's actual active avatar.
+ * lock the avatar service's selection and creation endpoints take, so the pair serializes; a start
+ * for any other avatar throws AVATAR_NOT_ACTIVE naming the account's actual active avatar.
  */
 export async function startActivity(
   deps: StartActivityDeps,
@@ -120,12 +120,12 @@ export async function startActivity(
 
   try {
     // One transaction, per-user advisory lock first, chain row second: the advisory lock
-    // serializes this against selectAvatar/createAvatar so start-vs-switch is atomic, and the
-    // chain upsert's write lock is held until commit, so a forward exit advancing this chain's
-    // anchor either commits before the anchor is read here or waits behind it — a new activity
-    // always roots at the anchor current at insert time. Every writer that touches both rows
-    // acquires the chain row before the activity row, and the advisory lock is taken before
-    // either, so no interleaving admits a lock cycle.
+    // serializes this against the avatar service's own selection and creation calls so
+    // start-vs-switch is atomic, and the chain upsert's write lock is held until commit, so a
+    // forward exit advancing this chain's anchor either commits before the anchor is read here or
+    // waits behind it — a new activity always roots at the anchor current at insert time. Every
+    // writer that touches both rows acquires the chain row before the activity row, and the
+    // advisory lock is taken before either, so no interleaving admits a lock cycle.
     const row = await deps.db.transaction().execute(async (trx) => {
       await requireActiveAvatar(trx, actingUserID, opts.input.avatarID, opts.errors);
 
@@ -284,7 +284,8 @@ async function resolveSimVersionStamp(
 }
 
 /**
- * Errors `requireActiveAvatar` can throw — a subset of the handler's full error map.
+ * Errors thrown when the account's active avatar doesn't match the requested one — a subset of
+ * the handler's full error map.
  */
 interface RequireActiveAvatarErrors {
   readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
@@ -296,9 +297,9 @@ interface RequireActiveAvatarErrors {
  * left without one because its prior selection's avatar was deleted — adopts `avatarID` as active,
  * unless a different avatar already holds a live run; adopting past a live run would mint a second
  * one for the account, so that start is refused and the live run's avatar named instead. Takes
- * the same per-user advisory lock `selectAvatar`/`createAvatar` take, so the read and the
- * adopt-or-refuse it decides on are atomic against a concurrent selectAvatar, createAvatar, or
- * startActivity for the same user.
+ * the same per-user advisory lock the avatar service's select and create take, so the read and the
+ * adopt-or-refuse it decides on are atomic against a concurrent selection change, avatar creation,
+ * or another activity start for the same user.
  */
 async function requireActiveAvatar(
   trx: Kysely<DB>,
