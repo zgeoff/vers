@@ -5,11 +5,12 @@ import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { waitFor } from '@vers/test-utils';
 import { HttpResponse } from 'msw';
-import { createActor } from 'xstate';
+import { SimulatedClock, createActor } from 'xstate';
 import { server } from '../mocks/node';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import type { CheckpointActivityEmittedEvent } from './checkpoint-activity-machine';
 import { checkpointActivityMachine } from './checkpoint-activity-machine';
+import { RETRY_BACKOFF_CAP_MS } from './constants';
 import type { ActivityServiceClient } from './types';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
@@ -18,11 +19,11 @@ function setupTest(
     activityID?: string;
     latestQueuedVersion?: number;
     onAcked?: (activityID: string, appendedHead: number) => void;
-    retryTimings?: Readonly<{ maxTimeout: number; minTimeout: number }>;
     signal?: AbortSignal;
     terminalQueued?: boolean;
   }> = {},
 ) {
+  const clock = new SimulatedClock();
   const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
 
   const client: ActivityServiceClient = createORPCClient(link);
@@ -32,6 +33,7 @@ function setupTest(
   const emitted: Array<CheckpointActivityEmittedEvent> = [];
 
   const actor = createActor(checkpointActivityMachine, {
+    clock,
     input: {
       activityID: config.activityID ?? 'activity-machine-test',
       client,
@@ -42,7 +44,7 @@ function setupTest(
       onEvicted: undefined,
       onInvalid,
       onServerContact: undefined,
-      retryTimings: config.retryTimings ?? { maxTimeout: 300_000, minTimeout: 10_000 },
+      retryTimings: { maxTimeout: 300_000, minTimeout: 10_000 },
       scheduleProgressFlush,
       signal: config.signal,
       terminalQueued: config.terminalQueued ?? false,
@@ -55,7 +57,7 @@ function setupTest(
 
   actor.start();
 
-  return { actor, emitted, onAcked, onInvalid, scheduleProgressFlush };
+  return { actor, clock, emitted, onAcked, onInvalid, scheduleProgressFlush };
 }
 
 test('it arms the shared progress window and waits for an explicit flush-due event, not a timer', async () => {
@@ -116,14 +118,10 @@ test('it moves to retrying and reports the batch held on a transport failure', a
   ]);
 });
 
-test('it retries on a real backoff timer, driven by tiny retryTimings, until the batch lands', async () => {
+test('it retries once the backoff delay elapses, until the batch lands', async () => {
   let shouldFail = true;
   const track = mock<() => void>();
-
-  const ctx = setupTest({
-    activityID: 'backoff-machine-activity',
-    retryTimings: { maxTimeout: 20, minTimeout: 5 },
-  });
+  const ctx = setupTest({ activityID: 'backoff-machine-activity' });
 
   server.use(
     mockActivityService.trackActivityProgress.handler(() => {
@@ -150,20 +148,18 @@ test('it retries on a real backoff timer, driven by tiny retryTimings, until the
 
   shouldFail = false;
 
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
   await waitFor(() => {
     expect(ctx.actor.getSnapshot().matches('evicted')).toBeTrue();
   });
 
-  expect(track.mock.calls.length).toBeGreaterThan(1);
+  expect(track).toHaveBeenCalledTimes(2);
 });
 
 test('it runs an immediate attempt from retrying without advancing the backoff attempt counter', async () => {
   const track = mock<() => void>();
-
-  const ctx = setupTest({
-    activityID: 'flush-now-retrying-activity',
-    retryTimings: { maxTimeout: 100_000, minTimeout: 50_000 },
-  });
+  const ctx = setupTest({ activityID: 'flush-now-retrying-activity' });
 
   server.use(
     mockActivityService.trackActivityProgress.handler(() => {
@@ -198,11 +194,7 @@ test('it runs an immediate attempt from retrying without advancing the backoff a
 
 test('it resets the backoff attempt counter and re-flushes when flushHeld arrives while retrying', async () => {
   let shouldFail = true;
-
-  const ctx = setupTest({
-    activityID: 'flush-held-retrying-activity',
-    retryTimings: { maxTimeout: 20, minTimeout: 5 },
-  });
+  const ctx = setupTest({ activityID: 'flush-held-retrying-activity' });
 
   server.use(
     mockActivityService.trackActivityProgress.handler(() => {
@@ -222,7 +214,14 @@ test('it resets the backoff attempt counter and re-flushes when flushHeld arrive
   ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 1 });
 
   await waitFor(() => {
-    expect(ctx.actor.getSnapshot().context.retryAttempt).toBeGreaterThan(0);
+    expect(ctx.actor.getSnapshot().matches('retrying')).toBeTrue();
+  });
+
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('retrying')).toBeTrue();
+    expect(ctx.actor.getSnapshot().context.retryAttempt).toBe(1);
   });
 
   shouldFail = false;
@@ -283,7 +282,6 @@ test('it exits retrying with no re-entry once the shutdown signal aborts', async
 
   const ctx = setupTest({
     activityID: 'shutdown-abort-activity',
-    retryTimings: { maxTimeout: 100_000, minTimeout: 50_000 },
     signal: shutdownController.signal,
   });
 
@@ -314,8 +312,11 @@ test('it exits retrying with no re-entry once the shutdown signal aborts', async
 
   const callsAtAbort = track.mock.calls.length;
 
+  // an abort that failed to cancel the backoff would fire an attempt as soon as it elapses
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
   await new Promise((resolve) => {
-    setTimeout(resolve, 40);
+    setTimeout(resolve, 0);
   });
 
   expect(track.mock.calls.length).toBe(callsAtAbort);
@@ -404,11 +405,7 @@ test('it reports a callback failure and holds the batch without starting a retry
 
 test('it resets the backoff attempt counter once a retried batch lands, so a later outage starts at the base window', async () => {
   let shouldFail = true;
-
-  const ctx = setupTest({
-    activityID: 'backoff-reset-machine-activity',
-    retryTimings: { maxTimeout: 20, minTimeout: 5 },
-  });
+  const ctx = setupTest({ activityID: 'backoff-reset-machine-activity' });
 
   server.use(
     mockActivityService.trackActivityProgress.handler(() => {
@@ -429,10 +426,19 @@ test('it resets the backoff attempt counter once a retried batch lands, so a lat
   ctx.actor.send({ type: 'FLUSH_DUE' });
 
   await waitFor(() => {
-    expect(ctx.actor.getSnapshot().context.retryAttempt).toBeGreaterThan(0);
+    expect(ctx.actor.getSnapshot().matches('retrying')).toBeTrue();
+  });
+
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('retrying')).toBeTrue();
+    expect(ctx.actor.getSnapshot().context.retryAttempt).toBe(1);
   });
 
   shouldFail = false;
+
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
 
   await waitFor(() => {
     expect(ctx.actor.getSnapshot().matches('idle')).toBeTrue();

@@ -1,6 +1,7 @@
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
+import type { ActorOptions, AnyActorLogic } from 'xstate';
 import { createActor, waitFor } from 'xstate';
 import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
 import type { CheckpointActivityChildRef } from './checkpoint-submitter-machine';
@@ -143,10 +144,11 @@ interface CreateCheckpointSubmitterOptions {
   readonly scheduleFlush?: (flush: () => Promise<void>) => void;
 
   /**
-   * Overrides a held batch's retry backoff timings — test-only, so a suite can drive the retry
-   * loop without waiting out real backoff delays.
+   * Overrides the actor clock driving every retry-backoff delay — test-only, so a suite advances
+   * a simulated clock explicitly instead of waiting out real backoff windows. Spawned per-activity
+   * children inherit it through the actor system.
    */
-  readonly retryTimings?: { readonly maxTimeout: number; readonly minTimeout: number };
+  readonly clock?: ActorOptions<AnyActorLogic>['clock'];
 
   /**
    * The runtime's shutdown signal, composed into every held-batch retry loop's own controller so
@@ -200,9 +202,12 @@ export function createCheckpointSubmitter(
   const writeCursors = new Map<string, WriteCursor>();
   const registrations = new Map<string, Promise<void>>();
 
-  const parentActor = createActor(checkpointSubmitterMachine).start();
+  // an options object carrying `clock: undefined` clobbers the actor system's default clock, so
+  // the option is only forwarded when a caller actually injected one
+  const actorOptions = options.clock === undefined ? undefined : { clock: options.clock };
+  const parentActor = createActor(checkpointSubmitterMachine, actorOptions).start();
 
-  const retryTimings = options.retryTimings ?? {
+  const retryTimings = {
     maxTimeout: RETRY_BACKOFF_CAP_MS,
     minTimeout: PROGRESS_FLUSH_INTERVAL_MS,
   };
