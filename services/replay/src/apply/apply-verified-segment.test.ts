@@ -30,7 +30,7 @@ test('it applies a duplicate segment exactly once', async () => {
     activityID: activity.id,
     avatarID: avatar.id,
     expectedVerifiedHead: 0,
-    settledXP: 0,
+    settledXP: 50,
     verifiedHead: 5,
     xpDelta: 50,
   });
@@ -39,7 +39,7 @@ test('it applies a duplicate segment exactly once', async () => {
     activityID: activity.id,
     avatarID: avatar.id,
     expectedVerifiedHead: 0,
-    settledXP: 0,
+    settledXP: 50,
     verifiedHead: 5,
     xpDelta: 50,
   });
@@ -57,11 +57,12 @@ test('it applies a duplicate segment exactly once', async () => {
 
   const cursor = await ctx.db
     .selectFrom('activities')
-    .select(['verifiedAt', 'verifiedHead'])
+    .select(['settledXp', 'verifiedAt', 'verifiedHead'])
     .where('id', '=', activity.id)
     .executeTakeFirstOrThrow();
 
   expect(cursor.verifiedHead).toBe(5);
+  expect(cursor.settledXp).toBe(50);
   expect(cursor.verifiedAt).toBeValidDate();
 });
 

@@ -2,11 +2,10 @@ import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
 /**
- * Backfills `settled_xp` for activities that settled a terminal checkpoint while the column
- * existed but nothing advanced it — the window between the column landing and the verifier
- * beginning to write it. Those rows are fully verified, so no later terminal trues them up, and a
- * cursor rewound by hand would otherwise pay their total a second time. Idempotent: it only
- * touches rows still at zero.
+ * Backfills `settled_xp` for an activity that settled a terminal checkpoint's xp while nothing
+ * advanced the column. Its verified cursor already sits at its appended head, so the replay queue
+ * never admits it again and no later segment records what it paid; a cursor rewound by hand would
+ * then pay that total a second time. Idempotent — it touches only rows still at zero.
  */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await sql`
