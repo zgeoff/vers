@@ -1,6 +1,9 @@
 import { createId } from '@paralleldrive/cuid2';
 import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
 import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
+import invariant from 'tiny-invariant';
+import { findLiveActivityAvatar } from '../avatar/find-live-activity-avatar';
+import { upsertActiveAvatar } from '../avatar/upsert-active-avatar';
 import * as db from '../db';
 import { os } from './os';
 import { resolveEncounterNode } from './resolve-encounter-node';
@@ -14,8 +17,10 @@ const MOCK_SIM_VERSION = '0.0.0-mock';
 
 /**
  * Starts an activity for an avatar owned by the acting user, snapshotting the avatar's current
- * progression, mirroring the real service: CONFLICT carries the already-active activity, and a
- * quarantined chain for the same avatar and scope admits no new starts.
+ * progression, mirroring the real service: CONFLICT carries the already-active activity, a
+ * quarantined chain for the same avatar and scope admits no new starts, and admission is gated to
+ * the account's active avatar — AVATAR_NOT_ACTIVE naming the actual one, with an absent selection
+ * adopting the starting avatar unless a different avatar already holds a live run.
  */
 export const startActivity = os.startActivity.handler(async (opts) => {
   const actingUserId = opts.context.actingUserId;
@@ -49,6 +54,28 @@ export const startActivity = os.startActivity.handler(async (opts) => {
 
   if (encounterNode === undefined) {
     throw opts.errors.NODE_UNKNOWN({ data: {} });
+  }
+
+  const selection = db.activeAvatarCollection.findFirst((q) => q.where({ userID: actingUserId }));
+
+  if (selection === undefined) {
+    const liveAvatar = findLiveActivityAvatar(actingUserId);
+
+    if (liveAvatar !== null && liveAvatar.id !== opts.input.avatarID) {
+      throw opts.errors.AVATAR_NOT_ACTIVE({
+        data: { activeAvatarID: liveAvatar.id, activeAvatarName: liveAvatar.name },
+      });
+    }
+
+    await upsertActiveAvatar(actingUserId, opts.input.avatarID);
+  } else if (selection.avatarID !== opts.input.avatarID) {
+    const activeAvatar = db.avatarCollection.findFirst((q) => q.where({ id: selection.avatarID }));
+
+    invariant(activeAvatar !== undefined, 'active avatar selection must name an existing avatar');
+
+    throw opts.errors.AVATAR_NOT_ACTIVE({
+      data: { activeAvatarID: activeAvatar.id, activeAvatarName: activeAvatar.name },
+    });
   }
 
   const active = db.activityCollection.findFirst((q) =>
