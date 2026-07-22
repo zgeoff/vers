@@ -1,4 +1,4 @@
-import { createORPCClient } from '@orpc/client';
+import { createORPCClient, isDefinedError } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ContractRouterClient } from '@orpc/contract';
 import type {
@@ -14,6 +14,15 @@ import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import { runReplaySimulation } from '../handlers/run-replay-simulation';
 
+/**
+ * Bounds one provider dispatch, so a provider stuck mid-boot fails the call rather than holding
+ * the caller's claim transaction forever. Applied fresh to each of the two dispatches a
+ * cross-version segment can make (initial replay, fresh confirm) rather than a shared deadline
+ * across both — worst case, a claim transaction that dispatches twice holds the lock for roughly
+ * twice this bound.
+ */
+const DEFAULT_PROVIDER_DISPATCH_TIMEOUT_MS = 15_000;
+
 export interface RunReplaySegmentDeps {
   readonly db: Kysely<DB>;
 
@@ -24,20 +33,28 @@ export interface RunReplaySegmentDeps {
   readonly privateKey: CryptoKey;
 
   readonly simVersion: string;
+
+  /**
+   * Overrides `DEFAULT_PROVIDER_DISPATCH_TIMEOUT_MS` for a remote provider dispatch.
+   */
+  readonly timeoutMs?: number;
 }
 
 export type RunReplaySegmentOutcome =
   | { readonly kind: 'expired' }
+  | { readonly kind: 'providerUnavailable' }
   | { readonly kind: 'replayed'; readonly output: ReplaySegmentOutput }
   | { readonly kind: 'unknownVersion' };
 
 /**
  * Routes one replay job to wherever its stamped `simVersion` can run: in-process when it matches
  * this deploy's own baked engine hash, or a remote call to the registry's provider otherwise.
- * `unknownVersion` (no registry row — a newer or unrecognized stamp) and `expired` (past retention)
- * are operational outcomes for the caller to act on — parking the activity or forcing a resync —
- * never thrown. A `SIM_VERSION_MISMATCH` rejection from a resolved provider means dispatch routed
- * to the wrong deploy; that is a bug, not an operational outcome, and is left to throw.
+ * `unknownVersion` (no registry row — a newer or unrecognized stamp), `expired` (past retention),
+ * and `providerUnavailable` (the remote dispatch timed out, couldn't connect, or the provider
+ * answered with an undefined error such as a proxy 5xx) are operational outcomes for the caller to
+ * act on — parking the activity or forcing a resync — never thrown. A `SIM_VERSION_MISMATCH`
+ * rejection from a resolved provider means dispatch routed to the wrong deploy; that is a bug, not
+ * an operational outcome, and is left to throw.
  */
 export async function runReplaySegment(
   deps: Readonly<RunReplaySegmentDeps>,
@@ -58,15 +75,24 @@ export async function runReplaySegment(
     return { kind: 'expired' };
   }
 
-  return {
-    kind: 'replayed',
-    output: await sendProviderReplaySegment(deps, version.providerUrl, job),
-  };
+  try {
+    const output = await sendProviderReplaySegment(deps, version.providerUrl, job);
+
+    return { kind: 'replayed', output };
+  } catch (error) {
+    if (isDefinedError(error)) {
+      throw error;
+    }
+
+    return { kind: 'providerUnavailable' };
+  }
 }
 
 /**
  * Calls the registered provider's own `replaySegment` endpoint, minting a short-lived s2s token
- * scoped to the replay audience.
+ * scoped to the replay audience. A defined contract error (a genuine misroute) and an undefined
+ * one (timeout, connection failure, or a proxy answering for a provider that isn't up yet) both
+ * reach the caller as a thrown error — the caller distinguishes them.
  */
 async function sendProviderReplaySegment(
   deps: Readonly<RunReplaySegmentDeps>,
@@ -88,5 +114,7 @@ async function sendProviderReplaySegment(
     }),
   );
 
-  return client.replaySegment(job);
+  return client.replaySegment(job, {
+    signal: AbortSignal.timeout(deps.timeoutMs ?? DEFAULT_PROVIDER_DISPATCH_TIMEOUT_MS),
+  });
 }

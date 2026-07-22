@@ -164,6 +164,9 @@ timestamp to the moment the drain confirms it.
 - `version-park` — unknown or retention-expired sim version, a version-registry problem needing
   fleet action.
 - `elapsed-time` — replay duration cap tripped, a per-stream anomaly.
+- `provider-unavailable` — a cross-version dispatch's provider timed out, refused the connection, or
+  answered with an undefined error; repeated occurrences distinguish a dead provider deploy from
+  normal cold-boot latency.
 
 Each recording's log line carries the raw numbers behind it (heads, checkpoint counts, sim version).
 
