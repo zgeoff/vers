@@ -41,20 +41,24 @@ fixed block of hex cells — the unit of generation. A **cell coordinate** `(cx,
 single hex cell within the lattice and is a node's identity; `cellToChunk` maps a cell to the chunk
 that owns it.
 
-- **Seeding** — a stateless integer hash `hash(userSeed, chunkX, chunkY)` (a random-access,
-  order-independent PCG/Squirrel-style hash) seeds each chunk. Nothing is baked; nothing is read
-  from disk.
+- **Seeding** — a stateless
+  [PCG](https://www.pcg-random.org/)/[Squirrel](https://www.youtube.com/watch?v=LWFzPP8ZbdU)-style
+  integer hash `hash(userSeed, chunkX, chunkY)` seeds each chunk: it computes a chunk's value
+  straight from its coordinates without generating any neighbour first, so regions load in any
+  order. Nothing is baked; nothing is read from disk.
 - **Placement** — a hex grid carries one jittered node per cell. Every cell holds a node; visible
   sparseness is a rendering choice, not an absence. Probabilistic existence is rejected: it
   reintroduces "does this id exist?" ambiguity and risks a fragmented graph.
-- **Connectivity** — a distance-capped Gabriel graph. Both sides of a chunk border evaluate the same
-  predicate from the same hash inputs, so borders agree with no stitching pass — the geometry
-  already joins itself. Agreement needs a one-chunk halo: evaluating a border cell's edges reads the
-  neighbouring chunk's nodes, so each side sees the same candidates. A Gabriel graph contains the
-  Euclidean minimum spanning tree, so the backbone never fragments — but only while the distance cap
-  stays above the maximum jittered cell spacing, so every MST edge falls within the cap and survives
-  it. The rule connects two nodes when nothing sits between them and they fall within the cap — a
-  local, deterministic test both neighbours compute identically.
+- **Connectivity** — a distance-capped [Gabriel graph](https://en.wikipedia.org/wiki/Gabriel_graph).
+  Both sides of a chunk border evaluate the same predicate from the same hash inputs, so borders
+  agree with no stitching pass — the geometry already joins itself. Agreement needs a one-chunk
+  halo: evaluating a border cell's edges reads the neighbouring chunk's nodes, so each side sees the
+  same candidates. A Gabriel graph contains the
+  [Euclidean minimum spanning tree](https://en.wikipedia.org/wiki/Euclidean_minimum_spanning_tree) —
+  the shortest set of edges that still links every node — so the backbone never fragments, but only
+  while the distance cap stays above the maximum jittered cell spacing, so every MST edge falls
+  within the cap and survives it. The rule connects two nodes when nothing sits between them and
+  they fall within the cap — a local, deterministic test both neighbours compute identically.
 - **Difficulty** — `clamp(floor(hexDistance(cell, origin) / k), 0, 100)`. It is O(1), needs no
   traversal, and the server recomputes it from the coordinate alone.
 
