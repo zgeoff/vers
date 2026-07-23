@@ -49,7 +49,7 @@ interface StartAttemptReport {
  * — the lockout overlay above it covers the UI, but this keeps a mounted panel from auto-sending a
  * start of its own underneath it.
  */
-export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
+export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   const navigate = useNavigate();
   const idleWorkerHandle = useIdleWorkerHandle();
   const selectedNode = useSelectedNode().node;

@@ -26,7 +26,7 @@ test('it reports the running tally while fast-forwarding, still with no close bu
   setResyncStatus({ attempts: 12, kind: 'fast-forwarding', levelUps: 1 });
   render(<WelcomeBackModal />);
 
-  expect(screen.getByText('Catching up… 12 attempts, 1 level-ups so far.')).toBeInTheDocument();
+  expect(screen.getByText('Catching up… 12 attempts, 1 level-up so far.')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
 });
 
