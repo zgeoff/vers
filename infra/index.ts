@@ -10,6 +10,7 @@ export {
   metricsDatasetName,
   replayPokeFailedMonitorName,
   serverErrorsMonitorName,
+  slowRequestsMonitorName,
   tracesDatasetName,
 } from './axiom.ts';
 

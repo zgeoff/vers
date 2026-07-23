@@ -127,6 +127,30 @@ const serverErrorsMonitor = new axiom.Monitor(
 );
 
 /**
+ * Catches a hung or pathologically slow request the moment its span closes, independent of the
+ * per-request warn log `createService` emits against its own configurable threshold — this alarm
+ * fires on any server span past a fixed ceiling regardless of which service or route it came from.
+ */
+const slowRequestsMonitor = new axiom.Monitor(
+  'vers-slow-requests',
+  {
+    name: 'vers slow requests',
+    type: 'Threshold',
+    description:
+      'Fires when a vers service or app-web server span exceeds a 10s duration ceiling — the explicit alarm for a hung or pathologically slow request.',
+    aplQuery:
+      "['vers-traces'] | where kind == 'server' and duration > 10s | summarize count() by bin(_time, 5m)",
+    intervalMinutes: 5,
+    rangeMinutes: 10,
+    operator: 'AboveOrEqual',
+    threshold: 1,
+    triggerFromNRuns: 1,
+    notifierIds: [alarmsNotifier.id],
+  },
+  { provider: axiomProvider },
+);
+
+/**
  * alertOnNoData stays false: the counter emits only when a wake delivery
  * exhausts its retries, so a quiet dataset is the healthy default, never a
  * down exporter. The metric is an OTLP cumulative counter (the exporter sets no
@@ -226,6 +250,7 @@ export const ingestTokenName = ingestToken.name;
 export const mcpTokenName = mcpToken.name;
 export const alarmsNotifierName = alarmsNotifier.name;
 export const serverErrorsMonitorName = serverErrorsMonitor.name;
+export const slowRequestsMonitorName = slowRequestsMonitor.name;
 export const replayPokeFailedMonitorName = replayPokeFailedMonitor.name;
 export const baselineDashboardUID = baselineDashboard.uid;
 
