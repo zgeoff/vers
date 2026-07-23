@@ -1,8 +1,5 @@
 import { afterEach } from 'bun:test';
-import {
-  IDLE_CHECKPOINT_PREFERENCES_STORE_NAME,
-  resolveIdleCheckpointDB,
-} from './resolve-idle-checkpoint-db';
+import { resolveIdleCheckpointDB } from './resolve-idle-checkpoint-db';
 
 /**
  * Sweeps the idle worker's IndexedDB preferences store after each test, called once from the test
@@ -13,6 +10,6 @@ export function registerIdleCheckpointDBReset(): void {
   afterEach(async () => {
     const idleCheckpointDB = await resolveIdleCheckpointDB();
 
-    await idleCheckpointDB.clear(IDLE_CHECKPOINT_PREFERENCES_STORE_NAME);
+    await idleCheckpointDB.clear('preferences');
   });
 }

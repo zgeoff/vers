@@ -5,6 +5,7 @@ import type { AvatarData } from '@vers/contract-avatar';
 import { AVATAR_MODE_CAP } from '@vers/contract-avatar';
 import { Heading, Text } from '@vers/design-system';
 import { readPendingStartIntent } from '@vers/idle-client';
+import type { PendingStartIntent } from '@vers/idle-client';
 import { css, cx } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
@@ -100,18 +101,17 @@ export function AvatarRoster(props: AvatarRosterProps) {
     setIsPending(true);
     setMessage(null);
 
-    const pendingIntent = await readPendingStartIntent();
-
-    const owner = findOngoingRunOwner(handle.avatar, pendingIntent, props.roster.avatars);
-
-    if (owner !== null && owner.id !== avatarID) {
-      setMessage(`${owner.name} is out on an activity — finish or stop it to switch`);
-      setIsPending(false);
-
-      return;
-    }
-
     try {
+      const pendingIntent = await tryReadPendingStartIntent();
+
+      const owner = findOngoingRunOwner(handle.avatar, pendingIntent, props.roster.avatars);
+
+      if (owner !== null && owner.id !== avatarID) {
+        setMessage(`${owner.name} is out on an activity — finish or stop it to switch`);
+
+        return;
+      }
+
       // a successful pick ends in a redirect that useServerFn already navigated to, resolving
       // this call with no value
       const result: AvatarSelectResult | undefined = await avatarSelectFn({ data: { avatarID } });
@@ -182,4 +182,21 @@ export function AvatarRoster(props: AvatarRosterProps) {
       </div>
     </main>
   );
+}
+
+/**
+ * Reads the held continuation-start intent, failing open: a blocked or unavailable IndexedDB read
+ * yields no intent rather than throwing, so the roster falls through to the server gate — which
+ * still rejects a wrong-avatar switch — instead of leaving the sheet stuck.
+ */
+async function tryReadPendingStartIntent(): Promise<PendingStartIntent | undefined> {
+  let intent: PendingStartIntent | undefined;
+
+  try {
+    intent = await readPendingStartIntent();
+  } catch {
+    // a blocked or unavailable IndexedDB read fails open, leaving the intent unread
+  }
+
+  return intent;
 }

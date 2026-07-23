@@ -2,9 +2,14 @@ import type { IDBPDatabase } from 'idb';
 import { openDB } from 'idb';
 
 /**
- * Preferences-store record shapes the idle worker's IndexedDB database holds; only the
- * continuation-start intent shape is written here, mirroring `PendingStartIntent`.
+ * Mirrors the idle worker's private IndexedDB identity (its `resolve-checkpoint-queue-db` in
+ * `@vers/idle-client`): the database name and version. The worker exposes no cross-package write
+ * path for a continuation-start intent, so a test seeding one opens the same database directly. A
+ * drift from the worker's real values fails the seeded-intent read test loudly.
  */
+const IDLE_CHECKPOINT_DB_NAME = 'vers-idle-checkpoint-queue';
+const IDLE_CHECKPOINT_DB_VERSION = 2;
+
 interface IdleCheckpointDBSchema {
   'pending-checkpoints': {
     key: [string, number];
@@ -16,22 +21,12 @@ interface IdleCheckpointDBSchema {
   };
 }
 
-const IDLE_CHECKPOINT_DB_NAME = 'vers-idle-checkpoint-queue';
-const IDLE_CHECKPOINT_DB_VERSION = 2;
-const IDLE_CHECKPOINT_CHECKPOINTS_STORE_NAME = 'pending-checkpoints';
-
-/**
- * The `preferences` object store name, exported so a seed and its later read agree on where a
- * record lives.
- */
-export const IDLE_CHECKPOINT_PREFERENCES_STORE_NAME = 'preferences';
 let idleCheckpointDB: IDBPDatabase<IdleCheckpointDBSchema> | null = null;
 
 /**
  * Opens the idle worker's durable IndexedDB database under its real name, version, and store
- * layout, so a record this seeds lands where the worker's own read of it looks. The worker package
- * exposes no cross-package write path for a continuation-start intent — reading is the only
- * exported access — so a test seeding one writes directly against this mirrored schema instead.
+ * layout, so a record this seeds lands where the worker's own read of it looks. Store names are
+ * checked against the schema at each call, so a mistyped store fails typecheck rather than drifting.
  */
 export async function resolveIdleCheckpointDB(): Promise<IDBPDatabase<IdleCheckpointDBSchema>> {
   idleCheckpointDB ??= await openDB<IdleCheckpointDBSchema>(
@@ -39,14 +34,14 @@ export async function resolveIdleCheckpointDB(): Promise<IDBPDatabase<IdleCheckp
     IDLE_CHECKPOINT_DB_VERSION,
     {
       upgrade(database) {
-        if (!database.objectStoreNames.contains(IDLE_CHECKPOINT_CHECKPOINTS_STORE_NAME)) {
-          database.createObjectStore(IDLE_CHECKPOINT_CHECKPOINTS_STORE_NAME, {
+        if (!database.objectStoreNames.contains('pending-checkpoints')) {
+          database.createObjectStore('pending-checkpoints', {
             keyPath: ['activityID', 'version'],
           });
         }
 
-        if (!database.objectStoreNames.contains(IDLE_CHECKPOINT_PREFERENCES_STORE_NAME)) {
-          database.createObjectStore(IDLE_CHECKPOINT_PREFERENCES_STORE_NAME);
+        if (!database.objectStoreNames.contains('preferences')) {
+          database.createObjectStore('preferences');
         }
       },
     },

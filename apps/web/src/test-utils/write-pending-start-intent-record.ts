@@ -1,9 +1,9 @@
 import type { PendingStartIntent } from '@vers/idle-client';
-import {
-  IDLE_CHECKPOINT_PREFERENCES_STORE_NAME,
-  resolveIdleCheckpointDB,
-} from './resolve-idle-checkpoint-db';
+import { resolveIdleCheckpointDB } from './resolve-idle-checkpoint-db';
 
+/**
+ * Mirrors the idle worker's private preferences-store key for the held intent.
+ */
 const PENDING_START_INTENT_KEY = 'pending-start';
 
 /**
@@ -15,5 +15,5 @@ export async function writePendingStartIntentRecord(
 ): Promise<void> {
   const db = await resolveIdleCheckpointDB();
 
-  await db.put(IDLE_CHECKPOINT_PREFERENCES_STORE_NAME, intent, PENDING_START_INTENT_KEY);
+  await db.put('preferences', intent, PENDING_START_INTENT_KEY);
 }
