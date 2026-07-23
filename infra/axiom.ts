@@ -127,11 +127,12 @@ const serverErrorsMonitor = new axiom.Monitor(
 );
 
 /**
- * Catches a hung or pathologically slow request the moment its span closes, independent of the
- * per-request warn log `createService` emits against its own configurable threshold — this alarm
- * fires on any non-probe server span past a fixed ceiling regardless of which service or route it
- * came from. Health-probe routes are excluded: their latency tracks scale-to-zero machine wake, not
- * request handling, so they would fire the alarm continuously without indicating a real fault.
+ * Fleet-wide alarm for a hung or pathologically slow request, evaluated on the monitor's own
+ * schedule rather than at span close, and independent of the per-request slow-request warn log a
+ * service emits against its own configurable threshold. It fires on any non-probe server span past
+ * a fixed ceiling regardless of which service or route it came from. Health-probe routes are
+ * excluded: their latency tracks scale-to-zero machine wake, not request handling, so they would
+ * fire the alarm continuously without indicating a real fault.
  */
 const slowRequestsMonitor = new axiom.Monitor(
   'vers-slow-requests',

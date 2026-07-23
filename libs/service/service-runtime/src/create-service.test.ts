@@ -809,6 +809,44 @@ test('it logs a request past its slow-request threshold at warn with slow and th
   );
 });
 
+test('it keeps a slow 5xx at error severity without the slow flag', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+    slowRequestMs: 0,
+  });
+
+  const errorSpy = spyOn(service.logger, 'error');
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  await expect(client.throwPlainError({})).toReject();
+
+  expect(errorSpy).toHaveBeenCalledWith(
+    {
+      durationMs: expect.toBeNumber(),
+      method: 'POST',
+      path: '/rpc/throwPlainError',
+      status: 500,
+    },
+    'request completed',
+  );
+});
+
 test('it keeps a request under its slow-request threshold at its status-derived level with no slow flag', async () => {
   const keyPair = await getTestServiceKeyPair();
 

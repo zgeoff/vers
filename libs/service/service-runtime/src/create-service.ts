@@ -298,9 +298,10 @@ function registerORPCHandler(
 
         finalResponse.headers.set('x-trace-id', trace.traceID);
 
-        const durationMs = toDurationMs(performance.now() - start);
+        const elapsedMs = performance.now() - start;
+        const durationMs = toDurationMs(elapsedMs);
         const thresholdMs = deps.slowRequestOverridesMs?.[path] ?? deps.slowRequestMs;
-        const isSlow = durationMs > thresholdMs && finalResponse.status < 500;
+        const isSlow = elapsedMs > thresholdMs && finalResponse.status < 500;
 
         deps.logger[isSlow ? 'warn' : pickRequestLogLevel(finalResponse.status)](
           {
