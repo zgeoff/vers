@@ -89,8 +89,10 @@ grant table `(avatarId, landmarkId)`.
   player a million nodes deep pays for a few thousand completion rows while the enormous visible
   region recomputes on demand.
 - The hex grid is itself the spatial index, because a node maps structurally to its cell. A viewport
-  query is a Morton/z-order range scan over packed coordinates. A per-chunk run-length reveal
-  bitmask may cache the result, but the completion table stays the source of truth.
+  query is a [Morton/z-order](https://en.wikipedia.org/wiki/Z-order_curve) range scan over packed
+  coordinates — interleaving a cell's x and y bits into one number keeps nearby cells adjacent in
+  sort order, so a 2D box reads as one 1D range. A per-chunk run-length reveal bitmask may cache the
+  result, but the completion table stays the source of truth.
 - Reveal discloses only after the predecessor completion verifies, never on optimistic completion.
   Disclosure carries expected-value-flat descriptor metadata alone — never salt or drops — and its
   fan-out is capped independent of node degree. An on-demand priority bump keeps the online path
@@ -145,8 +147,10 @@ Biome is how the terrain looks, so it renders, so it belongs on the public geome
 through fog like distant landscape. Its constraints keep it from becoming a predictor of sealed
 reward magnitude.
 
-- **B1** — biome is a low-frequency value/Worley field over position, in a hash domain independent
-  of content.
+- **B1** — biome is a low-frequency
+  [value](https://en.wikipedia.org/wiki/Value_noise)/[Worley](https://en.wikipedia.org/wiki/Worley_noise)
+  field over position — smooth noise functions of a coordinate that paint organic regional patches,
+  Worley by distance to the nearest scattered seed point — in a hash domain independent of content.
 - **B2** — `Cov(biome, sealed_reward_residual) = 0`. The content derivation takes no biome input.
   Pure flavour means content genuinely ignores biome, not merely that no bonus is visible — a hidden
   dependence turns biome into a public prior over hidden magnitude.
