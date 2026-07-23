@@ -160,6 +160,53 @@ test('it emits a db.connect client span around a successful connection acquisiti
   expect(connectSpans[0]?.attributes['db.system']).toBe('postgresql');
 });
 
+test('it forwards savepoint, rollbackToSavepoint, and releaseSavepoint to the wrapped driver', async () => {
+  await using handle = await createTestDB();
+
+  const trx = await handle.db.startTransaction().execute();
+
+  try {
+    await trx
+      .insertInto('users')
+      .values({
+        email: 'before-savepoint@test.com',
+        id: 'usr_before_savepoint',
+        name: 'Before Savepoint User',
+        username: 'before_savepoint_user',
+      })
+      .execute();
+
+    const trxAfterSavepoint = await trx.savepoint('after_insert').execute();
+
+    await trxAfterSavepoint
+      .insertInto('users')
+      .values({
+        email: 'after-savepoint@test.com',
+        id: 'usr_after_savepoint',
+        name: 'After Savepoint User',
+        username: 'after_savepoint_user',
+      })
+      .execute();
+
+    const trxAfterRollback = await trxAfterSavepoint.rollbackToSavepoint('after_insert').execute();
+
+    await trxAfterRollback.releaseSavepoint('after_insert').execute();
+    await trxAfterRollback.commit().execute();
+  } catch (error) {
+    await trx.rollback().execute();
+
+    throw error;
+  }
+
+  const users = await handle.db
+    .selectFrom('users')
+    .select('id')
+    .where('id', 'in', ['usr_before_savepoint', 'usr_after_savepoint'])
+    .execute();
+
+  expect(users.map((user) => user.id)).toEqual(['usr_before_savepoint']);
+});
+
 test('it marks the db.connect span failed and records the exception when the connection never opens', async () => {
   const ctx = setupTest();
   const db = createDB({ databaseURL: 'postgres://user:pass@127.0.0.1:1/db' });

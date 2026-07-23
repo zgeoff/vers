@@ -1,6 +1,6 @@
 import { SpanKind, SpanStatusCode, context, trace } from '@opentelemetry/api';
 import { CamelCasePlugin, Kysely } from 'kysely';
-import type { Dialect, Driver, LogEvent } from 'kysely';
+import type { AbortableOperationOptions, Dialect, Driver, LogEvent } from 'kysely';
 import { PostgresJSDialect } from 'kysely-postgres-js';
 import postgres from 'postgres';
 import type { DB } from './schema.generated';
@@ -75,18 +75,29 @@ function buildTracedDialect(dialect: PostgresJSDialect): Dialect {
 
 /**
  * Wraps a `Driver` so `acquireConnection` runs inside a `db.connect` span, delegating every other
- * method to the inner driver unchanged.
+ * method — including the optional savepoint methods — to the inner driver unchanged. Delegates
+ * through a `Proxy` rather than a hand-listed method map, so a `Driver` method this file doesn't
+ * name still reaches the inner driver instead of silently becoming a no-op.
  */
 function buildTracedDriver(driver: Driver): Driver {
-  return {
-    acquireConnection: (options) => withConnectSpan(() => driver.acquireConnection(options)),
-    beginTransaction: (connection, settings) => driver.beginTransaction(connection, settings),
-    commitTransaction: (connection) => driver.commitTransaction(connection),
-    destroy: (options) => driver.destroy(options),
-    init: (options) => driver.init(options),
-    releaseConnection: (connection, options) => driver.releaseConnection(connection, options),
-    rollbackTransaction: (connection) => driver.rollbackTransaction(connection),
-  };
+  return new Proxy(driver, {
+    get: (target, property, receiver) => {
+      if (property === 'acquireConnection') {
+        return (options?: AbortableOperationOptions) =>
+          withConnectSpan(() => target.acquireConnection(options));
+      }
+
+      const value: unknown = Reflect.get(target, property, receiver);
+
+      if (typeof value !== 'function') {
+        return value;
+      }
+
+      const boundValue: unknown = value.bind(target);
+
+      return boundValue;
+    },
+  });
 }
 
 /**
