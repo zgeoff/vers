@@ -10,32 +10,11 @@ minimumReleaseAge = 604800
 
 # an exclude lives only as long as its pinned version is younger than the gate —
 # once the version ages past it, the entry is dead weight; remove it
-# format-codemod 0.0.5 (published 2026-07-08) ages past the gate ~2026-07-15 — remove its exclude then (#219)
-# @zgeoff/bun-test-extended 0.0.3 ages past the 7-day gate ~2026-07-16 — remove then (#257)
-# @zgeoff/oxlint-config 0.0.4 ages past the 7-day gate ~2026-07-18 — remove then (#292)
-# oxlint 1.73.0 (published 2026-07-06) ages past the 7-day gate ~2026-07-13 — remove then
-# typescript 7.0.2 (published 2026-07-08) ages past the 7-day gate ~2026-07-15 — remove then
-# @types/node 26.1.1 (published 2026-07-08) ages past the 7-day gate ~2026-07-15 — remove then
-# vite 8.1.4 (published 2026-07-09) ages past the 7-day gate ~2026-07-16 — remove then
-# @zgeoff/dbhub 0.23.4 (published 2026-07-12) ages past the 7-day gate ~2026-07-19 — remove then (#478)
 # brace-expansion 2.1.2/5.0.7 (published 2026-07-20, patch GHSA-3jxr-9vmj-r5cp) age past the gate ~2026-07-28 — remove then (#735)
 # protobufjs 7.6.5 (published 2026-07-20, patches GHSA-j3f2-48v5-ccww) ages past the gate ~2026-07-28 — remove then (#735)
 # fast-uri 3.1.4 (published 2026-07-19, patches GHSA-v2hh-gcrm-f6hx) ages past the gate ~2026-07-26 — remove then (#765)
 # @hono/node-server 2.0.11 (published 2026-07-21, patches GHSA-9mqv-5hh9-4cgg) ages past the gate ~2026-07-28 — remove then (#766)
-minimumReleaseAgeExcludes = [
-  "@zgeoff/format-codemod",
-  "@zgeoff/bun-test-extended",
-  "@zgeoff/oxlint-config",
-  "@zgeoff/dbhub",
-  "oxlint",
-  "typescript",
-  "@types/node",
-  "vite",
-  "brace-expansion",
-  "protobufjs",
-  "fast-uri",
-  "@hono/node-server",
-]
+minimumReleaseAgeExcludes = ["brace-expansion", "protobufjs", "fast-uri", "@hono/node-server"]
 
 [test]
 # registers jest-extended matchers for any root-invoked `bun test`; each
