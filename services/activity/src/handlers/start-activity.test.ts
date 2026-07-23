@@ -3,7 +3,9 @@ import type { ActivityContract } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
 import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import {
+  createActiveAvatarRow,
   createAnonymousViewer,
+  createAvatarRow,
   createServiceToken,
   createTestDB,
   createTestUser,
@@ -14,8 +16,6 @@ import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { sql } from 'kysely';
 import { createActivityService } from '../create-activity-service';
-import { createActiveAvatarRow } from '../test-utils/create-active-avatar-row';
-import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 /**

@@ -1,14 +1,14 @@
 import type { Avatars, DB } from '@vers/db';
 import type { Insertable, Kysely, Selectable } from 'kysely';
-import { createMockAvatar } from './factories/create-mock-avatar';
+import { createMockAvatar } from '../factories/create-mock-avatar';
 
 interface CreateAvatarRowData extends Partial<Insertable<Avatars>> {
   readonly userId: string;
 }
 
 /**
- * Seeds an avatar owned by *another* user for cross-tenant ownership tests, which can't go through
- * the owner-scoped RPC client.
+ * Seeds an avatar owned by the given user. A cross-tenant fixture is the same composite called
+ * with a different `userId`.
  */
 export function createAvatarRow(
   db: Kysely<DB>,

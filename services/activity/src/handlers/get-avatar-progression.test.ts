@@ -1,12 +1,16 @@
 import { expect, mock, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
 import { mockReplayService } from '@vers/mock-services/replay';
-import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import {
+  createAnonymousViewer,
+  createAvatarRow,
+  createTestDB,
+  createViewer,
+} from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { server } from '../mocks/server';
-import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 /**

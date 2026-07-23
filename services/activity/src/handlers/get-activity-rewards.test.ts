@@ -1,10 +1,14 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
-import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import {
+  createAnonymousViewer,
+  createAvatarRow,
+  createTestDB,
+  createViewer,
+} from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
-import { createAvatarRow } from '../test-utils/create-avatar-row';
 
 /**
  * `startActivity` opens its own `db.transaction()` for the chain claim, which can't nest under

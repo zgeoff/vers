@@ -1,11 +1,11 @@
 import { createId } from '@paralleldrive/cuid2';
+import { findLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
 import type { AvatarData, AvatarMode } from '@vers/contract-avatar';
 import { AVATAR_MODE_CAP } from '@vers/contract-avatar';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
-import { findLiveActivityAvatar } from './find-live-activity-avatar';
 import { toAvatarData } from './to-avatar-data';
 
 /**
@@ -88,13 +88,7 @@ async function runCreateWrites(
     .executeTakeFirstOrThrow();
 
   if ((await findLiveActivityAvatar(trx, actingUserId)) === null) {
-    await trx
-      .insertInto('activeAvatars')
-      .values({ avatarId: row.id, userId: actingUserId })
-      .onConflict((oc) =>
-        oc.column('userId').doUpdateSet({ avatarId: row.id, updatedAt: sql`now()` }),
-      )
-      .execute();
+    await upsertActiveAvatar(trx, actingUserId, row.id);
   }
 
   return toAvatarData(row);

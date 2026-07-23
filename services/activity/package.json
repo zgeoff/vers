@@ -17,6 +17,7 @@
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
+    "@vers/active-avatar": "workspace:*",
     "@vers/contract-activity": "workspace:*",
     "@vers/contract-replay": "workspace:*",
     "@vers/data": "workspace:*",

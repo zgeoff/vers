@@ -1,10 +1,14 @@
 import { expect, test } from 'bun:test';
 import type { AvatarContract } from '@vers/contract-avatar';
 import { AVATAR_MODE_CAP } from '@vers/contract-avatar';
-import { createAnonymousViewer, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import {
+  createActivityRow,
+  createAnonymousViewer,
+  createTestDB,
+  createViewer,
+} from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createAvatarService } from '../create-avatar-service';
-import { createActivityRow } from '../test-utils/create-activity-row';
 
 async function setupTest() {
   const db = await createTestDB();

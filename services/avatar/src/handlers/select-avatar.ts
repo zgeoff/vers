@@ -1,8 +1,8 @@
+import { findLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
-import { findLiveActivityAvatar } from './find-live-activity-avatar';
 
 /**
  * Payload shape for selectAvatar's CONFLICT: the live run's avatar, named so the client can tell
@@ -74,13 +74,7 @@ async function runSelectWrites(
     });
   }
 
-  await trx
-    .insertInto('activeAvatars')
-    .values({ avatarId: avatar.id, userId: actingUserId })
-    .onConflict((oc) =>
-      oc.column('userId').doUpdateSet({ avatarId: avatar.id, updatedAt: sql`now()` }),
-    )
-    .execute();
+  await upsertActiveAvatar(trx, actingUserId, avatar.id);
 
   return { activeAvatarID: avatar.id };
 }

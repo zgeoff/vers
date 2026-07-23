@@ -1,4 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
+import { findActiveAvatar, findLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
 import type { ActivityData, BuildSnapshot } from '@vers/contract-activity';
 import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
@@ -309,12 +310,7 @@ async function requireActiveAvatar(
 ): Promise<void> {
   await sql`select pg_advisory_xact_lock(hashtext(${userID}))`.execute(trx);
 
-  const selection = await trx
-    .selectFrom('activeAvatars')
-    .innerJoin('avatars', 'avatars.id', 'activeAvatars.avatarId')
-    .select(['avatars.id', 'avatars.name'])
-    .where('activeAvatars.userId', '=', userID)
-    .executeTakeFirst();
+  const selection = await findActiveAvatar(trx, userID);
 
   if (selection === undefined) {
     const liveAvatar = await findLiveActivityAvatar(trx, userID);
@@ -327,13 +323,7 @@ async function requireActiveAvatar(
       });
     }
 
-    await trx
-      .insertInto('activeAvatars')
-      .values({ avatarId: avatarID, userId: userID })
-      .onConflict((oc) =>
-        oc.column('userId').doUpdateSet({ avatarId: avatarID, updatedAt: sql`now()` }),
-      )
-      .execute();
+    await upsertActiveAvatar(trx, userID, avatarID);
 
     return;
   }
@@ -345,26 +335,6 @@ async function requireActiveAvatar(
       data: { activeAvatarID: selection.id, activeAvatarName: selection.name },
     });
   }
-}
-
-/**
- * Finds the avatar owning the user's live activity, or null when no run is live. At most one
- * activity per account is live by design, so the first match is the answer. The activity service
- * cannot import `service-avatar`'s equivalent (`bun run boundaries` denies it), so this mirrors it.
- */
-async function findLiveActivityAvatar(
-  trx: Kysely<DB>,
-  userID: string,
-): Promise<{ id: string; name: string } | null> {
-  const row = await trx
-    .selectFrom('activities')
-    .innerJoin('avatars', 'avatars.id', 'activities.avatarId')
-    .select(['avatars.id', 'avatars.name'])
-    .where('avatars.userId', '=', userID)
-    .where('activities.status', '=', 'active')
-    .executeTakeFirst();
-
-  return row ?? null;
 }
 
 interface OptimisticBuild {

@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
 import {
   createAnonymousViewer,
+  createAvatarRow,
   createTestDB,
   createTestUser,
   createViewer,
@@ -9,7 +10,6 @@ import {
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
-import { createAvatarRow } from '../test-utils/create-avatar-row';
 
 /**
  * These tests drive startActivity, whose own `db.transaction()` can't nest under the default

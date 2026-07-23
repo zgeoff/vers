@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { createTestDB, createTestUser } from '@vers/service-test-utils/bun';
+import { createTestDB } from '../create-test-db';
+import { createTestUser } from '../create-test-user';
 import { createActiveAvatarRow } from './create-active-avatar-row';
 import { createAvatarRow } from './create-avatar-row';
 
