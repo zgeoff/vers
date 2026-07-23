@@ -184,9 +184,9 @@ preference.
   source. Its public functions are `buildChunk(userSeed, chunkX, chunkY) → WorldMapNode[]`,
   `collectNodeEdges(userSeed, cx, cy) → WorldEdge[]`, `toNodeID(cx, cy) → CanonicalID`,
   `getBiome(userSeed, cx, cy) → BiomeId`, `getDifficulty(cx, cy) → number`, and
-  `collectRevealedCells(sources, viewport) → RevealedCells`. `buildChunk` takes chunk coordinates;
-  the rest take cell coordinates. Edges are computed, not stored; `id` is the canonical cell
-  coordinate.
+  `collectRevealedCells(sources, viewport) → RevealedCells`. `buildChunk` takes chunk coordinates
+  and `collectRevealedCells` takes reveal sources and a viewport; the rest take cell coordinates.
+  Edges are computed, not stored; `id` is the canonical cell coordinate.
 - **Server-only content module** — content derivation keyed by `scopeSecret`, never bundled to the
   client. Its functions (`deriveContent`, `buildEncounterTable`, `getRewardTier`) live here and
   nowhere the client can reach.
