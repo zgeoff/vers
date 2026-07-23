@@ -105,6 +105,10 @@ line-level conventions:
   GET-mapped procedure inputs. The service scaffold emits the line for every `/rpc` request and
   leaves `/health` unlogged, so platform probes don't dominate volume. app-web's middleware emits it
   for every request, at `debug` for a served static asset (a pathname with a file extension).
+- A request past its slow-request threshold logs at `warn` instead, with `slow: true` and
+  `thresholdMs` added onto the completion line, unless its status is already a server error. The
+  threshold defaults to 2s (`slowRequestMs`, a `createService` config option) and is overridable per
+  pathname through `slowRequestOverridesMs`.
 - Presentation is the transport's job: dev consoles pretty-print through `pino-pretty`, and call
   sites never embed color codes or decoration in the message.
 
@@ -214,6 +218,13 @@ notifies `vers alarms`. It alerts on the threshold alone, never on no data — t
 when a wake delivery exhausts its retries, so a quiet dataset is the healthy default, not a down
 exporter. It is the explicit signal that the replay queue may go undrained despite an activity
 appending unverified work.
+
+The `vers slow requests` threshold monitor watches `vers-traces` for any non-probe server span past
+a fixed 30s duration ceiling and notifies `vers alarms`, evaluated on its own schedule rather than
+at span close. Health-probe routes are excluded because their latency tracks scale-to-zero machine
+wake rather than request handling. It is the fleet-wide alarm for a hung or pathologically slow
+request, independent of the per-request slow-request warn log a service's own `slowRequestMs`
+threshold decides.
 
 ## Alarms channel
 

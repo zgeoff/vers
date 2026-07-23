@@ -127,6 +127,33 @@ const serverErrorsMonitor = new axiom.Monitor(
 );
 
 /**
+ * Fleet-wide alarm for a hung or pathologically slow request, evaluated on the monitor's own
+ * schedule rather than at span close, and independent of the per-request slow-request warn log a
+ * service emits against its own configurable threshold. It fires on any non-probe server span past
+ * a fixed ceiling regardless of which service or route it came from. Health-probe routes are
+ * excluded: their latency tracks scale-to-zero machine wake, not request handling, so they would
+ * fire the alarm continuously without indicating a real fault.
+ */
+const slowRequestsMonitor = new axiom.Monitor(
+  'vers-slow-requests',
+  {
+    name: 'vers slow requests',
+    type: 'Threshold',
+    description:
+      'Fires when a vers service or app-web server span other than a health probe exceeds a 30s duration ceiling — the explicit alarm for a hung or pathologically slow request.',
+    aplQuery:
+      "['vers-traces'] | where kind == 'server' and duration > 30s and not (name endswith '/health') | summarize count() by bin(_time, 5m)",
+    intervalMinutes: 5,
+    rangeMinutes: 10,
+    operator: 'AboveOrEqual',
+    threshold: 1,
+    triggerFromNRuns: 1,
+    notifierIds: [alarmsNotifier.id],
+  },
+  { provider: axiomProvider },
+);
+
+/**
  * alertOnNoData stays false: the counter emits only when a wake delivery
  * exhausts its retries, so a quiet dataset is the healthy default, never a
  * down exporter. The metric is an OTLP cumulative counter (the exporter sets no
@@ -226,6 +253,7 @@ export const ingestTokenName = ingestToken.name;
 export const mcpTokenName = mcpToken.name;
 export const alarmsNotifierName = alarmsNotifier.name;
 export const serverErrorsMonitorName = serverErrorsMonitor.name;
+export const slowRequestsMonitorName = slowRequestsMonitor.name;
 export const replayPokeFailedMonitorName = replayPokeFailedMonitor.name;
 export const baselineDashboardUID = baselineDashboard.uid;
 
