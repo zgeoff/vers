@@ -1,10 +1,6 @@
 import { ORPCError } from '@orpc/client';
 import type { OutboundFailureMode } from './types';
 
-interface ServiceUnavailableErrorData {
-  readonly failureMode?: OutboundFailureMode;
-}
-
 /**
  * Reports whether `error` is a bounded-fetch `SERVICE_UNAVAILABLE` tagged with the `'transport'`
  * failure mode — the outbound request never reached the server, so nothing applied and retrying is
@@ -18,6 +14,10 @@ export function isNeverAppliedFailure(error: unknown): boolean {
   const data: unknown = error.data;
 
   return isServiceUnavailableErrorData(data) && data.failureMode === 'transport';
+}
+
+interface ServiceUnavailableErrorData {
+  readonly failureMode?: OutboundFailureMode;
 }
 
 function isServiceUnavailableErrorData(value: unknown): value is ServiceUnavailableErrorData {
