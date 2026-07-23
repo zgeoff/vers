@@ -219,10 +219,11 @@ when a wake delivery exhausts its retries, so a quiet dataset is the healthy def
 exporter. It is the explicit signal that the replay queue may go undrained despite an activity
 appending unverified work.
 
-The `vers slow requests` threshold monitor watches `vers-traces` for any server span past a fixed
-10s duration ceiling and notifies `vers alarms`. It is the immediate, fleet-wide alarm for a hung or
-pathologically slow request, independent of the per-request slow-request warn log a service's own
-`slowRequestMs` threshold decides.
+The `vers slow requests` threshold monitor watches `vers-traces` for any non-probe server span past
+a fixed 30s duration ceiling and notifies `vers alarms`. Health-probe routes are excluded because
+their latency tracks scale-to-zero machine wake rather than request handling. It is the immediate,
+fleet-wide alarm for a hung or pathologically slow request, independent of the per-request
+slow-request warn log a service's own `slowRequestMs` threshold decides.
 
 ## Alarms channel
 

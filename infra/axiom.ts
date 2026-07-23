@@ -129,7 +129,9 @@ const serverErrorsMonitor = new axiom.Monitor(
 /**
  * Catches a hung or pathologically slow request the moment its span closes, independent of the
  * per-request warn log `createService` emits against its own configurable threshold — this alarm
- * fires on any server span past a fixed ceiling regardless of which service or route it came from.
+ * fires on any non-probe server span past a fixed ceiling regardless of which service or route it
+ * came from. Health-probe routes are excluded: their latency tracks scale-to-zero machine wake, not
+ * request handling, so they would fire the alarm continuously without indicating a real fault.
  */
 const slowRequestsMonitor = new axiom.Monitor(
   'vers-slow-requests',
@@ -137,9 +139,9 @@ const slowRequestsMonitor = new axiom.Monitor(
     name: 'vers slow requests',
     type: 'Threshold',
     description:
-      'Fires when a vers service or app-web server span exceeds a 10s duration ceiling — the explicit alarm for a hung or pathologically slow request.',
+      'Fires when a vers service or app-web server span other than a health probe exceeds a 30s duration ceiling — the explicit alarm for a hung or pathologically slow request.',
     aplQuery:
-      "['vers-traces'] | where kind == 'server' and duration > 10s | summarize count() by bin(_time, 5m)",
+      "['vers-traces'] | where kind == 'server' and duration > 30s and not (name endswith '/health') | summarize count() by bin(_time, 5m)",
     intervalMinutes: 5,
     rangeMinutes: 10,
     operator: 'AboveOrEqual',
