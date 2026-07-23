@@ -3,6 +3,7 @@ import type { StandardLinkClientInterceptorOptions } from '@orpc/client/standard
 import type { Interceptor } from '@orpc/shared';
 import type { StandardLazyResponse } from '@orpc/standard-server';
 import invariant from 'tiny-invariant';
+import { isNeverAppliedFailure } from './is-never-applied-failure';
 
 export interface RetryInterceptorOptions {
   /**
@@ -27,12 +28,14 @@ const DEFAULT_MAX_RETRIES = 2;
 const DEFAULT_BACKOFF_MS = 250;
 
 /**
- * Builds an `RPCLink` `clientInterceptors` entry that retries a contract's idempotent procedures
- * on a transient failure — a 5xx response or a thrown transport error — with a growing linear
- * backoff between attempts. A non-retryable path (`isRetryable` reads GET/HEAD off the contract,
- * since only those can't double-apply) passes through unchanged after a single attempt. The
- * caller's own abort always ends the loop immediately, mid-attempt or mid-backoff, rather than
- * spending the remaining retry budget on a call nobody wants anymore.
+ * Builds an `RPCLink` `clientInterceptors` entry that retries a transient failure with a growing
+ * linear backoff between attempts. A 5xx response retries only an idempotent path (`isRetryable`
+ * reads GET/HEAD off the contract, since only those can't double-apply); a thrown never-applied
+ * failure (`isNeverAppliedFailure` — the outbound request never reached the server) retries
+ * regardless of method, since nothing applied and nothing can double-apply. Any other thrown error
+ * still falls back to the idempotent-path check. The caller's own abort always ends the loop
+ * immediately, mid-attempt or mid-backoff, rather than spending the remaining retry budget on a
+ * call nobody wants anymore.
  */
 export function buildRetryInterceptor<T extends ClientContext = ClientContext>(
   options: Readonly<RetryInterceptorOptions>,
@@ -51,10 +54,6 @@ export function buildRetryInterceptor<T extends ClientContext = ClientContext>(
   );
 
   return async (interceptorOptions) => {
-    if (!options.isRetryable(interceptorOptions.path)) {
-      return interceptorOptions.next();
-    }
-
     const signal = interceptorOptions.request.signal;
 
     for (let attempt = 0; ; attempt += 1) {
@@ -63,11 +62,18 @@ export function buildRetryInterceptor<T extends ClientContext = ClientContext>(
       try {
         const response = await interceptorOptions.next();
 
-        if (response.status < 500 || isLastAttempt) {
+        if (
+          response.status < 500 ||
+          isLastAttempt ||
+          !options.isRetryable(interceptorOptions.path)
+        ) {
           return response;
         }
       } catch (error) {
-        if (signal?.aborted === true || isLastAttempt) {
+        const canRetry =
+          isNeverAppliedFailure(error) || options.isRetryable(interceptorOptions.path);
+
+        if (signal?.aborted === true || isLastAttempt || !canRetry) {
           throw error;
         }
       }

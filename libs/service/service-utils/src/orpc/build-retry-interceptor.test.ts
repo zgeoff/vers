@@ -1,4 +1,5 @@
 import { expect, mock, test } from 'bun:test';
+import { ORPCError } from '@orpc/client';
 import type { StandardLazyResponse } from '@orpc/standard-server';
 import { buildRetryInterceptor } from './build-retry-interceptor';
 
@@ -279,4 +280,155 @@ test('it invokes onRetry once per retry', async () => {
 
   expect(response.status).toBe(200);
   expect(onRetry).toHaveBeenCalledTimes(2);
+});
+
+test('it retries a POST whose transport failure never reached the server', async () => {
+  let callCount = 0;
+
+  const next = mock((): Promise<StandardLazyResponse> => {
+    callCount += 1;
+
+    if (callCount === 1) {
+      throw new ORPCError('SERVICE_UNAVAILABLE', { data: { failureMode: 'transport' } });
+    }
+
+    return Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 200 });
+  });
+
+  const interceptor = buildRetryInterceptor({ backoffMs: 1, isRetryable: () => false });
+
+  const response = await interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['auth', 'refreshTokens'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'POST',
+      signal: undefined,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
+
+  expect(response.status).toBe(200);
+  expect(next).toHaveBeenCalledTimes(2);
+});
+
+test('it does not retry a POST timeout since the request may have already reached the server', async () => {
+  const next = mock((): Promise<StandardLazyResponse> => {
+    throw new ORPCError('SERVICE_UNAVAILABLE', { data: { failureMode: 'timeout' } });
+  });
+
+  const interceptor = buildRetryInterceptor({ backoffMs: 1, isRetryable: () => false });
+
+  const pending = interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['auth', 'refreshTokens'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'POST',
+      signal: undefined,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
+
+  await expect(pending).toReject();
+
+  expect(next).toHaveBeenCalledOnce();
+});
+
+test('it does not retry a POST 5xx response since the server already processed it', async () => {
+  const next = mock(
+    (): Promise<StandardLazyResponse> =>
+      Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 503 }),
+  );
+
+  const interceptor = buildRetryInterceptor({ backoffMs: 1, isRetryable: () => false });
+
+  const response = await interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['auth', 'refreshTokens'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'POST',
+      signal: undefined,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
+
+  expect(response.status).toBe(503);
+  expect(next).toHaveBeenCalledOnce();
+});
+
+test('it retries a GET timeout for an idempotent path', async () => {
+  let callCount = 0;
+
+  const next = mock((): Promise<StandardLazyResponse> => {
+    callCount += 1;
+
+    if (callCount === 1) {
+      throw new ORPCError('SERVICE_UNAVAILABLE', { data: { failureMode: 'timeout' } });
+    }
+
+    return Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 200 });
+  });
+
+  const interceptor = buildRetryInterceptor({ backoffMs: 1, isRetryable: () => true });
+
+  const response = await interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['activity', 'getLatestActivityProgress'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'GET',
+      signal: undefined,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
+
+  expect(response.status).toBe(200);
+  expect(next).toHaveBeenCalledTimes(2);
+});
+
+test('it retries a GET transport failure for an idempotent path', async () => {
+  let callCount = 0;
+
+  const next = mock((): Promise<StandardLazyResponse> => {
+    callCount += 1;
+
+    if (callCount === 1) {
+      throw new ORPCError('SERVICE_UNAVAILABLE', { data: { failureMode: 'transport' } });
+    }
+
+    return Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 200 });
+  });
+
+  const interceptor = buildRetryInterceptor({ backoffMs: 1, isRetryable: () => true });
+
+  const response = await interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['activity', 'getLatestActivityProgress'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'GET',
+      signal: undefined,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
+
+  expect(response.status).toBe(200);
+  expect(next).toHaveBeenCalledTimes(2);
 });
