@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import type { LatticeNode } from '@vers/worldmap-core';
+import type { WorldMapNode } from '@vers/worldmap-core';
 import { useWorldmapStore } from '../state/use-worldmap-store';
 import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
 import { WorldMapNodes } from './world-map-nodes';
 
-async function setupTest(nodes: ReadonlyArray<LatticeNode>) {
+async function setupTest(nodes: ReadonlyArray<WorldMapNode>) {
   const renderer = await ReactThreeTestRenderer.create(<WorldMapNodes nodes={[...nodes]} />);
 
   return renderer;

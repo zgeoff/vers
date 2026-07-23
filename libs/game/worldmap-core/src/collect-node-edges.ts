@@ -1,6 +1,6 @@
 import { buildCellNode } from './build-cell-node';
 import { EDGE_DISTANCE_CAP } from './consts';
-import type { LatticeEdge, LatticeNode } from './types';
+import type { WorldEdge, WorldMapNode } from './types';
 
 /**
  * Rings of cells scanned around a node. Two rings reach every cell whose node could fall inside the
@@ -16,11 +16,11 @@ const WITNESS_RING_RADIUS = 2;
  * reconciliation pass. Returns all incident edges, both orientations; callers spanning many cells
  * dedupe on `id`.
  */
-export function collectNodeEdges(userSeed: number, cx: number, cy: number): Array<LatticeEdge> {
+export function collectNodeEdges(userSeed: number, cx: number, cy: number): Array<WorldEdge> {
   const source = buildCellNode(userSeed, cx, cy);
   const pool = collectDiscNodes(userSeed, cx, cy, WITNESS_RING_RADIUS);
   const capSquared = EDGE_DISTANCE_CAP * EDGE_DISTANCE_CAP;
-  const edges: Array<LatticeEdge> = [];
+  const edges: Array<WorldEdge> = [];
 
   for (const candidate of pool) {
     if (candidate.id === source.id) {
@@ -50,8 +50,8 @@ function collectDiscNodes(
   cx: number,
   cy: number,
   radius: number,
-): Array<LatticeNode> {
-  const nodes: Array<LatticeNode> = [];
+): Array<WorldMapNode> {
+  const nodes: Array<WorldMapNode> = [];
 
   for (let dq = -radius; dq <= radius; dq++) {
     const lowDr = Math.max(-radius, -dq - radius);
@@ -70,9 +70,9 @@ function collectDiscNodes(
  * whose diameter is the pair, which forbids the edge.
  */
 function hasWitnessInside(
-  a: LatticeNode,
-  b: LatticeNode,
-  pool: ReadonlyArray<LatticeNode>,
+  a: WorldMapNode,
+  b: WorldMapNode,
+  pool: ReadonlyArray<WorldMapNode>,
 ): boolean {
   const midX = (a.position[0] + b.position[0]) / 2;
   const midY = (a.position[1] + b.position[1]) / 2;
@@ -91,7 +91,7 @@ function hasWitnessInside(
  * Builds the undirected edge for a pair, its id the endpoint ids sorted ascending so either endpoint
  * derives the same identity.
  */
-function buildEdge(a: LatticeNode, b: LatticeNode): LatticeEdge {
+function buildEdge(a: WorldMapNode, b: WorldMapNode): WorldEdge {
   const id = a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`;
 
   return { end: b.position, id, start: a.position };

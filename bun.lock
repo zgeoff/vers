@@ -396,13 +396,6 @@
         "typescript": "catalog:",
       },
     },
-    "libs/data/data": {
-      "name": "@vers/data",
-      "version": "0.0.0",
-      "devDependencies": {
-        "typescript": "catalog:",
-      },
-    },
     "libs/data/db": {
       "name": "@vers/db",
       "version": "0.0.0",
@@ -684,8 +677,6 @@
       "name": "@vers/worldmap-core",
       "version": "0.0.0",
       "dependencies": {
-        "@paralleldrive/cuid2": "catalog:",
-        "@vers/game-utils": "workspace:*",
         "tiny-invariant": "catalog:",
       },
       "devDependencies": {
@@ -2602,8 +2593,6 @@
     "@vers/contract-user": ["@vers/contract-user@workspace:contracts/user"],
 
     "@vers/contract-verification": ["@vers/contract-verification@workspace:contracts/verification"],
-
-    "@vers/data": ["@vers/data@workspace:libs/data/data"],
 
     "@vers/db": ["@vers/db@workspace:libs/data/db"],
 

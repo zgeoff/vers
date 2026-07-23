@@ -1,4 +1,4 @@
-import type { LatticeEdge, LatticeNode } from '@vers/worldmap-core';
+import type { WorldEdge, WorldMapNode } from '@vers/worldmap-core';
 
 export type VectorTuple = [number, number, number];
 
@@ -7,6 +7,6 @@ export type VectorTuple = [number, number, number];
  * bounded area around a center, so the client holds a finite slice of the infinite map.
  */
 export interface WorldGraph {
-  readonly edges: Readonly<Record<string, LatticeEdge>>;
-  readonly nodes: Readonly<Record<string, LatticeNode>>;
+  readonly edges: Readonly<Record<string, WorldEdge>>;
+  readonly nodes: Readonly<Record<string, WorldMapNode>>;
 }

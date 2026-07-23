@@ -1,5 +1,5 @@
 import { buildCellNode, collectNodeEdges } from '@vers/worldmap-core';
-import type { LatticeEdge, LatticeNode } from '@vers/worldmap-core';
+import type { WorldEdge, WorldMapNode } from '@vers/worldmap-core';
 import invariant from 'tiny-invariant';
 import type { WorldGraph } from './types';
 
@@ -14,7 +14,7 @@ export function buildRegionGraph(userSeed: number, radius: number): WorldGraph {
     'buildRegionGraph radius must be a non-negative integer',
   );
 
-  const nodes: Record<string, LatticeNode> = {};
+  const nodes: Record<string, WorldMapNode> = {};
 
   for (let cx = -radius; cx <= radius; cx++) {
     const lowCy = Math.max(-radius, -cx - radius);
@@ -27,7 +27,7 @@ export function buildRegionGraph(userSeed: number, radius: number): WorldGraph {
     }
   }
 
-  const edges: Record<string, LatticeEdge> = {};
+  const edges: Record<string, WorldEdge> = {};
 
   for (const node of Object.values(nodes)) {
     for (const edge of collectNodeEdges(userSeed, node.coord[0], node.coord[1])) {
