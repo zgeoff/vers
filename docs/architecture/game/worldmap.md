@@ -1,0 +1,196 @@
+# The world map
+
+The world map is the graph of places an avatar travels to reach content. Every avatar owns a
+distinct map, focused near its origin and opening into an unbounded expanse as distance grows. The
+map is generated, never stored: the client derives its shape locally and the server derives what
+each place holds, so an infinite world ships almost nothing over the wire and no two players share a
+layout.
+
+Two properties hold together. Geometry is public and client-computable; content is sealed and
+server-only; the two derive from disjoint inputs, so knowing the shape of the map reveals nothing
+about where reward concentrates. This is the map-layer statement of the flatness the
+[entropy model](./game-entropy.md) prices: a client that can compute the whole map still cannot
+compute which node pays, so scanning the map for a jackpot returns nothing.
+
+## Two planes
+
+Every derived value belongs to one of two planes, split by who can compute it.
+
+- **Geometry** — positions, edges, difficulty, and biome — is `f(userSeed, coord)`. `userSeed` is
+  the avatar's own seed: per-avatar, so every map differs, but non-secret and safe to ship, so the
+  client derives the entire infinite map locally in the SharedWorker — panning is instant and needs
+  no round-trip. Public here means non-secret, not shared: shape leaks nothing worth hiding.
+- **Content** — reward profile, encounter family, archetype — is `f(scopeSecret, coord)`, a one-way
+  derivation the server alone can run. `scopeSecret` is a per-avatar secret held server-side and
+  never shipped. A revealed node discloses too little to derive its unrevealed neighbours, and the
+  secret being per-avatar means one player's reveals crack no other player's map and colluders share
+  no secret to triangulate.
+
+The disjoint inputs are the whole of the guarantee: geometry and content share no derivable input,
+so map-shape knowledge is worthless for locating loot. Drops stay server-authoritative over a
+client-generated shell.
+
+## Geometry generation — chunked hex lattice
+
+Geometry generates one chunk at a time from a stateless hash, so any region around a coordinate
+computes without touching the rest — the requirement an infinite world imposes — and every value is
+per-avatar.
+
+Two coordinate spaces run through generation. A **chunk coordinate** `(chunkX, chunkY)` addresses a
+fixed block of hex cells — the unit of generation. A **cell coordinate** `(cx, cy)` addresses a
+single hex cell within the lattice and is a node's identity; `cellToChunk` maps a cell to the chunk
+that owns it.
+
+- **Seeding** — a stateless
+  [PCG](https://www.pcg-random.org/)/[Squirrel](https://www.youtube.com/watch?v=LWFzPP8ZbdU)-style
+  integer hash `hash(userSeed, chunkX, chunkY)` seeds each chunk: it computes a chunk's value
+  straight from its coordinates without generating any neighbour first, so regions load in any
+  order. Nothing is baked; nothing is read from disk.
+- **Placement** — a hex grid carries one jittered node per cell. Every cell holds a node; visible
+  sparseness is a rendering choice, not an absence. Probabilistic existence is rejected: it
+  reintroduces "does this id exist?" ambiguity and risks a fragmented graph.
+- **Connectivity** — a distance-capped [Gabriel graph](https://en.wikipedia.org/wiki/Gabriel_graph).
+  Both sides of a chunk border evaluate the same predicate from the same hash inputs, so borders
+  agree with no stitching pass — the geometry already joins itself. Agreement needs a one-chunk
+  halo: evaluating a border cell's edges reads the neighbouring chunk's nodes, so each side sees the
+  same candidates. A Gabriel graph contains the
+  [Euclidean minimum spanning tree](https://en.wikipedia.org/wiki/Euclidean_minimum_spanning_tree) —
+  the shortest set of edges that still links every node — so the backbone never fragments, but only
+  while the distance cap stays above the maximum jittered cell spacing, so every MST edge falls
+  within the cap and survives it. The rule connects two nodes when nothing sits between them and
+  they fall within the cap — a local, deterministic test both neighbours compute identically.
+- **Difficulty** — `clamp(floor(hexDistance(cell, origin) / k), 0, 100)`. It is O(1), needs no
+  traversal, and the server recomputes it from the coordinate alone.
+
+## Node identity — canonical cell coordinate
+
+A node's id is its cell coordinate, `(cx, cy)`. The id is stable across regenerations, referenceable
+from the database, and survives per-player topology because `userSeed` varies what a cell contains
+and which edges leave it, never that the cell exists or what its id is. First-clear grants key on
+`(avatarId, nodeId)` directly.
+
+Coordinates make the node server-recomputable, which random per-node ids cannot: a coordinate feeds
+straight back into the derivation, so the server reconstructs any node for verification without
+having stored it. Reachability is a server invariant at activity start — an activity seed mints only
+for a node reachable from the avatar's verified first-clear frontier under that avatar's own
+topology, the same edges the generator derives from its `userSeed`, recomputed server-side — not a
+client-side filter. Client and server derive paths from identical inputs, so they never disagree on
+which nodes are reachable.
+
+## Reveal — a projection, not stored state
+
+Fog is the boundary between what a player has earned sight of and what stays hidden, and it costs
+nothing to maintain because it is derived, not stored. The revealed region is
+`⋃ disc(position(N), REVEAL_RADIUS)` over the avatar's completed nodes `N`, plus a small landmark
+grant table `(avatarId, landmarkId)`.
+
+- There is no reveal event stream and no stored reveal state; the projection is idempotent by
+  construction. Storage is O(nodes completed) — roughly path length — not O(area visible), so a
+  player a million nodes deep pays for a few thousand completion rows while the enormous visible
+  region recomputes on demand.
+- The hex grid is itself the spatial index, because a node maps structurally to its cell. A viewport
+  query is a [Morton/z-order](https://en.wikipedia.org/wiki/Z-order_curve) range scan over packed
+  coordinates — interleaving a cell's x and y bits into one number keeps nearby cells adjacent in
+  sort order, so a 2D box reads as one 1D range. A per-chunk run-length reveal bitmask may cache the
+  result, but the completion table stays the source of truth.
+- Reveal discloses only after the predecessor completion verifies, never on optimistic completion.
+  Disclosure carries expected-value-flat descriptor metadata alone — never salt or drops — and its
+  fan-out is capped independent of node degree. An on-demand priority bump keeps the online path
+  responsive.
+
+## Selection and the offline horizon
+
+Reveal and selection are two boundaries at deliberately different widths. Reveal is wide: a player
+sees content within `REVEAL_RADIUS`. Selection is narrow: a player travels only to completed nodes
+and their immediate neighbours. Sight running ahead of reach is the intended exploration feel, not a
+leak — a bounded local horizon cannot compute the global-best jackpot, which is the exploit fog
+exists to deny.
+
+Enforcement is server-side, not the cache. Every activity start and every replay checks the target
+against the avatar's verified first-clear frontier and rejects anything beyond it, so cached
+descriptors and offline movement — both client-controlled — buy no reach a fresh server check would
+deny. `REVEAL_RADIUS > SELECTION_RADIUS` is a cache and pacing bound on top of that check, not the
+boundary itself.
+
+Within it, the server returns descriptors for the whole revealed disc, which extends past the
+selectable frontier, and the client caches them. Offline, a player farms revealed nodes and pushes
+selection outward into already-revealed cells, bounded by `REVEAL_RADIUS − SELECTION_RADIUS`, with
+the cached disc's rim as the honest client's stop; the server's frontier check is the real one.
+Pre-disclosing content into that shell is safe only because the base is flat — a flat base means
+peeking buys nothing, since all reward magnitude lives in juice salt minted per-run and online. A
+player farms the known offline and ventures into fog online.
+
+## Content sealing & verification
+
+Regeneration beats storage for an infinite per-avatar map: `descriptor(coord)` is O(1) and stores
+nothing. Tamper-resistance follows without extra machinery — encounter derivation already recomputes
+a node's enemies from server truth at activity start, and the verifier recomputes at replay, so a
+claim that an easy node was secretly a jackpot is refuted by recomputation. Nothing is stored to
+forge.
+
+The activity's `Started` event snapshots `contentVersion` (a content-derivation hash, parallel to
+`simVersion`) and a `secretRef`/`secretVersion` pair. The secret never enters the event log — an
+append-only replayable stream is the wrong home for a secret — and lives in identity Postgres / KMS,
+referenced by id and rotatable.
+
+## Difficulty plateau, infinite distance
+
+Difficulty plateaus at 100 while distance runs unbounded, so pure vertical scaling dies at the cap.
+Horizontal variety carries the world past it: biome combinatorics from blended noise fields, node
+archetypes selected by low-probability hash, rare distance-scaled landmarks visible as pillars of
+light in the fog, and juice overlays as the post-cap reason to push deeper. Past the cap, distance
+stops meaning bigger numbers and starts meaning which biome, how deep, and what waits out there.
+
+## Biome — the terrain plane
+
+Biome is how the terrain looks, so it renders, so it belongs on the public geometry plane, visible
+through fog like distant landscape. Its constraints keep it from becoming a predictor of sealed
+reward magnitude.
+
+- **Independent hash domain** — biome is a low-frequency
+  [value](https://en.wikipedia.org/wiki/Value_noise)/[Worley](https://en.wikipedia.org/wiki/Worley_noise)
+  field over position — smooth noise functions of a coordinate that paint organic regional patches,
+  Worley by distance to the nearest scattered seed point — in a hash domain independent of content.
+- **Zero reward covariance** — `Cov(biome, sealed_reward_residual) = 0`. The content derivation
+  takes no biome input. Pure flavour means content genuinely ignores biome, not merely that no bonus
+  is visible — a hidden dependence turns biome into a public prior over hidden magnitude.
+- **Public biome-uniform term only** — biome touches reward only through a pure function of the
+  public biome id, constant across every node in the biome, computable by every client. Biome may
+  set a mean, publicly; it never rides hidden per-node variance.
+- **No hidden per-node reward** — a hidden per-node reward that clusters by biome is forbidden, and
+  the ban carries a permanent code comment. It would make client-visible terrain a treasure map for
+  sealed loot — the exact sniping fog prevents — and it is the cheapest form to build, so it tempts.
+- **Reroll defeated by progression cost** — the seed-selection attack (rerolling `userSeed` or
+  spinning throwaway avatars for a favourable layout) is defeated by progression cost, not
+  expected-value neutrality: a rerolled character starts at level 1, and using a fished
+  high-distance biome demands re-earning full progression, a cost that dwarfs any biome bonus. Biome
+  bonuses may therefore be additive expected value — genuinely richer biomes — not merely flavour
+  tilts. This holds only while reroll cost far exceeds biome payoff; it is revisited if progression
+  ever gets cheap or biome bonuses grow large relative to level investment.
+- **Earned by path-gating** — path-gated selection keeps a known-good biome earned: reaching and
+  sustaining it is gated on the completed frontier, so a rich biome is safe on the reward axis only
+  because the path to it is.
+
+## The reveal radius
+
+`REVEAL_RADIUS` is the one knob that sets both the look-ahead bound and offline exploration depth.
+It holds in the range of 2 to 5 hops, and never above 5: look-ahead value climbs with the radius and
+the scanning exploit returns as it approaches infinity, so the ceiling is a security bound, not a
+preference.
+
+## Package layout
+
+- **`@vers/worldmap-core`** — the platform-agnostic geometry generator, consumed as TypeScript
+  source. Its public functions are `generateChunk(userSeed, chunkX, chunkY) → Node[]`,
+  `getNodeEdges(node, halo) → EdgeId[]`, `nodeId(cx, cy) → CanonicalId`,
+  `biomeAt(userSeed, pos) → BiomeId`, `difficultyAt(cx, cy) → number`, and
+  `revealViewport(sources, viewport) → RevealedCells`. `generateChunk` takes chunk coordinates; the
+  rest take cell coordinates. `connections` is computed, not stored; `id` is the canonical cell
+  coordinate.
+- **Server-only content module** — content derivation keyed by `scopeSecret`, never bundled to the
+  client. Its functions (`contentOf`, `encounterTable`, `rewardTier`) live here and nowhere the
+  client can reach.
+- **`@vers/worldmap-client`** — geometry generation for render, viewport-bounded reveal queries, and
+  caching of disclosed content, in the SharedWorker. Geometry renders optimistically; content slots
+  read as fogged until the server discloses them. The three.js render layer — meshes, edge lines,
+  culling, tooltips — draws from the local generator.
