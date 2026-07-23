@@ -196,11 +196,12 @@ the app's service machines.
 
 ### Rollout strategies
 
-`app-web` rolls out `bluegreen` — a full parallel fleet passes `/health` before traffic cuts over —
-because it is the user-facing app. Services use `rolling` with `max_unavailable = 1`: a broken boot
-fails the health gate with the old machine still up. Deploy jobs queue rather than cancel — killing
-flyctl mid-bluegreen strands the green machines and fails every later deploy with "found multiple
-image versions".
+Every app and service rolls out `bluegreen`: Fly boots a parallel fleet, gates it on `/health`, cuts
+traffic over, then retires the old machines. A broken boot fails the gate before cutover, and the
+old machines serve every request until it passes — an in-place `rolling` swap of a scale-to-zero
+service's single machine drops its internal callers with 503s for the length of the restart. Deploy
+jobs queue rather than cancel — killing flyctl mid-deploy strands the green machines and fails every
+later deploy with "found multiple image versions".
 
 A rollout can fail on transient `syd` host-capacity refusals ("could not reserve resource"); Fly
 rolls back cleanly, so re-run the failed job.

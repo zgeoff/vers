@@ -32,5 +32,4 @@ cpu_kind = 'shared'
 cpus = 1
 
 [deploy]
-strategy = 'rolling'
-max_unavailable = 1
+strategy = 'bluegreen'
