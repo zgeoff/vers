@@ -66,8 +66,10 @@ progress settles ([game simulation](./game/game-simulation.md)). The checkpoint 
 stream together but do not attest combat outcomes. Replay is the proof, and the same replay path
 generates offline progress by simulating forward from the last verified checkpoint.
 
-The world map (`@vers/worldmap-*`) generates the world graph as concentric difficulty rings of baked
-nodes. It renders that graph with three.js through react-three-fiber
+The world map (`@vers/worldmap-*`) gives every avatar a distinct, unbounded graph generated on
+demand: the client derives its geometry locally from a deterministic hex lattice while the server
+seals each node's content behind a per-avatar secret, so map shape reveals nothing about reward
+([world map](./game/worldmap.md)). It renders that graph with three.js through react-three-fiber
 ([game rendering](./game/game-rendering.md)).
 
 ## Cross-cutting
