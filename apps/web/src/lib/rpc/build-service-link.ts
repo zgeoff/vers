@@ -1,7 +1,12 @@
 import { RPCLink } from '@orpc/client/fetch';
 import type { AnyContractRouter } from '@orpc/contract';
 import type { ServiceName } from '@vers/service-auth';
-import { buildTracingInterceptor, makeIsRetryable } from '@vers/service-utils/orpc';
+import {
+  buildRetryInterceptor,
+  buildTracingInterceptor,
+  makeIsRetryable,
+} from '@vers/service-utils/orpc';
+import { recordServiceCallRetry } from '../metrics/record-service-call-retry';
 import { createEdgeServiceToken } from './create-edge-service-token';
 import { loadSessionActor } from './load-session-actor';
 import { makeBoundedFetch } from './make-bounded-fetch';
@@ -10,17 +15,26 @@ import type { ServiceLinkContext } from './types';
 
 /**
  * Builds one service's server-branch `RPCLink`: mints and attaches a short-lived s2s token for the
- * target service, and bounds/retries each outbound attempt per the contract's declared idempotent
- * procedures. Callers invoke this only from inside a `createIsomorphicFn().server()` branch — the
- * contract reference, and everything it pulls in, must never reach the browser bundle.
+ * target service, bounds each outbound attempt to a single timeout, and retries the contract's
+ * declared idempotent procedures on a transient failure. Callers invoke this only from inside a
+ * `createIsomorphicFn().server()` branch — the contract reference, and everything it pulls in, must
+ * never reach the browser bundle.
  */
 export function buildServiceLink(
   service: ServiceName,
   contract: AnyContractRouter,
 ): RPCLink<ServiceLinkContext> {
   return new RPCLink<ServiceLinkContext>({
-    clientInterceptors: [buildTracingInterceptor()],
-    fetch: makeBoundedFetch({ isRetryable: makeIsRetryable(contract), service }),
+    clientInterceptors: [
+      buildTracingInterceptor(),
+      buildRetryInterceptor({
+        isRetryable: makeIsRetryable(contract),
+        onRetry: () => {
+          recordServiceCallRetry(service);
+        },
+      }),
+    ],
+    fetch: makeBoundedFetch({ service }),
     headers: async (options) => {
       // an explicit acting user (login, force-logout) has no cookie session to name, so the token
       // carries no `sid` claim on that path
