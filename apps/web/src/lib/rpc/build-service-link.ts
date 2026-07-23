@@ -1,11 +1,10 @@
 import { RPCLink } from '@orpc/client/fetch';
 import type { AnyContractRouter } from '@orpc/contract';
 import type { ServiceName } from '@vers/service-auth';
-import { buildTracingInterceptor } from '@vers/service-utils/orpc';
+import { buildTracingInterceptor, makeIsRetryable } from '@vers/service-utils/orpc';
 import { createEdgeServiceToken } from './create-edge-service-token';
 import { loadSessionActor } from './load-session-actor';
 import { makeBoundedFetch } from './make-bounded-fetch';
-import { makeIsRetryable } from './make-is-retryable';
 import { SERVICE_URLS } from './service-urls';
 import type { ServiceLinkContext } from './types';
 
