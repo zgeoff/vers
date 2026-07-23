@@ -13,19 +13,21 @@ test('it renders nothing while no resync is underway', () => {
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
-test('it masks the catch-up from its zero-tally start', () => {
+test('it masks the catch-up from its zero-tally start with a non-dismissible lockout', () => {
   setResyncStatus({ attempts: 0, kind: 'fast-forwarding', levelUps: 0 });
   render(<WelcomeBackModal />);
 
   expect(screen.getByText('Welcome back')).toBeInTheDocument();
   expect(screen.getByText('Catching up… 0 attempts, 0 level-ups so far.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
 });
 
-test('it reports the running tally while fast-forwarding', () => {
+test('it reports the running tally while fast-forwarding, still with no close button', () => {
   setResyncStatus({ attempts: 12, kind: 'fast-forwarding', levelUps: 1 });
   render(<WelcomeBackModal />);
 
   expect(screen.getByText('Catching up… 12 attempts, 1 level-ups so far.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
 });
 
 test('it reports the final tally when the catch-up is done', () => {

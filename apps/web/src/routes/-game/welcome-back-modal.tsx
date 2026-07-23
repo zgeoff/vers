@@ -17,6 +17,8 @@ import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
  * redirect returns them here, where the fresh session's own resync resumes the catch-up. A resync
  * dropped for an avatar the account switched away from opens on a reload action — the tab's own
  * state still names the old avatar, and only a reload re-runs every gate against the new one.
+ * While the catch-up is still fast-forwarding, the dialog is a non-dismissible lockout — the
+ * player can't act on stale state until the resync settles into one of its terminal outcomes.
  */
 export function WelcomeBackModal() {
   const resyncStatus = useResyncStatus();
@@ -29,6 +31,14 @@ export function WelcomeBackModal() {
   // which carries the take-back action — a second dialog saying the same thing helps nobody
   if (resyncStatus.kind === 'active-elsewhere') {
     return null;
+  }
+
+  if (resyncStatus.kind === 'fast-forwarding') {
+    return (
+      <Dialog dismissible={false} open title="Welcome back">
+        <Text>Catching up… {formatTally(resyncStatus)} so far.</Text>
+      </Dialog>
+    );
   }
 
   return (
@@ -46,8 +56,20 @@ export function WelcomeBackModal() {
   );
 }
 
+interface ResyncTally {
+  readonly attempts: number;
+  readonly levelUps: number;
+}
+
+function formatTally(tally: Readonly<ResyncTally>): string {
+  return `${tally.attempts} attempts, ${tally.levelUps} level-ups`;
+}
+
 interface ResyncOutcomeProps {
-  readonly resyncStatus: Exclude<ResyncStatus, { readonly kind: 'active-elsewhere' }>;
+  readonly resyncStatus: Exclude<
+    ResyncStatus,
+    { readonly kind: 'active-elsewhere' } | { readonly kind: 'fast-forwarding' }
+  >;
 }
 
 function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
@@ -111,6 +133,7 @@ function formatResyncStatus(
       | { readonly kind: 'active-elsewhere' }
       | { readonly kind: 'avatar-switched' }
       | { readonly kind: 'failed' }
+      | { readonly kind: 'fast-forwarding' }
       | { readonly kind: 'session-expired' }
     >
   >,
@@ -119,11 +142,5 @@ function formatResyncStatus(
     return 'Offline progress reached its cap. Your avatar held position — jump back in to continue.';
   }
 
-  const tally = `${resyncStatus.attempts} attempts, ${resyncStatus.levelUps} level-ups`;
-
-  if (resyncStatus.kind === 'fast-forwarding') {
-    return `Catching up… ${tally} so far.`;
-  }
-
-  return `While you were away: ${tally}.`;
+  return `While you were away: ${formatTally(resyncStatus)}.`;
 }
