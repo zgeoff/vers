@@ -6,6 +6,7 @@ import {
   SimpleSpanProcessor,
 } from '@opentelemetry/sdk-trace-node';
 import invariant from 'tiny-invariant';
+import { buildPostgresOptions, createDB } from './create-db';
 import { createTestDB } from './test-support/create-test-db';
 
 function setupTest() {
@@ -60,7 +61,7 @@ test('it emits a db.select client span carrying the compiled sql with placeholde
 
   await handle.db.selectFrom('users').selectAll().where('email', '=', 'redaction-probe').execute();
 
-  const [span] = ctx.exporter.getFinishedSpans();
+  const span = ctx.exporter.getFinishedSpans().find((candidate) => candidate.name === 'db.select');
 
   invariant(span, 'expected the query span to be exported');
 
@@ -87,7 +88,7 @@ test('it names the span from the compiled query kind', async () => {
     })
     .execute();
 
-  const [span] = ctx.exporter.getFinishedSpans();
+  const span = ctx.exporter.getFinishedSpans().find((candidate) => candidate.name === 'db.insert');
 
   expect(span?.name).toBe('db.insert');
 });
@@ -105,7 +106,7 @@ test('it marks the span failed for a query that errors', async () => {
       .execute(),
   ).toReject();
 
-  const [span] = ctx.exporter.getFinishedSpans();
+  const span = ctx.exporter.getFinishedSpans().find((candidate) => candidate.name === 'db.select');
 
   expect(span?.status.code).toBe(SpanStatusCode.ERROR);
 });
@@ -123,7 +124,9 @@ test('it parents the query span to the active context', async () => {
     parentSpan.end();
   });
 
-  const [querySpan, parentSpan] = ctx.exporter.getFinishedSpans();
+  const spans = ctx.exporter.getFinishedSpans();
+  const querySpan = spans.find((candidate) => candidate.name === 'db.select');
+  const parentSpan = spans.find((candidate) => candidate.name === 'parent');
 
   invariant(querySpan, 'expected the query span to be exported');
   invariant(parentSpan, 'expected the parent span to be exported');
@@ -135,4 +138,87 @@ test('it stays inert without a registered tracer provider', async () => {
   await using handle = await createTestDB();
 
   await expect(handle.db.selectFrom('users').selectAll().execute()).toResolve();
+});
+
+test('it bounds connection acquisition with a 10s connect_timeout', () => {
+  const options = buildPostgresOptions({ databaseURL: 'postgres://user:pass@localhost:5432/db' });
+
+  expect(options.connect_timeout).toBe(10);
+});
+
+test('it emits a db.connect client span around a successful connection acquisition', async () => {
+  const ctx = setupTest();
+
+  await using handle = await createTestDB();
+
+  await handle.db.selectFrom('users').selectAll().execute();
+
+  const connectSpans = ctx.exporter.getFinishedSpans().filter((span) => span.name === 'db.connect');
+
+  expect(connectSpans).toHaveLength(1);
+  expect(connectSpans[0]?.kind).toBe(SpanKind.CLIENT);
+  expect(connectSpans[0]?.attributes['db.system']).toBe('postgresql');
+});
+
+test('it forwards savepoint, rollbackToSavepoint, and releaseSavepoint to the wrapped driver', async () => {
+  await using handle = await createTestDB();
+
+  const trx = await handle.db.startTransaction().execute();
+
+  try {
+    await trx
+      .insertInto('users')
+      .values({
+        email: 'before-savepoint@test.com',
+        id: 'usr_before_savepoint',
+        name: 'Before Savepoint User',
+        username: 'before_savepoint_user',
+      })
+      .execute();
+
+    const trxAfterSavepoint = await trx.savepoint('after_insert').execute();
+
+    await trxAfterSavepoint
+      .insertInto('users')
+      .values({
+        email: 'after-savepoint@test.com',
+        id: 'usr_after_savepoint',
+        name: 'After Savepoint User',
+        username: 'after_savepoint_user',
+      })
+      .execute();
+
+    const trxAfterRollback = await trxAfterSavepoint.rollbackToSavepoint('after_insert').execute();
+
+    await trxAfterRollback.releaseSavepoint('after_insert').execute();
+    await trxAfterRollback.commit().execute();
+  } catch (error) {
+    await trx.rollback().execute();
+
+    throw error;
+  }
+
+  const users = await handle.db
+    .selectFrom('users')
+    .select('id')
+    .where('id', 'in', ['usr_before_savepoint', 'usr_after_savepoint'])
+    .execute();
+
+  expect(users.map((user) => user.id)).toEqual(['usr_before_savepoint']);
+});
+
+test('it marks the db.connect span failed and records the exception when the connection never opens', async () => {
+  const ctx = setupTest();
+  const db = createDB({ databaseURL: 'postgres://user:pass@127.0.0.1:1/db' });
+
+  onTestFinished(() => db.destroy());
+
+  await expect(db.selectFrom('users').selectAll().execute()).toReject();
+
+  const connectSpan = ctx.exporter.getFinishedSpans().find((span) => span.name === 'db.connect');
+
+  invariant(connectSpan, 'expected a db.connect span to be exported');
+
+  expect(connectSpan.status.code).toBe(SpanStatusCode.ERROR);
+  expect(connectSpan.events[0]?.name).toBe('exception');
 });
