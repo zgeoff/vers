@@ -2,11 +2,10 @@ import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
 import { CURRENT_CONTENT_VERSION, getEncounterContent } from '@vers/game-utils';
 import { getTables } from '@vers/item-gen';
-import { createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import { createAvatarRow, createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from './create-activity-service';
-import { createAvatarRow } from './test-utils/create-avatar-row';
 
 test('it wires an injected db into the router instead of building one from env', async () => {
   await using db = await createTestDB({ isolation: 'schema' });

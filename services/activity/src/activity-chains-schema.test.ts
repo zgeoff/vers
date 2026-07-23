@@ -1,7 +1,6 @@
 import { expect, test } from 'bun:test';
 import { faker } from '@faker-js/faker';
-import { createTestDB, createTestUser } from '@vers/service-test-utils/bun';
-import { createAvatarRow } from './test-utils/create-avatar-row';
+import { createAvatarRow, createTestDB, createTestUser } from '@vers/service-test-utils/bun';
 
 test('it round-trips an activity_chains row', async () => {
   await using db = await createTestDB();

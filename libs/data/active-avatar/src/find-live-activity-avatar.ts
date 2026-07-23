@@ -7,13 +7,13 @@ import type { Kysely } from 'kysely';
  */
 export async function findLiveActivityAvatar(
   db: Kysely<DB>,
-  userId: string,
+  userID: string,
 ): Promise<{ id: string; name: string } | null> {
   const row = await db
     .selectFrom('activities')
     .innerJoin('avatars', 'avatars.id', 'activities.avatarId')
     .select(['avatars.id', 'avatars.name'])
-    .where('avatars.userId', '=', userId)
+    .where('avatars.userId', '=', userID)
     .where('activities.status', '=', 'active')
     .executeTakeFirst();
 

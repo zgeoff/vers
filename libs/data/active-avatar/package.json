@@ -1,5 +1,5 @@
 {
-  "name": "@vers/service-avatar",
+  "name": "@vers/active-avatar",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,22 +7,14 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "dev": "bun --watch src/serve.ts",
     "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@orpc/server": "catalog:",
-    "@paralleldrive/cuid2": "catalog:",
-    "@vers/active-avatar": "workspace:*",
-    "@vers/contract-avatar": "workspace:*",
     "@vers/db": "workspace:*",
-    "@vers/service-runtime": "workspace:*",
-    "kysely": "catalog:",
-    "zod": "catalog:"
+    "kysely": "catalog:"
   },
   "devDependencies": {
-    "@orpc/contract": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/service-test-utils": "workspace:*",
