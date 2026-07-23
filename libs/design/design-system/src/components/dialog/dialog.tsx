@@ -30,7 +30,7 @@ const dialogRecipe = sva({
       backgroundColor: '[rgba(0, 0, 0, 0.6)]',
       inset: '0',
       position: 'fixed',
-      zIndex: '[20]',
+      zIndex: '[60]',
     },
     content: {
       backgroundColor: 'bg.panelElevated',
@@ -50,7 +50,7 @@ const dialogRecipe = sva({
       justifyContent: 'center',
       padding: '4',
       position: 'fixed',
-      zIndex: '[20]',
+      zIndex: '[60]',
     },
   },
   slots: ['backdrop', 'content', 'positioner'],
