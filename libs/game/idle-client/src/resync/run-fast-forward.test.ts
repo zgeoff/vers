@@ -9,8 +9,9 @@ import {
   createMockAvatarData,
   createMockEnemyData,
 } from '@vers/idle-core/test-utils';
-import { resolveServiceURL } from '@vers/mock-services';
+import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
+import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
@@ -24,14 +25,22 @@ interface TrackedBatch {
   readonly expectedHead: number;
 }
 
-function setupTest() {
+interface SetupTestConfig {
+  /**
+   * Skips installing the scripted `startActivity` mint so a test can seed the real stateful
+   * backend's collections and exercise its gates instead.
+   */
+  readonly installStartActivityMock?: boolean;
+}
+
+function setupTest(config: Readonly<SetupTestConfig> = {}) {
   const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
 
   const client: ActivityServiceClient = createORPCClient(link);
   const batches: Array<TrackedBatch> = [];
   const startedActivities: Array<ActivityData> = [];
 
-  server.use(
+  const handlers = [
     mockActivityService.trackActivityProgress.handler((opts) => {
       batches.push({
         checkpoints: opts.input.checkpoints,
@@ -42,14 +51,21 @@ function setupTest() {
 
       return { appendedHead: last?.version ?? opts.input.expectedHead };
     }),
-    mockActivityService.startActivity.handler((opts) => {
-      const started = createMockActivityData({ avatarID: opts.input.avatarID });
+  ];
 
-      startedActivities.push(started);
+  if (config.installStartActivityMock !== false) {
+    handlers.push(
+      mockActivityService.startActivity.handler((opts) => {
+        const started = createMockActivityData({ avatarID: opts.input.avatarID });
 
-      return started;
-    }),
-  );
+        startedActivities.push(started);
+
+        return started;
+      }),
+    );
+  }
+
+  server.use(...handlers);
 
   const onInvalid = mock<(activityID: string, reason: string) => void>();
   const submitter = createCheckpointSubmitter({ client, onInvalid });
@@ -348,4 +364,51 @@ test('it aborts to displaced when another session takes the writer mid-pass', as
   // the tallies never persisted, so the pass reports none
   expect(onProgress).not.toHaveBeenCalled();
   expect(ctx.startedActivities).toStrictEqual([]);
+});
+
+test('it returns the earned report rather than throwing when a continuation start is rejected because the account switched avatars', async () => {
+  const ctx = setupTest({ installStartActivityMock: false });
+
+  const viewer = await createViewer({ avatar: { id: 'avatar_active', name: 'Active One' } });
+  const targetAvatar = await db.avatarCollection.create({ userID: viewer.user.id });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const progress = createMockLatestActivityProgress({
+    activity: createMockActivityData({ avatarID: targetAvatar.id }),
+  });
+
+  const report = await runFastForward({
+    budgetMs: 60_000,
+    buildSimulationInput: (activity) => ({
+      activity: createMockActivityInput({
+        encounter: {
+          waves: [
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 6 }, () => createMockEnemyData()),
+            Array.from({ length: 3 }, () => createMockEnemyData()),
+            Array.from({ length: 4 }, () => createMockEnemyData()),
+          ],
+        },
+        failureAction: ActivityFailureAction.Retry,
+        id: activity.id,
+        seed: activity.seed,
+      }),
+
+      // life 1 dies on the first hit taken, so the attempt fails and terminates quickly
+      avatar: createMockAvatarData({ life: 1 }),
+    }),
+    client,
+    progress,
+    submitter: ctx.submitter,
+  });
+
+  expect(report).toMatchObject({
+    activeAvatarName: 'Active One',
+    activity: progress.activity,
+    attempts: 1,
+    finalRowTerminal: true,
+    reason: 'avatar-switched',
+  });
+
+  expect(ctx.batches).toHaveLength(1);
 });

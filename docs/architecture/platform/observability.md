@@ -135,25 +135,26 @@ in stack state are encrypted by the stack passphrase.
 
 ## Instrument registry
 
-| Instrument                           | Type            | Unit           | Attributes          | Meaning                                                                          |
-| ------------------------------------ | --------------- | -------------- | ------------------- | -------------------------------------------------------------------------------- |
-| `vers.replay.verification_lag`       | histogram       | `s`            | —                   | seconds between an append landing and a drain cycle confirming it                |
-| `vers.replay.wake`                   | counter         | `{wake}`       | —                   | wake requests received                                                           |
-| `vers.replay.drain_duration`         | histogram       | `s`            | —                   | wall-clock duration of one drain cycle                                           |
-| `vers.replay.backlog_claimed`        | histogram       | `{chain}`      | —                   | chains claimed and adjudicated in one drain cycle                                |
-| `vers.verification.rejections`       | counter         | `{rejection}`  | `reason`            | adjudications that rejected or parked an activity, by reason                     |
-| `vers.replay.iteration_failures`     | counter         | `{iteration}`  | `outcome`           | worker iterations that failed to replay a claimed chain, by outcome              |
-| `vers.replay.settled_xp`             | up-down counter | `{xp}`         | `source`            | xp verified segments settled to avatars, by how the amount was derived           |
-| `vers.replay.clamped_settlements`    | counter         | `{settlement}` | —                   | settlements whose debit was floored at zero, paying less than recorded           |
-| `vers.keys.derive_rejections`        | counter         | `{rejection}`  | `reason`            | deriveAvatarKey calls that refused to derive a key, by reason                    |
-| `vers.activity.terminal_transitions` | counter         | `{activity}`   | `status`            | activities that claimed a terminal transition, by status                         |
-| `vers.activity.writer_takeovers`     | counter         | `{takeover}`   | —                   | successful writer-session claims on active activities                            |
-| `vers.activity.replay_poke_failed`   | counter         | `{poke}`       | —                   | replay wake pokes that never delivered after exhausting retries                  |
-| `vers.email.delivery_failures`       | counter         | `{email}`      | —                   | emails that failed to deliver                                                    |
-| `vers.session.failed_attempts`       | counter         | `{attempt}`    | —                   | failed step-up verification attempts                                             |
-| `vers.analytics.delivery_failures`   | counter         | `{event}`      | `reason`            | product events that never landed in the Tinybird data source, by reason          |
-| `vers.web.service_call_retries`      | counter         | `{retry}`      | `service`           | retry attempts against an outbound service call that failed its previous attempt |
-| `vers.web.service_call_failures`     | counter         | `{call}`       | `service`, `reason` | outbound service calls that never delivered, by service and reason               |
+| Instrument                                   | Type            | Unit           | Attributes          | Meaning                                                                          |
+| -------------------------------------------- | --------------- | -------------- | ------------------- | -------------------------------------------------------------------------------- |
+| `vers.replay.verification_lag`               | histogram       | `s`            | —                   | seconds between an append landing and a drain cycle confirming it                |
+| `vers.replay.wake`                           | counter         | `{wake}`       | —                   | wake requests received                                                           |
+| `vers.replay.drain_duration`                 | histogram       | `s`            | —                   | wall-clock duration of one drain cycle                                           |
+| `vers.replay.backlog_claimed`                | histogram       | `{chain}`      | —                   | chains claimed and adjudicated in one drain cycle                                |
+| `vers.verification.rejections`               | counter         | `{rejection}`  | `reason`            | adjudications that rejected or parked an activity, by reason                     |
+| `vers.replay.iteration_failures`             | counter         | `{iteration}`  | `outcome`           | worker iterations that failed to replay a claimed chain, by outcome              |
+| `vers.replay.settled_xp`                     | up-down counter | `{xp}`         | `source`            | xp verified segments settled to avatars, by how the amount was derived           |
+| `vers.replay.clamped_settlements`            | counter         | `{settlement}` | —                   | settlements whose debit was floored at zero, paying less than recorded           |
+| `vers.keys.derive_rejections`                | counter         | `{rejection}`  | `reason`            | deriveAvatarKey calls that refused to derive a key, by reason                    |
+| `vers.activity.terminal_transitions`         | counter         | `{activity}`   | `status`            | activities that claimed a terminal transition, by status                         |
+| `vers.activity.writer_takeovers`             | counter         | `{takeover}`   | —                   | successful writer-session claims on active activities                            |
+| `vers.activity.replay_poke_failed`           | counter         | `{poke}`       | —                   | replay wake pokes that never delivered after exhausting retries                  |
+| `vers.activity.avatar_not_active_rejections` | counter         | `{rejection}`  | —                   | startActivity calls rejected because the starting avatar is not active           |
+| `vers.email.delivery_failures`               | counter         | `{email}`      | —                   | emails that failed to deliver                                                    |
+| `vers.session.failed_attempts`               | counter         | `{attempt}`    | —                   | failed step-up verification attempts                                             |
+| `vers.analytics.delivery_failures`           | counter         | `{event}`      | `reason`            | product events that never landed in the Tinybird data source, by reason          |
+| `vers.web.service_call_retries`              | counter         | `{retry}`      | `service`           | retry attempts against an outbound service call that failed its previous attempt |
+| `vers.web.service_call_failures`             | counter         | `{call}`       | `service`, `reason` | outbound service calls that never delivered, by service and reason               |
 
 `service-activity` pokes `service-replay`'s `POST /wake` each time an append advances an activity
 past its verified cursor. The handler drains the queue — claiming and adjudicating chains until none

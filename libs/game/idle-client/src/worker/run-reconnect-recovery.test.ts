@@ -19,12 +19,13 @@ async function setupTest(userID: string) {
   return { context };
 }
 
-test("it resyncs the held start intent's avatar over the reported one", async () => {
+test('it drops the held start intent as stale and falls back to the reported avatar when the intent avatar is no longer active', async () => {
   const viewer = await createViewer();
   const avatar = await db.avatarCollection.create({ userID: viewer.user.id });
   const ctx = await setupTest(viewer.user.id);
 
-  // the intent's source row already reads closed, so the recovery's drain mints the next row
+  // the intent's source row already reads closed, so the recovery's drain would mint the next
+  // row if the intent's avatar were still active
   const source = await db.activityCollection.create({
     avatarID: avatar.id,
     status: 'stopped',
@@ -37,16 +38,26 @@ test("it resyncs the held start intent's avatar over the reported one", async ()
     scopeType: source.scopeType,
   });
 
+  await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'capped',
+  });
+
   await runReconnectRecovery(ctx.context, viewer.avatar.id);
 
   const minted = db.activityCollection.findFirst((q) =>
     q.where({ avatarID: avatar.id, status: 'active' }),
   );
 
-  invariant(minted !== undefined, "expected the drain to mint the intent avatar's next row");
+  expect(minted).toBeUndefined();
 
-  expect(minted.id).not.toBe(source.id);
-  expect(ctx.context.getResyncAvatarID()).toBe(avatar.id);
+  expect(ctx.context.getBroadcasts()).toPartiallyContain({
+    status: { kind: 'capped' },
+    type: WorkerMessageType.ResyncStatus,
+  });
+
+  expect(ctx.context.getResyncAvatarID()).toBe(viewer.avatar.id);
 });
 
 test('it resyncs the reported avatar when no intent is held', async () => {

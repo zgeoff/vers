@@ -35,14 +35,19 @@ export interface FastForwardProgress {
  * fast-forward itself submitted that row's terminal checkpoint: the stream is closed even though
  * the row's fetched `status` still reads active, so no live attach may follow. `displaced` means
  * another session took the stream's writer mid-run: the tallies past the confirmed head never
- * persisted, and no live attach may follow.
+ * persisted, and no live attach may follow. `avatar-switched` means the account's active avatar
+ * changed between this row's terminal append and the next continuation's start — the closed row's
+ * tallies already persisted, `finalRowTerminal` is true, and `activeAvatarName` names who to
+ * attach next.
  */
-export interface FastForwardReport extends FastForwardProgress {
+export type FastForwardReport = FastForwardProgress & {
   readonly activity: ActivityData;
   readonly appendedHead: number;
   readonly finalRowTerminal: boolean;
-  readonly reason: 'aborted-on-failure' | 'budget-exhausted' | 'displaced';
-}
+} & (
+    | { readonly activeAvatarName: string; readonly reason: 'avatar-switched' }
+    | { readonly reason: 'aborted-on-failure' | 'budget-exhausted' | 'displaced' }
+  );
 
 /**
  * `progress` is the confirmed snapshot the plan was decided from — `null` only when the avatar has
