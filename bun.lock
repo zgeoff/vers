@@ -570,6 +570,7 @@
         "@vers/contract-activity": "workspace:*",
         "@vers/design-system": "workspace:*",
         "@vers/idle-core": "workspace:*",
+        "@vers/service-utils": "workspace:*",
         "@vers/styled-system": "workspace:*",
         "@vers/trace": "workspace:*",
         "idb": "catalog:",
@@ -788,6 +789,7 @@
         "@opentelemetry/sdk-metrics": "catalog:",
         "@opentelemetry/sdk-trace-node": "catalog:",
         "@orpc/client": "catalog:",
+        "@orpc/contract": "catalog:",
         "@orpc/shared": "catalog:",
         "@orpc/standard-server": "catalog:",
         "@vers/trace": "workspace:*",
@@ -801,6 +803,7 @@
       "devDependencies": {
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
+        "@vers/contract-avatar": "workspace:*",
         "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
         "typescript": "catalog:",
