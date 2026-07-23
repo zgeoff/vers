@@ -100,13 +100,19 @@ and their immediate neighbours. Sight running ahead of reach is the intended exp
 leak — a bounded local horizon cannot compute the global-best jackpot, which is the exploit fog
 exists to deny.
 
-Setting `REVEAL_RADIUS > SELECTION_RADIUS` makes the offline boundary self-enforcing. The server
-returns descriptors for the whole revealed disc, which extends past the selectable frontier, and the
-client caches it. Offline, a player farms revealed nodes and pushes selection outward into
-already-revealed cells, bounded by `REVEAL_RADIUS − SELECTION_RADIUS`; the cached disc's rim is a
-hard stop. Pre-disclosing content into that shell is safe only because the base is flat — a flat
-base means peeking buys nothing, since all reward magnitude lives in juice salt minted per-run and
-online. A player farms the known offline and ventures into fog online.
+Enforcement is server-side, not the cache. Every activity start and every replay checks the target
+against the avatar's verified first-clear frontier and rejects anything beyond it, so cached
+descriptors and offline movement — both client-controlled — buy no reach a fresh server check would
+deny. `REVEAL_RADIUS > SELECTION_RADIUS` is a cache and pacing bound on top of that check, not the
+boundary itself.
+
+Within it, the server returns descriptors for the whole revealed disc, which extends past the
+selectable frontier, and the client caches them. Offline, a player farms revealed nodes and pushes
+selection outward into already-revealed cells, bounded by `REVEAL_RADIUS − SELECTION_RADIUS`, with
+the cached disc's rim as the honest client's stop; the server's frontier check is the real one.
+Pre-disclosing content into that shell is safe only because the base is flat — a flat base means
+peeking buys nothing, since all reward magnitude lives in juice salt minted per-run and online. A
+player farms the known offline and ventures into fog online.
 
 ## Content sealing & verification
 
@@ -159,10 +165,10 @@ reward magnitude.
 
 ## The reveal radius
 
-`REVEAL_RADIUS` is the one knob that sets both the look-ahead bound (the security property) and
-offline exploration depth. It starts at 2 hops and is expected to settle between 2 and 5, never past
-about 5; it is tuned in dev once the systems it governs exist. The exploit returns only as the
-radius approaches infinity.
+`REVEAL_RADIUS` is the one knob that sets both the look-ahead bound and offline exploration depth.
+It holds in the range of 2 to 5 hops, and never above 5: look-ahead value climbs with the radius and
+the scanning exploit returns as it approaches infinity, so the ceiling is a security bound, not a
+preference.
 
 ## Package layout
 
