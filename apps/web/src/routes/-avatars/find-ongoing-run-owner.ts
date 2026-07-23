@@ -1,6 +1,6 @@
 import type { AvatarData } from '@vers/contract-avatar';
 import type { PendingStartIntent } from '@vers/idle-client';
-import type { AvatarSnapshot } from '@vers/idle-core';
+import type { ActivitySnapshot, AvatarSnapshot } from '@vers/idle-core';
 
 /**
  * The avatar the roster must treat as currently out, identifying enough to name it in a rejection
@@ -12,17 +12,20 @@ export interface OngoingRunOwner {
 }
 
 /**
- * Finds the avatar the idle worker's own state says is mid-run, ahead of any server round trip: a
- * live simulation snapshot takes precedence, since it reflects the running sim directly; absent
- * that, a parked continuation-start intent names the avatar the worker meant to resume. `null` when
- * neither is present, meaning no avatar is known to be out.
+ * Finds the avatar the idle worker's own state says is mid-run, ahead of any server round trip. A
+ * running activity is the liveness signal — its paired avatar snapshot names the owner — because the
+ * avatar snapshot alone lingers a frame past a run's end and would wrongly read as still out. Absent
+ * a live activity, a parked continuation-start intent names the avatar the worker meant to resume
+ * across the gap between run segments. `null` when neither holds, meaning no avatar is known to be
+ * out.
  */
 export function findOngoingRunOwner(
+  activity: Readonly<ActivitySnapshot> | undefined,
   liveAvatar: Readonly<AvatarSnapshot> | undefined,
   pendingIntent: Readonly<PendingStartIntent> | undefined,
   avatars: ReadonlyArray<AvatarData>,
 ): OngoingRunOwner | null {
-  if (liveAvatar !== undefined) {
+  if (activity !== undefined && liveAvatar !== undefined) {
     return { id: liveAvatar.id, name: liveAvatar.name };
   }
 

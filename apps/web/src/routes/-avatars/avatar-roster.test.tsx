@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AVATAR_MODE_CAP } from '@vers/contract-avatar';
 import { ActivityFailureAction } from '@vers/idle-core';
-import { createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
+import { createMockActivitySnapshot, createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
 import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { createMockAvatar } from '../../test-utils/factories/create-mock-avatar';
@@ -72,7 +72,7 @@ test('it blocks a click on a different avatar than the one live in the simulatio
   const other = createMockAvatar({ name: 'Zetha' });
 
   setIdleWorkerHandle({
-    activity: undefined,
+    activity: createMockActivitySnapshot(),
     avatar: createMockAvatarSnapshot({ id: out.id, name: out.name }),
     client: undefined,
     failureAction: ActivityFailureAction.Abort,
@@ -98,7 +98,7 @@ test('it lets a click on the currently-out avatar proceed', async () => {
   await db.activityCollection.create({ avatarID: out.id, status: 'active' });
 
   setIdleWorkerHandle({
-    activity: undefined,
+    activity: createMockActivitySnapshot(),
     avatar: createMockAvatarSnapshot({ id: out.id, name: out.name }),
     client: undefined,
     failureAction: ActivityFailureAction.Abort,

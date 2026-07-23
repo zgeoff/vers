@@ -104,7 +104,12 @@ export function AvatarRoster(props: AvatarRosterProps) {
     try {
       const pendingIntent = await tryReadPendingStartIntent();
 
-      const owner = findOngoingRunOwner(handle.avatar, pendingIntent, props.roster.avatars);
+      const owner = findOngoingRunOwner(
+        handle.activity,
+        handle.avatar,
+        pendingIntent,
+        props.roster.avatars,
+      );
 
       if (owner !== null && owner.id !== avatarID) {
         setMessage(`${owner.name} is out on an activity — finish or stop it to switch`);
