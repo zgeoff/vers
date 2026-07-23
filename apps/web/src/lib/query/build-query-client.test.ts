@@ -1,6 +1,19 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { ORPCError } from '@orpc/client';
+import { QueryClient } from '@tanstack/react-query';
 import { buildQueryClient } from './build-query-client';
+
+test('it builds a query client without a cross-tab broadcast channel (the SSR path)', () => {
+  const originalBroadcastChannel = globalThis.BroadcastChannel;
+
+  Reflect.deleteProperty(globalThis, 'BroadcastChannel');
+
+  onTestFinished(() => {
+    globalThis.BroadcastChannel = originalBroadcastChannel;
+  });
+
+  expect(buildQueryClient()).toBeInstanceOf(QueryClient);
+});
 
 test('it does not retry a 4xx service error', async () => {
   const queryClient = buildQueryClient();
