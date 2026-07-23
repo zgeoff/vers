@@ -1,6 +1,6 @@
 import { SpanKind, SpanStatusCode, context, trace } from '@opentelemetry/api';
 import { CamelCasePlugin, Kysely } from 'kysely';
-import type { LogEvent } from 'kysely';
+import type { AbortableOperationOptions, Dialect, Driver, LogEvent } from 'kysely';
 import { PostgresJSDialect } from 'kysely-postgres-js';
 import postgres from 'postgres';
 import type { DB } from './schema.generated';
@@ -26,22 +26,106 @@ interface CreateDBConfig {
  * it the pool hands a caller a connection the endpoint already closed, and the
  * first write fails with CONNECTION_CLOSED; the value stays under the
  * endpoint's suspend timeout so the client always closes first.
+ *
+ * `connect_timeout` (also seconds) bounds connection acquisition itself, a
+ * phase neither `statement_timeout` nor `idle_timeout` covers: a suspended
+ * managed Postgres endpoint that stalls on wake fails in 10s instead of
+ * hanging for minutes, while 10s leaves headroom for a normal cold wake
+ * (roughly 1-5s).
  */
 export function createDB(config: CreateDBConfig): Kysely<DB> {
+  const sql = postgres(config.databaseURL, buildPostgresOptions(config));
+
   return new Kysely<DB>({
-    dialect: new PostgresJSDialect({
-      postgres: postgres(config.databaseURL, {
-        connection: {
-          idle_in_transaction_session_timeout: 30_000,
-          statement_timeout: 30_000,
-          ...(config.searchPath === undefined ? {} : { search_path: config.searchPath }),
-        },
-        idle_timeout: 240,
-      }),
-    }),
+    dialect: buildTracedDialect(new PostgresJSDialect({ postgres: sql })),
     log: recordQuerySpan,
     plugins: [new CamelCasePlugin()],
   });
+}
+
+/**
+ * Builds the postgres.js connection options `createDB` passes to `postgres(...)`, split out from
+ * the dialect construction so tests can assert on the options object without opening a real
+ * connection.
+ */
+export function buildPostgresOptions(config: CreateDBConfig) {
+  return {
+    connect_timeout: 10,
+    connection: {
+      idle_in_transaction_session_timeout: 30_000,
+      statement_timeout: 30_000,
+      ...(config.searchPath === undefined ? {} : { search_path: config.searchPath }),
+    },
+    idle_timeout: 240,
+  };
+}
+
+/**
+ * Wraps a `PostgresJSDialect` so the driver it creates emits a `db.connect` span around connection
+ * acquisition, delegating every other dialect method straight through.
+ */
+function buildTracedDialect(dialect: PostgresJSDialect): Dialect {
+  return {
+    createAdapter: () => dialect.createAdapter(),
+    createDriver: () => buildTracedDriver(dialect.createDriver()),
+    createIntrospector: (db) => dialect.createIntrospector(db),
+    createQueryCompiler: () => dialect.createQueryCompiler(),
+  };
+}
+
+/**
+ * Wraps a `Driver` so `acquireConnection` runs inside a `db.connect` span, delegating every other
+ * method — including the optional savepoint methods — to the inner driver unchanged. Delegates
+ * through a `Proxy` rather than a hand-listed method map, so a `Driver` method this file doesn't
+ * name still reaches the inner driver instead of silently becoming a no-op.
+ */
+function buildTracedDriver(driver: Driver): Driver {
+  return new Proxy(driver, {
+    get: (target, property, receiver) => {
+      if (property === 'acquireConnection') {
+        return (options?: AbortableOperationOptions) =>
+          withConnectSpan(() => target.acquireConnection(options));
+      }
+
+      const value: unknown = Reflect.get(target, property, receiver);
+
+      if (typeof value !== 'function') {
+        return value;
+      }
+
+      const boundValue: unknown = value.bind(target);
+
+      return boundValue;
+    },
+  });
+}
+
+/**
+ * Runs a driver's `acquireConnection` call inside a `db.connect` CLIENT span, parented to
+ * `context.active()` so it nests under whatever request or worker span is active; a no-op span
+ * without a registered tracer provider. Marks the span failed and records the exception on a
+ * stalled or refused connect.
+ */
+async function withConnectSpan<T>(acquireConnection: () => Promise<T>): Promise<T> {
+  const tracer = trace.getTracer('@vers/db');
+
+  const span = tracer.startSpan(
+    'db.connect',
+    { attributes: { 'db.system': 'postgresql' }, kind: SpanKind.CLIENT },
+    context.active(),
+  );
+
+  try {
+    return await acquireConnection();
+  } catch (error) {
+    const exception = error instanceof Error ? error : String(error);
+
+    span.recordException(exception);
+    span.setStatus({ code: SpanStatusCode.ERROR });
+    throw error;
+  } finally {
+    span.end();
+  }
 }
 
 /**
