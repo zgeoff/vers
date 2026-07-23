@@ -11,3 +11,11 @@ export function Default() {
     </Dialog>
   );
 }
+
+export function NonDismissible() {
+  return (
+    <Dialog dismissible={false} open title="Welcome back">
+      <Text>Catching up… 12 attempts, 1 level-up so far.</Text>
+    </Dialog>
+  );
+}

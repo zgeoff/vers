@@ -3,7 +3,7 @@ import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { StartStatus } from '@vers/idle-client';
-import { advanceWriterGeneration, setEngagedActivityID } from '@vers/idle-client';
+import { advanceWriterGeneration, setEngagedActivityID, setResyncStatus } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import { setSelectedNode } from '@vers/worldmap-client';
@@ -97,6 +97,73 @@ test('it sends one start call for the selected node once initialized', async () 
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledExactlyOnceWith(
+        { avatarID: avatar.id, scopeID: 'a9lp75', scopeType: 'world_map_node' },
+        { signal: writerAbortSignal },
+      );
+    });
+  });
+});
+
+test('it withholds the start call while an offline catch-up is fast-forwarding', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setResyncStatus({ attempts: 3, kind: 'fast-forwarding', levelUps: 0 });
+
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ kind: 'failed' }),
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    // a start that went out would resolve to `failed` and render the retry action — its absence
+    // within a generous window stands in for the call never having been sent
+    await expect(
+      rendered.findByTestId('start-activity-retry', undefined, { timeout: 300 }),
+    ).toReject();
+
+    expect(client.startActivity).not.toHaveBeenCalled();
+  });
+});
+
+test('it sends the start once the offline catch-up clears', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setResyncStatus({ attempts: 3, kind: 'fast-forwarding', levelUps: 0 });
+
+  const client = createStubWorkerClient({
+    startActivity: () => new Promise(() => {}),
+  });
+
+  const writerAbortSignal = new AbortController().signal;
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+    setResyncStatus(null);
 
     await waitFor(() => {
       expect(client.startActivity).toHaveBeenCalledExactlyOnceWith(
