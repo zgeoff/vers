@@ -12,6 +12,13 @@ interface Props {
    * Label for the built-in close trigger. Default "Close".
    */
   closeLabel?: string;
+
+  /**
+   * Whether escape, the backdrop, and the built-in close trigger can close the dialog. Default
+   * true. `false` renders no close trigger and blocks escape and outside-interaction dismissal,
+   * leaving the caller's own `open` state as the only way to close it.
+   */
+  dismissible?: boolean;
   onOpenChange?: (open: boolean) => void;
   open: boolean;
   title: string;
@@ -23,6 +30,7 @@ const dialogRecipe = sva({
       backgroundColor: '[rgba(0, 0, 0, 0.6)]',
       inset: '0',
       position: 'fixed',
+      zIndex: '[60]',
     },
     content: {
       backgroundColor: 'bg.panelElevated',
@@ -42,6 +50,7 @@ const dialogRecipe = sva({
       justifyContent: 'center',
       padding: '4',
       position: 'fixed',
+      zIndex: '[60]',
     },
   },
   slots: ['backdrop', 'content', 'positioner'],
@@ -50,13 +59,17 @@ const dialogRecipe = sva({
 /**
  * Modal dialog over the Ark UI primitive: focus is trapped while open, and escape, the backdrop,
  * and the built-in close trigger all report through `onOpenChange` — the open state itself is the
- * caller's.
+ * caller's. `dismissible={false}` drops all three dismissal paths and the close trigger, for a
+ * lockout the caller's own state must resolve instead.
  */
 export function Dialog(props: Readonly<Props>) {
   const styles = dialogRecipe();
+  const dismissible = props.dismissible ?? true;
 
   return (
     <ArkDialog.Root
+      closeOnEscape={dismissible}
+      closeOnInteractOutside={dismissible}
       onOpenChange={(details) => props.onOpenChange?.(details.open)}
       open={props.open}
     >
@@ -68,9 +81,11 @@ export function Dialog(props: Readonly<Props>) {
               <Heading level={2}>{props.title}</Heading>
             </ArkDialog.Title>
             {props.children}
-            <ArkDialog.CloseTrigger asChild>
-              <Button type="button">{props.closeLabel ?? 'Close'}</Button>
-            </ArkDialog.CloseTrigger>
+            {dismissible && (
+              <ArkDialog.CloseTrigger asChild>
+                <Button type="button">{props.closeLabel ?? 'Close'}</Button>
+              </ArkDialog.CloseTrigger>
+            )}
           </ArkDialog.Content>
         </ArkDialog.Positioner>
       </Portal>

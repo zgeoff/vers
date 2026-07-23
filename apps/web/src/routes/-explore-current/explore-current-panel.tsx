@@ -2,7 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, CheckboxField, Spinner } from '@vers/design-system';
 import type { StartStatus } from '@vers/idle-client';
-import { setEngagedActivityID, useEngagedActivityID, useWriterGeneration } from '@vers/idle-client';
+import {
+  setEngagedActivityID,
+  useEngagedActivityID,
+  useResyncStatus,
+  useWriterGeneration,
+} from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -40,14 +45,17 @@ interface StartAttemptReport {
  * bouncing the player back. A start rejected because the account's active avatar changed renders a
  * distinct notice naming the current one, with a reload action rather than the generic retry — the
  * route's own data still names the stale avatar, and only a reload re-runs every gate against the
- * new one.
+ * new one. While an offline catch-up is still fast-forwarding, the panel withholds its start call
+ * — the lockout overlay above it covers the UI, but this keeps a mounted panel from auto-sending a
+ * start of its own underneath it.
  */
-export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
+export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   const navigate = useNavigate();
   const idleWorkerHandle = useIdleWorkerHandle();
   const selectedNode = useSelectedNode().node;
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const writerGeneration = useWriterGeneration();
+  const resyncStatus = useResyncStatus();
   const avatarID = avatarQuery.data?.id;
   const isAutoRetryChecked = idleWorkerHandle.failureAction === ActivityFailureAction.Retry;
 
@@ -104,7 +112,12 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
       return;
     }
 
-    if (avatarID === undefined || selectedNode === null || attemptScopeID === selectedNode.id) {
+    if (
+      avatarID === undefined ||
+      selectedNode === null ||
+      attemptScopeID === selectedNode.id ||
+      resyncStatus?.kind === 'fast-forwarding'
+    ) {
       return;
     }
 
@@ -136,6 +149,7 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     avatarID,
     selectedNode,
     attemptScopeID,
+    resyncStatus,
   ]);
 
   useEffect(() => {
