@@ -14,6 +14,7 @@
   "dependencies": {
     "@orpc/server": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
+    "@vers/active-avatar": "workspace:*",
     "@vers/contract-avatar": "workspace:*",
     "@vers/db": "workspace:*",
     "@vers/service-runtime": "workspace:*",
