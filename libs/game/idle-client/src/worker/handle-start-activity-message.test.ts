@@ -42,7 +42,7 @@ test('it mints a row, installs it, and answers with the started status', async (
 
   const result = await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -52,7 +52,7 @@ test('it mints a row, installs it, and answers with the started status', async (
 
   invariant(minted !== undefined, 'expected the start to mint an active row');
 
-  expect(minted.scopeID).toBe('a9lp75');
+  expect(minted.scopeID).toBe('0_0');
   expect(context.getSimulation()?.activity?.id).toBe(minted.id);
   expect(context.getActivity()?.id).toBe(minted.id);
 
@@ -76,7 +76,7 @@ test('it installs a simulation even when none was initialized yet', async () => 
 
   await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -95,7 +95,7 @@ test('it resyncs onto the already-active row when the same scope conflicts', asy
 
   const running = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     startKey: 'someone-elses-start',
     status: 'active',
@@ -108,7 +108,7 @@ test('it resyncs onto the already-active row when the same scope conflicts', asy
 
   const result = await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -122,7 +122,7 @@ test('it flushes and stops a different scope before starting the requested one',
 
   const previous = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
-    scopeID: 'old-node',
+    scopeID: '5_0',
     scopeType: 'world_map_node',
     status: 'active',
   });
@@ -134,7 +134,7 @@ test('it flushes and stops a different scope before starting the requested one',
 
   await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -151,7 +151,7 @@ test('it flushes and stops a different scope before starting the requested one',
 
   invariant(minted !== undefined, 'expected the start to mint an active row');
 
-  expect(minted.scopeID).toBe('a9lp75');
+  expect(minted.scopeID).toBe('0_0');
   expect(context.getSimulation()?.activity?.id).toBe(minted.id);
 });
 
@@ -170,7 +170,7 @@ test('it stops the minted row back when a stop lands mid-start', async () => {
   // always answers with this pre-minted row, standing in for the service's real answer
   const minted = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     startKey: 'seed-key',
     status: 'active',
@@ -186,7 +186,7 @@ test('it stops the minted row back when a stop lands mid-start', async () => {
 
   const result = await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -233,7 +233,7 @@ test('it answers failed without reporting a fault when a worker shutdown aborts 
 
   const result = await handleStartActivityMessage(context, {
     avatarID: 'avatar_1',
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -254,7 +254,7 @@ test('it abandons a superseded call without touching the fresher claim', async (
 
   const minted = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     startKey: 'seed-key',
     status: 'active',
@@ -271,7 +271,7 @@ test('it abandons a superseded call without touching the fresher claim', async (
 
   await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -289,7 +289,7 @@ test('it leaves the conflicting row running when a fresher call supersedes durin
 
   const previous = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
-    scopeID: 'old-node',
+    scopeID: '5_0',
     scopeType: 'world_map_node',
     status: 'active',
   });
@@ -315,7 +315,7 @@ test('it leaves the conflicting row running when a fresher call supersedes durin
 
   const result = await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -334,7 +334,7 @@ test('it answers failed on a transport failure', async () => {
 
   const result = await handleStartActivityMessage(context, {
     avatarID: 'avatar_1',
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -347,7 +347,7 @@ test('it fails an attach the resync could not install', async () => {
 
   await db.activityCollection.create({
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     startKey: 'someone-elses-start',
     status: 'active',
@@ -364,7 +364,7 @@ test('it fails an attach the resync could not install', async () => {
 
   const result = await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -392,12 +392,12 @@ test('it runs interleaved starts one at a time, the fresher claim winning', asyn
   await Promise.all([
     handleStartActivityMessage(context, {
       avatarID: viewer.avatar.id,
-      scopeID: 'esaxrt',
+      scopeID: '1_0',
       scopeType: 'world_map_node',
     }),
     handleStartActivityMessage(context, {
       avatarID: viewer.avatar.id,
-      scopeID: 'a9lp75',
+      scopeID: '0_0',
       scopeType: 'world_map_node',
     }),
   ]);
@@ -410,7 +410,7 @@ test('it runs interleaved starts one at a time, the fresher claim winning', asyn
 
   invariant(active[0] !== undefined, 'expected one active row');
 
-  expect(active[0].scopeID).toBe('a9lp75');
+  expect(active[0].scopeID).toBe('0_0');
   expect(context.getActivity()?.id).toBe(active[0].id);
 });
 
@@ -420,7 +420,7 @@ test('it takes over and stops a different scope another writer owns before start
 
   const previous = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
-    scopeID: 'old-node',
+    scopeID: '5_0',
     scopeType: 'world_map_node',
     status: 'active',
   });
@@ -458,7 +458,7 @@ test('it takes over and stops a different scope another writer owns before start
 
   await handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -474,7 +474,7 @@ test('it takes over and stops a different scope another writer owns before start
 
   invariant(minted !== undefined, 'expected the start to mint an active row');
 
-  expect(minted.scopeID).toBe('a9lp75');
+  expect(minted.scopeID).toBe('0_0');
   expect(context.getSimulation()?.activity?.id).toBe(minted.id);
 });
 
@@ -487,7 +487,7 @@ test("it settles a start rejected for a non-active avatar as failed, carrying th
 
   const result = await handleStartActivityMessage(context, {
     avatarID: otherAvatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -522,7 +522,7 @@ test('it reports no worker fault for a start rejected because the avatar is not 
 
   await handleStartActivityMessage(context, {
     avatarID: otherAvatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 

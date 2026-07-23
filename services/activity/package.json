@@ -20,7 +20,6 @@
     "@vers/active-avatar": "workspace:*",
     "@vers/contract-activity": "workspace:*",
     "@vers/contract-replay": "workspace:*",
-    "@vers/data": "workspace:*",
     "@vers/db": "workspace:*",
     "@vers/game-utils": "workspace:*",
     "@vers/idle-core": "workspace:*",

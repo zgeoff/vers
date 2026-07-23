@@ -153,7 +153,7 @@ test("it leaves another avatar's intent untouched", async () => {
   await writePendingStartIntent({
     activityID: 'activity_1',
     avatarID: 'avatar_other',
-    scopeID: 'scope_1',
+    scopeID: '2_0',
     scopeType: 'mission',
   });
 
@@ -179,7 +179,7 @@ test('it skips the attempt and keeps the intent when the budget is spent', async
   await writePendingStartIntent({
     activityID: 'activity_1',
     avatarID: 'avatar_1',
-    scopeID: 'scope_1',
+    scopeID: '2_0',
     scopeType: 'mission',
   });
 
@@ -196,7 +196,7 @@ test('it skips the attempt and keeps the intent when the budget is spent', async
   expect(heldIntent).toStrictEqual({
     activityID: 'activity_1',
     avatarID: 'avatar_1',
-    scopeID: 'scope_1',
+    scopeID: '2_0',
     scopeType: 'mission',
   });
 });
@@ -209,7 +209,7 @@ test('it keeps the intent on a transport failure', async () => {
   await writePendingStartIntent({
     activityID: 'activity_1',
     avatarID: 'avatar_1',
-    scopeID: 'scope_1',
+    scopeID: '2_0',
     scopeType: 'mission',
   });
 
@@ -238,7 +238,7 @@ test('it keeps the intent and rethrows when the session is not recognized', asyn
   await writePendingStartIntent({
     activityID: 'activity_1',
     avatarID: 'avatar_1',
-    scopeID: 'scope_1',
+    scopeID: '2_0',
     scopeType: 'mission',
   });
 
@@ -255,7 +255,7 @@ test('it keeps the intent and rethrows when the session is not recognized', asyn
   expect(heldIntent).toStrictEqual({
     activityID: 'activity_1',
     avatarID: 'avatar_1',
-    scopeID: 'scope_1',
+    scopeID: '2_0',
     scopeType: 'mission',
   });
 });
@@ -272,7 +272,7 @@ test('it releases the intent and rethrows a defined error other than CONFLICT', 
   await writePendingStartIntent({
     activityID: 'activity_1',
     avatarID: 'avatar_1',
-    scopeID: 'scope_1',
+    scopeID: '2_0',
     scopeType: 'mission',
   });
 
@@ -359,7 +359,7 @@ test("it drops the held intent and reports it stale when the intent's avatar is 
   await writePendingStartIntent({
     activityID: 'activity_1',
     avatarID: targetAvatar.id,
-    scopeID: 'esaxrt',
+    scopeID: '1_0',
     scopeType: 'world_map_node',
   });
 

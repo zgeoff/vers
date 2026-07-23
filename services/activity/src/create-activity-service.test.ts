@@ -20,7 +20,7 @@ test('it wires an injected db into the router instead of building one from env',
 
   await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -48,7 +48,7 @@ test('it defaults the content and key versions when none are injected', async ()
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -68,7 +68,7 @@ test('it stamps a default content version both the item and encounter content di
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -89,7 +89,7 @@ test('it uses an injected content version when given', async () => {
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -109,7 +109,7 @@ test('it uses an injected key version when given', async () => {
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 

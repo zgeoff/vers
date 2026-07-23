@@ -133,7 +133,7 @@ test('it blocks a click on a different avatar than the one named by a parked con
   await writePendingStartIntentRecord({
     activityID: 'activity_1',
     avatarID: out.id,
-    scopeID: 'scope_1',
+    scopeID: '2_0',
     scopeType: 'world_map_node',
   });
 

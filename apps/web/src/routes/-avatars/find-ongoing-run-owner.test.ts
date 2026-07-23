@@ -29,7 +29,7 @@ test('it resolves the owner name from the roster for a parked start intent', () 
     {
       activityID: 'activity_1',
       avatarID: 'avatar_parked',
-      scopeID: 'scope_1',
+      scopeID: '2_0',
       scopeType: 'node',
     },
     avatars,
@@ -54,7 +54,7 @@ test('it finds no owner when a parked intent names an avatar absent from the ros
     {
       activityID: 'activity_1',
       avatarID: 'avatar_missing',
-      scopeID: 'scope_1',
+      scopeID: '2_0',
       scopeType: 'node',
     },
     avatars,
@@ -78,7 +78,7 @@ test('it prefers the running activity avatar over a parked intent naming a diffe
     {
       activityID: 'activity_1',
       avatarID: 'avatar_parked',
-      scopeID: 'scope_1',
+      scopeID: '2_0',
       scopeType: 'node',
     },
     avatars,

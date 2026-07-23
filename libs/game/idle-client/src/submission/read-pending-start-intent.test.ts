@@ -15,7 +15,7 @@ test('it reads the held intent without picking up other preference records', asy
   await writePendingStartIntent({
     activityID: 'activity_1',
     avatarID: 'avatar_1',
-    scopeID: 'scope_1',
+    scopeID: '2_0',
     scopeType: 'mission',
   });
 
@@ -24,7 +24,7 @@ test('it reads the held intent without picking up other preference records', asy
   expect(intent).toStrictEqual({
     activityID: 'activity_1',
     avatarID: 'avatar_1',
-    scopeID: 'scope_1',
+    scopeID: '2_0',
     scopeType: 'mission',
   });
 });

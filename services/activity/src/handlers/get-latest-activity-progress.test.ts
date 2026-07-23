@@ -38,7 +38,7 @@ test('it returns a fresh activity with a null anchor at verifiedHead 0', async (
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -69,7 +69,7 @@ test("it returns the avatar's persisted failure action", async () => {
 
   await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -88,7 +88,7 @@ test('it returns the server clock beside the resume cursors', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -110,7 +110,7 @@ test('it returns the activity anchored to its verified checkpoint once verifiedH
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -149,7 +149,7 @@ test('it returns the newest activity regardless of status', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -205,7 +205,7 @@ test('it reports isWriter false to a session another writer displaced', async ()
 
   const started = await clientA.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -239,7 +239,7 @@ test('it reports isWriter true for an unstamped stream whatever the session', as
 
   await sessionlessClient.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
