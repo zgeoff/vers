@@ -1,3 +1,4 @@
+import 'fake-indexeddb/auto';
 import '@zgeoff/bun-test-extended';
 import { afterEach, expect } from 'bun:test';
 import { faker } from '@faker-js/faker';
@@ -12,6 +13,7 @@ import {
 import { server } from './src/mocks/node';
 import { registerAvatarViewerMock } from './src/test-utils/register-avatar-viewer-mock';
 import { registerGameCanvasMock } from './src/test-utils/register-game-canvas-mock';
+import { registerIdleCheckpointDBReset } from './src/test-utils/register-idle-checkpoint-db-reset';
 import { registerIdleWorkerHandleMock } from './src/test-utils/register-idle-worker-handle-mock';
 import { registerRequestContextMock } from './src/test-utils/register-request-context-mock';
 import { registerRespiteSceneMock } from './src/test-utils/register-respite-scene-mock';
@@ -43,6 +45,7 @@ registerMSWLifecycle(server);
 registerMockDBReset();
 registerRequestContextMock();
 registerIdleWorkerHandleMock();
+registerIdleCheckpointDBReset();
 registerGameCanvasMock();
 registerAvatarViewerMock();
 registerWorldmapSceneMock();

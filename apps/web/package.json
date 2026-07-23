@@ -28,6 +28,7 @@
     "@react-three/fiber": "catalog:",
     "@sentry/node": "catalog:",
     "@sentry/react": "catalog:",
+    "@tanstack/query-broadcast-client-experimental": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
     "@tanstack/react-router-ssr-query": "catalog:",
@@ -91,6 +92,8 @@
     "@vitejs/plugin-rsc": "catalog:",
     "@zgeoff/bun-test-extended": "catalog:",
     "babel-plugin-react-compiler": "catalog:",
+    "fake-indexeddb": "catalog:",
+    "idb": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:"
   },

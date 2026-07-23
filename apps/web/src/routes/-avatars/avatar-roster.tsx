@@ -4,10 +4,13 @@ import { useServerFn } from '@tanstack/react-start';
 import type { AvatarData } from '@vers/contract-avatar';
 import { AVATAR_MODE_CAP } from '@vers/contract-avatar';
 import { Heading, Text } from '@vers/design-system';
+import { readPendingStartIntent } from '@vers/idle-client';
 import { css, cx } from '@vers/styled-system/css';
 import { useState } from 'react';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
+import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { avatarSelect } from './avatar-select';
+import { findOngoingRunOwner } from './find-ongoing-run-owner';
 import type { AvatarSelectResult } from './types';
 
 const screen = css({
@@ -89,12 +92,24 @@ interface AvatarRosterProps {
 export function AvatarRoster(props: AvatarRosterProps) {
   const avatarSelectFn = useServerFn(avatarSelect);
   const queryClient = useQueryClient();
+  const handle = useIdleWorkerHandle();
   const [isPending, setIsPending] = useState(false);
   const [message, setMessage] = useState<null | string>(null);
 
   const handleSelect = async (avatarID: string) => {
     setIsPending(true);
     setMessage(null);
+
+    const pendingIntent = await readPendingStartIntent();
+
+    const owner = findOngoingRunOwner(handle.avatar, pendingIntent, props.roster.avatars);
+
+    if (owner !== null && owner.id !== avatarID) {
+      setMessage(`${owner.name} is out on an activity — finish or stop it to switch`);
+      setIsPending(false);
+
+      return;
+    }
 
     try {
       // a successful pick ends in a redirect that useServerFn already navigated to, resolving
