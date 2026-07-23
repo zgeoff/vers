@@ -10,10 +10,11 @@ test('it declares UNAUTHORIZED and FORBIDDEN on every owner-scoped procedure', (
   ]);
 });
 
-test('it declares CONFLICT, NOT_FOUND, NODE_UNKNOWN, and CHAIN_QUARANTINED on startActivity', () => {
+test('it declares CONFLICT, NOT_FOUND, NODE_UNKNOWN, CHAIN_QUARANTINED, and AVATAR_NOT_ACTIVE on startActivity', () => {
   expect(activityContract.startActivity['~orpc'].errorMap).toContainAllKeys([
     'UNAUTHORIZED',
     'FORBIDDEN',
+    'AVATAR_NOT_ACTIVE',
     'CHAIN_QUARANTINED',
     'CONFLICT',
     'NODE_UNKNOWN',

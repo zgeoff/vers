@@ -7,6 +7,7 @@ import { ActivityFailureAction } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import invariant from 'tiny-invariant';
+import { AvatarSwitchedNotice } from '../../components/avatar-switched-notice';
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
@@ -36,7 +37,10 @@ interface StartAttemptReport {
  * to the engagement screen, once per activity — latched in `@vers/idle-client`'s store rather than
  * a component ref, so a remount (the browser back button, re-drilling the same node) that re-fires
  * the start call and finds the same activity already live reads it as already engaged rather than
- * bouncing the player back.
+ * bouncing the player back. A start rejected because the account's active avatar changed renders a
+ * distinct notice naming the current one, with a reload action rather than the generic retry — the
+ * route's own data still names the stale avatar, and only a reload re-runs every gate against the
+ * new one.
  */
 export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
   const navigate = useNavigate();
@@ -164,6 +168,15 @@ export function ExploreCurrentPanel(props: ExploreCurrentPanelProps) {
     setEngagedActivityID(expectedActivityID);
     void navigate({ to: '/activity' });
   }, [isActivityReady, expectedActivityID, engagedActivityID, navigate]);
+
+  if (reportedStatus?.kind === 'failed' && reportedStatus.rejection !== undefined) {
+    return (
+      <AvatarSwitchedNotice
+        activeAvatarName={reportedStatus.rejection.activeAvatarName}
+        testID="start-activity-avatar-not-active"
+      />
+    );
+  }
 
   if (reportedStatus?.kind === 'failed') {
     return (

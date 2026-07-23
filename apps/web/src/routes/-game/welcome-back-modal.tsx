@@ -1,6 +1,7 @@
 import { Button, Dialog, Text } from '@vers/design-system';
 import { setResyncStatus, useResyncStatus } from '@vers/idle-client';
 import type { ResyncStatus } from '@vers/idle-client';
+import { AvatarSwitchedNotice } from '../../components/avatar-switched-notice';
 import { getLoginPathWithRedirect } from '../../lib/auth/get-login-path-with-redirect';
 import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
 import { sendIdleReportOnline } from '../../lib/idle/send-idle-report-online';
@@ -13,7 +14,9 @@ import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
  * report — a fresh login, a zero-gap reconnect — broadcasts no status, so it never opens this. A
  * resync that fails outright opens on a retry action instead; one stopped by an expired session
  * opens on a sign-in link, since no retry can succeed until the player signs back in — the login
- * redirect returns them here, where the fresh session's own resync resumes the catch-up.
+ * redirect returns them here, where the fresh session's own resync resumes the catch-up. A resync
+ * dropped for an avatar the account switched away from opens on a reload action — the tab's own
+ * state still names the old avatar, and only a reload re-runs every gate against the new one.
  */
 export function WelcomeBackModal() {
   const resyncStatus = useResyncStatus();
@@ -62,6 +65,16 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
     );
   }
 
+  if (resyncStatus.kind === 'avatar-switched') {
+    return (
+      <AvatarSwitchedNotice
+        activeAvatarName={resyncStatus.activeAvatarName}
+        attempts={resyncStatus.attempts}
+        levelUps={resyncStatus.levelUps}
+      />
+    );
+  }
+
   if (resyncStatus.kind === 'failed') {
     return (
       <>
@@ -96,6 +109,7 @@ function formatResyncStatus(
     Exclude<
       ResyncStatus,
       | { readonly kind: 'active-elsewhere' }
+      | { readonly kind: 'avatar-switched' }
       | { readonly kind: 'failed' }
       | { readonly kind: 'session-expired' }
     >

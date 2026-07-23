@@ -7,6 +7,11 @@ import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
 
+const AvatarNotActiveDataSchema = z.object({
+  activeAvatarID: z.string(),
+  activeAvatarName: z.string(),
+});
+
 const CappedDataSchema = z.object({ appendedHead: z.int() });
 const CheckpointInvalidDataSchema = z.object({ reason: z.string() });
 const SimVersionProblemDataSchema = z.object({ currentSimVersion: z.string().nullable() });
@@ -154,6 +159,11 @@ export const activityContract = {
     .output(ActivityDataSchema)
     .errors(
       defineErrors({
+        AVATAR_NOT_ACTIVE: {
+          data: AvatarNotActiveDataSchema,
+          message: "The account's active avatar is not the one starting",
+          status: 409,
+        },
         CHAIN_QUARANTINED: {
           data: z.object({}),
           message: 'The chain is quarantined pending replay adjudication',

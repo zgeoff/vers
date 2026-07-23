@@ -22,6 +22,14 @@ export interface ActiveActivityConflictPayload {
 }
 
 /**
+ * Payload shape for `startActivity`'s AVATAR_NOT_ACTIVE: the account's actual active avatar, so
+ * the caller can name who it is without a second round-trip.
+ */
+export interface AvatarNotActivePayload {
+  readonly data: { readonly activeAvatarID: string; readonly activeAvatarName: string };
+}
+
+/**
  * Payload shape for `startActivity`'s SIM_VERSION_UNKNOWN and SIM_VERSION_EXPIRED: the registry's
  * current engine hash, null when the registry carries no active version, so the client knows what
  * to resync onto.

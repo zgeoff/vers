@@ -7,11 +7,14 @@ import type { WorkerContext } from './types';
  * The worker's one decision point for self-scheduled catch-ups, run on every connectivity proof:
  * resends whatever the submitter held, delivers a stop raised offline, then — once the held tail
  * is drained, so a resync never reads a stale appended head — resyncs while no run is live. The
- * avatar comes from the durable start intent first (recorded at the most recent boundary failure,
- * so it is always the freshest signal), else the reporting tab's session avatar, else the last
- * avatar a resync ran for; with none of the three, there is nothing to catch up. `claim` carries
- * a reporting tab's deliberate presence into the resync so it may take an active run's writer;
- * the worker's own triggers — a reconnect, a flush answer — never claim.
+ * avatar comes from the durable start intent first (recorded at the most recent boundary
+ * failure), else the reporting tab's session avatar, else the last avatar a resync ran for; with
+ * none of the three, there is nothing to catch up. An intent's avatar can be stale — the account
+ * switched away from it while the intent was held — but the resync flow discovers that itself
+ * from the service's own rejection and catches up the account's real active avatar in the same
+ * call, so nothing needs deriving here. `claim` carries a reporting tab's deliberate presence into
+ * the resync so it may take an active run's writer; the worker's own triggers — a reconnect, a
+ * flush answer — never claim.
  */
 export async function runReconnectRecovery(
   context: WorkerContext,
@@ -26,9 +29,10 @@ export async function runReconnectRecovery(
 
   const heldIntent = await readPendingStartIntent();
 
-  const avatarID = heldIntent?.avatarID ?? signalAvatarID ?? context.getResyncAvatarID() ?? null;
+  const avatarID =
+    heldIntent?.avatarID ?? signalAvatarID ?? context.getResyncAvatarID() ?? undefined;
 
-  if (context.getActivity() === null && avatarID !== null) {
+  if (context.getActivity() === null && avatarID !== undefined) {
     await runResyncTurn(context, avatarID, claim);
   }
 }

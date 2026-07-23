@@ -14,6 +14,7 @@ import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { sql } from 'kysely';
 import { createActivityService } from '../create-activity-service';
+import { createActiveAvatarRow } from '../test-utils/create-active-avatar-row';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
@@ -1124,4 +1125,128 @@ test('it records no borrowed run for a parked activity left out of the build sna
     .execute();
 
   expect(sources).toBeEmpty();
+});
+
+test("it starts an activity when the starting avatar is the account's active one", async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActiveAvatarRow(ctx.db, { avatarId: avatar.id, userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  expect(activity.avatarID).toBe(avatar.id);
+});
+
+test('it rejects a start from an avatar that is not the active one, naming the active avatar', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const activeAvatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+  const otherAvatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActiveAvatarRow(ctx.db, { avatarId: activeAvatar.id, userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.startActivity({
+      avatarID: otherAvatar.id,
+      scopeID: 'a9lp75',
+      scopeType: 'world_map_node',
+    }),
+  ).rejects.toMatchObject({
+    code: 'AVATAR_NOT_ACTIVE',
+    data: { activeAvatarID: activeAvatar.id, activeAvatarName: activeAvatar.name },
+  });
+});
+
+test('it makes the starting avatar active when the account holds no selection', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const selection = await ctx.db
+    .selectFrom('activeAvatars')
+    .selectAll()
+    .where('userId', '=', viewer.user.id)
+    .executeTakeFirstOrThrow();
+
+  expect(selection.avatarId).toBe(avatar.id);
+});
+
+test('it refuses to adopt while another avatar holds a live run', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const liveAvatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+  const otherAvatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  // no active_avatars row exists yet; this start's own adopt claims the slot for liveAvatar
+  await client.startActivity({
+    avatarID: liveAvatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  await ctx.db.deleteFrom('activeAvatars').where('userId', '=', viewer.user.id).execute();
+
+  const conflictingStart = client.startActivity({
+    avatarID: otherAvatar.id,
+    scopeID: 'esaxrt',
+    scopeType: 'world_map_node',
+  });
+
+  // `.rejects` chains type as synchronous and are ordinarily left unawaited, but the trailing
+  // query below must observe the rejected call's transaction fully settled — draining it here
+  // guarantees that ordering before the shape assertion below runs against the settled promise.
+  await conflictingStart.catch(() => {});
+
+  expect(conflictingStart).rejects.toMatchObject({
+    code: 'AVATAR_NOT_ACTIVE',
+    data: { activeAvatarID: liveAvatar.id, activeAvatarName: liveAvatar.name },
+  });
+
+  const minted = await ctx.db
+    .selectFrom('activities')
+    .selectAll()
+    .where('avatarId', '=', otherAvatar.id)
+    .executeTakeFirst();
+
+  expect(minted).toBeUndefined();
+
+  const selection = await ctx.db
+    .selectFrom('activeAvatars')
+    .selectAll()
+    .where('userId', '=', viewer.user.id)
+    .executeTakeFirst();
+
+  expect(selection).toBeUndefined();
 });

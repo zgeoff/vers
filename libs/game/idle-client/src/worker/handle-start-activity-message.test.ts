@@ -477,3 +477,54 @@ test('it takes over and stops a different scope another writer owns before start
   expect(minted.scopeID).toBe('a9lp75');
   expect(context.getSimulation()?.activity?.id).toBe(minted.id);
 });
+
+test("it settles a start rejected for a non-active avatar as failed, carrying the active avatar's name", async () => {
+  const viewer = await createViewer();
+  const otherAvatar = await db.avatarCollection.create({ userID: viewer.user.id });
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const context = createStubWorkerContext({ client: ctx.client, submitter: createStubSubmitter() });
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: otherAvatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  expect(result).toStrictEqual({
+    kind: 'failed',
+    rejection: { activeAvatarName: viewer.avatar.name, reason: 'avatar-not-active' },
+  });
+});
+
+test('it reports no worker fault for a start rejected because the avatar is not active', async () => {
+  const previousHandle = sentryHandle.current;
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  const viewer = await createViewer();
+  const otherAvatar = await db.avatarCollection.create({ userID: viewer.user.id });
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const context = createStubWorkerContext({ client: ctx.client, submitter: createStubSubmitter() });
+
+  await handleStartActivityMessage(context, {
+    avatarID: otherAvatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  expect(recorded).toStrictEqual([]);
+});

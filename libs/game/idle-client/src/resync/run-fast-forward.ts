@@ -156,6 +156,18 @@ export async function runFastForward(
         continue;
       }
 
+      if (isDefinedError(error) && error.code === 'AVATAR_NOT_ACTIVE') {
+        return {
+          activeAvatarName: error.data.activeAvatarName,
+          activity,
+          appendedHead,
+          attempts,
+          finalRowTerminal,
+          levelUps,
+          reason: 'avatar-switched',
+        };
+      }
+
       throw error;
     }
 

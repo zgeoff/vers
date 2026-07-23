@@ -78,6 +78,13 @@ async function runStart(
     return setLiveStartedRow(context, token, started, signals);
   }
 
+  if (isDefinedError(error) && error.code === 'AVATAR_NOT_ACTIVE') {
+    return {
+      kind: 'failed',
+      rejection: { activeAvatarName: error.data.activeAvatarName, reason: 'avatar-not-active' },
+    };
+  }
+
   if (!isDefinedError(error) || error.code !== 'CONFLICT') {
     // a defined rejection is the service answering; anything else belongs in the error backend
     if (!isDefinedError(error)) {
@@ -125,6 +132,16 @@ async function runStart(
   const [retryError, retried] = await tryStartActivity(context, input, token);
 
   if (retryError !== null) {
+    if (isDefinedError(retryError) && retryError.code === 'AVATAR_NOT_ACTIVE') {
+      return {
+        kind: 'failed',
+        rejection: {
+          activeAvatarName: retryError.data.activeAvatarName,
+          reason: 'avatar-not-active',
+        },
+      };
+    }
+
     if (!isDefinedError(retryError)) {
       reportWorkerFault('start', retryError);
     }

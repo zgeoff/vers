@@ -8,6 +8,7 @@ import { waitFor } from '@vers/test-utils';
 import { http } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
+import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
@@ -311,18 +312,18 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
   expect(closed.status).toBe('stopped');
 });
 
-test("it resumes the held start intent's avatar on reconnect over an earlier avatar it resynced", async () => {
+test('it drops a held start intent as stale on reconnect and resumes the remembered avatar instead', async () => {
   const viewer = await createViewer();
   const avatar = await db.avatarCollection.create({ userID: viewer.user.id });
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
-  // the intent's source row already reads closed, so the reconnect's drain mints the next row
+  // the intent's source row already reads closed; a stale-dropped intent must mint nothing here
   const source = await db.activityCollection.create({
     avatarID: avatar.id,
     status: 'stopped',
   });
 
-  // a capped row makes the first resync's completion observable: it plans a rebase and emits a
+  // a capped row makes each resync's completion observable: it plans a rebase and emits a
   // capped status, installing nothing — the reconnect gate below still sees no simulation
   await db.activityCollection.create({
     appendedHead: 0,
@@ -345,8 +346,7 @@ test("it resumes the held start intent's avatar on reconnect over an earlier ava
     });
   });
 
-  // parked while offline, after the earlier resync: the held intent must outrank the remembered
-  // avatar on reconnect or the continuation strands
+  // parked while offline, for an avatar the account is no longer playing as
   await writePendingStartIntent({
     activityID: source.id,
     avatarID: avatar.id,
@@ -356,15 +356,33 @@ test("it resumes the held start intent's avatar on reconnect over an earlier ava
 
   globalThis.dispatchEvent(new Event('online'));
 
-  await waitFor(() => {
-    const minted = db.activityCollection.findFirst((q) =>
-      q.where({ avatarID: avatar.id, status: 'active' }),
-    );
+  // The server names the remembered avatar as the account's real active one, so a fallback pass
+  // runs for it in the same call — its own `capped` status broadcasts first, then
+  // `avatar-switched` broadcasts as the cycle's terminal status, carrying that pass's (zero)
+  // tallies.
+  await waitFor(async () => {
+    const heldIntent = await readPendingStartIntent();
 
-    invariant(minted !== undefined, 'expected the reconnect to resume the pending avatar');
-
-    expect(minted.id).not.toBe(source.id);
+    expect(heldIntent).toBeUndefined();
   });
+
+  await waitFor(() => {
+    expect(broadcasts.received.at(-1)).toStrictEqual({
+      status: {
+        activeAvatarName: viewer.avatar.name,
+        attempts: 0,
+        kind: 'avatar-switched',
+        levelUps: 0,
+      },
+      type: WorkerMessageType.ResyncStatus,
+    });
+  });
+
+  const minted = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: avatar.id, status: 'active' }),
+  );
+
+  expect(minted).toBeUndefined();
 });
 
 test('it recovers a stop parked offline once a flush answer proves the connection returned', async () => {
