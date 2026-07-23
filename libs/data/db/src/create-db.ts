@@ -19,6 +19,13 @@ interface CreateDBConfig {
  * idle-in-transaction connection can hold a lock: no future code path that
  * opens a transaction can leave orphaned transaction state alive past 30s,
  * even across a serverless process kill.
+ *
+ * `idle_timeout` (seconds, unlike the millisecond session timeouts) closes a
+ * pooled connection from the client side before the managed Postgres endpoint
+ * suspends on its own idle timeout and drops the socket server-side. Without
+ * it the pool hands a caller a connection the endpoint already closed, and the
+ * first write fails with CONNECTION_CLOSED; the value stays under the
+ * endpoint's suspend timeout so the client always closes first.
  */
 export function createDB(config: CreateDBConfig): Kysely<DB> {
   return new Kysely<DB>({
@@ -29,6 +36,7 @@ export function createDB(config: CreateDBConfig): Kysely<DB> {
           statement_timeout: 30_000,
           ...(config.searchPath === undefined ? {} : { search_path: config.searchPath }),
         },
+        idle_timeout: 240,
       }),
     }),
     log: recordQuerySpan,
