@@ -350,27 +350,23 @@ test('it stops the minted row back when a stop lands while the start is in fligh
 });
 
 test("it drops the held intent and reports it stale when the intent's avatar is no longer active", async () => {
-  server.use(
-    mockActivityService.startActivity.handler((opts) => {
-      throw opts.errors.AVATAR_NOT_ACTIVE({
-        data: { activeAvatarID: 'avatar_active', activeAvatarName: 'Active One' },
-      });
-    }),
-  );
+  const viewer = await createViewer({ avatar: { id: 'avatar_active', name: 'Active One' } });
+  const targetAvatar = await db.avatarCollection.create({ userID: viewer.user.id });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
-  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+  const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
 
   await writePendingStartIntent({
     activityID: 'activity_1',
-    avatarID: 'avatar_1',
-    scopeID: 'scope_1',
-    scopeType: 'mission',
+    avatarID: targetAvatar.id,
+    scopeID: 'esaxrt',
+    scopeType: 'world_map_node',
   });
 
   const result = await flushPendingStart(
     context,
     { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
-    'avatar_1',
+    targetAvatar.id,
   );
 
   expect(result).toStrictEqual({

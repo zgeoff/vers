@@ -365,18 +365,14 @@ test('it leaves a replacement simulation installed when uninstalling after a sto
 });
 
 test('it broadcasts the avatar-switched status when the continuation avatar is no longer active, rather than resetting to idle silently', async () => {
-  server.use(
-    mockActivityService.startActivity.handler((opts) => {
-      throw opts.errors.AVATAR_NOT_ACTIVE({
-        data: { activeAvatarID: 'avatar_active', activeAvatarName: 'Active One' },
-      });
-    }),
-  );
+  const viewer = await createViewer({ avatar: { id: 'avatar_active', name: 'Active One' } });
+  const targetAvatar = await db.avatarCollection.create({ userID: viewer.user.id });
+  const ctx = await setupTest({ userID: viewer.user.id });
 
   const submitter = createStubSubmitter();
-  const context = createStubWorkerContext({ submitter });
+  const context = createStubWorkerContext({ client: ctx.client, submitter });
   const simulation = createSimulation();
-  const previousActivity = createMockActivityData();
+  const previousActivity = createMockActivityData({ avatarID: targetAvatar.id });
 
   context.setSimulation(simulation);
   context.setActivity(previousActivity);
