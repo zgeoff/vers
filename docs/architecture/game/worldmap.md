@@ -147,29 +147,29 @@ Biome is how the terrain looks, so it renders, so it belongs on the public geome
 through fog like distant landscape. Its constraints keep it from becoming a predictor of sealed
 reward magnitude.
 
-- **B1** — biome is a low-frequency
+- **Independent hash domain** — biome is a low-frequency
   [value](https://en.wikipedia.org/wiki/Value_noise)/[Worley](https://en.wikipedia.org/wiki/Worley_noise)
   field over position — smooth noise functions of a coordinate that paint organic regional patches,
   Worley by distance to the nearest scattered seed point — in a hash domain independent of content.
-- **B2** — `Cov(biome, sealed_reward_residual) = 0`. The content derivation takes no biome input.
-  Pure flavour means content genuinely ignores biome, not merely that no bonus is visible — a hidden
-  dependence turns biome into a public prior over hidden magnitude.
-- **B3** — biome touches reward only through a public, biome-uniform term: a pure function of the
+- **Zero reward covariance** — `Cov(biome, sealed_reward_residual) = 0`. The content derivation
+  takes no biome input. Pure flavour means content genuinely ignores biome, not merely that no bonus
+  is visible — a hidden dependence turns biome into a public prior over hidden magnitude.
+- **Public biome-uniform term only** — biome touches reward only through a pure function of the
   public biome id, constant across every node in the biome, computable by every client. Biome may
   set a mean, publicly; it never rides hidden per-node variance.
-- **B4** — a hidden per-node reward that clusters by biome is forbidden, and the ban carries a
-  permanent code comment. It would make client-visible terrain a treasure map for sealed loot — the
-  exact sniping fog prevents — and it is the cheapest form to build, so it tempts.
-- **B5** — the seed-selection attack (rerolling `userSeed` or spinning throwaway avatars for a
-  favourable layout) is defeated by progression cost, not expected-value neutrality: a rerolled
-  character starts at level 1, and using a fished high-distance biome demands re-earning full
-  progression, a cost that dwarfs any biome bonus. Biome bonuses may therefore be additive expected
-  value — genuinely richer biomes — not merely flavour tilts. This holds only while reroll cost far
-  exceeds biome payoff; it is revisited if progression ever gets cheap or biome bonuses grow large
-  relative to level investment.
-- **B6** — path-gated selection keeps a known-good biome earned: reaching and sustaining it is gated
-  on the completed frontier, so a rich biome is safe on the reward axis only because the path to it
-  is.
+- **No hidden per-node reward** — a hidden per-node reward that clusters by biome is forbidden, and
+  the ban carries a permanent code comment. It would make client-visible terrain a treasure map for
+  sealed loot — the exact sniping fog prevents — and it is the cheapest form to build, so it tempts.
+- **Reroll defeated by progression cost** — the seed-selection attack (rerolling `userSeed` or
+  spinning throwaway avatars for a favourable layout) is defeated by progression cost, not
+  expected-value neutrality: a rerolled character starts at level 1, and using a fished
+  high-distance biome demands re-earning full progression, a cost that dwarfs any biome bonus. Biome
+  bonuses may therefore be additive expected value — genuinely richer biomes — not merely flavour
+  tilts. This holds only while reroll cost far exceeds biome payoff; it is revisited if progression
+  ever gets cheap or biome bonuses grow large relative to level investment.
+- **Earned by path-gating** — path-gated selection keeps a known-good biome earned: reaching and
+  sustaining it is gated on the completed frontier, so a rich biome is safe on the reward axis only
+  because the path to it is.
 
 ## The reveal radius
 
