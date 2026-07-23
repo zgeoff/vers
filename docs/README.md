@@ -55,6 +55,8 @@ How the platform is built — system design, data flows, and operational wiring.
   provenance
 - [Item generation](./architecture/game/item-generation.md) — the entropy-agnostic interpreter that
   turns a digest into item content: roll streams, versioned tables, craft constraints
+- [World map](./architecture/game/worldmap.md) — the per-avatar infinite graph: public hex-lattice
+  geometry, server-sealed content, reveal projection, and biome terrain
 - [Game rendering](./architecture/game/game-rendering.md) — the persistent three.js canvas and scene
   state
 
