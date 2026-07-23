@@ -25,10 +25,16 @@ interface ServiceRuntime<TEnvShape extends z.ZodRawShape> {
   readonly logger: pino.Logger;
 }
 
+/**
+ * `slowRequestMs` defaults to 2000 when unset. `slowRequestOverridesMs` keys a per-pathname
+ * threshold that wins over `slowRequestMs` for a matching request.
+ */
 export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
   readonly buildRouter: (runtime: ServiceRuntime<TEnvShape>) => AnyRouter | Promise<AnyRouter>;
   readonly envShape: TEnvShape;
   readonly name: string;
+  readonly slowRequestMs?: number;
+  readonly slowRequestOverridesMs?: Readonly<Record<string, number>>;
 }
 
 export interface Service<TEnvShape extends z.ZodRawShape> {
@@ -38,6 +44,8 @@ export interface Service<TEnvShape extends z.ZodRawShape> {
   logger: pino.Logger;
   stopTelemetry: () => Promise<void>;
 }
+
+const DEFAULT_SLOW_REQUEST_MS = 2000;
 
 /**
  * Boots the Elysia shell every service composes: env validation, s2s token verification ahead of
@@ -126,6 +134,10 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
     keySet,
     logger,
     serviceName: config.name,
+    slowRequestMs: config.slowRequestMs ?? DEFAULT_SLOW_REQUEST_MS,
+    ...(config.slowRequestOverridesMs !== undefined && {
+      slowRequestOverridesMs: config.slowRequestOverridesMs,
+    }),
   });
 
   return {
@@ -201,6 +213,8 @@ interface RegisterORPCHandlerDeps {
   readonly keySet: ServiceKeySet;
   readonly logger: pino.Logger;
   readonly serviceName: string;
+  readonly slowRequestMs: number;
+  readonly slowRequestOverridesMs?: Readonly<Record<string, number>>;
 }
 
 /**
@@ -209,7 +223,9 @@ interface RegisterORPCHandlerDeps {
  * split. Every response — including that 401 — carries the request's trace id
  * in `x-trace-id`, and the whole request runs inside its trace-context scope so logs correlate.
  * Every request logs one structured line on completion (method, path, status, duration), severity
- * following the response status; a trust-boundary rejection's line carries the rejection reason.
+ * following the response status; a trust-boundary rejection's line carries the rejection reason. A
+ * completed request past its slow-request threshold logs at `warn` with `slow: true` and
+ * `thresholdMs` instead, unless its status is already a server error.
  */
 function registerORPCHandler(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- elysia app is a live framework instance with mutable routing state; no readonly form
@@ -282,12 +298,18 @@ function registerORPCHandler(
 
         finalResponse.headers.set('x-trace-id', trace.traceID);
 
-        deps.logger[pickRequestLogLevel(finalResponse.status)](
+        const elapsedMs = performance.now() - start;
+        const durationMs = toDurationMs(elapsedMs);
+        const thresholdMs = deps.slowRequestOverridesMs?.[path] ?? deps.slowRequestMs;
+        const isSlow = elapsedMs > thresholdMs && finalResponse.status < 500;
+
+        deps.logger[isSlow ? 'warn' : pickRequestLogLevel(finalResponse.status)](
           {
-            durationMs: toDurationMs(performance.now() - start),
+            durationMs,
             method,
             path,
             status: finalResponse.status,
+            ...(isSlow && { slow: true, thresholdMs }),
           },
           'request completed',
         );
