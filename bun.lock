@@ -382,8 +382,6 @@
       "name": "@vers/active-avatar",
       "version": "0.0.0",
       "dependencies": {
-        "@faker-js/faker": "catalog:",
-        "@paralleldrive/cuid2": "catalog:",
         "@vers/db": "workspace:*",
         "kysely": "catalog:",
       },
@@ -992,7 +990,6 @@
         "zod": "catalog:",
       },
       "devDependencies": {
-        "@faker-js/faker": "catalog:",
         "@orpc/contract": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
