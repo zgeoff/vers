@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./orpc": "./src/orpc/index.ts",
@@ -23,6 +24,7 @@
     "@opentelemetry/sdk-metrics": "catalog:",
     "@opentelemetry/sdk-trace-node": "catalog:",
     "@orpc/client": "catalog:",
+    "@orpc/contract": "catalog:",
     "@orpc/shared": "catalog:",
     "@orpc/standard-server": "catalog:",
     "@vers/trace": "workspace:*",
@@ -36,6 +38,7 @@
   "devDependencies": {
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
+    "@vers/contract-avatar": "workspace:*",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "typescript": "catalog:"

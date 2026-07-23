@@ -1,5 +1,7 @@
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
+import { activityContract } from '@vers/contract-activity';
+import { buildRetryInterceptor, makeIsRetryable } from '@vers/service-utils/orpc';
 import type { ActivityCallContext, ActivityServiceClient } from './types';
 
 /**
@@ -7,10 +9,14 @@ import type { ActivityCallContext, ActivityServiceClient } from './types';
  * `/api/rpc/activity` proxy, built from `self.location.origin` since a `SharedWorker` has no
  * ambient server request to read headers from. The proxy mints the outbound s2s token from the
  * session cookie `fetch` sends by default on a same-origin request, and forwards a caller-minted
- * `traceparent` untouched so the service continues that trace.
+ * `traceparent` untouched so the service continues that trace. Retries the contract's idempotent
+ * procedures on a transient failure, absorbing a cold-resumed service's brief unavailability
+ * instead of surfacing it to a resync in progress.
  */
 export function createActivityServiceClient(): ActivityServiceClient {
   const link = new RPCLink<ActivityCallContext>({
+    clientInterceptors: [buildRetryInterceptor({ isRetryable: makeIsRetryable(activityContract) })],
+
     // a call made with no options at all reaches this callback with an undefined context
     headers: (options) =>
       options.context?.traceparent === undefined
