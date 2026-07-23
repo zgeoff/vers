@@ -48,11 +48,12 @@ carries no such plugin; `withRequestTrace` (`apps/web/src/server/with-request-tr
 same SERVER span itself, skipping a served static asset or the `/health` probe. Every `Kysely`
 client (`createDB`, `@vers/db`) emits a retroactively timed CLIENT span per compiled query from its
 `log` callback, named `db.<operation>` from the compiled query's root node kind and carrying the
-compiled SQL (never its parameters). Every service-to-service `RPCLink` carries
-`buildTracingInterceptor` (`@vers/service-utils/orpc`) in its `clientInterceptors`, minting a CLIENT
-span per call named by the procedure path. A worker iteration, a boot drain, a scheduled sweep, or a
-queued job — anything with no inbound request to continue — opens its own root span through
-`withRootSpan` (`@vers/service-utils`).
+compiled SQL (never its parameters). A `db.connect` CLIENT span wraps each connection acquired from
+the driver's pool, covering the phase neither the query span nor a session timeout observes. Every
+service-to-service `RPCLink` carries `buildTracingInterceptor` (`@vers/service-utils/orpc`) in its
+`clientInterceptors`, minting a CLIENT span per call named by the procedure path. A worker
+iteration, a boot drain, a scheduled sweep, or a queued job — anything with no inbound request to
+continue — opens its own root span through `withRootSpan` (`@vers/service-utils`).
 
 Boundary span sites — the server plugins and outbound clients — inject or extract `traceparent`
 through the OpenTelemetry API's global propagator, never `@vers/trace` directly: outbound calls
