@@ -378,6 +378,24 @@
         "typescript": "catalog:",
       },
     },
+    "libs/data/active-avatar": {
+      "name": "@vers/active-avatar",
+      "version": "0.0.0",
+      "dependencies": {
+        "@faker-js/faker": "catalog:",
+        "@paralleldrive/cuid2": "catalog:",
+        "@vers/db": "workspace:*",
+        "kysely": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "libs/data/data": {
       "name": "@vers/data",
       "version": "0.0.0",
@@ -2560,6 +2578,8 @@
     "@ungap/structured-clone": ["@ungap/structured-clone@1.3.2", "", {}, "sha512-5jsZFwgR5rTdKwidH9Qmat75RKwqfpKlWWB1frDkljN127mwqBu8K0PYo7/hFpF03IEJpfVPpCQDY/eDx3iHvA=="],
 
     "@ver0/deep-equal": ["@ver0/deep-equal@1.0.1", "", {}, "sha512-XSvL5wKXBZIv7fflMqhQx936sRpEtzxeV25xAEt0rLLXzbF6RCQaRA1jrVIn8JCubMyn/y0TaidphUtilLzl1A=="],
+
+    "@vers/active-avatar": ["@vers/active-avatar@workspace:libs/data/active-avatar"],
 
     "@vers/bugsink": ["@vers/bugsink@workspace:apps/bugsink"],
 
