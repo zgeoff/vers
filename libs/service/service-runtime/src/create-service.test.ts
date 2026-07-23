@@ -22,6 +22,7 @@ function buildTestContract() {
       .input(z.object({ id: z.string() }))
       .output(z.object({ id: z.string() })),
     ping: publicRoute.output(z.object({ pong: z.boolean() })),
+    sleep: publicRoute.input(z.object({ ms: z.number() })).output(z.object({ slept: z.boolean() })),
     throwPlainError: publicRoute.output(z.object({})),
   };
 }
@@ -55,6 +56,11 @@ function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
       return { id: opts.input.id };
     }),
     ping: os.ping.handler(() => ({ pong: true })),
+    sleep: os.sleep.handler(async (opts) => {
+      await Bun.sleep(opts.input.ms);
+
+      return { slept: true };
+    }),
     throwPlainError: os.throwPlainError.handler(() => {
       throw new Error('a secret internal detail');
     }),
@@ -761,4 +767,123 @@ test('it serves /health without logging a request line', async () => {
   await service.app.handle(new Request('http://test.local/health'));
 
   expect(infoSpy).not.toHaveBeenCalled();
+});
+
+test('it logs a request past its slow-request threshold at warn with slow and thresholdMs', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+    slowRequestMs: 10,
+  });
+
+  const warnSpy = spyOn(service.logger, 'warn');
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  await client.sleep({ ms: 30 });
+
+  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
+    {
+      durationMs: expect.toBeNumber(),
+      method: 'POST',
+      path: '/rpc/sleep',
+      slow: true,
+      status: 200,
+      thresholdMs: 10,
+    },
+    'request completed',
+  );
+});
+
+test('it keeps a request under its slow-request threshold at its status-derived level with no slow flag', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+    slowRequestMs: 1000,
+  });
+
+  const infoSpy = spyOn(service.logger, 'info');
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  await client.sleep({ ms: 5 });
+
+  expect(infoSpy).toHaveBeenCalledExactlyOnceWith(
+    {
+      durationMs: expect.toBeNumber(),
+      method: 'POST',
+      path: '/rpc/sleep',
+      status: 200,
+    },
+    'request completed',
+  );
+});
+
+test('it honors a per-path slow-request override over the default threshold', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+    slowRequestMs: 10_000,
+    slowRequestOverridesMs: { '/rpc/sleep': 10 },
+  });
+
+  const warnSpy = spyOn(service.logger, 'warn');
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  await client.sleep({ ms: 30 });
+
+  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
+    {
+      durationMs: expect.toBeNumber(),
+      method: 'POST',
+      path: '/rpc/sleep',
+      slow: true,
+      status: 200,
+      thresholdMs: 10,
+    },
+    'request completed',
+  );
 });
