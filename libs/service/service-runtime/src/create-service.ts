@@ -14,6 +14,7 @@ import * as z from 'zod';
 import { baseEnvSchema } from './base-env-schema';
 import { createLogger } from './create-logger';
 import { reportUnexpectedError } from './report-unexpected-error';
+import { shouldTraceRequest } from './should-trace-request';
 import { startErrorReporting } from './start-error-reporting';
 import type { ServiceContext } from './types';
 
@@ -88,6 +89,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
     // and shared plus per-signal headers (backend auth, dataset routing) merge from env
     app.use(
       opentelemetry({
+        checkIfShouldTrace: shouldTraceRequest,
         resource: buildTelemetryResource({ serviceName: config.name }),
         serviceName: config.name,
         traceExporter: new OTLPTraceExporter(),
