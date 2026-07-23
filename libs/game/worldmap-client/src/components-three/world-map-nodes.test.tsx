@@ -1,19 +1,19 @@
 import { expect, test } from 'bun:test';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import type { WorldMapNode } from '@vers/worldmap-core';
+import type { LatticeNode } from '@vers/worldmap-core';
 import { useWorldmapStore } from '../state/use-worldmap-store';
 import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
 import { WorldMapNodes } from './world-map-nodes';
 
-async function setupTest(nodes: ReadonlyArray<WorldMapNode>) {
+async function setupTest(nodes: ReadonlyArray<LatticeNode>) {
   const renderer = await ReactThreeTestRenderer.create(<WorldMapNodes nodes={[...nodes]} />);
 
   return renderer;
 }
 
 test('it sets the hovered node when the pointer enters a node instance', async () => {
-  const nodeA = createMockWorldMapNode({ id: 'nodeA', index: 0 });
-  const nodeB = createMockWorldMapNode({ id: 'nodeB', index: 1 });
+  const nodeA = createMockWorldMapNode({ id: 'nodeA' });
+  const nodeB = createMockWorldMapNode({ id: 'nodeB' });
 
   const renderer = await setupTest([nodeA, nodeB]);
 
@@ -25,8 +25,8 @@ test('it sets the hovered node when the pointer enters a node instance', async (
 });
 
 test('it unsets the hovered node when the pointer leaves the instanced mesh', async () => {
-  const nodeA = createMockWorldMapNode({ id: 'nodeA', index: 0 });
-  const nodeB = createMockWorldMapNode({ id: 'nodeB', index: 1 });
+  const nodeA = createMockWorldMapNode({ id: 'nodeA' });
+  const nodeB = createMockWorldMapNode({ id: 'nodeB' });
 
   const renderer = await setupTest([nodeA, nodeB]);
 
@@ -39,8 +39,8 @@ test('it unsets the hovered node when the pointer leaves the instanced mesh', as
 });
 
 test('it sets the selected node when a node instance is clicked', async () => {
-  const nodeA = createMockWorldMapNode({ id: 'nodeA', index: 0 });
-  const nodeB = createMockWorldMapNode({ id: 'nodeB', index: 1 });
+  const nodeA = createMockWorldMapNode({ id: 'nodeA' });
+  const nodeB = createMockWorldMapNode({ id: 'nodeB' });
 
   const renderer = await setupTest([nodeA, nodeB]);
 

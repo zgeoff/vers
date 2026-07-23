@@ -1,6 +1,7 @@
-import type { WorldEdge, WorldGraph, WorldMapNode } from '@vers/worldmap-core';
+import type { LatticeEdge, LatticeNode } from '@vers/worldmap-core';
 import type { Object3D } from 'three';
 import { Vector3 } from 'three';
+import type { WorldGraph } from '../types';
 import { getScenePosition } from './get-scene-position';
 
 /**
@@ -14,7 +15,7 @@ const MAX_DISTANCE = 160;
  */
 export function buildNearbyGraph(selectedNode: null | Object3D, graphData: WorldGraph): WorldGraph {
   const position = selectedNode?.position ?? new Vector3();
-  const nodes: Record<string, WorldMapNode> = {};
+  const nodes: Record<string, LatticeNode> = {};
 
   for (const [id, node] of Object.entries(graphData.nodes)) {
     const nodePosition = new Vector3(...getScenePosition(node.position));
@@ -26,7 +27,7 @@ export function buildNearbyGraph(selectedNode: null | Object3D, graphData: World
     }
   }
 
-  const edges: Record<string, WorldEdge> = {};
+  const edges: Record<string, LatticeEdge> = {};
 
   for (const [id, edge] of Object.entries(graphData.edges)) {
     const start = new Vector3(...getScenePosition(edge.start));

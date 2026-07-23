@@ -1,7 +1,7 @@
 import { extend, useFrame } from '@react-three/fiber';
 import type { ThreeEvent } from '@react-three/fiber';
 import { sceneColors } from '@vers/design-system';
-import type { WorldMapNode } from '@vers/worldmap-core';
+import type { LatticeNode } from '@vers/worldmap-core';
 import { useLayoutEffect, useRef } from 'react';
 import type { InstancedMesh } from 'three';
 import { Color, Matrix4 } from 'three';
@@ -12,7 +12,7 @@ import { useWorldmapStore } from '../state/use-worldmap-store';
 import { getScenePosition } from '../utils/get-scene-position';
 
 interface WorldMapNodesProps {
-  readonly nodes: ReadonlyArray<WorldMapNode>;
+  readonly nodes: ReadonlyArray<LatticeNode>;
 }
 
 const RADIUS = 0.8;
