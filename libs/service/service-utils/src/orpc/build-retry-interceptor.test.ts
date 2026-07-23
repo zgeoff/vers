@@ -140,6 +140,26 @@ test('it rethrows immediately without retrying once the caller has aborted', asy
   expect(next).toHaveBeenCalledOnce();
 });
 
+test('it stops retrying when the caller aborts during the backoff wait', async () => {
+  const controller = new AbortController();
+
+  const next = mock((): Promise<StandardLazyResponse> => {
+    // abort while the post-attempt backoff timer is armed, exercising the pending-wait abort path
+    setTimeout(() => {
+      controller.abort();
+    }, 0);
+
+    return Promise.resolve(buildResponse(503));
+  });
+
+  const interceptor = buildRetryInterceptor({ backoffMs: 100, isRetryable: () => true });
+  const pending = interceptor(buildOptions(next, controller.signal));
+
+  await expect(pending).toReject();
+
+  expect(next).toHaveBeenCalledOnce();
+});
+
 test('it invokes onRetry once per retry', async () => {
   let callCount = 0;
 

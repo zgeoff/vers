@@ -2,6 +2,7 @@ import type { ClientContext } from '@orpc/client';
 import type { StandardLinkClientInterceptorOptions } from '@orpc/client/standard';
 import type { Interceptor } from '@orpc/shared';
 import type { StandardLazyResponse } from '@orpc/standard-server';
+import invariant from 'tiny-invariant';
 
 export interface RetryInterceptorOptions {
   /**
@@ -38,6 +39,16 @@ export function buildRetryInterceptor<T extends ClientContext = ClientContext>(
 ): Interceptor<StandardLinkClientInterceptorOptions<T>, Promise<StandardLazyResponse>> {
   const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
   const backoffMs = options.backoffMs ?? DEFAULT_BACKOFF_MS;
+
+  invariant(
+    Number.isInteger(maxRetries) && maxRetries >= 0,
+    'maxRetries must be a non-negative integer',
+  );
+
+  invariant(
+    Number.isFinite(backoffMs) && backoffMs >= 0,
+    'backoffMs must be a non-negative number',
+  );
 
   return async (interceptorOptions) => {
     if (!options.isRetryable(interceptorOptions.path)) {
