@@ -16,9 +16,10 @@ compute which node pays, so scanning the map for a jackpot returns nothing.
 
 Every derived value belongs to one of two planes, split by who can compute it.
 
-- **Geometry** — positions, edges, difficulty, and biome — is `f(publicSeed, coord)`. The client
-  derives the entire infinite map locally in the SharedWorker, so panning is instant and needs no
-  round-trip. Shape is not secret; disclosing it leaks nothing worth hiding.
+- **Geometry** — positions, edges, difficulty, and biome — is `f(userSeed, coord)`. `userSeed` is
+  the avatar's own seed: per-avatar, so every map differs, but non-secret and safe to ship, so the
+  client derives the entire infinite map locally in the SharedWorker — panning is instant and needs
+  no round-trip. Public here means non-secret, not shared: shape leaks nothing worth hiding.
 - **Content** — reward profile, encounter family, archetype — is `f(scopeSecret, coord)`, a one-way
   derivation the server alone can run. `scopeSecret` is a per-avatar secret held server-side and
   never shipped. A revealed node discloses too little to derive its unrevealed neighbours, and the
@@ -35,7 +36,12 @@ Geometry generates one chunk at a time from a stateless hash, so any region arou
 computes without touching the rest — the requirement an infinite world imposes — and every value is
 per-avatar.
 
-- **Seeding** — a stateless integer hash `hash(userSeed, cx, cy)` (a random-access,
+Two coordinate spaces run through generation. A **chunk coordinate** `(chunkX, chunkY)` addresses a
+fixed block of hex cells — the unit of generation. A **cell coordinate** `(cx, cy)` addresses a
+single hex cell within the lattice and is a node's identity; `cellToChunk` maps a cell to the chunk
+that owns it.
+
+- **Seeding** — a stateless integer hash `hash(userSeed, chunkX, chunkY)` (a random-access,
   order-independent PCG/Squirrel-style hash) seeds each chunk. Nothing is baked; nothing is read
   from disk.
 - **Placement** — a hex grid carries one jittered node per cell. Every cell holds a node; visible
@@ -43,10 +49,12 @@ per-avatar.
   reintroduces "does this id exist?" ambiguity and risks a fragmented graph.
 - **Connectivity** — a distance-capped Gabriel graph. Both sides of a chunk border evaluate the same
   predicate from the same hash inputs, so borders agree with no stitching pass — the geometry
-  already joins itself. A Gabriel graph contains the Euclidean minimum spanning tree, so the
-  backbone never fragments, and the jitter spacing bound keeps the distance cap from cutting it. The
-  rule connects two nodes when nothing sits between them and they fall within the cap — a local,
-  deterministic test both neighbours compute identically.
+  already joins itself. Agreement needs a one-chunk halo: evaluating a border cell's edges reads the
+  neighbouring chunk's nodes, so each side sees the same candidates. A Gabriel graph contains the
+  Euclidean minimum spanning tree, so the backbone never fragments — but only while the distance cap
+  stays above the maximum jittered cell spacing, so every MST edge falls within the cap and survives
+  it. The rule connects two nodes when nothing sits between them and they fall within the cap — a
+  local, deterministic test both neighbours compute identically.
 - **Difficulty** — `clamp(floor(hexDistance(cell, origin) / k), 0, 100)`. It is O(1), needs no
   traversal, and the server recomputes it from the coordinate alone.
 
@@ -60,8 +68,10 @@ and which edges leave it, never that the cell exists or what its id is. First-cl
 Coordinates make the node server-recomputable, which random per-node ids cannot: a coordinate feeds
 straight back into the derivation, so the server reconstructs any node for verification without
 having stored it. Reachability is a server invariant at activity start — an activity seed mints only
-for a node reachable from the avatar's verified first-clear frontier under canonical topology — not
-a client-side filter.
+for a node reachable from the avatar's verified first-clear frontier under that avatar's own
+topology, the same edges the generator derives from its `userSeed`, recomputed server-side — not a
+client-side filter. Client and server derive paths from identical inputs, so they never disagree on
+which nodes are reachable.
 
 ## Reveal — a projection, not stored state
 
@@ -157,11 +167,12 @@ radius approaches infinity.
 ## Package layout
 
 - **`@vers/worldmap-core`** — the platform-agnostic geometry generator, consumed as TypeScript
-  source. Its public functions are `generateChunk(userSeed, cx, cy) → Node[]`,
+  source. Its public functions are `generateChunk(userSeed, chunkX, chunkY) → Node[]`,
   `getNodeEdges(node, halo) → EdgeId[]`, `nodeId(cx, cy) → CanonicalId`,
   `biomeAt(userSeed, pos) → BiomeId`, `difficultyAt(cx, cy) → number`, and
-  `revealViewport(sources, viewport) → RevealedCells`. `connections` is computed, not stored; `id`
-  is the canonical coordinate.
+  `revealViewport(sources, viewport) → RevealedCells`. `generateChunk` takes chunk coordinates; the
+  rest take cell coordinates. `connections` is computed, not stored; `id` is the canonical cell
+  coordinate.
 - **Server-only content module** — content derivation keyed by `scopeSecret`, never bundled to the
   client. Its functions (`contentOf`, `encounterTable`, `rewardTier`) live here and nowhere the
   client can reach.
