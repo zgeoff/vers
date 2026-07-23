@@ -46,7 +46,7 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  proc.kill();
+  proc?.kill();
 });
 
 /**
