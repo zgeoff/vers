@@ -148,6 +148,12 @@
           { "from": "package", "name": "Page", "package": "playwright-core" },
           // a live kysely transaction handle: same mutable connection state as Kysely above
           { "from": "package", "name": "Transaction", "package": "kysely" },
+          // a driver's connection-pool handle: structurally a set of method signatures, same as
+          // KyselyTransactionLike below
+          { "from": "package", "name": "Driver", "package": "kysely" },
+          // a live kysely-postgres-js dialect handle: wraps a postgres.js Sql client, no readonly
+          // form
+          { "from": "package", "name": "PostgresJSDialect", "package": "kysely-postgres-js" },
           // a live pg-boss client handle: connection pool and event emitter state, no readonly form
           { "from": "package", "name": "PgBoss", "package": "pg-boss" },
           // structurally a single method signature, which the rule's default settings treat as
