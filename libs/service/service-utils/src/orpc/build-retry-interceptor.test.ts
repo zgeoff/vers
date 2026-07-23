@@ -1,13 +1,23 @@
 import { expect, mock, test } from 'bun:test';
-import type { StandardLinkClientInterceptorOptions } from '@orpc/client/standard';
 import type { StandardLazyResponse } from '@orpc/standard-server';
 import { buildRetryInterceptor } from './build-retry-interceptor';
 
-function buildOptions(
-  next: () => Promise<StandardLazyResponse>,
-  signal?: AbortSignal,
-): StandardLinkClientInterceptorOptions<Record<never, never>> & { next: typeof next } {
-  return {
+test('it retries a 5xx response and returns the following success', async () => {
+  let callCount = 0;
+
+  const next = mock((): Promise<StandardLazyResponse> => {
+    callCount += 1;
+
+    return Promise.resolve({
+      body: () => Promise.resolve(undefined),
+      headers: {},
+      status: callCount === 1 ? 503 : 200,
+    });
+  });
+
+  const interceptor = buildRetryInterceptor({ backoffMs: 1, isRetryable: () => true });
+
+  const response = await interceptor({
     context: {},
     input: undefined,
     next,
@@ -16,30 +26,10 @@ function buildOptions(
       body: undefined,
       headers: {},
       method: 'GET',
-      signal,
+      signal: undefined,
       url: new URL('http://test.local/rpc'),
     },
-  };
-}
-
-function buildResponse(status: number): StandardLazyResponse {
-  return { body: () => Promise.resolve(undefined), headers: {}, status };
-}
-
-test('it retries a 5xx response and returns the following success', async () => {
-  let callCount = 0;
-
-  const next = mock((): Promise<StandardLazyResponse> => {
-    callCount += 1;
-
-    const response = callCount === 1 ? buildResponse(503) : buildResponse(200);
-
-    return Promise.resolve(response);
   });
-
-  const interceptor = buildRetryInterceptor({ backoffMs: 1, isRetryable: () => true });
-
-  const response = await interceptor(buildOptions(next));
 
   expect(response.status).toBe(200);
   expect(next).toHaveBeenCalledTimes(2);
@@ -55,39 +45,86 @@ test('it retries a thrown transport error and returns the following success', as
       throw new Error('transport down');
     }
 
-    return Promise.resolve(buildResponse(200));
+    return Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 200 });
   });
 
   const interceptor = buildRetryInterceptor({ backoffMs: 1, isRetryable: () => true });
 
-  const response = await interceptor(buildOptions(next));
+  const response = await interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['activity', 'getLatestActivityProgress'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'GET',
+      signal: undefined,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
 
   expect(response.status).toBe(200);
   expect(next).toHaveBeenCalledTimes(2);
 });
 
 test('it does not retry a 4xx response', async () => {
-  const next = mock((): Promise<StandardLazyResponse> => Promise.resolve(buildResponse(404)));
+  const next = mock(
+    (): Promise<StandardLazyResponse> =>
+      Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 404 }),
+  );
+
   const interceptor = buildRetryInterceptor({ isRetryable: () => true });
 
-  const response = await interceptor(buildOptions(next));
+  const response = await interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['activity', 'getLatestActivityProgress'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'GET',
+      signal: undefined,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
 
   expect(response.status).toBe(404);
   expect(next).toHaveBeenCalledOnce();
 });
 
 test('it does not retry a 5xx response for a non-retryable path', async () => {
-  const next = mock((): Promise<StandardLazyResponse> => Promise.resolve(buildResponse(503)));
+  const next = mock(
+    (): Promise<StandardLazyResponse> =>
+      Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 503 }),
+  );
+
   const interceptor = buildRetryInterceptor({ isRetryable: () => false });
 
-  const response = await interceptor(buildOptions(next));
+  const response = await interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['activity', 'getLatestActivityProgress'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'GET',
+      signal: undefined,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
 
   expect(response.status).toBe(503);
   expect(next).toHaveBeenCalledOnce();
 });
 
 test('it exhausts its retry budget and returns the last 5xx response', async () => {
-  const next = mock((): Promise<StandardLazyResponse> => Promise.resolve(buildResponse(503)));
+  const next = mock(
+    (): Promise<StandardLazyResponse> =>
+      Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 503 }),
+  );
 
   const interceptor = buildRetryInterceptor({
     backoffMs: 1,
@@ -95,7 +132,19 @@ test('it exhausts its retry budget and returns the last 5xx response', async () 
     maxRetries: 2,
   });
 
-  const response = await interceptor(buildOptions(next));
+  const response = await interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['activity', 'getLatestActivityProgress'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'GET',
+      signal: undefined,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
 
   expect(response.status).toBe(503);
   expect(next).toHaveBeenCalledTimes(3);
@@ -112,7 +161,19 @@ test('it exhausts its retry budget and rethrows the last transport error', async
     maxRetries: 2,
   });
 
-  const pending = interceptor(buildOptions(next));
+  const pending = interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['activity', 'getLatestActivityProgress'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'GET',
+      signal: undefined,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
 
   expect(pending).rejects.toThrowWithMessage(Error, 'transport down');
 
@@ -131,7 +192,20 @@ test('it rethrows immediately without retrying once the caller has aborted', asy
   });
 
   const interceptor = buildRetryInterceptor({ backoffMs: 1, isRetryable: () => true });
-  const pending = interceptor(buildOptions(next, controller.signal));
+
+  const pending = interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['activity', 'getLatestActivityProgress'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'GET',
+      signal: controller.signal,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
 
   expect(pending).rejects.toThrowWithMessage(Error, 'transport down');
 
@@ -149,11 +223,24 @@ test('it stops retrying when the caller aborts during the backoff wait', async (
       controller.abort();
     }, 0);
 
-    return Promise.resolve(buildResponse(503));
+    return Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 503 });
   });
 
   const interceptor = buildRetryInterceptor({ backoffMs: 100, isRetryable: () => true });
-  const pending = interceptor(buildOptions(next, controller.signal));
+
+  const pending = interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['activity', 'getLatestActivityProgress'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'GET',
+      signal: controller.signal,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
 
   await expect(pending).toReject();
 
@@ -166,15 +253,29 @@ test('it invokes onRetry once per retry', async () => {
   const next = mock((): Promise<StandardLazyResponse> => {
     callCount += 1;
 
-    const response = callCount <= 2 ? buildResponse(503) : buildResponse(200);
-
-    return Promise.resolve(response);
+    return Promise.resolve({
+      body: () => Promise.resolve(undefined),
+      headers: {},
+      status: callCount <= 2 ? 503 : 200,
+    });
   });
 
   const onRetry = mock<() => void>(() => {});
   const interceptor = buildRetryInterceptor({ backoffMs: 1, isRetryable: () => true, onRetry });
 
-  const response = await interceptor(buildOptions(next));
+  const response = await interceptor({
+    context: {},
+    input: undefined,
+    next,
+    path: ['activity', 'getLatestActivityProgress'],
+    request: {
+      body: undefined,
+      headers: {},
+      method: 'GET',
+      signal: undefined,
+      url: new URL('http://test.local/rpc'),
+    },
+  });
 
   expect(response.status).toBe(200);
   expect(onRetry).toHaveBeenCalledTimes(2);
