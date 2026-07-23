@@ -78,7 +78,9 @@ once it ships, including what they don't experience (no dupes, no lost progress)
 one-sentence distillation. The story names no implementation nouns — no table, field, component, or
 service names; machinery belongs in Scope. The issue-hygiene workflow checks each new issue's
 labels, milestone, and required sections (dep-health's generated report issues excepted) and
-comments the defects it finds.
+comments the defects it finds. After opening or editing an issue, run
+`bun scripts/src/bin/issue-hygiene.ts <n>` and clear every finding before handing it back — it runs
+the workflow's own check locally, so a dropped template section is caught before CI.
 
 Upkeep issues are the exception: event- or date-triggered maintenance (dropping a dependency
 override, deleting an audit ignore) carries the `upkeep` label plus an area label, no milestone, and
