@@ -1,8 +1,11 @@
 import { expect, test } from 'bun:test';
-import { createTestDB, createTestUser } from '@vers/service-test-utils/bun';
+import {
+  createActiveAvatarRow,
+  createAvatarRow,
+  createTestDB,
+  createTestUser,
+} from '@vers/service-test-utils/bun';
 import { findActiveAvatar } from './find-active-avatar';
-import { createActiveAvatarRow } from './test-utils/create-active-avatar-row';
-import { createAvatarRow } from './test-utils/create-avatar-row';
 
 test("it returns the id and name of the user's active avatar", async () => {
   await using testDB = await createTestDB();

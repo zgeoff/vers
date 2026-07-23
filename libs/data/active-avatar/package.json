@@ -4,16 +4,13 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./test-utils": "./src/test-utils/index.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@faker-js/faker": "catalog:",
-    "@paralleldrive/cuid2": "catalog:",
     "@vers/db": "workspace:*",
     "kysely": "catalog:"
   },

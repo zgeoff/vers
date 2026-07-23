@@ -22,7 +22,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@faker-js/faker": "catalog:",
     "@orpc/contract": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",

@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
 import {
+  createAvatarRow,
   createServiceToken,
   createTestDB,
   createViewer,
@@ -9,7 +10,6 @@ import {
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
-import { createAvatarRow } from '../test-utils/create-avatar-row';
 
 /**
  * Several tests here drive startActivity, stopActivity, or trackActivityProgress, whose own

@@ -1,7 +1,10 @@
 import { expect, test } from 'bun:test';
-import { createTestDB, createTestUser } from '@vers/service-test-utils/bun';
-import { createActiveAvatarRow } from './test-utils/create-active-avatar-row';
-import { createAvatarRow } from './test-utils/create-avatar-row';
+import {
+  createActiveAvatarRow,
+  createAvatarRow,
+  createTestDB,
+  createTestUser,
+} from '@vers/service-test-utils/bun';
 import { upsertActiveAvatar } from './upsert-active-avatar';
 
 test('it inserts a selection row when the user holds none', async () => {

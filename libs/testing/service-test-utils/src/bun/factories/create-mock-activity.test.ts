@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
-import { createMockActivityRow } from './create-mock-activity-row';
+import { createMockActivity } from './create-mock-activity';
 
 test('it builds a default activity head row', () => {
-  const row = createMockActivityRow();
+  const row = createMockActivity();
 
   expect(row).toStrictEqual({
     avatarId: expect.toBeString(),
@@ -16,11 +16,12 @@ test('it builds a default activity head row', () => {
     seed: expect.toBeString(),
     simVersion: '0.0.0-dev',
     startHash: expect.toBeString(),
+    status: 'active',
   });
 });
 
 test('it applies overrides on top of the defaults', () => {
-  const row = createMockActivityRow({ avatarId: 'avatar_1', status: 'active' });
+  const row = createMockActivity({ avatarId: 'avatar_1', status: 'stopped' });
 
   expect(row).toStrictEqual({
     avatarId: 'avatar_1',
@@ -34,6 +35,6 @@ test('it applies overrides on top of the defaults', () => {
     seed: expect.toBeString(),
     simVersion: '0.0.0-dev',
     startHash: expect.toBeString(),
-    status: 'active',
+    status: 'stopped',
   });
 });

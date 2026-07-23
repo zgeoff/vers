@@ -6,9 +6,9 @@ import type { Insertable } from 'kysely';
 /**
  * A plain, unpersisted activity head row with faker-generated defaults. Never requires a parent —
  * `avatarId` defaults to a random id, not a real avatar's. Hash and content fields default to
- * opaque strings: the live-run query under test reads status and ownership, never the chain.
+ * opaque strings, and `status` defaults to `'active'` — a live-run row.
  */
-export function createMockActivityRow(
+export function createMockActivity(
   overrides: Readonly<Partial<Insertable<Activities>>> = {},
 ): Insertable<Activities> {
   const startHash = faker.string.hexadecimal({ casing: 'lower', length: 64, prefix: '' });
@@ -25,6 +25,7 @@ export function createMockActivityRow(
     seed: faker.string.hexadecimal({ casing: 'lower', length: 32, prefix: '' }),
     simVersion: '0.0.0-dev',
     startHash,
+    status: 'active',
     ...overrides,
   };
 }

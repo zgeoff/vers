@@ -1,9 +1,14 @@
+export { createActiveAvatarRow } from './composites/create-active-avatar-row';
+export { createActivityRow } from './composites/create-activity-row';
 export { createAnonymousViewer } from './composites/create-anonymous-viewer';
+export { createAvatarRow } from './composites/create-avatar-row';
 export { createViewer } from './composites/create-viewer';
 export { createDatabaseFromTemplate } from './create-database-from-template';
 export { createServiceToken } from './create-service-token';
 export { createTestDB } from './create-test-db';
 export { createTestUser } from './create-test-user';
+export { createMockActivity } from './factories/create-mock-activity';
+export { createMockAvatar } from './factories/create-mock-avatar';
 export { getTestServiceKeyPair } from './get-test-service-key-pair';
 export type { Isolation } from './make-test-db';
 export { makeTestDB } from './make-test-db';
