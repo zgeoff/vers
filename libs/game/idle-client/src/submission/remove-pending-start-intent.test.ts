@@ -7,7 +7,7 @@ test('it removes the intent naming the expected source row', async () => {
   await writePendingStartIntent({
     activityID: 'activity_1',
     avatarID: 'avatar_1',
-    scopeID: 'scope_1',
+    scopeID: '2_0',
     scopeType: 'mission',
   });
 
@@ -22,7 +22,7 @@ test('it keeps a fresher intent written while the delivery was in flight', async
   await writePendingStartIntent({
     activityID: 'activity_2',
     avatarID: 'avatar_1',
-    scopeID: 'scope_2',
+    scopeID: '3_0',
     scopeType: 'mission',
   });
 
@@ -33,7 +33,7 @@ test('it keeps a fresher intent written while the delivery was in flight', async
   expect(intent).toStrictEqual({
     activityID: 'activity_2',
     avatarID: 'avatar_1',
-    scopeID: 'scope_2',
+    scopeID: '3_0',
     scopeType: 'mission',
   });
 });
@@ -42,7 +42,7 @@ test('it removes whatever intent is held when no source row is expected', async 
   await writePendingStartIntent({
     activityID: 'activity_3',
     avatarID: 'avatar_1',
-    scopeID: 'scope_3',
+    scopeID: '4_0',
     scopeType: 'mission',
   });
 

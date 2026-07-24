@@ -40,7 +40,7 @@ test('it stops the active activity for an avatar owned by the acting user', asyn
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -88,7 +88,7 @@ test('it advances the chain anchor to the last appended checkpoint on stop', asy
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -113,7 +113,7 @@ test('it advances the chain anchor to the last appended checkpoint on stop', asy
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'a9lp75')
+    .where('scopeId', '=', '0_0')
     .executeTakeFirstOrThrow();
 
   expect(chain.appendedNextSeed).toBe(tail.payload.nextSeed);
@@ -130,7 +130,7 @@ test('it leaves the anchor unchanged when nothing was appended', async () => {
 
   await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -139,7 +139,7 @@ test('it leaves the anchor unchanged when nothing was appended', async () => {
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'a9lp75')
+    .where('scopeId', '=', '0_0')
     .executeTakeFirstOrThrow();
 
   await client.stopActivity({ avatarID: avatar.id });
@@ -149,7 +149,7 @@ test('it leaves the anchor unchanged when nothing was appended', async () => {
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'a9lp75')
+    .where('scopeId', '=', '0_0')
     .executeTakeFirstOrThrow();
 
   expect(chainAfter).toStrictEqual(chainBefore);
@@ -165,7 +165,7 @@ test('it leaves the anchor unchanged when only the Started checkpoint was append
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -174,7 +174,7 @@ test('it leaves the anchor unchanged when only the Started checkpoint was append
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'a9lp75')
+    .where('scopeId', '=', '0_0')
     .executeTakeFirstOrThrow();
 
   const batch = createMockCheckpointBatch({
@@ -196,7 +196,7 @@ test('it leaves the anchor unchanged when only the Started checkpoint was append
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'a9lp75')
+    .where('scopeId', '=', '0_0')
     .executeTakeFirstOrThrow();
 
   expect(chainAfter).toStrictEqual(chainBefore);
@@ -212,7 +212,7 @@ test('it rejects a duplicate stop with NOT_FOUND and advances the anchor exactly
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -231,7 +231,7 @@ test('it rejects a duplicate stop with NOT_FOUND and advances the anchor exactly
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'a9lp75')
+    .where('scopeId', '=', '0_0')
     .executeTakeFirstOrThrow();
 
   expect(client.stopActivity({ avatarID: avatar.id })).rejects.toMatchObject({
@@ -243,7 +243,7 @@ test('it rejects a duplicate stop with NOT_FOUND and advances the anchor exactly
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'a9lp75')
+    .where('scopeId', '=', '0_0')
     .executeTakeFirstOrThrow();
 
   expect(chainAfterSecond).toStrictEqual(chainAfterFirst);
@@ -259,7 +259,7 @@ test('it stops the targeted row when an activity id is named', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -283,7 +283,7 @@ test('it succeeds idempotently when the targeted row already left active', async
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -303,7 +303,7 @@ test('it never stops a row other than the targeted one', async () => {
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -311,7 +311,7 @@ test('it never stops a row other than the targeted one', async () => {
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -336,7 +336,7 @@ test('it rejects a targeted stop for a row of another user with NOT_FOUND', asyn
 
   const started = await ownerClient.startActivity({
     avatarID: ownerAvatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -367,7 +367,7 @@ test('it rejects a stop from a session another writer displaced with SESSION_EVI
 
   const started = await clientA.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -413,7 +413,7 @@ test('it still succeeds idempotently for a displaced session once the row left a
 
   const started = await clientA.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -444,7 +444,7 @@ test('it attempts a wake delivery after a successful stop', async () => {
 
   await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 

@@ -804,7 +804,7 @@ test('it clears a stale start intent silently when the budget is spent and anoth
   await writePendingStartIntent({
     activityID: 'activity_departed',
     avatarID: viewer.avatar.id,
-    scopeID: 'scope_departed',
+    scopeID: '6_0',
     scopeType: 'mission',
   });
 

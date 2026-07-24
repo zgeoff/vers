@@ -51,7 +51,7 @@ test("it includes a pending entry carrying the terminal checkpoint's rewards.xp 
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -87,7 +87,7 @@ test('it excludes a verified activity from pending', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -124,7 +124,7 @@ test('it excludes a rejected activity from pending', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -161,7 +161,7 @@ test('it excludes an active activity from pending', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -193,7 +193,7 @@ test('it reports how much of the live run the settled total already carries', as
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -223,7 +223,7 @@ test('it includes the unsettled xp of a run stopped before its encounter finishe
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -262,7 +262,7 @@ test('it reports unsettled xp that sums past what a database integer holds', asy
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -312,7 +312,7 @@ test('it skips a pending entry whose tail checkpoint carries no terminal rewards
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -382,7 +382,7 @@ test('it attempts a wake delivery when a pending entry is present', async () => 
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 

@@ -130,7 +130,7 @@ test('it broadcasts a simulation update once a started run installs', async () =
 
   const status = await testClient.startActivity({
     avatarID: viewer.avatar.id,
-    scopeID: 'esaxrt',
+    scopeID: '1_0',
     scopeType: 'world_map_node',
   });
 
@@ -511,7 +511,7 @@ test('it cancels an in-flight resync read on stop() without stopping the row bac
   // cancelled read didn't strand it hanging on the mailbox
   const status = await testClient.startActivity({
     avatarID: 'stop-cancel-avatar',
-    scopeID: 'scope-after-stop',
+    scopeID: '7_0',
     scopeType: 'world_map_node',
   });
 
