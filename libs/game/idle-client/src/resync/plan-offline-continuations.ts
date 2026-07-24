@@ -19,7 +19,7 @@ import { buildCheckpointBatchEntry } from '../submission/build-checkpoint-batch-
 import { ENTROPY_SOURCE_SERVER_KEY } from '../submission/constants';
 import type { LatestActivityProgress } from './types';
 
-export interface PlannedContinuation {
+interface PlannedContinuation {
   readonly continuation: CatchUpContinuation;
   readonly levelUps: number;
 }
