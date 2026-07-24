@@ -1,15 +1,10 @@
+import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from '@vers/contract-activity';
 import type { ActivityInput, AvatarData, SimulationInputSource } from '@vers/idle-core';
 import type { ActivityServiceClient } from '../submission/types';
 import { drainOfflineBatches } from './drain-offline-batches';
 import { planOfflineContinuations } from './plan-offline-continuations';
 import { splitContinuationsIntoBatches } from './split-continuations-into-batches';
 import type { FastForwardProgress, FastForwardReport, LatestActivityProgress } from './types';
-
-/**
- * Bounds a single `advanceActivity` request's total checkpoint count, keeping peak payload size
- * and the server's sync-hash CPU flat regardless of how long the offline gap ran.
- */
-const MAX_CHECKPOINTS_PER_BATCH = 500;
 
 interface RunFastForwardOptions {
   readonly budgetMs: number;
@@ -72,7 +67,7 @@ export async function runFastForward(
 
   const batches = splitContinuationsIntoBatches(
     plan.planned.map((planned) => planned.continuation),
-    options.maxCheckpointsPerBatch ?? MAX_CHECKPOINTS_PER_BATCH,
+    options.maxCheckpointsPerBatch ?? MAX_CATCH_UP_BATCH_CHECKPOINTS,
   );
 
   const drained = await drainOfflineBatches({

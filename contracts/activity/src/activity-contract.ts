@@ -6,6 +6,7 @@ import { ActivityStatusSchema } from './activity-status-schema';
 import { CatchUpContinuationSchema } from './catch-up-continuation-schema';
 import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
+import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
 
 const AvatarNotActiveDataSchema = z.object({
@@ -76,7 +77,11 @@ export const activityContract = {
     .input(
       z.object({
         activityID: z.string(),
-        continuations: z.array(CatchUpContinuationSchema).min(1).readonly(),
+        continuations: z
+          .array(CatchUpContinuationSchema)
+          .min(1)
+          .max(MAX_CATCH_UP_BATCH_CHECKPOINTS)
+          .readonly(),
         expectedHead: z.int().min(0),
       }),
     )
