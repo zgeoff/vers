@@ -497,7 +497,12 @@ async function applyFastForward(
     return;
   }
 
-  if (report.activity.status === 'active' && !report.finalRowTerminal) {
+  if (report.finalRowTerminal) {
+    // The plan's abort policy mints its final continuation's row exactly like any other, but the
+    // policy's online counterpart never starts a successor at all — stop this one back durably so
+    // the gap reads idle server-side too, instead of sitting active for the next resync to revive.
+    await submitStopIntent(context, report.activity);
+  } else if (report.activity.status === 'active') {
     await applyHeadAttach(
       context,
       report.activity,

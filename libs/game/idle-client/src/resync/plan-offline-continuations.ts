@@ -56,8 +56,8 @@ export interface PlanOfflineContinuationsResult {
  * under the abort policy stops planning after that continuation's own tail — the same policy
  * `pickPostTerminalAction` applies live — so no further continuation is planned past it. The
  * wire format still mints that continuation's own fresh row (every entry both closes a row and
- * opens the next), but the caller leaves it unattached: like an aborted online failure, nothing
- * resumes automatically, and the row sits ready for the player's next explicit start.
+ * opens the next), but the caller stops that row back durably rather than attaching it: like an
+ * aborted online failure, nothing resumes automatically, and the row reads idle server-side too.
  */
 export async function planOfflineContinuations(
   options: Readonly<PlanOfflineContinuationsOptions>,
