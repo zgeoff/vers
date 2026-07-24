@@ -1,3 +1,4 @@
+import type { CatchUpContinuation } from '@vers/contract-activity';
 import invariant from 'tiny-invariant';
 import * as db from '../db';
 import { os } from './os';
@@ -7,8 +8,10 @@ import { os } from './os';
  * the same simplification level `trackActivityProgress`'s mock accepts: each entry appends its
  * tail onto the currently active row, closes it by flipping to `stopped`, and mints the entry's own
  * id as the next active row using its own hint `buildSnapshot` — the mock has no settled-xp state
- * to author it from. Hash-chain validation, the offline-progress cap, mint dedup, and writer
- * eviction need state the mock doesn't track — those rejections are per-test overrides.
+ * to author it from. A non-active target row converges on an already-minted continuation the same
+ * way the real endpoint's mint dedup does — same avatar, `startKey`, and scope — rather than
+ * rejecting a lost-response retry outright. Hash-chain validation, the offline-progress cap, and
+ * writer eviction need state the mock doesn't track — those rejections are per-test overrides.
  */
 export const advanceActivity = os.advanceActivity.handler(async (opts) => {
   const actingUserId = opts.context.actingUserId;
@@ -38,13 +41,21 @@ export const advanceActivity = os.advanceActivity.handler(async (opts) => {
 
   for (const continuation of opts.input.continuations) {
     if (activity.status !== 'active') {
-      throw opts.errors.ACTIVITY_TERMINAL({
-        data: {
-          activityID: activity.id,
-          appendedHead: activity.appendedHead,
-          status: activity.status,
-        },
-      });
+      const converged = resolveMintIDCollision(activity, continuation);
+
+      if (converged === undefined) {
+        throw opts.errors.ACTIVITY_TERMINAL({
+          data: {
+            activityID: activity.id,
+            appendedHead: activity.appendedHead,
+            status: activity.status,
+          },
+        });
+      }
+
+      activity = converged;
+      expectedHead = converged.appendedHead;
+      continue;
     }
 
     if (expectedHead !== activity.appendedHead) {
@@ -104,3 +115,39 @@ export const advanceActivity = os.advanceActivity.handler(async (opts) => {
 
   return { activity, appendedHead: activity.appendedHead };
 });
+
+/**
+ * The provenance a mint dedup checks a candidate row against — the same fields the real
+ * endpoint's own dedup requires beyond ownership alone.
+ */
+interface MintProvenance {
+  readonly avatarID: string;
+  readonly scopeID: string;
+  readonly scopeType: string;
+}
+
+/**
+ * Resolves a continuation whose target row is no longer active: an existing row at the
+ * continuation's id converges only when it is genuinely the continuation this request is
+ * retrying — owned by the same avatar, minted from the same `startKey`, and scoped to the same
+ * chain — mirroring the real endpoint's mint-id dedup. Anything short of that full match,
+ * including no row at all, is `undefined`.
+ */
+function resolveMintIDCollision(
+  pinned: Readonly<MintProvenance>,
+  continuation: Readonly<CatchUpContinuation>,
+): ReturnType<typeof db.activityCollection.findFirst> {
+  const existing = db.activityCollection.findFirst((q) => q.where({ id: continuation.id }));
+
+  if (
+    existing === undefined ||
+    existing.avatarID !== pinned.avatarID ||
+    existing.startKey !== continuation.startKey ||
+    existing.scopeType !== pinned.scopeType ||
+    existing.scopeID !== pinned.scopeID
+  ) {
+    return undefined;
+  }
+
+  return existing;
+}
