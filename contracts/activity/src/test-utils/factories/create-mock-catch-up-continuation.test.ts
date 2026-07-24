@@ -16,6 +16,13 @@ test('it builds the requested number of checkpoint entries', () => {
   expect(continuation.checkpoints.map((checkpoint) => checkpoint.version)).toStrictEqual([1, 2, 3]);
 });
 
+test('it clamps a requested checkpoint count of 0 up to 1', () => {
+  const continuation = createMockCatchUpContinuation({ checkpointCount: 0 });
+
+  expect(CatchUpContinuationSchema.parse(continuation)).toStrictEqual(continuation);
+  expect(continuation.checkpoints).toHaveLength(1);
+});
+
 test('it applies overrides over the defaults', () => {
   const continuation = createMockCatchUpContinuation({
     id: 'act_fixed',
