@@ -18,7 +18,8 @@
     "@vers/game-utils": "workspace:*",
     "@vers/utils": "workspace:*",
     "fast-equals": "catalog:",
-    "tiny-invariant": "catalog:"
+    "tiny-invariant": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@faker-js/faker": "catalog:",

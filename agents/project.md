@@ -4,9 +4,10 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 
 **Pure producers** — result comes from arguments alone, no side effects:
 
-| Prefix    | Contract                                       | Example                |
-| --------- | ---------------------------------------------- | ---------------------- |
-| `compare` | aligned structures in, equivalence verdict out | `compareReplaySegment` |
+| Prefix    | Contract                                                                  | Example                |
+| --------- | ------------------------------------------------------------------------- | ---------------------- |
+| `compare` | aligned structures in, equivalence verdict out                            | `compareReplaySegment` |
+| `fold`    | a baseline value plus a list of items reduced into one accumulated result | `foldOptimisticBuild`  |
 
 **Effectful** — touches the world (filesystem, streams, processes, registries):
 
@@ -15,6 +16,7 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 | `advance`   | step a stateful cursor, clock, or simulation forward in place, optionally to a target  | `advanceToDuration`     |
 | `broadcast` | post one message to every connected client on whichever transport carries it           | `broadcast`             |
 | `flush`     | attempt delivery of the durable outbound backlog, removing entries confirmed received  | `flush`                 |
+| `mint`      | create and persist a new identity-bearing row rooted in a chain or coordinate          | `mintContinuation`      |
 | `park`      | set a work item aside in a parked status for later resumption                          | `parkActivity`          |
 | `record`    | durably note that an event occurred (counter, log, audit row)                          | `recordFailedAttempt`   |
 | `redirect`  | return a redirect response for a request failing a gate, else defer                    | `redirectToHTTPS`       |
