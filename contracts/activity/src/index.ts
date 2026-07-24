@@ -10,6 +10,8 @@ export { buildCheckpointHash } from './build-checkpoint-hash';
 export { buildStartHash } from './build-start-hash';
 export type { BuildSnapshot } from './build-snapshot-schema';
 export { BuildSnapshotSchema } from './build-snapshot-schema';
+export type { CatchUpContinuation } from './catch-up-continuation-schema';
+export { CatchUpContinuationSchema } from './catch-up-continuation-schema';
 export type { CheckpointBatchEntry } from './checkpoint-batch-entry-schema';
 export { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 export type { CheckpointPayload } from './checkpoint-payload-schema';

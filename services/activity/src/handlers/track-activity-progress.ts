@@ -1,13 +1,13 @@
-import type { CheckpointBatchEntry, CheckpointPayload } from '@vers/contract-activity';
-import { RewardSlotSchema, buildCheckpointHash } from '@vers/contract-activity';
-import type { ActivityStatus, DB, Json } from '@vers/db';
+import type { CheckpointBatchEntry } from '@vers/contract-activity';
+import type { DB, Json } from '@vers/db';
 import { isTerminalCheckpointType } from '@vers/idle-core';
 import type { ServiceContext } from '@vers/service-runtime';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
-import * as z from 'zod';
+import { findCheckpointBatchInvalidReason } from '../find-checkpoint-batch-invalid-reason';
 import { recordTerminalTransition } from '../metrics/record-terminal-transition';
+import { pickCheckpointBatchRaceOutcome } from '../pick-checkpoint-batch-race-outcome';
 import type {
   CappedPayload,
   CheckpointInvalidPayload,
@@ -124,7 +124,7 @@ export async function trackActivityProgress(
   }
 
   const appendedTimeMs = Number(head.appendedTimeMs);
-  const reason = findInvalidReason(opts.input, { ...head, appendedTimeMs });
+  const reason = findCheckpointBatchInvalidReason(opts.input, { ...head, appendedTimeMs });
 
   if (reason !== undefined) {
     throw opts.errors.CHECKPOINT_INVALID({ data: { reason } });
@@ -331,15 +331,30 @@ async function checkAppendRace(
     .where('id', '=', opts.input.activityID)
     .executeTakeFirst();
 
-  const outcome = pickAppendRaceOutcome(
-    opts.errors,
+  const outcome = pickCheckpointBatchRaceOutcome(
     opts.context.actingSessionId,
     current,
     opts.input.checkpoints,
   );
 
-  if (outcome instanceof Error) {
-    throw outcome;
+  switch (outcome.kind) {
+    case 'not-found': {
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }
+
+    case 'session-evicted': {
+      throw opts.errors.SESSION_EVICTED({ data: {} });
+    }
+
+    case 'terminal': {
+      throw opts.errors.ACTIVITY_TERMINAL({
+        data: { appendedHead: outcome.appendedHead, status: outcome.status },
+      });
+    }
+
+    case 'conflict': {
+      throw opts.errors.CONFLICT({ data: { appendedHead: outcome.appendedHead } });
+    }
   }
 
   opts.context.logger.info(
@@ -348,242 +363,4 @@ async function checkAppendRace(
   );
 
   return { appendedHead: outcome.appendedHead };
-}
-
-interface SettledTailRow {
-  readonly appendedHead: number;
-  readonly lastHash: string;
-}
-
-/**
- * Reports whether a checkpoint batch, replayed from scratch, recomputes onto a settled activity's
- * recorded tail: the last entry's version lands on `settled.appendedHead`, and every entry's hash —
- * recomputed from each payload, never trusted from the submitted `hash` field — chains onto
- * the previous entry's rebuilt hash and the final one reproduces `settled.lastHash`. A match proves
- * the recorded tail is this exact batch: the original submit landed and only the ack was lost.
- */
-function isSettledResubmit(
-  checkpoints: ReadonlyArray<CheckpointBatchEntry>,
-  settled: Readonly<SettledTailRow>,
-): boolean {
-  const lastCheckpoint = checkpoints.at(-1);
-
-  if (lastCheckpoint === undefined || lastCheckpoint.version !== settled.appendedHead) {
-    return false;
-  }
-
-  let previousHash: string | undefined;
-
-  for (const checkpoint of checkpoints) {
-    if (previousHash !== undefined && checkpoint.prevHash !== previousHash) {
-      return false;
-    }
-
-    previousHash = buildCheckpointHash({
-      chainIndex: checkpoint.payload.chainIndex,
-      entropySource: checkpoint.payload.entropySource,
-      nextSeed: checkpoint.payload.nextSeed,
-      prevHash: checkpoint.prevHash,
-      seed: checkpoint.payload.seed,
-      time: checkpoint.payload.time,
-      type: checkpoint.payload.type,
-      version: checkpoint.version,
-    });
-  }
-
-  return previousHash === settled.lastHash;
-}
-
-interface TerminalRow extends SettledTailRow {
-  readonly status: ActivityStatus;
-}
-
-/**
- * Resolves a non-active head: a resubmit that recomputes onto the recorded tail settles as the
- * already-settled head, a normal success; any other batch against a terminal status resolves
- * ACTIVITY_TERMINAL.
- */
-function pickTerminalOutcome(
-  checkpoints: ReadonlyArray<CheckpointBatchEntry>,
-  current: Readonly<TerminalRow>,
-  errors: TrackActivityProgressOpts['errors'],
-): { readonly appendedHead: number } | Error {
-  if (isSettledResubmit(checkpoints, current)) {
-    return { appendedHead: current.appendedHead };
-  }
-
-  return errors.ACTIVITY_TERMINAL({
-    data: { appendedHead: current.appendedHead, status: current.status },
-  });
-}
-
-const RewardSlotsSchema = z.array(RewardSlotSchema);
-
-/**
- * A checkpoint's `rewardSlots` field rides outside the hashed subset like `rewards`, so it's
- * validated here rather than by the payload schema. Absent is valid — an older client or a
- * checkpoint that dropped nothing carries no key at all. Present, it must parse and its ordinals
- * must run contiguous from 0 in list order.
- */
-function findRewardSlotsInvalidReason(payload: Readonly<CheckpointPayload>): string | undefined {
-  if (!('rewardSlots' in payload)) {
-    return undefined;
-  }
-
-  const parsed = RewardSlotsSchema.safeParse(payload['rewardSlots']);
-
-  if (!parsed.success) {
-    return 'invalid-reward-slots';
-  }
-
-  const isContiguous = parsed.data.every((slot, index) => slot.ordinal === index);
-
-  return isContiguous ? undefined : 'invalid-reward-slots';
-}
-
-const RewardsSchema = z.looseObject({ xp: z.int32().optional() });
-
-/**
- * A checkpoint's `rewards` field rides outside the hashed subset, so it's validated here rather
- * than by the payload schema. Absent is valid — a checkpoint that earned nothing carries no key at
- * all. Present, `xp` must fit postgres `integer`: readers aggregate it with a cast that fails the
- * whole statement on a fractional, non-numeric, or out-of-range value, and the offending
- * checkpoint would keep failing it on every later read.
- */
-function findRewardsInvalidReason(payload: Readonly<CheckpointPayload>): string | undefined {
-  if (!('rewards' in payload)) {
-    return undefined;
-  }
-
-  return RewardsSchema.safeParse(payload['rewards']).success ? undefined : 'invalid-rewards';
-}
-
-interface CheckpointBatchInput {
-  readonly checkpoints: ReadonlyArray<CheckpointBatchEntry>;
-  readonly expectedHead: number;
-}
-
-interface TrackActivityProgressHead {
-  readonly appendedHead: number;
-  readonly appendedTimeMs: number;
-  readonly lastHash: string;
-  readonly scopeId: string;
-  readonly scopeType: string;
-  readonly startChainIndex: number;
-}
-
-/**
- * Validates a checkpoint batch's internal shape ahead of the transactional head-row compare-and-swap: version
- * contiguity from `expectedHead + 1`, each entry's `chainIndex` continuity from
- * `head.startChainIndex`, no run-ending entry before the batch's last — only the last entry claims
- * the activity's terminal transition, so an interior one would store a terminal the settlement rule
- * never reads — each entry's optional `rewardSlots` shape and ordinal contiguity, each entry's
- * optional `rewards.xp` fitting postgres `integer`, each
- * entry's cumulative `time` never regressing — within the batch always, and from the head row's
- * accounted time only when `expectedHead` still matches the head row, since a stale batch predates
- * that value — each entry's hash against its own payload, each entry's chain link to the previous
- * one, and (under the same head-match condition) the first entry's link onto the current head.
- */
-function findInvalidReason(
-  input: Readonly<CheckpointBatchInput>,
-  head: Readonly<TrackActivityProgressHead>,
-): string | undefined {
-  const headMatches = input.expectedHead === head.appendedHead;
-  let previousTime = headMatches ? head.appendedTimeMs : undefined;
-
-  for (const [index, checkpoint] of input.checkpoints.entries()) {
-    const expectedVersion = input.expectedHead + index + 1;
-
-    if (checkpoint.version !== expectedVersion) {
-      return 'non-contiguous-versions';
-    }
-
-    if (checkpoint.payload.chainIndex !== head.startChainIndex + checkpoint.version) {
-      return 'non-contiguous-chain-index';
-    }
-
-    const isLast = index === input.checkpoints.length - 1;
-
-    if (!isLast && isTerminalCheckpointType(checkpoint.payload.type)) {
-      return 'terminal-not-last';
-    }
-
-    const rewardSlotsReason = findRewardSlotsInvalidReason(checkpoint.payload);
-
-    if (rewardSlotsReason !== undefined) {
-      return rewardSlotsReason;
-    }
-
-    const rewardsReason = findRewardsInvalidReason(checkpoint.payload);
-
-    if (rewardsReason !== undefined) {
-      return rewardsReason;
-    }
-
-    // The negated >= also rejects a NaN time, which would otherwise slip through as a 0 delta.
-    if (previousTime !== undefined && !(checkpoint.payload.time >= previousTime)) {
-      return 'time-regression';
-    }
-
-    previousTime = checkpoint.payload.time;
-
-    let previousHash: string | undefined;
-
-    if (index === 0) {
-      previousHash = headMatches ? head.lastHash : undefined;
-    } else {
-      previousHash = input.checkpoints[index - 1]?.hash;
-    }
-
-    if (previousHash !== undefined && checkpoint.prevHash !== previousHash) {
-      return 'broken-chain-link';
-    }
-
-    const expectedHash = buildCheckpointHash({
-      chainIndex: checkpoint.payload.chainIndex,
-      entropySource: checkpoint.payload.entropySource,
-      nextSeed: checkpoint.payload.nextSeed,
-      prevHash: checkpoint.prevHash,
-      seed: checkpoint.payload.seed,
-      time: checkpoint.payload.time,
-      type: checkpoint.payload.type,
-      version: checkpoint.version,
-    });
-
-    if (expectedHash !== checkpoint.hash) {
-      return 'hash-mismatch';
-    }
-  }
-
-  return undefined;
-}
-
-interface AppendRaceRow extends TerminalRow {
-  readonly writerSessionId: null | string;
-}
-
-/**
- * Resolves a lost head-row race from a fresh read of the activity row: gone (NOT_FOUND), terminal
- * (a matching resubmit settles, otherwise ACTIVITY_TERMINAL), writer taken over (SESSION_EVICTED),
- * or a retryable stale head (CONFLICT).
- */
-function pickAppendRaceOutcome(
-  errors: TrackActivityProgressOpts['errors'],
-  actingSessionID: null | string,
-  current: AppendRaceRow | undefined,
-  checkpoints: ReadonlyArray<CheckpointBatchEntry>,
-): { readonly appendedHead: number } | Error {
-  if (current === undefined) {
-    return errors.NOT_FOUND({ data: {} });
-  }
-
-  if (current.status !== 'active') {
-    return pickTerminalOutcome(checkpoints, current, errors);
-  }
-
-  if (current.writerSessionId !== null && current.writerSessionId !== actingSessionID) {
-    return errors.SESSION_EVICTED({ data: {} });
-  }
-
-  return errors.CONFLICT({ data: { appendedHead: current.appendedHead } });
 }
