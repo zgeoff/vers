@@ -75,15 +75,28 @@ export const activityContract = {
       summary: 'Bulk mint-and-append offline catch-up continuations onto an activity chain',
     })
     .input(
-      z.object({
-        activityID: z.string(),
-        continuations: z
-          .array(CatchUpContinuationSchema)
-          .min(1)
-          .max(MAX_CATCH_UP_BATCH_CHECKPOINTS)
-          .readonly(),
-        expectedHead: z.int().min(0),
-      }),
+      z
+        .object({
+          activityID: z.string(),
+          continuations: z
+            .array(CatchUpContinuationSchema)
+            .min(1)
+            .max(MAX_CATCH_UP_BATCH_CHECKPOINTS)
+            .readonly(),
+          expectedHead: z.int().min(0),
+        })
+
+        // The per-array caps still admit continuations × checkpoints work; the aggregate bound is
+        // what keeps a direct API caller's synchronous hash + insert cost per request flat,
+        // matching the honest client's per-request total.
+        .refine(
+          (input) =>
+            input.continuations.reduce((total, entry) => total + entry.checkpoints.length, 0) <=
+            MAX_CATCH_UP_BATCH_CHECKPOINTS,
+          {
+            error: `a request carries at most ${MAX_CATCH_UP_BATCH_CHECKPOINTS} checkpoints across all continuations`,
+          },
+        ),
     )
     .output(z.object({ activity: ActivityDataSchema, appendedHead: z.int() }))
     .errors(
