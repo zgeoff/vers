@@ -175,7 +175,7 @@ test('it stops after the first failed attempt under the abort policy', async () 
 
   expect(report).toMatchObject({
     attempts: 1,
-    finalRowTerminal: false,
+    finalRowTerminal: true,
     reason: 'aborted-on-failure',
   });
 

@@ -94,12 +94,15 @@ export async function runFastForward(
   }
 
   // The delivered plan's final row is always the last continuation's own fresh mint — nothing
-  // has been appended onto it yet, so it is always live-attachable.
+  // has been appended onto it yet, so it is live-attachable, UNLESS the plan stopped on an
+  // aborted failure: the abort policy's online counterpart never starts a successor, so the
+  // freshly minted row here stays unattached too, left ready for the player's next explicit
+  // start rather than resumed automatically.
   return {
     activity: drained.activity,
     appendedHead: drained.appendedHead,
     attempts,
-    finalRowTerminal: false,
+    finalRowTerminal: plan.reason === 'aborted-on-failure',
     levelUps,
     reason: plan.reason,
   };

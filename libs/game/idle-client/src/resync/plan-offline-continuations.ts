@@ -54,9 +54,10 @@ export interface PlanOfflineContinuationsResult {
  * so the confirmed row's own snapshot is the correct baseline for every later attempt's fold, and
  * the only sources this loop must add are the gap's own continuations as they close. A failure
  * under the abort policy stops planning after that continuation's own tail — the same policy
- * `pickPostTerminalAction` applies live — so no further continuation is planned past it, and its
- * own mint step lands a fresh, unplayed row exactly as an aborted online failure would leave one
- * ready for the player's next explicit start.
+ * `pickPostTerminalAction` applies live — so no further continuation is planned past it. The
+ * wire format still mints that continuation's own fresh row (every entry both closes a row and
+ * opens the next), but the caller leaves it unattached: like an aborted online failure, nothing
+ * resumes automatically, and the row sits ready for the player's next explicit start.
  */
 export async function planOfflineContinuations(
   options: Readonly<PlanOfflineContinuationsOptions>,
