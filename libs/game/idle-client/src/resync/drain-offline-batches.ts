@@ -1,4 +1,4 @@
-import { safe } from '@orpc/client';
+import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData, CatchUpContinuation } from '@vers/contract-activity';
 import type { ActivityServiceClient } from '../submission/types';
 
@@ -39,9 +39,11 @@ interface DrainOfflineBatchesResult {
  * `createCheckpointSubmitter`, whose `flushHeld` fans batches out with no cross-activity ordering;
  * two flushers over one queue would double-submit and could interleave. Ordering — batch N's mint
  * committing before batch N+1 ships — comes from awaiting each response before sending the next,
- * not from any assertion. A rejection discards every batch still unsent and stops immediately: the
- * confirmed row this function returns is whichever batch last committed, exactly what the outer
- * resync re-plans from.
+ * not from any assertion. A defined `advanceActivity` rejection discards every batch still unsent
+ * and stops immediately: the confirmed row this function returns is whichever batch last
+ * committed, exactly what the outer resync re-plans from. A transport failure carries no such
+ * verdict — the server never rejected anything — so it propagates instead of resolving, reaching
+ * the resync's own failure/retry path rather than reading as a displaced writer.
  */
 export async function drainOfflineBatches(
   options: Readonly<DrainOfflineBatchesOptions>,
@@ -59,6 +61,10 @@ export async function drainOfflineBatches(
     );
 
     if (error !== null) {
+      if (!isDefinedError(error)) {
+        throw error;
+      }
+
       options.onRejected?.();
 
       return { activity, appendedHead, delivered: false };

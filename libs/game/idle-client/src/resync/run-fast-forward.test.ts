@@ -11,6 +11,7 @@ import {
 } from '@vers/idle-core/test-utils';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
+import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import type { ActivityServiceClient } from '../submission/types';
@@ -349,4 +350,83 @@ test('it bails to displaced and reports zero tallies when a batch is rejected', 
     levelUps: 0,
     reason: 'displaced',
   });
+});
+
+test('it propagates a transport failure rather than reporting it as displaced', () => {
+  const progress = createMockLatestActivityProgress();
+
+  server.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
+
+  const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
+
+  const client: ActivityServiceClient = createORPCClient(link);
+
+  const run = runFastForward({
+    budgetMs: 60_000,
+    buildSimulationInput: (source) => ({
+      activity: createMockActivityInput({
+        encounter: buildWaveTemplate(),
+        failureAction: ActivityFailureAction.Abort,
+
+        id: source.id,
+        seed: source.seed,
+      }),
+
+      // life 1 dies on the first hit taken, so a plan still exists to submit
+      avatar: createMockAvatarData({ life: 1 }),
+    }),
+    client,
+    progress,
+  });
+
+  expect(run).rejects.toThrow();
+});
+
+test('it resolves with no fast-forward at all when the confirmed row already reconstructs through its own terminal', async () => {
+  const ctx = setupTest();
+
+  // One fixed input template, deep-copied per call — the probe attempt below and the
+  // fast-forward's own reconstruction must simulate byte-identically.
+  const template = {
+    activity: createMockActivityInput({
+      encounter: buildWaveTemplate(),
+      failureAction: ActivityFailureAction.Retry,
+    }),
+    avatar: createMockAvatarData(),
+  };
+
+  const probeInput = structuredClone(template);
+
+  const probe = await runAttempt(probeInput.activity, probeInput.avatar, {
+    maxDurationMs: Number.MAX_SAFE_INTEGER,
+  });
+
+  // the confirmed head already covers every checkpoint the row's own attempt ever produces —
+  // nothing unconfirmed remains for a fast-forward to catch up
+  const progress = createMockLatestActivityProgress({
+    activity: createMockActivityData({
+      appendedHead: probe.checkpoints.length,
+      id: template.activity.id,
+      seed: template.activity.seed,
+    }),
+    appendedHead: probe.checkpoints.length,
+  });
+
+  const report = await runFastForward({
+    budgetMs: 60_000,
+    buildSimulationInput: () => structuredClone(template),
+    client: ctx.client,
+    progress,
+  });
+
+  expect(report).toStrictEqual({
+    activity: progress.activity,
+    appendedHead: progress.appendedHead,
+    attempts: 0,
+    finalRowTerminal: false,
+    levelUps: 0,
+    reason: 'budget-exhausted',
+  });
+
+  expect(ctx.calls).toStrictEqual([]);
 });

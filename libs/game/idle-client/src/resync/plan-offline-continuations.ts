@@ -58,6 +58,9 @@ export interface PlanOfflineContinuationsResult {
  * wire format still mints that continuation's own fresh row (every entry both closes a row and
  * opens the next), but the caller stops that row back durably rather than attaching it: like an
  * aborted online failure, nothing resumes automatically, and the row reads idle server-side too.
+ * A confirmed row whose reconstructed attempt already accounts for every checkpoint through its
+ * own terminal — an empty remaining tail — resolves as no fast-forward at all rather than minting
+ * a successor from nothing.
  */
 export async function planOfflineContinuations(
   options: Readonly<PlanOfflineContinuationsOptions>,
@@ -112,6 +115,13 @@ export async function planOfflineContinuations(
     }
 
     const tail = attempt.checkpoints.slice(appendedHead);
+
+    if (tail.length === 0) {
+      // The confirmed row's own attempt already reconstructs through its terminal checkpoint with
+      // nothing left unconfirmed — an empty tail carries no successor to mint.
+      return { planned, reason: 'budget-exhausted' };
+    }
+
     const checkpoints = buildTailEntries(cursor, appendedHead, tail, lastAppended?.nextSeed);
     const lastEntry = checkpoints.at(-1);
 
