@@ -1,2 +1,11 @@
+export { buildCellNode } from './build-cell-node';
+export { buildChunk } from './build-chunk';
+export { collectNodeEdges } from './collect-node-edges';
 export { decompressWorldGraph } from './decompress-world-graph';
+export { getDifficulty } from './get-difficulty';
+export { getHexDistance } from './get-hex-distance';
+export { toCellCoord } from './to-cell-coord';
+export { toChunkCoord } from './to-chunk-coord';
+export { toHexPosition } from './to-hex-position';
+export { toNodeID } from './to-node-id';
 export type * from './types';
