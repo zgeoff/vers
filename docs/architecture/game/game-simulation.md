@@ -83,15 +83,24 @@ checkpoints converge instead of interleaving.
 
 ## Server-authored inputs
 
-`startActivity` and `advanceActivity` are the server actions that own every simulation input — the
-first mints a single fresh activity, the second mints a whole chain of continuations in one bulk
-request. For each mint they:
+`startActivity` and `advanceActivity` are the server actions that own every simulation input.
+`startActivity` mints a single fresh activity and resolves everything it pins fresh from server
+truth:
 
-- derive the seed: a CSPRNG mint for a node's first-ever activity, or the previous activity's
-  appended checkpoint for every continuation (see [the seed chain](./seed-chain.md))
-- resolve the node's enemy content
-- snapshot the avatar's build (equipment, passives, level) from server truth
-- stamp the engine and content versions
+- derives the seed: a CSPRNG mint for a node's first-ever activity, or the previous activity's
+  appended checkpoint for a continuation started online (see [the seed chain](./seed-chain.md))
+- resolves the node's enemy content
+- snapshots the avatar's build (equipment, passives, level) from server truth
+- stamps the engine and content versions
+
+`advanceActivity` mints a whole chain of continuations in one bulk request, replaying an offline gap
+under the exact context the client's own local simulation was pinned to rather than resolving any of
+it fresh: every continuation it mints reuses the initial row's own seed chain and pinned
+encounter/version context unchanged, and re-derives its own `buildSnapshot` server-side from the
+avatar's progression instead of resolving a fresh build. The client predicts that same snapshot
+locally so its offline simulation runs against the correct build; `advanceActivity` cross-checks the
+prediction against what it derived and rejects the continuation on a mismatch rather than trusting
+the client's value.
 
 The `Started` snapshot pins every version a replay needs — the engine and content versions, the roll
 `keyVersion` ([game entropy](./game-entropy.md#version-pinning)), and `start_chain_index`
@@ -247,9 +256,12 @@ the whole gap, however long, simulates before any of it is submitted. The planne
 bounded `advanceActivity` batches, sequentially and awaited: batch N's mint commits before batch N+1
 ships, never asserted, and no other path — in particular not the per-activity checkpoint submitter —
 delivers an offline continuation. A rejected batch discards every batch still unsent and reconciles
-to whichever batch last committed; the worker then attaches live to that response's row, always a
-freshly minted one with nothing appended yet, exactly as it would a fresh continuation reached by
-any other path.
+to whichever continuation last committed anywhere in the request. Once at least one continuation has
+committed, that is always a freshly minted row with nothing appended yet, and the worker attaches
+live to it exactly as it would a fresh continuation reached by any other path. A rejection before
+the request's first continuation ever commits mints nothing at all — the bail carries only the
+activity id and the confirmed head unchanged from before the gap, and the worker reconciles to that
+same row through the outer resync's own refetch rather than attaching anywhere new.
 
 A live continuation the worker couldn't complete — a same-row race just after a terminal checkpoint,
 or a transport failure starting the next row — leaves a durable start intent that survives a worker
