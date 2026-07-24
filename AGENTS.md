@@ -167,7 +167,7 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 **Pure producers** — result comes from arguments alone, no side effects:
 
 | Prefix    | Contract                                                                  | Example                |
-| --------- | -------------------------------------------------------------------------- | ---------------------- |
+| --------- | ------------------------------------------------------------------------- | ---------------------- |
 | `compare` | aligned structures in, equivalence verdict out                            | `compareReplaySegment` |
 | `fold`    | a baseline value plus a list of items reduced into one accumulated result | `foldOptimisticBuild`  |
 
