@@ -181,7 +181,7 @@ test('it rejects a continuation whose predicted buildSnapshot mismatches the ser
     startVersion: 1,
   });
 
-  await expect(
+  expect(
     client.advanceActivity({
       activityID: started.id,
       continuations: [
@@ -316,7 +316,7 @@ test('it conflicts a mint whose client id already belongs to another avatar', as
     startVersion: 1,
   });
 
-  await expect(
+  expect(
     clientB.advanceActivity({
       activityID: startedB.id,
       continuations: [
@@ -363,7 +363,7 @@ test('it caps a continuation whose tail exceeds the accrued offline budget', asy
     timeStepMs: 100_000,
   });
 
-  await expect(
+  expect(
     client.advanceActivity({
       activityID: started.id,
       continuations: [
@@ -422,7 +422,7 @@ test('it evicts a session that is no longer the writer', async () => {
     startVersion: 1,
   });
 
-  await expect(
+  expect(
     client.advanceActivity({
       activityID: started.id,
       continuations: [
@@ -474,7 +474,7 @@ test('it bails with CHAIN_QUARANTINED when the scope already carries a quarantin
     startVersion: 1,
   });
 
-  await expect(
+  expect(
     client.advanceActivity({
       activityID: started.id,
       continuations: [
@@ -536,7 +536,7 @@ test('it bails with CHECKPOINT_INVALID on a broken hash chain, leaving the head 
 
   const firstContinuationID = `act_${createId()}`;
 
-  await expect(
+  expect(
     client.advanceActivity({
       activityID: started.id,
       continuations: [

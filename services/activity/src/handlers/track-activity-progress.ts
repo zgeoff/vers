@@ -355,6 +355,10 @@ async function checkAppendRace(
     case 'conflict': {
       throw opts.errors.CONFLICT({ data: { appendedHead: outcome.appendedHead } });
     }
+
+    case 'resubmit-settled': {
+      break;
+    }
   }
 
   opts.context.logger.info(

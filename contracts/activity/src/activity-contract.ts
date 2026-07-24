@@ -76,7 +76,7 @@ export const activityContract = {
     .input(
       z.object({
         activityID: z.string(),
-        continuations: z.array(CatchUpContinuationSchema).min(1),
+        continuations: z.array(CatchUpContinuationSchema).min(1).readonly(),
         expectedHead: z.int().min(0),
       }),
     )

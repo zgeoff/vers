@@ -46,7 +46,6 @@ interface RunFastForwardOptions {
  * `displaced` handling clears the same optimistic display a lost writer race would.
  */
 export async function runFastForward(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- carries the zod-inferred contract progress shape and a callback-bearing client, neither of which has a readonly form
   options: Readonly<RunFastForwardOptions>,
 ): Promise<FastForwardReport> {
   const plan = await planOfflineContinuations({

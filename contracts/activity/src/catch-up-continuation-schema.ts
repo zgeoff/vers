@@ -13,7 +13,7 @@ import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
  */
 export const CatchUpContinuationSchema = z.object({
   buildSnapshot: BuildSnapshotSchema,
-  checkpoints: z.array(CheckpointBatchEntrySchema).min(1),
+  checkpoints: z.array(CheckpointBatchEntrySchema).min(1).readonly(),
   id: z.string(),
   startKey: z.string().max(128),
 });

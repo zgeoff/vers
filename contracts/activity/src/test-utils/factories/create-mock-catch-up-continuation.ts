@@ -3,13 +3,13 @@ import { createId } from '@paralleldrive/cuid2';
 import type { CatchUpContinuation } from '../../catch-up-continuation-schema';
 import type { CheckpointBatchEntry } from '../../checkpoint-batch-entry-schema';
 
-interface CreateMockCatchUpContinuationOverrides extends Partial<CatchUpContinuation> {
+type CreateMockCatchUpContinuationOverrides = Partial<CatchUpContinuation> & {
   /**
    * How many checkpoint entries the default `checkpoints` array carries. Ignored when
    * `checkpoints` is itself overridden. Default 1.
    */
   readonly checkpointCount?: number;
-}
+};
 
 export function createMockCatchUpContinuation(
   overrides: Readonly<CreateMockCatchUpContinuationOverrides> = {},

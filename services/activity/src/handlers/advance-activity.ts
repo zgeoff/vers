@@ -294,6 +294,12 @@ function buildBailError(
         },
       });
     }
+
+    // every BailOutcome kind is handled above; a raw throw here (rather than `invariant`) is what
+    // satisfies the linter's return-consistency check across an exhaustive switch
+    default: {
+      throw new Error(`unreachable BailOutcome kind: ${JSON.stringify(outcome)}`);
+    }
   }
 }
 

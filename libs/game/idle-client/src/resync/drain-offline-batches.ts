@@ -5,7 +5,7 @@ import type { ActivityServiceClient } from '../submission/types';
 interface DrainOfflineBatchesOptions {
   readonly activity: ActivityData;
   readonly appendedHead: number;
-  readonly batches: ReadonlyArray<Array<CatchUpContinuation>>;
+  readonly batches: ReadonlyArray<ReadonlyArray<CatchUpContinuation>>;
   readonly client: Pick<ActivityServiceClient, 'advanceActivity'>;
 
   /**
