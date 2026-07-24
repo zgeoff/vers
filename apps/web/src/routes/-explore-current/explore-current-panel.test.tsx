@@ -45,7 +45,7 @@ test('it re-sends the start intent against a promoted writer', async () => {
 
   await createActiveAvatar({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
 
   const client = createStubWorkerClient({
     startActivity: () => new Promise(() => {}),
@@ -79,7 +79,7 @@ test('it sends one start call for the selected node once initialized', async () 
   const signedIn = await createSignedInUser();
   const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
 
   const client = createStubWorkerClient({
     startActivity: () => new Promise(() => {}),
@@ -100,7 +100,7 @@ test('it sends one start call for the selected node once initialized', async () 
 
     await waitFor(() => {
       expect(client.startActivity).toHaveBeenCalledExactlyOnceWith(
-        { avatarID: avatar.id, scopeID: 'a9lp75', scopeType: 'world_map_node' },
+        { avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' },
         { signal: writerAbortSignal },
       );
     });
@@ -178,9 +178,9 @@ test('it renders the node and its codex fragment once the worker reports the sta
   const signedIn = await createSignedInUser();
   const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
 
-  const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
+  const started = createMockActivityData({ avatarID: avatar.id, scopeID: '0_0' });
 
   const client = createStubWorkerClient({
     startActivity: () => Promise.resolve({ activity: started, kind: 'started' }),
@@ -225,7 +225,7 @@ test('it treats an attached report as ready once the simulation carries that row
 
   await createActiveAvatar({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
 
   const client = createStubWorkerClient({
     startActivity: () => Promise.resolve({ activityID: 'activity_attached', kind: 'attached' }),
@@ -269,7 +269,7 @@ test('it offers a retry on a failed report and sends a fresh call on demand', as
 
   await createActiveAvatar({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
 
   const client = createStubWorkerClient({
     startActivity: () => Promise.resolve({ kind: 'failed' }),
@@ -304,9 +304,9 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
   const signedIn = await createSignedInUser();
   const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
 
-  const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
+  const started = createMockActivityData({ avatarID: avatar.id, scopeID: '0_0' });
 
   const client = createStubWorkerClient({
     startActivity: () => Promise.resolve({ activity: started, kind: 'started' }),
@@ -411,9 +411,9 @@ test('it navigates to the engagement screen once the start goes live', async () 
   const signedIn = await createSignedInUser();
   const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
 
-  const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
+  const started = createMockActivityData({ avatarID: avatar.id, scopeID: '0_0' });
 
   const client = createStubWorkerClient({
     startActivity: () => Promise.resolve({ activity: started, kind: 'started' }),
@@ -459,7 +459,7 @@ test('it navigates once an attached report is ready, without a fresh start call'
 
   await createActiveAvatar({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
 
   const client = createStubWorkerClient({
     startActivity: () => Promise.resolve({ activityID: 'activity_attached', kind: 'attached' }),
@@ -504,7 +504,7 @@ test('it does not navigate when the start attempt fails', async () => {
 
   await createActiveAvatar({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
 
   const client = createStubWorkerClient({
     startActivity: () => Promise.resolve({ kind: 'failed' }),
@@ -534,9 +534,9 @@ test('it does not bounce back to the engagement screen once a remount finds the 
   const signedIn = await createSignedInUser();
   const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
 
-  const started = createMockActivityData({ avatarID: avatar.id, scopeID: 'a9lp75' });
+  const started = createMockActivityData({ avatarID: avatar.id, scopeID: '0_0' });
 
   // the scope never changes across this test's remounts, so every call after the first attaches to
   // the same already-running row rather than minting a fresh one
@@ -608,7 +608,7 @@ test('it explains a start rejected because another avatar is active, naming that
 
   await createActiveAvatar({ userID: signedIn.userID });
 
-  setSelectedNode(createMockWorldMapNode({ id: 'a9lp75' }));
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
 
   const client = createStubWorkerClient({
     startActivity: () =>

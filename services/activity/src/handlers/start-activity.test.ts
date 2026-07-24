@@ -46,7 +46,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -61,7 +61,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     id: expect.toBeString(),
     keyVersion: 1,
     lastHash: expect.toBeString(),
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     seed: expect.toBeString(),
     simVersion: current.engineHash,
@@ -91,7 +91,7 @@ test("it stamps the row's encounterNode from the static world map's node for the
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'esaxrt',
+    scopeID: '1_0',
     scopeType: 'world_map_node',
   });
 
@@ -117,7 +117,7 @@ test('it derives a startHash that folds in the resolved encounter node', async (
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'esaxrt',
+    scopeID: '1_0',
     scopeType: 'world_map_node',
   });
 
@@ -164,7 +164,7 @@ test('it mints a chain row on a node visited for the first time, with the activi
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -173,7 +173,7 @@ test('it mints a chain row on a node visited for the first time, with the activi
     .selectAll()
     .where('avatarId', '=', avatar.id)
     .where('scopeType', '=', 'world_map_node')
-    .where('scopeId', '=', 'a9lp75')
+    .where('scopeId', '=', '0_0')
     .executeTakeFirstOrThrow();
 
   expect(activity.seed).toBe(chain.genesisSeed);
@@ -194,7 +194,7 @@ test('it mints independent genesis seeds for different nodes visited by the same
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -206,7 +206,7 @@ test('it mints independent genesis seeds for different nodes visited by the same
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'esaxrt',
+    scopeID: '1_0',
     scopeType: 'world_map_node',
   });
 
@@ -227,7 +227,7 @@ test('it reads the existing chain anchor for a second activity on an already-cha
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -239,7 +239,7 @@ test('it reads the existing chain anchor for a second activity on an already-cha
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -260,12 +260,12 @@ test('it rejects a second start with CONFLICT carrying the already-active activi
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
   expect(
-    client.startActivity({ avatarID: avatar.id, scopeID: 'esaxrt', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: avatar.id, scopeID: '1_0', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({
     code: 'CONFLICT',
     data: { activity: { id: first.id } },
@@ -282,7 +282,7 @@ test('it rejects starting an activity on a foreign avatar with NOT_FOUND', async
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
-    client.startActivity({ avatarID: avatar.id, scopeID: 'a9lp75', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({
     code: 'NOT_FOUND',
   });
@@ -296,7 +296,7 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
-    client.startActivity({ avatarID: 'avatar_1', scopeID: 'a9lp75', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: 'avatar_1', scopeID: '0_0', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({
     code: 'UNAUTHORIZED',
     data: { reason: 'missing-session' },
@@ -315,7 +315,7 @@ test('it blocks a new start while the chain is quarantined', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -326,7 +326,7 @@ test('it blocks a new start while the chain is quarantined', async () => {
     .execute();
 
   expect(
-    client.startActivity({ avatarID: avatar.id, scopeID: 'a9lp75', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({ code: 'CHAIN_QUARANTINED' });
 });
 
@@ -347,7 +347,7 @@ test('it stamps the acting session as the new activity writer', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -373,7 +373,7 @@ test('it stamps a new activity with the registry current version when the client
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -389,7 +389,7 @@ test('it rejects a start with SIM_VERSION_UNKNOWN carrying a null current versio
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
-    client.startActivity({ avatarID: avatar.id, scopeID: 'a9lp75', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({
     code: 'SIM_VERSION_UNKNOWN',
     data: { currentSimVersion: null },
@@ -411,7 +411,7 @@ test('it echoes the client-stamped sim version when its row is active and retain
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     simVersion: stamped.engineHash,
   });
@@ -431,7 +431,7 @@ test('it rejects an unrecognized stamped version with SIM_VERSION_UNKNOWN carryi
   expect(
     client.startActivity({
       avatarID: avatar.id,
-      scopeID: 'a9lp75',
+      scopeID: '0_0',
       scopeType: 'world_map_node',
       simVersion: 'hash_never_registered',
     }),
@@ -459,7 +459,7 @@ test('it rejects a pruned stamped version with SIM_VERSION_EXPIRED', async () =>
   expect(
     client.startActivity({
       avatarID: avatar.id,
-      scopeID: 'a9lp75',
+      scopeID: '0_0',
       scopeType: 'world_map_node',
       simVersion: pruned.engineHash,
     }),
@@ -488,7 +488,7 @@ test('it rejects an active stamped version past its retention deadline with SIM_
   expect(
     client.startActivity({
       avatarID: avatar.id,
-      scopeID: 'a9lp75',
+      scopeID: '0_0',
       scopeType: 'world_map_node',
       simVersion: stale.engineHash,
     }),
@@ -510,7 +510,7 @@ test('it roots a new activity at the anchor a concurrent forward exit commits', 
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -530,12 +530,12 @@ test('it roots a new activity at the anchor a concurrent forward exit commits', 
       .set({ appendedChainIndex: 7, appendedNextSeed: anchorSeed })
       .where('avatarId', '=', avatar.id)
       .where('scopeType', '=', 'world_map_node')
-      .where('scopeId', '=', 'a9lp75')
+      .where('scopeId', '=', '0_0')
       .execute();
 
     const start = client.startActivity({
       avatarID: avatar.id,
-      scopeID: 'a9lp75',
+      scopeID: '0_0',
       scopeType: 'world_map_node',
     });
 
@@ -580,7 +580,7 @@ test('it stamps the start key on the minted row', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     startKey: 'start_request_1',
   });
@@ -600,14 +600,14 @@ test('it answers a duplicate start carrying the same key with the row already mi
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     startKey: 'start_request_1',
   });
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     startKey: 'start_request_1',
   });
@@ -627,7 +627,7 @@ test('it conflicts a keyed start when the active row carries a different key', a
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     startKey: 'start_request_1',
   });
@@ -635,7 +635,7 @@ test('it conflicts a keyed start when the active row carries a different key', a
   expect(
     client.startActivity({
       avatarID: avatar.id,
-      scopeID: 'a9lp75',
+      scopeID: '0_0',
       scopeType: 'world_map_node',
       startKey: 'continue_of_something_else',
     }),
@@ -654,12 +654,12 @@ test('it conflicts an unkeyed duplicate start as before', async () => {
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
   expect(
-    client.startActivity({ avatarID: avatar.id, scopeID: 'a9lp75', scopeType: 'world_map_node' }),
+    client.startActivity({ avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({ code: 'CONFLICT', data: { activity: { id: first.id } } });
 });
 
@@ -675,7 +675,7 @@ test('it conflicts a keyed duplicate once the row has appended progress', async 
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     startKey: 'start_request_1',
   });
@@ -691,7 +691,7 @@ test('it conflicts a keyed duplicate once the row has appended progress', async 
   expect(
     client.startActivity({
       avatarID: avatar.id,
-      scopeID: 'a9lp75',
+      scopeID: '0_0',
       scopeType: 'world_map_node',
       startKey: 'start_request_1',
     }),
@@ -715,7 +715,7 @@ test('it conflicts a keyed duplicate arriving from a different session', async (
 
   const first = await writerClient.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     startKey: 'start_request_1',
   });
@@ -734,7 +734,7 @@ test('it conflicts a keyed duplicate arriving from a different session', async (
   expect(
     otherClient.startActivity({
       avatarID: avatar.id,
-      scopeID: 'a9lp75',
+      scopeID: '0_0',
       scopeType: 'world_map_node',
       startKey: 'start_request_1',
     }),
@@ -753,7 +753,7 @@ test('it conflicts a keyed duplicate naming a different scope', async () => {
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
     startKey: 'start_request_1',
   });
@@ -761,7 +761,7 @@ test('it conflicts a keyed duplicate naming a different scope', async () => {
   expect(
     client.startActivity({
       avatarID: avatar.id,
-      scopeID: 'esaxrt',
+      scopeID: '1_0',
       scopeType: 'world_map_node',
       startKey: 'start_request_1',
     }),
@@ -780,7 +780,7 @@ test("it includes a stopped-but-unverified terminal activity's xp in a new build
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -794,7 +794,7 @@ test("it includes a stopped-but-unverified terminal activity's xp in a new build
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -813,7 +813,7 @@ test("it excludes a rejected activity's xp from a new build snapshot", async () 
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -833,7 +833,7 @@ test("it excludes a rejected activity's xp from a new build snapshot", async () 
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -852,7 +852,7 @@ test("it excludes a parked activity's xp from a new build snapshot", async () =>
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -872,7 +872,7 @@ test("it excludes a parked activity's xp from a new build snapshot", async () =>
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -891,7 +891,7 @@ test("it includes a stopped run's unsettled progress xp in a new build snapshot"
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -907,7 +907,7 @@ test("it includes a stopped run's unsettled progress xp in a new build snapshot"
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -931,7 +931,7 @@ test('it stamps the build snapshot from settled xp/level alone when the avatar c
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -950,7 +950,7 @@ test('it records the unverified run a new build snapshot borrowed its xp from', 
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -964,7 +964,7 @@ test('it records the unverified run a new build snapshot borrowed its xp from', 
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'esaxrt',
+    scopeID: '1_0',
     scopeType: 'world_map_node',
   });
 
@@ -989,7 +989,7 @@ test('it records no borrowed run for an unsettled run that moved the total by no
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -1003,7 +1003,7 @@ test('it records no borrowed run for an unsettled run that moved the total by no
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'esaxrt',
+    scopeID: '1_0',
     scopeType: 'world_map_node',
   });
 
@@ -1029,7 +1029,7 @@ test('it records a borrowed run whose death penalty lowered the total', async ()
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -1043,7 +1043,7 @@ test('it records a borrowed run whose death penalty lowered the total', async ()
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'esaxrt',
+    scopeID: '1_0',
     scopeType: 'world_map_node',
   });
 
@@ -1069,7 +1069,7 @@ test('it records no borrowed run when the avatar carries no pending work', async
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -1094,7 +1094,7 @@ test('it records no borrowed run for a parked activity left out of the build sna
 
   const first = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -1114,7 +1114,7 @@ test('it records no borrowed run for a parked activity left out of the build sna
 
   const second = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'esaxrt',
+    scopeID: '1_0',
     scopeType: 'world_map_node',
   });
 
@@ -1141,7 +1141,7 @@ test("it starts an activity when the starting avatar is the account's active one
 
   const activity = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -1164,7 +1164,7 @@ test('it rejects a start from an avatar that is not the active one, naming the a
   expect(
     client.startActivity({
       avatarID: otherAvatar.id,
-      scopeID: 'a9lp75',
+      scopeID: '0_0',
       scopeType: 'world_map_node',
     }),
   ).rejects.toMatchObject({
@@ -1185,7 +1185,7 @@ test('it makes the starting avatar active when the account holds no selection', 
 
   await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -1212,7 +1212,7 @@ test('it refuses to adopt while another avatar holds a live run', async () => {
   // no active_avatars row exists yet; this start's own adopt claims the slot for liveAvatar
   await client.startActivity({
     avatarID: liveAvatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -1220,7 +1220,7 @@ test('it refuses to adopt while another avatar holds a live run', async () => {
 
   const conflictingStart = client.startActivity({
     avatarID: otherAvatar.id,
-    scopeID: 'esaxrt',
+    scopeID: '1_0',
     scopeType: 'world_map_node',
   });
 

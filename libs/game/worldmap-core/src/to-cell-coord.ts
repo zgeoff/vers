@@ -1,15 +1,15 @@
 import invariant from 'tiny-invariant';
-
-const ID_PATTERN = /^-?\d+_-?\d+$/;
+import { findCellCoord } from './find-cell-coord';
 
 /**
  * Reverses `toNodeID`, recovering the integer cell coordinate a canonical id encodes. Throws on any
- * string that is not a well-formed id — a broken invariant, never ordinary input.
+ * string that is not a well-formed id — a broken invariant, never ordinary input; callers holding
+ * untrusted input reach for `findCellCoord` instead.
  */
 export function toCellCoord(id: string): [number, number] {
-  invariant(ID_PATTERN.test(id), `malformed node id: ${id}`);
+  const coord = findCellCoord(id);
 
-  const [cx, cy] = id.split('_');
+  invariant(coord, `malformed node id: ${id}`);
 
-  return [Number(cx), Number(cy)];
+  return coord;
 }

@@ -6,14 +6,14 @@ test('it overwrites the previously held intent', async () => {
   await writePendingStartIntent({
     activityID: 'activity_1',
     avatarID: 'avatar_1',
-    scopeID: 'scope_1',
+    scopeID: '2_0',
     scopeType: 'mission',
   });
 
   await writePendingStartIntent({
     activityID: 'activity_2',
     avatarID: 'avatar_1',
-    scopeID: 'scope_2',
+    scopeID: '3_0',
     scopeType: 'mission',
   });
 
@@ -22,7 +22,7 @@ test('it overwrites the previously held intent', async () => {
   expect(intent).toStrictEqual({
     activityID: 'activity_2',
     avatarID: 'avatar_1',
-    scopeID: 'scope_2',
+    scopeID: '3_0',
     scopeType: 'mission',
   });
 });
