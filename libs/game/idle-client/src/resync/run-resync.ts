@@ -1,6 +1,6 @@
 import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
-import type { ActivityInput, AvatarData } from '@vers/idle-core';
+import type { ActivityInput, AvatarData, SimulationInputSource } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient } from '../submission/types';
@@ -12,10 +12,10 @@ interface RunResyncOptions {
   readonly avatarID: string;
 
   /**
-   * Derives the engine's simulation input and avatar from a server-authored activity row, called
-   * fresh for every continuation a fast-forward runs through.
+   * Derives the engine's simulation input and avatar from a chain-position source, called fresh
+   * for every continuation a fast-forward runs through.
    */
-  readonly buildSimulationInput: (activity: ActivityData) => {
+  readonly buildSimulationInput: (source: Readonly<SimulationInputSource>) => {
     activity: ActivityInput;
     avatar: AvatarData;
   };
@@ -33,7 +33,7 @@ interface RunResyncOptions {
 
   readonly client: Pick<
     ActivityServiceClient,
-    'getLatestActivityProgress' | 'resumeActivity' | 'startActivity'
+    'advanceActivity' | 'getLatestActivityProgress' | 'resumeActivity'
   >;
 
   /**
@@ -176,7 +176,6 @@ export async function runResync(
     buildSimulationInput: options.buildSimulationInput,
     client: options.client,
     progress,
-    submitter: options.submitter,
     ...(options.onProgress !== undefined && { onProgress: options.onProgress }),
   });
 

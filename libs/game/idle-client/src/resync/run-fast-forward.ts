@@ -1,194 +1,107 @@
-import { isDefinedError, safe } from '@orpc/client';
-import type { ActivityData } from '@vers/contract-activity';
-import type { ActivityCheckpoint, ActivityInput, AvatarData } from '@vers/idle-core';
-import { ActivityCheckpointType, ActivityFailureAction, runAttempt } from '@vers/idle-core';
-import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import type { ActivityInput, AvatarData, SimulationInputSource } from '@vers/idle-core';
 import type { ActivityServiceClient } from '../submission/types';
+import { drainOfflineBatches } from './drain-offline-batches';
+import { planOfflineContinuations } from './plan-offline-continuations';
+import { splitContinuationsIntoBatches } from './split-continuations-into-batches';
 import type { FastForwardProgress, FastForwardReport, LatestActivityProgress } from './types';
+
+/**
+ * Bounds a single `advanceActivity` request's total checkpoint count, keeping peak payload size
+ * and the server's sync-hash CPU flat regardless of how long the offline gap ran.
+ */
+const MAX_CHECKPOINTS_PER_BATCH = 500;
 
 interface RunFastForwardOptions {
   readonly budgetMs: number;
 
   /**
-   * Derives the engine's simulation input and avatar from a server-authored activity row, called
-   * fresh for every continuation — the verifier derives the same way from each row's own
-   * snapshot, so a stream must never carry one avatar across continuations.
+   * Derives the engine's simulation input and avatar from a chain-position source — the
+   * verifier derives the same way from the same source, so a stream must never carry one avatar
+   * across continuations.
    */
-  readonly buildSimulationInput: (activity: ActivityData) => {
+  readonly buildSimulationInput: (source: Readonly<SimulationInputSource>) => {
     activity: ActivityInput;
     avatar: AvatarData;
   };
 
-  readonly client: Pick<ActivityServiceClient, 'startActivity'>;
+  readonly client: Pick<ActivityServiceClient, 'advanceActivity'>;
+
+  /**
+   * Caps a single bulk request's total checkpoint count — test-only, to drive the chunking
+   * boundary without simulating a batch this large.
+   */
+  readonly maxCheckpointsPerBatch?: number;
+
   readonly onProgress?: (progress: FastForwardProgress) => void;
   readonly progress: LatestActivityProgress;
-  readonly submitter: CheckpointSubmitter;
 }
 
 /**
- * Simulates an offline gap attempt by attempt: reconstruction of the snapshot's active activity
- * from its seed first, then fresh continuations started server-side, submitting each committed
- * attempt's stream as it lands. Budget accounting mirrors the server's meter — each attempt
- * consumes its last checkpoint's cumulative time beyond what the head row already accounted, so a
- * reconstructed prefix costs nothing — and an attempt whose unaccounted time overruns the
- * remaining budget is discarded, never submitted, keeping every submitted stream inside the cap
- * and boundary-terminated. Failure policy is the activity's own, identical to live play: a failed
- * attempt under `Retry` continues to the next continuation, under `Abort` it ends the
- * fast-forward.
+ * Simulates the whole offline gap locally and instantly through `planOfflineContinuations`, then
+ * ships it as bounded `advanceActivity` batches through `drainOfflineBatches` — the only path that
+ * delivers offline continuations, never the per-activity `createCheckpointSubmitter`. Tallies
+ * report optimistically the instant planning completes, before any batch reaches the network;
+ * `drainOfflineBatches` reconciles down to the confirmed head on a rejection, reporting zero
+ * attempts and level-ups the same way a lost writer race already does, so the caller's existing
+ * `displaced` handling clears the same optimistic display a lost writer race would.
  */
 export async function runFastForward(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- carries the zod-inferred contract progress shape and a callback-bearing submitter handle, neither of which has a readonly form
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- carries the zod-inferred contract progress shape and a callback-bearing client, neither of which has a readonly form
   options: Readonly<RunFastForwardOptions>,
 ): Promise<FastForwardReport> {
-  let remainingMs = options.budgetMs;
-  let attempts = 0;
-  let levelUps = 0;
-  let activity = options.progress.activity;
-  let appendedHead = options.progress.appendedHead;
-  let finalRowTerminal = false;
+  const plan = await planOfflineContinuations({
+    budgetMs: options.budgetMs,
+    buildSimulationInput: options.buildSimulationInput,
+    progress: options.progress,
+  });
 
-  while (remainingMs > 0) {
-    const input = options.buildSimulationInput(activity);
-
-    // A reconstruction must reach its terminal to reconcile, whatever the budget — its prefix is
-    // already accounted server-side, so only the tail is priced against the budget below.
-    const ceilingMs = appendedHead > 0 ? Number.MAX_SAFE_INTEGER : remainingMs;
-
-    const attempt = await runAttempt(input.activity, input.avatar, { maxDurationMs: ceilingMs });
-
-    if (attempt.outcome === 'exceeded-budget') {
-      return {
-        activity,
-        appendedHead,
-        attempts,
-        finalRowTerminal,
-        levelUps,
-        reason: 'budget-exhausted',
-      };
-    }
-
-    const lastCheckpoint = attempt.checkpoints.at(-1);
-    const lastAppended = appendedHead > 0 ? attempt.checkpoints[appendedHead - 1] : undefined;
-    const tailTimeMs = (lastCheckpoint?.time ?? 0) - (lastAppended?.time ?? 0);
-
-    if (tailTimeMs > remainingMs) {
-      return {
-        activity,
-        appendedHead,
-        attempts,
-        finalRowTerminal,
-        levelUps,
-        reason: 'budget-exhausted',
-      };
-    }
-
-    const tail = attempt.checkpoints.slice(appendedHead);
-
-    await options.submitter.registerActivity({
-      activityID: activity.id,
-      appendedHead,
-      lastHash: activity.lastHash,
-      startChainIndex: activity.startChainIndex,
-      ...(lastAppended !== undefined && { previousNextSeed: lastAppended.nextSeed }),
-    });
-
-    for (const checkpoint of tail) {
-      await options.submitter.submit(activity.id, checkpoint);
-    }
-
-    // A concurrent claimer can take the stream's writer mid-pass: the tail's terminal flush lands
-    // `SESSION_EVICTED` and nothing past the confirmed head persisted. Simulating further
-    // continuations would only report tallies the player never earned. The explicit delivery
-    // attempt settles a flush the terminal submit folded into an already-running one, so the
-    // eviction is observable at the check.
-    await options.submitter.flushNow(activity.id);
-
-    if (options.submitter.isEvicted(activity.id)) {
-      return {
-        activity,
-        appendedHead,
-        attempts,
-        finalRowTerminal: false,
-        levelUps,
-        reason: 'displaced',
-      };
-    }
-
-    attempts += 1;
-    levelUps += countLevelUps(tail);
-    remainingMs -= tailTimeMs;
-
-    // Every submitted tail ends on the attempt's terminal checkpoint, closing this row's stream.
-    finalRowTerminal = true;
-    options.onProgress?.({ attempts, levelUps });
-
-    if (
-      attempt.outcome === 'failed' &&
-      input.activity.failureAction === ActivityFailureAction.Abort
-    ) {
-      return {
-        activity,
-        appendedHead,
-        attempts,
-        finalRowTerminal,
-        levelUps,
-        reason: 'aborted-on-failure',
-      };
-    }
-
-    if (remainingMs <= 0) {
-      break;
-    }
-
-    const [error, started] = await safe(
-      options.client.startActivity({
-        avatarID: activity.avatarID,
-        scopeID: activity.scopeID,
-        scopeType: activity.scopeType,
-      }),
-    );
-
-    if (error !== null) {
-      if (isDefinedError(error) && error.code === 'CONFLICT') {
-        activity = error.data.activity;
-        appendedHead = error.data.activity.appendedHead;
-        finalRowTerminal = false;
-        continue;
-      }
-
-      if (isDefinedError(error) && error.code === 'AVATAR_NOT_ACTIVE') {
-        return {
-          activeAvatarName: error.data.activeAvatarName,
-          activity,
-          appendedHead,
-          attempts,
-          finalRowTerminal,
-          levelUps,
-          reason: 'avatar-switched',
-        };
-      }
-
-      throw error;
-    }
-
-    activity = started;
-    appendedHead = 0;
-    finalRowTerminal = false;
+  if (plan.planned.length === 0) {
+    return {
+      activity: options.progress.activity,
+      appendedHead: options.progress.appendedHead,
+      attempts: 0,
+      finalRowTerminal: false,
+      levelUps: 0,
+      reason: 'budget-exhausted',
+    };
   }
 
-  return {
-    activity,
-    appendedHead,
-    attempts,
-    finalRowTerminal,
-    levelUps,
-    reason: 'budget-exhausted',
-  };
-}
+  const attempts = plan.planned.length;
+  const levelUps = plan.planned.reduce((sum, continuation) => sum + continuation.levelUps, 0);
 
-function countLevelUps(checkpoints: ReadonlyArray<ActivityCheckpoint>): number {
-  return checkpoints.filter(
-    (checkpoint) =>
-      checkpoint.type === ActivityCheckpointType.Progress && checkpoint.levelUp !== undefined,
-  ).length;
+  options.onProgress?.({ attempts, levelUps });
+
+  const batches = splitContinuationsIntoBatches(
+    plan.planned.map((planned) => planned.continuation),
+    options.maxCheckpointsPerBatch ?? MAX_CHECKPOINTS_PER_BATCH,
+  );
+
+  const drained = await drainOfflineBatches({
+    activity: options.progress.activity,
+    appendedHead: options.progress.appendedHead,
+    batches,
+    client: options.client,
+  });
+
+  if (!drained.delivered) {
+    return {
+      activity: drained.activity,
+      appendedHead: drained.appendedHead,
+      attempts: 0,
+      finalRowTerminal: false,
+      levelUps: 0,
+      reason: 'displaced',
+    };
+  }
+
+  // The delivered plan's final row is always the last continuation's own fresh mint — nothing
+  // has been appended onto it yet, so it is always live-attachable.
+  return {
+    activity: drained.activity,
+    appendedHead: drained.appendedHead,
+    attempts,
+    finalRowTerminal: false,
+    levelUps,
+    reason: plan.reason,
+  };
 }

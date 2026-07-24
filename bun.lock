@@ -155,6 +155,7 @@
       "devDependencies": {
         "@orpc/openapi": "catalog:",
         "@orpc/zod": "catalog:",
+        "@paralleldrive/cuid2": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@zgeoff/bun-test-extended": "catalog:",
@@ -565,6 +566,7 @@
         "@orpc/client": "catalog:",
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
+        "@paralleldrive/cuid2": "catalog:",
         "@sentry/browser": "catalog:",
         "@vers/client-test-utils": "workspace:*",
         "@vers/contract-activity": "workspace:*",
@@ -606,6 +608,7 @@
         "@vers/utils": "workspace:*",
         "fast-equals": "catalog:",
         "tiny-invariant": "catalog:",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@faker-js/faker": "catalog:",
