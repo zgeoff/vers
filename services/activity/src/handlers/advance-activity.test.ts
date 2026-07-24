@@ -335,6 +335,82 @@ test('it conflicts a mint whose client id already belongs to another avatar', as
   });
 });
 
+test('it conflicts a mint whose client id collides with an unrelated row for the same avatar', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: 'a9lp75',
+    scopeType: 'world_map_node',
+  });
+
+  const reusedID = `act_${createId()}`;
+
+  // an unrelated row for the same avatar that happens to reuse this id — never a continuation of
+  // `started`, so its own `startKey` never matches `continue_${started.id}`
+  await ctx.db
+    .insertInto('activities')
+    .values(
+      createMockActivity({
+        avatarId: avatar.id,
+        id: reusedID,
+        scopeId: 'a9lp75',
+        scopeType: 'world_map_node',
+        startKey: 'continue_unrelated',
+        status: 'stopped',
+      }),
+    )
+    .execute();
+
+  const tail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 10 }, type: 'completed' },
+    startChainIndex: started.startChainIndex,
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  expect(
+    client.advanceActivity({
+      activityID: started.id,
+      continuations: [
+        {
+          buildSnapshot: { level: buildLevelFromXP(10), xp: 10 },
+          checkpoints: tail,
+          id: reusedID,
+          startKey: `continue_${started.id}`,
+        },
+      ],
+      expectedHead: 0,
+    }),
+  ).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { activityID: started.id, appendedHead: 0 },
+  });
+
+  // the mismatch is rejected outright, never adopted as the append target: the unrelated row is
+  // untouched and the source row's own append rolled back with the mint it was blocked from
+  const decoy = await ctx.db
+    .selectFrom('activities')
+    .select(['status', 'startKey'])
+    .where('id', '=', reusedID)
+    .executeTakeFirstOrThrow();
+
+  expect(decoy).toStrictEqual({ startKey: 'continue_unrelated', status: 'stopped' });
+
+  const row = await ctx.db
+    .selectFrom('activities')
+    .select(['status', 'appendedHead'])
+    .where('id', '=', started.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row).toStrictEqual({ appendedHead: 0, status: 'active' });
+});
+
 test('it caps a continuation whose tail exceeds the accrued offline budget', async () => {
   await using ctx = await setupTest({ simTimeCapMs: 60_000 });
 

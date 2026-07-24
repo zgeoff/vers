@@ -80,10 +80,13 @@ interface AdvanceActivityOpts {
  * `buildSnapshot` is only a cross-check hint, and a mismatch bails with `CHECKPOINT_INVALID` rather
  * than trusting it — a client-supplied snapshot the server stored as-is would be direct xp
  * inflation. Mint dedup keys on the entry's own `id`, resolved outside any transaction once its
- * insert's unique violation has unwound one: an existing row at that id owned by this avatar
- * converges (a resubmit of a partially committed request), a row owned by another avatar
- * conflicts — unlike `startActivity`'s own dedup (the active-status row for the avatar), which
- * would find nothing and stall forever once a gap has already ended terminal.
+ * insert's unique violation has unwound one: an existing row at that id converges only when its
+ * `startKey` and scope also match this continuation (a resubmit of a partially committed request),
+ * never on id and ownership alone — a reused or aliased id must not let an unrelated activity
+ * become the next append target. Anything short of that full match — foreign-owned, a different
+ * `startKey`, a different scope, or genuinely missing — conflicts, unlike `startActivity`'s own
+ * dedup (the active-status row for the avatar), which would find nothing and stall forever once a
+ * gap has already ended terminal.
  */
 export async function advanceActivity(
   deps: AdvanceActivityDeps,
@@ -149,7 +152,7 @@ export async function advanceActivity(
       // The mint's insert lost to another row already minted at this client id — resolved here,
       // outside any transaction, since the one that just rolled back cannot run another
       // statement once a constraint violation has poisoned it.
-      const recovered = await resolveMintIDCollision(deps.db, pinned.avatarId, continuation);
+      const recovered = await resolveMintIDCollision(deps.db, pinned, continuation);
 
       if (recovered === undefined) {
         recordAdvanceBailout('conflict');
@@ -476,7 +479,7 @@ async function runContinuation(
     });
   }
 
-  return deps.db.transaction().execute(async (trx) => {
+  const outcome = await deps.db.transaction().execute(async (trx) => {
     // Chain row before activity row — the one lock order every writer that touches both shares.
     await trx
       .selectFrom('activityChains')
@@ -511,7 +514,7 @@ async function runContinuation(
       .executeTakeFirst();
 
     if (updated === undefined) {
-      return resolveLostRace(trx, pinned, input);
+      return { kind: 'resolved' as const, minted: await resolveLostRace(trx, pinned, input) };
     }
 
     await trx
@@ -555,10 +558,17 @@ async function runContinuation(
       invariant(consumed.numUpdatedRows > 0n, 'meter debit must apply once the append is won');
     }
 
-    recordTerminalTransition('stopped');
-
-    return mintContinuation(trx, input, pinned);
+    return { kind: 'stopped' as const, minted: await mintContinuation(trx, input, pinned) };
   });
+
+  // Recorded only after the transaction commits: a statement failure after the guarded update
+  // rolls the transition back, and a counter incremented inside the transaction would still count
+  // it.
+  if (outcome.kind === 'stopped') {
+    recordTerminalTransition('stopped');
+  }
+
+  return outcome.minted;
 }
 
 /**
@@ -725,13 +735,16 @@ async function mintContinuation(
 
 /**
  * Resolves a mint's unique-violation, from a fresh connection once the transaction that hit it has
- * rolled back: an existing row at the continuation's id owned by this avatar converges — a
- * resubmit of a request whose mint already committed and whose response was lost — anything else
- * (owned by a different avatar, or genuinely missing) is `undefined`, a conflict the caller reports.
+ * rolled back: an existing row at the continuation's id converges only when it is genuinely the
+ * continuation this request is retrying — owned by this avatar, minted from the same `startKey`,
+ * and scoped to the same chain — a resubmit of a request whose mint already committed and whose
+ * response was lost. A row that merely shares the id but not that provenance (a reused or aliased
+ * id landing on an unrelated activity) is rejected exactly like a foreign-owned or missing row:
+ * `undefined`, a conflict the caller reports rather than a row it adopts as the next append target.
  */
 async function resolveMintIDCollision(
   db: Kysely<DB>,
-  avatarID: string,
+  pinned: Readonly<PinnedActivityContext>,
   continuation: Readonly<CatchUpContinuation>,
 ): Promise<MintedContinuation | undefined> {
   const existing = await db
@@ -740,7 +753,13 @@ async function resolveMintIDCollision(
     .where('id', '=', continuation.id)
     .executeTakeFirst();
 
-  if (existing === undefined || existing.avatarId !== avatarID) {
+  if (
+    existing === undefined ||
+    existing.avatarId !== pinned.avatarId ||
+    existing.startKey !== continuation.startKey ||
+    existing.scopeType !== pinned.scopeType ||
+    existing.scopeId !== pinned.scopeId
+  ) {
     return undefined;
   }
 
