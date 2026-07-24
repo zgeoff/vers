@@ -105,7 +105,6 @@ export const startActivity = os.startActivity.handler(async (opts) => {
   const seed = createGenesisSeed();
 
   const startHash = buildStartHash({
-    activityID: id,
     contentVersion: CURRENT_CONTENT_VERSION,
     encounterNode,
     keyVersion: 1,
