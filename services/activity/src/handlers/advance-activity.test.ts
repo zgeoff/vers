@@ -181,21 +181,26 @@ test('it rejects a continuation whose predicted buildSnapshot mismatches the ser
     startVersion: 1,
   });
 
-  expect(
-    client.advanceActivity({
-      activityID: started.id,
-      continuations: [
-        {
-          // the honest total is 40, not 999 — a client that over-predicts (or a tampered payload)
-          buildSnapshot: { level: buildLevelFromXP(999), xp: 999 },
-          checkpoints: tail,
-          id: `act_${createId()}`,
-          startKey: `continue_${started.id}`,
-        },
-      ],
-      expectedHead: 0,
-    }),
-  ).rejects.toMatchObject({
+  const request = client.advanceActivity({
+    activityID: started.id,
+    continuations: [
+      {
+        // the honest total is 40, not 999 — a client that over-predicts (or a tampered payload)
+        buildSnapshot: { level: buildLevelFromXP(999), xp: 999 },
+        checkpoints: tail,
+        id: `act_${createId()}`,
+        startKey: `continue_${started.id}`,
+      },
+    ],
+    expectedHead: 0,
+  });
+
+  // `.rejects` chains type as synchronous and are ordinarily left unawaited, but the trailing
+  // query below must observe the rejected call's transaction fully settled — draining it here
+  // guarantees that ordering before the shape assertion below runs against the settled promise.
+  await request.catch(() => {});
+
+  expect(request).rejects.toMatchObject({
     code: 'CHECKPOINT_INVALID',
     data: { activityID: started.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
   });
@@ -374,20 +379,25 @@ test('it conflicts a mint whose client id collides with an unrelated row for the
     startVersion: 1,
   });
 
-  expect(
-    client.advanceActivity({
-      activityID: started.id,
-      continuations: [
-        {
-          buildSnapshot: { level: buildLevelFromXP(10), xp: 10 },
-          checkpoints: tail,
-          id: reusedID,
-          startKey: `continue_${started.id}`,
-        },
-      ],
-      expectedHead: 0,
-    }),
-  ).rejects.toMatchObject({
+  const request = client.advanceActivity({
+    activityID: started.id,
+    continuations: [
+      {
+        buildSnapshot: { level: buildLevelFromXP(10), xp: 10 },
+        checkpoints: tail,
+        id: reusedID,
+        startKey: `continue_${started.id}`,
+      },
+    ],
+    expectedHead: 0,
+  });
+
+  // `.rejects` chains type as synchronous and are ordinarily left unawaited, but the trailing
+  // query below must observe the rejected call's transaction fully settled — draining it here
+  // guarantees that ordering before the shape assertion below runs against the settled promise.
+  await request.catch(() => {});
+
+  expect(request).rejects.toMatchObject({
     code: 'CONFLICT',
     data: { activityID: started.id, appendedHead: 0 },
   });
@@ -439,20 +449,25 @@ test('it caps a continuation whose tail exceeds the accrued offline budget', asy
     timeStepMs: 100_000,
   });
 
-  expect(
-    client.advanceActivity({
-      activityID: started.id,
-      continuations: [
-        {
-          buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
-          checkpoints: overCapTail,
-          id: `act_${createId()}`,
-          startKey: `continue_${started.id}`,
-        },
-      ],
-      expectedHead: 0,
-    }),
-  ).rejects.toMatchObject({
+  const request = client.advanceActivity({
+    activityID: started.id,
+    continuations: [
+      {
+        buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
+        checkpoints: overCapTail,
+        id: `act_${createId()}`,
+        startKey: `continue_${started.id}`,
+      },
+    ],
+    expectedHead: 0,
+  });
+
+  // `.rejects` chains type as synchronous and are ordinarily left unawaited, but the trailing
+  // query below must observe the rejected call's transaction fully settled — draining it here
+  // guarantees that ordering before the shape assertion below runs against the settled promise.
+  await request.catch(() => {});
+
+  expect(request).rejects.toMatchObject({
     code: 'ACTIVITY_CAPPED',
     data: { activityID: started.id, appendedHead: 0 },
   });
@@ -550,20 +565,25 @@ test('it bails with CHAIN_QUARANTINED when the scope already carries a quarantin
     startVersion: 1,
   });
 
-  expect(
-    client.advanceActivity({
-      activityID: started.id,
-      continuations: [
-        {
-          buildSnapshot: { level: buildLevelFromXP(10), xp: 10 },
-          checkpoints: tail,
-          id: `act_${createId()}`,
-          startKey: `continue_${started.id}`,
-        },
-      ],
-      expectedHead: 0,
-    }),
-  ).rejects.toMatchObject({
+  const request = client.advanceActivity({
+    activityID: started.id,
+    continuations: [
+      {
+        buildSnapshot: { level: buildLevelFromXP(10), xp: 10 },
+        checkpoints: tail,
+        id: `act_${createId()}`,
+        startKey: `continue_${started.id}`,
+      },
+    ],
+    expectedHead: 0,
+  });
+
+  // `.rejects` chains type as synchronous and are ordinarily left unawaited, but the trailing
+  // query below must observe the rejected call's transaction fully settled — draining it here
+  // guarantees that ordering before the shape assertion below runs against the settled promise.
+  await request.catch(() => {});
+
+  expect(request).rejects.toMatchObject({
     code: 'CHAIN_QUARANTINED',
     data: { activityID: started.id, appendedHead: 0 },
   });
@@ -612,26 +632,31 @@ test('it bails with CHECKPOINT_INVALID on a broken hash chain, leaving the head 
 
   const firstContinuationID = `act_${createId()}`;
 
-  expect(
-    client.advanceActivity({
-      activityID: started.id,
-      continuations: [
-        {
-          buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
-          checkpoints: firstTail,
-          id: firstContinuationID,
-          startKey: `continue_${started.id}`,
-        },
-        {
-          buildSnapshot: { level: buildLevelFromXP(65), xp: 65 },
-          checkpoints: brokenSecondTail,
-          id: `act_${createId()}`,
-          startKey: `continue_${firstContinuationID}`,
-        },
-      ],
-      expectedHead: 0,
-    }),
-  ).rejects.toMatchObject({
+  const request = client.advanceActivity({
+    activityID: started.id,
+    continuations: [
+      {
+        buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
+        checkpoints: firstTail,
+        id: firstContinuationID,
+        startKey: `continue_${started.id}`,
+      },
+      {
+        buildSnapshot: { level: buildLevelFromXP(65), xp: 65 },
+        checkpoints: brokenSecondTail,
+        id: `act_${createId()}`,
+        startKey: `continue_${firstContinuationID}`,
+      },
+    ],
+    expectedHead: 0,
+  });
+
+  // `.rejects` chains type as synchronous and are ordinarily left unawaited, but the trailing
+  // query below must observe the rejected call's transaction fully settled — draining it here
+  // guarantees that ordering before the shape assertion below runs against the settled promise.
+  await request.catch(() => {});
+
+  expect(request).rejects.toMatchObject({
     code: 'CHECKPOINT_INVALID',
     data: { activityID: firstContinuationID, appendedHead: 0 },
   });
