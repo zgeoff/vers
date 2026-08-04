@@ -79,7 +79,7 @@ test('it mint-and-appends a two-continuation chain, returning the final freshly 
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -170,7 +170,7 @@ test('it rejects a continuation whose predicted buildSnapshot mismatches the ser
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -225,7 +225,7 @@ test('it converges a resubmit of an already-minted continuation onto the same ro
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -277,7 +277,7 @@ test('it conflicts a mint whose client id already belongs to another avatar', as
 
   const startedA = await clientA.startActivity({
     avatarID: avatarA.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -288,7 +288,7 @@ test('it conflicts a mint whose client id already belongs to another avatar', as
 
   const startedB = await clientB.startActivity({
     avatarID: avatarB.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -350,7 +350,7 @@ test('it conflicts a mint whose client id collides with an unrelated row for the
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -364,7 +364,7 @@ test('it conflicts a mint whose client id collides with an unrelated row for the
       createMockActivity({
         avatarId: avatar.id,
         id: reusedID,
-        scopeId: 'a9lp75',
+        scopeId: '0_0',
         scopeType: 'world_map_node',
         startKey: 'continue_unrelated',
         status: 'stopped',
@@ -437,7 +437,7 @@ test('it caps a continuation whose tail exceeds the accrued offline budget', asy
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -496,7 +496,7 @@ test('it evicts a session that is no longer the writer', async () => {
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -542,7 +542,7 @@ test('it bails with CHAIN_QUARANTINED when the scope already carries a quarantin
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
@@ -551,7 +551,7 @@ test('it bails with CHAIN_QUARANTINED when the scope already carries a quarantin
     .values(
       createMockActivity({
         avatarId: avatar.id,
-        scopeId: 'a9lp75',
+        scopeId: '0_0',
         scopeType: 'world_map_node',
         status: 'quarantined',
       }),
@@ -608,7 +608,7 @@ test('it bails with CHECKPOINT_INVALID on a broken hash chain, leaving the head 
 
   const started = await client.startActivity({
     avatarID: avatar.id,
-    scopeID: 'a9lp75',
+    scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
