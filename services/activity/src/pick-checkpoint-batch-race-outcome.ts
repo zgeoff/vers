@@ -1,5 +1,5 @@
 import type { CheckpointBatchEntry } from '@vers/contract-activity';
-import { buildCheckpointHash } from '@vers/contract-activity';
+import { buildCheckpointHashFromEntry } from '@vers/contract-activity';
 import type { ActivityStatus } from '@vers/db';
 
 /**
@@ -86,16 +86,7 @@ function isSettledResubmit(
       return false;
     }
 
-    previousHash = buildCheckpointHash({
-      chainIndex: checkpoint.payload.chainIndex,
-      entropySource: checkpoint.payload.entropySource,
-      nextSeed: checkpoint.payload.nextSeed,
-      prevHash: checkpoint.prevHash,
-      seed: checkpoint.payload.seed,
-      time: checkpoint.payload.time,
-      type: checkpoint.payload.type,
-      version: checkpoint.version,
-    });
+    previousHash = buildCheckpointHashFromEntry(checkpoint);
   }
 
   return previousHash === settled.lastHash;

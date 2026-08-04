@@ -1,5 +1,5 @@
 import type { CheckpointBatchEntry, CheckpointPayload } from '@vers/contract-activity';
-import { RewardSlotSchema, buildCheckpointHash } from '@vers/contract-activity';
+import { RewardSlotSchema, buildCheckpointHashFromEntry } from '@vers/contract-activity';
 import { isTerminalCheckpointType } from '@vers/idle-core';
 import * as z from 'zod';
 
@@ -97,16 +97,7 @@ export function findCheckpointBatchInvalidReason(
       return 'broken-chain-link';
     }
 
-    const expectedHash = buildCheckpointHash({
-      chainIndex: checkpoint.payload.chainIndex,
-      entropySource: checkpoint.payload.entropySource,
-      nextSeed: checkpoint.payload.nextSeed,
-      prevHash: checkpoint.prevHash,
-      seed: checkpoint.payload.seed,
-      time: checkpoint.payload.time,
-      type: checkpoint.payload.type,
-      version: checkpoint.version,
-    });
+    const expectedHash = buildCheckpointHashFromEntry(checkpoint);
 
     if (expectedHash !== checkpoint.hash) {
       return 'hash-mismatch';
