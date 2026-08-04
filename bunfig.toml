@@ -10,11 +10,18 @@ minimumReleaseAge = 604800
 
 # an exclude lives only as long as its pinned version is younger than the gate —
 # once the version ages past it, the entry is dead weight; remove it
-# brace-expansion 2.1.2/5.0.7 (published 2026-07-20, patch GHSA-3jxr-9vmj-r5cp) age past the gate ~2026-07-28 — remove then (#735)
+# brace-expansion 2.1.4 (published 2026-07-30, patches GHSA-mh99-v99m-4gvg + GHSA-rgw5-rvv9-x895) ages past the gate ~2026-08-06 — remove then (#735)
 # protobufjs 7.6.5 (published 2026-07-20, patches GHSA-j3f2-48v5-ccww) ages past the gate ~2026-07-28 — remove then (#735)
-# fast-uri 3.1.4 (published 2026-07-19, patches GHSA-v2hh-gcrm-f6hx) ages past the gate ~2026-07-26 — remove then (#765)
+# fast-uri 3.1.5 (published 2026-07-31, patches GHSA-7p8r-x3mc-p8w7) ages past the gate ~2026-08-07 — remove then (#765)
 # @hono/node-server 2.0.11 (published 2026-07-21, patches GHSA-9mqv-5hh9-4cgg) ages past the gate ~2026-07-28 — remove then (#766)
-minimumReleaseAgeExcludes = ["brace-expansion", "protobufjs", "fast-uri", "@hono/node-server"]
+# hono 4.13.0 (published 2026-08-03, patches GHSA-8j4g-w8fx-2239) ages past the gate ~2026-08-10 — remove then (#837)
+minimumReleaseAgeExcludes = [
+  "brace-expansion",
+  "protobufjs",
+  "fast-uri",
+  "@hono/node-server",
+  "hono",
+]
 
 [test]
 # registers jest-extended matchers for any root-invoked `bun test`; each
