@@ -12,7 +12,12 @@ export const baseEnvSchema = z.object({
     .url()
     .optional()
     .describe('OTLP collector endpoint; unset leaves every instrument a no-op'),
-  PORT: z.coerce.number().int().positive().default(3000).describe('TCP port the HTTP server binds'),
+  PORT: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(3000)
+    .describe('TCP port the HTTP server binds; 0 binds an OS-assigned port'),
   SENTRY_DSN: z.url().optional().describe('Bugsink project DSN; unset disables error reporting'),
   SERVICE_AUTH_JWKS: z
     .string()
