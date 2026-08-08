@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
-import type { ActivityData, CheckpointBatchEntry } from '@vers/contract-activity';
+import type { ActivityData, CatchUpContinuation } from '@vers/contract-activity';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction, runAttempt } from '@vers/idle-core';
 import {
@@ -9,68 +9,67 @@ import {
   createMockAvatarData,
   createMockEnemyData,
 } from '@vers/idle-core/test-utils';
-import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
+import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
-import * as db from '@vers/mock-services/db';
+import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
-import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import { createMockLatestActivityProgress } from '../test-utils/factories/create-mock-latest-activity-progress';
 import { runFastForward } from './run-fast-forward';
 import type { FastForwardProgress } from './types';
 
-interface TrackedBatch {
-  readonly checkpoints: ReadonlyArray<CheckpointBatchEntry>;
+interface TrackedAdvanceCall {
+  readonly activityID: string;
+  readonly continuations: ReadonlyArray<CatchUpContinuation>;
   readonly expectedHead: number;
 }
 
-interface SetupTestConfig {
-  /**
-   * Skips installing the scripted `startActivity` mint so a test can seed the real stateful
-   * backend's collections and exercise its gates instead.
-   */
-  readonly installStartActivityMock?: boolean;
+/**
+ * The waves every attempt in this suite simulates against — fixed so the same template produces a
+ * byte-identical reconstruction whenever it's rebuilt for a fresh attempt.
+ */
+function buildWaveTemplate() {
+  return {
+    waves: [
+      Array.from({ length: 6 }, () => createMockEnemyData()),
+      Array.from({ length: 6 }, () => createMockEnemyData()),
+      Array.from({ length: 3 }, () => createMockEnemyData()),
+      Array.from({ length: 4 }, () => createMockEnemyData()),
+    ],
+  };
 }
 
-function setupTest(config: Readonly<SetupTestConfig> = {}) {
+function setupTest() {
   const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
 
   const client: ActivityServiceClient = createORPCClient(link);
-  const batches: Array<TrackedBatch> = [];
-  const startedActivities: Array<ActivityData> = [];
+  const calls: Array<TrackedAdvanceCall> = [];
 
   const handlers = [
-    mockActivityService.trackActivityProgress.handler((opts) => {
-      batches.push({
-        checkpoints: opts.input.checkpoints,
+    mockActivityService.advanceActivity.handler((opts) => {
+      calls.push({
+        activityID: opts.input.activityID,
+        continuations: opts.input.continuations,
         expectedHead: opts.input.expectedHead,
       });
 
-      const last = opts.input.checkpoints.at(-1);
+      const lastContinuation = opts.input.continuations.at(-1);
 
-      return { appendedHead: last?.version ?? opts.input.expectedHead };
+      invariant(lastContinuation !== undefined, 'a bulk request always carries a continuation');
+
+      const activity: ActivityData = createMockActivityData({
+        id: lastContinuation.id,
+        startKey: lastContinuation.startKey,
+      });
+
+      return { activity, appendedHead: 0 };
     }),
   ];
 
-  if (config.installStartActivityMock !== false) {
-    handlers.push(
-      mockActivityService.startActivity.handler((opts) => {
-        const started = createMockActivityData({ avatarID: opts.input.avatarID });
-
-        startedActivities.push(started);
-
-        return started;
-      }),
-    );
-  }
-
   server.use(...handlers);
 
-  const onInvalid = mock<(activityID: string, reason: string) => void>();
-  const submitter = createCheckpointSubmitter({ client, onInvalid });
-
-  return { batches, client, startedActivities, submitter };
+  return { calls, client };
 }
 
 test('it discards a partial attempt and submits nothing when the budget is too small', async () => {
@@ -79,25 +78,17 @@ test('it discards a partial attempt and submits nothing when the budget is too s
 
   const report = await runFastForward({
     budgetMs: 3000,
-    buildSimulationInput: (activity) => ({
+    buildSimulationInput: (source) => ({
       activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
+        encounter: buildWaveTemplate(),
         failureAction: ActivityFailureAction.Retry,
-        id: activity.id,
-        seed: activity.seed,
+        id: source.id,
+        seed: source.seed,
       }),
       avatar: createMockAvatarData(),
     }),
     client: ctx.client,
     progress,
-    submitter: ctx.submitter,
   });
 
   expect(report).toStrictEqual({
@@ -109,25 +100,22 @@ test('it discards a partial attempt and submits nothing when the budget is too s
     reason: 'budget-exhausted',
   });
 
-  expect(ctx.batches).toStrictEqual([]);
+  expect(ctx.calls).toStrictEqual([]);
 });
 
-test('it reports the final row terminal when a reconstructed tail lands exactly on the budget', async () => {
+test('it consumes exactly the budget when a reconstructed tail lands on it precisely', async () => {
   const ctx = setupTest();
-  const progress = createMockLatestActivityProgress({ appendedHead: 1 });
+
+  const progress = createMockLatestActivityProgress({
+    activity: createMockActivityData({ appendedHead: 1 }),
+    appendedHead: 1,
+  });
 
   // One fixed input template, deep-copied per call: the probe attempt below and the
   // fast-forward's reconstruction must simulate byte-identically for the budget to land exactly.
   const template = {
     activity: createMockActivityInput({
-      encounter: {
-        waves: [
-          Array.from({ length: 6 }, () => createMockEnemyData()),
-          Array.from({ length: 6 }, () => createMockEnemyData()),
-          Array.from({ length: 3 }, () => createMockEnemyData()),
-          Array.from({ length: 4 }, () => createMockEnemyData()),
-        ],
-      },
+      encounter: buildWaveTemplate(),
       failureAction: ActivityFailureAction.Retry,
       id: progress.activity.id,
       seed: progress.activity.seed,
@@ -142,7 +130,7 @@ test('it reports the final row terminal when a reconstructed tail lands exactly 
   });
 
   // The unaccounted tail past the appended head prices the attempt; a budget equal to it is
-  // consumed exactly, ending the fast-forward on a submitted terminal with no continuation.
+  // consumed exactly.
   const tailTimeMs = (probe.checkpoints.at(-1)?.time ?? 0) - (probe.checkpoints[0]?.time ?? 0);
 
   const report = await runFastForward({
@@ -150,17 +138,17 @@ test('it reports the final row terminal when a reconstructed tail lands exactly 
     buildSimulationInput: () => structuredClone(template),
     client: ctx.client,
     progress,
-    submitter: ctx.submitter,
   });
 
   expect(report).toMatchObject({
     attempts: 1,
-    finalRowTerminal: true,
+    finalRowTerminal: false,
     reason: 'budget-exhausted',
   });
 
-  expect(ctx.batches).toHaveLength(1);
-  expect(ctx.startedActivities).toStrictEqual([]);
+  expect(ctx.calls).toHaveLength(1);
+  expect(ctx.calls[0]?.expectedHead).toBe(1);
+  expect(ctx.calls[0]?.continuations).toHaveLength(1);
 });
 
 test('it stops after the first failed attempt under the abort policy', async () => {
@@ -170,19 +158,12 @@ test('it stops after the first failed attempt under the abort policy', async () 
 
   const report = await runFastForward({
     budgetMs: 60_000,
-    buildSimulationInput: (activity) => ({
+    buildSimulationInput: (source) => ({
       activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
+        encounter: buildWaveTemplate(),
         failureAction: ActivityFailureAction.Abort,
-        id: activity.id,
-        seed: activity.seed,
+        id: source.id,
+        seed: source.seed,
       }),
 
       // life 1 dies on the first hit taken, so the attempt fails quickly
@@ -191,7 +172,6 @@ test('it stops after the first failed attempt under the abort policy', async () 
     client: ctx.client,
     onProgress,
     progress,
-    submitter: ctx.submitter,
   });
 
   expect(report).toMatchObject({
@@ -201,45 +181,38 @@ test('it stops after the first failed attempt under the abort policy', async () 
   });
 
   expect(onProgress).toHaveBeenCalledExactlyOnceWith({ attempts: 1, levelUps: 0 });
-  expect(ctx.batches).toHaveLength(1);
-  expect(ctx.batches[0]?.checkpoints.at(-1)?.payload.type).toBe('failed');
-  expect(ctx.startedActivities).toStrictEqual([]);
+  expect(ctx.calls).toHaveLength(1);
+  expect(ctx.calls[0]?.continuations[0]?.checkpoints.at(-1)?.payload.type).toBe('failed');
 });
 
-test('it chains fresh server-started attempts through failures under the retry policy', async () => {
+test('it plans multiple continuations locally and ships them in one bulk request', async () => {
   const ctx = setupTest();
   const progress = createMockLatestActivityProgress();
 
   const report = await runFastForward({
     budgetMs: 30_000,
-    buildSimulationInput: (activity) => ({
+    buildSimulationInput: (source) => ({
       activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
+        encounter: buildWaveTemplate(),
         failureAction: ActivityFailureAction.Retry,
-        id: activity.id,
-        seed: activity.seed,
+        id: source.id,
+        seed: source.seed,
       }),
       avatar: createMockAvatarData({ life: 1 }),
     }),
     client: ctx.client,
     progress,
-    submitter: ctx.submitter,
   });
 
   expect(report.reason).toBe('budget-exhausted');
   expect(report.attempts).toBeGreaterThan(1);
-  expect(ctx.startedActivities.length).toBeGreaterThanOrEqual(report.attempts - 1);
 
-  // every submitted stream ends on a terminal checkpoint — never mid-encounter
-  for (const batch of ctx.batches) {
-    expect(batch.checkpoints.at(-1)?.payload.type).toBe('failed');
+  // the whole plan ships as one bulk request, never one call per continuation
+  expect(ctx.calls).toHaveLength(1);
+  expect(ctx.calls[0]?.continuations.length).toBe(report.attempts);
+
+  for (const continuation of ctx.calls[0]?.continuations ?? []) {
+    expect(continuation.checkpoints.at(-1)?.payload.type).toBe('failed');
   }
 });
 
@@ -253,162 +226,207 @@ test('it resumes a mid-stream activity submitting only the tail past the appende
 
   const report = await runFastForward({
     budgetMs: 60_000,
-    buildSimulationInput: (activity) => ({
+    buildSimulationInput: (source) => ({
       activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
+        encounter: buildWaveTemplate(),
         failureAction: ActivityFailureAction.Abort,
-        id: activity.id,
-        seed: activity.seed,
+        id: source.id,
+        seed: source.seed,
       }),
       avatar: createMockAvatarData({ life: 1 }),
     }),
     client: ctx.client,
     progress,
-    submitter: ctx.submitter,
   });
 
   expect(report.attempts).toBe(1);
-  expect(ctx.batches).toHaveLength(1);
-  expect(ctx.batches[0]?.expectedHead).toBe(1);
-  expect(ctx.batches[0]?.checkpoints[0]?.version).toBe(2);
+  expect(ctx.calls).toHaveLength(1);
+  expect(ctx.calls[0]?.expectedHead).toBe(1);
+  expect(ctx.calls[0]?.continuations[0]?.checkpoints[0]?.version).toBe(2);
 });
 
-test('it reports the final row it left off at, for a caller to attach directly', async () => {
+test('it reports the final row the server minted, for a caller to attach directly', async () => {
   const ctx = setupTest();
   const progress = createMockLatestActivityProgress();
 
   const report = await runFastForward({
     budgetMs: 30_000,
-    buildSimulationInput: (activity) => ({
+    buildSimulationInput: (source) => ({
       activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
+        encounter: buildWaveTemplate(),
         failureAction: ActivityFailureAction.Retry,
-        id: activity.id,
-        seed: activity.seed,
+        id: source.id,
+        seed: source.seed,
       }),
       avatar: createMockAvatarData({ life: 1 }),
     }),
     client: ctx.client,
     progress,
-    submitter: ctx.submitter,
   });
 
-  const lastStarted = ctx.startedActivities.at(-1);
-
-  invariant(lastStarted !== undefined, 'expected at least one server-started continuation');
-
-  expect(report.activity).toStrictEqual(lastStarted);
+  expect(report.activity.id).toBe(ctx.calls[0]!.continuations.at(-1)!.id);
   expect(report.appendedHead).toBe(0);
 });
 
-test('it aborts to displaced when another session takes the writer mid-pass', async () => {
+test('it splits a large plan into bounded batches, awaiting each in order', async () => {
   const ctx = setupTest();
-  const onProgress = mock<(progress: FastForwardProgress) => void>();
   const progress = createMockLatestActivityProgress();
-
-  server.use(
-    mockActivityService.trackActivityProgress.handler((opts) => {
-      throw opts.errors.SESSION_EVICTED({ data: {} });
-    }),
-  );
 
   const report = await runFastForward({
     budgetMs: 60_000,
-    buildSimulationInput: (activity) => ({
+    buildSimulationInput: (source) => ({
       activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: activity.id,
-        seed: activity.seed,
+        encounter: buildWaveTemplate(),
+        failureAction: ActivityFailureAction.Retry,
+        id: source.id,
+        seed: source.seed,
       }),
-
-      // life 1 dies on the first hit taken, so the attempt ends quickly
       avatar: createMockAvatarData({ life: 1 }),
     }),
     client: ctx.client,
-    onProgress,
+
+    // small enough that a multi-attempt plan must split across more than one request
+    maxCheckpointsPerBatch: 3,
     progress,
-    submitter: ctx.submitter,
+  });
+
+  expect(report.attempts).toBeGreaterThan(1);
+  expect(ctx.calls.length).toBeGreaterThan(1);
+
+  // batch N's activityID is exactly the row batch N-1's last continuation minted, proving each
+  // batch was awaited (and its mint committed) before the next shipped
+  for (const [index, call] of ctx.calls.entries()) {
+    if (index === 0) {
+      continue;
+    }
+
+    const previous = ctx.calls[index - 1];
+
+    invariant(previous !== undefined, 'index > 0 always has a preceding call');
+
+    expect(call.activityID).toBe(previous.continuations.at(-1)!.id);
+    expect(call.expectedHead).toBe(0);
+  }
+});
+
+test('it bails to displaced and reports zero tallies when a batch is rejected', async () => {
+  const progress = createMockLatestActivityProgress();
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.SESSION_EVICTED({
+        data: { activityID: opts.input.activityID, appendedHead: opts.input.expectedHead },
+      });
+    }),
+  );
+
+  const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
+
+  const client: ActivityServiceClient = createORPCClient(link);
+
+  const report = await runFastForward({
+    budgetMs: 60_000,
+    buildSimulationInput: (source) => ({
+      activity: createMockActivityInput({
+        encounter: buildWaveTemplate(),
+        failureAction: ActivityFailureAction.Abort,
+
+        id: source.id,
+        seed: source.seed,
+      }),
+
+      // life 1 dies on the first hit taken, so a plan still exists to submit
+      avatar: createMockAvatarData({ life: 1 }),
+    }),
+    client,
+    progress,
   });
 
   expect(report).toStrictEqual({
     activity: progress.activity,
-    appendedHead: 0,
+    appendedHead: progress.appendedHead,
     attempts: 0,
     finalRowTerminal: false,
     levelUps: 0,
     reason: 'displaced',
   });
-
-  // the tallies never persisted, so the pass reports none
-  expect(onProgress).not.toHaveBeenCalled();
-  expect(ctx.startedActivities).toStrictEqual([]);
 });
 
-test('it returns the earned report rather than throwing when a continuation start is rejected because the account switched avatars', async () => {
-  const ctx = setupTest({ installStartActivityMock: false });
+test('it propagates a transport failure rather than reporting it as displaced', () => {
+  const progress = createMockLatestActivityProgress();
 
-  const viewer = await createViewer({ avatar: { id: 'avatar_active', name: 'Active One' } });
-  const targetAvatar = await db.avatarCollection.create({ userID: viewer.user.id });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+  server.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
 
-  const progress = createMockLatestActivityProgress({
-    activity: createMockActivityData({ avatarID: targetAvatar.id }),
-  });
+  const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
 
-  const report = await runFastForward({
+  const client: ActivityServiceClient = createORPCClient(link);
+
+  const run = runFastForward({
     budgetMs: 60_000,
-    buildSimulationInput: (activity) => ({
+    buildSimulationInput: (source) => ({
       activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Retry,
-        id: activity.id,
-        seed: activity.seed,
+        encounter: buildWaveTemplate(),
+        failureAction: ActivityFailureAction.Abort,
+
+        id: source.id,
+        seed: source.seed,
       }),
 
-      // life 1 dies on the first hit taken, so the attempt fails and terminates quickly
+      // life 1 dies on the first hit taken, so a plan still exists to submit
       avatar: createMockAvatarData({ life: 1 }),
     }),
     client,
     progress,
-    submitter: ctx.submitter,
   });
 
-  expect(report).toMatchObject({
-    activeAvatarName: 'Active One',
+  expect(run).rejects.toThrow();
+});
+
+test('it resolves with no fast-forward at all when the confirmed row already reconstructs through its own terminal', async () => {
+  const ctx = setupTest();
+
+  // One fixed input template, deep-copied per call — the probe attempt below and the
+  // fast-forward's own reconstruction must simulate byte-identically.
+  const template = {
+    activity: createMockActivityInput({
+      encounter: buildWaveTemplate(),
+      failureAction: ActivityFailureAction.Retry,
+    }),
+    avatar: createMockAvatarData(),
+  };
+
+  const probeInput = structuredClone(template);
+
+  const probe = await runAttempt(probeInput.activity, probeInput.avatar, {
+    maxDurationMs: Number.MAX_SAFE_INTEGER,
+  });
+
+  // the confirmed head already covers every checkpoint the row's own attempt ever produces —
+  // nothing unconfirmed remains for a fast-forward to catch up
+  const progress = createMockLatestActivityProgress({
+    activity: createMockActivityData({
+      appendedHead: probe.checkpoints.length,
+      id: template.activity.id,
+      seed: template.activity.seed,
+    }),
+    appendedHead: probe.checkpoints.length,
+  });
+
+  const report = await runFastForward({
+    budgetMs: 60_000,
+    buildSimulationInput: () => structuredClone(template),
+    client: ctx.client,
+    progress,
+  });
+
+  expect(report).toStrictEqual({
     activity: progress.activity,
-    attempts: 1,
-    finalRowTerminal: true,
-    reason: 'avatar-switched',
+    appendedHead: progress.appendedHead,
+    attempts: 0,
+    finalRowTerminal: false,
+    levelUps: 0,
+    reason: 'budget-exhausted',
   });
 
-  expect(ctx.batches).toHaveLength(1);
+  expect(ctx.calls).toStrictEqual([]);
 });

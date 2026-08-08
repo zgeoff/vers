@@ -3,8 +3,10 @@ import * as z from 'zod';
 import { ActivityDataSchema } from './activity-data-schema';
 import { ActivityFailureActionSchema } from './activity-failure-action-schema';
 import { ActivityStatusSchema } from './activity-status-schema';
+import { CatchUpContinuationSchema } from './catch-up-continuation-schema';
 import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
+import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
 
 const AvatarNotActiveDataSchema = z.object({
@@ -17,6 +19,14 @@ const CheckpointInvalidDataSchema = z.object({ reason: z.string() });
 const SimVersionProblemDataSchema = z.object({ currentSimVersion: z.string().nullable() });
 const StaleHeadDataSchema = z.object({ appendedHead: z.int() });
 const TerminalStatusDataSchema = z.object({ appendedHead: z.int(), status: ActivityStatusSchema });
+
+/**
+ * `advanceActivity`'s uniform bail data: the last row a rejected bulk request fully committed,
+ * whatever reason stopped it — the row the client's outer resync re-plans from.
+ */
+const AdvanceBailDataSchema = z.object({ activityID: z.string(), appendedHead: z.int() });
+const AdvanceCheckpointInvalidDataSchema = AdvanceBailDataSchema.extend({ reason: z.string() });
+const AdvanceTerminalDataSchema = AdvanceBailDataSchema.extend({ status: ActivityStatusSchema });
 
 const RewardItemAffixSchema = z.object({
   affixID: z.string(),
@@ -58,6 +68,72 @@ const AvatarProgressionSchema = z.object({
  * avatars.
  */
 export const activityContract = {
+  advanceActivity: authedRoute
+    .route({
+      method: 'POST',
+      path: '/activities/{activityID}/advance',
+      summary: 'Bulk mint-and-append offline catch-up continuations onto an activity chain',
+    })
+    .input(
+      z
+        .object({
+          activityID: z.string(),
+          continuations: z
+            .array(CatchUpContinuationSchema)
+            .min(1)
+            .max(MAX_CATCH_UP_BATCH_CHECKPOINTS)
+            .readonly(),
+          expectedHead: z.int().min(0),
+        })
+
+        // The per-array caps alone still admit continuations × checkpoints work; the aggregate
+        // bound is what keeps a direct API caller's synchronous hash and insert cost per request
+        // flat, matching the honest client's per-request total.
+        .refine(
+          (input) =>
+            input.continuations.reduce((total, entry) => total + entry.checkpoints.length, 0) <=
+            MAX_CATCH_UP_BATCH_CHECKPOINTS,
+          {
+            error: `a request carries at most ${MAX_CATCH_UP_BATCH_CHECKPOINTS} checkpoints across all continuations`,
+          },
+        ),
+    )
+    .output(z.object({ activity: ActivityDataSchema, appendedHead: z.int() }))
+    .errors(
+      defineErrors({
+        ACTIVITY_CAPPED: {
+          data: AdvanceBailDataSchema,
+          message: "A continuation's tail exceeds the avatar's accrued offline-progress budget",
+          status: 409,
+        },
+        ACTIVITY_TERMINAL: {
+          data: AdvanceTerminalDataSchema,
+          message: 'A continuation targets an activity that already reached a terminal status',
+          status: 409,
+        },
+        CHAIN_QUARANTINED: {
+          data: AdvanceBailDataSchema,
+          message: 'The chain is quarantined pending replay adjudication',
+          status: 409,
+        },
+        CHECKPOINT_INVALID: {
+          data: AdvanceCheckpointInvalidDataSchema,
+          message: "A continuation's checkpoint tail failed structural or cross-check validation",
+          status: 422,
+        },
+        CONFLICT: {
+          data: AdvanceBailDataSchema,
+          message: "A continuation's mint or append is stale for the chain's current state",
+        },
+        NOT_FOUND: { data: z.object({}), message: 'No activity with that id' },
+        SESSION_EVICTED: {
+          data: AdvanceBailDataSchema,
+          message: "The submitting session is no longer the activity's writer",
+          status: 403,
+        },
+      }),
+    ),
+
   getActivityRewards: authedRoute
     .route({
       method: 'GET',

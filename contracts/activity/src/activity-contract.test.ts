@@ -2,6 +2,8 @@ import { expect, test } from 'bun:test';
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
 import { activityContract } from './activity-contract';
+import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
+import { createMockCatchUpContinuation } from './test-utils/factories/create-mock-catch-up-continuation';
 
 test('it declares UNAUTHORIZED and FORBIDDEN on every owner-scoped procedure', () => {
   expect(activityContract.getCurrentActivity['~orpc'].errorMap).toContainAllKeys([
@@ -58,6 +60,38 @@ test('it declares a bespoke ACTIVITY_CAPPED with an explicit status on trackActi
 
   expect(errorMap).toContainKey('ACTIVITY_CAPPED');
   expect(errorMap.ACTIVITY_CAPPED?.status).toBe(409);
+});
+
+test('advanceActivity rejects a request whose checkpoints exceed the cap across continuations', () => {
+  const half = Math.ceil(MAX_CATCH_UP_BATCH_CHECKPOINTS / 2);
+
+  // Each continuation is under the per-array cap; only their sum trips the aggregate bound.
+  const input = {
+    activityID: 'act_source',
+    continuations: [
+      createMockCatchUpContinuation({ checkpointCount: half }),
+      createMockCatchUpContinuation({ checkpointCount: half + 1 }),
+    ],
+    expectedHead: 0,
+  };
+
+  expect(activityContract.advanceActivity['~orpc'].inputSchema?.safeParse(input).success).toBe(
+    false,
+  );
+});
+
+test('advanceActivity accepts a request at the aggregate checkpoint cap', () => {
+  const input = {
+    activityID: 'act_source',
+    continuations: [
+      createMockCatchUpContinuation({ checkpointCount: MAX_CATCH_UP_BATCH_CHECKPOINTS }),
+    ],
+    expectedHead: 0,
+  };
+
+  expect(activityContract.advanceActivity['~orpc'].inputSchema?.safeParse(input).success).toBe(
+    true,
+  );
 });
 
 test('it generates a valid OpenAPI document from the activity contract', async () => {

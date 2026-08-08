@@ -233,7 +233,11 @@ test('it fast-forwards a real offline gap and reports the outcome', async () => 
     kind: 'fast-forward',
   });
 
-  expect(result.report).toMatchObject({ attempts: 1, reason: 'aborted-on-failure' });
+  expect(result.report).toMatchObject({
+    attempts: 1,
+    finalRowTerminal: true,
+    reason: 'aborted-on-failure',
+  });
 });
 
 test('it awaits onProgressFetched with the settled progress before planning a fast-forward', async () => {

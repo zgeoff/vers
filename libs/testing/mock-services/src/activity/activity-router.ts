@@ -1,3 +1,4 @@
+import { advanceActivity } from './advance-activity';
 import { getActivityRewards } from './get-activity-rewards';
 import { getAvatarProgression } from './get-avatar-progression';
 import { getCurrentActivity } from './get-current-activity';
@@ -9,6 +10,7 @@ import { trackActivityProgress } from './track-activity-progress';
 import { updateFailureAction } from './update-failure-action';
 
 export const activityRouter = {
+  advanceActivity,
   getActivityRewards,
   getAvatarProgression,
   getCurrentActivity,
