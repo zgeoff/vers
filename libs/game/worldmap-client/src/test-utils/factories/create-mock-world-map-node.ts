@@ -1,8 +1,8 @@
 import { faker } from '@faker-js/faker';
-import type { LatticeNode } from '@vers/worldmap-core';
+import type { WorldMapNode } from '@vers/worldmap-core';
 import { toNodeID } from '@vers/worldmap-core';
 
-export function createMockWorldMapNode(overrides: Partial<LatticeNode> = {}): LatticeNode {
+export function createMockWorldMapNode(overrides: Partial<WorldMapNode> = {}): WorldMapNode {
   const cx = faker.number.int({ max: 100, min: -100 });
   const cy = faker.number.int({ max: 100, min: -100 });
 

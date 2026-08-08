@@ -1,7 +1,6 @@
 export { buildCellNode } from './build-cell-node';
 export { buildChunk } from './build-chunk';
 export { collectNodeEdges } from './collect-node-edges';
-export { decompressWorldGraph } from './decompress-world-graph';
 export { findCellCoord } from './find-cell-coord';
 export { getDifficulty } from './get-difficulty';
 export { getHexDistance } from './get-hex-distance';

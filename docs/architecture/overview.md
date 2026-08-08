@@ -165,7 +165,6 @@ Libraries (`libs/`, grouped by domain):
 - `libs/core/flags` - OpenFeature-backed feature flag registry and env provider
 - `libs/core/trace` - isomorphic W3C trace-context primitives (mint, serialize, parse)
 - `libs/core/utils` - low-level platform-agnostic utils
-- `libs/data/data` - core static game data
 - `libs/data/db` - kysely connection helper, migrations, and generated database types
 - `libs/data/release-registry` - deploy release registry: records a row per rollout that passed its
   post-deploy probes and finds each app's newest release as its rollback target
