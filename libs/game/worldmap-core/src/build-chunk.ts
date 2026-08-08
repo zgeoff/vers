@@ -1,15 +1,15 @@
 import { buildCellNode } from './build-cell-node';
 import { CHUNK_SIZE } from './consts';
-import type { LatticeNode } from './types';
+import type { WorldMapNode } from './types';
 
 /**
  * Builds every node in a chunk — a `CHUNK_SIZE`×`CHUNK_SIZE` block of cells — straight from the
  * chunk coordinate, touching no neighbouring chunk. Nodes come in row-major cell order.
  */
-export function buildChunk(userSeed: number, chunkX: number, chunkY: number): Array<LatticeNode> {
+export function buildChunk(userSeed: number, chunkX: number, chunkY: number): Array<WorldMapNode> {
   const baseX = chunkX * CHUNK_SIZE;
   const baseY = chunkY * CHUNK_SIZE;
-  const nodes: Array<LatticeNode> = [];
+  const nodes: Array<WorldMapNode> = [];
 
   for (let row = 0; row < CHUNK_SIZE; row++) {
     for (let col = 0; col < CHUNK_SIZE; col++) {

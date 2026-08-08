@@ -1,12 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": [
-    "infra/sdks/**",
-    "**/augment-bun-test.ts",
-    "**/*.generated.ts",
-    "libs/game/worldmap-core/generate-graph.ts",
-    ".claude/**"
-  ],
+  "ignore": ["infra/sdks/**", "**/augment-bun-test.ts", "**/*.generated.ts", ".claude/**"],
   "ignoreBinaries": ["flyctl", "gh", "ladle", "op", "pulumi", "uv"],
   "rules": {
     "enumMembers": "off"

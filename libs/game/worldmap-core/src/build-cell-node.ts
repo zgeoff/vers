@@ -3,7 +3,7 @@ import { JITTER } from './consts';
 import { getDifficulty } from './get-difficulty';
 import { toHexPosition } from './to-hex-position';
 import { toNodeID } from './to-node-id';
-import type { LatticeNode } from './types';
+import type { WorldMapNode } from './types';
 
 /**
  * Builds the single node a cell carries: its canonical id, jittered scene position, and difficulty.
@@ -11,7 +11,7 @@ import type { LatticeNode } from './types';
  * returns null. Jitter is a pure function of the avatar seed and coordinate, so client and server
  * agree on the position without either storing it.
  */
-export function buildCellNode(userSeed: number, cx: number, cy: number): LatticeNode {
+export function buildCellNode(userSeed: number, cx: number, cy: number): WorldMapNode {
   const [centerX, centerY] = toHexPosition(cx, cy);
   const offsetX = (buildCoordHashUnit(userSeed, cx, cy, HASH_CHANNEL.jitterX) - 0.5) * 2 * JITTER;
   const offsetY = (buildCoordHashUnit(userSeed, cx, cy, HASH_CHANNEL.jitterY) - 0.5) * 2 * JITTER;

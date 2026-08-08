@@ -1,6 +1,6 @@
 import { extend } from '@react-three/fiber';
 import { sceneColors } from '@vers/design-system';
-import type { LatticeEdge } from '@vers/worldmap-core';
+import type { WorldEdge } from '@vers/worldmap-core';
 import { useLayoutEffect, useRef } from 'react';
 import type { BufferGeometry } from 'three';
 import { BufferAttribute } from 'three';
@@ -8,7 +8,7 @@ import { LineBasicNodeMaterial } from 'three/webgpu';
 import { getScenePosition } from '../utils/get-scene-position';
 
 interface WorldEdgesProps {
-  readonly edges: ReadonlyArray<LatticeEdge>;
+  readonly edges: ReadonlyArray<WorldEdge>;
 }
 
 const COLOR = sceneColors.worldmapEdge;
