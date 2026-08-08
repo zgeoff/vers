@@ -1,4 +1,4 @@
-import type { WorldGraph } from '@vers/worldmap-core';
+import type { WorldGraph } from '../types';
 
 export interface GraphSlice {
   worldGraph: WorldGraph;

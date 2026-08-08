@@ -1,17 +1,16 @@
 import { faker } from '@faker-js/faker';
-import type { WorldMapNode } from '@vers/worldmap-core';
+import type { LatticeNode } from '@vers/worldmap-core';
+import { toNodeID } from '@vers/worldmap-core';
 
-export function createMockWorldMapNode(overrides: Partial<WorldMapNode> = {}): WorldMapNode {
+export function createMockWorldMapNode(overrides: Partial<LatticeNode> = {}): LatticeNode {
+  const cx = faker.number.int({ max: 100, min: -100 });
+  const cy = faker.number.int({ max: 100, min: -100 });
+
   return {
-    connections: [null, null, null, null],
+    coord: [cx, cy],
     difficulty: faker.number.int({ max: 10, min: 0 }),
-    id: faker.string.alphanumeric({ casing: 'lower', length: 24 }),
-    index: faker.number.int({ max: 100, min: 0 }),
-    position: [
-      faker.number.int({ max: 100, min: -100 }),
-      faker.number.int({ max: 100, min: -100 }),
-    ],
-    seed: faker.number.int(),
+    id: toNodeID(cx, cy),
+    position: [cx, cy],
     ...overrides,
   };
 }

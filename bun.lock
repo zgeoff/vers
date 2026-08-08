@@ -64,7 +64,6 @@
         "@vers/contract-session": "workspace:*",
         "@vers/contract-user": "workspace:*",
         "@vers/contract-verification": "workspace:*",
-        "@vers/data": "workspace:*",
         "@vers/design-system": "workspace:*",
         "@vers/flags": "workspace:*",
         "@vers/game-rendering": "workspace:*",
@@ -661,6 +660,7 @@
         "react": "catalog:",
         "react-dom": "catalog:",
         "three": "catalog:",
+        "tiny-invariant": "catalog:",
         "zustand": "catalog:",
       },
       "devDependencies": {

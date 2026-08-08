@@ -7,7 +7,6 @@ import { NodeTooltip } from './node-tooltip';
 
 test('it displays information about the hovered node', () => {
   const node = createMockWorldMapNode({
-    connections: ['conn1', null, 'conn2', null],
     difficulty: 2,
     id: 'node123',
     position: [1.2345, 6.789],

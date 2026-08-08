@@ -1,22 +1,29 @@
-import { worldMapNodes } from '@vers/data';
 import { GameCanvas } from '@vers/game-rendering';
-import { setSelectedNode, setWorldGraph } from '@vers/worldmap-client';
-import type { CompressedWorldMapNode } from '@vers/worldmap-core';
-import { decompressWorldGraph } from '@vers/worldmap-core';
+import { buildRegionGraph, setSelectedNode, setWorldGraph } from '@vers/worldmap-client';
+import { toNodeID } from '@vers/worldmap-core';
+import invariant from 'tiny-invariant';
 import { SceneRoot } from './scene-root';
 
-// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the world graph ships as plain JSON with no way to encode the branded CompressedWorldMapNode type at that boundary
-const worldGraph = decompressWorldGraph(worldMapNodes as Array<CompressedWorldMapNode>);
+/**
+ * Seed the geometry generator draws from until the avatar's own seed is wired through; zero renders
+ * a stable placeholder region.
+ */
+const WORLD_SEED = 0;
 
-// oxlint-disable-next-line typescript/no-non-null-assertion -- the world graph ships with at least one node
-const firstNode = Object.values(worldGraph.nodes)[0]!;
+/**
+ * Ring radius of the lattice region generated for the initial render.
+ */
+const REGION_RADIUS = 24;
+const worldGraph = buildRegionGraph(WORLD_SEED, REGION_RADIUS);
+const originNode = worldGraph.nodes[toNodeID(0, 0)];
 
+invariant(originNode, 'the generated region always contains its origin cell');
 setWorldGraph(worldGraph);
-setSelectedNode(firstNode, null);
+setSelectedNode(originNode, null);
 
 /**
  * The persistent canvas's world content: dynamically imported through `GameCanvasMount`'s
- * code-split boundary so three.js and the world graph payload never land in the initial bundle.
+ * code-split boundary so three.js and the generated region never land in the initial bundle.
  */
 export function GameWorld() {
   return (

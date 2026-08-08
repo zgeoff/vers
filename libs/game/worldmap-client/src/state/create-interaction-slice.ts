@@ -1,9 +1,9 @@
-import type { WorldMapNode } from '@vers/worldmap-core';
+import type { LatticeNode } from '@vers/worldmap-core';
 import type { Object3D } from 'three';
 
 export interface InteractionSlice {
-  hoveredNode: WorldMapNode | null;
-  selectedNode: WorldMapNode | null;
+  hoveredNode: LatticeNode | null;
+  selectedNode: LatticeNode | null;
   selectedObject3D: null | Object3D;
 }
 

@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { render, renderHook } from '@testing-library/react';
 import { setSelectedNode, setWorldGraph, useSelectedNode } from '@vers/worldmap-client';
+import type { WorldGraph } from '@vers/worldmap-client';
 import { createMockWorldMapNode } from '@vers/worldmap-client/test-utils';
-import type { WorldGraph } from '@vers/worldmap-core';
 import { ExploreNodeFocus } from './explore-node-focus';
 
 test('it selects the graph node matching the route param', () => {
