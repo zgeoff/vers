@@ -187,8 +187,12 @@ jobs:
         with:
           persist-credentials: false
 
+      # pinned: 0.4.80's bluegreen health polling ignores configured check grace
+      # periods and aborts the whole rollout on a single transient machine read
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+        with:
+          version: 0.4.78
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -281,8 +285,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # pinned: 0.4.80's bluegreen health polling ignores configured check grace
+      # periods and aborts the whole rollout on a single transient machine read
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+        with:
+          version: 0.4.78
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
