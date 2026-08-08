@@ -19,31 +19,36 @@ let proc: Bun.Subprocess;
  * by `build-provider-router.test.ts`; this file only proves the real entrypoint boots and serves
  * over a socket, so one shared process serves every case.
  */
-beforeAll(async () => {
-  const keyPair = await getTestServiceKeyPair();
+beforeAll(
+  async () => {
+    const keyPair = await getTestServiceKeyPair();
 
-  proc = Bun.spawn([process.execPath, SERVE_PROVIDER_PATH], {
-    cwd: REPLAY_DIR,
-    env: {
-      PORT: String(PORT),
-      SERVICE_AUTH_JWKS: keyPair.jwksJSON,
-      SIM_ENGINE_HASH: 'test-engine-hash',
-    },
-    stderr: 'pipe',
-    stdout: 'pipe',
-  });
+    proc = Bun.spawn([process.execPath, SERVE_PROVIDER_PATH], {
+      cwd: REPLAY_DIR,
+      env: {
+        PORT: String(PORT),
+        SERVICE_AUTH_JWKS: keyPair.jwksJSON,
+        SIM_ENGINE_HASH: 'test-engine-hash',
+      },
+      stderr: 'pipe',
+      stdout: 'pipe',
+    });
 
-  await waitFor(
-    async () => {
-      const response = await fetch(`${URL}/health`);
+    // a cold CI runner can take longer than bun's default 5s hook timeout to
+    // spawn and boot the process, so both the poll and the hook get headroom
+    await waitFor(
+      async () => {
+        const response = await fetch(`${URL}/health`);
 
-      if (!response.ok) {
-        throw new Error(`provider health check returned ${String(response.status)}`);
-      }
-    },
-    { timeoutMs: 5000 },
-  );
-});
+        if (!response.ok) {
+          throw new Error(`provider health check returned ${String(response.status)}`);
+        }
+      },
+      { timeoutMs: 15_000 },
+    );
+  },
+  { timeout: 20_000 },
+);
 
 afterAll(() => {
   proc?.kill();
