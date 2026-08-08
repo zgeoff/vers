@@ -22,8 +22,8 @@ interface ProviderProcess {
  * Readiness is event-driven, not polled: the boot resolves on the log's bound-port announcement,
  * and a process that exits first rejects immediately with its captured output, so a crashing boot
  * reports its real error instead of running out the clock. The deadline only catches a boot that
- * hangs without exiting. stdout keeps draining after the port is found so a full pipe can never
- * block the child.
+ * hangs without exiting. Both pipes keep draining for the process's whole life so a full pipe can
+ * never block the child.
  */
 export async function createProviderProcess(engineHash: string): Promise<ProviderProcess> {
   const keyPair = await getTestServiceKeyPair();
@@ -46,10 +46,22 @@ export async function createProviderProcess(engineHash: string): Promise<Provide
   });
 
   const collected: Array<string> = [];
+  const stderrCollected: Array<string> = [];
 
-  // consumes stdout to exhaustion — never releasing it mid-run, which would close the pipe under
-  // the writing child — reporting the first bound-port announcement and collecting every chunk
-  // for failure diagnostics
+  // both pipes drain to exhaustion from the start — an unread pipe would block the child once its
+  // buffer fills, hanging the boot without ever reporting the real error
+  const drainStderr = async (): Promise<void> => {
+    const decoder = new TextDecoder();
+
+    for await (const chunk of proc.stderr) {
+      stderrCollected.push(decoder.decode(chunk, { stream: true }));
+    }
+  };
+
+  const stderrDrain = drainStderr();
+
+  // consumes stdout to exhaustion, reporting the first bound-port announcement and collecting
+  // every chunk for failure diagnostics
   const drainForPort = async (onPort: (port: number) => void): Promise<void> => {
     const decoder = new TextDecoder();
 
@@ -83,7 +95,7 @@ export async function createProviderProcess(engineHash: string): Promise<Provide
     const timer = setTimeout(() => {
       reject(
         new Error(
-          `provider reported no listening port within ${String(BOOT_DEADLINE_MS)}ms\n${collected.join('')}`,
+          `provider reported no listening port within ${String(BOOT_DEADLINE_MS)}ms\n${collected.join('')}${stderrCollected.join('')}`,
         ),
       );
     }, BOOT_DEADLINE_MS);
@@ -96,13 +108,14 @@ export async function createProviderProcess(engineHash: string): Promise<Provide
     const reportExit = async (): Promise<void> => {
       const code = await proc.exited;
 
-      const stderr = await new Response(proc.stderr).text();
+      // the drain ends when the pipe closes at process death, so the message carries all of stderr
+      await stderrDrain.catch(() => {});
 
       clearTimeout(timer);
 
       reject(
         new Error(
-          `provider exited with code ${String(code)} before serving\n${collected.join('')}${stderr}`,
+          `provider exited with code ${String(code)} before serving\n${collected.join('')}${stderrCollected.join('')}`,
         ),
       );
     };
