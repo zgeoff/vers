@@ -7,8 +7,8 @@ import { buildLevelFromXP } from '@vers/idle-core';
 import { findCurrentSimVersion, findSimVersion } from '@vers/sim-registry';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
-import invariant from 'tiny-invariant';
-import { buildUnsettledXP } from '../build-unsettled-xp';
+import { getOptimisticBuild } from '../get-optimistic-build';
+import { isUniqueViolation } from '../is-unique-violation';
 import { recordAvatarNotActiveRejection } from '../metrics/record-avatar-not-active-rejection';
 import { resolveEncounterNode } from '../resolve-encounter-node';
 import type {
@@ -158,7 +158,6 @@ export async function startActivity(
       };
 
       const startHash = buildStartHash({
-        activityID: id,
         contentVersion: deps.contentVersion,
         encounterNode,
         keyVersion: deps.keyVersion,
@@ -335,107 +334,4 @@ async function requireActiveAvatar(
       data: { activeAvatarID: selection.id, activeAvatarName: selection.name },
     });
   }
-}
-
-interface OptimisticBuild {
-  /**
-   * The unverified runs `totalXP` borrows from, holding only those that moved it. Recording them
-   * is what lets the verifier refuse a run whose snapshot counted xp that a later rejection proved
-   * never existed.
-   */
-  readonly sourceIDs: ReadonlyArray<string>;
-
-  readonly totalXP: number;
-}
-
-/**
- * An avatar's settled xp plus the unsettled xp of every activity that ended and is still awaiting
- * its verifier — what a new run's build snapshot is stamped with — beside the runs that xp came
- * from. A `parked` or `quarantined` activity is left out: both are holds with no path back to
- * verification on their own, so counting them would stamp xp that never settles into this run's
- * snapshot and every later one's. The settled row and the unsettled set are read in one statement,
- * so a concurrent verifier commit can't land its delta in the gap between two separate reads.
- */
-async function getOptimisticBuild(trx: Kysely<DB>, avatarID: string): Promise<OptimisticBuild> {
-  const rows = await trx
-    .selectFrom('avatars')
-    .leftJoin('activities', (join) =>
-      join
-        .onRef('activities.avatarId', '=', 'avatars.id')
-        .on('activities.status', 'in', ['stopped', 'capped'])
-        .onRef('activities.verifiedHead', '<', 'activities.appendedHead'),
-    )
-    .leftJoin('activityCheckpoints', (join) =>
-      join
-        .onRef('activityCheckpoints.activityId', '=', 'activities.id')
-        .onRef('activityCheckpoints.version', '=', 'activities.appendedHead'),
-    )
-    .leftJoinLateral(
-      (eb) =>
-        eb
-          .selectFrom('activityCheckpoints as unverified')
-          .select(
-            sql<string>`coalesce(sum((unverified.payload -> 'rewards' ->> 'xp')::integer), 0)`.as(
-              'deltaSum',
-            ),
-          )
-          .whereRef('unverified.activityId', '=', 'activities.id')
-          .whereRef('unverified.version', '>', 'activities.verifiedHead')
-          .as('unsettled'),
-      (join) => join.onTrue(),
-    )
-    .select([
-      'avatars.xp',
-      'activities.id',
-      'activities.settledXp',
-      'activityCheckpoints.payload',
-      'unsettled.deltaSum',
-    ])
-    .where('avatars.id', '=', avatarID)
-    .execute();
-
-  const [settled] = rows;
-
-  invariant(
-    settled !== undefined,
-    'avatar must still exist inside the transaction that starts its activity',
-  );
-
-  const sourceIDs: Array<string> = [];
-  let totalXP = settled.xp;
-
-  // The left join yields one all-null activity row for an avatar with nothing unsettled, so a null
-  // id marks the absence of a source rather than a source without one.
-  for (const row of rows) {
-    if (row.id === null) {
-      continue;
-    }
-
-    const unsettledXP = buildUnsettledXP({
-      settledXP: row.settledXp ?? 0,
-      tailPayload: row.payload,
-      unverifiedDeltaSum: Number(row.deltaSum ?? 0),
-    });
-
-    // A run that moved the total by nothing is not a dependency: the snapshot is the same value
-    // whether or not it exists, so its later rejection has no bearing on this run's honesty. A
-    // negative contribution still counts — a death penalty lowered the total, which is a borrow
-    // like any other.
-    if (unsettledXP === 0) {
-      continue;
-    }
-
-    sourceIDs.push(row.id);
-
-    totalXP += unsettledXP;
-  }
-
-  return { sourceIDs, totalXP };
-}
-
-/**
- * postgres.js surfaces a unique-constraint violation as SQLSTATE 23505.
- */
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
 }

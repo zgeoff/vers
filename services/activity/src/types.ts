@@ -68,3 +68,36 @@ export interface TerminalStatusPayload {
 export interface CappedPayload {
   readonly data: { readonly appendedHead: number };
 }
+
+/**
+ * Payload shape for `advanceActivity`'s bail errors — CONFLICT, ACTIVITY_CAPPED,
+ * CHAIN_QUARANTINED, SESSION_EVICTED: the last row the bulk request fully committed, whatever
+ * reason stopped it, so the caller re-plans from it without a refetch.
+ */
+export interface AdvanceBailPayload {
+  readonly data: { readonly activityID: string; readonly appendedHead: number };
+}
+
+/**
+ * Payload shape for `advanceActivity`'s CHECKPOINT_INVALID: the last fully committed row, plus
+ * the structural or cross-check reason a continuation's tail failed.
+ */
+export interface AdvanceCheckpointInvalidPayload {
+  readonly data: {
+    readonly activityID: string;
+    readonly appendedHead: number;
+    readonly reason: string;
+  };
+}
+
+/**
+ * Payload shape for `advanceActivity`'s ACTIVITY_TERMINAL: the last fully committed row, plus
+ * the terminal status a continuation's target had already reached.
+ */
+export interface AdvanceTerminalPayload {
+  readonly data: {
+    readonly activityID: string;
+    readonly appendedHead: number;
+    readonly status: ActivityStatus;
+  };
+}

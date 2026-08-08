@@ -1,7 +1,7 @@
 import type { DB } from '@vers/db';
+import { buildUnsettledXP } from '@vers/idle-core';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
-import { buildUnsettledXP } from '../build-unsettled-xp';
 import type { MissingSessionPayload } from '../types';
 
 interface GetAvatarProgressionDeps {

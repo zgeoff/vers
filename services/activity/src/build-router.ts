@@ -3,6 +3,7 @@ import { activityContract } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import type { ServiceContext } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
+import { advanceActivity } from './handlers/advance-activity';
 import { getActivityRewards } from './handlers/get-activity-rewards';
 import { getAvatarProgression } from './handlers/get-avatar-progression';
 import { getCurrentActivity } from './handlers/get-current-activity';
@@ -30,6 +31,12 @@ export function buildActivityRouter(deps: BuildActivityRouterDeps) {
   const os = implement(activityContract).$context<ServiceContext>();
 
   return {
+    advanceActivity: os.advanceActivity.handler((opts) =>
+      advanceActivity(
+        { db: deps.db, sendReplayWake: deps.sendReplayWake, simTimeCapMs: deps.simTimeCapMs },
+        opts,
+      ),
+    ),
     getActivityRewards: os.getActivityRewards.handler((opts) => getActivityRewards(deps.db, opts)),
     getAvatarProgression: os.getAvatarProgression.handler((opts) =>
       getAvatarProgression({ db: deps.db, sendReplayWake: deps.sendReplayWake }, opts),

@@ -92,15 +92,7 @@ export async function createHonestActivityFixture(
   const engineCheckpoints = buildTerminalPrefix(simulationResult.checkpoints);
   const keyVersion = 1;
   const simVersion = 'test-engine-hash';
-
-  const startHash = buildStartHash({
-    activityID,
-    contentVersion,
-    encounterNode,
-    keyVersion,
-    seed,
-    simVersion,
-  });
+  const startHash = buildStartHash({ contentVersion, encounterNode, keyVersion, seed, simVersion });
 
   const checkpoints = buildHonestCheckpointRows(engineCheckpoints, {
     seed,

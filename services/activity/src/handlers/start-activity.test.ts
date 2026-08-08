@@ -123,7 +123,6 @@ test('it derives a startHash that folds in the resolved encounter node', async (
 
   expect(activity.startHash).toBe(
     buildStartHash({
-      activityID: activity.id,
       contentVersion: activity.contentVersion,
       encounterNode: activity.encounterNode,
       keyVersion: activity.keyVersion,

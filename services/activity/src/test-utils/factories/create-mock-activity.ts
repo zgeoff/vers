@@ -27,7 +27,7 @@ export function createMockActivity(
 
   const startHash =
     overrides.startHash ??
-    buildStartHash({ activityID: id, contentVersion, encounterNode, keyVersion, seed, simVersion });
+    buildStartHash({ contentVersion, encounterNode, keyVersion, seed, simVersion });
 
   return {
     avatarId: createId(),

@@ -25,6 +25,8 @@
           "broadcast",
           "compare",
           "flush",
+          "fold",
+          "mint",
           "park",
           "record",
           "redirect",

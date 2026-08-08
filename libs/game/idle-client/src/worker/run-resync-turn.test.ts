@@ -1431,21 +1431,30 @@ test('it settles a mid-fast-forward displacement as active-elsewhere with the no
     startedAt: new Date(Date.now() - 63_000),
   });
 
-  // another session takes the writer while the catch-up simulates, so its first submitted tail
-  // is rejected whole
+  // another session takes the writer while the catch-up simulates, so its bulk request is
+  // rejected whole
   server.use(
-    mockActivityService.trackActivityProgress.handler((opts) => {
-      throw opts.errors.SESSION_EVICTED({ data: {} });
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.SESSION_EVICTED({
+        data: { activityID: opts.input.activityID, appendedHead: opts.input.expectedHead },
+      });
     }),
   );
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  await ctx.connection.waitForMessages(3);
+  await ctx.connection.waitForMessages(4);
 
   expect(ctx.connection.received).toStrictEqual([
     {
       status: { attempts: 0, kind: 'fast-forwarding', levelUps: 0 },
+      type: WorkerMessageType.ResyncStatus,
+    },
+
+    // the whole plan's optimistic tallies report the instant local planning completes, before the
+    // rejected bulk request settles
+    {
+      status: { attempts: 1, kind: 'fast-forwarding', levelUps: 1 },
       type: WorkerMessageType.ResyncStatus,
     },
     { activityID: activity.id, type: WorkerMessageType.WriterDisplaced },
