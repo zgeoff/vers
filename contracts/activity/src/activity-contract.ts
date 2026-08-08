@@ -22,7 +22,7 @@ const TerminalStatusDataSchema = z.object({ appendedHead: z.int(), status: Activ
 
 /**
  * `advanceActivity`'s uniform bail data: the last row a rejected bulk request fully committed,
- * whatever reason stopped it — the re-anchor point the client's outer resync re-plans from.
+ * whatever reason stopped it — the row the client's outer resync re-plans from.
  */
 const AdvanceBailDataSchema = z.object({ activityID: z.string(), appendedHead: z.int() });
 const AdvanceCheckpointInvalidDataSchema = AdvanceBailDataSchema.extend({ reason: z.string() });
@@ -86,9 +86,9 @@ export const activityContract = {
           expectedHead: z.int().min(0),
         })
 
-        // The per-array caps still admit continuations × checkpoints work; the aggregate bound is
-        // what keeps a direct API caller's synchronous hash + insert cost per request flat,
-        // matching the honest client's per-request total.
+        // The per-array caps alone still admit continuations × checkpoints work; the aggregate
+        // bound is what keeps a direct API caller's synchronous hash and insert cost per request
+        // flat, matching the honest client's per-request total.
         .refine(
           (input) =>
             input.continuations.reduce((total, entry) => total + entry.checkpoints.length, 0) <=

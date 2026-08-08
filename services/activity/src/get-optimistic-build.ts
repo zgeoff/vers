@@ -6,12 +6,12 @@ import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 
 /**
- * An avatar's settled xp plus the unsettled xp of every activity that ended and is still awaiting
- * its verifier — what a new run's build snapshot is stamped with — beside the runs that xp came
- * from. A `parked` or `quarantined` activity is left out: both are holds with no path back to
- * verification on their own, so counting them would stamp xp that never settles into this run's
- * snapshot and every later one's. The settled row and the unsettled set are read in one statement,
- * so a concurrent verifier commit can't land its delta in the gap between two separate reads.
+ * The total a new run's build snapshot stamps — the avatar's settled xp plus the unsettled xp of
+ * every activity that ended and still awaits its verifier — beside the runs that xp came from. A
+ * `parked` or `quarantined` activity is left out: both are holds with no path back to verification
+ * on their own, so counting them would stamp xp that never settles into this run's snapshot and
+ * every later one's. One statement reads the settled row and the unsettled set together, so a
+ * concurrent verifier commit can't land its delta between two separate reads.
  */
 export async function getOptimisticBuild(
   trx: Kysely<DB>,

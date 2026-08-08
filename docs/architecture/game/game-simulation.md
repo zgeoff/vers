@@ -84,8 +84,7 @@ checkpoints converge instead of interleaving.
 ## Server-authored inputs
 
 `startActivity` and `advanceActivity` are the server actions that own every simulation input.
-`startActivity` mints a single fresh activity and resolves everything it pins fresh from server
-truth:
+`startActivity` mints a single fresh activity and resolves everything it pins from server truth:
 
 - derives the seed: a CSPRNG mint for a node's first-ever activity, or the previous activity's
   appended checkpoint for a continuation started online (see [the seed chain](./seed-chain.md))
@@ -94,13 +93,12 @@ truth:
 - stamps the engine and content versions
 
 `advanceActivity` mints a whole chain of continuations in one bulk request, replaying an offline gap
-under the exact context the client's own local simulation was pinned to rather than resolving any of
-it fresh: every continuation it mints reuses the initial row's own seed chain and pinned
-encounter/version context unchanged, and re-derives its own `buildSnapshot` server-side from the
-avatar's progression instead of resolving a fresh build. The client predicts that same snapshot
-locally so its offline simulation runs against the correct build; `advanceActivity` cross-checks the
-prediction against what it derived and rejects the continuation on a mismatch rather than trusting
-the client's value.
+under the exact context the client's own local simulation was pinned to: every continuation it mints
+reuses the initial row's seed chain and pinned encounter/version context unchanged, and re-derives
+each `buildSnapshot` server-side from the avatar's progression rather than resolving a fresh build.
+The client predicts that same snapshot locally so its offline simulation runs against the correct
+build; `advanceActivity` cross-checks the prediction against what it derived and rejects the
+continuation on a mismatch.
 
 The `Started` snapshot pins every version a replay needs — the engine and content versions, the roll
 `keyVersion` ([game entropy](./game-entropy.md#version-pinning)), and `start_chain_index`
@@ -109,17 +107,17 @@ produced it.
 
 The activity's own id carries no cryptographic role: its start hash digests only
 `[seed, simVersion, contentVersion, keyVersion, encounterNode]`, since
-`(seed, versions, encounterNode)` already identifies the stream uniquely and a checkpoint's
-`chainIndex` plus its link to the chain's appended anchor — never the id — is what keeps one
-activity's checkpoints from crossing into another's. The id is a client-assigned label:
-`advanceActivity`'s caller mints each continuation's id itself, so the whole chain a fast-forward
-walks is computable client-side with no round trip per row. Client-submitted activity and avatar
-payloads are otherwise display hints only — a continuation's seed and build snapshot are client
-computations the verifier and `advanceActivity` both reproduce from the appended chain and settled
-progression, online and offline alike, never a round-tripped value taken on trust. The scope node's
-encounter params resolve server-side and freeze onto the activity row at start, inherited unchanged
-by every continuation `advanceActivity` mints in the same request. They fold into the start hash, so
-a later content change can't retroactively alter an activity already in flight.
+`(seed, versions, encounterNode)` already identifies the stream uniquely. A checkpoint's
+`chainIndex` plus its link to the chain's appended anchor — never the id — keeps one activity's
+checkpoints from crossing into another's. The id is a client-assigned label: `advanceActivity`'s
+caller mints each continuation's id itself, so the whole chain a fast-forward walks is computable
+client-side with no round trip per row. Client-submitted activity and avatar payloads are otherwise
+display hints only — a continuation's seed and build snapshot are client computations the verifier
+and `advanceActivity` both reproduce from the appended chain and settled progression, online and
+offline alike, never a round-tripped value taken on trust. The scope node's encounter params resolve
+server-side and freeze onto the activity row at start, inherited unchanged by every continuation
+`advanceActivity` mints in the same request. They fold into the start hash, so a later content
+change can't retroactively alter an activity already in flight.
 
 Build mutations are gated while an activity is active: level-ups render optimistically and apply
 between activities. A snapshot that cannot change mid-activity is what makes replay exact.
@@ -236,8 +234,8 @@ Four processes move simulation results around, each with one name:
 - A **resync** is the client's confirmed-state fetch (verified anchor, appended head, server time)
   and the decision it drives.
 - A **fast-forward** is the client's catch-up simulation of an offline gap, run on return: every
-  attempt the gap covers simulates locally first, instantly, with no network call, before any of it
-  reaches the server.
+  attempt the gap covers simulates locally, with no network call, before any of it reaches the
+  server.
 - **Reconstruction** re-runs an activity from its seed to rebuild simulation state the client no
   longer holds. Determinism makes the result identical to the lost original, and the
   already-accepted prefix costs nothing against the budget.
@@ -253,15 +251,16 @@ there. A larger gap fast-forwards first: the confirmed row's own remaining tail 
 free, then each further attempt derives its seed, client-assigned id, and predicted build snapshot
 from the chain position alone — the same computation `advanceActivity` reproduces server-side — so
 the whole gap, however long, simulates before any of it is submitted. The planned chain ships as
-bounded `advanceActivity` batches, sequentially and awaited: batch N's mint commits before batch N+1
-ships, never asserted, and no other path — in particular not the per-activity checkpoint submitter —
-delivers an offline continuation. A rejected batch discards every batch still unsent and reconciles
-to whichever continuation last committed anywhere in the request. Once at least one continuation has
-committed, that is always a freshly minted row with nothing appended yet, and the worker attaches
-live to it exactly as it would a fresh continuation reached by any other path. A rejection before
-the request's first continuation ever commits mints nothing at all — the bail carries only the
-activity id and the confirmed head unchanged from before the gap, and the worker reconciles to that
-same row through the outer resync's own refetch rather than attaching anywhere new.
+bounded `advanceActivity` batches, sequentially and awaited: batch N's mint is confirmed committed
+before batch N+1 ships, and no other path — in particular not the per-activity checkpoint submitter
+— delivers an offline continuation. On a rejected batch, the client discards every batch still
+unsent and reconciles to whichever continuation last committed anywhere in the request. When at
+least one continuation has committed, the reconciled row is a fresh mint with nothing appended yet,
+and the worker attaches live to it exactly as it would a fresh continuation reached by any other
+path. A request rejected before its first continuation commits mints nothing at all — the bail
+carries only the activity id and the confirmed head unchanged from before the gap, and the worker
+reconciles to that same row through the outer resync's own refetch rather than attaching anywhere
+new.
 
 A live continuation the worker couldn't complete — a same-row race just after a terminal checkpoint,
 or a transport failure starting the next row — leaves a durable start intent that survives a worker
@@ -269,8 +268,8 @@ reload. A resync for the intent's avatar delivers it at entry, before the confir
 the fetch finds the minted row and attaches it through ordinary planning; an intent whose source row
 still reads active waits for the resync's own queued-checkpoint drain to close it, then retries. A
 player stop, or a fresh player-chosen start, clears the intent, so a run the player ended is never
-resumed. A fast-forward needs no such intent: a worker reload mid-drain simply re-plans the gap from
-the last confirmed row, deterministically reproducing the same chain.
+resumed. A fast-forward needs no such intent: a worker reload mid-drain re-plans the gap from the
+last confirmed row, deterministically reproducing the same chain.
 
 ### The offline budget
 

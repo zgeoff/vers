@@ -27,7 +27,7 @@ interface AdvanceActivityDeps {
   readonly sendReplayWake: () => void;
 
   /**
-   * Ceiling on the avatar's accrued simulated-time budget, in milliseconds — the same cap
+   * Cap on the avatar's accrued simulated-time budget, in milliseconds — the same limit
    * `trackActivityProgress` enforces, applied once per continuation's own committed transaction.
    */
   readonly simTimeCapMs: number;
@@ -73,20 +73,15 @@ interface AdvanceActivityOpts {
  *
  * Each continuation is its own transaction: append, then (on terminal) mint — reusing
  * `trackActivityProgress`'s head compare-and-swap, meter debit, and terminal anchor advance, and
- * `startActivity`'s chain-seed read and provenance recording. A rejection at either step throws a
- * `ContinuationBailError`, which unwinds the whole transaction, so the confirmed head reported on any
- * bail is always the last continuation that fully committed — never a partial append with no
- * successor. The mint step authors `buildSnapshot` itself via `getOptimisticBuild`; the entry's own
- * `buildSnapshot` is only a cross-check hint, and a mismatch bails with `CHECKPOINT_INVALID` rather
- * than trusting it — a client-supplied snapshot the server stored as-is would be direct xp
- * inflation. Mint dedup keys on the entry's own `id`, resolved outside any transaction once its
- * insert's unique violation has unwound one: an existing row at that id converges only when its
- * `startKey` and scope also match this continuation (a resubmit of a partially committed request),
- * never on id and ownership alone — a reused or aliased id must not let an unrelated activity
- * become the next append target. Anything short of that full match — foreign-owned, a different
- * `startKey`, a different scope, or genuinely missing — conflicts, unlike `startActivity`'s own
- * dedup (the active-status row for the avatar), which would find nothing and stall forever once a
- * gap has already ended terminal.
+ * `startActivity`'s chain-seed read and provenance recording. A rejection at either step unwinds
+ * the whole transaction, so the confirmed head reported on any bail is always the last fully
+ * committed continuation's — never a partial append with no successor. The mint step authors
+ * `buildSnapshot` itself server-side; the entry's own `buildSnapshot` is only a cross-check hint,
+ * and a mismatch bails with `CHECKPOINT_INVALID` — a client-supplied snapshot the server stored
+ * as-is would be direct xp inflation. Mint dedup keys on the entry's own `id` plus a matching
+ * `startKey` and scope, never on id and ownership alone, resolved outside any transaction once
+ * the insert's unique violation has unwound one; `startActivity`'s own dedup (the active-status
+ * row for the avatar) would find nothing and stall forever once a gap has already ended terminal.
  */
 export async function advanceActivity(
   deps: AdvanceActivityDeps,
@@ -222,9 +217,9 @@ type BailOutcome =
 
 /**
  * Thrown to reject a continuation from inside its own transaction, unwinding whatever it appended
- * or minted so far — the mechanism, not `runContinuation`'s return value, that makes a rejected
- * continuation roll back: `db.transaction().execute()` commits on any normal return regardless of
- * the value, and only a throw triggers its rollback.
+ * or minted so far — the mechanism, not a return value, that makes a rejected continuation roll
+ * back: `db.transaction().execute()` commits on any normal return regardless of the value, and
+ * only a throw triggers its rollback.
  */
 class ContinuationBailError extends Error {
   readonly outcome: BailOutcome;
@@ -318,11 +313,10 @@ interface RunContinuationInput {
  * terminal by construction — mint its own id as the next row. The target read and its structural
  * validation run outside any transaction, matching `trackActivityProgress`'s own shape, so a
  * rejection found there needs no rollback. The cap decision and the append-and-mint each open
- * their own top-level transaction: a cap commits on its own — its terminal transition is honest
- * progress independent of this continuation's own fate, exactly as `trackActivityProgress` commits
- * it apart from the append it rejects — while an append and its following mint share one
- * transaction, so a rejected mint (`ContinuationBailError`, thrown from inside it) rolls the append back
- * with it.
+ * their own top-level transaction. A cap commits on its own: its terminal transition is honest
+ * progress independent of this continuation's fate, exactly as `trackActivityProgress` commits it
+ * apart from the append it rejects. An append and its following mint share one transaction, so a
+ * rejected mint rolls the append back with it.
  */
 async function runContinuation(
   deps: AdvanceActivityDeps,
@@ -575,8 +569,8 @@ async function runContinuation(
  * Resolves a continuation's guarded update losing its compare-and-swap, from a fresh read of the
  * target row. A resubmit that recomputes onto the row's recorded tail has already landed in an
  * earlier, partially committed request — only the mint may still be outstanding, so this falls
- * through to it exactly like the non-active branch above. Every other outcome bails with the
- * row's own current head as the re-anchor point.
+ * through to it exactly as a target that already reads non-active does. Every other outcome bails
+ * with the row's own current head — the row the client re-plans from.
  */
 async function resolveLostRace(
   trx: Kysely<DB>,
@@ -627,13 +621,12 @@ async function resolveLostRace(
 
 /**
  * Mints a continuation's own id as the row appended onto in this request's next step.
- * Server-authors `buildSnapshot` via `getOptimisticBuild` and rejects with `CHECKPOINT_INVALID` on
- * a mismatch against the continuation's hint, rather than trusting the client's value. The insert's
- * own unique violation — an id already minted by an earlier attempt at this same continuation — is
- * left to propagate uncaught: this transaction is about to commit everything before it, so a
- * caught-and-recovered duplicate here would need a second statement in a connection Postgres has
- * already poisoned. The caller resolves that collision instead, once this transaction's rollback
- * has landed.
+ * Server-authors `buildSnapshot` from the avatar's settled-plus-unsettled progression and rejects
+ * with `CHECKPOINT_INVALID` on a mismatch against the continuation's hint. The insert's own unique
+ * violation — an id already minted by an earlier attempt at this same continuation — propagates
+ * uncaught: this transaction is about to commit everything before it, so a caught-and-recovered
+ * duplicate here would need a second statement in a connection Postgres has already poisoned. The
+ * caller resolves that collision instead, once this transaction's rollback has landed.
  */
 async function mintContinuation(
   trx: Kysely<DB>,
@@ -734,11 +727,11 @@ async function mintContinuation(
 }
 
 /**
- * Resolves a mint's unique-violation, from a fresh connection once the transaction that hit it has
- * rolled back: an existing row at the continuation's id converges only when it is genuinely the
- * continuation this request is retrying — owned by this avatar, minted from the same `startKey`,
- * and scoped to the same chain — a resubmit of a request whose mint already committed and whose
- * response was lost. A row that merely shares the id but not that provenance (a reused or aliased
+ * Resolves a mint's unique violation, from a fresh connection once the transaction that hit it has
+ * rolled back: an existing row at the continuation's id converges only when it is the continuation
+ * this request is retrying — owned by this avatar, minted from the same `startKey`, and scoped to
+ * the same chain — a resubmit of a request whose mint already committed and whose response was
+ * lost. A row that merely shares the id but not that provenance (a reused or aliased
  * id landing on an unrelated activity) is rejected exactly like a foreign-owned or missing row:
  * `undefined`, a conflict the caller reports rather than a row it adopts as the next append target.
  */

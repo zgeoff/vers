@@ -26,13 +26,13 @@ export interface OptimisticBuild {
 
 /**
  * Folds a settled xp baseline against a set of unverified runs into the optimistic total a new
- * activity's build snapshot stamps — a run that moved the total by nothing is left out of
- * `sourceIDs`, since the snapshot is the same value whether or not it exists and its later
- * rejection has no bearing on this run's honesty. A negative contribution still counts — a death
- * penalty lowered the total, which is a borrow like any other. The server folds a database read of
- * every unverified run into this shape; the client folds its own local simulation state the same
- * way, so a chain simulated entirely offline predicts the identical total the server would compute
- * from its own read.
+ * activity's build snapshot stamps. A run that moved the total by nothing is left out of
+ * `sourceIDs`: the snapshot is the same value whether or not that run exists, so its later
+ * rejection has no bearing on the new activity's honesty. A negative contribution still counts —
+ * a death penalty lowered the total, which is a borrow like any other. The server folds a
+ * database read of every unverified run into this shape; the client folds its own local
+ * simulation state the same way, so a chain simulated entirely offline predicts the identical
+ * total the server would compute from its own read.
  */
 export function foldOptimisticBuild(
   settledXP: number,

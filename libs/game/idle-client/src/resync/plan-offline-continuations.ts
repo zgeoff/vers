@@ -45,22 +45,21 @@ export interface PlanOfflineContinuationsResult {
 }
 
 /**
- * Simulates an entire offline gap locally, instantly: no network call, no submitter. Attempt by
- * attempt, it reconstructs the confirmed row's own remaining tail for free (the already-appended
- * prefix costs nothing against the budget), then — while budget remains and the failure policy
- * allows it — derives each further attempt's seed, client id, and predicted build snapshot from
- * the chain position alone, exactly as `advanceActivity` reproduces them server-side. Prediction
- * depends on the single-active-run invariant: no other scope accrues unsettled xp during the gap,
- * so the confirmed row's own snapshot is the correct baseline for every later attempt's fold, and
- * the only sources this loop must add are the gap's own continuations as they close. A failure
- * under the abort policy stops planning after that continuation's own tail — the same policy
- * `pickPostTerminalAction` applies live — so no further continuation is planned past it. The
- * wire format still mints that continuation's own fresh row (every entry both closes a row and
- * opens the next), but the caller stops that row back durably rather than attaching it: like an
- * aborted online failure, nothing resumes automatically, and the row reads idle server-side too.
- * A confirmed row whose reconstructed attempt already accounts for every checkpoint through its
- * own terminal — an empty remaining tail — resolves as no fast-forward at all rather than minting
- * a successor from nothing.
+ * Simulates an entire offline gap locally: no network call, no submitter. Attempt by attempt, it
+ * reconstructs the confirmed row's own remaining tail for free (the already-appended prefix costs
+ * nothing against the budget), then — while budget remains and the failure policy allows it —
+ * derives each further attempt's seed, client id, and predicted build snapshot from the chain
+ * position alone, exactly as `advanceActivity` reproduces them server-side. Prediction depends on
+ * the single-active-run invariant: no other scope accrues unsettled xp during the gap, so the
+ * confirmed row's own snapshot is the correct baseline for every later attempt's fold, and the
+ * only sources this loop must add are the gap's own continuations as they close. A failure under
+ * the abort policy stops planning after that continuation's own tail — the same policy live play
+ * applies after a terminal checkpoint. The wire format still mints that continuation's own fresh
+ * row, since every entry both closes a row and opens the next; the caller stops that row back
+ * durably rather than attaching it, so — like an aborted online failure — nothing resumes
+ * automatically and the row reads idle server-side. A confirmed row whose reconstructed attempt
+ * already accounts for every checkpoint through its own terminal — an empty remaining tail —
+ * resolves as no fast-forward at all rather than minting a successor from nothing.
  */
 export async function planOfflineContinuations(
   options: Readonly<PlanOfflineContinuationsOptions>,
@@ -202,10 +201,9 @@ interface OfflineOptimisticSource {
 
 /**
  * Maps a reconstructed attempt's tail onto the wire `CheckpointBatchEntry` shape, chaining each
- * entry's hash onto the row's own `lastHash` (or the previous entry's) exactly as
- * `buildCheckpointBatchEntry` chains a live submission. `appendedHead` offsets the first entry's
- * version for a row whose prefix is already confirmed — the reconstruction's own tail-slicing
- * point.
+ * entry's hash onto the row's own `lastHash` (or the previous entry's) exactly as a live
+ * submission chains. `appendedHead` offsets the first entry's version for a row whose prefix is
+ * already confirmed — the reconstruction's own tail-slicing point.
  */
 function buildTailEntries(
   cursor: Readonly<OfflineRowCursor>,

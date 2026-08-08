@@ -32,13 +32,12 @@ interface RunFastForwardOptions {
 }
 
 /**
- * Simulates the whole offline gap locally and instantly through `planOfflineContinuations`, then
- * ships it as bounded `advanceActivity` batches through `drainOfflineBatches` — the only path that
- * delivers offline continuations, never the per-activity `createCheckpointSubmitter`. Tallies
- * report optimistically the instant planning completes, before any batch reaches the network;
- * `drainOfflineBatches` reconciles down to the confirmed head on a rejection, reporting zero
- * attempts and level-ups the same way a lost writer race already does, so the caller's existing
- * `displaced` handling clears the same optimistic display a lost writer race would.
+ * Simulates the whole offline gap locally, then ships it as bounded `advanceActivity` batches —
+ * the only path that delivers offline continuations, never the per-activity checkpoint submitter.
+ * Tallies report optimistically the instant planning completes, before any batch reaches the
+ * network; after a rejected batch, the report reconciles down to the confirmed head with zero
+ * attempts and level-ups, so the caller's existing `displaced` handling clears the optimistic
+ * display exactly as it does after a lost writer race.
  */
 export async function runFastForward(
   options: Readonly<RunFastForwardOptions>,
@@ -88,10 +87,10 @@ export async function runFastForward(
     };
   }
 
-  // The delivered plan's final row is always the last continuation's own fresh mint — nothing
-  // has been appended onto it yet, so it is live-attachable, UNLESS the plan stopped on an
-  // aborted failure: the abort policy's online counterpart never starts a successor, so the
-  // caller stops this freshly minted row back durably too, rather than attaching or resuming it.
+  // The delivered plan's final row is always the last continuation's own fresh mint — nothing has
+  // been appended onto it yet, so it is live-attachable. A plan that stopped on an aborted failure
+  // is the exception: the abort policy's online counterpart never starts a successor, so the
+  // caller stops that freshly minted row back durably rather than attaching or resuming it.
   return {
     activity: drained.activity,
     appendedHead: drained.appendedHead,

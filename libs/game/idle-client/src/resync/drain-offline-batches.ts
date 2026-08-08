@@ -19,9 +19,9 @@ interface DrainOfflineBatchesOptions {
 
 interface DrainOfflineBatchesResult {
   /**
-   * The confirmed row and head as of the last batch that actually committed — the caller's
-   * original `activity`/`appendedHead` when the very first batch was rejected, so a caller never
-   * reports progress a rejection discarded.
+   * The confirmed row and head as of the last batch that committed — the caller's original
+   * `activity`/`appendedHead` when the first batch was rejected, so a caller never reports
+   * progress a rejection discarded.
    */
   readonly activity: ActivityData;
   readonly appendedHead: number;
@@ -35,13 +35,13 @@ interface DrainOfflineBatchesResult {
 
 /**
  * Ships bounded offline-catch-up batches to `advanceActivity`, sequentially and awaited — the
- * single owner of offline continuation delivery. It is never registered with the per-activity
- * `createCheckpointSubmitter`, whose `flushHeld` fans batches out with no cross-activity ordering;
- * two flushers over one queue would double-submit and could interleave. Ordering — batch N's mint
+ * single delivery path for offline continuations. It is never registered with the per-activity
+ * checkpoint submitter, whose held-batch flush fans out with no cross-activity ordering; two
+ * flushers over one queue would double-submit and could interleave. Ordering — batch N's mint
  * committing before batch N+1 ships — comes from awaiting each response before sending the next,
- * not from any assertion. A defined `advanceActivity` rejection discards every batch still unsent
- * and stops immediately: the confirmed row this function returns is whichever batch last
- * committed, exactly what the outer resync re-plans from. A transport failure carries no such
+ * not from any assertion. On a defined `advanceActivity` rejection, the drain discards every batch
+ * still unsent and stops immediately: the confirmed row and head it returns come from the last
+ * committed batch, exactly what the outer resync re-plans from. A transport failure carries no such
  * verdict — the server never rejected anything — so it propagates instead of resolving, reaching
  * the resync's own failure/retry path rather than reading as a displaced writer.
  */

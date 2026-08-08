@@ -8,7 +8,7 @@ import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints
  * through a terminal checkpoint — appended onto whichever row is active when this entry is
  * processed (the request's own `activityID` for the first entry, otherwise the row the previous
  * entry minted). Once that append lands terminal, `id`/`startKey`/`buildSnapshot` mint the next
- * row it roots, ready for the following entry's tail. `buildSnapshot` is the client's own
+ * row, ready for the following entry's tail. `buildSnapshot` is the client's own
  * prediction of that mint's server-authored snapshot — a fast-fail cross-check hint, never trusted
  * as the stored value.
  */

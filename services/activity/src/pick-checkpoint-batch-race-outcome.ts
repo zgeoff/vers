@@ -17,7 +17,7 @@ export interface CheckpointBatchRaceRow {
  * What a lost checkpoint-batch compare-and-swap resolves to: the row is gone (`not-found`), a
  * resubmit that recomputes onto the recorded tail settles as already-applied (`resubmit-settled`),
  * any other batch against a non-active row is fatal for the stream (`terminal`), a different
- * session now owns the writer (`session-evicted`), or the head is simply stale and retryable
+ * session now owns the writer (`session-evicted`), or the head is stale and retryable
  * (`conflict`).
  */
 export type CheckpointBatchRaceOutcome =
@@ -28,10 +28,8 @@ export type CheckpointBatchRaceOutcome =
   | { readonly appendedHead: number; readonly kind: 'terminal'; readonly status: ActivityStatus };
 
 /**
- * Resolves a lost head-row race from a fresh read of the activity row: gone (`not-found`),
- * terminal (a matching resubmit settles as `resubmit-settled`, otherwise `terminal`), writer taken
- * over (`session-evicted`), or a retryable stale head (`conflict`). Pure and error-shape-free, so
- * each caller maps the outcome onto its own contract's error payloads.
+ * Resolves a lost head-row race from a fresh read of the activity row. Pure and error-shape-free,
+ * so each caller maps the outcome onto its own contract's error payloads.
  */
 export function pickCheckpointBatchRaceOutcome(
   actingSessionID: null | string,
