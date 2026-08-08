@@ -181,15 +181,15 @@ preference.
 ## Package layout
 
 - **`@vers/worldmap-core`** — the platform-agnostic geometry generator, consumed as TypeScript
-  source. Its public functions are `generateChunk(userSeed, chunkX, chunkY) → Node[]`,
-  `getNodeEdges(node, halo) → EdgeId[]`, `nodeId(cx, cy) → CanonicalId`,
-  `biomeAt(userSeed, pos) → BiomeId`, `difficultyAt(cx, cy) → number`, and
-  `revealViewport(sources, viewport) → RevealedCells`. `generateChunk` takes chunk coordinates; the
-  rest take cell coordinates. `connections` is computed, not stored; `id` is the canonical cell
-  coordinate.
+  source. Its public functions are `buildChunk(userSeed, chunkX, chunkY) → WorldMapNode[]`,
+  `collectNodeEdges(userSeed, cx, cy) → WorldEdge[]`, `toNodeID(cx, cy) → CanonicalID`,
+  `getBiome(userSeed, cx, cy) → BiomeId`, `getDifficulty(cx, cy) → number`, and
+  `collectRevealedCells(sources, viewport) → RevealedCells`. `buildChunk` takes chunk coordinates
+  and `collectRevealedCells` takes reveal sources and a viewport; the rest take cell coordinates.
+  Edges are computed, not stored; `id` is the canonical cell coordinate.
 - **Server-only content module** — content derivation keyed by `scopeSecret`, never bundled to the
-  client. Its functions (`contentOf`, `encounterTable`, `rewardTier`) live here and nowhere the
-  client can reach.
+  client. Its functions (`deriveContent`, `buildEncounterTable`, `getRewardTier`) live here and
+  nowhere the client can reach.
 - **`@vers/worldmap-client`** — geometry generation for render, viewport-bounded reveal queries, and
   caching of disclosed content, in the SharedWorker. Geometry renders optimistically; content slots
   read as fogged until the server discloses them. The three.js render layer — meshes, edge lines,
