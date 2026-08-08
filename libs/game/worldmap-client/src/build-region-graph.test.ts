@@ -42,3 +42,15 @@ test('it connects the origin to at least one neighbour', () => {
 test('it is deterministic for a seed and radius', () => {
   expect(buildRegionGraph(SEED, 2)).toStrictEqual(buildRegionGraph(SEED, 2));
 });
+
+test('it lays nodes out differently under a different seed', () => {
+  const id = toNodeID(1, 0);
+
+  expect(buildRegionGraph(SEED, 2).nodes[id]?.position).not.toStrictEqual(
+    buildRegionGraph(SEED + 1, 2).nodes[id]?.position,
+  );
+});
+
+test('it rejects a non-integer radius', () => {
+  expect(() => buildRegionGraph(SEED, 2.5)).toThrow('non-negative integer');
+});

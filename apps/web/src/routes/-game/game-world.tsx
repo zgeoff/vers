@@ -1,6 +1,7 @@
 import { GameCanvas } from '@vers/game-rendering';
 import { buildRegionGraph, setSelectedNode, setWorldGraph } from '@vers/worldmap-client';
 import { toNodeID } from '@vers/worldmap-core';
+import invariant from 'tiny-invariant';
 import { SceneRoot } from './scene-root';
 
 /**
@@ -14,10 +15,9 @@ const WORLD_SEED = 0;
  */
 const REGION_RADIUS = 24;
 const worldGraph = buildRegionGraph(WORLD_SEED, REGION_RADIUS);
+const originNode = worldGraph.nodes[toNodeID(0, 0)];
 
-// oxlint-disable-next-line typescript/no-non-null-assertion -- the region always contains its origin cell
-const originNode = worldGraph.nodes[toNodeID(0, 0)]!;
-
+invariant(originNode, 'the generated region always contains its origin cell');
 setWorldGraph(worldGraph);
 setSelectedNode(originNode, null);
 

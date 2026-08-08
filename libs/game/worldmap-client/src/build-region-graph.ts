@@ -1,5 +1,6 @@
 import { buildCellNode, collectNodeEdges } from '@vers/worldmap-core';
 import type { LatticeEdge, LatticeNode } from '@vers/worldmap-core';
+import invariant from 'tiny-invariant';
 import type { WorldGraph } from './types';
 
 /**
@@ -8,6 +9,11 @@ import type { WorldGraph } from './types';
  * rendered edge lands on a rendered node.
  */
 export function buildRegionGraph(userSeed: number, radius: number): WorldGraph {
+  invariant(
+    Number.isSafeInteger(radius) && radius >= 0,
+    'buildRegionGraph radius must be a non-negative integer',
+  );
+
   const nodes: Record<string, LatticeNode> = {};
 
   for (let cx = -radius; cx <= radius; cx++) {
