@@ -1,4 +1,4 @@
-import type { WorldGraph } from '@vers/worldmap-core';
+import type { WorldGraph } from '../types';
 import { useWorldmapStore } from './use-worldmap-store';
 
 export function setWorldGraph(graph: WorldGraph) {

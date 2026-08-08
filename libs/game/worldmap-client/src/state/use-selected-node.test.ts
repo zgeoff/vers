@@ -22,7 +22,7 @@ test('it returns the current selected node and object3D', () => {
 });
 
 test('it derives an object3D positioned at the node when none was provided', () => {
-  const node = createMockWorldMapNode({ id: 'node2', index: 1, position: [3, 5] });
+  const node = createMockWorldMapNode({ id: 'node2', position: [3, 5] });
 
   setSelectedNode(node);
 

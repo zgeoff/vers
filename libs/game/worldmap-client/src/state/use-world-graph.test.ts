@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import type { WorldGraph } from '@vers/worldmap-core';
 import { createMockWorldMapEdge } from '../test-utils/factories/create-mock-world-map-edge';
 import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
+import type { WorldGraph } from '../types';
 import { setWorldGraph } from './set-world-graph';
 import { useWorldGraph } from './use-world-graph';
 

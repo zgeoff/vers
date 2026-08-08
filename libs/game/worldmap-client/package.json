@@ -24,6 +24,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "three": "catalog:",
+    "tiny-invariant": "catalog:",
     "zustand": "catalog:"
   },
   "devDependencies": {

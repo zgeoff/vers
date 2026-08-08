@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
-import type { WorldGraph } from '@vers/worldmap-core';
 import { Object3D } from 'three';
 import { createMockWorldMapEdge } from '../test-utils/factories/create-mock-world-map-edge';
 import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
+import type { WorldGraph } from '../types';
 import { buildNearbyGraph } from './build-nearby-graph';
 
 test('it filters nodes beyond the maximum distance', () => {
