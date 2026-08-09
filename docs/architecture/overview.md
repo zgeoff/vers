@@ -181,8 +181,8 @@ Libraries (`libs/`, grouped by domain):
   three.js canvas
 - `libs/game/game-utils` - shared game logic (encounter derivation, rewards)
 - `libs/game/roll-crypto` - avatar roll-key derivation and the rolled-reward digest PRF
-- `libs/game/item-gen` - entropy-agnostic item interpreter: roll streams, versioned loot tables,
-  affix constraints
+- `libs/game/item-gen` - entropy-agnostic item interpreter: roll streams, interpretation of
+  caller-supplied loot tables, affix constraints
 - `libs/game/idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
 - `libs/game/idle-core` - deterministic seeded simulation engine
 - `libs/game/worldmap-content` - sealed worldmap content derivation and the s2s scope-secret read it
