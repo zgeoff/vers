@@ -12,7 +12,7 @@ export interface SimulationInputSource {
   readonly avatarID: string;
   readonly buildSnapshot: { readonly level: number; readonly xp: number };
   readonly contentVersion: string;
-  readonly encounterNode: { readonly difficulty: number; readonly poolID?: string };
+  readonly encounterNode: { readonly difficulty: number; readonly poolID?: string | undefined };
   readonly id: string;
   readonly seed: string;
 }

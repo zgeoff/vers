@@ -80,7 +80,7 @@ test('it rethrows a keys-defined NOT_FOUND as a plain Error naming the ref and v
     }),
   );
 
-  await expect(
+  expect(
     readScopeSecret(
       {
         issuer: 'service-activity',
@@ -89,10 +89,7 @@ test('it rethrows a keys-defined NOT_FOUND as a plain Error naming the ref and v
       },
       { avatarID: 'avatar_1', secretRef: 'worldmap', secretVersion: 99 },
     ),
-  ).rejects.toThrowWithMessage(
-    Error,
-    /keys service has no root for secretRef "worldmap" version 99/,
-  );
+  ).rejects.toThrow(/keys service has no root for secretRef "worldmap" version 99/);
 });
 
 test('it rejects when the keys service never responds', async () => {

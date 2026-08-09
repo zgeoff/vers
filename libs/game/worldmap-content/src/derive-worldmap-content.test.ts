@@ -18,7 +18,7 @@ test('it stamps no sealed fields for content version 1', () => {
 test('it stamps a poolID drawn from the registered pool list for content version 2', () => {
   const result = deriveWorldmapContent('2', { coord: [3, -2], scopeSecret, userSeed: 0 });
 
-  invariant(result.poolID, 'content version 2 must stamp a poolID');
+  invariant(result.poolID !== undefined, 'content version 2 must stamp a poolID');
 
   const poolIDs = contentV2.pools.map((pool) => pool.id);
 
