@@ -399,6 +399,25 @@
         "typescript": "catalog:",
       },
     },
+    "libs/data/content-registry": {
+      "name": "@vers/content-registry",
+      "version": "0.0.0",
+      "dependencies": {
+        "@vers/contract-activity": "workspace:*",
+        "@vers/db": "workspace:*",
+        "kysely": "catalog:",
+        "tiny-invariant": "catalog:",
+      },
+      "devDependencies": {
+        "@faker-js/faker": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "libs/data/db": {
       "name": "@vers/db",
       "version": "0.0.0",
@@ -2611,6 +2630,8 @@
     "@vers/bugsink": ["@vers/bugsink@workspace:apps/bugsink"],
 
     "@vers/client-test-utils": ["@vers/client-test-utils@workspace:libs/testing/client-test-utils"],
+
+    "@vers/content-registry": ["@vers/content-registry@workspace:libs/data/content-registry"],
 
     "@vers/contract-activity": ["@vers/contract-activity@workspace:contracts/activity"],
 

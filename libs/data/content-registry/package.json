@@ -1,0 +1,28 @@
+{
+  "name": "@vers/content-registry",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@vers/contract-activity": "workspace:*",
+    "@vers/db": "workspace:*",
+    "kysely": "catalog:",
+    "tiny-invariant": "catalog:"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@vers/service-test-utils": "workspace:*",
+    "@vers/test-utils": "workspace:*",
+    "@zgeoff/bun-test-extended": "catalog:",
+    "typescript": "catalog:"
+  }
+}
