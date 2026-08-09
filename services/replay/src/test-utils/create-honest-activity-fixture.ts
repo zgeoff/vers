@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
+import type { EncounterNode } from '@vers/contract-activity';
 import { buildCheckpointHash, buildStartHash } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { Activities, ActivityChains, DB, Json } from '@vers/db';
@@ -40,6 +41,13 @@ interface HonestActivityFixture {
   readonly activity: Selectable<Activities>;
   readonly chain: Selectable<ActivityChains>;
   readonly checkpoints: ReadonlyArray<HonestCheckpointRow>;
+
+  /**
+   * The node exactly as this fixture authored it before insert, typed — callers assert loader
+   * output against it instead of re-shaping the row's untyped jsonb.
+   */
+  readonly encounterNode: EncounterNode;
+
   readonly engineCheckpoints: ReadonlyArray<ActivityCheckpoint>;
 }
 
@@ -166,7 +174,7 @@ export async function createHonestActivityFixture(
       .execute();
   }
 
-  return { activity, chain, checkpoints, engineCheckpoints };
+  return { activity, chain, checkpoints, encounterNode, engineCheckpoints };
 }
 
 interface BuildFixtureEncounterNodeInput {
@@ -184,7 +192,7 @@ interface BuildFixtureEncounterNodeInput {
  * backend recomputes. A `null` secretRef is the legacy escape hatch: a fixed difficulty-1 node
  * with no sealed fields.
  */
-function buildFixtureEncounterNode(input: Readonly<BuildFixtureEncounterNodeInput>) {
+function buildFixtureEncounterNode(input: Readonly<BuildFixtureEncounterNodeInput>): EncounterNode {
   if (input.secretRef === null) {
     return { difficulty: 1 };
   }
