@@ -24,9 +24,11 @@ export async function runContentPublish(
 
   const db = createDB({ databaseURL: input.databaseURL });
 
-  await createContentVersion(db, result.document);
-
-  await db.destroy();
+  try {
+    await createContentVersion(db, result.document);
+  } finally {
+    await db.destroy();
+  }
 
   return { contentVersion: result.document.contentVersion };
 }
