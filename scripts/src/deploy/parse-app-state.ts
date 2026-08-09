@@ -51,6 +51,7 @@ export function parseAppState(json: unknown): AppState {
     id: machine.id,
     state: machine.state,
     gitSHA: machine.config?.env?.['GIT_SHA'] ?? null,
+    image: normalizeImage(machine.config?.image),
     checks: machine.checks ?? [],
   }));
 

@@ -20,8 +20,20 @@ test('it reads the deployed SHA and image the whole fleet agrees on', () => {
   expect(parseAppState(json)).toStrictEqual({
     deployedSHA: 'abc123',
     machines: [
-      { checks: [], gitSHA: 'abc123', id: 'm1', state: 'started' },
-      { checks: [], gitSHA: 'abc123', id: 'm2', state: 'suspended' },
+      {
+        checks: [],
+        gitSHA: 'abc123',
+        id: 'm1',
+        image: 'registry.fly.io/x:tag1',
+        state: 'started',
+      },
+      {
+        checks: [],
+        gitSHA: 'abc123',
+        id: 'm2',
+        image: 'registry.fly.io/x:tag1',
+        state: 'suspended',
+      },
     ],
     scheduledMachines: [],
     serviceImage: 'registry.fly.io/x:tag1',
@@ -50,6 +62,7 @@ test('it carries each machine health check through as name and status', () => {
       ],
       gitSHA: 'abc123',
       id: 'm1',
+      image: null,
       state: 'started',
     },
   ]);
@@ -79,6 +92,18 @@ test('it treats a fleet with mixed images as having no service image', () => {
   expect(parseAppState(json).serviceImage).toBeNull();
 });
 
+test('it carries each machine own image through even when the fleet as a whole disagrees', () => {
+  const json = [
+    { config: { image: 'registry.fly.io/x:tag1' }, id: 'm1', name: 'm1', state: 'started' },
+    { config: { image: 'registry.fly.io/x:tag2' }, id: 'm2', name: 'm2', state: 'started' },
+  ];
+
+  expect(parseAppState(json).machines).toStrictEqual([
+    { checks: [], gitSHA: null, id: 'm1', image: 'registry.fly.io/x:tag1', state: 'started' },
+    { checks: [], gitSHA: null, id: 'm2', image: 'registry.fly.io/x:tag2', state: 'started' },
+  ]);
+});
+
 test('it ignores machines outside the app process group', () => {
   const json = [
     { config: { env: { GIT_SHA: 'abc123' } }, id: 'm1', name: 'm1', state: 'started' },
@@ -92,7 +117,7 @@ test('it ignores machines outside the app process group', () => {
 
   expect(parseAppState(json)).toStrictEqual({
     deployedSHA: 'abc123',
-    machines: [{ checks: [], gitSHA: 'abc123', id: 'm1', state: 'started' }],
+    machines: [{ checks: [], gitSHA: 'abc123', id: 'm1', image: null, state: 'started' }],
     scheduledMachines: [],
     serviceImage: null,
   });
@@ -116,7 +141,15 @@ test('it separates a scheduled machine from the app process group by its schedul
 
   expect(parseAppState(json)).toStrictEqual({
     deployedSHA: 'abc123',
-    machines: [{ checks: [], gitSHA: 'abc123', id: 'm1', state: 'started' }],
+    machines: [
+      {
+        checks: [],
+        gitSHA: 'abc123',
+        id: 'm1',
+        image: 'registry.fly.io/x:tag1',
+        state: 'started',
+      },
+    ],
     scheduledMachines: [{ id: 'm2', image: 'registry.fly.io/x:old', name: 'sweeper' }],
     serviceImage: 'registry.fly.io/x:tag1',
   });
@@ -143,7 +176,15 @@ test('it reads images with the resolved digest stripped', () => {
 
   expect(parseAppState(json)).toStrictEqual({
     deployedSHA: 'abc123',
-    machines: [{ checks: [], gitSHA: 'abc123', id: 'm1', state: 'started' }],
+    machines: [
+      {
+        checks: [],
+        gitSHA: 'abc123',
+        id: 'm1',
+        image: 'registry.fly.io/x:tag1',
+        state: 'started',
+      },
+    ],
     scheduledMachines: [{ id: 'm2', image: 'registry.fly.io/x:tag1', name: 'sweeper' }],
     serviceImage: 'registry.fly.io/x:tag1',
   });

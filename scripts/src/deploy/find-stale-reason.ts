@@ -1,6 +1,13 @@
 import type { ChangeSet, DeployTarget } from './types';
 
 /**
+ * The reason reported for a fleet whose machines don't agree on a single deployed SHA — exported
+ * so callers that know the more specific cause can suppress this generic one by identity rather
+ * than by matching message text.
+ */
+export const NO_TRUSTWORTHY_SHA_REASON = 'no trustworthy deployed SHA recorded on the fleet';
+
+/**
  * Decides whether a target's deployed state is behind HEAD, returning the
  * human-readable reason or null when it's current. A null change set (no
  * recorded deploy SHA, or one this repo doesn't contain) is always stale:
@@ -8,7 +15,7 @@ import type { ChangeSet, DeployTarget } from './types';
  */
 export function findStaleReason(target: DeployTarget, changes: ChangeSet | null): string | null {
   if (changes === null) {
-    return 'no trustworthy deployed SHA recorded on the fleet';
+    return NO_TRUSTWORTHY_SHA_REASON;
   }
 
   if (target.trigger.kind === 'turbo-affected') {
