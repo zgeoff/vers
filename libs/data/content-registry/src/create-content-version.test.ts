@@ -27,10 +27,13 @@ test('it publishes a document and moves the current pointer to it', async () => 
 test('it rejects a duplicate contentVersion and leaves the pointer untouched', async () => {
   await using ctx = await setupTest();
 
-  const document = createMockContentDocument({ contentVersion: 'dup-version' });
+  const first = createMockContentDocument({ contentVersion: 'dup-version' });
+  const second = createMockContentDocument({ contentVersion: 'later-version' });
 
-  await createContentVersion(ctx.db, document);
+  await createContentVersion(ctx.db, first);
+  await createContentVersion(ctx.db, second);
 
-  expect(createContentVersion(ctx.db, document)).rejects.toThrow();
-  expect(findCurrentContentVersion(ctx.db)).resolves.toBe('dup-version');
+  // republishing the first document must not move the pointer back off the later version
+  expect(createContentVersion(ctx.db, first)).rejects.toThrow();
+  expect(findCurrentContentVersion(ctx.db)).resolves.toBe('later-version');
 });
