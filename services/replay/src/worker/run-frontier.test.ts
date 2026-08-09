@@ -1,5 +1,8 @@
 import { expect, test } from 'bun:test';
-import { CONTENT_BY_VERSION, buildStateFromSeed } from '@vers/game-utils';
+import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
+import { ContentDocumentSchema } from '@vers/contract-activity';
+import { contentDocumentV2 } from '@vers/db';
+import { buildStateFromSeed } from '@vers/game-utils';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockKeysService } from '@vers/mock-services/keys';
@@ -15,6 +18,9 @@ import { runFrontier } from './run-frontier';
 
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
+
+  await createContentVersion(db.db, ContentDocumentSchema.parse(contentDocumentV2));
+
   const keyPair = await getTestServiceKeyPair();
 
   return {
@@ -49,6 +55,7 @@ test('it defers the cache mutation until the caller applies it, never touching t
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -82,6 +89,7 @@ test('it reports idle rather than throwing when the claimed activity row is gone
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -127,6 +135,7 @@ test('it settles the terminal checkpoint reward into the avatar xp and level on 
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -177,6 +186,7 @@ test('it settles a run verified in two segments to the terminal total, counting 
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -264,6 +274,7 @@ test('it settles a matched mid-run segment onto the avatar before the run ends',
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -319,6 +330,7 @@ test('it settles no additional xp when a stale duplicate frontier misses the alr
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -384,6 +396,7 @@ test('it refuses an activity whose build snapshot borrowed xp from a rejected ru
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -452,6 +465,7 @@ test('it makes no keys dispatch when the frontier has already verified part of t
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -492,6 +506,7 @@ test('it verifies an honest sealed content-version-2 row, matching its stamped p
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -527,10 +542,7 @@ test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", a
     'a content-version-2 fixture always stamps a poolID',
   );
 
-  const contentV2 = CONTENT_BY_VERSION['2'];
-
-  invariant(contentV2, 'content version 2 must be registered for this test to be meaningful');
-
+  const contentV2 = ContentDocumentSchema.parse(contentDocumentV2).encounter;
   const tamperedPoolID = contentV2.pools.find((pool) => pool.id !== stampedPoolID['poolID'])?.id;
 
   invariant(tamperedPoolID !== undefined, 'content version 2 registers more than one pool');
@@ -546,6 +558,7 @@ test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", a
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -607,6 +620,7 @@ test("it rejects a tampered stamped encounter node on a continuation row, not ju
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',

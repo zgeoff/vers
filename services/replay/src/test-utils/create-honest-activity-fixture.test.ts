@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { buildCheckpointHash } from '@vers/contract-activity';
+import { ContentDocumentSchema, buildCheckpointHash } from '@vers/contract-activity';
+import { contentDocumentV2 } from '@vers/db';
 import { buildMockScopeSecret } from '@vers/mock-services/keys';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
@@ -88,7 +89,7 @@ test('it stamps secretRef/secretVersion and a sealed encounterNode matching real
 
   const expected = {
     difficulty: 1,
-    ...deriveWorldmapContent(fixture.activity.contentVersion, {
+    ...deriveWorldmapContent(ContentDocumentSchema.parse(contentDocumentV2).encounter, {
       coord: [1, 0],
       scopeSecret,
       userSeed: 0,

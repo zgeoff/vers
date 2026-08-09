@@ -1,4 +1,5 @@
-import { buildPositionStream, getTables, rollItemFromStream } from '@vers/item-gen';
+import { buildPositionStream, rollItemFromStream } from '@vers/item-gen';
+import type { LootTables } from '@vers/item-gen';
 import type { CryptoKey } from 'jose';
 import type { RewardFact } from '../replay/types';
 import type { MintedItem } from '../types';
@@ -11,11 +12,11 @@ interface RollRewardItemsDeps {
 
 interface RollRewardItemsInput {
   readonly avatarID: string;
-  readonly contentVersion: string;
   readonly keyVersion: number;
   readonly rewardFacts: ReadonlyArray<RewardFact>;
   readonly scopeID: string;
   readonly scopeType: string;
+  readonly tables: Readonly<LootTables>;
 }
 
 /**
@@ -38,8 +39,6 @@ export async function rollRewardItems(
     keyVersion: input.keyVersion,
   });
 
-  const tables = getTables(input.contentVersion);
-
   return input.rewardFacts.map((fact) => {
     const stream = buildPositionStream(rollKey, {
       avatarID: input.avatarID,
@@ -50,7 +49,7 @@ export async function rollRewardItems(
       scopeType: input.scopeType,
     });
 
-    const item = rollItemFromStream(tables, { nodeTier: fact.nodeTier }, stream);
+    const item = rollItemFromStream(input.tables, { nodeTier: fact.nodeTier }, stream);
 
     return {
       affixes: item.affixes,

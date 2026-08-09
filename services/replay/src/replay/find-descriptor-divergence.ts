@@ -1,9 +1,10 @@
+import type { EncounterContent } from '@vers/game-utils';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
 import { findCellCoord, getDifficulty } from '@vers/worldmap-core';
 import type { CompareVerdict } from './types';
 
 interface FindDescriptorDivergenceInput {
-  readonly contentVersion: string;
+  readonly content: Readonly<EncounterContent>;
   readonly scopeID: string;
   readonly scopeSecret: Uint8Array;
   readonly stampedEncounterNode: {
@@ -15,7 +16,7 @@ interface FindDescriptorDivergenceInput {
 /**
  * Compares a segment's stamped, server-sealed node fields against the server's own
  * recomputation: difficulty from the activity's scope id alone, and every sealed content field
- * the content derivation yields for the activity's content version and a freshly read scope
+ * the content derivation yields for the activity's pinned content and a freshly read scope
  * secret. A scope id that no longer resolves to a coordinate is itself a divergence. Undefined
  * means no divergence found here.
  */
@@ -30,7 +31,7 @@ export function findDescriptorDivergence(
 
   const truth = {
     difficulty: getDifficulty(coord[0], coord[1]),
-    ...deriveWorldmapContent(input.contentVersion, {
+    ...deriveWorldmapContent(input.content, {
       coord,
       scopeSecret: input.scopeSecret,
       userSeed: 0,

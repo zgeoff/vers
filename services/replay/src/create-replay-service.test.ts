@@ -1,4 +1,7 @@
 import { expect, test } from 'bun:test';
+import { createContentVersion } from '@vers/content-registry';
+import { ContentDocumentSchema } from '@vers/contract-activity';
+import { contentDocumentV2 } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { updateEnv } from '@vers/test-utils/bun';
@@ -44,6 +47,8 @@ test('it never destroys an injected db when stopped', async () => {
 
 test('it drains a claimable chain through the same deps the wake procedure closes over', async () => {
   await using ctx = await createTestDB({ isolation: 'schema' });
+
+  await createContentVersion(ctx.db, ContentDocumentSchema.parse(contentDocumentV2));
 
   const service = await createReplayService({ db: ctx.db });
 

@@ -1,11 +1,16 @@
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
-import type { CheckpointPayload, EncounterNode } from '@vers/contract-activity';
-import { buildCheckpointHash, buildStartHash } from '@vers/contract-activity';
+import type { CheckpointPayload, ContentDocument, EncounterNode } from '@vers/contract-activity';
+import {
+  ContentDocumentSchema,
+  buildCheckpointHash,
+  buildStartHash,
+} from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { Activities, ActivityChains, DB } from '@vers/db';
-import { toJSON } from '@vers/db';
-import { CURRENT_CONTENT_VERSION, buildStateFromSeed } from '@vers/game-utils';
+import { contentDocumentV1, contentDocumentV2, toJSON } from '@vers/db';
+import { buildStateFromSeed } from '@vers/game-utils';
+import type { EncounterContent } from '@vers/game-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { runSimulation } from '@vers/idle-core/replay';
@@ -101,19 +106,21 @@ export async function createHonestActivityFixture(
   });
 
   const startChainIndex = input.startChainIndex ?? chain.appendedChainIndex;
-  const contentVersion = input.contentVersion ?? CURRENT_CONTENT_VERSION;
+  const contentVersion = input.contentVersion ?? '2';
+  const contentSource = contentVersion === '1' ? contentDocumentV1 : contentDocumentV2;
+  const document: ContentDocument = ContentDocumentSchema.parse(contentSource);
   const secretRef = input.secretRef ?? 'worldmap';
   const secretVersion = input.secretVersion ?? 1;
 
   const encounterNode = buildFixtureEncounterNode({
     avatarID: chain.avatarId,
-    contentVersion,
+    content: document.encounter,
     scopeID: chain.scopeId,
     secretRef,
     secretVersion,
   });
 
-  const simulationInput = buildSimulationInput({
+  const simulationInput = buildSimulationInput(document.encounter, {
     avatarID: chain.avatarId,
     buildSnapshot,
     contentVersion,
@@ -178,7 +185,7 @@ export async function createHonestActivityFixture(
 
 interface BuildFixtureEncounterNodeInput {
   readonly avatarID: string;
-  readonly contentVersion: string;
+  readonly content: EncounterContent;
   readonly scopeID: string;
   readonly secretRef: SecretRef;
   readonly secretVersion: number;
@@ -199,7 +206,7 @@ function buildFixtureEncounterNode(input: Readonly<BuildFixtureEncounterNodeInpu
 
   return {
     difficulty: getDifficulty(coord[0], coord[1]),
-    ...deriveWorldmapContent(input.contentVersion, { coord, scopeSecret, userSeed: 0 }),
+    ...deriveWorldmapContent(input.content, { coord, scopeSecret, userSeed: 0 }),
   };
 }
 

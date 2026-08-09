@@ -1,7 +1,9 @@
 import { expect, test } from 'bun:test';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { utf8ToBytes } from '@noble/hashes/utils.js';
-import { buildPositionStream, getTables, rollItemFromStream } from '@vers/item-gen';
+import { ContentDocumentSchema } from '@vers/contract-activity';
+import { contentDocumentV1 } from '@vers/db';
+import { buildPositionStream, rollItemFromStream } from '@vers/item-gen';
 import { resolveServiceURL } from '@vers/mock-services';
 import { deriveAvatarKey } from '@vers/roll-crypto';
 import { getTestServiceKeyPair } from '@vers/service-test-utils/bun';
@@ -23,11 +25,11 @@ test('it rolls no items and dispatches nothing for an empty fact list', async ()
     { keysServiceURL: 'http://127.0.0.1:1', privateKey: keyPair.privateKey },
     {
       avatarID: 'avatar_1',
-      contentVersion: '1',
       keyVersion: 1,
       rewardFacts: [],
       scopeID: 'node_1',
       scopeType: 'world_map_node',
+      tables: ContentDocumentSchema.parse(contentDocumentV1).loot,
     },
   );
 
@@ -41,11 +43,11 @@ test('it mints content identical to rolling the same coordinate directly', async
     { keysServiceURL: resolveServiceURL('keys'), privateKey: keyPair.privateKey },
     {
       avatarID: 'avatar_1',
-      contentVersion: '1',
       keyVersion: 1,
       rewardFacts: [{ chainIndex: 5, nodeTier: 2, ordinal: 0 }],
       scopeID: 'node_1',
       scopeType: 'world_map_node',
+      tables: ContentDocumentSchema.parse(contentDocumentV1).loot,
     },
   );
 
@@ -65,7 +67,11 @@ test('it mints content identical to rolling the same coordinate directly', async
     scopeType: 'world_map_node',
   });
 
-  const expectedItem = rollItemFromStream(getTables('1'), { nodeTier: 2 }, stream);
+  const expectedItem = rollItemFromStream(
+    ContentDocumentSchema.parse(contentDocumentV1).loot,
+    { nodeTier: 2 },
+    stream,
+  );
 
   expect(items).toStrictEqual([
     {
@@ -89,7 +95,6 @@ test('it rolls one item per reward fact, each at its own coordinate', async () =
     { keysServiceURL: resolveServiceURL('keys'), privateKey: keyPair.privateKey },
     {
       avatarID: 'avatar_1',
-      contentVersion: '1',
       keyVersion: 1,
       rewardFacts: [
         { chainIndex: 5, nodeTier: 1, ordinal: 0 },
@@ -97,6 +102,7 @@ test('it rolls one item per reward fact, each at its own coordinate', async () =
       ],
       scopeID: 'node_1',
       scopeType: 'world_map_node',
+      tables: ContentDocumentSchema.parse(contentDocumentV1).loot,
     },
   );
 

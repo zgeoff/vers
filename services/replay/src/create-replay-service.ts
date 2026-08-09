@@ -1,3 +1,4 @@
+import { makeContentDocumentLoader } from '@vers/content-registry';
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
 import { parseServicePrivateKey } from '@vers/service-auth';
@@ -65,6 +66,7 @@ export async function createReplayService(
       resolvedDeps = {
         db,
         keysServiceURL: runtime.env.KEYS_SERVICE_URL,
+        loadContentDocument: makeContentDocumentLoader(db),
         logger: runtime.logger,
         privateKey,
         simVersion: runtime.env.SIM_ENGINE_HASH,

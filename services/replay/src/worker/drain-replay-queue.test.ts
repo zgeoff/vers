@@ -1,6 +1,8 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/bun';
-import { createDB } from '@vers/db';
+import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
+import { ContentDocumentSchema } from '@vers/contract-activity';
+import { contentDocumentV2, createDB } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { resolveServiceURL } from '@vers/mock-services';
 import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
@@ -12,6 +14,9 @@ import { drainReplayQueue } from './drain-replay-queue';
 
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
+
+  await createContentVersion(db.db, ContentDocumentSchema.parse(contentDocumentV2));
+
   const keyPair = await getTestServiceKeyPair();
 
   return {
@@ -19,6 +24,7 @@ async function setupTest() {
     deps: {
       db: db.db,
       keysServiceURL: resolveServiceURL('keys'),
+      loadContentDocument: makeContentDocumentLoader(db.db),
       logger: pino({ enabled: false }),
       privateKey: keyPair.privateKey,
       simVersion: 'test-engine-hash',
@@ -88,6 +94,7 @@ test('it stops draining and reports a claim failure carrying a trace id, without
   const drained = await drainReplayQueue({
     db: unreachableDB,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(unreachableDB),
     logger: pino({ enabled: false }),
     privateKey: keyPair.privateKey,
     simVersion: 'test-engine-hash',
