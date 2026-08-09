@@ -13,12 +13,17 @@ export async function handleSetActivityMessage(
   message: SetActivityMessage,
 ): Promise<void> {
   const simulation = context.getSimulation();
+  const cancel = context.getCancelSignal();
 
   const document = await loadContentDocument(
     context.getClient(),
     message.activity.contentVersion,
-    context.getCancelSignal(),
+    cancel,
   );
+
+  // the signal only cancels the load's fetch — a cached document resolves without consulting it,
+  // so a stop or shutdown that landed during the load is re-checked here before anything installs
+  cancel.throwIfAborted();
 
   const input = buildSimulationInput(document.encounter, message.activity, {
     failureAction: context.getFailureAction(),

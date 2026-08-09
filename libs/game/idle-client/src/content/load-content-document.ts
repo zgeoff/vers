@@ -8,7 +8,9 @@ import { writeContentDocumentCache } from './write-content-document-cache';
  * miss fetches over the activity service and persists the result before returning it. Documents
  * are immutable once published, so the cached row never needs revalidation — the IDB row is the
  * only cache. A `NOT_FOUND` from the fetch propagates uncaught, to the worker's existing fault
- * handling.
+ * handling. `signal` cancels only the fetch — a cache hit resolves without consulting it, so a
+ * caller that installs state after the load re-checks its own captured signals; aborting here
+ * would also skip a caller's post-load compensation.
  */
 export async function loadContentDocument(
   client: Pick<ActivityServiceClient, 'getContentDocument'>,
