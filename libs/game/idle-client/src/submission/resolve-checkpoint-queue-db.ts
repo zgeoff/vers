@@ -4,6 +4,7 @@ import {
   CHECKPOINT_QUEUE_DB_NAME,
   CHECKPOINT_QUEUE_DB_VERSION,
   CHECKPOINT_QUEUE_STORE_NAME,
+  CONTENT_DOCUMENT_STORE_NAME,
   PREFERENCES_STORE_NAME,
 } from './constants';
 import type { CheckpointQueueSchema } from './types';
@@ -29,6 +30,10 @@ export function resolveCheckpointQueueDB(): Promise<IDBPDatabase<CheckpointQueue
 
       if (!database.objectStoreNames.contains(PREFERENCES_STORE_NAME)) {
         database.createObjectStore(PREFERENCES_STORE_NAME);
+      }
+
+      if (!database.objectStoreNames.contains(CONTENT_DOCUMENT_STORE_NAME)) {
+        database.createObjectStore(CONTENT_DOCUMENT_STORE_NAME, { keyPath: 'contentVersion' });
       }
     },
   });

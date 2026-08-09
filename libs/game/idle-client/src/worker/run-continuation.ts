@@ -2,6 +2,7 @@ import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
+import { loadContentDocument } from '../content/load-content-document';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { WorkerMessageType } from '../types';
@@ -111,7 +112,15 @@ async function startContinuationFrom(
   simulation: Simulation,
   row: Readonly<ActivityData>,
 ): Promise<void> {
-  const input = buildSimulationInput(row, { failureAction: context.getFailureAction() });
+  const document = await loadContentDocument(
+    context.getClient(),
+    row.contentVersion,
+    context.getCancelSignal(),
+  );
+
+  const input = buildSimulationInput(document.encounter, row, {
+    failureAction: context.getFailureAction(),
+  });
 
   simulation.startActivity(input.avatar, input.activity);
   context.setActivity(row);

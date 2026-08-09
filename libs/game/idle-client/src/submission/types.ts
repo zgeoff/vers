@@ -1,5 +1,9 @@
 import type { ContractRouterClient } from '@orpc/contract';
-import type { CheckpointBatchEntry, activityContract } from '@vers/contract-activity';
+import type {
+  CheckpointBatchEntry,
+  ContentDocument,
+  activityContract,
+} from '@vers/contract-activity';
 import type { ActivityFailureAction } from '@vers/idle-core';
 import type { DBSchema } from 'idb';
 
@@ -49,6 +53,10 @@ export interface PendingStartIntent {
 }
 
 export interface CheckpointQueueSchema extends DBSchema {
+  'content-documents': {
+    key: string;
+    value: ContentDocument;
+  };
   'pending-checkpoints': {
     key: [string, number];
     value: QueuedCheckpoint;

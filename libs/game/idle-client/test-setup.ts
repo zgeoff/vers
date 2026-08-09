@@ -6,7 +6,11 @@ import { registerZustandReset } from '@vers/client-test-utils';
 import { registerMockDBReset } from '@vers/mock-services/bun';
 import { registerMSWLifecycle } from '@vers/test-utils/bun';
 import { server } from './src/mocks/node';
-import { CHECKPOINT_QUEUE_STORE_NAME, PREFERENCES_STORE_NAME } from './src/submission/constants';
+import {
+  CHECKPOINT_QUEUE_STORE_NAME,
+  CONTENT_DOCUMENT_STORE_NAME,
+  PREFERENCES_STORE_NAME,
+} from './src/submission/constants';
 import { resolveCheckpointQueueDB } from './src/submission/resolve-checkpoint-queue-db';
 
 // a throwaway dev-only Ed25519 PKCS8 key, so tests can mint the access tokens the stateful
@@ -39,4 +43,5 @@ afterEach(async () => {
 
   await queueDB.clear(CHECKPOINT_QUEUE_STORE_NAME);
   await queueDB.clear(PREFERENCES_STORE_NAME);
+  await queueDB.clear(CONTENT_DOCUMENT_STORE_NAME);
 });

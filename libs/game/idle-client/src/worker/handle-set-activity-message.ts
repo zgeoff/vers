@@ -1,5 +1,6 @@
 import type { ActivityData } from '@vers/contract-activity';
 import { buildSimulationInput } from '@vers/idle-core';
+import { loadContentDocument } from '../content/load-content-document';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import type { WorkerContext } from './types';
 
@@ -13,7 +14,13 @@ export async function handleSetActivityMessage(
 ): Promise<void> {
   const simulation = context.getSimulation();
 
-  const input = buildSimulationInput(message.activity, {
+  const document = await loadContentDocument(
+    context.getClient(),
+    message.activity.contentVersion,
+    context.getCancelSignal(),
+  );
+
+  const input = buildSimulationInput(document.encounter, message.activity, {
     failureAction: context.getFailureAction(),
   });
 
