@@ -13,6 +13,7 @@ import { buildRPCTestClient } from '@vers/test-utils';
 import invariant from 'tiny-invariant';
 import { createActivityService } from '../create-activity-service';
 import { createMockActivity } from '../test-utils/factories/create-mock-activity';
+import { createMockCatchUpContinuation } from '../test-utils/factories/create-mock-catch-up-continuation';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 /**
@@ -184,12 +185,11 @@ test('it carries the closing row secretRef/secretVersion forward onto a minted c
     startVersion: 1,
   });
 
-  const continuation: CatchUpContinuation = {
+  const continuation = createMockCatchUpContinuation({
     buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
     checkpoints: tail,
-    id: `act_${createId()}`,
     startKey: `continue_${started.id}`,
-  };
+  });
 
   const result = await client.advanceActivity({
     activityID: started.id,

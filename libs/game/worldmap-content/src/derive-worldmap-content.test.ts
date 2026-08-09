@@ -39,7 +39,7 @@ test('it selects across every registered pool over a spread of coordinates', () 
     ),
   );
 
-  expect(poolIDs.size).toBe(contentV2.pools.length);
+  expect([...poolIDs]).toIncludeSameMembers(contentV2.pools.map((pool) => pool.id));
 });
 
 test('it rejects an unknown content version and names it', () => {

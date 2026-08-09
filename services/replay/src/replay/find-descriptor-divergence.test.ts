@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { buildMockScopeSecret } from '@vers/mock-services/keys';
 import { getDifficulty } from '@vers/worldmap-core';
+import { createMockEncounterNode } from '../test-utils/factories/create-mock-encounter-node';
 import { findDescriptorDivergence } from './find-descriptor-divergence';
 
 const scopeSecret = buildMockScopeSecret('avatar_1', 'worldmap', 1);
@@ -12,7 +13,7 @@ test('it finds no divergence when the stamped fields match the recomputed truth 
     contentVersion: '1',
     scopeID: '1_0',
     scopeSecret,
-    stampedEncounterNode: { difficulty },
+    stampedEncounterNode: createMockEncounterNode({ difficulty }),
   });
 
   expect(divergence).toBeUndefined();
@@ -25,14 +26,14 @@ test('it finds no divergence when a v2 stamped poolID matches the recomputed tru
     contentVersion: '2',
     scopeID: '1_0',
     scopeSecret,
-    stampedEncounterNode: { difficulty, poolID: 'brawler-den' },
+    stampedEncounterNode: createMockEncounterNode({ difficulty, poolID: 'brawler-den' }),
   });
 
   const otherDivergence = findDescriptorDivergence({
     contentVersion: '2',
     scopeID: '1_0',
     scopeSecret,
-    stampedEncounterNode: { difficulty, poolID: 'skirmisher-flock' },
+    stampedEncounterNode: createMockEncounterNode({ difficulty, poolID: 'skirmisher-flock' }),
   });
 
   // exactly one of the two pool ids matches the sealed truth for this scope secret and coordinate
@@ -44,7 +45,7 @@ test('it finds a divergence when the stamped difficulty disagrees with the recom
     contentVersion: '1',
     scopeID: '1_0',
     scopeSecret,
-    stampedEncounterNode: { difficulty: 99 },
+    stampedEncounterNode: createMockEncounterNode({ difficulty: 99 }),
   });
 
   expect(divergence).toStrictEqual({
@@ -61,7 +62,7 @@ test('it finds a divergence when the stamped poolID disagrees with the sealed tr
     contentVersion: '2',
     scopeID: '1_0',
     scopeSecret,
-    stampedEncounterNode: { difficulty, poolID: 'not-a-real-pool' },
+    stampedEncounterNode: createMockEncounterNode({ difficulty, poolID: 'not-a-real-pool' }),
   });
 
   expect(divergence).toStrictEqual({
@@ -76,7 +77,7 @@ test('it finds a divergence when the scope id no longer resolves to a coordinate
     contentVersion: '1',
     scopeID: 'not_a_real_node',
     scopeSecret,
-    stampedEncounterNode: { difficulty: 1 },
+    stampedEncounterNode: createMockEncounterNode({ difficulty: 1 }),
   });
 
   expect(divergence).toStrictEqual({

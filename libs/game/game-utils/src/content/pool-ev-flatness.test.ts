@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
-import { CONTENT_BY_VERSION } from '../get-encounter-content';
+import invariant from 'tiny-invariant';
 import type { EncounterArchetype, EncounterPool } from '../types';
+import { CONTENT_BY_VERSION } from './content-by-version';
 
 function buildWeightedMeanBaseXP(
   pool: Readonly<EncounterPool>,
@@ -11,7 +12,12 @@ function buildWeightedMeanBaseXP(
   const weightedXP = pool.entries.reduce((sum, entry) => {
     const archetype = archetypes.find((candidate) => candidate.id === entry.archetypeID);
 
-    return archetype === undefined ? sum : sum + archetype.baseXP * entry.weight;
+    invariant(
+      archetype,
+      `pool "${pool.id}" references an unregistered archetype: ${entry.archetypeID}`,
+    );
+
+    return sum + archetype.baseXP * entry.weight;
   }, 0);
 
   return weightedXP / totalWeight;

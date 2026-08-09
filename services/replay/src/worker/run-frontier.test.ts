@@ -513,6 +513,46 @@ test('it makes no keys dispatch when the frontier has already verified part of t
   expect(outcome.kind).toBe('matched');
 });
 
+test('it verifies an honest sealed content-version-2 row, matching its stamped poolID against the derived truth', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    contentVersion: '2',
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const stampedNode = fixture.activity.encounterNode;
+
+  invariant(
+    typeof stampedNode === 'object' && stampedNode !== null && 'poolID' in stampedNode,
+    'a content-version-2 fixture always stamps a poolID',
+  );
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome.kind).toBe('matched');
+});
+
 test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", async () => {
   await using ctx = await setupTest();
 
@@ -592,8 +632,9 @@ test("it rejects a tampered stamped encounter node on a continuation row, not ju
     seed: buildStateFromSeed(1_616_267_014),
   });
 
-  // the continuation inherits the genesis row's own secretRef/secretVersion, exactly as a real
-  // advanceActivity mint does — a row this fixture's default already stamps as sealed
+  // the fixture stamps each row's default sealed secretRef/secretVersion independently, so the
+  // continuation row ends up carrying the same pair a real mint copies forward from the row it
+  // appends onto — these assertions pin that alignment
   expect(continuation.activity.secretRef).toBe(genesis.activity.secretRef);
   expect(continuation.activity.avatarId).toBe(genesis.activity.avatarId);
 
