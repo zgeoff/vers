@@ -1,7 +1,9 @@
 import { implement } from '@orpc/server';
 import { activityContract } from '@vers/contract-activity';
+import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import type { ServiceContext } from '@vers/service-runtime';
+import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import { advanceActivity } from './handlers/advance-activity';
 import { getActivityRewards } from './handlers/get-activity-rewards';
@@ -17,14 +19,19 @@ import { updateFailureAction } from './handlers/update-failure-action';
 interface BuildActivityRouterDeps {
   readonly contentVersion: string;
   readonly db: Kysely<DB>;
+  readonly keysServiceURL: string;
   readonly keyVersion: number;
+  readonly privateKey: CryptoKey;
+  readonly secretRef: SecretRef;
+  readonly secretVersion: number;
   readonly sendReplayWake: () => void;
   readonly simTimeCapMs: number;
 }
 
 /**
  * Assembles the activities service's oRPC router, closing each handler over the shared db client
- * (and, for `startActivity`, the content and key versions new activities are minted against; for
+ * (and, for `startActivity`, the content and key versions new activities are minted against, plus
+ * the keys origin, s2s signing key, and scope secret ref/version its sealed content read uses; for
  * `trackActivityProgress`, the offline-progress budget ceiling).
  */
 export function buildActivityRouter(deps: BuildActivityRouterDeps) {
