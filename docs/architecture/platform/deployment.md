@@ -404,12 +404,26 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
      SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS" \
      SERVICE_AUTH_PRIVATE_KEY="$(cat s2s-service-activity.key)"
 
+   # The root payloads are minted once and stored in the `vers` vault (`key-roots` item):
+   # persisted rows reference their root versions by number, so a rerun reads the stored payloads
+   # (`op read 'op://vers/key-roots/...'`) instead of regenerating them, and a rotation appends a
+   # new version to a payload — never an overwrite of an existing one.
+   ROLL_KEY_ROOTS="$(jq -nc \
+     --arg trade "$(openssl rand -hex 32)" \
+     --arg selfFound "$(openssl rand -hex 32)" \
+     '{trade: {current: 1, roots: {"1": $trade}}, "self-found": {current: 1, roots: {"1": $selfFound}}}')"
+   SCOPE_SECRET_ROOTS="$(jq -nc \
+     --arg worldmap "$(openssl rand -hex 32)" \
+     '{worldmap: {current: 1, roots: {"1": $worldmap}}}')"
+
+   op item create --vault vers --category "API Credential" --title key-roots \
+     "roll-key-roots[concealed]=$ROLL_KEY_ROOTS" \
+     "scope-secret-roots[concealed]=$SCOPE_SECRET_ROOTS"
+
    fly secrets set -a vers-service-keys \
      SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS" \
-     ROLL_KEY_ROOTS="$(jq -nc \
-       --arg trade "$(openssl rand -hex 32)" \
-       --arg selfFound "$(openssl rand -hex 32)" \
-       '{trade: {current: 1, roots: {"1": $trade}}, "self-found": {current: 1, roots: {"1": $selfFound}}}')"
+     ROLL_KEY_ROOTS="$ROLL_KEY_ROOTS" \
+     SCOPE_SECRET_ROOTS="$SCOPE_SECRET_ROOTS"
 
    fly secrets set -a vers-service-session \
      DATABASE_URL="$DATABASE_URL" \

@@ -19,6 +19,8 @@ export function createMockActivityData(overrides: Partial<ActivityData> = {}): A
     scopeID: '0_0',
     scopeType: 'world_map_node',
     seed: faker.string.hexadecimal({ casing: 'lower', length: 32, prefix: '' }),
+    secretRef: 'worldmap',
+    secretVersion: 1,
     simVersion: '0.0.0-dev',
     startChainIndex: 0,
     startHash: faker.string.hexadecimal({ casing: 'lower', length: 64, prefix: '' }),

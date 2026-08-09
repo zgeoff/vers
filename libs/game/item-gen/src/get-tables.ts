@@ -1,9 +1,11 @@
 import invariant from 'tiny-invariant';
 import { tablesV1 } from './tables/tables-v1';
+import { tablesV2 } from './tables/tables-v2';
 import type { LootTables } from './types';
 
 const TABLES_BY_VERSION: Readonly<Record<string, LootTables>> = {
   [tablesV1.contentVersion]: tablesV1,
+  [tablesV2.contentVersion]: tablesV2,
 };
 
 /**

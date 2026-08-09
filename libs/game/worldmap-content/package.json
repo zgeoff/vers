@@ -1,0 +1,34 @@
+{
+  "name": "@vers/worldmap-content",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@noble/hashes": "catalog:",
+    "@orpc/client": "catalog:",
+    "@orpc/contract": "catalog:",
+    "@vers/contract-keys": "workspace:*",
+    "@vers/game-utils": "workspace:*",
+    "@vers/service-auth": "workspace:*",
+    "@vers/service-utils": "workspace:*",
+    "jose": "catalog:",
+    "tiny-invariant": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@vers/mock-services": "workspace:*",
+    "@vers/service-test-utils": "workspace:*",
+    "@vers/test-utils": "workspace:*",
+    "@zgeoff/bun-test-extended": "catalog:",
+    "msw": "catalog:",
+    "typescript": "catalog:"
+  }
+}

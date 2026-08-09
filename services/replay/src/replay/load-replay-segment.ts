@@ -28,6 +28,8 @@ export async function loadReplaySegment(
       'keyVersion',
       'scopeId',
       'scopeType',
+      'secretRef',
+      'secretVersion',
       'seed',
       'settledXp',
       'simVersion',
@@ -79,6 +81,8 @@ export async function loadReplaySegment(
       keyVersion: activity.keyVersion,
       scopeID: activity.scopeId,
       scopeType: activity.scopeType,
+      secretRef: activity.secretRef,
+      secretVersion: activity.secretVersion,
       seed: activity.seed,
       settledXP: activity.settledXp,
       simVersion: activity.simVersion,
@@ -119,14 +123,15 @@ function readBuildSnapshot(value: unknown): { level: number; xp: number } {
 
 /**
  * The activities row's `encounter_node` column is untyped jsonb; every write is the activity
- * service's own server-side node resolution, so this reads its one known field without
- * re-validating.
+ * service's own server-side node resolution, so this reads its known fields without re-validating.
+ * `poolID` round-trips only when the stored row carries one — an old row predating sealed pool
+ * selection stays shaped exactly as it was stamped.
  */
-function readEncounterNode(value: unknown): { difficulty: number } {
+function readEncounterNode(value: unknown): { difficulty: number; poolID?: string } {
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is the activity service's own server-side node resolution
-  const node = value as { difficulty: number };
+  const node = value as { difficulty: number; poolID?: string };
 
-  return { difficulty: node.difficulty };
+  return { difficulty: node.difficulty, ...(node.poolID !== undefined && { poolID: node.poolID }) };
 }
 
 function readPayloadNextSeed(payload: Readonly<CheckpointPayload>): string {

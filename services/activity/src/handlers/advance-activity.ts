@@ -66,10 +66,11 @@ interface AdvanceActivityOpts {
  * continuation always ends terminal by construction: the client only ever submits a full attempt,
  * never a partial one, so each entry both closes a row and opens the next.
  *
- * `contentVersion`, `keyVersion`, `simVersion`, and `encounterNode` are inherited once from
- * `activityID`'s own row and reused for every mint in this request — never re-resolved from the
- * service's current deploy or the world map — so the whole offline gap replays under the exact
- * engine, content, and encounter the client's own local simulation was pinned to.
+ * `contentVersion`, `keyVersion`, `simVersion`, `encounterNode`, and `secretRef`/`secretVersion` are
+ * inherited once from `activityID`'s own row and reused for every mint in this request — never
+ * re-resolved from the service's current deploy or the world map — so the whole offline gap
+ * replays under the exact engine, content, and encounter the client's own local simulation was
+ * pinned to, and every minted row stays eligible for the replay verifier's descriptor check.
  *
  * Each continuation is its own transaction: append, then (on terminal) mint — reusing
  * `trackActivityProgress`'s head compare-and-swap, meter debit, and terminal anchor advance, and
@@ -111,10 +112,15 @@ export async function advanceActivity(
     avatarId: initial.avatarId,
     contentVersion: initial.contentVersion,
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is this service's own encounter-node resolution
-    encounterNode: initial.encounterNode as { readonly difficulty: number },
+    encounterNode: initial.encounterNode as {
+      readonly difficulty: number;
+      readonly poolID?: string;
+    },
     keyVersion: initial.keyVersion,
     scopeId: initial.scopeId,
     scopeType: initial.scopeType,
+    secretRef: initial.secretRef,
+    secretVersion: initial.secretVersion,
     simVersion: initial.simVersion,
   };
 
@@ -181,10 +187,12 @@ export async function advanceActivity(
 interface PinnedActivityContext {
   readonly avatarId: string;
   readonly contentVersion: string;
-  readonly encounterNode: { readonly difficulty: number };
+  readonly encounterNode: { readonly difficulty: number; readonly poolID?: string };
   readonly keyVersion: number;
   readonly scopeId: string;
   readonly scopeType: string;
+  readonly secretRef: string | null;
+  readonly secretVersion: number | null;
   readonly simVersion: string;
 }
 
@@ -701,6 +709,8 @@ async function mintContinuation(
       lastHash: startHash,
       scopeId: pinned.scopeId,
       scopeType: pinned.scopeType,
+      secretRef: pinned.secretRef,
+      secretVersion: pinned.secretVersion,
       seed,
       simVersion: pinned.simVersion,
       startChainIndex: chain.appendedChainIndex,

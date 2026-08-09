@@ -66,9 +66,10 @@ export interface EncounterContent {
 }
 
 /**
- * The trajectory facts a derivation resolves an encounter's pool and stat scaling against —
- * expands as node content lands.
+ * The trajectory facts a derivation resolves an encounter's pool and stat scaling against.
+ * `poolID` is absent for content versions that predate sealed pool selection.
  */
 export interface EncounterNode {
   readonly difficulty: number;
+  readonly poolID?: string;
 }

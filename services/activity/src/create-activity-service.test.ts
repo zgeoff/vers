@@ -81,7 +81,7 @@ test('it uses an injected content version when given', async () => {
 
   await createSimVersionRow(db.db);
 
-  const service = await createActivityService({ contentVersion: 'content_9', db: db.db });
+  const service = await createActivityService({ contentVersion: '2', db: db.db });
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });
   const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
 
@@ -93,7 +93,7 @@ test('it uses an injected content version when given', async () => {
     scopeType: 'world_map_node',
   });
 
-  expect(activity).toMatchObject({ contentVersion: 'content_9' });
+  expect(activity).toMatchObject({ contentVersion: '2' });
 });
 
 test('it uses an injected key version when given', async () => {

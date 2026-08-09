@@ -16,6 +16,8 @@ test('it accepts a well-formed activity', () => {
     scopeID: 'node_1',
     scopeType: 'world_map_node',
     seed: 'seed_1',
+    secretRef: 'worldmap',
+    secretVersion: 1,
     simVersion: '0.0.0-dev',
     startChainIndex: 0,
     startHash: 'hash_start',
@@ -29,6 +31,78 @@ test('it accepts a well-formed activity', () => {
   });
 
   expect(result.success).toBeTrue();
+});
+
+test('it rejects an activity with a secretRef but a null secretVersion', () => {
+  const result = ActivityDataSchema.safeParse({
+    appendedAt: null,
+    appendedHead: 0,
+    avatarID: 'avatar_1',
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: '0.0.0-dev',
+    createdAt: new Date(),
+    encounterNode: { difficulty: 1 },
+    id: 'act_1',
+    keyVersion: 1,
+    lastHash: 'hash_start',
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+    seed: 'seed_1',
+    secretRef: 'worldmap',
+    secretVersion: null,
+    simVersion: '0.0.0-dev',
+    startChainIndex: 0,
+    startHash: 'hash_start',
+    startKey: null,
+    startedAt: new Date(),
+    status: 'active',
+    stoppedAt: null,
+    updatedAt: new Date(),
+    verifiedAt: null,
+    verifiedHead: 0,
+  });
+
+  expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['secretVersion'] }),
+  );
+});
+
+test('it rejects an activity with a secretVersion but a null secretRef', () => {
+  const result = ActivityDataSchema.safeParse({
+    appendedAt: null,
+    appendedHead: 0,
+    avatarID: 'avatar_1',
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: '0.0.0-dev',
+    createdAt: new Date(),
+    encounterNode: { difficulty: 1 },
+    id: 'act_1',
+    keyVersion: 1,
+    lastHash: 'hash_start',
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+    seed: 'seed_1',
+    secretRef: null,
+    secretVersion: 1,
+    simVersion: '0.0.0-dev',
+    startChainIndex: 0,
+    startHash: 'hash_start',
+    startKey: null,
+    startedAt: new Date(),
+    status: 'active',
+    stoppedAt: null,
+    updatedAt: new Date(),
+    verifiedAt: null,
+    verifiedHead: 0,
+  });
+
+  expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['secretVersion'] }),
+  );
 });
 
 test('it rejects an activity with an invalid status', () => {
@@ -46,6 +120,8 @@ test('it rejects an activity with an invalid status', () => {
     scopeID: 'node_1',
     scopeType: 'world_map_node',
     seed: 'seed_1',
+    secretRef: 'worldmap',
+    secretVersion: 1,
     simVersion: '0.0.0-dev',
     startChainIndex: 0,
     startHash: 'hash_start',
@@ -60,4 +136,36 @@ test('it rejects an activity with an invalid status', () => {
 
   expect(result.success).toBeFalse();
   expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['status'] }));
+});
+
+test('it accepts a legacy activity with a null secretRef and secretVersion', () => {
+  const result = ActivityDataSchema.safeParse({
+    appendedAt: null,
+    appendedHead: 0,
+    avatarID: 'avatar_1',
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: '0.0.0-dev',
+    createdAt: new Date(),
+    encounterNode: { difficulty: 1 },
+    id: 'act_1',
+    keyVersion: 1,
+    lastHash: 'hash_start',
+    scopeID: 'node_1',
+    scopeType: 'world_map_node',
+    seed: 'seed_1',
+    secretRef: null,
+    secretVersion: null,
+    simVersion: '0.0.0-dev',
+    startChainIndex: 0,
+    startHash: 'hash_start',
+    startKey: null,
+    startedAt: new Date(),
+    status: 'active',
+    stoppedAt: null,
+    updatedAt: new Date(),
+    verifiedAt: null,
+    verifiedHead: 0,
+  });
+
+  expect(result.success).toBeTrue();
 });

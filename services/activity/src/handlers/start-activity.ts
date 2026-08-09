@@ -2,9 +2,12 @@ import { createId } from '@paralleldrive/cuid2';
 import { findActiveAvatar, findLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
 import type { ActivityData, BuildSnapshot } from '@vers/contract-activity';
 import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
+import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { findCurrentSimVersion, findSimVersion } from '@vers/sim-registry';
+import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
+import type { CryptoKey } from 'jose';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import { getOptimisticBuild } from '../get-optimistic-build';
@@ -21,13 +24,18 @@ import type {
 import { toActivityData } from './to-activity-data';
 
 /**
- * Db handle plus the content and key versions every new activity is minted against — the sim
- * version is resolved per request from the registry, never a fixed dep.
+ * Db handle plus the content and key versions every new activity is minted against, and the keys
+ * dispatch a start reads its scope secret over — the sim version is resolved per request from the
+ * registry, never a fixed dep.
  */
 interface StartActivityDeps {
   readonly contentVersion: string;
   readonly db: Kysely<DB>;
+  readonly keysServiceURL: string;
   readonly keyVersion: number;
+  readonly privateKey: CryptoKey;
+  readonly secretRef: SecretRef;
+  readonly secretVersion: number;
 }
 
 /**
@@ -108,11 +116,33 @@ export async function startActivity(
     throw opts.errors.CHAIN_QUARANTINED({ data: {} });
   }
 
-  const encounterNode = resolveEncounterNode(opts.input.scopeType, opts.input.scopeID);
+  const resolved = resolveEncounterNode(opts.input.scopeType, opts.input.scopeID);
 
-  if (encounterNode === undefined) {
+  if (resolved === undefined) {
     throw opts.errors.NODE_UNKNOWN({ data: {} });
   }
+
+  // Read before the transaction opens, keeping the advisory-lock window it holds small; a keys
+  // dispatch failure (the service unreachable, or a config bug the keys client's own guard already
+  // demoted to a plain Error) escapes uncaught to the central error interceptor, a 500 — never a
+  // typed error this handler defines.
+  const scopeSecret = await readScopeSecret(
+    {
+      issuer: 'service-activity',
+      keysServiceURL: deps.keysServiceURL,
+      privateKey: deps.privateKey,
+    },
+    { avatarID: opts.input.avatarID, secretRef: deps.secretRef, secretVersion: deps.secretVersion },
+  );
+
+  const encounterNode = {
+    difficulty: resolved.difficulty,
+    ...deriveWorldmapContent(deps.contentVersion, {
+      coord: resolved.coord,
+      scopeSecret,
+      userSeed: 0,
+    }),
+  };
 
   const simVersion = await resolveSimVersionStamp(deps.db, opts.input.simVersion, opts.errors);
 
@@ -177,6 +207,8 @@ export async function startActivity(
           lastHash: startHash,
           scopeId: opts.input.scopeID,
           scopeType: opts.input.scopeType,
+          secretRef: deps.secretRef,
+          secretVersion: deps.secretVersion,
           seed,
           simVersion,
           startChainIndex: chain.appendedChainIndex,

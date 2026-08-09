@@ -183,6 +183,8 @@ Libraries (`libs/`, grouped by domain):
   affix constraints
 - `libs/game/idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
 - `libs/game/idle-core` - deterministic seeded simulation engine
+- `libs/game/worldmap-content` - sealed worldmap content derivation and the s2s scope-secret read it
+  dispatches to the keys service
 - `libs/service/jobs` - typed pg-boss job queue wrapper: send, drain, and retry/dead-letter policy
 - `libs/service/product-analytics` - product-event registry types and the Tinybird Events API sender
 - `libs/service/service-auth` - s2s token minting, parsing, and audience derivation

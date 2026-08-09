@@ -15,6 +15,11 @@
           "deny": ["app", "service"]
         }
       },
+      "server-only": {
+        "dependents": {
+          "allow": ["service"]
+        }
+      },
       "service": {
         "dependencies": {
           "deny": ["app"]

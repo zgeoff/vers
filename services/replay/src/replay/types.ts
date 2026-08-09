@@ -40,12 +40,20 @@ export interface ReplaySegment {
     readonly avatarID: string;
     readonly buildSnapshot: { readonly level: number; readonly xp: number };
     readonly contentVersion: string;
-    readonly encounterNode: { readonly difficulty: number };
+    readonly encounterNode: { readonly difficulty: number; readonly poolID?: string };
     readonly id: string;
     readonly keyVersion: number;
     readonly scopeID: string;
     readonly scopeType: string;
     readonly seed: string;
+
+    /**
+     * The scope secret ref and root version content sealing derived this activity's node content
+     * from, null on a legacy row minted before sealing — the verifier's skip signal for the
+     * descriptor check.
+     */
+    readonly secretRef: string | null;
+    readonly secretVersion: number | null;
 
     /**
      * The xp this activity has already contributed to its avatar's settled row, so a terminal
@@ -102,6 +110,7 @@ export interface RewardFact {
  */
 type DivergenceReason =
   | 'checkpoint-count-mismatch'
+  | 'descriptor-mismatch'
   | 'hash-mismatch'
   | 'reward-mismatch'
   | 'seed-mismatch';

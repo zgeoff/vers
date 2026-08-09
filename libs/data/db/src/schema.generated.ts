@@ -51,6 +51,8 @@ export interface Activities {
   replayAttempts: Generated<number>;
   scopeId: string;
   scopeType: string;
+  secretRef: string | null;
+  secretVersion: number | null;
   seed: string;
   settledXp: Generated<number>;
   simVersion: string;

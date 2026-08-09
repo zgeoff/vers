@@ -1,10 +1,12 @@
 import { expect, test } from 'bun:test';
-import { buildStateFromSeed } from '@vers/game-utils';
+import { CONTENT_BY_VERSION, buildStateFromSeed } from '@vers/game-utils';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
+import { mockKeysService } from '@vers/mock-services/keys';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import pino from 'pino';
 import invariant from 'tiny-invariant';
+import { server } from '../mocks/server';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
@@ -415,4 +417,261 @@ test('it refuses an activity whose build snapshot borrowed xp from a rejected ru
     .executeTakeFirstOrThrow();
 
   expect(avatar.xp).toBe(0);
+});
+
+test('it verifies a legacy row with a null secretRef, skipping the descriptor check', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    secretRef: null,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  expect(fixture.activity.secretRef).toBeNull();
+
+  // a mock that throws proves the descriptor check never reads the keys service for a legacy row
+  server.use(
+    mockKeysService.deriveScopeSecret.handler(() => {
+      throw new Error('a legacy row must never dispatch to the keys service');
+    }),
+  );
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome.kind).toBe('matched');
+});
+
+test('it makes no keys dispatch when the frontier has already verified part of the run', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const totalCheckpoints = fixture.checkpoints.length;
+  const firstBatchCount = totalCheckpoints - 1;
+
+  await ctx.db
+    .updateTable('activities')
+    .set({
+      appendedHead: firstBatchCount,
+      lastHash: fixture.checkpoints[firstBatchCount - 1]?.hash,
+      verifiedHead: firstBatchCount,
+    })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  // a mock that throws proves a segment past its first pass never reads the keys service
+  server.use(
+    mockKeysService.deriveScopeSecret.handler(() => {
+      throw new Error('a segment past verifiedHead 0 must never dispatch to the keys service');
+    }),
+  );
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: totalCheckpoints,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: firstBatchCount,
+    }),
+  );
+
+  expect(outcome.kind).toBe('matched');
+});
+
+test('it verifies an honest sealed content-version-2 row, matching its stamped poolID against the derived truth', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    contentVersion: '2',
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const stampedNode = fixture.activity.encounterNode;
+
+  invariant(
+    typeof stampedNode === 'object' && stampedNode !== null && 'poolID' in stampedNode,
+    'a content-version-2 fixture always stamps a poolID',
+  );
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome.kind).toBe('matched');
+});
+
+test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    contentVersion: '2',
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const stampedPoolID = fixture.activity.encounterNode;
+
+  invariant(
+    typeof stampedPoolID === 'object' && stampedPoolID !== null && 'poolID' in stampedPoolID,
+    'a content-version-2 fixture always stamps a poolID',
+  );
+
+  const contentV2 = CONTENT_BY_VERSION['2'];
+
+  invariant(contentV2, 'content version 2 must be registered for this test to be meaningful');
+
+  const tamperedPoolID = contentV2.pools.find((pool) => pool.id !== stampedPoolID['poolID'])?.id;
+
+  invariant(tamperedPoolID !== undefined, 'content version 2 registers more than one pool');
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ encounterNode: { difficulty: 1, poolID: tamperedPoolID } })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome).toStrictEqual({ kind: 'rejected' });
+
+  const activity = await ctx.db
+    .selectFrom('activities')
+    .select('status')
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(activity.status).toBe('rejected');
+});
+
+test("it rejects a tampered stamped encounter node on a continuation row, not just a chain's first activity", async () => {
+  await using ctx = await setupTest();
+
+  const genesis = await createHonestActivityFixture(ctx.db, {
+    // a real mint-and-append only ever opens a continuation once its predecessor has closed —
+    // the partial unique index admits one active row per avatar
+    activity: { status: 'stopped' },
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const continuation = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    rootChain: genesis.chain,
+    seed: buildStateFromSeed(1_616_267_014),
+  });
+
+  // the fixture stamps each row's default sealed secretRef/secretVersion independently, so the
+  // continuation row ends up carrying the same pair a real mint copies forward from the row it
+  // appends onto — these assertions pin that alignment
+  expect(continuation.activity.secretRef).toBe(genesis.activity.secretRef);
+  expect(continuation.activity.avatarId).toBe(genesis.activity.avatarId);
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ encounterNode: { difficulty: 999 } })
+    .where('id', '=', continuation.activity.id)
+    .execute();
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: continuation.activity.id,
+      appendedHead: continuation.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: continuation.activity.startChainIndex,
+      status: continuation.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome).toStrictEqual({ kind: 'rejected' });
+
+  const activity = await ctx.db
+    .selectFrom('activities')
+    .select('status')
+    .where('id', '=', continuation.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(activity.status).toBe('rejected');
 });

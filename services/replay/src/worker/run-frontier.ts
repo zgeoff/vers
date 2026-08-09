@@ -1,7 +1,9 @@
+import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import type { SimulationDriver } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
+import { readScopeSecret } from '@vers/worldmap-content';
 import type { Transaction } from 'kysely';
 import invariant from 'tiny-invariant';
 import { applyVerifiedSegment } from '../apply/apply-verified-segment';
@@ -18,6 +20,7 @@ import { updateReplayAttempts } from '../queue/update-replay-attempts';
 import { buildSegmentDuration } from '../replay/build-segment-duration';
 import { compareReplaySegment } from '../replay/compare-replay-segment';
 import type { ReplayCache } from '../replay/create-replay-cache';
+import { findDescriptorDivergence } from '../replay/find-descriptor-divergence';
 import { findSeedDivergence } from '../replay/find-seed-divergence';
 import { isForwardExited } from '../replay/is-forward-exited';
 import { loadReplaySegment } from '../replay/load-replay-segment';
@@ -74,6 +77,47 @@ export async function runFrontier(
 
   if (seedDivergence !== undefined) {
     return rejectSegment(trx, deps, cache, segment, seedDivergence, 'seed-validation-failed');
+  }
+
+  // Only a segment's first pass needs the descriptor check — a later pass over the same activity
+  // has already verified its sealed fields once, and a stamped row never changes them afterward.
+  if (segment.verifiedHead === 0 && segment.activity.secretRef !== null) {
+    invariant(
+      segment.activity.secretVersion !== null,
+      'a sealed activity always stamps a secret version alongside its secret ref',
+    );
+
+    const scopeSecret = await readScopeSecret(
+      {
+        issuer: 'service-replay',
+        keysServiceURL: deps.keysServiceURL,
+        privateKey: deps.privateKey,
+      },
+      {
+        avatarID: segment.activity.avatarID,
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped text; every write is this service's own custodied scope-ref enum
+        secretRef: segment.activity.secretRef as SecretRef,
+        secretVersion: segment.activity.secretVersion,
+      },
+    );
+
+    const descriptorDivergence = findDescriptorDivergence({
+      contentVersion: segment.activity.contentVersion,
+      scopeID: segment.activity.scopeID,
+      scopeSecret,
+      stampedEncounterNode: segment.activity.encounterNode,
+    });
+
+    if (descriptorDivergence !== undefined) {
+      return rejectSegment(
+        trx,
+        deps,
+        cache,
+        segment,
+        descriptorDivergence,
+        'descriptor-validation-failed',
+      );
+    }
   }
 
   if (segment.activity.simVersion === deps.simVersion) {
@@ -334,7 +378,10 @@ async function applyMatch(
   return { kind: 'matched', pendingCache: { activityID: segment.activity.id, effect } };
 }
 
-type RejectionCause = 'confirmed-on-fresh-replay' | 'seed-validation-failed';
+type RejectionCause =
+  | 'confirmed-on-fresh-replay'
+  | 'descriptor-validation-failed'
+  | 'seed-validation-failed';
 
 async function rejectSegment(
   trx: Transaction<DB>,
@@ -345,11 +392,6 @@ async function rejectSegment(
   divergence: Extract<CompareVerdict, { kind: 'divergence' }>,
   cause: RejectionCause,
 ): Promise<ReplayIterationOutcome> {
-  const message =
-    cause === 'seed-validation-failed'
-      ? 'replay seed validation failed; rejecting activity'
-      : 'replay divergence confirmed on a fresh replay; rejecting activity';
-
   deps.logger.error(
     {
       activityID: segment.activity.id,
@@ -359,10 +401,13 @@ async function rejectSegment(
       verifiedHead: segment.verifiedHead,
       version: divergence.version,
     },
-    message,
+    pickRejectMessage(cause),
   );
 
-  recordRejection('integrity-mismatch');
+  const rejectionReason: RejectionReason =
+    cause === 'descriptor-validation-failed' ? 'descriptor-mismatch' : 'integrity-mismatch';
+
+  recordRejection(rejectionReason);
 
   await rejectActivity(trx, {
     activityID: segment.activity.id,
@@ -374,6 +419,18 @@ async function rejectSegment(
   cache.remove(segment.activity.id);
 
   return { kind: 'rejected' };
+}
+
+function pickRejectMessage(cause: RejectionCause): string {
+  if (cause === 'seed-validation-failed') {
+    return 'replay seed validation failed; rejecting activity';
+  }
+
+  if (cause === 'descriptor-validation-failed') {
+    return 'replay descriptor validation failed; rejecting activity';
+  }
+
+  return 'replay divergence confirmed on a fresh replay; rejecting activity';
 }
 
 /**

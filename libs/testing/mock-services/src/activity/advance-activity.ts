@@ -102,6 +102,8 @@ export const advanceActivity = os.advanceActivity.handler(async (opts) => {
       keyVersion: closingActivity.keyVersion,
       scopeID: closingActivity.scopeID,
       scopeType: closingActivity.scopeType,
+      secretRef: closingActivity.secretRef,
+      secretVersion: closingActivity.secretVersion,
       simVersion: closingActivity.simVersion,
       startKey: continuation.startKey,
       status: 'active',
