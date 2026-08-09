@@ -182,6 +182,8 @@ timestamp to the moment the drain confirms it.
 - `unbacked-snapshot` — the activity's build snapshot borrowed xp from a run that has since been
   rejected, so the level and life it plays at were never proven; a rise tracks how far one rejection
   propagates through an avatar's later runs.
+- `descriptor-mismatch` — a sealed node's stamped content fields failed to reproduce against a
+  freshly read scope secret, on the segment's first verification pass.
 
 Each recording's log line carries the raw numbers behind it (heads, checkpoint counts, sim version).
 
@@ -199,12 +201,13 @@ and the shortfall is silent everywhere else.
 
 `vers.replay.iteration_failures` splits by `outcome`: `quarantined` covers an activity that
 exhausted its replay attempts, `errored` covers every other failed iteration.
-`vers.keys.derive_rejections` splits by `reason`, currently `unknown-key-version` alone.
-`vers.activity.terminal_transitions` splits by `status`: `stopped` covers a completed or failed last
-checkpoint, `capped` covers a batch rejected whole because it exceeded the avatar's accrued
-simulated-time budget. `vers.activity.advance_continuations` splits by `outcome`: `minted` covers a
-continuation whose mint step landed a fresh row, `converged` covers one that resolved onto a row a
-prior, partially committed request already minted at the same client id.
+`vers.keys.derive_rejections` splits by `reason`: `unknown-key-version` covers an avatar roll key
+version absent from the population's custodied roots, `unknown-scope-secret-version` covers the same
+for a scope secret. `vers.activity.terminal_transitions` splits by `status`: `stopped` covers a
+completed or failed last checkpoint, `capped` covers a batch rejected whole because it exceeded the
+avatar's accrued simulated-time budget. `vers.activity.advance_continuations` splits by `outcome`:
+`minted` covers a continuation whose mint step landed a fresh row, `converged` covers one that
+resolved onto a row a prior, partially committed request already minted at the same client id.
 `vers.activity.advance_bailouts` splits by `reason`, one per `advanceActivity` rejection code
 (`conflict`, `checkpoint_invalid`, `activity_capped`, `session_evicted`, `chain_quarantined`,
 `terminal`); a bailout always leaves the confirmed head advanced past the committed prefix, so a

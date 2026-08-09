@@ -1,6 +1,8 @@
 import { expect, test } from 'bun:test';
 import { buildCheckpointHash } from '@vers/contract-activity';
+import { buildMockScopeSecret } from '@vers/mock-services/keys';
 import { createTestDB } from '@vers/service-test-utils/bun';
+import { deriveWorldmapContent } from '@vers/worldmap-content';
 import { createHonestActivityFixture } from './create-honest-activity-fixture';
 
 test('it persists a stream whose stored hashes byte-match a fresh recompute', async () => {
@@ -78,4 +80,36 @@ test('it roots a successor on an already-persisted chain instead of creating a n
     .execute();
 
   expect(chains).toHaveLength(1);
+});
+
+test('it stamps secretRef/secretVersion and a sealed encounterNode matching real derivation truth by default', async () => {
+  await using ctx = await createTestDB();
+
+  const fixture = await createHonestActivityFixture(ctx.db, { duration: 80_000 });
+
+  expect(fixture.activity.secretRef).toBe('worldmap');
+  expect(fixture.activity.secretVersion).toBe(1);
+
+  const scopeSecret = buildMockScopeSecret(fixture.activity.avatarId, 'worldmap', 1);
+
+  const expected = {
+    difficulty: 1,
+    ...deriveWorldmapContent(fixture.activity.contentVersion, {
+      coord: [1, 0],
+      scopeSecret,
+      userSeed: 0,
+    }),
+  };
+
+  expect(fixture.activity.encounterNode).toStrictEqual(expected);
+});
+
+test('it stamps a null secretRef/secretVersion and the hardcoded legacy node for the escape hatch', async () => {
+  await using ctx = await createTestDB();
+
+  const fixture = await createHonestActivityFixture(ctx.db, { duration: 80_000, secretRef: null });
+
+  expect(fixture.activity.secretRef).toBeNull();
+  expect(fixture.activity.secretVersion).toBeNull();
+  expect(fixture.activity.encounterNode).toStrictEqual({ difficulty: 1 });
 });
