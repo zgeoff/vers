@@ -2,7 +2,12 @@ import { faker } from '@faker-js/faker';
 import { Collection } from '@msw/data';
 import { createId } from '@paralleldrive/cuid2';
 import { ActivityDataSchema, EncounterNodeSchema } from '@vers/contract-activity';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import * as z from 'zod';
+import {
+  MOCK_CURRENT_CONTENT_VERSION,
+  contentDocumentCollection,
+} from './content-document-collection';
 
 /**
  * A stored mock activity row: the public `ActivityDataSchema`'s shape with every field defaulted,
@@ -16,7 +21,7 @@ const ActivityRowSchema = z.object({
   appendedHead: z.int().default(0),
   avatarID: z.string().default(() => createId()),
   buildSnapshot: z.object({ level: z.int(), xp: z.int() }).default({ level: 1, xp: 0 }),
-  contentVersion: z.string().default('2'),
+  contentVersion: z.string().default(MOCK_CURRENT_CONTENT_VERSION),
   createdAt: z.date().default(() => new Date()),
   encounterNode: EncounterNodeSchema.default({ difficulty: 1 }),
   id: z.string().default(() => `act_${createId()}`),
@@ -40,6 +45,19 @@ const ActivityRowSchema = z.object({
 });
 
 export const activityCollection = new Collection({ schema: ActivityRowSchema });
+
+// Every stored activity's stamped contentVersion resolves through the mock content dispatch, so a
+// client that fetches a row's version always finds a document: creating a row backfills a content
+// document for its version unless a test already seeded one.
+// oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- the hooks emitter awaits a listener's returned promise at runtime, so the backfill lands before the creating call resolves; only the listener's declared type says void
+activityCollection.hooks.on('create', async (event) => {
+  const contentVersion = event.data.record.contentVersion;
+  const existing = contentDocumentCollection.findFirst((q) => q.where({ contentVersion }));
+
+  if (existing === undefined) {
+    await contentDocumentCollection.create(createMockContentDocument({ contentVersion }));
+  }
+});
 
 function buildMockHash(): string {
   return faker.string.hexadecimal({ casing: 'lower', length: 64, prefix: '' });

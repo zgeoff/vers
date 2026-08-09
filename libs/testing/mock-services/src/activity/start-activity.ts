@@ -4,7 +4,6 @@ import invariant from 'tiny-invariant';
 import { findLiveActivityAvatar } from '../avatar/find-live-activity-avatar';
 import { upsertActiveAvatar } from '../avatar/upsert-active-avatar';
 import * as db from '../db';
-import { MOCK_CONTENT_DOCUMENT } from './mock-content-document';
 import { os } from './os';
 import { resolveEncounterNode } from './resolve-encounter-node';
 
@@ -105,7 +104,7 @@ export const startActivity = os.startActivity.handler(async (opts) => {
   const seed = createGenesisSeed();
 
   const startHash = buildStartHash({
-    contentVersion: MOCK_CONTENT_DOCUMENT.contentVersion,
+    contentVersion: db.MOCK_CURRENT_CONTENT_VERSION,
     encounterNode,
     keyVersion: 1,
     seed,
@@ -119,7 +118,7 @@ export const startActivity = os.startActivity.handler(async (opts) => {
     appendedHead: 0,
     avatarID: opts.input.avatarID,
     buildSnapshot: { level: avatar.level, xp: avatar.xp },
-    contentVersion: MOCK_CONTENT_DOCUMENT.contentVersion,
+    contentVersion: db.MOCK_CURRENT_CONTENT_VERSION,
     createdAt: now,
     encounterNode,
     id,

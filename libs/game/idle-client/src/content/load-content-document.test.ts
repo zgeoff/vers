@@ -3,6 +3,7 @@ import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { resolveServiceURL } from '@vers/mock-services';
+import * as db from '@vers/mock-services/db';
 import type { ActivityServiceClient } from '../submission/types';
 import { findCachedContentDocument } from './find-cached-content-document';
 import { loadContentDocument } from './load-content-document';
@@ -29,11 +30,12 @@ test('it returns a cached document without dispatching a fetch', async () => {
 });
 
 test('it fetches and persists a document on a cache miss', async () => {
-  const document = await loadContentDocument(createRealClient(), '2');
+  const published = await db.contentDocumentCollection.create({});
+  const document = await loadContentDocument(createRealClient(), published.contentVersion);
 
-  expect(document.contentVersion).toBe('2');
+  expect(document.contentVersion).toBe(published.contentVersion);
 
-  const nowCached = await findCachedContentDocument('2');
+  const nowCached = await findCachedContentDocument(published.contentVersion);
 
   expect(nowCached).toStrictEqual(document);
 });

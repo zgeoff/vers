@@ -1,10 +1,14 @@
-import { MOCK_CONTENT_DOCUMENT } from './mock-content-document';
+import * as db from '../db';
 import { os } from './os';
 
 export const getContentDocument = os.getContentDocument.handler((opts) => {
-  if (opts.input.contentVersion !== MOCK_CONTENT_DOCUMENT.contentVersion) {
+  const document = db.contentDocumentCollection.findFirst((q) =>
+    q.where({ contentVersion: opts.input.contentVersion }),
+  );
+
+  if (document === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  return MOCK_CONTENT_DOCUMENT;
+  return document;
 });
