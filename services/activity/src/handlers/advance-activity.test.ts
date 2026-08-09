@@ -160,6 +160,59 @@ test('it mint-and-appends a two-continuation chain, returning the final freshly 
   ]);
 });
 
+test('it carries the closing row secretRef/secretVersion forward onto a minted continuation', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(started.secretRef).not.toBeNull();
+  expect(started.secretVersion).not.toBeNull();
+
+  const tail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+    startChainIndex: started.startChainIndex,
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  const continuation: CatchUpContinuation = {
+    buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
+    checkpoints: tail,
+    id: `act_${createId()}`,
+    startKey: `continue_${started.id}`,
+  };
+
+  const result = await client.advanceActivity({
+    activityID: started.id,
+    continuations: [continuation],
+    expectedHead: 0,
+  });
+
+  expect(result.activity.secretRef).toBe(started.secretRef);
+  expect(result.activity.secretVersion).toBe(started.secretVersion);
+
+  const rows = await ctx.db
+    .selectFrom('activities')
+    .select(['id', 'secretRef', 'secretVersion'])
+    .where('avatarId', '=', avatar.id)
+    .orderBy('startedAt', 'asc')
+    .execute();
+
+  expect(rows).toStrictEqual([
+    { id: started.id, secretRef: started.secretRef, secretVersion: started.secretVersion },
+    { id: continuation.id, secretRef: started.secretRef, secretVersion: started.secretVersion },
+  ]);
+});
+
 test('it rejects a continuation whose predicted buildSnapshot mismatches the server-authored one', async () => {
   await using ctx = await setupTest();
 

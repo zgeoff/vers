@@ -574,3 +574,63 @@ test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", a
 
   expect(activity.status).toBe('rejected');
 });
+
+test("it rejects a tampered stamped encounter node on a continuation row, not just a chain's first activity", async () => {
+  await using ctx = await setupTest();
+
+  const genesis = await createHonestActivityFixture(ctx.db, {
+    // a real mint-and-append only ever opens a continuation once its predecessor has closed —
+    // the partial unique index admits one active row per avatar
+    activity: { status: 'stopped' },
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const continuation = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    rootChain: genesis.chain,
+    seed: buildStateFromSeed(1_616_267_014),
+  });
+
+  // the continuation inherits the genesis row's own secretRef/secretVersion, exactly as a real
+  // advanceActivity mint does — a row this fixture's default already stamps as sealed
+  expect(continuation.activity.secretRef).toBe(genesis.activity.secretRef);
+  expect(continuation.activity.avatarId).toBe(genesis.activity.avatarId);
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ encounterNode: { difficulty: 999 } })
+    .where('id', '=', continuation.activity.id)
+    .execute();
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: continuation.activity.id,
+      appendedHead: continuation.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: continuation.activity.startChainIndex,
+      status: continuation.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome).toStrictEqual({ kind: 'rejected' });
+
+  const activity = await ctx.db
+    .selectFrom('activities')
+    .select('status')
+    .where('id', '=', continuation.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(activity.status).toBe('rejected');
+});
