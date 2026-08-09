@@ -8,7 +8,7 @@ test('it derives a frozen golden descriptor from fixed inputs', () => {
   const descriptor = deriveWorldmapDescriptor({ coord: [3, -2], scopeSecret, userSeed: 0 });
 
   expect(bytesToHex(descriptor)).toMatchInlineSnapshot(
-    `"c2ea5ef6d51eba7b920ff429390142e6efd64328cfc3aeb8b24ad56d65e02712"`,
+    `"900f266547490349828b49daebb52a97fae66fe4b470e656f88fdb8c1c1063dc"`,
   );
 });
 

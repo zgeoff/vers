@@ -12,9 +12,6 @@ interface ScopeSecretRootEntry {
 
 export type ScopeSecretRoots = Readonly<Record<SecretRef, ScopeSecretRootEntry>>;
 
-const HEX_ROOT_PATTERN = /^[0-9a-f]{64}$/i;
-const INTEGER_KEY_PATTERN = /^[1-9]\d*$/;
-
 const RawRootEntrySchema = z.object({
   current: z.int().min(1),
   roots: z.record(z.string(), z.string()),
@@ -53,6 +50,9 @@ interface RawRootEntry {
   readonly current: number;
   readonly roots: Readonly<Record<string, string>>;
 }
+
+const HEX_ROOT_PATTERN = /^[0-9a-f]{64}$/i;
+const INTEGER_KEY_PATTERN = /^[1-9]\d*$/;
 
 function parseScopeEntry(secretRef: SecretRef, entry: RawRootEntry): ScopeSecretRootEntry {
   const roots = new Map<number, Uint8Array>();

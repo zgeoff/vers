@@ -112,7 +112,10 @@ export async function advanceActivity(
     avatarId: initial.avatarId,
     contentVersion: initial.contentVersion,
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is this service's own encounter-node resolution
-    encounterNode: initial.encounterNode as { readonly difficulty: number },
+    encounterNode: initial.encounterNode as {
+      readonly difficulty: number;
+      readonly poolID?: string;
+    },
     keyVersion: initial.keyVersion,
     scopeId: initial.scopeId,
     scopeType: initial.scopeType,
@@ -184,7 +187,7 @@ export async function advanceActivity(
 interface PinnedActivityContext {
   readonly avatarId: string;
   readonly contentVersion: string;
-  readonly encounterNode: { readonly difficulty: number };
+  readonly encounterNode: { readonly difficulty: number; readonly poolID?: string };
   readonly keyVersion: number;
   readonly scopeId: string;
   readonly scopeType: string;

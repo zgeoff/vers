@@ -1,9 +1,18 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 
+/**
+ * The frozen encounter params folded into the start hash: `difficulty` is always present, and any
+ * further sealed field is a string or number so it serializes canonically.
+ */
+interface HashedEncounterNode {
+  readonly [key: string]: number | string | undefined;
+  readonly difficulty: number;
+}
+
 interface BuildStartHashInput {
   readonly contentVersion: string;
-  readonly encounterNode: Readonly<Record<string, unknown>>;
+  readonly encounterNode: HashedEncounterNode;
   readonly keyVersion: number;
   readonly seed: string;
   readonly simVersion: string;
@@ -31,16 +40,16 @@ export function buildStartHash(input: Readonly<BuildStartHashInput>): string {
   return bytesToHex(sha256(utf8ToBytes(canonical)));
 }
 
-function buildCanonicalEncounterNode(
-  node: Readonly<Record<string, unknown>>,
-): Record<string, unknown> {
-  const canonical: Record<string, unknown> = {};
-
-  for (const key of Object.keys(node)
-    .filter((candidate) => node[candidate] !== undefined)
-    .toSorted()) {
-    canonical[key] = node[key];
-  }
-
-  return canonical;
+/**
+ * `Object.fromEntries` defines each key as an own property, so a node parsed from JSON with an own
+ * `__proto__` key lands in the digest like any other field — plain assignment would invoke the
+ * prototype setter and silently drop it.
+ */
+function buildCanonicalEncounterNode(node: HashedEncounterNode): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.keys(node)
+      .filter((candidate) => node[candidate] !== undefined)
+      .toSorted()
+      .map((key) => [key, node[key]]),
+  );
 }

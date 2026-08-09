@@ -2,9 +2,11 @@ import type { EncounterContent } from '../types';
 
 /**
  * Machinery-exercising placeholder content whose multiplier is 1x so stats scale by node
- * difficulty alone. Every pool's weighted-mean `baseXP` is exactly 9, tying the flat-base law to a
- * concrete number: which pool a node's sealed descriptor picks changes flavor, never expected
- * reward magnitude. Frozen — a content change is a new version module, never an edit here.
+ * difficulty alone. Every pool's weighted-mean `baseXP` is exactly 9 — the one flat-base property
+ * a sweep test enforces: which pool a node's sealed descriptor picks never changes the expected
+ * xp per defeated enemy. Pools do differ in life, attack, and speed, so time-to-clear — and with
+ * it time-normalized expected value — varies by pool and is ungoverned. Frozen — a content change
+ * is a new version module, never an edit here.
  */
 export const encounterContentV2: EncounterContent = {
   contentVersion: '2',

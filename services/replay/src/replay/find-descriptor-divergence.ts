@@ -6,13 +6,16 @@ interface FindDescriptorDivergenceInput {
   readonly contentVersion: string;
   readonly scopeID: string;
   readonly scopeSecret: Uint8Array;
-  readonly stampedEncounterNode: { readonly difficulty: number; readonly poolID?: string };
+  readonly stampedEncounterNode: {
+    readonly difficulty: number;
+    readonly poolID?: string | undefined;
+  };
 }
 
 /**
  * Compares a segment's stamped, server-sealed node fields against the server's own
  * recomputation: difficulty from the activity's scope id alone, and every sealed content field
- * `deriveWorldmapContent` derives for the activity's content version and a freshly read scope
+ * the content derivation yields for the activity's content version and a freshly read scope
  * secret. A scope id that no longer resolves to a coordinate is itself a divergence. Undefined
  * means no divergence found here.
  */

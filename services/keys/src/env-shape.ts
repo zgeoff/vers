@@ -1,8 +1,8 @@
 import * as z from 'zod';
 
 /**
- * Environment the keys service needs beyond the base service env: the root key material avatar
- * roll keys and scope secrets are derived from.
+ * Environment the keys service needs beyond the base service env: the root key material that
+ * avatar roll keys and scope secrets are derived from.
  */
 export const envShape = {
   ROLL_KEY_ROOTS: z

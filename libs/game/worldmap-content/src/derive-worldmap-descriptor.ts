@@ -1,3 +1,4 @@
+import { hmac } from '@noble/hashes/hmac.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { utf8ToBytes } from '@noble/hashes/utils.js';
 import invariant from 'tiny-invariant';
@@ -9,7 +10,7 @@ export interface DeriveWorldmapDescriptorInput {
 }
 
 /**
- * Derives a world map node's sealed descriptor: SHA-256 over the scope secret followed by the
+ * Derives a world map node's sealed descriptor: HMAC-SHA256 keyed by the scope secret over the
  * canonical `vers/worldmap-descriptor/v1|cx|cy|userSeed` byte encoding. Pure: identical input
  * always yields an identical descriptor, and it is uncorrelated with public node geometry — no
  * client can reproduce it without the scope secret.
@@ -29,12 +30,7 @@ export function deriveWorldmapDescriptor(
 
   const info = utf8ToBytes(`vers/worldmap-descriptor/v1|${cx}|${cy}|${input.userSeed}`);
 
-  const message = new Uint8Array(input.scopeSecret.length + info.length);
-
-  message.set(input.scopeSecret, 0);
-  message.set(info, input.scopeSecret.length);
-
-  return sha256(message);
+  return hmac(sha256, input.scopeSecret, info);
 }
 
 function assertSafeInteger(value: number, label: string): void {

@@ -18,8 +18,8 @@ import { createChainRow } from './create-chain-row';
 
 /**
  * The chain scope id every honest fixture roots on unless the caller overrides it: a real cell
- * coordinate whose difficulty is 1, matching this module's historical hardcoded encounter node —
- * every fixture stays byte-comparable across sealed and legacy runs.
+ * coordinate whose difficulty is 1, so sealed and legacy fixtures stamp the same difficulty and
+ * stay byte-comparable.
  */
 const DEFAULT_SCOPE_ID = '1_0';
 
@@ -70,9 +70,9 @@ interface CreateHonestActivityFixtureInput {
  * `startChainIndex` to that chain's own `appendedChainIndex`; pass both explicitly for a successor
  * seeded from a predecessor's tail rather than the chain's current appended anchor. Defaults to a
  * sealed row — `secretRef`/`secretVersion` stamped and the encounter node's sealed fields derived
- * through the real `deriveWorldmapContent` over a `buildMockScopeSecret`-rooted secret, so a caller
- * verifying against the same helper sees identical truth; pass `secretRef: null` for the legacy
- * escape hatch, a row exactly as this fixture stamped before sealing.
+ * through the real content derivation over the mock keys backend's deterministic scope secret, so
+ * a caller verifying through that same backend sees identical truth; pass `secretRef: null` for
+ * the legacy escape hatch, a row with a fixed difficulty-1 node and no sealed fields.
  */
 export async function createHonestActivityFixture(
   db: Kysely<DB>,
@@ -178,11 +178,11 @@ interface BuildFixtureEncounterNodeInput {
 }
 
 /**
- * Resolves the encounter node a sealed fixture stamps: difficulty recomputed from the fixture's own
- * scope id, plus every sealed content field the real `deriveWorldmapContent` derives from a
- * `buildMockScopeSecret`-rooted secret — the same truth a verifier reading through the mocked keys
- * backend recomputes. A `null` secretRef is the legacy escape hatch: the fixture's historical
- * hardcoded difficulty-1 node, no sealed fields.
+ * Resolves the encounter node a sealed fixture stamps: difficulty recomputed from the fixture's
+ * own scope id, plus every sealed content field the real content derivation yields for the mock
+ * keys backend's deterministic scope secret — the same truth a verifier reading through that
+ * backend recomputes. A `null` secretRef is the legacy escape hatch: a fixed difficulty-1 node
+ * with no sealed fields.
  */
 function buildFixtureEncounterNode(input: Readonly<BuildFixtureEncounterNodeInput>) {
   if (input.secretRef === null) {
