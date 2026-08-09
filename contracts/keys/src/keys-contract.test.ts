@@ -11,6 +11,14 @@ test('it declares UNAUTHORIZED, FORBIDDEN, and NOT_FOUND on deriveAvatarKey', ()
   ]);
 });
 
+test('it declares UNAUTHORIZED, FORBIDDEN, and NOT_FOUND on deriveScopeSecret', () => {
+  expect(keysContract.deriveScopeSecret['~orpc'].errorMap).toContainAllKeys([
+    'UNAUTHORIZED',
+    'FORBIDDEN',
+    'NOT_FOUND',
+  ]);
+});
+
 test('it generates a valid OpenAPI document from the keys contract', async () => {
   const generator = new OpenAPIGenerator({
     schemaConverters: [new ZodToJsonSchemaConverter()],

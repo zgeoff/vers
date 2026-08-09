@@ -25,11 +25,14 @@ services:
       - services/activity/.env.development
     environment:
       - DATABASE_URL=postgresql://admin:password@postgres:5433/vers
+      - KEYS_SERVICE_URL=http://service-keys:3008
       - REPLAY_SERVICE_URL=http://service-replay:3009
     ports:
       - '3006:3006'
     depends_on:
       postgres:
+        condition: service_healthy
+      service-keys:
         condition: service_healthy
   service-avatar:
     build:

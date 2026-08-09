@@ -1,12 +1,13 @@
 import { expect, test } from 'bun:test';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import type { KeysContract } from '@vers/contract-keys';
-import { deriveAvatarKey } from '@vers/roll-crypto';
+import { deriveAvatarKey, deriveScopeSecret } from '@vers/roll-crypto';
 import { createAnonymousViewer } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createKeysService } from './create-keys-service';
 
 const TRADE_ROOT_HEX = '11'.repeat(32);
+const WORLDMAP_ROOT_HEX = '44'.repeat(32);
 
 async function setupTest() {
   const service = await createKeysService();
@@ -102,6 +103,63 @@ test('it rejects an unknown key version with NOT_FOUND naming the version and po
   ).rejects.toMatchObject({
     code: 'NOT_FOUND',
     data: { keyVersion: 99, population: 'trade' },
+  });
+});
+
+test('it derives a scope secret matching a direct call against the configured root', async () => {
+  const ctx = await setupTest();
+  const viewer = await createAnonymousViewer({ audience: 'service-keys' });
+
+  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: viewer.token });
+
+  const result = await client.deriveScopeSecret({
+    avatarID: 'avatar-1',
+    secretRef: 'worldmap',
+    secretVersion: 1,
+  });
+
+  const expected = deriveScopeSecret({
+    avatarID: 'avatar-1',
+    secretRef: 'worldmap',
+    secretVersion: 1,
+    root: hexToBytes(WORLDMAP_ROOT_HEX),
+  });
+
+  expect(result.secret).toBe(Buffer.from(expected).toString('hex'));
+});
+
+test('it derives diverging scope secrets across secret versions', async () => {
+  const ctx = await setupTest();
+  const viewer = await createAnonymousViewer({ audience: 'service-keys' });
+
+  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: viewer.token });
+
+  const versionOne = await client.deriveScopeSecret({
+    avatarID: 'avatar-1',
+    secretRef: 'worldmap',
+    secretVersion: 1,
+  });
+
+  const versionTwo = await client.deriveScopeSecret({
+    avatarID: 'avatar-1',
+    secretRef: 'worldmap',
+    secretVersion: 2,
+  });
+
+  expect(versionOne.secret).not.toBe(versionTwo.secret);
+});
+
+test('it rejects an unknown scope secret version with NOT_FOUND naming the ref and version', async () => {
+  const ctx = await setupTest();
+  const viewer = await createAnonymousViewer({ audience: 'service-keys' });
+
+  const client = buildRPCTestClient<KeysContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.deriveScopeSecret({ avatarID: 'avatar-1', secretRef: 'worldmap', secretVersion: 99 }),
+  ).rejects.toMatchObject({
+    code: 'NOT_FOUND',
+    data: { secretRef: 'worldmap', secretVersion: 99 },
   });
 });
 

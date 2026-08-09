@@ -1,6 +1,6 @@
 import { metrics } from '@opentelemetry/api';
 
-export type DeriveRejectionReason = 'unknown-key-version';
+export type DeriveRejectionReason = 'unknown-key-version' | 'unknown-scope-secret-version';
 
 /**
  * Counts one `deriveAvatarKey` call that refused to derive a key, split by reason. The counter is
