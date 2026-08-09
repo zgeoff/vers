@@ -206,6 +206,21 @@ later deploy with "found multiple image versions".
 A rollout can fail on transient `syd` host-capacity refusals ("could not reserve resource"); Fly
 rolls back cleanly, so re-run the failed job.
 
+### Stranded-machine sweep
+
+A deploy or cutover leg reads the fleet before running flyctl and groups its machines by image. A
+single group is clean. Multiple groups mean a prior rollout left machines stranded on a second
+image, and the leg sweeps them: it picks the group to keep, destroys every machine outside it, then
+proceeds — so flyctl's own preflight never hits "found multiple image versions".
+
+The kept group is the one whose machines all carry the app's recorded release git SHA. When no group
+matches that SHA, the kept group falls back to the single image group holding a started machine
+whose health checks all pass. A started machine outside the kept group is never a destroy target:
+the leg fails instead, printing the fleet's machine table (id, state, image, git SHA) so an operator
+can resolve it by hand. `deploy verify` reports a mixed-image fleet as its own finding — each image
+with its machine count — in place of the generic finding that no trustworthy SHA is recorded, and
+never sweeps; the fleet is left exactly as found.
+
 ### Pinned upstream images
 
 `vers-bugsink` and `vers-umami` ship pinned upstream images. Neither sits in the turbo task graph,

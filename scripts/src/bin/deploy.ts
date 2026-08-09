@@ -9,6 +9,7 @@ import type { Kysely } from 'kysely';
 import { applyBuild } from '../deploy/apply-build';
 import { applyDeploy } from '../deploy/apply-deploy';
 import { applyIPPostureActions } from '../deploy/apply-ip-posture-actions';
+import { applyMachineSweepActions } from '../deploy/apply-machine-sweep-actions';
 import { applyRetentionActions } from '../deploy/apply-retention-actions';
 import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-actions';
 import { applySimVersionActions } from '../deploy/apply-sim-version-actions';
@@ -17,9 +18,11 @@ import { buildProviderAppName } from '../deploy/build-provider-app-name';
 import { checkParkedApp } from '../deploy/check-parked-app';
 import { checkTarget } from '../deploy/check-target';
 import { findStaleReason } from '../deploy/find-stale-reason';
+import { formatMachineTable } from '../deploy/format-machine-table';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
 import { PINNED_BUN_VERSION, loadEngineHash } from '../deploy/load-engine-hash';
 import { planIPPosture } from '../deploy/plan-ip-posture';
+import { planMachineSweep } from '../deploy/plan-machine-sweep';
 import { planRetentionActions } from '../deploy/plan-retention-actions';
 import { planScheduledMachineActions } from '../deploy/plan-scheduled-machine-actions';
 import { planSimVersionActions } from '../deploy/plan-sim-version-actions';
@@ -301,10 +304,13 @@ async function withReleaseDB(run: (db: Kysely<DB>) => Promise<void>): Promise<vo
 
 /**
  * One rollout from an already-built image (null for targets that deploy their fly.toml stock
- * image): ensure the target's IP posture, cut the fleet over, reconcile, probe. Probes
- * passing records the release as the app's next rollback target; probes failing rolls the fleet
- * back to the previous recorded release and leaves the run red either way, so the failure ships
- * forward on a later push instead of a broken release serving meanwhile.
+ * image): sweep any machines stranded on a second image by an aborted rollout, ensure the target's
+ * IP posture, cut the fleet over, reconcile, probe. Probes passing records the release as the app's
+ * next rollback target; probes failing rolls the fleet back to the previous recorded release and
+ * leaves the run red either way, so the failure ships forward on a later push instead of a broken
+ * release serving meanwhile. A sweep the planner can't resolve unambiguously fails the leg before
+ * flyctl ever runs, rather than let its own "found multiple image versions" preflight fail it with
+ * no path to recovery but a manual machine destroy.
  */
 async function runRollout(
   db: Kysely<DB>,
@@ -313,6 +319,23 @@ async function runRollout(
   image: string | null,
 ): Promise<void> {
   const previous = await findLatestRelease(db, target.app);
+  const fleet = await readAppState(target.app);
+
+  const recordedRelease = previous === undefined ? null : { gitSHA: previous.gitSha };
+  const sweepPlan = planMachineSweep(fleet.machines, recordedRelease);
+
+  if (sweepPlan.kind === 'ambiguous') {
+    console.error(`✗ ${target.app} — ${sweepPlan.reason}`);
+    console.error(formatMachineTable(fleet.machines));
+
+    process.exitCode = 1;
+
+    return;
+  }
+
+  if (sweepPlan.kind === 'sweep') {
+    await applyMachineSweepActions(target.app, sweepPlan.machines);
+  }
 
   await runIPPostureReconcile(target);
   await applyDeploy(target, sha, image);

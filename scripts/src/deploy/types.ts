@@ -69,6 +69,7 @@ export interface AppMachine {
   readonly id: string;
   readonly state: string;
   readonly gitSHA: string | null;
+  readonly image: string | null;
   readonly checks?: ReadonlyArray<MachineCheck>;
 }
 
