@@ -166,6 +166,8 @@ Libraries (`libs/`, grouped by domain):
 - `libs/core/trace` - isomorphic W3C trace-context primitives (mint, serialize, parse)
 - `libs/core/utils` - low-level platform-agnostic utils
 - `libs/data/db` - kysely connection helper, migrations, and generated database types
+- `libs/data/content-registry` - published content-document registry: reads a pinned version's
+  document, reads and advances the current pointer, and memoizes loaded documents per process
 - `libs/data/release-registry` - deploy release registry: records a row per rollout that passed its
   post-deploy probes and finds each app's newest release as its rollback target
 - `libs/data/sim-registry` - sim-engine version registry: registers built engine images, resolves
