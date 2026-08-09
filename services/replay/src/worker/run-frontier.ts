@@ -81,12 +81,7 @@ export async function runFrontier(
 
   // Only a segment's first pass needs the descriptor check — a later pass over the same activity
   // has already verified its sealed fields once, and a stamped row never changes them afterward.
-  if (segment.verifiedHead === 0 && segment.activity.secretRef !== null) {
-    invariant(
-      segment.activity.secretVersion !== null,
-      'a sealed activity always stamps a secret version alongside its secret ref',
-    );
-
+  if (segment.verifiedHead === 0) {
     const scopeSecret = await readScopeSecret(
       {
         issuer: 'service-replay',

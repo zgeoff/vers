@@ -419,48 +419,6 @@ test('it refuses an activity whose build snapshot borrowed xp from a rejected ru
   expect(avatar.xp).toBe(0);
 });
 
-test('it verifies a legacy row with a null secretRef, skipping the descriptor check', async () => {
-  await using ctx = await setupTest();
-
-  const fixture = await createHonestActivityFixture(ctx.db, {
-    duration: 80_000,
-    secretRef: null,
-    seed: buildStateFromSeed(3_047_525_658),
-  });
-
-  expect(fixture.activity.secretRef).toBeNull();
-
-  // a mock that throws proves the descriptor check never reads the keys service for a legacy row
-  server.use(
-    mockKeysService.deriveScopeSecret.handler(() => {
-      throw new Error('a legacy row must never dispatch to the keys service');
-    }),
-  );
-
-  const cache = createReplayCache();
-
-  const deps = {
-    db: ctx.db,
-    keysServiceURL: resolveServiceURL('keys'),
-    logger: pino({ enabled: false }),
-    privateKey: ctx.privateKey,
-    simVersion: 'test-engine-hash',
-  };
-
-  const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
-  );
-
-  expect(outcome.kind).toBe('matched');
-});
-
 test('it makes no keys dispatch when the frontier has already verified part of the run', async () => {
   await using ctx = await setupTest();
 

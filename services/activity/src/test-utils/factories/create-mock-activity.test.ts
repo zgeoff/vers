@@ -14,6 +14,8 @@ test('it builds a default activity row', () => {
     lastHash: expect.toBeString(),
     scopeId: expect.toBeString(),
     scopeType: 'world_map_node',
+    secretRef: 'worldmap',
+    secretVersion: 1,
     seed: expect.toBeString(),
     simVersion: '0.0.0-dev',
     startHash: expect.toBeString(),
