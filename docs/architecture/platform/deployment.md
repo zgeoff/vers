@@ -409,7 +409,10 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
      ROLL_KEY_ROOTS="$(jq -nc \
        --arg trade "$(openssl rand -hex 32)" \
        --arg selfFound "$(openssl rand -hex 32)" \
-       '{trade: {current: 1, roots: {"1": $trade}}, "self-found": {current: 1, roots: {"1": $selfFound}}}')"
+       '{trade: {current: 1, roots: {"1": $trade}}, "self-found": {current: 1, roots: {"1": $selfFound}}}')" \
+     SCOPE_SECRET_ROOTS="$(jq -nc \
+       --arg worldmap "$(openssl rand -hex 32)" \
+       '{worldmap: {current: 1, roots: {"1": $worldmap}}}')"
 
    fly secrets set -a vers-service-session \
      DATABASE_URL="$DATABASE_URL" \

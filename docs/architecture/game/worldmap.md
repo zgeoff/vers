@@ -122,6 +122,11 @@ player farms the known offline and ventures into fog online.
 
 ## Content sealing & verification
 
+`secretRef`/`secretVersion` are nullable `activities` columns, exempting a row minted before content
+sealing from the descriptor check; the scope secret they name is custodied in `service-keys` under
+`SCOPE_SECRET_ROOTS`, and `descriptor(coord)` folds in a `userSeed` pinned to 0 until a per-avatar
+seed exists.
+
 Regeneration beats storage for an infinite per-avatar map: `descriptor(coord)` is O(1) and stores
 nothing. Tamper-resistance follows without extra machinery — encounter derivation already recomputes
 a node's enemies from server truth at activity start, and the verifier recomputes at replay, so a
