@@ -28,3 +28,17 @@ test('it accepts an encounter node without a poolID', () => {
 
   expect(result.success).toBeTrue();
 });
+
+test('it keeps a sealed scalar field it does not declare', () => {
+  const result = EncounterNodeSchema.safeParse({ difficulty: 3, juiceSalt: 7 });
+
+  expect(result.success).toBeTrue();
+  expect(result.data).toStrictEqual({ difficulty: 3, juiceSalt: 7 });
+});
+
+test('it rejects a sealed field that is not a string or number', () => {
+  const result = EncounterNodeSchema.safeParse({ difficulty: 3, modifiers: { fire: 2 } });
+
+  expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['modifiers'] }));
+});
