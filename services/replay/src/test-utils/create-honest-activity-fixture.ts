@@ -107,6 +107,12 @@ export async function createHonestActivityFixture(
 
   const startChainIndex = input.startChainIndex ?? chain.appendedChainIndex;
   const contentVersion = input.contentVersion ?? '2';
+
+  invariant(
+    contentVersion === '1' || contentVersion === '2',
+    `no seeded content document exists for content version ${contentVersion}`,
+  );
+
   const contentSource = contentVersion === '1' ? contentDocumentV1 : contentDocumentV2;
   const document: ContentDocument = ContentDocumentSchema.parse(contentSource);
   const secretRef = input.secretRef ?? 'worldmap';
