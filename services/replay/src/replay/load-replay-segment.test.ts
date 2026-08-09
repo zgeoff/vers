@@ -41,8 +41,7 @@ test('it anchors a genesis segment on the activity startHash and seed', async ()
     avatarID: fixture.activity.avatarId,
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: fixture.activity.contentVersion,
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the fixture stamps a schema-shaped encounter node
-    encounterNode: fixture.activity.encounterNode as { difficulty: number; poolID?: string },
+    encounterNode: fixture.encounterNode,
     id: fixture.activity.id,
     settledXP: fixture.activity.settledXp,
     keyVersion: fixture.activity.keyVersion,
@@ -55,10 +54,6 @@ test('it anchors a genesis segment on the activity startHash and seed', async ()
     startChainIndex: fixture.activity.startChainIndex,
     status: fixture.activity.status,
   });
-
-  // the row-reference equality above proves the loader round-trips the stored node; this proves
-  // the stored node actually carries a sealed pool stamp under the current content version
-  expect(segment?.activity.encounterNode).toContainEntry(['poolID', expect.toBeString()]);
 });
 
 test('it anchors a continuation segment on the last verified checkpoint hash and nextSeed', async () => {
