@@ -55,6 +55,10 @@ test('it anchors a genesis segment on the activity startHash and seed', async ()
     startChainIndex: fixture.activity.startChainIndex,
     status: fixture.activity.status,
   });
+
+  // the row-reference equality above proves the loader round-trips the stored node; this proves
+  // the stored node actually carries a sealed pool stamp under the current content version
+  expect(segment?.activity.encounterNode).toContainEntry(['poolID', expect.toBeString()]);
 });
 
 test('it anchors a continuation segment on the last verified checkpoint hash and nextSeed', async () => {
