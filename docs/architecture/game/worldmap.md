@@ -122,8 +122,8 @@ player farms the known offline and ventures into fog online.
 
 ## Content sealing & verification
 
-`secretRef`/`secretVersion` are nullable `activities` columns, exempting a row minted before content
-sealing from the descriptor check; `service-keys` custodies the versioned roots in
+Every `activities` row carries `secretRef`/`secretVersion`, so the verifier runs the descriptor
+check on every stream's first pass; `service-keys` custodies the versioned roots in
 `SCOPE_SECRET_ROOTS` and derives each avatar's scope secret from the referenced root, and
 `descriptor(coord)` folds in a `userSeed` pinned to 0 until a per-avatar seed exists.
 
