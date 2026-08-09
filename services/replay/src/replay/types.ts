@@ -49,11 +49,10 @@ export interface ReplaySegment {
 
     /**
      * The scope secret ref and root version content sealing derived this activity's node content
-     * from, null on a legacy row minted before sealing — the verifier's skip signal for the
-     * descriptor check.
+     * from.
      */
-    readonly secretRef: string | null;
-    readonly secretVersion: number | null;
+    readonly secretRef: string;
+    readonly secretVersion: number;
 
     /**
      * The xp this activity has already contributed to its avatar's settled row, so a terminal

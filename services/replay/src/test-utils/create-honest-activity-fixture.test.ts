@@ -103,13 +103,3 @@ test('it stamps secretRef/secretVersion and a sealed encounterNode matching real
 
   expect(fixture.activity.encounterNode).toStrictEqual(expected);
 });
-
-test('it stamps a null secretRef/secretVersion and the hardcoded legacy node for the escape hatch', async () => {
-  await using ctx = await createTestDB();
-
-  const fixture = await createHonestActivityFixture(ctx.db, { duration: 80_000, secretRef: null });
-
-  expect(fixture.activity.secretRef).toBeNull();
-  expect(fixture.activity.secretVersion).toBeNull();
-  expect(fixture.activity.encounterNode).toStrictEqual({ difficulty: 1 });
-});
