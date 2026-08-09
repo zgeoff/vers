@@ -169,6 +169,7 @@
     "format:check": "oxfmt --check . && format-codemod --check --quiet .",
     "codegen:styles": "turbo run codegen",
     "codegen:types": "turbo run typegen",
+    "content:publish": "bun scripts/src/bin/content-publish.ts",
     "deploy": "bun scripts/src/bin/deploy.ts",
     "env:contract": "bun scripts/src/bin/write-env-contracts.ts",
     "env:contract:check": "bun scripts/src/bin/write-env-contracts.ts --check",

@@ -959,6 +959,8 @@
       "version": "0.0.0",
       "dependencies": {
         "@dotenvx/dotenvx": "catalog:",
+        "@vers/content-registry": "workspace:*",
+        "@vers/contract-activity": "workspace:*",
         "@vers/db": "workspace:*",
         "@vers/release-registry": "workspace:*",
         "@vers/service-runtime": "workspace:*",
