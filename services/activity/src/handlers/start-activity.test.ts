@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import type { ActivityContract } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
 import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
+import { buildMockScopeSecret, mockKeysService } from '@vers/mock-services/keys';
 import {
   createActiveAvatarRow,
   createAnonymousViewer,
@@ -14,8 +15,12 @@ import {
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import { deriveWorldmapContent } from '@vers/worldmap-content';
+import { findCellCoord, getDifficulty } from '@vers/worldmap-core';
 import { sql } from 'kysely';
+import invariant from 'tiny-invariant';
 import { createActivityService } from '../create-activity-service';
+import { server } from '../mocks/server';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 /**
@@ -23,9 +28,13 @@ import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-c
  * lock, which can't nest under the default rollback-on-dispose isolation — this suite runs
  * against a real, committed schema clone instead.
  */
-async function setupTest() {
+async function setupTest(config: { readonly contentVersion?: string } = {}) {
   const db = await createTestDB({ isolation: 'schema' });
-  const service = await createActivityService({ db: db.db });
+
+  const service = await createActivityService({
+    ...(config.contentVersion !== undefined && { contentVersion: config.contentVersion }),
+    db: db.db,
+  });
 
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
@@ -63,6 +72,8 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     lastHash: expect.toBeString(),
     scopeID: '0_0',
     scopeType: 'world_map_node',
+    secretRef: 'worldmap',
+    secretVersion: 1,
     seed: expect.toBeString(),
     simVersion: current.engineHash,
     startChainIndex: 0,
@@ -1248,4 +1259,84 @@ test('it refuses to adopt while another avatar holds a live run', async () => {
     .executeTakeFirst();
 
   expect(selection).toBeUndefined();
+});
+
+test('it stamps secretRef and secretVersion on the minted row', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(activity.secretRef).toBe('worldmap');
+  expect(activity.secretVersion).toBe(1);
+});
+
+test('it stamps a poolID matching the sealed derivation truth for content version 2, and folds it into the startHash', async () => {
+  await using ctx = await setupTest({ contentVersion: '2' });
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: '1_0',
+    scopeType: 'world_map_node',
+  });
+
+  const coord = findCellCoord('1_0');
+
+  invariant(coord, 'scope id 1_0 must resolve to a valid cell coordinate');
+
+  const scopeSecret = buildMockScopeSecret(avatar.id, 'worldmap', 1);
+  const expected = deriveWorldmapContent('2', { coord, scopeSecret, userSeed: 0 });
+
+  expect(activity.encounterNode).toStrictEqual({
+    difficulty: getDifficulty(coord[0], coord[1]),
+    poolID: expected.poolID,
+  });
+
+  expect(activity.startHash).toBe(
+    buildStartHash({
+      contentVersion: '2',
+      encounterNode: activity.encounterNode,
+      keyVersion: activity.keyVersion,
+      seed: activity.seed,
+      simVersion: activity.simVersion,
+    }),
+  );
+});
+
+test('it fails a start with a 500 when the keys dispatch fails', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  server.use(
+    mockKeysService.deriveScopeSecret.handler(() => {
+      throw new Error('keys backend unreachable');
+    }),
+  );
+
+  expect(
+    client.startActivity({ avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' }),
+  ).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR' });
 });

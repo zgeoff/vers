@@ -12,7 +12,7 @@ export interface SimulationInputSource {
   readonly avatarID: string;
   readonly buildSnapshot: { readonly level: number; readonly xp: number };
   readonly contentVersion: string;
-  readonly encounterNode: { readonly difficulty: number };
+  readonly encounterNode: { readonly difficulty: number; readonly poolID?: string | undefined };
   readonly id: string;
   readonly seed: string;
 }
@@ -43,7 +43,10 @@ export function buildSimulationInput(
 
   const encounter = buildEncounter({
     content,
-    node: { difficulty },
+    node: {
+      difficulty,
+      ...(source.encounterNode.poolID !== undefined && { poolID: source.encounterNode.poolID }),
+    },
     seed: source.seed,
   });
 

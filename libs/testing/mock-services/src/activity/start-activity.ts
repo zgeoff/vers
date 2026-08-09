@@ -128,6 +128,8 @@ export const startActivity = os.startActivity.handler(async (opts) => {
     scopeID: opts.input.scopeID,
     scopeType: opts.input.scopeType,
     seed,
+    secretRef: 'worldmap',
+    secretVersion: 1,
     simVersion: MOCK_SIM_VERSION,
     startChainIndex: 0,
     startHash,

@@ -27,6 +27,7 @@ timeout = '2s'
 grace_period = '10s'
 
 [env]
+KEYS_SERVICE_URL = 'http://vers-service-keys.flycast'
 REPLAY_SERVICE_URL = 'http://vers-service-replay.flycast'
 
 [[vm]]

@@ -51,9 +51,12 @@ services:
     image: ${IMAGE_VERS_SERVICE_ACTIVITY}
     environment:
       <<: *db-env
+      KEYS_SERVICE_URL: http://service-keys:3000
       REPLAY_SERVICE_URL: http://service-replay:3000
     depends_on:
       postgres:
+        condition: service_healthy
+      service-keys:
         condition: service_healthy
     <<: [*service-base, *service-health]
   service-avatar:
@@ -80,6 +83,7 @@ services:
     image: ${IMAGE_VERS_SERVICE_KEYS}
     environment:
       ROLL_KEY_ROOTS: '{"trade":{"current":1,"roots":{"1":"1111111111111111111111111111111111111111111111111111111111111111"}},"self-found":{"current":1,"roots":{"1":"2222222222222222222222222222222222222222222222222222222222222222"}}}'
+      SCOPE_SECRET_ROOTS: '{"worldmap":{"current":1,"roots":{"1":"4444444444444444444444444444444444444444444444444444444444444444"}}}'
     <<: [*service-base, *service-health]
   service-replay:
     image: ${IMAGE_VERS_SERVICE_REPLAY}

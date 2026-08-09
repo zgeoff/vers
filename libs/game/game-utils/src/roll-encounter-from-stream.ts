@@ -17,16 +17,23 @@ export const MIN_DIFFICULTY = 1;
 /**
  * Resolves a full encounter — wave count, each wave's enemy count, archetype picks, and
  * difficulty-scaled stats — from a stream of typed draws, in that draw order, so identical
- * content, node, and stream always produce identical waves. The node selects only the stat
- * multiplier for now; pool selection is the content's single default pool until node content
- * lands.
+ * content, node, and stream always produce identical waves. A stamped `poolID` selects that pool;
+ * its absence falls back to the content's first registered pool, matching a pre-sealing node
+ * byte-for-byte. Picking the pool from the node consumes no stream draws — every draw below is
+ * spent inside whichever pool was selected, keeping reward magnitude variance confined to sealed
+ * content rather than the roll stream (the flat-base law).
  */
 export function rollEncounterFromStream(
   content: Readonly<EncounterContent>,
   node: Readonly<EncounterNode>,
   stream: RollStream,
 ): EncounterDefinition {
-  const [pool] = content.pools;
+  const pool =
+    node.poolID === undefined
+      ? content.pools[0]
+      : content.pools.find((candidate) => candidate.id === node.poolID);
+
+  invariant(pool, `node poolID must reference a known pool: ${node.poolID}`);
 
   const weightedArchetypes = pool.entries.map((entry) => {
     const archetype = content.archetypes.find((candidate) => candidate.id === entry.archetypeID);

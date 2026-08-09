@@ -11,4 +11,8 @@ process.env['ROLL_KEY_ROOTS'] = JSON.stringify({
   trade: { current: 1, roots: { 1: '11'.repeat(32), 2: '33'.repeat(32) } },
 });
 
+process.env['SCOPE_SECRET_ROOTS'] = JSON.stringify({
+  worldmap: { current: 1, roots: { 1: '44'.repeat(32), 2: '55'.repeat(32) } },
+});
+
 registerBunTestCleanup();

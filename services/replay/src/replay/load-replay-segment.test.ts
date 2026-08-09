@@ -47,6 +47,8 @@ test('it anchors a genesis segment on the activity startHash and seed', async ()
     keyVersion: fixture.activity.keyVersion,
     scopeID: fixture.activity.scopeId,
     scopeType: fixture.activity.scopeType,
+    secretRef: fixture.activity.secretRef,
+    secretVersion: fixture.activity.secretVersion,
     seed: fixture.activity.seed,
     simVersion: fixture.activity.simVersion,
     startChainIndex: fixture.activity.startChainIndex,

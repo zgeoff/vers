@@ -16,3 +16,15 @@ test('it rejects a missing difficulty', () => {
     expect.objectContaining({ path: ['difficulty'] }),
   );
 });
+
+test('it accepts an encounter node with a poolID', () => {
+  const result = EncounterNodeSchema.safeParse({ difficulty: 3, poolID: 'brawler-den' });
+
+  expect(result.success).toBeTrue();
+});
+
+test('it accepts an encounter node without a poolID', () => {
+  const result = EncounterNodeSchema.safeParse({ difficulty: 3 });
+
+  expect(result.success).toBeTrue();
+});

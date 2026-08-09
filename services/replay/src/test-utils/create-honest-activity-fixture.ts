@@ -1,15 +1,27 @@
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
 import { buildCheckpointHash, buildStartHash } from '@vers/contract-activity';
+import type { SecretRef } from '@vers/contract-keys';
 import type { Activities, ActivityChains, DB, Json } from '@vers/db';
 import { CURRENT_CONTENT_VERSION, buildStateFromSeed } from '@vers/game-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { runSimulation } from '@vers/idle-core/replay';
+import { buildMockScopeSecret } from '@vers/mock-services/keys';
+import { deriveWorldmapContent } from '@vers/worldmap-content';
+import { findCellCoord, getDifficulty } from '@vers/worldmap-core';
 import type { Insertable, Kysely, Selectable } from 'kysely';
+import invariant from 'tiny-invariant';
 import { TERMINAL_CHECKPOINT_TYPES } from '../replay/types';
 import { createActivityRow } from './create-activity-row';
 import { createChainRow } from './create-chain-row';
+
+/**
+ * The chain scope id every honest fixture roots on unless the caller overrides it: a real cell
+ * coordinate whose difficulty is 1, so sealed and legacy fixtures stamp the same difficulty and
+ * stay byte-comparable.
+ */
+const DEFAULT_SCOPE_ID = '1_0';
 
 interface HonestCheckpointRow {
   readonly hash: string;
@@ -36,8 +48,11 @@ interface CreateHonestActivityFixtureInput {
   readonly avatarID?: string;
   readonly buildSnapshot?: { readonly level: number; readonly xp: number };
   readonly chain?: Readonly<Partial<Insertable<ActivityChains>>>;
+  readonly contentVersion?: string;
   readonly duration?: number;
   readonly rootChain?: Readonly<Selectable<ActivityChains>>;
+  readonly secretRef?: SecretRef | null;
+  readonly secretVersion?: number;
   readonly seed?: string;
   readonly startChainIndex?: number;
 }
@@ -53,7 +68,11 @@ interface CreateHonestActivityFixtureInput {
  * output. `rootChain` roots this activity on an already-persisted chain instead of creating a
  * fresh one — a successor fixture's own way of sharing its predecessor's chain — and defaults
  * `startChainIndex` to that chain's own `appendedChainIndex`; pass both explicitly for a successor
- * seeded from a predecessor's tail rather than the chain's current appended anchor.
+ * seeded from a predecessor's tail rather than the chain's current appended anchor. Defaults to a
+ * sealed row — `secretRef`/`secretVersion` stamped and the encounter node's sealed fields derived
+ * through the real content derivation over the mock keys backend's deterministic scope secret, so
+ * a caller verifying through that same backend sees identical truth; pass `secretRef: null` for
+ * the legacy escape hatch, a row with a fixed difficulty-1 node and no sealed fields.
  */
 export async function createHonestActivityFixture(
   db: Kysely<DB>,
@@ -67,14 +86,24 @@ export async function createHonestActivityFixture(
   chain ??= await createChainRow(db, {
     appendedNextSeed: seed,
     genesisSeed: seed,
+    scopeId: DEFAULT_SCOPE_ID,
     verifiedNextSeed: seed,
     ...(input.avatarID !== undefined && { avatarId: input.avatarID }),
     ...input.chain,
   });
 
   const startChainIndex = input.startChainIndex ?? chain.appendedChainIndex;
-  const contentVersion = CURRENT_CONTENT_VERSION;
-  const encounterNode = { difficulty: 1 };
+  const contentVersion = input.contentVersion ?? CURRENT_CONTENT_VERSION;
+  const secretRef = input.secretRef === undefined ? 'worldmap' : input.secretRef;
+  const secretVersion = input.secretVersion ?? 1;
+
+  const encounterNode = buildFixtureEncounterNode({
+    avatarID: chain.avatarId,
+    contentVersion,
+    scopeID: chain.scopeId,
+    secretRef,
+    secretVersion,
+  });
 
   const simulationInput = buildSimulationInput({
     avatarID: chain.avatarId,
@@ -113,6 +142,8 @@ export async function createHonestActivityFixture(
     lastHash: checkpoints.at(-1)?.hash ?? startHash,
     scopeId: chain.scopeId,
     scopeType: chain.scopeType,
+    secretRef,
+    secretVersion: secretRef === null ? null : secretVersion,
     seed,
     simVersion,
     startChainIndex,
@@ -136,6 +167,38 @@ export async function createHonestActivityFixture(
   }
 
   return { activity, chain, checkpoints, engineCheckpoints };
+}
+
+interface BuildFixtureEncounterNodeInput {
+  readonly avatarID: string;
+  readonly contentVersion: string;
+  readonly scopeID: string;
+  readonly secretRef: SecretRef | null;
+  readonly secretVersion: number;
+}
+
+/**
+ * Resolves the encounter node a sealed fixture stamps: difficulty recomputed from the fixture's
+ * own scope id, plus every sealed content field the real content derivation yields for the mock
+ * keys backend's deterministic scope secret — the same truth a verifier reading through that
+ * backend recomputes. A `null` secretRef is the legacy escape hatch: a fixed difficulty-1 node
+ * with no sealed fields.
+ */
+function buildFixtureEncounterNode(input: Readonly<BuildFixtureEncounterNodeInput>) {
+  if (input.secretRef === null) {
+    return { difficulty: 1 };
+  }
+
+  const coord = findCellCoord(input.scopeID);
+
+  invariant(coord, 'a sealed honest fixture needs a coordinate-shaped chain scope id');
+
+  const scopeSecret = buildMockScopeSecret(input.avatarID, input.secretRef, input.secretVersion);
+
+  return {
+    difficulty: getDifficulty(coord[0], coord[1]),
+    ...deriveWorldmapContent(input.contentVersion, { coord, scopeSecret, userSeed: 0 }),
+  };
 }
 
 /**

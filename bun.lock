@@ -676,6 +676,31 @@
         "vite": "catalog:",
       },
     },
+    "libs/game/worldmap-content": {
+      "name": "@vers/worldmap-content",
+      "version": "0.0.0",
+      "dependencies": {
+        "@noble/hashes": "catalog:",
+        "@orpc/client": "catalog:",
+        "@orpc/contract": "catalog:",
+        "@vers/contract-keys": "workspace:*",
+        "@vers/game-utils": "workspace:*",
+        "@vers/service-auth": "workspace:*",
+        "@vers/service-utils": "workspace:*",
+        "jose": "catalog:",
+        "tiny-invariant": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/mock-services": "workspace:*",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "msw": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "libs/game/worldmap-core": {
       "name": "@vers/worldmap-core",
       "version": "0.0.0",
@@ -947,6 +972,7 @@
         "@paralleldrive/cuid2": "catalog:",
         "@vers/active-avatar": "workspace:*",
         "@vers/contract-activity": "workspace:*",
+        "@vers/contract-keys": "workspace:*",
         "@vers/contract-replay": "workspace:*",
         "@vers/db": "workspace:*",
         "@vers/game-utils": "workspace:*",
@@ -955,7 +981,9 @@
         "@vers/service-runtime": "workspace:*",
         "@vers/service-utils": "workspace:*",
         "@vers/sim-registry": "workspace:*",
+        "@vers/worldmap-content": "workspace:*",
         "@vers/worldmap-core": "workspace:*",
+        "jose": "catalog:",
         "kysely": "catalog:",
         "tiny-invariant": "catalog:",
         "zod": "catalog:",
@@ -1069,6 +1097,8 @@
         "@vers/sim-registry": "workspace:*",
         "@vers/trace": "workspace:*",
         "@vers/utils": "workspace:*",
+        "@vers/worldmap-content": "workspace:*",
+        "@vers/worldmap-core": "workspace:*",
         "jose": "catalog:",
         "kysely": "catalog:",
         "lru-cache": "catalog:",
@@ -2672,6 +2702,8 @@
     "@vers/web-e2e": ["@vers/web-e2e@workspace:apps/web-e2e"],
 
     "@vers/worldmap-client": ["@vers/worldmap-client@workspace:libs/game/worldmap-client"],
+
+    "@vers/worldmap-content": ["@vers/worldmap-content@workspace:libs/game/worldmap-content"],
 
     "@vers/worldmap-core": ["@vers/worldmap-core@workspace:libs/game/worldmap-core"],
 

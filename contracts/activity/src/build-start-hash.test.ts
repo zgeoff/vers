@@ -77,3 +77,62 @@ test('it derives the frozen canonical digest for a known input', () => {
     `"31f2c78bcc35eb015d8e2bad425ab9dd54770b0614095a2b262f1a64d2801ca8"`,
   );
 });
+
+test('it produces a different hash when a poolID is added to the encounter node', () => {
+  const input = {
+    contentVersion: '0.0.0-dev',
+    keyVersion: 1,
+    seed: 'seed_0',
+    simVersion: '0.0.0-dev',
+  };
+
+  const withoutPoolID = buildStartHash({ ...input, encounterNode: { difficulty: 1 } });
+
+  const withPoolID = buildStartHash({
+    ...input,
+    encounterNode: { difficulty: 1, poolID: 'brawler-den' },
+  });
+
+  expect(withoutPoolID).not.toBe(withPoolID);
+});
+
+test('it folds an own __proto__ key into the digest like any other defined property', () => {
+  const input = {
+    contentVersion: '0.0.0-dev',
+    keyVersion: 1,
+    seed: 'seed_0',
+    simVersion: '0.0.0-dev',
+  };
+
+  // an object literal's `__proto__` key sets the prototype instead of an own property, so the own
+  // key is defined explicitly — the shape JSON.parse produces for a stored node carrying one
+  const withProtoKey = Object.defineProperty({ difficulty: 1 }, '__proto__', {
+    enumerable: true,
+    value: 'smuggled',
+  });
+
+  expect(buildStartHash({ ...input, encounterNode: withProtoKey })).not.toBe(
+    buildStartHash({ ...input, encounterNode: { difficulty: 1 } }),
+  );
+});
+
+test('it ignores encounter node key insertion order', () => {
+  const input = {
+    contentVersion: '0.0.0-dev',
+    keyVersion: 1,
+    seed: 'seed_0',
+    simVersion: '0.0.0-dev',
+  };
+
+  const forward = buildStartHash({
+    ...input,
+    encounterNode: { difficulty: 1, poolID: 'brawler-den' },
+  });
+
+  const reversed = buildStartHash({
+    ...input,
+    encounterNode: { poolID: 'brawler-den', difficulty: 1 },
+  });
+
+  expect(forward).toBe(reversed);
+});

@@ -1,10 +1,6 @@
 import invariant from 'tiny-invariant';
-import { encounterContentV1 } from './content/encounter-content-v1';
+import { CONTENT_BY_VERSION } from './content/content-by-version';
 import type { EncounterContent } from './types';
-
-const CONTENT_BY_VERSION: Readonly<Record<string, EncounterContent>> = {
-  [encounterContentV1.contentVersion]: encounterContentV1,
-};
 
 /**
  * Callers resolve versions pinned in an activity's `Started` snapshot and every shipped version
