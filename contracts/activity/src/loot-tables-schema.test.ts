@@ -2,29 +2,34 @@ import { expect, test } from 'bun:test';
 import type { LootTables } from '@vers/item-gen';
 import { LootTablesSchema } from './loot-tables-schema';
 
-const VALID_LOOT_TABLES = {
-  contentVersion: '1',
-  rarities: [{ id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 }],
-  bases: [{ id: 'base-a', weight: 60 }],
-  affixes: [{ id: 'affix-a', groupID: 'group-a', weight: 3, valueMin: 1, valueMax: 10 }],
-};
-
 test('it accepts a coherent loot tables document', () => {
-  const result = LootTablesSchema.safeParse(VALID_LOOT_TABLES);
+  const result = LootTablesSchema.safeParse({
+    contentVersion: '1',
+    rarities: [{ id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 }],
+    bases: [{ id: 'base-a', weight: 60 }],
+    affixes: [{ id: 'affix-a', groupID: 'group-a', weight: 3, valueMin: 1, valueMax: 10 }],
+  });
 
   expect(result.success).toBeTrue();
 });
 
 test('it parses into the game type', () => {
-  const loot: LootTables = LootTablesSchema.parse(VALID_LOOT_TABLES);
+  const loot: LootTables = LootTablesSchema.parse({
+    contentVersion: '1',
+    rarities: [{ id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 }],
+    bases: [{ id: 'base-a', weight: 60 }],
+    affixes: [{ id: 'affix-a', groupID: 'group-a', weight: 3, valueMin: 1, valueMax: 10 }],
+  });
 
   expect(loot.contentVersion).toBe('1');
 });
 
 test('it rejects a rarity missing a required field', () => {
   const result = LootTablesSchema.safeParse({
-    ...VALID_LOOT_TABLES,
+    contentVersion: '1',
     rarities: [{ id: 'common', weight: 70, affixCountMin: 0 }],
+    bases: [{ id: 'base-a', weight: 60 }],
+    affixes: [{ id: 'affix-a', groupID: 'group-a', weight: 3, valueMin: 1, valueMax: 10 }],
   });
 
   expect(result.success).toBeFalse();
@@ -36,7 +41,9 @@ test('it rejects a rarity missing a required field', () => {
 
 test('it rejects an affix missing a required field', () => {
   const result = LootTablesSchema.safeParse({
-    ...VALID_LOOT_TABLES,
+    contentVersion: '1',
+    rarities: [{ id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 }],
+    bases: [{ id: 'base-a', weight: 60 }],
     affixes: [{ id: 'affix-a', groupID: 'group-a', weight: 3, valueMin: 1 }],
   });
 

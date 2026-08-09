@@ -1831,8 +1831,6 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
   `);
 });
 
-const EQUIVALENCE_SEEDS = [17, 90_210, 8_675_309, 424_242_424, 3_047_525_658, 555_000_111];
-
 /**
  * Every replay path must consume the stamped seed identically: the single-attempt runner and the
  * checkpoint-capturing driver are separate orchestrations of the same engine, so their streams for
@@ -1881,6 +1879,8 @@ test('it produces one identical checkpoint stream across the attempt and driver 
       difficultyScalingFactor: 1,
     },
   };
+
+  const EQUIVALENCE_SEEDS = [17, 90_210, 8_675_309, 424_242_424, 3_047_525_658, 555_000_111];
 
   for (const seed of EQUIVALENCE_SEEDS) {
     const source = {

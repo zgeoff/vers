@@ -5,8 +5,6 @@ import { getDifficulty } from '@vers/worldmap-core';
 import { createMockEncounterNode } from '../test-utils/factories/create-mock-encounter-node';
 import { findDescriptorDivergence } from './find-descriptor-divergence';
 
-const scopeSecret = buildMockScopeSecret('avatar_1', 'worldmap', 1);
-
 test('it finds no divergence when the stamped fields match the recomputed truth for a v1 node', () => {
   const content: EncounterContent = {
     contentVersion: '1',
@@ -33,6 +31,7 @@ test('it finds no divergence when the stamped fields match the recomputed truth 
   };
 
   const difficulty = getDifficulty(1, 0);
+  const scopeSecret = buildMockScopeSecret('avatar_1', 'worldmap', 1);
 
   const divergence = findDescriptorDivergence({
     content,
@@ -105,6 +104,7 @@ test('it finds no divergence when a v2 stamped poolID matches the recomputed tru
   };
 
   const difficulty = getDifficulty(1, 0);
+  const scopeSecret = buildMockScopeSecret('avatar_1', 'worldmap', 1);
 
   const truthDivergence = findDescriptorDivergence({
     content,
@@ -148,6 +148,8 @@ test('it finds a divergence when the stamped difficulty disagrees with the recom
       difficultyScalingFactor: 1,
     },
   };
+
+  const scopeSecret = buildMockScopeSecret('avatar_1', 'worldmap', 1);
 
   const divergence = findDescriptorDivergence({
     content,
@@ -224,6 +226,7 @@ test('it finds a divergence when the stamped poolID disagrees with the sealed tr
   };
 
   const difficulty = getDifficulty(1, 0);
+  const scopeSecret = buildMockScopeSecret('avatar_1', 'worldmap', 1);
 
   const divergence = findDescriptorDivergence({
     content,
@@ -263,6 +266,8 @@ test('it finds a divergence when the scope id no longer resolves to a coordinate
       difficultyScalingFactor: 1,
     },
   };
+
+  const scopeSecret = buildMockScopeSecret('avatar_1', 'worldmap', 1);
 
   const divergence = findDescriptorDivergence({
     content,

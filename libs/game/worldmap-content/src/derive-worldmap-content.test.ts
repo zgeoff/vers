@@ -3,8 +3,6 @@ import type { EncounterContent } from '@vers/game-utils';
 import invariant from 'tiny-invariant';
 import { deriveWorldmapContent } from './derive-worldmap-content';
 
-const scopeSecret = new Uint8Array(32).fill(0x0b);
-
 test('it stamps no sealed fields for content version 1', () => {
   const content: EncounterContent = {
     contentVersion: '1',
@@ -29,6 +27,8 @@ test('it stamps no sealed fields for content version 1', () => {
       difficultyScalingFactor: 1,
     },
   };
+
+  const scopeSecret = new Uint8Array(32).fill(0x0b);
 
   const result = deriveWorldmapContent(content, { coord: [3, -2], scopeSecret, userSeed: 0 });
 
@@ -94,6 +94,8 @@ test('it stamps a poolID drawn from the registered pool list for content version
       difficultyScalingFactor: 1,
     },
   };
+
+  const scopeSecret = new Uint8Array(32).fill(0x0b);
 
   const result = deriveWorldmapContent(content, { coord: [3, -2], scopeSecret, userSeed: 0 });
 
@@ -164,6 +166,8 @@ test('it stamps deterministically for identical input', () => {
     },
   };
 
+  const scopeSecret = new Uint8Array(32).fill(0x0b);
+
   const input = { coord: [3, -2], scopeSecret, userSeed: 0 } as const;
 
   expect(deriveWorldmapContent(content, input)).toStrictEqual(
@@ -230,6 +234,8 @@ test('it selects across every registered pool over a spread of coordinates', () 
       difficultyScalingFactor: 1,
     },
   };
+
+  const scopeSecret = new Uint8Array(32).fill(0x0b);
 
   const poolIDs = new Set(
     Array.from(
