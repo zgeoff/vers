@@ -266,10 +266,10 @@ trigger is ordinary control flow, not an invariant.
 
 ## Untyped column boundaries
 
-An untyped jsonb or text column value re-enters typed code through its contract schema's `.parse`
-— a malformed row fails loudly at the read — or by threading the typed value its author already
-holds; never through a bare `as` cast. A write TypeScript cannot prove assignable to the column's
-`Json` type goes through the one documented converter (`toJSON`, `@vers/db`).
+An untyped jsonb or text column value re-enters typed code through its contract schema's `.parse` —
+a malformed row fails loudly at the read — or by threading the typed value its author already holds;
+never through a bare `as` cast. A write TypeScript cannot prove assignable to the column's `Json`
+type goes through the one documented converter (`toJSON`, `@vers/db`).
 
 ## Third-party packages
 
