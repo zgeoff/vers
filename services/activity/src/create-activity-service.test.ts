@@ -1,8 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createContentVersion, findContentDocument } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
-import { ContentDocumentSchema } from '@vers/contract-activity';
-import { contentDocumentV2 } from '@vers/db';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { createAvatarRow, createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
@@ -12,7 +11,7 @@ test('it wires an injected db into the router instead of building one from env',
   await using db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
-  await createContentVersion(db.db, ContentDocumentSchema.parse(contentDocumentV2));
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const service = await createActivityService({ db: db.db });
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });
@@ -41,7 +40,7 @@ test('it defaults the content and key versions when none are injected', async ()
   await using db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
-  await createContentVersion(db.db, ContentDocumentSchema.parse(contentDocumentV2));
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const service = await createActivityService({ db: db.db });
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });
@@ -62,7 +61,7 @@ test('it stamps a content version whose document the registry can load', async (
   await using db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
-  await createContentVersion(db.db, ContentDocumentSchema.parse(contentDocumentV2));
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const service = await createActivityService({ db: db.db });
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });
@@ -83,7 +82,7 @@ test('it uses an injected key version when given', async () => {
   await using db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
-  await createContentVersion(db.db, ContentDocumentSchema.parse(contentDocumentV2));
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const service = await createActivityService({ db: db.db, keyVersion: 7 });
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });

@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
-import { ContentDocumentSchema, buildStartHash } from '@vers/contract-activity';
-import { contentDocumentV2 } from '@vers/db';
+import { buildStartHash } from '@vers/contract-activity';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildMockScopeSecret, mockKeysService } from '@vers/mock-services/keys';
 import {
   createActiveAvatarRow,
@@ -35,7 +35,7 @@ import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-c
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 
-  await createContentVersion(db.db, ContentDocumentSchema.parse(contentDocumentV2));
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const service = await createActivityService({ db: db.db });
 
@@ -1284,13 +1284,19 @@ test('it stamps secretRef and secretVersion on the minted row', async () => {
   expect(activity.secretVersion).toBe(1);
 });
 
-test('it stamps a poolID matching the sealed derivation truth for content version 2, and folds it into the startHash', async () => {
+test('it stamps a poolID matching the sealed derivation truth for the current content, and folds it into the startHash', async () => {
   await using ctx = await setupTest();
 
   await createSimVersionRow(ctx.db);
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  // publish this test's own document, moving the current pointer onto it, so the derivation truth
+  // asserted below comes from content this test authored rather than the suite's shared seed
+  const document = createMockContentDocument();
+
+  await createContentVersion(ctx.db, document);
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -1306,7 +1312,7 @@ test('it stamps a poolID matching the sealed derivation truth for content versio
 
   const scopeSecret = buildMockScopeSecret(avatar.id, 'worldmap', 1);
 
-  const expected = deriveWorldmapContent(ContentDocumentSchema.parse(contentDocumentV2).encounter, {
+  const expected = deriveWorldmapContent(document.encounter, {
     coord,
     scopeSecret,
     userSeed: 0,
@@ -1319,7 +1325,7 @@ test('it stamps a poolID matching the sealed derivation truth for content versio
 
   expect(activity.startHash).toBe(
     buildStartHash({
-      contentVersion: '2',
+      contentVersion: document.contentVersion,
       encounterNode: activity.encounterNode,
       keyVersion: activity.keyVersion,
       seed: activity.seed,

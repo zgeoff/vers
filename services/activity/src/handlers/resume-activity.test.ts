@@ -1,8 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
-import { ContentDocumentSchema } from '@vers/contract-activity';
-import { contentDocumentV2 } from '@vers/db';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import {
   createAvatarRow,
   createServiceToken,
@@ -23,7 +22,7 @@ async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
-  await createContentVersion(db.db, ContentDocumentSchema.parse(contentDocumentV2));
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const service = await createActivityService({ db: db.db });
 
