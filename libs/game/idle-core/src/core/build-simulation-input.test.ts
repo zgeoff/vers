@@ -136,6 +136,33 @@ test('it rejects an unknown content version', () => {
   ).toThrowWithMessage(Error, /unknown content version: nope/);
 });
 
+test('it selects the pool named by a stamped poolID, and falls back to the first when absent', () => {
+  const stamped = buildSimulationInput({
+    avatarID: 'avatar_1',
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: '2',
+    encounterNode: { difficulty: 1, poolID: 'skirmisher-flock' },
+    id: 'act_1',
+    seed: 'bb'.repeat(16),
+  });
+
+  const absent = buildSimulationInput({
+    avatarID: 'avatar_1',
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: '2',
+    encounterNode: { difficulty: 1 },
+    id: 'act_1',
+    seed: 'bb'.repeat(16),
+  });
+
+  const stampedNames = new Set(
+    stamped.activity.encounter.waves.flatMap((wave) => wave.map((enemy) => enemy.name)),
+  );
+
+  expect(stampedNames).not.toContain('World Map Enemy');
+  expect(stamped.activity.encounter).not.toStrictEqual(absent.activity.encounter);
+});
+
 test('it honors a failureAction override', () => {
   const result = buildSimulationInput(
     {

@@ -20,6 +20,14 @@ export const ActivityDataSchema = z.object({
   scopeID: z.string(),
   scopeType: z.string(),
   seed: z.string(),
+
+  /**
+   * The scope secret ref and root version content sealing derived this activity's node content
+   * from, null on a legacy row minted before sealing.
+   */
+  secretRef: z.string().nullable(),
+  secretVersion: z.int().min(1).nullable(),
+
   simVersion: z.string(),
   startChainIndex: z.int().min(0),
   startHash: z.string(),

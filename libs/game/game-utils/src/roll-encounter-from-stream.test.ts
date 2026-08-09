@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { buildRollStream } from '@vers/roll-crypto';
 import { encounterContentV1 } from './content/encounter-content-v1';
+import { encounterContentV2 } from './content/encounter-content-v2';
 import { rollEncounterFromStream } from './roll-encounter-from-stream';
 
 test('it reproduces the frozen golden encounter for a fixed seed', () => {
@@ -213,4 +214,50 @@ test('it floors a zero-difficulty node to the same stats as difficulty one', () 
   );
 
   expect(floored).toStrictEqual(unscaled);
+});
+
+test('it draws from the pool named by a stamped poolID', () => {
+  const seed = Uint8Array.from({ length: 32 }, () => 22);
+
+  const encounter = rollEncounterFromStream(
+    encounterContentV2,
+    { difficulty: 1, poolID: 'skirmisher-flock' },
+    buildRollStream(seed, 'test/domain'),
+  );
+
+  const archetypeNames = new Set(
+    encounter.waves.flatMap((wave) => wave.map((enemy) => enemy.name)),
+  );
+
+  expect(archetypeNames).not.toContain('World Map Enemy');
+});
+
+test('it falls back to the first registered pool when poolID is absent', () => {
+  const seed = Uint8Array.from({ length: 32 }, () => 22);
+
+  const withoutPoolID = rollEncounterFromStream(
+    encounterContentV2,
+    { difficulty: 1 },
+    buildRollStream(seed, 'test/domain'),
+  );
+
+  const withFirstPoolID = rollEncounterFromStream(
+    encounterContentV2,
+    { difficulty: 1, poolID: 'brawler-den' },
+    buildRollStream(seed, 'test/domain'),
+  );
+
+  expect(withoutPoolID).toStrictEqual(withFirstPoolID);
+});
+
+test('it rejects a poolID naming no pool in the content', () => {
+  const seed = Uint8Array.from({ length: 32 }, () => 22);
+
+  expect(() =>
+    rollEncounterFromStream(
+      encounterContentV2,
+      { difficulty: 1, poolID: 'nonexistent-pool' },
+      buildRollStream(seed, 'test/domain'),
+    ),
+  ).toThrowWithMessage(Error, /node poolID must reference a known pool/);
 });

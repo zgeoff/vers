@@ -5,7 +5,7 @@ export { createSeed } from './create-seed';
 export { CURRENT_CONTENT_VERSION } from './current-content-version';
 export { decodeState } from './decode-state';
 export { encodeState } from './encode-state';
-export { getEncounterContent } from './get-encounter-content';
+export { CONTENT_BY_VERSION, getEncounterContent } from './get-encounter-content';
 export { MIN_DIFFICULTY, rollEncounterFromStream } from './roll-encounter-from-stream';
 export type { BuildEncounterInput } from './build-encounter';
 export type * from './types';

@@ -3,7 +3,7 @@ import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 
 interface BuildStartHashInput {
   readonly contentVersion: string;
-  readonly encounterNode: { readonly difficulty: number };
+  readonly encounterNode: Readonly<Record<string, unknown>>;
   readonly keyVersion: number;
   readonly seed: string;
   readonly simVersion: string;
@@ -15,9 +15,9 @@ interface BuildStartHashInput {
  * first checkpoint links onto it. The activity's own id carries no cryptographic role and is
  * excluded: `(seed, versions, encounterNode)` already uniquely identifies the stream,
  * and the chain never needs the id to reproduce it — the client computes every continuation's seed
- * and hash from the appended chain alone, online and offline alike. `encounterNode` serializes with
- * its keys in fixed alphabetical order, so a richer descriptor can extend it later without another
- * format change.
+ * and hash from the appended chain alone, online and offline alike. `encounterNode` serializes
+ * every defined key in sorted order, key insertion order irrelevant, so a richer descriptor can
+ * extend it later without another format change.
  */
 export function buildStartHash(input: Readonly<BuildStartHashInput>): string {
   const canonical = JSON.stringify([
@@ -25,8 +25,22 @@ export function buildStartHash(input: Readonly<BuildStartHashInput>): string {
     input.simVersion,
     input.contentVersion,
     input.keyVersion,
-    { difficulty: input.encounterNode.difficulty },
+    buildCanonicalEncounterNode(input.encounterNode),
   ]);
 
   return bytesToHex(sha256(utf8ToBytes(canonical)));
+}
+
+function buildCanonicalEncounterNode(
+  node: Readonly<Record<string, unknown>>,
+): Record<string, unknown> {
+  const canonical: Record<string, unknown> = {};
+
+  for (const key of Object.keys(node)
+    .filter((candidate) => node[candidate] !== undefined)
+    .toSorted()) {
+    canonical[key] = node[key];
+  }
+
+  return canonical;
 }

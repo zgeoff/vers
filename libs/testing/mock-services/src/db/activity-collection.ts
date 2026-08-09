@@ -24,6 +24,8 @@ const ActivityRowSchema = ActivityDataSchema.extend({
   scopeID: z.string().default('1_0'),
   scopeType: z.string().default('world_map_node'),
   seed: z.string().default(() => buildMockHash().slice(0, 32)),
+  secretRef: z.string().nullable().default('worldmap'),
+  secretVersion: z.int().min(1).nullable().default(1),
   simVersion: z.string().default('0.0.0-mock'),
   startChainIndex: z.int().min(0).default(0),
   startHash: z.string().default(() => buildMockHash()),
