@@ -66,7 +66,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     buildSnapshot: { level: 1, xp: 42 },
     contentVersion: CURRENT_CONTENT_VERSION,
     createdAt: expect.toBeValidDate(),
-    encounterNode: { difficulty: 0 },
+    encounterNode: { difficulty: 0, poolID: expect.toBeString() },
     id: expect.toBeString(),
     keyVersion: 1,
     lastHash: expect.toBeString(),
@@ -106,7 +106,7 @@ test("it stamps the row's encounterNode from the static world map's node for the
     scopeType: 'world_map_node',
   });
 
-  expect(activity.encounterNode).toStrictEqual({ difficulty: 1 });
+  expect(activity.encounterNode).toStrictEqual({ difficulty: 1, poolID: expect.toBeString() });
 
   const row = await ctx.db
     .selectFrom('activities')
@@ -114,7 +114,7 @@ test("it stamps the row's encounterNode from the static world map's node for the
     .where('id', '=', activity.id)
     .executeTakeFirstOrThrow();
 
-  expect(row.encounterNode).toStrictEqual({ difficulty: 1 });
+  expect(row.encounterNode).toStrictEqual({ difficulty: 1, poolID: expect.toBeString() });
 });
 
 test('it derives a startHash that folds in the resolved encounter node', async () => {

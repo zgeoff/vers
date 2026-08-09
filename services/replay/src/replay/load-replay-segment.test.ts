@@ -41,7 +41,8 @@ test('it anchors a genesis segment on the activity startHash and seed', async ()
     avatarID: fixture.activity.avatarId,
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: fixture.activity.contentVersion,
-    encounterNode: { difficulty: 1 },
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the fixture stamps a schema-shaped encounter node
+    encounterNode: fixture.activity.encounterNode as { difficulty: number; poolID?: string },
     id: fixture.activity.id,
     settledXP: fixture.activity.settledXp,
     keyVersion: fixture.activity.keyVersion,

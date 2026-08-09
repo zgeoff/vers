@@ -16,6 +16,7 @@ import pino from 'pino';
 import { MAX_REPLAY_ATTEMPTS } from '../queue/update-replay-attempts';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createActivityRow } from '../test-utils/create-activity-row';
+import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
 import { createRemoteReplayProvider } from '../test-utils/create-remote-replay-provider';
 import { runReplayIteration } from './run-replay-iteration';
@@ -1149,7 +1150,12 @@ test('a capped activity advances the chain verified anchor from its tail, and an
 test('a stream fully verified while still active reconciles the anchor once a successor claims a forward-exited predecessor position', async () => {
   await using ctx = await setupTest();
 
+  // A pinned avatar id keeps the sealed content derivation — and with it both fixtures' checkpoint
+  // timelines — identical across runs; a random id would re-derive a different pool each run.
+  const avatar = await createAvatarRow(ctx.db, { id: 'avatar_reconcile' });
+
   const predecessor = await createHonestActivityFixture(ctx.db, {
+    avatarID: avatar.id,
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
