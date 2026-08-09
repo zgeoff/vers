@@ -6,6 +6,7 @@ import { ActivityStatusSchema } from './activity-status-schema';
 import { CatchUpContinuationSchema } from './catch-up-continuation-schema';
 import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
+import { ContentDocumentSchema } from './content-document-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 import { RewardItemAffixSchema } from './reward-item-affix-schema';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
@@ -151,6 +152,24 @@ export const activityContract = {
     })
     .input(z.object({ avatarID: z.string() }))
     .output(AvatarProgressionSchema.nullable()),
+
+  /**
+   * Documents are immutable once published, so a fetched version never revalidates — the GET
+   * marks it retry-safe.
+   */
+  getContentDocument: authedRoute
+    .route({
+      method: 'GET',
+      path: '/content/{contentVersion}',
+      summary: "Get a published content version's document",
+    })
+    .input(z.object({ contentVersion: z.string() }))
+    .output(ContentDocumentSchema)
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'No published content version with that id' },
+      }),
+    ),
 
   getCurrentActivity: authedRoute
     .route({

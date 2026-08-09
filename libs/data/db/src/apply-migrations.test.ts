@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import postgres from 'postgres';
 import { applyMigrations } from './apply-migrations';
+import { contentDocumentV2 } from './content-seed/content-document-v2';
 import { createDB } from './create-db';
 import { resolveTestDBTarget } from './test-support/resolve-test-db-target';
 
@@ -144,6 +145,64 @@ test('it bumps updated_at through the set_updated_at trigger on update', async (
     .executeTakeFirstOrThrow();
 
   expect(updated.updatedAt).toBeAfter(inserted.updatedAt);
+
+  await db.destroy();
+});
+
+test('it seeds both content versions and points current at the newest', async () => {
+  const databaseURL = await createEmptyDB();
+
+  await applyMigrations({ databaseURL });
+
+  const db = createDB({ databaseURL });
+
+  const versions = await db.selectFrom('contentVersions').select('contentVersion').execute();
+
+  expect(versions.map((row) => row.contentVersion)).toIncludeSameMembers(['1', '2']);
+
+  const current = await db.selectFrom('contentCurrent').selectAll().executeTakeFirstOrThrow();
+
+  expect(current.contentVersion).toBe('2');
+
+  const v2Row = await db
+    .selectFrom('contentVersions')
+    .selectAll()
+    .where('contentVersion', '=', '2')
+    .executeTakeFirstOrThrow();
+
+  expect(v2Row.document).toStrictEqual(contentDocumentV2);
+
+  await db.destroy();
+});
+
+test('it refuses to update a content_versions row', async () => {
+  const databaseURL = await createEmptyDB();
+
+  await applyMigrations({ databaseURL });
+
+  const db = createDB({ databaseURL });
+
+  await expect(
+    db
+      .updateTable('contentVersions')
+      .set({ document: { nonsense: true } })
+      .where('contentVersion', '=', '1')
+      .execute(),
+  ).rejects.toThrowWithMessage(Error, /immutable/);
+
+  await db.destroy();
+});
+
+test('it refuses to delete a content_versions row', async () => {
+  const databaseURL = await createEmptyDB();
+
+  await applyMigrations({ databaseURL });
+
+  const db = createDB({ databaseURL });
+
+  await expect(
+    db.deleteFrom('contentVersions').where('contentVersion', '=', '1').execute(),
+  ).rejects.toThrowWithMessage(Error, /immutable/);
 
   await db.destroy();
 });
