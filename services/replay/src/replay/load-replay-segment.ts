@@ -1,4 +1,8 @@
-import type { CheckpointPayload } from '@vers/contract-activity';
+import {
+  BuildSnapshotSchema,
+  CheckpointPayloadSchema,
+  EncounterNodeSchema,
+} from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
@@ -10,7 +14,9 @@ import type { ReplaySegment } from './types';
  * checkpoint from version 1 through `appendedHead` — the whole stream, not just the unverified
  * tail, because a cache-miss rebuild must replay every earlier local attempt's own boundary to
  * read the stream's later `time` values correctly. Undefined when the activity row is gone (raced
- * against a concurrent cleanup) — the caller treats that as nothing to replay.
+ * against a concurrent cleanup) — the caller treats that as nothing to replay. The untyped jsonb
+ * columns re-enter typed code through their contract schemas, so a malformed row fails the load
+ * loudly instead of flowing into the verifier.
  */
 export async function loadReplaySegment(
   db: Kysely<DB>,
@@ -62,7 +68,16 @@ export async function loadReplaySegment(
     .orderBy('version')
     .execute();
 
-  const predecessor = frontier.verifiedHead === 0 ? undefined : rows[frontier.verifiedHead - 1];
+  const checkpoints = rows.map((row) => ({
+    appendedAt: row.appendedAt,
+    hash: row.hash,
+    payload: CheckpointPayloadSchema.parse(row.payload),
+    prevHash: row.prevHash,
+    version: row.version,
+  }));
+
+  const predecessor =
+    frontier.verifiedHead === 0 ? undefined : checkpoints[frontier.verifiedHead - 1];
 
   invariant(
     frontier.verifiedHead === 0 || predecessor?.version === frontier.verifiedHead,
@@ -74,9 +89,9 @@ export async function loadReplaySegment(
       appendedHead: frontier.appendedHead,
       appendedTimeMs: Number(activity.appendedTimeMs),
       avatarID: activity.avatarId,
-      buildSnapshot: readBuildSnapshot(activity.buildSnapshot),
+      buildSnapshot: BuildSnapshotSchema.parse(activity.buildSnapshot),
       contentVersion: activity.contentVersion,
-      encounterNode: readEncounterNode(activity.encounterNode),
+      encounterNode: EncounterNodeSchema.parse(activity.encounterNode),
       id: activity.id,
       keyVersion: activity.keyVersion,
       scopeID: activity.scopeId,
@@ -90,50 +105,9 @@ export async function loadReplaySegment(
       status: activity.status,
     },
     chain,
-    checkpoints: rows.map((row) => ({
-      appendedAt: row.appendedAt,
-      hash: row.hash,
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is schema-validated contract input
-      payload: row.payload as CheckpointPayload,
-      prevHash: row.prevHash,
-      version: row.version,
-    })),
+    checkpoints,
     prevHash: predecessor === undefined ? activity.startHash : predecessor.hash,
-    seed:
-      predecessor === undefined
-        ? activity.seed
-        : readPayloadNextSeed(
-            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is schema-validated contract input
-            predecessor.payload as CheckpointPayload,
-          ),
+    seed: predecessor === undefined ? activity.seed : predecessor.payload.nextSeed,
     verifiedHead: frontier.verifiedHead,
   };
-}
-
-/**
- * The activities row's `build_snapshot` column is untyped jsonb; every write is schema-validated
- * contract input (`BuildSnapshotSchema`), so this reads its two known fields without re-validating.
- */
-function readBuildSnapshot(value: unknown): { level: number; xp: number } {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is schema-validated contract input
-  const snapshot = value as { level: number; xp: number };
-
-  return { level: snapshot.level, xp: snapshot.xp };
-}
-
-/**
- * The activities row's `encounter_node` column is untyped jsonb; every write is the activity
- * service's own server-side node resolution, so this reads its known fields without re-validating.
- * `poolID` round-trips only when the stored row carries one — an old row predating sealed pool
- * selection stays shaped exactly as it was stamped.
- */
-function readEncounterNode(value: unknown): { difficulty: number; poolID?: string } {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is the activity service's own server-side node resolution
-  const node = value as { difficulty: number; poolID?: string };
-
-  return { difficulty: node.difficulty, ...(node.poolID !== undefined && { poolID: node.poolID }) };
-}
-
-function readPayloadNextSeed(payload: Readonly<CheckpointPayload>): string {
-  return payload.nextSeed;
 }

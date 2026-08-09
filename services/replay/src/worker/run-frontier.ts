@@ -1,4 +1,4 @@
-import type { SecretRef } from '@vers/contract-keys';
+import { SecretRefSchema } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import type { SimulationDriver } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
@@ -90,8 +90,7 @@ export async function runFrontier(
       },
       {
         avatarID: segment.activity.avatarID,
-        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped text; every write is this service's own custodied scope-ref enum
-        secretRef: segment.activity.secretRef as SecretRef,
+        secretRef: SecretRefSchema.parse(segment.activity.secretRef),
         secretVersion: segment.activity.secretVersion,
       },
     );

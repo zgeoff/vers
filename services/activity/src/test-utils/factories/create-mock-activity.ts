@@ -1,8 +1,21 @@
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
+import type { EncounterNode } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
 import type { Activities } from '@vers/db';
 import type { Insertable } from 'kysely';
+
+/**
+ * The factory's own overrides shape: the row's insertable columns, except `encounterNode` narrows
+ * from the column's untyped jsonb to the contract type, so the factory threads the typed value a
+ * caller authored instead of re-shaping the column read.
+ */
+interface CreateMockActivityOverrides extends Omit<
+  Partial<Insertable<Activities>>,
+  'encounterNode'
+> {
+  readonly encounterNode?: Readonly<EncounterNode>;
+}
 
 /**
  * A plain, unpersisted activity row with faker-generated defaults. Never requires a parent —
@@ -11,7 +24,7 @@ import type { Insertable } from 'kysely';
  * checkpoint batch.
  */
 export function createMockActivity(
-  overrides: Readonly<Partial<Insertable<Activities>>> = {},
+  overrides: Readonly<CreateMockActivityOverrides> = {},
 ): Insertable<Activities> {
   const id = overrides.id ?? `act_${createId()}`;
   const seed = overrides.seed ?? faker.string.alphanumeric({ casing: 'lower', length: 32 });
@@ -19,11 +32,9 @@ export function createMockActivity(
   const contentVersion = overrides.contentVersion ?? '0.0.0-dev';
   const keyVersion = overrides.keyVersion ?? 1;
 
-  const encounterNode =
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is this factory's own schema-shaped literal
-    (overrides.encounterNode as { difficulty: number } | undefined) ?? {
-      difficulty: faker.number.int({ max: 10, min: 1 }),
-    };
+  const encounterNode = overrides.encounterNode ?? {
+    difficulty: faker.number.int({ max: 10, min: 1 }),
+  };
 
   const startHash =
     overrides.startHash ??

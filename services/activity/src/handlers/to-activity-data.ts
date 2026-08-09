@@ -1,25 +1,22 @@
-import type { ActivityData, BuildSnapshot, EncounterNode } from '@vers/contract-activity';
+import type { ActivityData } from '@vers/contract-activity';
+import { BuildSnapshotSchema, EncounterNodeSchema } from '@vers/contract-activity';
 import type { Activities } from '@vers/db';
 import type { Selectable } from 'kysely';
 
 /**
  * Maps a kysely `activities` row (camelCase columns) onto the contract's `ActivityData` shape.
- * `buildSnapshot` is cast to `BuildSnapshot`: the column is untyped jsonb, every write comes from
- * this service's own snapshot construction, and the cast cannot smuggle a drifted row past the RPC
- * boundary — oRPC validates handler output against the contract's output schema and fails the
- * request on mismatch.
+ * `buildSnapshot` and `encounterNode` are untyped jsonb columns and re-enter typed code through
+ * their contract schemas, so a drifted row fails here loudly instead of flowing on.
  */
 export function toActivityData(row: Readonly<Selectable<Activities>>): ActivityData {
   return {
     appendedAt: row.appendedAt,
     appendedHead: row.appendedHead,
     avatarID: row.avatarId,
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is this service's own snapshot construction, and oRPC's output validation rejects a drifted shape at the boundary
-    buildSnapshot: row.buildSnapshot as BuildSnapshot,
+    buildSnapshot: BuildSnapshotSchema.parse(row.buildSnapshot),
     contentVersion: row.contentVersion,
     createdAt: row.createdAt,
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is this service's own encounter-node resolution, and oRPC's output validation rejects a drifted shape at the boundary
-    encounterNode: row.encounterNode as EncounterNode,
+    encounterNode: EncounterNodeSchema.parse(row.encounterNode),
     id: row.id,
     keyVersion: row.keyVersion,
     lastHash: row.lastHash,

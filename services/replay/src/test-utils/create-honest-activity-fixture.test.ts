@@ -3,6 +3,7 @@ import { buildCheckpointHash } from '@vers/contract-activity';
 import { buildMockScopeSecret } from '@vers/mock-services/keys';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
+import invariant from 'tiny-invariant';
 import { createHonestActivityFixture } from './create-honest-activity-fixture';
 
 test('it persists a stream whose stored hashes byte-match a fresh recompute', async () => {
@@ -17,19 +18,16 @@ test('it persists a stream whose stored hashes byte-match a fresh recompute', as
   let prevHash = fixture.activity.startHash;
 
   for (const checkpoint of fixture.checkpoints) {
-    // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
     const recomputed = buildCheckpointHash({
-      chainIndex: checkpoint.payload['chainIndex'] as number,
+      chainIndex: checkpoint.payload.chainIndex,
       entropySource: 'server-key',
-      nextSeed: checkpoint.payload['nextSeed'] as string,
+      nextSeed: checkpoint.payload.nextSeed,
       prevHash,
-      seed: checkpoint.payload['seed'] as string,
-      time: checkpoint.payload['time'] as number,
-      type: checkpoint.payload['type'] as string,
+      seed: checkpoint.payload.seed,
+      time: checkpoint.payload.time,
+      type: checkpoint.payload.type,
       version: checkpoint.version,
     });
-
-    // oxlint-enable typescript/no-unsafe-type-assertion
 
     expect(checkpoint.hash).toBe(recomputed);
     expect(checkpoint.prevHash).toBe(prevHash);
@@ -57,20 +55,16 @@ test('it roots a successor on an already-persisted chain instead of creating a n
 
   const tail = predecessor.checkpoints.at(-1);
 
-  expect(tail).toBeDefined();
+  invariant(tail, 'the fixture always stores at least one checkpoint');
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
   const successor = await createHonestActivityFixture(ctx.db, {
     rootChain: predecessor.chain,
-    seed: tail?.payload['nextSeed'] as string,
-    startChainIndex: tail?.payload['chainIndex'] as number,
+    seed: tail.payload.nextSeed,
+    startChainIndex: tail.payload.chainIndex,
   });
 
-  expect(successor.activity.startChainIndex).toBe(tail?.payload['chainIndex'] as number);
-  expect(successor.activity.seed).toBe(tail?.payload['nextSeed'] as string);
-
-  // oxlint-enable typescript/no-unsafe-type-assertion
-
+  expect(successor.activity.startChainIndex).toBe(tail.payload.chainIndex);
+  expect(successor.activity.seed).toBe(tail.payload.nextSeed);
   expect(successor.activity.avatarId).toBe(predecessor.activity.avatarId);
 
   const chains = await ctx.db

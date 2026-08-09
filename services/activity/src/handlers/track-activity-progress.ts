@@ -1,5 +1,6 @@
 import type { CheckpointBatchEntry } from '@vers/contract-activity';
-import type { DB, Json } from '@vers/db';
+import type { DB } from '@vers/db';
+import { toJSON } from '@vers/db';
 import { isTerminalCheckpointType } from '@vers/idle-core';
 import type { ServiceContext } from '@vers/service-runtime';
 import { sql } from 'kysely';
@@ -255,8 +256,7 @@ export async function trackActivityProgress(
           opts.input.checkpoints.map((checkpoint) => ({
             activityId: opts.input.activityID,
             hash: checkpoint.hash,
-            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; the value is schema-validated contract input
-            payload: checkpoint.payload as Json,
+            payload: toJSON(checkpoint.payload),
             prevHash: checkpoint.prevHash,
             version: checkpoint.version,
           })),
