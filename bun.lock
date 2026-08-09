@@ -406,10 +406,8 @@
         "@vers/contract-activity": "workspace:*",
         "@vers/db": "workspace:*",
         "kysely": "catalog:",
-        "tiny-invariant": "catalog:",
       },
       "devDependencies": {
-        "@faker-js/faker": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@vers/service-test-utils": "workspace:*",
