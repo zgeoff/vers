@@ -1,6 +1,12 @@
-import type { ActivityData, BuildSnapshot, CatchUpContinuation } from '@vers/contract-activity';
-import { buildStartHash } from '@vers/contract-activity';
-import type { Activities, ActivityStatus, DB, Json } from '@vers/db';
+import type {
+  ActivityData,
+  BuildSnapshot,
+  CatchUpContinuation,
+  EncounterNode,
+} from '@vers/contract-activity';
+import { EncounterNodeSchema, buildStartHash } from '@vers/contract-activity';
+import type { Activities, ActivityStatus, DB } from '@vers/db';
+import { toJSON } from '@vers/db';
 import { buildLevelFromXP, isTerminalCheckpointType } from '@vers/idle-core';
 import { sql } from 'kysely';
 import type { Kysely, Selectable } from 'kysely';
@@ -111,11 +117,7 @@ export async function advanceActivity(
   const pinned: PinnedActivityContext = {
     avatarId: initial.avatarId,
     contentVersion: initial.contentVersion,
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is this service's own encounter-node resolution
-    encounterNode: initial.encounterNode as {
-      readonly difficulty: number;
-      readonly poolID?: string;
-    },
+    encounterNode: EncounterNodeSchema.parse(initial.encounterNode),
     keyVersion: initial.keyVersion,
     scopeId: initial.scopeId,
     scopeType: initial.scopeType,
@@ -187,7 +189,7 @@ export async function advanceActivity(
 interface PinnedActivityContext {
   readonly avatarId: string;
   readonly contentVersion: string;
-  readonly encounterNode: { readonly difficulty: number; readonly poolID?: string };
+  readonly encounterNode: Readonly<EncounterNode>;
   readonly keyVersion: number;
   readonly scopeId: string;
   readonly scopeType: string;
@@ -525,8 +527,7 @@ async function runContinuation(
         input.continuation.checkpoints.map((checkpoint) => ({
           activityId: input.targetActivityID,
           hash: checkpoint.hash,
-          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; the value is schema-validated contract input
-          payload: checkpoint.payload as Json,
+          payload: toJSON(checkpoint.payload),
           prevHash: checkpoint.prevHash,
           version: checkpoint.version,
         })),

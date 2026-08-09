@@ -158,6 +158,7 @@
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@zgeoff/bun-test-extended": "catalog:",
+        "tiny-invariant": "catalog:",
         "typescript": "catalog:",
       },
     },

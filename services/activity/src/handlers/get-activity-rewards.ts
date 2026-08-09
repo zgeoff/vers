@@ -1,3 +1,5 @@
+import type { RewardItemAffix } from '@vers/contract-activity';
+import { RewardItemAffixSchema } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
@@ -15,11 +17,7 @@ interface GetActivityRewardsOpts {
 }
 
 interface RewardItem {
-  readonly affixes: Array<{
-    readonly affixID: string;
-    readonly groupID: string;
-    readonly value: number;
-  }>;
+  readonly affixes: Array<RewardItemAffix>;
   readonly baseID: string;
   readonly contentVersion: string;
   readonly rarityID: string;
@@ -86,8 +84,7 @@ export async function getActivityRewards(
     items: rows.map((row) => ({
       chainIndex: row.chainIndex,
       item: {
-        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; every write is this service's own mint construction, and oRPC's output validation rejects a drifted shape at the boundary
-        affixes: row.affixes as RewardItem['affixes'],
+        affixes: RewardItemAffixSchema.array().parse(row.affixes),
         baseID: row.baseId,
         contentVersion: row.contentVersion,
         rarityID: row.rarityId,

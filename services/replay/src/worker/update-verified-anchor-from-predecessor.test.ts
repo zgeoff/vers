@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB } from '@vers/service-test-utils/bun';
+import invariant from 'tiny-invariant';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
 import { createMockReplaySegment } from '../test-utils/factories/create-mock-replay-segment';
 import { updateVerifiedAnchorFromPredecessor } from './update-verified-anchor-from-predecessor';
@@ -30,15 +31,14 @@ test('it advances the chain verified anchor from a fully verified, stopped prede
 
   const tail = fixture.checkpoints[tailCount - 1];
 
-  expect(tail).toBeDefined();
+  invariant(tail, 'the fixture always stores a checkpoint at the trimmed tail');
 
   const segment = createMockReplaySegment({
     activity: {
       avatarID: fixture.activity.avatarId,
       scopeID: fixture.activity.scopeId,
       scopeType: fixture.activity.scopeType,
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
-      startChainIndex: tail?.payload['chainIndex'] as number,
+      startChainIndex: tail.payload.chainIndex,
     },
     chain: {
       genesisSeed: fixture.chain.genesisSeed,
@@ -49,10 +49,9 @@ test('it advances the chain verified anchor from a fully verified, stopped prede
 
   const advance = await updateVerifiedAnchorFromPredecessor(ctx.db, segment);
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
   expect(advance).toStrictEqual({
-    chainIndex: tail?.payload['chainIndex'] as number,
-    nextSeed: tail?.payload['nextSeed'] as string,
+    chainIndex: tail.payload.chainIndex,
+    nextSeed: tail.payload.nextSeed,
   });
 
   const chain = await ctx.db
@@ -63,11 +62,9 @@ test('it advances the chain verified anchor from a fully verified, stopped prede
     .executeTakeFirstOrThrow();
 
   expect(chain).toStrictEqual({
-    verifiedChainIndex: tail?.payload['chainIndex'] as number,
-    verifiedNextSeed: tail?.payload['nextSeed'] as string,
+    verifiedChainIndex: tail.payload.chainIndex,
+    verifiedNextSeed: tail.payload.nextSeed,
   });
-
-  // oxlint-enable typescript/no-unsafe-type-assertion
 });
 
 test('it leaves the chain untouched when the frontier is not ahead of the verified anchor', async () => {

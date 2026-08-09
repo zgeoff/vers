@@ -26,5 +26,7 @@ export type { EntropySource } from './entropy-source-schema';
 export { EntropySourceSchema } from './entropy-source-schema';
 export { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 export { OFFLINE_PROGRESS_CAP_MS } from './offline-progress-cap-ms';
+export type { RewardItemAffix } from './reward-item-affix-schema';
+export { RewardItemAffixSchema } from './reward-item-affix-schema';
 export type { RewardSlot } from './reward-slot-schema';
 export { RewardSlotSchema } from './reward-slot-schema';

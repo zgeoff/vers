@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB } from '@vers/service-test-utils/bun';
+import invariant from 'tiny-invariant';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
 import { findVerifiedAnchorPredecessor } from './find-verified-anchor-predecessor';
 
@@ -36,13 +37,12 @@ test('it finds a fully verified, stopped predecessor rooted at the chain verifie
 
   const tail = fixture.checkpoints[tailCount - 1];
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
-  expect(predecessor).toStrictEqual({
-    chainIndex: tail?.payload['chainIndex'] as number,
-    nextSeed: tail?.payload['nextSeed'] as string,
-  });
+  invariant(tail, 'the fixture always stores a checkpoint at the trimmed tail');
 
-  // oxlint-enable typescript/no-unsafe-type-assertion
+  expect(predecessor).toStrictEqual({
+    chainIndex: tail.payload.chainIndex,
+    nextSeed: tail.payload.nextSeed,
+  });
 });
 
 test('it finds a fully verified, capped predecessor rooted at the chain verified anchor', async () => {
@@ -71,13 +71,12 @@ test('it finds a fully verified, capped predecessor rooted at the chain verified
 
   const tail = fixture.checkpoints[tailCount - 1];
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
-  expect(predecessor).toStrictEqual({
-    chainIndex: tail?.payload['chainIndex'] as number,
-    nextSeed: tail?.payload['nextSeed'] as string,
-  });
+  invariant(tail, 'the fixture always stores a checkpoint at the trimmed tail');
 
-  // oxlint-enable typescript/no-unsafe-type-assertion
+  expect(predecessor).toStrictEqual({
+    chainIndex: tail.payload.chainIndex,
+    nextSeed: tail.payload.nextSeed,
+  });
 });
 
 test('it finds no predecessor when the activity at that position is still active', async () => {
@@ -135,7 +134,7 @@ test('it finds no predecessor whose tail checkpoint is the Started one', async (
   });
 
   expect(fixture.checkpoints).toHaveLength(1);
-  expect(fixture.checkpoints[0]?.payload['type']).toBe('started');
+  expect(fixture.checkpoints[0]?.payload.type).toBe('started');
 
   await ctx.db
     .updateTable('activities')
@@ -163,7 +162,7 @@ test('it finds the consuming predecessor when a Started-only stopped activity sh
   });
 
   expect(startedOnly.checkpoints).toHaveLength(1);
-  expect(startedOnly.checkpoints[0]?.payload['type']).toBe('started');
+  expect(startedOnly.checkpoints[0]?.payload.type).toBe('started');
 
   await ctx.db
     .updateTable('activities')
@@ -196,13 +195,12 @@ test('it finds the consuming predecessor when a Started-only stopped activity sh
 
   const tail = consuming.checkpoints[tailCount - 1];
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
-  expect(predecessor).toStrictEqual({
-    chainIndex: tail?.payload['chainIndex'] as number,
-    nextSeed: tail?.payload['nextSeed'] as string,
-  });
+  invariant(tail, 'the fixture always stores a checkpoint at the trimmed tail');
 
-  // oxlint-enable typescript/no-unsafe-type-assertion
+  expect(predecessor).toStrictEqual({
+    chainIndex: tail.payload.chainIndex,
+    nextSeed: tail.payload.nextSeed,
+  });
 });
 
 test('it finds no predecessor rooted at a different chain position', async () => {
