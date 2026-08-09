@@ -1,4 +1,6 @@
-import { MIN_DIFFICULTY, buildEncounter, getEncounterContent } from '@vers/game-utils';
+import { MIN_DIFFICULTY, buildEncounter } from '@vers/game-utils';
+import type { EncounterContent } from '@vers/game-utils';
+import invariant from 'tiny-invariant';
 import { buildLifeFromLevel } from '../progression';
 import type { ActivityInput, AvatarData } from '../types';
 import { ActivityFailureAction, ActivityType, EquipmentSlot } from '../types';
@@ -35,10 +37,15 @@ export interface BuildSimulationInputOptions {
  * from one shared literal would have them corrupt each other.
  */
 export function buildSimulationInput(
+  content: Readonly<EncounterContent>,
   source: Readonly<SimulationInputSource>,
   options?: Readonly<BuildSimulationInputOptions>,
 ): { activity: ActivityInput; avatar: AvatarData } {
-  const content = getEncounterContent(source.contentVersion);
+  invariant(
+    content.contentVersion === source.contentVersion,
+    "content must match the source's pinned content version",
+  );
+
   const difficulty = Math.max(source.encounterNode.difficulty, MIN_DIFFICULTY);
 
   const encounter = buildEncounter({

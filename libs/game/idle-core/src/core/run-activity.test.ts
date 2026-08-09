@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
+import { createMockEncounterContent } from '@vers/game-utils/test-utils';
 import invariant from 'tiny-invariant';
 import { createAvatar } from '../entities/create-avatar';
 import { buildCompletionXP, buildLevelFromXP } from '../progression';
@@ -46,10 +46,10 @@ test('it immediately generates a started checkpoint', () => {
 });
 
 test('it clears a wave from a difficulty-0 source node without crashing on the reward-slot tier', () => {
-  const built = buildSimulationInput({
+  const built = buildSimulationInput(createMockEncounterContent({ contentVersion: '2' }), {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
-    contentVersion: CURRENT_CONTENT_VERSION,
+    contentVersion: '2',
     encounterNode: { difficulty: 0 },
     id: 'act_1',
     seed: 'ee'.repeat(16),

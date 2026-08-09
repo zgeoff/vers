@@ -1,4 +1,5 @@
 import { buildStateFromSeed } from '@vers/game-utils';
+import type { EncounterContent } from '@vers/game-utils';
 import { bench, run } from 'mitata';
 import { buildSimulationInput } from './core/build-simulation-input';
 import type { SimulationInputSource } from './core/build-simulation-input';
@@ -27,8 +28,32 @@ const SOURCE: SimulationInputSource = {
   seed: buildStateFromSeed(3_047_525_658),
 };
 
+const CONTENT: EncounterContent = {
+  contentVersion: '1',
+  archetypes: [
+    {
+      id: 'placeholder-brawler',
+      name: 'World Map Enemy',
+      baseLevel: 1,
+      baseLife: 30,
+      baseXP: 10,
+      attackMin: 1,
+      attackMax: 3,
+      attackSpeed: 0.5,
+    },
+  ],
+  pools: [{ id: 'default', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] }],
+  tuning: {
+    waveCountMin: 3,
+    waveCountMax: 6,
+    waveSizeMin: 3,
+    waveSizeMax: 6,
+    difficultyScalingFactor: 1,
+  },
+};
+
 bench('replay driver · 1 simulated hour', async () => {
-  const input = buildSimulationInput(SOURCE, {
+  const input = buildSimulationInput(CONTENT, SOURCE, {
     failureAction: ActivityFailureAction.Retry,
   });
 
@@ -38,7 +63,7 @@ bench('replay driver · 1 simulated hour', async () => {
 });
 
 bench('live loop with updated listener · 1 simulated hour', () => {
-  const input = buildSimulationInput(SOURCE, {
+  const input = buildSimulationInput(CONTENT, SOURCE, {
     failureAction: ActivityFailureAction.Retry,
   });
 

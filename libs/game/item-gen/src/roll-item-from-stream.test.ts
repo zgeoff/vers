@@ -2,9 +2,28 @@ import { expect, test } from 'bun:test';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import { buildPositionStream } from './build-position-stream';
 import { rollItemFromStream } from './roll-item-from-stream';
-import { tablesV1 } from './tables/tables-v1';
+import type { LootTables } from './types';
 
 test('it reproduces the frozen golden item for a fixed key and coordinate', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildPositionStream(hexToBytes('11'.repeat(32)), {
     kind: 'reward',
     avatarID: 'avatar-1',
@@ -14,7 +33,7 @@ test('it reproduces the frozen golden item for a fixed key and coordinate', () =
     ordinal: 0,
   });
 
-  expect(rollItemFromStream(tablesV1, { nodeTier: 0 }, stream)).toMatchInlineSnapshot(`
+  expect(rollItemFromStream(tables, { nodeTier: 0 }, stream)).toMatchInlineSnapshot(`
     {
       "affixes": [
         {
@@ -31,6 +50,25 @@ test('it reproduces the frozen golden item for a fixed key and coordinate', () =
 });
 
 test('it reproduces the frozen golden rare item with both affix groups', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildPositionStream(hexToBytes('11'.repeat(32)), {
     kind: 'reward',
     avatarID: 'avatar-1',
@@ -40,7 +78,7 @@ test('it reproduces the frozen golden rare item with both affix groups', () => {
     ordinal: 41,
   });
 
-  expect(rollItemFromStream(tablesV1, { nodeTier: 0 }, stream)).toMatchInlineSnapshot(`
+  expect(rollItemFromStream(tables, { nodeTier: 0 }, stream)).toMatchInlineSnapshot(`
     {
       "affixes": [
         {
@@ -62,6 +100,25 @@ test('it reproduces the frozen golden rare item with both affix groups', () => {
 });
 
 test('it rolls zero affixes for a common item', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildPositionStream(hexToBytes('11'.repeat(32)), {
     kind: 'reward',
     avatarID: 'avatar-1',
@@ -71,7 +128,7 @@ test('it rolls zero affixes for a common item', () => {
     ordinal: 1,
   });
 
-  expect(rollItemFromStream(tablesV1, { nodeTier: 0 }, stream)).toStrictEqual({
+  expect(rollItemFromStream(tables, { nodeTier: 0 }, stream)).toStrictEqual({
     affixes: [],
     baseID: 'placeholder-blade',
     contentVersion: '1',
@@ -80,6 +137,25 @@ test('it rolls zero affixes for a common item', () => {
 });
 
 test('it rolls identical items from equal inputs', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const first = buildPositionStream(hexToBytes('11'.repeat(32)), {
     kind: 'reward',
     avatarID: 'avatar-1',
@@ -98,12 +174,31 @@ test('it rolls identical items from equal inputs', () => {
     ordinal: 9,
   });
 
-  expect(rollItemFromStream(tablesV1, { nodeTier: 0 }, first)).toStrictEqual(
-    rollItemFromStream(tablesV1, { nodeTier: 0 }, second),
+  expect(rollItemFromStream(tables, { nodeTier: 0 }, first)).toStrictEqual(
+    rollItemFromStream(tables, { nodeTier: 0 }, second),
   );
 });
 
 test('it rolls a different item at a different ordinal', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const first = buildPositionStream(hexToBytes('11'.repeat(32)), {
     kind: 'reward',
     avatarID: 'avatar-1',
@@ -122,12 +217,31 @@ test('it rolls a different item at a different ordinal', () => {
     ordinal: 3,
   });
 
-  expect(rollItemFromStream(tablesV1, { nodeTier: 0 }, first)).not.toStrictEqual(
-    rollItemFromStream(tablesV1, { nodeTier: 0 }, second),
+  expect(rollItemFromStream(tables, { nodeTier: 0 }, first)).not.toStrictEqual(
+    rollItemFromStream(tables, { nodeTier: 0 }, second),
   );
 });
 
 test('it rejects a malformed context', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildPositionStream(hexToBytes('11'.repeat(32)), {
     kind: 'reward',
     avatarID: 'avatar-1',
@@ -137,7 +251,7 @@ test('it rejects a malformed context', () => {
     ordinal: 0,
   });
 
-  expect(() => rollItemFromStream(tablesV1, { nodeTier: -1 }, stream)).toThrowWithMessage(
+  expect(() => rollItemFromStream(tables, { nodeTier: -1 }, stream)).toThrowWithMessage(
     Error,
     /nodeTier must be a non-negative integer/,
   );

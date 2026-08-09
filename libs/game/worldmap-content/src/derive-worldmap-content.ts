@@ -1,4 +1,4 @@
-import { CONTENT_BY_VERSION } from '@vers/game-utils';
+import type { EncounterContent } from '@vers/game-utils';
 import invariant from 'tiny-invariant';
 import { deriveWorldmapDescriptor } from './derive-worldmap-descriptor';
 
@@ -24,16 +24,12 @@ export interface WorldmapContent {
  * stay uncorrelated with everything the client can see.
  */
 export function deriveWorldmapContent(
-  contentVersion: string,
+  content: Readonly<EncounterContent>,
   input: Readonly<DeriveWorldmapContentInput>,
 ): WorldmapContent {
-  if (contentVersion === '1') {
+  if (content.contentVersion === '1') {
     return {};
   }
-
-  const content = CONTENT_BY_VERSION[contentVersion];
-
-  invariant(content, `unknown content version: ${contentVersion}`);
 
   const descriptor = deriveWorldmapDescriptor(input);
   const index = pickUniformIndex(descriptor, content.pools.length);
