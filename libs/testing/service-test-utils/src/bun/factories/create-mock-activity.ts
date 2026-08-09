@@ -22,6 +22,8 @@ export function createMockActivity(
     lastHash: startHash,
     scopeId: faker.string.alphanumeric({ casing: 'lower', length: 8 }),
     scopeType: 'world_map_node',
+    secretRef: 'worldmap',
+    secretVersion: 1,
     seed: faker.string.hexadecimal({ casing: 'lower', length: 32, prefix: '' }),
     simVersion: '0.0.0-dev',
     startHash,

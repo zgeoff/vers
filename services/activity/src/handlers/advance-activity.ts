@@ -191,8 +191,8 @@ interface PinnedActivityContext {
   readonly keyVersion: number;
   readonly scopeId: string;
   readonly scopeType: string;
-  readonly secretRef: string | null;
-  readonly secretVersion: number | null;
+  readonly secretRef: string;
+  readonly secretVersion: number;
   readonly simVersion: string;
 }
 

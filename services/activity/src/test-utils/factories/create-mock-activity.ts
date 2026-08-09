@@ -39,6 +39,8 @@ export function createMockActivity(
     lastHash: startHash,
     scopeId: `${faker.number.int({ max: 99, min: -99 })}_${faker.number.int({ max: 99, min: -99 })}`,
     scopeType: 'world_map_node',
+    secretRef: 'worldmap',
+    secretVersion: 1,
     seed,
     simVersion,
     startHash,
