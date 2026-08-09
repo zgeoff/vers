@@ -69,6 +69,7 @@ export interface AppMachine {
   readonly id: string;
   readonly state: string;
   readonly gitSHA: string | null;
+  readonly image: string | null;
   readonly checks?: ReadonlyArray<MachineCheck>;
 }
 
@@ -85,6 +86,15 @@ export interface ScheduledMachineState {
   readonly id: string;
   readonly name: string;
   readonly image: string;
+}
+
+/**
+ * A stranded machine the sweep planner marked for destruction — `image` is null when flyctl
+ * reported none, retained so the sweep's log names what it removed.
+ */
+export interface MachineSweepTarget {
+  readonly id: string;
+  readonly image: string | null;
 }
 
 export type ScheduledMachineAction =
