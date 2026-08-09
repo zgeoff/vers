@@ -123,9 +123,9 @@ player farms the known offline and ventures into fog online.
 ## Content sealing & verification
 
 `secretRef`/`secretVersion` are nullable `activities` columns, exempting a row minted before content
-sealing from the descriptor check; the scope secret they name is custodied in `service-keys` under
-`SCOPE_SECRET_ROOTS`, and `descriptor(coord)` folds in a `userSeed` pinned to 0 until a per-avatar
-seed exists.
+sealing from the descriptor check; `service-keys` custodies the versioned roots in
+`SCOPE_SECRET_ROOTS` and derives each avatar's scope secret from the referenced root, and
+`descriptor(coord)` folds in a `userSeed` pinned to 0 until a per-avatar seed exists.
 
 Regeneration beats storage for an infinite per-avatar map: `descriptor(coord)` is O(1) and stores
 nothing. Tamper-resistance follows without extra machinery — encounter derivation already recomputes
@@ -134,9 +134,9 @@ claim that an easy node was secretly a jackpot is refuted by recomputation. Noth
 forge.
 
 The activity's `Started` event snapshots `contentVersion` (a content-derivation hash, parallel to
-`simVersion`) and a `secretRef`/`secretVersion` pair. The secret never enters the event log — an
-append-only replayable stream is the wrong home for a secret — and lives in identity Postgres / KMS,
-referenced by id and rotatable.
+`simVersion`) and a `secretRef`/`secretVersion` pair. No secret material enters the event log — an
+append-only replayable stream is the wrong home for a secret — the pair only names the versioned
+root `service-keys` custodies, and rotation adds a new root version rather than rewriting rows.
 
 ## Difficulty plateau, infinite distance
 
