@@ -1,5 +1,6 @@
 export { createDB } from './create-db';
 export { applyMigrations, migrationsFolder } from './apply-migrations';
+export { toJSON } from './to-json';
 
 export type {
   ActiveAvatars,

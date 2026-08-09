@@ -1,7 +1,7 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/bun';
 import { buildCheckpointHash } from '@vers/contract-activity';
-import type { Json } from '@vers/db';
+import { toJSON } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { buildLevelFromXP, buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
@@ -13,6 +13,7 @@ import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { waitFor } from '@vers/test-utils';
 import { createTraceContext } from '@vers/trace';
 import pino from 'pino';
+import invariant from 'tiny-invariant';
 import { MAX_REPLAY_ATTEMPTS } from '../queue/update-replay-attempts';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createActivityRow } from '../test-utils/create-activity-row';
@@ -174,8 +175,7 @@ test('it verifies a later batch from held state, not a fresh from-Started replay
       remaining.map((checkpoint) => ({
         activityId: fixture.activity.id,
         hash: checkpoint.hash,
-        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; the value is a hand-built, schema-shaped payload
-        payload: checkpoint.payload as Json,
+        payload: toJSON(checkpoint.payload),
         prevHash: checkpoint.prevHash,
         version: checkpoint.version,
       })),
@@ -222,31 +222,24 @@ test('it rejects a checkpoint with a forged continuation seed, rewinds the chain
   const targetVersion = 2;
   const target = fixture.checkpoints.find((checkpoint) => checkpoint.version === targetVersion);
 
-  expect(target).toBeDefined();
+  invariant(target, 'the fixture always stores a checkpoint at the tampered version');
 
-  const tamperedPayload: Record<string, unknown> = {
-    ...target?.payload,
-    nextSeed: tamperedNextSeed,
-  };
+  const tamperedPayload = { ...target.payload, nextSeed: tamperedNextSeed };
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
   const tamperedHash = buildCheckpointHash({
-    chainIndex: tamperedPayload['chainIndex'] as number,
+    chainIndex: tamperedPayload.chainIndex,
     entropySource: 'server-key',
     nextSeed: tamperedNextSeed,
-    prevHash: target?.prevHash ?? '',
-    seed: tamperedPayload['seed'] as string,
-    time: tamperedPayload['time'] as number,
-    type: tamperedPayload['type'] as string,
+    prevHash: target.prevHash,
+    seed: tamperedPayload.seed,
+    time: tamperedPayload.time,
+    type: tamperedPayload.type,
     version: targetVersion,
   });
 
-  // oxlint-enable typescript/no-unsafe-type-assertion
-
   await ctx.db
     .updateTable('activityCheckpoints')
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; the value is a hand-tampered, schema-shaped payload
-    .set({ hash: tamperedHash, payload: tamperedPayload as Json })
+    .set({ hash: tamperedHash, payload: toJSON(tamperedPayload) })
     .where('activityId', '=', fixture.activity.id)
     .where('version', '=', targetVersion)
     .execute();
@@ -313,28 +306,24 @@ test('it settles no xp and drops the rejected activity from the pending anchor w
   const targetVersion = 1;
   const target = fixture.checkpoints.find((checkpoint) => checkpoint.version === targetVersion);
 
-  expect(target).toBeDefined();
+  invariant(target, 'the fixture always stores a checkpoint at the tampered version');
 
-  const tamperedPayload: Record<string, unknown> = { ...target?.payload, chainIndex: 999 };
+  const tamperedPayload = { ...target.payload, chainIndex: 999 };
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
   const tamperedHash = buildCheckpointHash({
     chainIndex: 999,
     entropySource: 'server-key',
-    nextSeed: tamperedPayload['nextSeed'] as string,
-    prevHash: target?.prevHash ?? '',
-    seed: tamperedPayload['seed'] as string,
-    time: tamperedPayload['time'] as number,
-    type: tamperedPayload['type'] as string,
+    nextSeed: tamperedPayload.nextSeed,
+    prevHash: target.prevHash,
+    seed: tamperedPayload.seed,
+    time: tamperedPayload.time,
+    type: tamperedPayload.type,
     version: targetVersion,
   });
 
-  // oxlint-enable typescript/no-unsafe-type-assertion
-
   await ctx.db
     .updateTable('activityCheckpoints')
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; the value is a hand-tampered, schema-shaped payload
-    .set({ hash: tamperedHash, payload: tamperedPayload as Json })
+    .set({ hash: tamperedHash, payload: toJSON(tamperedPayload) })
     .where('activityId', '=', fixture.activity.id)
     .where('version', '=', targetVersion)
     .execute();
@@ -393,28 +382,24 @@ test('it rejects a checkpoint with a forged chain position', async () => {
   const targetVersion = 1;
   const target = fixture.checkpoints.find((checkpoint) => checkpoint.version === targetVersion);
 
-  expect(target).toBeDefined();
+  invariant(target, 'the fixture always stores a checkpoint at the tampered version');
 
-  const tamperedPayload: Record<string, unknown> = { ...target?.payload, chainIndex: 999 };
+  const tamperedPayload = { ...target.payload, chainIndex: 999 };
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
   const tamperedHash = buildCheckpointHash({
     chainIndex: 999,
     entropySource: 'server-key',
-    nextSeed: tamperedPayload['nextSeed'] as string,
-    prevHash: target?.prevHash ?? '',
-    seed: tamperedPayload['seed'] as string,
-    time: tamperedPayload['time'] as number,
-    type: tamperedPayload['type'] as string,
+    nextSeed: tamperedPayload.nextSeed,
+    prevHash: target.prevHash,
+    seed: tamperedPayload.seed,
+    time: tamperedPayload.time,
+    type: tamperedPayload.type,
     version: targetVersion,
   });
 
-  // oxlint-enable typescript/no-unsafe-type-assertion
-
   await ctx.db
     .updateTable('activityCheckpoints')
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; the value is a hand-tampered, schema-shaped payload
-    .set({ hash: tamperedHash, payload: tamperedPayload as Json })
+    .set({ hash: tamperedHash, payload: toJSON(tamperedPayload) })
     .where('activityId', '=', fixture.activity.id)
     .where('version', '=', targetVersion)
     .execute();
@@ -445,31 +430,24 @@ test('it rejects a checkpoint claiming the wrong entropy source', async () => {
   const targetVersion = 1;
   const target = fixture.checkpoints.find((checkpoint) => checkpoint.version === targetVersion);
 
-  expect(target).toBeDefined();
+  invariant(target, 'the fixture always stores a checkpoint at the tampered version');
 
-  const tamperedPayload: Record<string, unknown> = {
-    ...target?.payload,
-    entropySource: 'device-key',
-  };
+  const tamperedPayload = { ...target.payload, entropySource: 'device-key' };
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
   const tamperedHash = buildCheckpointHash({
-    chainIndex: tamperedPayload['chainIndex'] as number,
+    chainIndex: tamperedPayload.chainIndex,
     entropySource: 'device-key',
-    nextSeed: tamperedPayload['nextSeed'] as string,
-    prevHash: target?.prevHash ?? '',
-    seed: tamperedPayload['seed'] as string,
-    time: tamperedPayload['time'] as number,
-    type: tamperedPayload['type'] as string,
+    nextSeed: tamperedPayload.nextSeed,
+    prevHash: target.prevHash,
+    seed: tamperedPayload.seed,
+    time: tamperedPayload.time,
+    type: tamperedPayload.type,
     version: targetVersion,
   });
 
-  // oxlint-enable typescript/no-unsafe-type-assertion
-
   await ctx.db
     .updateTable('activityCheckpoints')
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; the value is a hand-tampered, schema-shaped payload
-    .set({ hash: tamperedHash, payload: tamperedPayload as Json })
+    .set({ hash: tamperedHash, payload: toJSON(tamperedPayload) })
     .where('activityId', '=', fixture.activity.id)
     .where('version', '=', targetVersion)
     .execute();
@@ -498,15 +476,13 @@ test('it rejects a checkpoint with a forged reward total', async () => {
   });
 
   const targetVersion = 1;
+  const target = fixture.checkpoints.find((checkpoint) => checkpoint.version === targetVersion);
+
+  invariant(target, 'the fixture always stores a checkpoint at the tampered version');
 
   await ctx.db
     .updateTable('activityCheckpoints')
-    .set({
-      payload: {
-        ...fixture.checkpoints.find((c) => c.version === targetVersion)?.payload,
-        rewards: { xp: 999_999 },
-      } as Json,
-    })
+    .set({ payload: toJSON({ ...target.payload, rewards: { xp: 999_999 } }) })
     .where('activityId', '=', fixture.activity.id)
     .where('version', '=', targetVersion)
     .execute();
@@ -968,18 +944,16 @@ test('it does not reject a divergence that fails to reproduce on the fresh confi
   });
 
   const corruptDriver = createSimulationDriver(corruptInput.activity, corruptInput.avatar);
+  const resumePoint = fixture.checkpoints[firstBatchCount - 1];
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
-  await corruptDriver.advanceToDuration(
-    fixture.checkpoints[firstBatchCount - 1]?.payload['time'] as number,
-  );
+  invariant(resumePoint, 'the fixture always stores a checkpoint at the cached head');
 
-  // oxlint-enable typescript/no-unsafe-type-assertion
+  await corruptDriver.advanceToDuration(resumePoint.payload.time);
 
   cache.set(fixture.activity.id, {
     driver: corruptDriver,
     emittedCount: firstBatchCount,
-    lastHash: fixture.checkpoints[firstBatchCount - 1]?.hash ?? '',
+    lastHash: resumePoint.hash,
   });
 
   const deps = {
@@ -1017,11 +991,11 @@ test('a user-stopped activity advances the chain verified anchor from its tail, 
   const tailCount = predecessor.checkpoints.length - 1;
   const tail = predecessor.checkpoints[tailCount - 1];
 
-  expect(tail).toBeDefined();
+  invariant(tail, 'the fixture always stores a checkpoint at the trimmed tail');
 
   await ctx.db
     .updateTable('activities')
-    .set({ appendedHead: tailCount, lastHash: tail?.hash })
+    .set({ appendedHead: tailCount, lastHash: tail.hash })
     .where('id', '=', predecessor.activity.id)
     .execute();
 
@@ -1039,13 +1013,10 @@ test('a user-stopped activity advances the chain verified anchor from its tail, 
 
   expect(predecessorOutcome).toStrictEqual({ kind: 'matched' });
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
   const expectedAnchor = {
-    verifiedChainIndex: tail?.payload['chainIndex'] as number,
-    verifiedNextSeed: tail?.payload['nextSeed'] as string,
+    verifiedChainIndex: tail.payload.chainIndex,
+    verifiedNextSeed: tail.payload.nextSeed,
   };
-
-  // oxlint-enable typescript/no-unsafe-type-assertion
 
   const chainAfterPredecessor = await ctx.db
     .selectFrom('activityChains')
@@ -1088,11 +1059,11 @@ test('a capped activity advances the chain verified anchor from its tail, and an
   const tailCount = predecessor.checkpoints.length - 1;
   const tail = predecessor.checkpoints[tailCount - 1];
 
-  expect(tail).toBeDefined();
+  invariant(tail, 'the fixture always stores a checkpoint at the trimmed tail');
 
   await ctx.db
     .updateTable('activities')
-    .set({ appendedHead: tailCount, lastHash: tail?.hash })
+    .set({ appendedHead: tailCount, lastHash: tail.hash })
     .where('id', '=', predecessor.activity.id)
     .execute();
 
@@ -1110,13 +1081,10 @@ test('a capped activity advances the chain verified anchor from its tail, and an
 
   expect(predecessorOutcome).toStrictEqual({ kind: 'matched' });
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
   const expectedAnchor = {
-    verifiedChainIndex: tail?.payload['chainIndex'] as number,
-    verifiedNextSeed: tail?.payload['nextSeed'] as string,
+    verifiedChainIndex: tail.payload.chainIndex,
+    verifiedNextSeed: tail.payload.nextSeed,
   };
-
-  // oxlint-enable typescript/no-unsafe-type-assertion
 
   const chainAfterPredecessor = await ctx.db
     .selectFrom('activityChains')
@@ -1163,11 +1131,11 @@ test('a stream fully verified while still active reconciles the anchor once a su
   const tailCount = predecessor.checkpoints.length - 1;
   const tail = predecessor.checkpoints[tailCount - 1];
 
-  expect(tail).toBeDefined();
+  invariant(tail, 'the fixture always stores a checkpoint at the trimmed tail');
 
   await ctx.db
     .updateTable('activities')
-    .set({ appendedHead: tailCount, lastHash: tail?.hash })
+    .set({ appendedHead: tailCount, lastHash: tail.hash })
     .where('id', '=', predecessor.activity.id)
     .execute();
 
@@ -1208,13 +1176,10 @@ test('a stream fully verified while still active reconciles the anchor once a su
     .where('id', '=', predecessor.activity.id)
     .execute();
 
-  // oxlint-disable typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
   const expectedAnchor = {
-    verifiedChainIndex: tail?.payload['chainIndex'] as number,
-    verifiedNextSeed: tail?.payload['nextSeed'] as string,
+    verifiedChainIndex: tail.payload.chainIndex,
+    verifiedNextSeed: tail.payload.nextSeed,
   };
-
-  // oxlint-enable typescript/no-unsafe-type-assertion
 
   // This reconciled seed's authored encounter resolves to a terminal checkpoint at 66,250ms of
   // simulated time; a 60s duration keeps the successor mid-run so its own match never advances
@@ -1258,7 +1223,7 @@ test('a stopped activity whose only checkpoint is Started leaves the anchor unto
   });
 
   expect(predecessor.checkpoints).toHaveLength(1);
-  expect(predecessor.checkpoints[0]?.payload['type']).toBe('started');
+  expect(predecessor.checkpoints[0]?.payload.type).toBe('started');
 
   const deps = {
     db: ctx.db,

@@ -76,8 +76,7 @@ test('it anchors a continuation segment on the last verified checkpoint hash and
 
   expect(predecessor).toBeDefined();
   expect(segment?.prevHash).toBe(predecessor?.hash);
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the fixture's payload is a hand-built, schema-shaped object
-  expect(segment?.seed).toBe(predecessor?.payload['nextSeed'] as string | undefined);
+  expect(segment?.seed).toBe(predecessor?.payload.nextSeed);
   expect(segment?.checkpoints).toHaveLength(fixture.checkpoints.length);
   expect(segment?.checkpoints.slice(verifiedHead)).toHaveLength(fixture.checkpoints.length - 1);
   expect(segment?.checkpoints[verifiedHead]?.version).toBe(2);

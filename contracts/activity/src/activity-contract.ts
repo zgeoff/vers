@@ -7,6 +7,7 @@ import { CatchUpContinuationSchema } from './catch-up-continuation-schema';
 import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
+import { RewardItemAffixSchema } from './reward-item-affix-schema';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
 
 const AvatarNotActiveDataSchema = z.object({
@@ -27,12 +28,6 @@ const TerminalStatusDataSchema = z.object({ appendedHead: z.int(), status: Activ
 const AdvanceBailDataSchema = z.object({ activityID: z.string(), appendedHead: z.int() });
 const AdvanceCheckpointInvalidDataSchema = AdvanceBailDataSchema.extend({ reason: z.string() });
 const AdvanceTerminalDataSchema = AdvanceBailDataSchema.extend({ status: ActivityStatusSchema });
-
-const RewardItemAffixSchema = z.object({
-  affixID: z.string(),
-  groupID: z.string(),
-  value: z.number(),
-});
 
 const RewardItemSchema = z.object({
   affixes: z.array(RewardItemAffixSchema),

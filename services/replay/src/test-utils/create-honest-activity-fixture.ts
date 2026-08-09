@@ -1,9 +1,10 @@
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
-import type { EncounterNode } from '@vers/contract-activity';
+import type { CheckpointPayload, EncounterNode } from '@vers/contract-activity';
 import { buildCheckpointHash, buildStartHash } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
-import type { Activities, ActivityChains, DB, Json } from '@vers/db';
+import type { Activities, ActivityChains, DB } from '@vers/db';
+import { toJSON } from '@vers/db';
 import { CURRENT_CONTENT_VERSION, buildStateFromSeed } from '@vers/game-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
@@ -26,7 +27,7 @@ const DEFAULT_SCOPE_ID = '1_0';
 
 interface HonestCheckpointRow {
   readonly hash: string;
-  readonly payload: Record<string, unknown>;
+  readonly payload: CheckpointPayload;
   readonly prevHash: string;
   readonly version: number;
 }
@@ -164,8 +165,7 @@ export async function createHonestActivityFixture(
         checkpoints.map((checkpoint) => ({
           activityId: activityID,
           hash: checkpoint.hash,
-          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the column is untyped jsonb; the value is a hand-built, schema-shaped payload
-          payload: checkpoint.payload as Json,
+          payload: toJSON(checkpoint.payload),
           prevHash: checkpoint.prevHash,
           version: checkpoint.version,
         })),
@@ -246,7 +246,7 @@ function buildHonestCheckpointRows(
       version,
     });
 
-    const payload = {
+    const payload: CheckpointPayload = {
       chainIndex,
       entropySource: 'server-key',
       nextSeed: checkpoint.nextSeed,
