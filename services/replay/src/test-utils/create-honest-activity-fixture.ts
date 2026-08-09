@@ -1,14 +1,12 @@
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
+import { createContentVersion, findContentDocument } from '@vers/content-registry';
 import type { CheckpointPayload, ContentDocument, EncounterNode } from '@vers/contract-activity';
-import {
-  ContentDocumentSchema,
-  buildCheckpointHash,
-  buildStartHash,
-} from '@vers/contract-activity';
+import { buildCheckpointHash, buildStartHash } from '@vers/contract-activity';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import type { SecretRef } from '@vers/contract-keys';
 import type { Activities, ActivityChains, DB } from '@vers/db';
-import { contentDocumentV1, contentDocumentV2, toJSON } from '@vers/db';
+import { toJSON } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import type { EncounterContent } from '@vers/game-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
@@ -29,6 +27,13 @@ import { createChainRow } from './create-chain-row';
  * stay byte-comparable.
  */
 const DEFAULT_SCOPE_ID = '1_0';
+
+/**
+ * The content version a fixture stamps and publishes when the caller passes neither a document nor
+ * a version — the same version the suites' shared setup publishes, so a default fixture and its
+ * suite agree on one document.
+ */
+const DEFAULT_CONTENT_VERSION = '2';
 
 interface HonestCheckpointRow {
   readonly hash: string;
@@ -63,6 +68,7 @@ interface CreateHonestActivityFixtureInput {
   readonly buildSnapshot?: { readonly level: number; readonly xp: number };
   readonly chain?: Readonly<Partial<Insertable<ActivityChains>>>;
   readonly contentVersion?: string;
+  readonly document?: ContentDocument;
   readonly duration?: number;
   readonly rootChain?: Readonly<Selectable<ActivityChains>>;
   readonly secretRef?: SecretRef;
@@ -106,15 +112,27 @@ export async function createHonestActivityFixture(
   });
 
   const startChainIndex = input.startChainIndex ?? chain.appendedChainIndex;
-  const contentVersion = input.contentVersion ?? '2';
 
   invariant(
-    contentVersion === '1' || contentVersion === '2',
-    `no seeded content document exists for content version ${contentVersion}`,
+    input.document === undefined ||
+      input.contentVersion === undefined ||
+      input.document.contentVersion === input.contentVersion,
+    'an explicit document must carry the explicit content version',
   );
 
-  const contentSource = contentVersion === '1' ? contentDocumentV1 : contentDocumentV2;
-  const document: ContentDocument = ContentDocumentSchema.parse(contentSource);
+  const document =
+    input.document ??
+    createMockContentDocument({ contentVersion: input.contentVersion ?? DEFAULT_CONTENT_VERSION });
+
+  const contentVersion = document.contentVersion;
+
+  // The replay worker loads content by the row's stamped version, so the document this fixture ran
+  // the engine against must be readable back from the registry; a suite (or an earlier fixture)
+  // may already have published the version, in which case its content is assumed identical.
+  if ((await findContentDocument(db, contentVersion)) === undefined) {
+    await createContentVersion(db, document);
+  }
+
   const secretRef = input.secretRef ?? 'worldmap';
   const secretVersion = input.secretVersion ?? 1;
 

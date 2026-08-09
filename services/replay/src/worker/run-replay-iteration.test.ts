@@ -1,8 +1,9 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/bun';
 import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
-import { ContentDocumentSchema, buildCheckpointHash } from '@vers/contract-activity';
-import { contentDocumentV2, toJSON } from '@vers/db';
+import { buildCheckpointHash } from '@vers/contract-activity';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
+import { toJSON } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { buildLevelFromXP, buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
@@ -31,7 +32,7 @@ import { runReplayIteration } from './run-replay-iteration';
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 
-  await createContentVersion(db.db, ContentDocumentSchema.parse(contentDocumentV2));
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const keyPair = await getTestServiceKeyPair();
 
@@ -769,7 +770,7 @@ test('it evicts and rebuilds from Started when the cached driver no longer match
     .execute();
 
   const cache = createReplayCache();
-  const staleContent = ContentDocumentSchema.parse(contentDocumentV2).encounter;
+  const staleContent = createMockContentDocument({ contentVersion: '2' }).encounter;
 
   const staleInput = buildSimulationInput(staleContent, {
     avatarID: fixture.activity.avatarId,
@@ -949,7 +950,7 @@ test('it does not reject a divergence that fails to reproduce on the fresh confi
   const cache = createReplayCache();
 
   const corruptInput = buildSimulationInput(
-    ContentDocumentSchema.parse(contentDocumentV2).encounter,
+    createMockContentDocument({ contentVersion: '2' }).encounter,
     {
       avatarID: fixture.activity.avatarId,
       buildSnapshot: { level: 1, xp: 0 },

@@ -1,7 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
-import { ContentDocumentSchema } from '@vers/contract-activity';
-import { contentDocumentV2 } from '@vers/db';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
@@ -19,7 +18,7 @@ import { runFrontier } from './run-frontier';
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 
-  await createContentVersion(db.db, ContentDocumentSchema.parse(contentDocumentV2));
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const keyPair = await getTestServiceKeyPair();
 
@@ -529,8 +528,50 @@ test('it verifies an honest sealed content-version-2 row, matching its stamped p
 test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", async () => {
   await using ctx = await setupTest();
 
+  // two pools, so the tampered stamp below can name a pool the document registers that still
+  // differs from the derived truth
+  const document = createMockContentDocument({
+    contentVersion: 'two-pools',
+    encounter: {
+      contentVersion: 'two-pools',
+      archetypes: [
+        {
+          id: 'placeholder-brawler',
+          name: 'World Map Enemy',
+          baseLevel: 1,
+          baseLife: 30,
+          baseXP: 10,
+          attackMin: 1,
+          attackMax: 3,
+          attackSpeed: 0.5,
+        },
+        {
+          id: 'placeholder-skirmisher',
+          name: 'World Map Skirmisher',
+          baseLevel: 1,
+          baseLife: 20,
+          baseXP: 8,
+          attackMin: 1,
+          attackMax: 4,
+          attackSpeed: 0.7,
+        },
+      ],
+      pools: [
+        { id: 'brawler-den', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] },
+        { id: 'skirmisher-flock', entries: [{ archetypeID: 'placeholder-skirmisher', weight: 1 }] },
+      ],
+      tuning: {
+        waveCountMin: 3,
+        waveCountMax: 6,
+        waveSizeMin: 3,
+        waveSizeMax: 6,
+        difficultyScalingFactor: 1,
+      },
+    },
+  });
+
   const fixture = await createHonestActivityFixture(ctx.db, {
-    contentVersion: '2',
+    document,
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -539,13 +580,14 @@ test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", a
 
   invariant(
     typeof stampedPoolID === 'object' && stampedPoolID !== null && 'poolID' in stampedPoolID,
-    'a content-version-2 fixture always stamps a poolID',
+    'a sealed fixture always stamps a poolID',
   );
 
-  const contentV2 = ContentDocumentSchema.parse(contentDocumentV2).encounter;
-  const tamperedPoolID = contentV2.pools.find((pool) => pool.id !== stampedPoolID['poolID'])?.id;
+  const tamperedPoolID = document.encounter.pools.find(
+    (pool) => pool.id !== stampedPoolID['poolID'],
+  )?.id;
 
-  invariant(tamperedPoolID !== undefined, 'content version 2 registers more than one pool');
+  invariant(tamperedPoolID !== undefined, 'the authored document registers more than one pool');
 
   await ctx.db
     .updateTable('activities')

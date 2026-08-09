@@ -1,14 +1,17 @@
 import { expect, test } from 'bun:test';
-import { ContentDocumentSchema, buildCheckpointHash } from '@vers/contract-activity';
-import { contentDocumentV2 } from '@vers/db';
+import { buildCheckpointHash } from '@vers/contract-activity';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildMockScopeSecret } from '@vers/mock-services/keys';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
 import invariant from 'tiny-invariant';
 import { createHonestActivityFixture } from './create-honest-activity-fixture';
 
+// The fixture publishes the content document it runs the engine against, which opens an
+// interactive transaction the default transaction-isolation handle can't nest — every test here
+// runs against a real, committed schema clone.
 test('it persists a stream whose stored hashes byte-match a fresh recompute', async () => {
-  await using ctx = await createTestDB();
+  await using ctx = await createTestDB({ isolation: 'schema' });
 
   const fixture = await createHonestActivityFixture(ctx.db, { duration: 80_000 });
 
@@ -47,7 +50,7 @@ test('it persists a stream whose stored hashes byte-match a fresh recompute', as
 });
 
 test('it roots a successor on an already-persisted chain instead of creating a new one', async () => {
-  await using ctx = await createTestDB();
+  await using ctx = await createTestDB({ isolation: 'schema' });
 
   const predecessor = await createHonestActivityFixture(ctx.db, {
     activity: { status: 'stopped' },
@@ -78,9 +81,11 @@ test('it roots a successor on an already-persisted chain instead of creating a n
 });
 
 test('it stamps secretRef/secretVersion and a sealed encounterNode matching real derivation truth by default', async () => {
-  await using ctx = await createTestDB();
+  await using ctx = await createTestDB({ isolation: 'schema' });
 
-  const fixture = await createHonestActivityFixture(ctx.db, { duration: 80_000 });
+  const document = createMockContentDocument();
+
+  const fixture = await createHonestActivityFixture(ctx.db, { document, duration: 80_000 });
 
   expect(fixture.activity.secretRef).toBe('worldmap');
   expect(fixture.activity.secretVersion).toBe(1);
@@ -89,7 +94,7 @@ test('it stamps secretRef/secretVersion and a sealed encounterNode matching real
 
   const expected = {
     difficulty: 1,
-    ...deriveWorldmapContent(ContentDocumentSchema.parse(contentDocumentV2).encounter, {
+    ...deriveWorldmapContent(document.encounter, {
       coord: [1, 0],
       scopeSecret,
       userSeed: 0,
@@ -97,4 +102,22 @@ test('it stamps secretRef/secretVersion and a sealed encounterNode matching real
   };
 
   expect(fixture.activity.encounterNode).toStrictEqual(expected);
+});
+
+test('it publishes the document it ran the engine against, keyed by the stamped content version', async () => {
+  await using ctx = await createTestDB({ isolation: 'schema' });
+
+  const document = createMockContentDocument();
+
+  const fixture = await createHonestActivityFixture(ctx.db, { document, duration: 80_000 });
+
+  expect(fixture.activity.contentVersion).toBe(document.contentVersion);
+
+  const stored = await ctx.db
+    .selectFrom('contentVersions')
+    .select('document')
+    .where('contentVersion', '=', document.contentVersion)
+    .executeTakeFirstOrThrow();
+
+  expect(stored.document).toStrictEqual(document);
 });
