@@ -88,6 +88,15 @@ export interface ScheduledMachineState {
   readonly image: string;
 }
 
+/**
+ * A stranded machine the sweep planner marked for destruction — `image` is null when flyctl
+ * reported none, retained so the sweep's log names what it removed.
+ */
+export interface MachineSweepTarget {
+  readonly id: string;
+  readonly image: string | null;
+}
+
 export type ScheduledMachineAction =
   | { readonly kind: 'create'; readonly machine: ScheduledMachine; readonly image: string }
   | { readonly kind: 'update-image'; readonly machineID: string; readonly image: string };

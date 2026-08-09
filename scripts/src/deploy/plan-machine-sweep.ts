@@ -1,10 +1,5 @@
 import invariant from 'tiny-invariant';
-import type { AppMachine } from './types';
-
-export interface MachineSweepTarget {
-  readonly id: string;
-  readonly image: string | null;
-}
+import type { AppMachine, MachineSweepTarget } from './types';
 
 export type MachineSweepPlan =
   | { readonly kind: 'clean' }

@@ -1,4 +1,4 @@
-import { findStaleReason } from './find-stale-reason';
+import { NO_TRUSTWORTHY_SHA_REASON, findStaleReason } from './find-stale-reason';
 import type { AppState, ChangeSet, DeployTarget } from './types';
 
 /**
@@ -34,6 +34,12 @@ export function checkTarget(
 
   if (mixedImageFinding !== null) {
     findings.push(mixedImageFinding);
+  }
+
+  const unreportedImageFinding = findUnreportedImageFinding(state);
+
+  if (unreportedImageFinding !== null) {
+    findings.push(unreportedImageFinding);
   }
 
   const staleReason = state.machines.length === 0 ? null : findStaleReason(target, changes);
@@ -80,14 +86,31 @@ function findMixedImageFinding(state: AppState): string | null {
     return null;
   }
 
-  const parts = [...counts.entries()]
-    .toSorted(([imageA], [imageB]) => imageA.localeCompare(imageB))
-    .map(([image, count]) => `${image} (${count} machine${count === 1 ? '' : 's'})`);
+  // default string sort — code-unit order keeps the finding text identical across locales
+  const parts = [...counts.keys()].toSorted().map((image) => {
+    const count = counts.get(image) ?? 0;
+
+    return `${image} (${count} machine${count === 1 ? '' : 's'})`;
+  });
 
   return `fleet splits across ${counts.size} images: ${parts.join(', ')}`;
 }
 
-const NO_TRUSTWORTHY_SHA_REASON = 'no trustworthy deployed SHA recorded on the fleet';
+/**
+ * A machine whose image flyctl did not report keeps the rollout planner from trusting the fleet's
+ * image groups, so verify names those machines rather than passing the fleet as single-image.
+ */
+function findUnreportedImageFinding(state: AppState): string | null {
+  const unreported = state.machines.filter((machine) => machine.image === null);
+
+  if (unreported.length === 0 || state.machines.length === unreported.length) {
+    return null;
+  }
+
+  const ids = unreported.map((machine) => machine.id).join(', ');
+
+  return `machine(s) ${ids} report no image — flyctl did not read an image for them`;
+}
 
 /**
  * A mixed-image fleet already explains why no single deployed SHA is trustworthy — reporting both

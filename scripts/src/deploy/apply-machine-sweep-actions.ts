@@ -1,5 +1,5 @@
 import { runFlyctl } from '../utils/run-flyctl';
-import type { MachineSweepTarget } from './plan-machine-sweep';
+import type { MachineSweepTarget } from './types';
 
 /**
  * Destroys each stranded machine the planner found outside the fleet's kept image group,

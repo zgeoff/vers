@@ -193,6 +193,8 @@ test('it flags a mixed-image fleet with the images and their machine counts, not
   const state = {
     deployedSHA: null,
     machines: [
+      { gitSHA: 'shaOLD', id: 'm2', image: 'registry.fly.io/x:old', state: 'suspended' },
+      { gitSHA: 'shaOLD', id: 'm3', image: 'registry.fly.io/x:old', state: 'suspended' },
       {
         checks: [{ name: 'servicecheck-00-http-3000', status: 'passing' }],
         gitSHA: 'shaNEW',
@@ -200,14 +202,30 @@ test('it flags a mixed-image fleet with the images and their machine counts, not
         image: 'registry.fly.io/x:new',
         state: 'started',
       },
-      { gitSHA: 'shaOLD', id: 'm2', image: 'registry.fly.io/x:old', state: 'suspended' },
     ],
     scheduledMachines: [],
     serviceImage: null,
   };
 
   expect(checkTarget(target, state, null)).toStrictEqual([
-    'fleet splits across 2 images: registry.fly.io/x:new (1 machine), registry.fly.io/x:old (1 machine)',
+    'fleet splits across 2 images: registry.fly.io/x:new (1 machine), registry.fly.io/x:old (2 machines)',
+  ]);
+});
+
+test('it flags a machine flyctl reported no image for beside its single-image peers', () => {
+  const state = {
+    deployedSHA: null,
+    machines: [
+      { gitSHA: 'abc123', id: 'm1', image: 'registry.fly.io/x:tag1', state: 'started' },
+      { gitSHA: null, id: 'm2', image: null, state: 'suspended' },
+    ],
+    scheduledMachines: [],
+    serviceImage: null,
+  };
+
+  expect(checkTarget(target, state, null)).toStrictEqual([
+    'machine(s) m2 report no image — flyctl did not read an image for them',
+    'stale: no trustworthy deployed SHA recorded on the fleet',
   ]);
 });
 
