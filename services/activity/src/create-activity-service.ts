@@ -1,8 +1,8 @@
+import { makeContentDocumentLoader } from '@vers/content-registry';
 import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
-import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import { parseServicePrivateKey } from '@vers/service-auth';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
@@ -16,8 +16,6 @@ const SCOPE_SECRET_REF: SecretRef = 'worldmap';
 const SCOPE_SECRET_VERSION = 1;
 
 interface CreateActivityServiceConfig {
-  readonly contentVersion?: string;
-
   /**
    * Injected only in tests, to run the service inside the test's own transaction.
    */
@@ -57,11 +55,13 @@ export function createActivityService(
     buildRouter: async (runtime) => {
       const privateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
 
+      const db = config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL });
+
       return buildActivityRouter({
-        contentVersion: config.contentVersion ?? CURRENT_CONTENT_VERSION,
-        db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
+        db,
         keyVersion: config.keyVersion ?? KEY_VERSION,
         keysServiceURL: runtime.env.KEYS_SERVICE_URL,
+        loadContentDocument: makeContentDocumentLoader(db),
         privateKey,
         secretRef: config.secretRef ?? SCOPE_SECRET_REF,
         secretVersion: config.secretVersion ?? SCOPE_SECRET_VERSION,

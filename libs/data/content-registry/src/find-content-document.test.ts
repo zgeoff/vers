@@ -15,7 +15,7 @@ async function setupTest(): Promise<{ db: Kysely<DB> } & AsyncDisposable> {
 test('it returns the seeded v2 document', async () => {
   await using ctx = await setupTest();
 
-  await expect(findContentDocument(ctx.db, '2')).resolves.toStrictEqual(
+  expect(findContentDocument(ctx.db, '2')).resolves.toStrictEqual(
     ContentDocumentSchema.parse(contentDocumentV2),
   );
 });
@@ -23,7 +23,7 @@ test('it returns the seeded v2 document', async () => {
 test('it returns undefined for an unknown version', async () => {
   await using ctx = await setupTest();
 
-  await expect(findContentDocument(ctx.db, 'unknown')).resolves.toBeUndefined();
+  expect(findContentDocument(ctx.db, 'unknown')).resolves.toBeUndefined();
 });
 
 test('it rejects loudly on a malformed stored document', async () => {
@@ -34,5 +34,5 @@ test('it rejects loudly on a malformed stored document', async () => {
     .values({ contentVersion: 'bad', document: toJSON({ nonsense: true }) })
     .execute();
 
-  await expect(findContentDocument(ctx.db, 'bad')).rejects.toThrow();
+  expect(findContentDocument(ctx.db, 'bad')).rejects.toThrow();
 });

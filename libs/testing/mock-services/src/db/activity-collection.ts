@@ -2,7 +2,6 @@ import { faker } from '@faker-js/faker';
 import { Collection } from '@msw/data';
 import { createId } from '@paralleldrive/cuid2';
 import { ActivityDataSchema, EncounterNodeSchema } from '@vers/contract-activity';
-import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import * as z from 'zod';
 
 /**
@@ -17,7 +16,7 @@ const ActivityRowSchema = z.object({
   appendedHead: z.int().default(0),
   avatarID: z.string().default(() => createId()),
   buildSnapshot: z.object({ level: z.int(), xp: z.int() }).default({ level: 1, xp: 0 }),
-  contentVersion: z.string().default(CURRENT_CONTENT_VERSION),
+  contentVersion: z.string().default('2'),
   createdAt: z.date().default(() => new Date()),
   encounterNode: EncounterNodeSchema.default({ difficulty: 1 }),
   id: z.string().default(() => `act_${createId()}`),

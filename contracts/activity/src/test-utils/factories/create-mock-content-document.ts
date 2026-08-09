@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import type { ContentDocument } from '../../content-document-schema';
 
 export function createMockContentDocument(
-  overrides: Partial<ContentDocument> = {},
+  overrides: Readonly<Partial<ContentDocument>> = {},
 ): ContentDocument {
   const contentVersion = overrides.contentVersion ?? faker.string.numeric(6);
 

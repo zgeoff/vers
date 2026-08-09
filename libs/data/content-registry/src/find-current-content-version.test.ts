@@ -18,7 +18,7 @@ async function setupTest(): Promise<{ db: Kysely<DB> } & AsyncDisposable> {
 test('it returns the seeded current version', async () => {
   await using ctx = await setupTest();
 
-  await expect(findCurrentContentVersion(ctx.db)).resolves.toBe('2');
+  expect(findCurrentContentVersion(ctx.db)).resolves.toBe('2');
 });
 
 test('it follows the pointer after a new version publishes', async () => {
@@ -28,5 +28,5 @@ test('it follows the pointer after a new version publishes', async () => {
 
   await createContentVersion(ctx.db, document);
 
-  await expect(findCurrentContentVersion(ctx.db)).resolves.toBe(document.contentVersion);
+  expect(findCurrentContentVersion(ctx.db)).resolves.toBe(document.contentVersion);
 });

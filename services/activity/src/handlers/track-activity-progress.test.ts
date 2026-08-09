@@ -1,5 +1,8 @@
 import { expect, test } from 'bun:test';
+import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
+import { ContentDocumentSchema } from '@vers/contract-activity';
+import { contentDocumentV2 } from '@vers/db';
 import { buildFailureXPLoss } from '@vers/idle-core';
 import {
   createAnonymousViewer,
@@ -23,6 +26,7 @@ async function setupTest(config: { readonly simTimeCapMs?: number } = {}) {
   const db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
+  await createContentVersion(db.db, ContentDocumentSchema.parse(contentDocumentV2));
 
   const service = await createActivityService({
     db: db.db,

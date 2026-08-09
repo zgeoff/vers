@@ -182,7 +182,7 @@ test('it refuses to update a content_versions row', async () => {
 
   const db = createDB({ databaseURL });
 
-  await expect(
+  expect(
     db
       .updateTable('contentVersions')
       .set({ document: { nonsense: true } })
@@ -200,7 +200,7 @@ test('it refuses to delete a content_versions row', async () => {
 
   const db = createDB({ databaseURL });
 
-  await expect(
+  expect(
     db.deleteFrom('contentVersions').where('contentVersion', '=', '1').execute(),
   ).rejects.toThrowWithMessage(Error, /immutable/);
 

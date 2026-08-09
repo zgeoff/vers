@@ -20,11 +20,8 @@ test('it publishes a document and moves the current pointer to it', async () => 
 
   await createContentVersion(ctx.db, document);
 
-  await expect(findContentDocument(ctx.db, document.contentVersion)).resolves.toStrictEqual(
-    document,
-  );
-
-  await expect(findCurrentContentVersion(ctx.db)).resolves.toBe(document.contentVersion);
+  expect(findContentDocument(ctx.db, document.contentVersion)).resolves.toStrictEqual(document);
+  expect(findCurrentContentVersion(ctx.db)).resolves.toBe(document.contentVersion);
 });
 
 test('it rejects a duplicate contentVersion and leaves the pointer untouched', async () => {
@@ -34,6 +31,6 @@ test('it rejects a duplicate contentVersion and leaves the pointer untouched', a
 
   await createContentVersion(ctx.db, document);
 
-  await expect(createContentVersion(ctx.db, document)).rejects.toThrow();
-  await expect(findCurrentContentVersion(ctx.db)).resolves.toBe('dup-version');
+  expect(createContentVersion(ctx.db, document)).rejects.toThrow();
+  expect(findCurrentContentVersion(ctx.db)).resolves.toBe('dup-version');
 });

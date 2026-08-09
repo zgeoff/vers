@@ -13,6 +13,7 @@ export const ContentDocumentSchema = z
     encounter: EncounterContentSchema,
     loot: LootTablesSchema,
   })
+  .readonly()
   .superRefine((value, ctx) => {
     if (value.encounter.contentVersion !== value.contentVersion) {
       ctx.addIssue({

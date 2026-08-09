@@ -1,7 +1,8 @@
 import { expect, test } from 'bun:test';
+import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
-import { buildStartHash } from '@vers/contract-activity';
-import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
+import { ContentDocumentSchema, buildStartHash } from '@vers/contract-activity';
+import { contentDocumentV2 } from '@vers/db';
 import { buildMockScopeSecret, mockKeysService } from '@vers/mock-services/keys';
 import {
   createActiveAvatarRow,
@@ -26,15 +27,17 @@ import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-c
 /**
  * `startActivity` opens its own `db.transaction()` to root the new activity under the chain-row
  * lock, which can't nest under the default rollback-on-dispose isolation — this suite runs
- * against a real, committed schema clone instead.
+ * against a real, committed schema clone instead. Content is seeded here, once, since every test
+ * needs a current version to start against and none of them vary its shape; the sim version is
+ * left to each test, since the registry's presence, absence, or pruned state is what several of
+ * them are specifically about.
  */
-async function setupTest(config: { readonly contentVersion?: string } = {}) {
+async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 
-  const service = await createActivityService({
-    ...(config.contentVersion !== undefined && { contentVersion: config.contentVersion }),
-    db: db.db,
-  });
+  await createContentVersion(db.db, ContentDocumentSchema.parse(contentDocumentV2));
+
+  const service = await createActivityService({ db: db.db });
 
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
@@ -64,7 +67,7 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     appendedHead: 0,
     avatarID: avatar.id,
     buildSnapshot: { level: 1, xp: 42 },
-    contentVersion: CURRENT_CONTENT_VERSION,
+    contentVersion: '2',
     createdAt: expect.toBeValidDate(),
     encounterNode: { difficulty: 0, poolID: expect.toBeString() },
     id: expect.toBeString(),
@@ -1282,7 +1285,7 @@ test('it stamps secretRef and secretVersion on the minted row', async () => {
 });
 
 test('it stamps a poolID matching the sealed derivation truth for content version 2, and folds it into the startHash', async () => {
-  await using ctx = await setupTest({ contentVersion: '2' });
+  await using ctx = await setupTest();
 
   await createSimVersionRow(ctx.db);
 
@@ -1302,7 +1305,12 @@ test('it stamps a poolID matching the sealed derivation truth for content versio
   invariant(coord, 'scope id 1_0 must resolve to a valid cell coordinate');
 
   const scopeSecret = buildMockScopeSecret(avatar.id, 'worldmap', 1);
-  const expected = deriveWorldmapContent('2', { coord, scopeSecret, userSeed: 0 });
+
+  const expected = deriveWorldmapContent(ContentDocumentSchema.parse(contentDocumentV2).encounter, {
+    coord,
+    scopeSecret,
+    userSeed: 0,
+  });
 
   expect(activity.encounterNode).toStrictEqual({
     difficulty: getDifficulty(coord[0], coord[1]),
