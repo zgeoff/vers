@@ -217,9 +217,11 @@ The kept group is the one whose machines all carry the app's recorded release gi
 matches that SHA, the kept group falls back to the single image group holding a started machine
 whose health checks all pass. A started machine outside the kept group is never a destroy target:
 the leg fails instead, printing the fleet's machine table (id, state, image, git SHA) so an operator
-can resolve it by hand. `deploy verify` reports a mixed-image fleet as its own finding — each image
-with its machine count — in place of the generic finding that no trustworthy SHA is recorded, and
-never sweeps; the fleet is left exactly as found.
+can resolve it by hand. A machine whose image flyctl did not report is never itself a group to keep
+or destroy: once a second image group exists, it fails the leg the same way, naming the machine so
+an operator can resolve it by hand. `deploy verify` reports a mixed-image fleet as its own finding —
+each image with its machine count — in place of the generic finding that no trustworthy SHA is
+recorded, and never sweeps; the fleet is left exactly as found.
 
 ### Pinned upstream images
 

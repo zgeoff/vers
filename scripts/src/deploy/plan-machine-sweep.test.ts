@@ -129,6 +129,30 @@ test('it reports ambiguous when a started machine sits outside the chosen keep g
   });
 });
 
+test('it reports ambiguous when a machine has no reported image alongside a real image group', () => {
+  const machines = [
+    { checks: [], gitSHA: 'sha1', id: 'm1', image: 'img-a', state: 'started' },
+    { checks: [], gitSHA: null, id: 'm2', image: null, state: 'started' },
+  ];
+
+  const plan = planMachineSweep(machines, null);
+
+  expect(plan).toStrictEqual({
+    kind: 'ambiguous',
+    reason:
+      "machine(s) m2 report no image — flyctl did not read an image for them, so the fleet's image groups cannot be trusted",
+  });
+});
+
+test('it treats a fleet where every machine has no reported image as clean', () => {
+  const machines = [
+    { checks: [], gitSHA: null, id: 'm1', image: null, state: 'started' },
+    { checks: [], gitSHA: null, id: 'm2', image: null, state: 'suspended' },
+  ];
+
+  expect(planMachineSweep(machines, null)).toStrictEqual({ kind: 'clean' });
+});
+
 test('it never counts a started machine with no checks as healthy for the fallback', () => {
   const machines = [
     { checks: [], gitSHA: 'shaA', id: 'm1', image: 'img-a', state: 'started' },

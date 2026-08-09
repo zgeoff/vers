@@ -13,11 +13,14 @@ export type MachineSweepPlan =
 
 /**
  * Decides whether a fleet carries stranded machines from an aborted bluegreen rollout. Groups
- * service machines by normalized image; a single image group (or none) is clean. Multiple groups
- * pick a keep group by the recorded release's git SHA, falling back to the one image group with a
- * healthy started machine when the SHA doesn't resolve it uniquely. A keep group chosen by either
- * rule that still leaves a started machine outside it is reported ambiguous rather than swept — a
- * started machine is never a destroy target.
+ * service machines by normalized image; a single image group (or none) is clean. A machine whose
+ * image flyctl did not report sits in its own null-keyed group and, once more than one group
+ * exists, makes the fleet ambiguous rather than a candidate to keep or destroy — a missing image
+ * is never evidence either way. Otherwise, multiple groups pick a keep group by the recorded
+ * release's git SHA, falling back to the one image group with a healthy started machine when the
+ * SHA doesn't resolve it uniquely. A keep group chosen by either rule that still leaves a started
+ * machine outside it is reported ambiguous rather than swept — a started machine is never a
+ * destroy target.
  */
 export function planMachineSweep(
   machines: ReadonlyArray<AppMachine>,
@@ -27,6 +30,12 @@ export function planMachineSweep(
 
   if (groups.size <= 1) {
     return { kind: 'clean' };
+  }
+
+  const unknownImage = findUnknownImageAmbiguity(groups);
+
+  if (unknownImage !== null) {
+    return unknownImage;
   }
 
   const keep = pickKeepImage(groups, recordedRelease);
@@ -75,14 +84,35 @@ function buildImageGroups(
   return groups;
 }
 
-interface KeepImage {
-  readonly image: string | null;
-  readonly kind: 'keep';
-}
-
 interface AmbiguousResult {
   readonly kind: 'ambiguous';
   readonly reason: string;
+}
+
+/**
+ * Reports ambiguous when the null-keyed group exists — machines whose image flyctl did not
+ * report never count as evidence for keeping or destroying anything.
+ */
+function findUnknownImageAmbiguity(
+  groups: ReadonlyMap<string | null, ReadonlyArray<AppMachine>>,
+): AmbiguousResult | null {
+  const unknown = groups.get(null);
+
+  if (unknown === undefined) {
+    return null;
+  }
+
+  const ids = unknown.map((machine) => machine.id).join(', ');
+
+  return {
+    kind: 'ambiguous',
+    reason: `machine(s) ${ids} report no image — flyctl did not read an image for them, so the fleet's image groups cannot be trusted`,
+  };
+}
+
+interface KeepImage {
+  readonly image: string | null;
+  readonly kind: 'keep';
 }
 
 function pickKeepImage(
