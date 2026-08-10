@@ -13,20 +13,79 @@ import { REVEAL_RADIUS } from '@vers/worldmap-core';
 import { createActivityService } from '../create-activity-service';
 
 /**
+ * A four-pool encounter document, so a disclosed `poolID` pins which pool the sealed derivation
+ * actually picked rather than echoing the single pool a minimal document would always return
+ * regardless of the coordinate, avatar seed, or scope secret fed into it.
+ */
+const multiPoolEncounter = {
+  contentVersion: '2',
+  archetypes: [
+    {
+      id: 'placeholder-brawler',
+      name: 'World Map Enemy',
+      baseLevel: 1,
+      baseLife: 30,
+      baseXP: 10,
+      attackMin: 1,
+      attackMax: 3,
+      attackSpeed: 0.5,
+    },
+    {
+      id: 'placeholder-skirmisher',
+      name: 'World Map Skirmisher',
+      baseLevel: 1,
+      baseLife: 20,
+      baseXP: 8,
+      attackMin: 1,
+      attackMax: 4,
+      attackSpeed: 0.7,
+    },
+  ],
+  pools: [
+    { id: 'pool-a', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] },
+    { id: 'pool-b', entries: [{ archetypeID: 'placeholder-skirmisher', weight: 1 }] },
+    {
+      id: 'pool-c',
+      entries: [
+        { archetypeID: 'placeholder-brawler', weight: 1 },
+        { archetypeID: 'placeholder-skirmisher', weight: 1 },
+      ],
+    },
+    {
+      id: 'pool-d',
+      entries: [
+        { archetypeID: 'placeholder-skirmisher', weight: 1 },
+        { archetypeID: 'placeholder-brawler', weight: 1 },
+      ],
+    },
+  ],
+  tuning: {
+    waveCountMin: 3,
+    waveCountMax: 6,
+    waveSizeMin: 3,
+    waveSizeMax: 6,
+    difficultyScalingFactor: 1,
+  },
+} as const;
+
+/**
  * `createContentVersion` opens its own `db.transaction()`, which can't nest under the default
  * rollback-on-dispose isolation — this suite runs against a real, committed schema clone instead.
  */
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 
-  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
+  await createContentVersion(
+    db.db,
+    createMockContentDocument({ contentVersion: '2', encounter: multiPoolEncounter }),
+  );
 
   const service = await createActivityService({ db: db.db });
 
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-test('it discloses content for a verified first-clear node inside the viewport', async () => {
+test('it discloses content pinned to the sealed derivation for every cell a verified first-clear disc covers', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -46,19 +105,94 @@ test('it discloses content for a verified first-clear node inside the viewport',
 
   const result = await client.getRevealedNodes({
     avatarID: avatar.id,
-    viewport: { maxCX: 0, maxCY: 0, minCX: 0, minCY: 0 },
+    viewport: { maxCX: 2, maxCY: 0, minCX: -2, minCY: 0 },
   });
 
   expect(result.contentVersion).toBe('2');
 
+  // distinct cells landing on distinct pools, rather than every cell echoing the same pool id,
+  // is what proves the coordinate actually reaches the sealed derivation
   expect(result.nodes).toMatchInlineSnapshot(`
     [
       {
         "id": "0_0",
-        "poolID": "default",
+        "poolID": "pool-a",
+      },
+      {
+        "id": "-1_0",
+        "poolID": "pool-c",
+      },
+      {
+        "id": "1_0",
+        "poolID": "pool-c",
+      },
+      {
+        "id": "-2_0",
+        "poolID": "pool-a",
+      },
+      {
+        "id": "2_0",
+        "poolID": "pool-b",
       },
     ]
   `);
+});
+
+test('it derives different pool assignments for the same cell across avatars with different seeds', async () => {
+  await using ctx = await setupTest();
+
+  const viewerA = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatarA = await createAvatarRow(ctx.db, {
+    id: 'avatar_reveal_seed_a',
+    seed: 111,
+    userId: viewerA.user.id,
+  });
+
+  const viewerB = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatarB = await createAvatarRow(ctx.db, {
+    id: 'avatar_reveal_seed_b',
+    seed: 222,
+    userId: viewerB.user.id,
+  });
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values([
+      { avatarId: avatarA.id, key: '0_0', kind: 'first_clear' },
+      { avatarId: avatarB.id, key: '0_0', kind: 'first_clear' },
+    ])
+    .execute();
+
+  const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewerA.token });
+  const clientB = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewerB.token });
+  const viewport = { maxCX: 0, maxCY: 0, minCX: 0, minCY: 0 };
+
+  const resultA = await clientA.getRevealedNodes({ avatarID: avatarA.id, viewport });
+  const resultB = await clientB.getRevealedNodes({ avatarID: avatarB.id, viewport });
+
+  expect(resultA.nodes).toMatchInlineSnapshot(`
+    [
+      {
+        "id": "0_0",
+        "poolID": "pool-c",
+      },
+    ]
+  `);
+
+  expect(resultB.nodes).toMatchInlineSnapshot(`
+    [
+      {
+        "id": "0_0",
+        "poolID": "pool-a",
+      },
+    ]
+  `);
+
+  expect(resultA.nodes.map((node) => node.poolID)).not.toStrictEqual(
+    resultB.nodes.map((node) => node.poolID),
+  );
 });
 
 test('it discloses a cell exactly REVEAL_RADIUS hops from a first-clear node', async () => {
