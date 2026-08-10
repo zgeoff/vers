@@ -50,6 +50,18 @@ export const ORIGIN_CELL: readonly [number, number] = [0, 0];
 export const MORTON_AXIS_BITS = 26;
 
 /**
+ * Lowest cell coordinate a Morton key can pack on either axis. Zigzag encoding spends one of the
+ * per-axis bits on sign, so the negative half reaches one step further from origin than the positive
+ * half.
+ */
+export const WORLD_COORD_MIN = -(2 ** (MORTON_AXIS_BITS - 1));
+
+/**
+ * Highest cell coordinate a Morton key can pack on either axis.
+ */
+export const WORLD_COORD_MAX = 2 ** (MORTON_AXIS_BITS - 1) - 1;
+
+/**
  * Hex-hop radius the reveal projection discloses around each verified first-clear node. The design
  * band is 2 to 5 hops, and 5 is a security bound rather than a tuning preference: look-ahead value
  * and the map-scanning exploit's return both climb with the radius, so a value approaching that

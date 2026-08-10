@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
 import { collectRevealedCells } from './collect-revealed-cells';
+import { WORLD_COORD_MAX } from './consts';
+import { decodeMortonKey } from './decode-morton-key';
 
 test('it emits one source disc, clipped to the viewport, Morton-sorted', () => {
   const cells = collectRevealedCells([{ coord: [0, 0], radius: 1 }], {
@@ -48,6 +50,22 @@ test('it excludes a source whose disc cannot reach the viewport', () => {
   );
 
   expect(cells).toStrictEqual([0]);
+});
+
+test('it drops the cells of a disc that runs past the packable coordinate range', () => {
+  const cells = collectRevealedCells([{ coord: [WORLD_COORD_MAX, 0], radius: 2 }], {
+    maxCX: WORLD_COORD_MAX + 2,
+    maxCY: 0,
+    minCX: WORLD_COORD_MAX - 2,
+    minCY: 0,
+  });
+
+  // the two cells past the edge of the world carry no packable key and leave the disc silently
+  expect(cells.map((key) => decodeMortonKey(key))).toStrictEqual([
+    [WORLD_COORD_MAX - 2, 0],
+    [WORLD_COORD_MAX - 1, 0],
+    [WORLD_COORD_MAX, 0],
+  ]);
 });
 
 test('it returns nothing for an empty source list', () => {

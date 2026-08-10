@@ -1,3 +1,4 @@
+import { canEncodeMortonKey } from './can-encode-morton-key';
 import { encodeMortonKey } from './encode-morton-key';
 import { getHexDistance } from './get-hex-distance';
 import type { RevealSource, RevealedCells, Viewport } from './types';
@@ -10,6 +11,9 @@ import type { RevealSource, RevealedCells, Viewport } from './types';
  * by its own radius — contributes nothing, so the security constraint holds structurally: only
  * cells inside the union of source discs can appear, and the viewport can only narrow that union,
  * never widen it.
+ *
+ * A disc around a source near the edge of the packable coordinate range reaches cells no Morton key
+ * can address; those cells are dropped, so a source stays usable right up to the edge.
  */
 export function collectRevealedCells(
   sources: ReadonlyArray<RevealSource>,
@@ -25,7 +29,10 @@ export function collectRevealedCells(
 
     for (let cx = minCX; cx <= maxCX; cx++) {
       for (let cy = minCY; cy <= maxCY; cy++) {
-        if (getHexDistance(source.coord, [cx, cy]) <= source.radius) {
+        if (
+          canEncodeMortonKey([cx, cy]) &&
+          getHexDistance(source.coord, [cx, cy]) <= source.radius
+        ) {
           keys.add(encodeMortonKey([cx, cy]));
         }
       }

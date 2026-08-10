@@ -1,4 +1,5 @@
 import { authedRoute, defineErrors } from '@vers/contract-base';
+import { WORLD_COORD_MAX, WORLD_COORD_MIN } from '@vers/worldmap-core';
 import * as z from 'zod';
 import { ActivityDataSchema } from './activity-data-schema';
 import { ActivityFailureActionSchema } from './activity-failure-action-schema';
@@ -60,11 +61,17 @@ const AvatarProgressionSchema = z.object({
   xp: z.int(),
 });
 
+/**
+ * One cell-coordinate axis value, bounded to the range a world-map cell coordinate packs into. An
+ * axis outside it names a cell the map cannot address at all.
+ */
+const CellAxisSchema = z.int().min(WORLD_COORD_MIN).max(WORLD_COORD_MAX);
+
 const ViewportSchema = z.object({
-  maxCX: z.int(),
-  maxCY: z.int(),
-  minCX: z.int(),
-  minCY: z.int(),
+  maxCX: CellAxisSchema,
+  maxCY: CellAxisSchema,
+  minCX: CellAxisSchema,
+  minCY: CellAxisSchema,
 });
 
 /**
@@ -239,15 +246,21 @@ export const activityContract = {
       summary: "Get the disclosed content for an avatar's revealed world-map cells in a viewport",
     })
     .input(
-      z.object({ avatarID: z.string(), viewport: ViewportSchema }).refine(
-        (input) => {
-          const width = input.viewport.maxCX - input.viewport.minCX + 1;
-          const height = input.viewport.maxCY - input.viewport.minCY + 1;
-
-          return width > 0 && height > 0 && width * height <= REVEAL_VIEWPORT_CELL_CAP;
-        },
-        { error: `viewport area may not exceed ${REVEAL_VIEWPORT_CELL_CAP} cells` },
-      ),
+      z
+        .object({ avatarID: z.string(), viewport: ViewportSchema })
+        .refine(
+          (input) =>
+            input.viewport.maxCX >= input.viewport.minCX &&
+            input.viewport.maxCY >= input.viewport.minCY,
+          { error: 'viewport bounds are inverted' },
+        )
+        .refine(
+          (input) =>
+            (input.viewport.maxCX - input.viewport.minCX + 1) *
+              (input.viewport.maxCY - input.viewport.minCY + 1) <=
+            REVEAL_VIEWPORT_CELL_CAP,
+          { error: `viewport area may not exceed ${REVEAL_VIEWPORT_CELL_CAP} cells` },
+        ),
     )
     .output(z.object({ contentVersion: z.string(), nodes: z.array(RevealedNodeSchema) }))
     .errors(

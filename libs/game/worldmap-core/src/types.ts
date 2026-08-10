@@ -29,8 +29,8 @@ export interface WorldEdge {
 
 /**
  * One origin the reveal projection discloses a disc around — a verified first-clear node in
- * production, any coordinate in a test. Generic over what grants it: `collectRevealedCells` folds a
- * list of these into the revealed region without knowing where they came from.
+ * production, any coordinate in a test. Generic over what grants it: the projection folds a list of
+ * these into the revealed region without knowing where they came from.
  */
 export interface RevealSource {
   readonly coord: readonly [number, number];
@@ -50,7 +50,7 @@ export interface Viewport {
 
 /**
  * Morton-packed cell keys a reveal query discloses, ascending by key — the sort order that keeps
- * spatially near cells near each other in the array. `decodeMortonKey` recovers each entry's cell
- * coordinate.
+ * spatially near cells near each other in the array. The matching Morton decoder recovers each
+ * entry's cell coordinate.
  */
 export type RevealedCells = ReadonlyArray<number>;

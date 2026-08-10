@@ -9,64 +9,8 @@ import {
   createViewer,
 } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
-import { REVEAL_RADIUS } from '@vers/worldmap-core';
+import { REVEAL_RADIUS, WORLD_COORD_MAX } from '@vers/worldmap-core';
 import { createActivityService } from '../create-activity-service';
-
-/**
- * A four-pool encounter document, so a disclosed `poolID` pins which pool the sealed derivation
- * actually picked rather than echoing the single pool a minimal document would always return
- * regardless of the coordinate, avatar seed, or scope secret fed into it.
- */
-const multiPoolEncounter = {
-  contentVersion: '2',
-  archetypes: [
-    {
-      id: 'placeholder-brawler',
-      name: 'World Map Enemy',
-      baseLevel: 1,
-      baseLife: 30,
-      baseXP: 10,
-      attackMin: 1,
-      attackMax: 3,
-      attackSpeed: 0.5,
-    },
-    {
-      id: 'placeholder-skirmisher',
-      name: 'World Map Skirmisher',
-      baseLevel: 1,
-      baseLife: 20,
-      baseXP: 8,
-      attackMin: 1,
-      attackMax: 4,
-      attackSpeed: 0.7,
-    },
-  ],
-  pools: [
-    { id: 'pool-a', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] },
-    { id: 'pool-b', entries: [{ archetypeID: 'placeholder-skirmisher', weight: 1 }] },
-    {
-      id: 'pool-c',
-      entries: [
-        { archetypeID: 'placeholder-brawler', weight: 1 },
-        { archetypeID: 'placeholder-skirmisher', weight: 1 },
-      ],
-    },
-    {
-      id: 'pool-d',
-      entries: [
-        { archetypeID: 'placeholder-skirmisher', weight: 1 },
-        { archetypeID: 'placeholder-brawler', weight: 1 },
-      ],
-    },
-  ],
-  tuning: {
-    waveCountMin: 3,
-    waveCountMax: 6,
-    waveSizeMin: 3,
-    waveSizeMax: 6,
-    difficultyScalingFactor: 1,
-  },
-} as const;
 
 /**
  * `createContentVersion` opens its own `db.transaction()`, which can't nest under the default
@@ -77,7 +21,63 @@ async function setupTest() {
 
   await createContentVersion(
     db.db,
-    createMockContentDocument({ contentVersion: '2', encounter: multiPoolEncounter }),
+    createMockContentDocument({
+      contentVersion: '2',
+
+      // four pools, so a disclosed `poolID` pins which pool the sealed derivation actually picked
+      // rather than echoing the single pool a minimal document would always return regardless of
+      // the coordinate, avatar seed, or scope secret fed into it
+      encounter: {
+        contentVersion: '2',
+        archetypes: [
+          {
+            id: 'placeholder-brawler',
+            name: 'World Map Enemy',
+            baseLevel: 1,
+            baseLife: 30,
+            baseXP: 10,
+            attackMin: 1,
+            attackMax: 3,
+            attackSpeed: 0.5,
+          },
+          {
+            id: 'placeholder-skirmisher',
+            name: 'World Map Skirmisher',
+            baseLevel: 1,
+            baseLife: 20,
+            baseXP: 8,
+            attackMin: 1,
+            attackMax: 4,
+            attackSpeed: 0.7,
+          },
+        ],
+        pools: [
+          { id: 'pool-a', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] },
+          { id: 'pool-b', entries: [{ archetypeID: 'placeholder-skirmisher', weight: 1 }] },
+          {
+            id: 'pool-c',
+            entries: [
+              { archetypeID: 'placeholder-brawler', weight: 1 },
+              { archetypeID: 'placeholder-skirmisher', weight: 1 },
+            ],
+          },
+          {
+            id: 'pool-d',
+            entries: [
+              { archetypeID: 'placeholder-skirmisher', weight: 1 },
+              { archetypeID: 'placeholder-brawler', weight: 1 },
+            ],
+          },
+        ],
+        tuning: {
+          waveCountMin: 3,
+          waveCountMax: 6,
+          waveSizeMin: 3,
+          waveSizeMax: 6,
+          difficultyScalingFactor: 1,
+        },
+      },
+    }),
   );
 
   const service = await createActivityService({ db: db.db });
@@ -240,6 +240,7 @@ test('it excludes a cell inside the viewport but outside every reveal disc', asy
     },
   });
 
+  expect(result.contentVersion).toBe('2');
   expect(result.nodes).toBeEmpty();
 });
 
@@ -318,6 +319,50 @@ test('it skips a first-clear grant key that is not a world-map node id', async (
   });
 
   expect(result.nodes.map((node) => node.id)).toStrictEqual(['0_0']);
+});
+
+test('it skips a first-clear grant naming a cell past the packable coordinate range', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: `${WORLD_COORD_MAX + 1}_0`, kind: 'first_clear' })
+    .execute();
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  // the disc around that grant would otherwise reach these addressable cells at the edge of the map
+  const result = await client.getRevealedNodes({
+    avatarID: avatar.id,
+    viewport: { maxCX: WORLD_COORD_MAX, maxCY: 0, minCX: WORLD_COORD_MAX - 1, minCY: 0 },
+  });
+
+  expect(result.nodes).toBeEmpty();
+});
+
+test('it reveals nothing for a second avatar of the same user that holds no first-clear grant', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const granted = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+  const ungranted = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: granted.id, key: '0_0', kind: 'first_clear' })
+    .execute();
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+  const viewport = { maxCX: 0, maxCY: 0, minCX: 0, minCY: 0 };
+
+  const grantedResult = await client.getRevealedNodes({ avatarID: granted.id, viewport });
+  const ungrantedResult = await client.getRevealedNodes({ avatarID: ungranted.id, viewport });
+
+  expect(grantedResult.nodes.map((node) => node.id)).toStrictEqual(['0_0']);
+  expect(ungrantedResult.nodes).toBeEmpty();
 });
 
 test('it rejects a foreign avatar with NOT_FOUND', async () => {

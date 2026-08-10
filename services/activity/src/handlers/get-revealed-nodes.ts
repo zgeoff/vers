@@ -5,6 +5,7 @@ import type { DB } from '@vers/db';
 import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
 import {
   REVEAL_RADIUS,
+  canEncodeMortonKey,
   collectRevealedCells,
   decodeMortonKey,
   findCellCoord,
@@ -19,7 +20,7 @@ import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 
 /**
  * Db handle plus the memoized content-document loader and keys dispatch a reveal query reads its
- * scope secret over — the same dependencies `startActivity` closes over, minus the key version and
+ * scope secret over — the dependencies an activity start closes over, minus the key version and
  * signing inputs a read never stamps.
  */
 interface GetRevealedNodesDeps {
@@ -63,12 +64,14 @@ interface GetRevealedNodesResult {
 
 /**
  * Returns the disclosed content for every cell the avatar's verified first-clear grants reveal
- * inside the requested viewport. The revealed region is a projection, never stored state: it is
- * `⋃ disc(position(N), REVEAL_RADIUS)` over the avatar's `first_clear`-kind grants, recomputed
- * fresh on every call from the grants table alone. A grant key that doesn't parse as a world-map
- * node id — a grant kind sharing the table with an unrelated future feature — contributes no
- * source rather than failing the query. Only cells the disc union actually covers can appear in the
+ * inside the requested viewport. The revealed region is a projection, never stored state: it is the
+ * union of the reveal disc around each of the avatar's `first_clear`-kind grants, recomputed fresh
+ * on every call from the grants table alone. Only cells that union actually covers can appear in the
  * response; the viewport bounds what is returned, never what is eligible to be revealed.
+ *
+ * A grant key that names no addressable world-map cell contributes no source rather than failing the
+ * query — a grant kind sharing the table with an unrelated future feature, or a row written before
+ * the coordinate bounds existed.
  */
 export async function getRevealedNodes(
   deps: GetRevealedNodesDeps,
@@ -101,7 +104,7 @@ export async function getRevealedNodes(
   for (const grant of grants) {
     const coord = findCellCoord(grant.key);
 
-    if (coord !== undefined) {
+    if (coord !== undefined && canEncodeMortonKey(coord)) {
       sources.push({ coord, radius: REVEAL_RADIUS });
     }
   }
@@ -111,6 +114,14 @@ export async function getRevealedNodes(
   const contentVersion = await findCurrentContentVersion(deps.db);
 
   invariant(contentVersion !== undefined, 'content registry has no current version');
+
+  // a viewport the discs never reach needs neither the content document nor the avatar's scope
+  // secret, so a fog-only query costs one grants read and no keys-service round trip
+  if (revealedCells.length === 0) {
+    recordRevealQuery({ cellCount: 0, sourceCount: grants.length });
+
+    return { contentVersion, nodes: [] };
+  }
 
   const document = await deps.loadContentDocument(contentVersion);
 
@@ -139,7 +150,7 @@ export async function getRevealedNodes(
     return content.poolID === undefined ? { id } : { id, poolID: content.poolID };
   });
 
-  recordRevealQuery(nodes.length, grants.length);
+  recordRevealQuery({ cellCount: nodes.length, sourceCount: grants.length });
 
   return { contentVersion, nodes };
 }

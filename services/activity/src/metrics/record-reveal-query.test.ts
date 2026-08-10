@@ -1,71 +1,40 @@
-import { expect, onTestFinished, test } from 'bun:test';
-import { metrics } from '@opentelemetry/api';
-import {
-  AggregationTemporality,
-  DataPointType,
-  InMemoryMetricExporter,
-  MeterProvider,
-  PeriodicExportingMetricReader,
-} from '@opentelemetry/sdk-metrics';
-import invariant from 'tiny-invariant';
+import { expect, test } from 'bun:test';
+import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import { recordRevealQuery } from './record-reveal-query';
 
-function setupTest() {
-  const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);
-
-  const provider = new MeterProvider({
-    readers: [new PeriodicExportingMetricReader({ exporter, exportIntervalMillis: 3_600_000 })],
-  });
-
-  metrics.setGlobalMeterProvider(provider);
-
-  onTestFinished(async () => {
-    metrics.disable();
-
-    await provider.shutdown();
-  });
-
-  return { exporter, provider };
-}
-
 test('it records the revealed cell count', async () => {
-  const ctx = setupTest();
+  const inMemoryMetrics = createInMemoryMetrics();
 
-  recordRevealQuery(19, 3);
+  recordRevealQuery({ cellCount: 19, sourceCount: 3 });
 
-  await ctx.provider.forceFlush();
+  const dataPoints = await inMemoryMetrics.readHistogramDataPoints('vers.activity.reveal_cells');
 
-  const histogram = ctx.exporter
-    .getMetrics()
-    .flatMap((resourceMetrics) => resourceMetrics.scopeMetrics)
-    .flatMap((scopeMetrics) => scopeMetrics.metrics)
-    .find((metric) => metric.descriptor.name === 'vers.activity.reveal_cells');
-
-  invariant(histogram?.dataPointType === DataPointType.HISTOGRAM, 'expected a histogram metric');
-
-  expect(histogram.dataPoints[0]?.value.sum).toBe(19);
+  expect(dataPoints.map((dataPoint) => dataPoint.sum)).toStrictEqual([19]);
 });
 
 test('it records the scanned first-clear grant source count', async () => {
-  const ctx = setupTest();
+  const inMemoryMetrics = createInMemoryMetrics();
 
-  recordRevealQuery(19, 3);
+  recordRevealQuery({ cellCount: 19, sourceCount: 3 });
 
-  await ctx.provider.forceFlush();
+  const dataPoints = await inMemoryMetrics.readHistogramDataPoints('vers.activity.reveal_sources');
 
-  const histogram = ctx.exporter
-    .getMetrics()
-    .flatMap((resourceMetrics) => resourceMetrics.scopeMetrics)
-    .flatMap((scopeMetrics) => scopeMetrics.metrics)
-    .find((metric) => metric.descriptor.name === 'vers.activity.reveal_sources');
+  expect(dataPoints.map((dataPoint) => dataPoint.sum)).toStrictEqual([3]);
+});
 
-  invariant(histogram?.dataPointType === DataPointType.HISTOGRAM, 'expected a histogram metric');
+test('it counts one observation per reveal query', async () => {
+  const inMemoryMetrics = createInMemoryMetrics();
 
-  expect(histogram.dataPoints[0]?.value.sum).toBe(3);
+  recordRevealQuery({ cellCount: 19, sourceCount: 3 });
+  recordRevealQuery({ cellCount: 4, sourceCount: 1 });
+
+  const dataPoints = await inMemoryMetrics.readHistogramDataPoints('vers.activity.reveal_cells');
+
+  expect(dataPoints.map((dataPoint) => dataPoint.count)).toStrictEqual([2]);
 });
 
 test('it stays inert without a registered meter provider', () => {
   expect(() => {
-    recordRevealQuery(19, 3);
+    recordRevealQuery({ cellCount: 19, sourceCount: 3 });
   }).not.toThrow();
 });

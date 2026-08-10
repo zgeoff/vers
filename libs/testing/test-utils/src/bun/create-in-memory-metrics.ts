@@ -21,11 +21,27 @@ interface InMemoryMetrics {
    * when nothing has recorded it in this test.
    */
   readonly readCounterValue: (name: string) => Promise<number | undefined>;
+
+  /**
+   * Flushes the reader and returns the named histogram's data points, one per distinct attribute
+   * combination recorded in this test.
+   */
+  readonly readHistogramDataPoints: (name: string) => Promise<ReadonlyArray<HistogramDataPoint>>;
 }
 
 interface CounterDataPoint {
   readonly attributes: Attributes;
   readonly value: number;
+}
+
+/**
+ * `sum` is absent for a histogram configured without one, so a test reading it asserts on the
+ * recorded total only where the instrument keeps one.
+ */
+interface HistogramDataPoint {
+  readonly attributes: Attributes;
+  readonly count: number;
+  readonly sum: number | undefined;
 }
 
 /**
@@ -49,14 +65,18 @@ export function createInMemoryMetrics(): InMemoryMetrics {
     await provider.shutdown();
   });
 
-  const readCounterDataPoints = async (name: string): Promise<ReadonlyArray<CounterDataPoint>> => {
+  const readMetric = async (name: string) => {
     await provider.forceFlush();
 
-    const metric = exporter
+    return exporter
       .getMetrics()
       .flatMap((resourceMetrics) => resourceMetrics.scopeMetrics)
       .flatMap((scopeMetrics) => scopeMetrics.metrics)
       .find((candidate) => candidate.descriptor.name === name);
+  };
+
+  const readCounterDataPoints = async (name: string): Promise<ReadonlyArray<CounterDataPoint>> => {
+    const metric = await readMetric(name);
 
     if (metric === undefined || metric.dataPointType !== DataPointType.SUM) {
       return [];
@@ -74,6 +94,19 @@ export function createInMemoryMetrics(): InMemoryMetrics {
       const dataPoints = await readCounterDataPoints(name);
 
       return dataPoints[0]?.value;
+    },
+    async readHistogramDataPoints(name) {
+      const metric = await readMetric(name);
+
+      if (metric === undefined || metric.dataPointType !== DataPointType.HISTOGRAM) {
+        return [];
+      }
+
+      return metric.dataPoints.map((dataPoint) => ({
+        attributes: dataPoint.attributes,
+        count: dataPoint.value.count,
+        sum: dataPoint.value.sum,
+      }));
     },
   };
 }

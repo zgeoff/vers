@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
+import { WORLD_COORD_MAX, WORLD_COORD_MIN } from '@vers/worldmap-core';
 import { activityContract } from './activity-contract';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 import { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
@@ -163,9 +164,11 @@ test('getRevealedNodes rejects a viewport whose area exceeds the cell cap', () =
     viewport: { maxCX: REVEAL_VIEWPORT_CELL_CAP, maxCY: 0, minCX: 0, minCY: 0 },
   };
 
-  expect(activityContract.getRevealedNodes['~orpc'].inputSchema?.safeParse(input).success).toBe(
-    false,
-  );
+  const result = activityContract.getRevealedNodes['~orpc'].inputSchema?.safeParse(input);
+
+  expect(result?.error?.issues.map((issue) => issue.message)).toStrictEqual([
+    `viewport area may not exceed ${REVEAL_VIEWPORT_CELL_CAP} cells`,
+  ]);
 });
 
 test('getRevealedNodes rejects an inverted viewport', () => {
@@ -174,8 +177,52 @@ test('getRevealedNodes rejects an inverted viewport', () => {
     viewport: { maxCX: 0, maxCY: 0, minCX: 5, minCY: 0 },
   };
 
+  const result = activityContract.getRevealedNodes['~orpc'].inputSchema?.safeParse(input);
+
+  expect(result?.error?.issues.map((issue) => issue.message)).toStrictEqual([
+    'viewport bounds are inverted',
+  ]);
+});
+
+test('getRevealedNodes rejects a viewport axis past the packable coordinate range', () => {
+  const input = {
+    avatarID: 'avatar_1',
+    viewport: { maxCX: WORLD_COORD_MAX + 1, maxCY: 0, minCX: WORLD_COORD_MAX, minCY: 0 },
+  };
+
+  const result = activityContract.getRevealedNodes['~orpc'].inputSchema?.safeParse(input);
+
+  expect(result?.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['viewport', 'maxCX'] }),
+  );
+});
+
+test('getRevealedNodes rejects a viewport axis below the packable coordinate range', () => {
+  const input = {
+    avatarID: 'avatar_1',
+    viewport: { maxCX: 0, maxCY: 0, minCX: 0, minCY: WORLD_COORD_MIN - 1 },
+  };
+
+  const result = activityContract.getRevealedNodes['~orpc'].inputSchema?.safeParse(input);
+
+  expect(result?.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['viewport', 'minCY'] }),
+  );
+});
+
+test('getRevealedNodes accepts a viewport at the edge of the packable coordinate range', () => {
+  const input = {
+    avatarID: 'avatar_1',
+    viewport: {
+      maxCX: WORLD_COORD_MAX,
+      maxCY: WORLD_COORD_MIN + 1,
+      minCX: WORLD_COORD_MAX - 1,
+      minCY: WORLD_COORD_MIN,
+    },
+  };
+
   expect(activityContract.getRevealedNodes['~orpc'].inputSchema?.safeParse(input).success).toBe(
-    false,
+    true,
   );
 });
 

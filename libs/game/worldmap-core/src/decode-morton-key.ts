@@ -1,12 +1,21 @@
+import invariant from 'tiny-invariant';
 import { MORTON_AXIS_BITS } from './consts';
 
 /**
- * Reverses `encodeMortonKey`, recovering the signed cell coordinate a Morton key encodes: the two
- * interleaved bit streams split back into their per-axis zigzag values, then each un-zigzags to its
- * original signed integer. Exact inverse — every key `encodeMortonKey` produces decodes back to the
- * coordinate it packed.
+ * Recovers the signed cell coordinate a Morton key encodes: the two interleaved bit streams split
+ * back into their per-axis zigzag values, then each un-zigzags to its original signed integer. Exact
+ * inverse of the packing — every key the Morton encoder produces decodes back to the coordinate it
+ * packed.
+ *
+ * A key that is not a non-negative integer inside the packed width was never produced by the
+ * encoder, and is rejected rather than decoded into a coordinate nothing packs to.
  */
 export function decodeMortonKey(key: number): [number, number] {
+  invariant(
+    Number.isInteger(key) && key >= 0 && key < 2 ** (2 * MORTON_AXIS_BITS),
+    `key outside the packed range: ${key}`,
+  );
+
   let zx = 0;
   let zy = 0;
 

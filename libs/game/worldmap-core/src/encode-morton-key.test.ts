@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { WORLD_COORD_MAX, WORLD_COORD_MIN } from './consts';
 import { decodeMortonKey } from './decode-morton-key';
 import { encodeMortonKey } from './encode-morton-key';
 
@@ -26,7 +27,32 @@ test('it packs a coordinate spanning multiple bit positions on both axes', () =>
   expect(encodeMortonKey([-3, 5])).toBe(153);
 });
 
-test('it round-trips through decodeMortonKey for a set of coordinates including negative axes', () => {
+test('it rejects a fractional x coordinate', () => {
+  expect(() => encodeMortonKey([1.5, 0])).toThrow('coordinate outside the packable range: 1.5_0');
+});
+
+test('it rejects a fractional y coordinate', () => {
+  expect(() => encodeMortonKey([0, -2.25])).toThrow(
+    'coordinate outside the packable range: 0_-2.25',
+  );
+});
+
+test('it rejects a coordinate past the upper packable bound', () => {
+  expect(() => encodeMortonKey([WORLD_COORD_MAX + 1, 0])).toThrow('outside the packable range');
+});
+
+test('it rejects a coordinate past the lower packable bound', () => {
+  expect(() => encodeMortonKey([0, WORLD_COORD_MIN - 1])).toThrow('outside the packable range');
+});
+
+test('it packs the extreme coordinate of each axis bound', () => {
+  expect(decodeMortonKey(encodeMortonKey([WORLD_COORD_MAX, WORLD_COORD_MIN]))).toStrictEqual([
+    WORLD_COORD_MAX,
+    WORLD_COORD_MIN,
+  ]);
+});
+
+test('it round-trips through the Morton decoder for a set of coordinates including negative axes', () => {
   const coords: Array<[number, number]> = [
     [0, 0],
     [1, 0],
