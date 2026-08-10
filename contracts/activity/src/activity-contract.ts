@@ -8,6 +8,7 @@ import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
 import { ContentDocumentSchema } from './content-document-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
+import { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
 import { RewardItemAffixSchema } from './reward-item-affix-schema';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
 
@@ -58,6 +59,20 @@ const AvatarProgressionSchema = z.object({
   pending: z.array(PendingXPEntrySchema),
   xp: z.int(),
 });
+
+const ViewportSchema = z.object({
+  maxCX: z.int(),
+  maxCY: z.int(),
+  minCX: z.int(),
+  minCY: z.int(),
+});
+
+/**
+ * A revealed cell's disclosed content: expected-value-flat descriptor metadata only, never the raw
+ * descriptor hash, salt, or drops. `poolID` is absent for a legacy content version that predates
+ * sealed content.
+ */
+const RevealedNodeSchema = z.object({ id: z.string(), poolID: z.string().optional() });
 
 /**
  * The activities service's API: every procedure is authed and owner-scoped through the caller's
@@ -208,6 +223,36 @@ export const activityContract = {
     .errors(
       defineErrors({
         NOT_FOUND: { data: z.object({}), message: 'No activity exists for this avatar' },
+      }),
+    ),
+
+  /**
+   * The revealed region is a projection of the avatar's verified first-clear grants, never stored
+   * reveal state — recomputed fresh every call. `viewport` bounds what the response returns, never
+   * what the underlying discs make eligible to disclose: a cell inside the viewport but outside
+   * every disc is never in the response, regardless of viewport size.
+   */
+  getRevealedNodes: authedRoute
+    .route({
+      method: 'GET',
+      path: '/avatars/{avatarID}/revealed-nodes',
+      summary: "Get the disclosed content for an avatar's revealed world-map cells in a viewport",
+    })
+    .input(
+      z.object({ avatarID: z.string(), viewport: ViewportSchema }).refine(
+        (input) => {
+          const width = input.viewport.maxCX - input.viewport.minCX + 1;
+          const height = input.viewport.maxCY - input.viewport.minCY + 1;
+
+          return width > 0 && height > 0 && width * height <= REVEAL_VIEWPORT_CELL_CAP;
+        },
+        { error: `viewport area may not exceed ${REVEAL_VIEWPORT_CELL_CAP} cells` },
+      ),
+    )
+    .output(z.object({ contentVersion: z.string(), nodes: z.array(RevealedNodeSchema) }))
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
       }),
     ),
 

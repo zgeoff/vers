@@ -3,6 +3,7 @@ import { OpenAPIGenerator } from '@orpc/openapi';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
 import { activityContract } from './activity-contract';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
+import { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
 
 test('it declares UNAUTHORIZED and FORBIDDEN on every owner-scoped procedure', () => {
   expect(activityContract.getCurrentActivity['~orpc'].errorMap).toContainAllKeys([
@@ -134,6 +135,47 @@ test('it accepts an advanceActivity request at the aggregate checkpoint cap', ()
 
   expect(activityContract.advanceActivity['~orpc'].inputSchema?.safeParse(input).success).toBe(
     true,
+  );
+});
+
+test('it declares NOT_FOUND on getRevealedNodes', () => {
+  expect(activityContract.getRevealedNodes['~orpc'].errorMap).toContainAllKeys([
+    'UNAUTHORIZED',
+    'FORBIDDEN',
+    'NOT_FOUND',
+  ]);
+});
+
+test('getRevealedNodes accepts a viewport exactly at the cell cap', () => {
+  const input = {
+    avatarID: 'avatar_1',
+    viewport: { maxCX: REVEAL_VIEWPORT_CELL_CAP - 1, maxCY: 0, minCX: 0, minCY: 0 },
+  };
+
+  expect(activityContract.getRevealedNodes['~orpc'].inputSchema?.safeParse(input).success).toBe(
+    true,
+  );
+});
+
+test('getRevealedNodes rejects a viewport whose area exceeds the cell cap', () => {
+  const input = {
+    avatarID: 'avatar_1',
+    viewport: { maxCX: REVEAL_VIEWPORT_CELL_CAP, maxCY: 0, minCX: 0, minCY: 0 },
+  };
+
+  expect(activityContract.getRevealedNodes['~orpc'].inputSchema?.safeParse(input).success).toBe(
+    false,
+  );
+});
+
+test('getRevealedNodes rejects an inverted viewport', () => {
+  const input = {
+    avatarID: 'avatar_1',
+    viewport: { maxCX: 0, maxCY: 0, minCX: 5, minCY: 0 },
+  };
+
+  expect(activityContract.getRevealedNodes['~orpc'].inputSchema?.safeParse(input).success).toBe(
+    false,
   );
 });
 
