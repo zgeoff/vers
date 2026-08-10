@@ -1,6 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
 import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
-import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import invariant from 'tiny-invariant';
 import { findLiveActivityAvatar } from '../avatar/find-live-activity-avatar';
 import { upsertActiveAvatar } from '../avatar/upsert-active-avatar';
@@ -105,7 +104,7 @@ export const startActivity = os.startActivity.handler(async (opts) => {
   const seed = createGenesisSeed();
 
   const startHash = buildStartHash({
-    contentVersion: CURRENT_CONTENT_VERSION,
+    contentVersion: db.MOCK_CURRENT_CONTENT_VERSION,
     encounterNode,
     keyVersion: 1,
     seed,
@@ -119,7 +118,7 @@ export const startActivity = os.startActivity.handler(async (opts) => {
     appendedHead: 0,
     avatarID: opts.input.avatarID,
     buildSnapshot: { level: avatar.level, xp: avatar.xp },
-    contentVersion: CURRENT_CONTENT_VERSION,
+    contentVersion: db.MOCK_CURRENT_CONTENT_VERSION,
     createdAt: now,
     encounterNode,
     id,

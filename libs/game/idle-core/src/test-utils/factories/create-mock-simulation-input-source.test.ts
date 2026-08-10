@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
 import { createMockSimulationInputSource } from './create-mock-simulation-input-source';
 
 test('it creates a simulation input source with expected properties', () => {
@@ -8,7 +7,7 @@ test('it creates a simulation input source with expected properties', () => {
   expect(source).toStrictEqual({
     avatarID: expect.toBeString(),
     buildSnapshot: { level: 1, xp: 0 },
-    contentVersion: CURRENT_CONTENT_VERSION,
+    contentVersion: '2',
     encounterNode: { difficulty: 1 },
     id: expect.toStartWith('act_'),
     seed: 'aa'.repeat(16),

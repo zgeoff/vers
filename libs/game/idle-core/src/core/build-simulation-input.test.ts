@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CURRENT_CONTENT_VERSION } from '@vers/game-utils';
+import { createMockEncounterContent } from '@vers/game-utils/test-utils';
 import invariant from 'tiny-invariant';
 import { buildLifeFromLevel } from '../progression';
 import { createMockSimulationInputSource } from '../test-utils';
@@ -7,14 +7,16 @@ import { ActivityFailureAction, EquipmentSlot } from '../types';
 import { buildSimulationInput } from './build-simulation-input';
 
 test('it derives the activity id, avatar id, seed, and build snapshot from the source row', () => {
-  const result = buildSimulationInput({
+  const source = {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 3, xp: 450 },
-    contentVersion: CURRENT_CONTENT_VERSION,
+    contentVersion: '2',
     encounterNode: { difficulty: 1 },
     id: 'act_1',
     seed: 'aa'.repeat(16),
-  });
+  };
+
+  const result = buildSimulationInput(createMockEncounterContent({ contentVersion: '2' }), source);
 
   expect(result.activity.id).toBe('act_1');
   expect(result.activity.seed).toBe('aa'.repeat(16));
@@ -25,12 +27,17 @@ test('it derives the activity id, avatar id, seed, and build snapshot from the s
 });
 
 test('it derives the avatar life from the build snapshot level', () => {
+  const oneSource = createMockSimulationInputSource({ buildSnapshot: { level: 1, xp: 0 } });
+  const levelledSource = createMockSimulationInputSource({ buildSnapshot: { level: 27, xp: 0 } });
+
   const levelOne = buildSimulationInput(
-    createMockSimulationInputSource({ buildSnapshot: { level: 1, xp: 0 } }),
+    createMockEncounterContent({ contentVersion: oneSource.contentVersion }),
+    oneSource,
   );
 
   const levelled = buildSimulationInput(
-    createMockSimulationInputSource({ buildSnapshot: { level: 27, xp: 0 } }),
+    createMockEncounterContent({ contentVersion: levelledSource.contentVersion }),
+    levelledSource,
   );
 
   expect(levelOne.avatar.life).toBe(buildLifeFromLevel(1));
@@ -42,29 +49,35 @@ test('it builds the same input for the same source row', () => {
   const source = {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
-    contentVersion: CURRENT_CONTENT_VERSION,
+    contentVersion: '2',
     encounterNode: { difficulty: 1 },
     id: 'act_1',
     seed: 'bb'.repeat(16),
   };
 
-  expect(buildSimulationInput(source)).toStrictEqual(buildSimulationInput(source));
+  const content = createMockEncounterContent({ contentVersion: '2' });
+
+  expect(buildSimulationInput(content, source)).toStrictEqual(
+    buildSimulationInput(content, source),
+  );
 });
 
 test('it derives the activity difficulty and encounter from the source encounter node', () => {
-  const low = buildSimulationInput({
+  const content = createMockEncounterContent({ contentVersion: '2' });
+
+  const low = buildSimulationInput(content, {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
-    contentVersion: CURRENT_CONTENT_VERSION,
+    contentVersion: '2',
     encounterNode: { difficulty: 1 },
     id: 'act_1',
     seed: 'bb'.repeat(16),
   });
 
-  const high = buildSimulationInput({
+  const high = buildSimulationInput(content, {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
-    contentVersion: CURRENT_CONTENT_VERSION,
+    contentVersion: '2',
     encounterNode: { difficulty: 5 },
     id: 'act_1',
     seed: 'bb'.repeat(16),
@@ -76,20 +89,22 @@ test('it derives the activity difficulty and encounter from the source encounter
 });
 
 test('it floors a difficulty-0 source node to the same difficulty and encounter as difficulty one', () => {
+  const content = createMockEncounterContent({ contentVersion: '2' });
+
   const source = {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
-    contentVersion: CURRENT_CONTENT_VERSION,
+    contentVersion: '2',
     seed: 'bb'.repeat(16),
   };
 
-  const floored = buildSimulationInput({
+  const floored = buildSimulationInput(content, {
     ...source,
     encounterNode: { difficulty: 0 },
     id: 'act_1',
   });
 
-  const unscaled = buildSimulationInput({
+  const unscaled = buildSimulationInput(content, {
     ...source,
     encounterNode: { difficulty: 1 },
     id: 'act_1',
@@ -100,17 +115,19 @@ test('it floors a difficulty-0 source node to the same difficulty and encounter 
 });
 
 test('it returns a fresh encounter and weapon on every call, never a shared reference', () => {
+  const content = createMockEncounterContent({ contentVersion: '2' });
+
   const source = {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
-    contentVersion: CURRENT_CONTENT_VERSION,
+    contentVersion: '2',
     encounterNode: { difficulty: 1 },
     id: 'act_1',
     seed: 'bb'.repeat(16),
   };
 
-  const first = buildSimulationInput(source);
-  const second = buildSimulationInput(source);
+  const first = buildSimulationInput(content, source);
+  const second = buildSimulationInput(content, source);
   const firstEnemy = first.activity.encounter.waves[0]?.[0];
   const secondEnemy = second.activity.encounter.waves[0]?.[0];
 
@@ -123,9 +140,11 @@ test('it returns a fresh encounter and weapon on every call, never a shared refe
   );
 });
 
-test('it rejects an unknown content version', () => {
+test('it rejects content whose version does not match the source', () => {
+  const content = createMockEncounterContent({ contentVersion: 'other' });
+
   expect(() =>
-    buildSimulationInput({
+    buildSimulationInput(content, {
       avatarID: 'avatar_1',
       buildSnapshot: { level: 1, xp: 0 },
       contentVersion: 'nope',
@@ -133,11 +152,51 @@ test('it rejects an unknown content version', () => {
       id: 'act_1',
       seed: 'dd'.repeat(16),
     }),
-  ).toThrowWithMessage(Error, /unknown content version: nope/);
+  ).toThrowWithMessage(Error, /content must match the source's pinned content version/);
 });
 
 test('it selects the pool named by a stamped poolID, and falls back to the first when absent', () => {
+  const content = createMockEncounterContent({
+    contentVersion: '2',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+      {
+        id: 'placeholder-skirmisher',
+        name: 'World Map Skirmisher',
+        baseLevel: 1,
+        baseLife: 20,
+        baseXP: 8,
+        attackMin: 1,
+        attackMax: 4,
+        attackSpeed: 0.7,
+      },
+    ],
+    pools: [
+      {
+        id: 'brawler-den',
+        entries: [
+          { archetypeID: 'placeholder-brawler', weight: 1 },
+          { archetypeID: 'placeholder-skirmisher', weight: 1 },
+        ],
+      },
+      {
+        id: 'skirmisher-flock',
+        entries: [{ archetypeID: 'placeholder-skirmisher', weight: 1 }],
+      },
+    ],
+  });
+
   const stamped = buildSimulationInput(
+    content,
     createMockSimulationInputSource({
       contentVersion: '2',
       encounterNode: { difficulty: 1, poolID: 'skirmisher-flock' },
@@ -145,6 +204,7 @@ test('it selects the pool named by a stamped poolID, and falls back to the first
   );
 
   const absent = buildSimulationInput(
+    content,
     createMockSimulationInputSource({
       contentVersion: '2',
       encounterNode: { difficulty: 1 },
@@ -165,10 +225,11 @@ test('it selects the pool named by a stamped poolID, and falls back to the first
 
 test('it honors a failureAction override', () => {
   const result = buildSimulationInput(
+    createMockEncounterContent({ contentVersion: '2' }),
     {
       avatarID: 'avatar_1',
       buildSnapshot: { level: 1, xp: 0 },
-      contentVersion: CURRENT_CONTENT_VERSION,
+      contentVersion: '2',
       encounterNode: { difficulty: 1 },
       id: 'act_1',
       seed: 'cc'.repeat(16),

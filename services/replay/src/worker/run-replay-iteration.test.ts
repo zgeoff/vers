@@ -1,6 +1,8 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/bun';
+import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
 import { buildCheckpointHash } from '@vers/contract-activity';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { toJSON } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { buildLevelFromXP, buildSimulationInput } from '@vers/idle-core';
@@ -29,6 +31,9 @@ import { runReplayIteration } from './run-replay-iteration';
  */
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
+
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
+
   const keyPair = await getTestServiceKeyPair();
 
   return {
@@ -49,6 +54,7 @@ test('it replays an honest full stream, matches, and advances the verified head 
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -85,6 +91,7 @@ test('it mints one reward per slot earned by the verified stream', async () => {
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -152,6 +159,7 @@ test('it verifies a later batch from held state, not a fresh from-Started replay
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -255,6 +263,7 @@ test('it rejects a checkpoint with a forged continuation seed, rewinds the chain
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -339,6 +348,7 @@ test('it settles no xp and drops the rejected activity from the pending anchor w
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -407,6 +417,7 @@ test('it rejects a checkpoint with a forged chain position', async () => {
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -455,6 +466,7 @@ test('it rejects a checkpoint claiming the wrong entropy source', async () => {
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -490,6 +502,7 @@ test('it rejects a checkpoint with a forged reward total', async () => {
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -519,6 +532,7 @@ test('it rejects a wrong continuation seed', async () => {
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -556,6 +570,7 @@ test('it parks an activity stamped with an unknown sim version', async () => {
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -593,6 +608,7 @@ test('it parks a stopped activity, leaving its chain claimable again', async () 
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -636,6 +652,7 @@ test('it parks an activity stamped with a retention-expired sim version', async 
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -668,6 +685,7 @@ test('it parks rather than rejects when the duration cap trips before the expect
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -712,6 +730,7 @@ test('it parks an activity without incrementing its attempt count when the provi
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -751,28 +770,21 @@ test('it evicts and rebuilds from Started when the cached driver no longer match
     .execute();
 
   const cache = createReplayCache();
+  const staleContent = createMockContentDocument({ contentVersion: '2' }).encounter;
+
+  const staleInput = buildSimulationInput(staleContent, {
+    avatarID: fixture.activity.avatarId,
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: fixture.activity.contentVersion,
+    encounterNode: { difficulty: 1 },
+    id: fixture.activity.id,
+    seed: fixture.activity.seed,
+  });
 
   // A cache entry keyed to this activity but stamped with coordinates from a different point in
   // the stream — the state a stale or mismatched resume would leave behind.
   cache.set(fixture.activity.id, {
-    driver: createSimulationDriver(
-      buildSimulationInput({
-        avatarID: fixture.activity.avatarId,
-        buildSnapshot: { level: 1, xp: 0 },
-        contentVersion: fixture.activity.contentVersion,
-        encounterNode: { difficulty: 1 },
-        id: fixture.activity.id,
-        seed: fixture.activity.seed,
-      }).activity,
-      buildSimulationInput({
-        avatarID: fixture.activity.avatarId,
-        buildSnapshot: { level: 1, xp: 0 },
-        contentVersion: fixture.activity.contentVersion,
-        encounterNode: { difficulty: 1 },
-        id: fixture.activity.id,
-        seed: fixture.activity.seed,
-      }).avatar,
-    ),
+    driver: createSimulationDriver(staleInput.activity, staleInput.avatar),
     emittedCount: firstBatchCount,
     lastHash: 'stale-hash-not-the-real-predecessor',
   });
@@ -780,6 +792,7 @@ test('it evicts and rebuilds from Started when the cached driver no longer match
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -824,6 +837,7 @@ test('it counts a replay error as a failed attempt and quarantines at the attemp
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -877,6 +891,7 @@ test('it reports an iteration failure exactly once when a frontier was claimed',
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -934,14 +949,17 @@ test('it does not reject a divergence that fails to reproduce on the fresh confi
 
   const cache = createReplayCache();
 
-  const corruptInput = buildSimulationInput({
-    avatarID: fixture.activity.avatarId,
-    buildSnapshot: { level: 1, xp: 0 },
-    contentVersion: fixture.activity.contentVersion,
-    encounterNode: { difficulty: 1 },
-    id: fixture.activity.id,
-    seed: 'ff'.repeat(16),
-  });
+  const corruptInput = buildSimulationInput(
+    createMockContentDocument({ contentVersion: '2' }).encounter,
+    {
+      avatarID: fixture.activity.avatarId,
+      buildSnapshot: { level: 1, xp: 0 },
+      contentVersion: fixture.activity.contentVersion,
+      encounterNode: { difficulty: 1 },
+      id: fixture.activity.id,
+      seed: 'ff'.repeat(16),
+    },
+  );
 
   const corruptDriver = createSimulationDriver(corruptInput.activity, corruptInput.avatar);
   const resumePoint = fixture.checkpoints[firstBatchCount - 1];
@@ -959,6 +977,7 @@ test('it does not reject a divergence that fails to reproduce on the fresh confi
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -1002,6 +1021,7 @@ test('a user-stopped activity advances the chain verified anchor from its tail, 
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -1070,6 +1090,7 @@ test('a capped activity advances the chain verified anchor from its tail, and an
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -1142,6 +1163,7 @@ test('a stream fully verified while still active reconciles the anchor once a su
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
@@ -1228,6 +1250,7 @@ test('a stopped activity whose only checkpoint is Started leaves the anchor unto
   const deps = {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: buildSilentLogger(),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',

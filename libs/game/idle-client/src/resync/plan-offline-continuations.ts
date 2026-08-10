@@ -30,11 +30,12 @@ interface PlanOfflineContinuationsOptions {
   /**
    * Derives the engine's simulation input and avatar from a chain-position source — the real
    * confirmed row for the gap's first attempt, a client-predicted one for every attempt after.
+   * Loads the pinned content document the source's `contentVersion` names, so it may need to
+   * fetch and cache it before resolving.
    */
-  readonly buildSimulationInput: (source: Readonly<SimulationInputSource>) => {
-    activity: ActivityInput;
-    avatar: AvatarData;
-  };
+  readonly buildSimulationInput: (
+    source: Readonly<SimulationInputSource>,
+  ) => Promise<{ activity: ActivityInput; avatar: AvatarData }>;
 
   readonly progress: Readonly<LatestActivityProgress>;
 }
@@ -93,7 +94,7 @@ export async function planOfflineContinuations(
       seed: cursor.seed,
     };
 
-    const input = options.buildSimulationInput(source);
+    const input = await options.buildSimulationInput(source);
 
     // A reconstruction must reach its terminal to reconcile, whatever the budget — its prefix is
     // already accounted server-side, so only the tail is priced against the budget below.

@@ -13,6 +13,8 @@ export type {
   AvatarItems,
   Avatars,
   ConsumedTransactionTokens,
+  ContentCurrent,
+  ContentVersions,
   DB,
   PendingTransactions,
   Releases,

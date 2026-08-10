@@ -1,4 +1,5 @@
 import { implement } from '@orpc/server';
+import type { ContentDocument } from '@vers/contract-activity';
 import { activityContract } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
@@ -8,6 +9,7 @@ import type { Kysely } from 'kysely';
 import { advanceActivity } from './handlers/advance-activity';
 import { getActivityRewards } from './handlers/get-activity-rewards';
 import { getAvatarProgression } from './handlers/get-avatar-progression';
+import { getContentDocument } from './handlers/get-content-document';
 import { getCurrentActivity } from './handlers/get-current-activity';
 import { getLatestActivityProgress } from './handlers/get-latest-activity-progress';
 import { resumeActivity } from './handlers/resume-activity';
@@ -17,10 +19,10 @@ import { trackActivityProgress } from './handlers/track-activity-progress';
 import { updateFailureAction } from './handlers/update-failure-action';
 
 interface BuildActivityRouterDeps {
-  readonly contentVersion: string;
   readonly db: Kysely<DB>;
   readonly keysServiceURL: string;
   readonly keyVersion: number;
+  readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
   readonly privateKey: CryptoKey;
   readonly secretRef: SecretRef;
   readonly secretVersion: number;
@@ -30,9 +32,9 @@ interface BuildActivityRouterDeps {
 
 /**
  * Assembles the activities service's oRPC router, closing each handler over the shared db client
- * (and, for `startActivity`, the content and key versions new activities are minted against, plus
- * the keys origin, s2s signing key, and scope secret ref/version its sealed content read uses; for
- * `trackActivityProgress`, the offline-progress budget ceiling).
+ * (and, for `startActivity`, the memoized content-document loader new activities are minted
+ * against, the key version, the keys origin, s2s signing key, and scope secret ref/version its
+ * sealed content read uses; for `trackActivityProgress`, the offline-progress budget ceiling).
  */
 export function buildActivityRouter(deps: BuildActivityRouterDeps) {
   const os = implement(activityContract).$context<ServiceContext>();
@@ -47,6 +49,9 @@ export function buildActivityRouter(deps: BuildActivityRouterDeps) {
     getActivityRewards: os.getActivityRewards.handler((opts) => getActivityRewards(deps.db, opts)),
     getAvatarProgression: os.getAvatarProgression.handler((opts) =>
       getAvatarProgression({ db: deps.db, sendReplayWake: deps.sendReplayWake }, opts),
+    ),
+    getContentDocument: os.getContentDocument.handler((opts) =>
+      getContentDocument({ loadContentDocument: deps.loadContentDocument }, opts),
     ),
     getCurrentActivity: os.getCurrentActivity.handler((opts) => getCurrentActivity(deps.db, opts)),
     getLatestActivityProgress: os.getLatestActivityProgress.handler((opts) =>

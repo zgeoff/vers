@@ -15,10 +15,9 @@ interface RunResyncOptions {
    * Derives the engine's simulation input and avatar from a chain-position source, called fresh
    * for every continuation a fast-forward runs through.
    */
-  readonly buildSimulationInput: (source: Readonly<SimulationInputSource>) => {
-    activity: ActivityInput;
-    avatar: AvatarData;
-  };
+  readonly buildSimulationInput: (
+    source: Readonly<SimulationInputSource>,
+  ) => Promise<{ activity: ActivityInput; avatar: AvatarData }>;
 
   readonly capMs?: number;
 

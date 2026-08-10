@@ -1,11 +1,14 @@
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
-import type { CheckpointPayload, EncounterNode } from '@vers/contract-activity';
+import { createContentVersion, findContentDocument } from '@vers/content-registry';
+import type { CheckpointPayload, ContentDocument, EncounterNode } from '@vers/contract-activity';
 import { buildCheckpointHash, buildStartHash } from '@vers/contract-activity';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import type { SecretRef } from '@vers/contract-keys';
 import type { Activities, ActivityChains, DB } from '@vers/db';
 import { toJSON } from '@vers/db';
-import { CURRENT_CONTENT_VERSION, buildStateFromSeed } from '@vers/game-utils';
+import { buildStateFromSeed } from '@vers/game-utils';
+import type { EncounterContent } from '@vers/game-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { runSimulation } from '@vers/idle-core/replay';
@@ -24,6 +27,13 @@ import { createChainRow } from './create-chain-row';
  * stay byte-comparable.
  */
 const DEFAULT_SCOPE_ID = '1_0';
+
+/**
+ * The content version a fixture stamps and publishes when the caller passes neither a document nor
+ * a version — the same version the suites' shared setup publishes, so a default fixture and its
+ * suite agree on one document.
+ */
+const DEFAULT_CONTENT_VERSION = '2';
 
 interface HonestCheckpointRow {
   readonly hash: string;
@@ -58,6 +68,7 @@ interface CreateHonestActivityFixtureInput {
   readonly buildSnapshot?: { readonly level: number; readonly xp: number };
   readonly chain?: Readonly<Partial<Insertable<ActivityChains>>>;
   readonly contentVersion?: string;
+  readonly document?: ContentDocument;
   readonly duration?: number;
   readonly rootChain?: Readonly<Selectable<ActivityChains>>;
   readonly secretRef?: SecretRef;
@@ -101,19 +112,39 @@ export async function createHonestActivityFixture(
   });
 
   const startChainIndex = input.startChainIndex ?? chain.appendedChainIndex;
-  const contentVersion = input.contentVersion ?? CURRENT_CONTENT_VERSION;
+
+  invariant(
+    input.document === undefined ||
+      input.contentVersion === undefined ||
+      input.document.contentVersion === input.contentVersion,
+    'an explicit document must carry the explicit content version',
+  );
+
+  const document =
+    input.document ??
+    createMockContentDocument({ contentVersion: input.contentVersion ?? DEFAULT_CONTENT_VERSION });
+
+  const contentVersion = document.contentVersion;
+
+  // The replay worker loads content by the row's stamped version, so the document this fixture ran
+  // the engine against must be readable back from the registry; a suite (or an earlier fixture)
+  // may already have published the version, in which case its content is assumed identical.
+  if ((await findContentDocument(db, contentVersion)) === undefined) {
+    await createContentVersion(db, document);
+  }
+
   const secretRef = input.secretRef ?? 'worldmap';
   const secretVersion = input.secretVersion ?? 1;
 
   const encounterNode = buildFixtureEncounterNode({
     avatarID: chain.avatarId,
-    contentVersion,
+    content: document.encounter,
     scopeID: chain.scopeId,
     secretRef,
     secretVersion,
   });
 
-  const simulationInput = buildSimulationInput({
+  const simulationInput = buildSimulationInput(document.encounter, {
     avatarID: chain.avatarId,
     buildSnapshot,
     contentVersion,
@@ -178,7 +209,7 @@ export async function createHonestActivityFixture(
 
 interface BuildFixtureEncounterNodeInput {
   readonly avatarID: string;
-  readonly contentVersion: string;
+  readonly content: EncounterContent;
   readonly scopeID: string;
   readonly secretRef: SecretRef;
   readonly secretVersion: number;
@@ -199,7 +230,7 @@ function buildFixtureEncounterNode(input: Readonly<BuildFixtureEncounterNodeInpu
 
   return {
     difficulty: getDifficulty(coord[0], coord[1]),
-    ...deriveWorldmapContent(input.contentVersion, { coord, scopeSecret, userSeed: 0 }),
+    ...deriveWorldmapContent(input.content, { coord, scopeSecret, userSeed: 0 }),
   };
 }
 

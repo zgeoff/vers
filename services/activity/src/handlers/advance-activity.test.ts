@@ -1,11 +1,13 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
+import { createContentVersion } from '@vers/content-registry';
 import type {
   ActivityContract,
   CatchUpContinuation,
   CheckpointBatchEntry,
 } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { createAvatarRow, createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
@@ -25,6 +27,7 @@ async function setupTest(config: { readonly simTimeCapMs?: number } = {}) {
   const db = await createTestDB({ isolation: 'schema' });
 
   await createSimVersionRow(db.db);
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const service = await createActivityService({
     db: db.db,

@@ -1,15 +1,55 @@
 import { expect, test } from 'bun:test';
 import { buildRollStream } from '@vers/roll-crypto';
-import { encounterContentV1 } from './content/encounter-content-v1';
-import { encounterContentV2 } from './content/encounter-content-v2';
 import { rollEncounterFromStream } from './roll-encounter-from-stream';
+import type { EncounterContent } from './types';
 
 test('it reproduces the frozen golden encounter for a fixed seed', () => {
+  const content: EncounterContent = {
+    contentVersion: '1',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+      {
+        id: 'placeholder-skirmisher',
+        name: 'World Map Skirmisher',
+        baseLevel: 1,
+        baseLife: 20,
+        baseXP: 8,
+        attackMin: 1,
+        attackMax: 4,
+        attackSpeed: 0.7,
+      },
+    ],
+    pools: [
+      {
+        id: 'default',
+        entries: [
+          { archetypeID: 'placeholder-brawler', weight: 1 },
+          { archetypeID: 'placeholder-skirmisher', weight: 1 },
+        ],
+      },
+    ],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
   const seed = Uint8Array.from({ length: 32 }, () => 22);
   const stream = buildRollStream(seed, 'test/domain');
 
-  expect(rollEncounterFromStream(encounterContentV1, { difficulty: 1 }, stream))
-    .toMatchInlineSnapshot(`
+  expect(rollEncounterFromStream(content, { difficulty: 1 }, stream)).toMatchInlineSnapshot(`
     {
       "waves": [
         [
@@ -134,6 +174,30 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
 });
 
 test('it rolls identical encounters from equal content, node, and stream inputs', () => {
+  const content: EncounterContent = {
+    contentVersion: '1',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+    ],
+    pools: [{ id: 'default', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] }],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
   const first = buildRollStream(
     Uint8Array.from({ length: 32 }, (_, i) => i),
     'test/domain',
@@ -144,19 +208,43 @@ test('it rolls identical encounters from equal content, node, and stream inputs'
     'test/domain',
   );
 
-  expect(rollEncounterFromStream(encounterContentV1, { difficulty: 1 }, first)).toStrictEqual(
-    rollEncounterFromStream(encounterContentV1, { difficulty: 1 }, second),
+  expect(rollEncounterFromStream(content, { difficulty: 1 }, first)).toStrictEqual(
+    rollEncounterFromStream(content, { difficulty: 1 }, second),
   );
 });
 
 test('it rolls differently shaped encounters across a small set of seeds', () => {
+  const content: EncounterContent = {
+    contentVersion: '1',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+    ],
+    pools: [{ id: 'default', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] }],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
   const shapes = Array.from({ length: 5 }, (_, seedByte) => {
     const stream = buildRollStream(
       Uint8Array.from({ length: 32 }, () => seedByte),
       'test/domain',
     );
 
-    const encounter = rollEncounterFromStream(encounterContentV1, { difficulty: 1 }, stream);
+    const encounter = rollEncounterFromStream(content, { difficulty: 1 }, stream);
 
     return encounter.waves.map((wave) => wave.length);
   });
@@ -167,16 +255,40 @@ test('it rolls differently shaped encounters across a small set of seeds', () =>
 });
 
 test('it scales enemy life, xp, and attack damage by the node difficulty', () => {
+  const content: EncounterContent = {
+    contentVersion: '1',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+    ],
+    pools: [{ id: 'default', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] }],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
   const seed = Uint8Array.from({ length: 32 }, () => 22);
 
   const unscaled = rollEncounterFromStream(
-    encounterContentV1,
+    content,
     { difficulty: 1 },
     buildRollStream(seed, 'test/domain'),
   );
 
   const scaled = rollEncounterFromStream(
-    encounterContentV1,
+    content,
     { difficulty: 2 },
     buildRollStream(seed, 'test/domain'),
   );
@@ -199,16 +311,40 @@ test('it scales enemy life, xp, and attack damage by the node difficulty', () =>
 });
 
 test('it floors a zero-difficulty node to the same stats as difficulty one', () => {
+  const content: EncounterContent = {
+    contentVersion: '1',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+    ],
+    pools: [{ id: 'default', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] }],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
   const seed = Uint8Array.from({ length: 32 }, () => 22);
 
   const floored = rollEncounterFromStream(
-    encounterContentV1,
+    content,
     { difficulty: 0 },
     buildRollStream(seed, 'test/domain'),
   );
 
   const unscaled = rollEncounterFromStream(
-    encounterContentV1,
+    content,
     { difficulty: 1 },
     buildRollStream(seed, 'test/domain'),
   );
@@ -217,10 +353,69 @@ test('it floors a zero-difficulty node to the same stats as difficulty one', () 
 });
 
 test('it draws from the pool named by a stamped poolID', () => {
+  const content: EncounterContent = {
+    contentVersion: '2',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+      {
+        id: 'placeholder-skirmisher',
+        name: 'World Map Skirmisher',
+        baseLevel: 1,
+        baseLife: 20,
+        baseXP: 8,
+        attackMin: 1,
+        attackMax: 4,
+        attackSpeed: 0.7,
+      },
+      {
+        id: 'placeholder-stalker',
+        name: 'World Map Stalker',
+        baseLevel: 1,
+        baseLife: 24,
+        baseXP: 10,
+        attackMin: 2,
+        attackMax: 5,
+        attackSpeed: 0.9,
+      },
+    ],
+    pools: [
+      {
+        id: 'brawler-den',
+        entries: [
+          { archetypeID: 'placeholder-brawler', weight: 1 },
+          { archetypeID: 'placeholder-skirmisher', weight: 1 },
+        ],
+      },
+      {
+        id: 'skirmisher-flock',
+        entries: [
+          { archetypeID: 'placeholder-skirmisher', weight: 1 },
+          { archetypeID: 'placeholder-stalker', weight: 1 },
+        ],
+      },
+    ],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
   const seed = Uint8Array.from({ length: 32 }, () => 22);
 
   const encounter = rollEncounterFromStream(
-    encounterContentV2,
+    content,
     { difficulty: 1, poolID: 'skirmisher-flock' },
     buildRollStream(seed, 'test/domain'),
   );
@@ -233,16 +428,58 @@ test('it draws from the pool named by a stamped poolID', () => {
 });
 
 test('it falls back to the first registered pool when poolID is absent', () => {
+  const content: EncounterContent = {
+    contentVersion: '2',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+      {
+        id: 'placeholder-skirmisher',
+        name: 'World Map Skirmisher',
+        baseLevel: 1,
+        baseLife: 20,
+        baseXP: 8,
+        attackMin: 1,
+        attackMax: 4,
+        attackSpeed: 0.7,
+      },
+    ],
+    pools: [
+      {
+        id: 'brawler-den',
+        entries: [
+          { archetypeID: 'placeholder-brawler', weight: 1 },
+          { archetypeID: 'placeholder-skirmisher', weight: 1 },
+        ],
+      },
+    ],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
   const seed = Uint8Array.from({ length: 32 }, () => 22);
 
   const withoutPoolID = rollEncounterFromStream(
-    encounterContentV2,
+    content,
     { difficulty: 1 },
     buildRollStream(seed, 'test/domain'),
   );
 
   const withFirstPoolID = rollEncounterFromStream(
-    encounterContentV2,
+    content,
     { difficulty: 1, poolID: 'brawler-den' },
     buildRollStream(seed, 'test/domain'),
   );
@@ -251,11 +488,35 @@ test('it falls back to the first registered pool when poolID is absent', () => {
 });
 
 test('it rejects a poolID naming no pool in the content', () => {
+  const content: EncounterContent = {
+    contentVersion: '1',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+    ],
+    pools: [{ id: 'default', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] }],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
   const seed = Uint8Array.from({ length: 32 }, () => 22);
 
   expect(() =>
     rollEncounterFromStream(
-      encounterContentV2,
+      content,
       { difficulty: 1, poolID: 'nonexistent-pool' },
       buildRollStream(seed, 'test/domain'),
     ),

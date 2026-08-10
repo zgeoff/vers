@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
+import * as db from '@vers/mock-services/db';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { handleSetActivityMessage } from './handle-set-activity-message';
@@ -11,6 +12,8 @@ test('it starts the activity on the simulation', async () => {
   const simulation = createSimulation();
 
   context.setSimulation(simulation);
+
+  await db.contentDocumentCollection.create({});
 
   const activity = createMockActivityData();
 
@@ -24,6 +27,8 @@ test('it registers the row against the submitter, seeded from its own chain-link
   const context = createStubWorkerContext({ submitter });
 
   context.setSimulation(createSimulation());
+
+  await db.contentDocumentCollection.create({});
 
   const activity = createMockActivityData({
     appendedHead: 2,
@@ -46,6 +51,8 @@ test('it remembers the row as the live simulation source', async () => {
   const context = createStubWorkerContext();
 
   context.setSimulation(createSimulation());
+
+  await db.contentDocumentCollection.create({});
 
   const activity = createMockActivityData();
 

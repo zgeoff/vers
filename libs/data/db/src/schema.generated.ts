@@ -136,6 +136,18 @@ export interface ConsumedTransactionTokens {
   jti: string;
 }
 
+export interface ContentCurrent {
+  contentVersion: string;
+  singleton: Generated<boolean>;
+  updatedAt: Generated<Timestamp>;
+}
+
+export interface ContentVersions {
+  contentVersion: string;
+  document: import('./types').Json;
+  publishedAt: Generated<Timestamp>;
+}
+
 export interface PendingTransactions {
   action: string;
   attempts: Generated<number>;
@@ -218,6 +230,8 @@ export interface DB {
   avatarItems: AvatarItems;
   avatars: Avatars;
   consumedTransactionTokens: ConsumedTransactionTokens;
+  contentCurrent: ContentCurrent;
+  contentVersions: ContentVersions;
   pendingTransactions: PendingTransactions;
   releases: Releases;
   sessions: Sessions;

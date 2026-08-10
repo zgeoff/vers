@@ -1,6 +1,7 @@
 import { advanceActivity } from './advance-activity';
 import { getActivityRewards } from './get-activity-rewards';
 import { getAvatarProgression } from './get-avatar-progression';
+import { getContentDocument } from './get-content-document';
 import { getCurrentActivity } from './get-current-activity';
 import { getLatestActivityProgress } from './get-latest-activity-progress';
 import { resumeActivity } from './resume-activity';
@@ -13,6 +14,7 @@ export const activityRouter = {
   advanceActivity,
   getActivityRewards,
   getAvatarProgression,
+  getContentDocument,
   getCurrentActivity,
   getLatestActivityProgress,
   resumeActivity,

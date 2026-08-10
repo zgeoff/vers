@@ -166,6 +166,8 @@ Libraries (`libs/`, grouped by domain):
 - `libs/core/trace` - isomorphic W3C trace-context primitives (mint, serialize, parse)
 - `libs/core/utils` - low-level platform-agnostic utils
 - `libs/data/db` - kysely connection helper, migrations, and generated database types
+- `libs/data/content-registry` - published content-document registry: reads a pinned version's
+  document, reads and advances the current pointer, and memoizes loaded documents per process
 - `libs/data/release-registry` - deploy release registry: records a row per rollout that passed its
   post-deploy probes and finds each app's newest release as its rollback target
 - `libs/data/sim-registry` - sim-engine version registry: registers built engine images, resolves
@@ -179,8 +181,8 @@ Libraries (`libs/`, grouped by domain):
   three.js canvas
 - `libs/game/game-utils` - shared game logic (encounter derivation, rewards)
 - `libs/game/roll-crypto` - avatar roll-key derivation and the rolled-reward digest PRF
-- `libs/game/item-gen` - entropy-agnostic item interpreter: roll streams, versioned loot tables,
-  affix constraints
+- `libs/game/item-gen` - entropy-agnostic item interpreter: roll streams, interpretation of
+  caller-supplied loot tables, affix constraints
 - `libs/game/idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
 - `libs/game/idle-core` - deterministic seeded simulation engine
 - `libs/game/worldmap-content` - sealed worldmap content derivation and the s2s scope-secret read it
