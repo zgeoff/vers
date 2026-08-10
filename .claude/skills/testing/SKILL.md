@@ -27,7 +27,8 @@ The rules below decide most situations; where they don't, these do:
 
 - Clarity over abstraction: repetition in a test isn't a smell, hidden setup is.
 - Isolation is non-negotiable: every test passes alone and in any order.
-- Test behaviour, not implementation: swapping a `forEach` for `Promise.all` breaks no test.
+- Test behaviour, not implementation: a refactor that preserves the observable contract — renaming a
+  private helper, restructuring a loop — breaks no test.
 - Every mock is a divergence from reality: mock only what is genuinely out of reach, and keep it
   high-fidelity — correct codes, realistic shapes, shared types.
 - Test utilities are production code, extracted and tested with the same rigour.
@@ -108,9 +109,9 @@ The rules below decide most situations; where they don't, these do:
   distinct outputs — because a mock's exact digests are not contract.
 - A deterministic pipeline's suite opens with a frozen-golden test: one hand-written literal input
   (never a factory — regenerating with `bun test -u` must never move the input), the full output
-  pinned with `toMatchInlineSnapshot`. Its companion is a one-line purity test,
+  pinned with `toMatchInlineSnapshot`. Its companion is a one-line same-input determinism test,
   `expect(collectNodeEdges(chunk)).toStrictEqual(collectNodeEdges(chunk))` — the snapshot pins the
-  value, the pair pins that it's a function.
+  value, the pair pins that equal inputs give equal outputs.
 - A thrown error is asserted at the strictness its contract demands: bare
   `expect(() => …).toThrow()` when only throwing matters, `toThrowWithMessage(Error, /…/)` when the
   message is contract, and a typed service rejection narrows on `code` — never on message strings.
@@ -119,13 +120,13 @@ The rules below decide most situations; where they don't, these do:
   value into a passing comparison — and a conditional path in a test means two tests. An `if` inside
   an MSW handler implementation scripting a call sequence ("first call fails, second succeeds") is
   handler scripting, not test branching.
-- Nothing fakes the clock — no fake timers, no `setSystemTime`. Code that steps with time takes a
-  duration or timestamp argument (`simulation.run(10_000)`, `advanceToDuration(20_000)`); code with
-  an internal loop takes an injected clock handle stepped explicitly (xstate's `SimulatedClock`
-  driven by `clock.increment(ms)`, or a `createFastClock()` passed as the runtime's `now` option). A
-  wall-clock-dependent row is built with a relative fixture
-  (`expiresAt: new Date(Date.now() - 1000)`) and asserted with range matchers (`toBeAfter`,
-  `toBeBefore`, `toBeWithin`).
+- Nothing replaces global timers or wall-clock reads — no fake timers, no `setSystemTime`. Code that
+  steps with time takes a duration or timestamp argument (`simulation.run(10_000)`,
+  `advanceToDuration(20_000)`); code with an internal loop takes an injected controlled clock
+  stepped explicitly (xstate's `SimulatedClock` driven by `clock.increment(ms)`, or a
+  `createFastClock()` passed as the runtime's `now` option). A wall-clock-dependent row is built
+  with a relative fixture (`expiresAt: new Date(Date.now() - 1000)`) and asserted with range
+  matchers (`toBeAfter`, `toBeBefore`, `toBeWithin`).
 - Waiting on an async condition is `waitFor`, never a `setTimeout` — RTL's `waitFor` in React
   packages (it wraps retries in `act`), `@vers/test-utils` elsewhere.
 - A test that passes alone but fails in the full run has a cleanup gap: binary-search the file list
@@ -173,7 +174,7 @@ The rules below decide most situations; where they don't, these do:
     `toHaveBeenCalledAfter`
   - errors/async: `toThrowWithMessage`, `toResolve`, `toReject` (both return a promise — always
     `await`)
-- Matchers also work asymmetrically inside `toEqual`/`toMatchObject`
+- Matchers also work asymmetrically inside `toStrictEqual`/`toMatchObject`
   (`status: expect.toBeOneOf([…])`).
 - Known gaps: `expect.pass`/`expect.fail` are unimplemented upstream and excluded from our types.
   It's `toEqualCaseInsensitive` — not `…Insensitively` as some docs claim; unknown matcher names
@@ -230,10 +231,10 @@ The rules below decide most situations; where they don't, these do:
   `renderer.fireEvent` — never a shortcut past a real interaction.
 - Query by what the user perceives: `getByRole` (with `name`) first, then
   `getByLabelText`/`getByText`; `getByTestId` last. `getBy*` asserts presence, `queryBy*` absence,
-  `findBy*` async appearance — the first query after render is an `await findBy*` so suspense
-  settles, with synchronous queries after it. `findBy*` replaces `waitFor(() => getBy*)` — the
-  combination double-polls; `waitFor` is for conditions that aren't DOM queries (store state, mock
-  call counts).
+  `findBy*` async appearance — after a render that suspends or fetches, the first query is an
+  `await findBy*` so the settled tree is what sync queries then read; a synchronous render starts
+  with `getBy*` directly. `findBy*` replaces `waitFor(() => getBy*)` — the combination double-polls;
+  `waitFor` is for conditions that aren't DOM queries (store state, mock call counts).
 
   ```tsx
   const user = userEvent.setup();
