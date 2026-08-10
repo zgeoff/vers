@@ -204,7 +204,7 @@ test('it forwards savepoint, rollbackToSavepoint, and releaseSavepoint to the wr
     .where('id', 'in', ['usr_before_savepoint', 'usr_after_savepoint'])
     .execute();
 
-  expect(users.map((user) => user.id)).toEqual(['usr_before_savepoint']);
+  expect(users.map((user) => user.id)).toStrictEqual(['usr_before_savepoint']);
 });
 
 test('it marks the db.connect span failed and records the exception when the connection never opens', async () => {

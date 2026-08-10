@@ -62,7 +62,7 @@ test('it declares a bespoke ACTIVITY_CAPPED with an explicit status on trackActi
   expect(errorMap.ACTIVITY_CAPPED?.status).toBe(409);
 });
 
-test('advanceActivity rejects a request whose checkpoints exceed the cap across continuations', () => {
+test('it rejects an advanceActivity request whose checkpoints exceed the cap across continuations', () => {
   const half = Math.ceil(MAX_CATCH_UP_BATCH_CHECKPOINTS / 2);
 
   // Each continuation is under the per-array cap; only their sum trips the aggregate bound.
@@ -80,7 +80,7 @@ test('advanceActivity rejects a request whose checkpoints exceed the cap across 
   );
 });
 
-test('advanceActivity accepts a request at the aggregate checkpoint cap', () => {
+test('it accepts an advanceActivity request at the aggregate checkpoint cap', () => {
   const input = {
     activityID: 'act_source',
     continuations: [
