@@ -1377,7 +1377,7 @@ test('it stamps a poolID matching the sealed derivation truth for the current co
   const expected = deriveWorldmapContent(document.encounter, {
     coord,
     scopeSecret,
-    userSeed: 0,
+    userSeed: avatar.seed,
   });
 
   expect(activity.encounterNode).toStrictEqual({
