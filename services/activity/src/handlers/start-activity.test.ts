@@ -511,6 +511,68 @@ test('it rejects an active stamped version past its retention deadline with SIM_
   });
 });
 
+test('it rejects a client-requested version whose engine predates the current content with SIM_VERSION_EXPIRED', async () => {
+  await using ctx = await setupTest();
+
+  const stamped = await createSimVersionRow(ctx.db, {
+    maxContentVersion: '1',
+    retainedUntil: new Date('2099-01-01'),
+    status: 'active',
+  });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.startActivity({
+      avatarID: avatar.id,
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+      simVersion: stamped.engineHash,
+    }),
+  ).rejects.toMatchObject({
+    code: 'SIM_VERSION_EXPIRED',
+    data: { currentSimVersion: stamped.engineHash },
+  });
+});
+
+test('it rejects a hash-less start with SIM_VERSION_EXPIRED when the registry-current engine predates the current content', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db, { maxContentVersion: '1' });
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.startActivity({ avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' }),
+  ).rejects.toMatchObject({
+    code: 'SIM_VERSION_EXPIRED',
+    data: { currentSimVersion: current.engineHash },
+  });
+});
+
+test('it stamps a new activity when the resolved engine supports the current content exactly', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db, { maxContentVersion: '2' });
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(activity.simVersion).toBe(current.engineHash);
+});
+
 test('it roots a new activity at the anchor a concurrent forward exit commits', async () => {
   await using ctx = await setupTest();
 
