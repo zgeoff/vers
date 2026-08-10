@@ -47,6 +47,28 @@ test('it ignores pruned rows even when they deployed most recently', async () =>
   expect(findCurrentSimVersion(ctx.db)).resolves.toStrictEqual(active);
 });
 
+test('it breaks a deployedAt tie toward the later insert', async () => {
+  await using ctx = await setupTest();
+
+  const at = new Date('2026-01-01T00:00:00Z');
+
+  await createSimVersionRow(ctx.db, {
+    createdAt: new Date('2026-01-01T00:00:00Z'),
+    deployedAt: at,
+    engineHash: 'hash_first',
+    status: 'active',
+  });
+
+  const later = await createSimVersionRow(ctx.db, {
+    createdAt: new Date('2026-01-01T00:00:01Z'),
+    deployedAt: at,
+    engineHash: 'hash_second',
+    status: 'active',
+  });
+
+  expect(findCurrentSimVersion(ctx.db)).resolves.toStrictEqual(later);
+});
+
 test('it returns undefined when no version is active', async () => {
   await using ctx = await setupTest();
 

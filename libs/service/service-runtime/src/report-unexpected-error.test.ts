@@ -5,6 +5,7 @@ import { waitFor } from '@vers/test-utils';
 import { createTraceContext } from '@vers/trace';
 import { reportUnexpectedError } from './report-unexpected-error';
 import { sentryHandle } from './sentry-handle';
+import { setSentryHandleForTesting } from './set-sentry-handle-for-testing';
 import { startErrorReporting } from './start-error-reporting';
 
 test('it does not report when reporting was never started', () => {
@@ -20,7 +21,7 @@ test('it reports an error with a traceID tag when called inside a trace context'
   const recorded: Array<Readonly<ErrorEvent>> = [];
 
   onTestFinished(() => {
-    sentryHandle.current = previousHandle;
+    setSentryHandleForTesting(previousHandle);
   });
 
   await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
@@ -50,7 +51,7 @@ test('it reports an error with no traceID tag when called outside a trace contex
   const recorded: Array<Readonly<ErrorEvent>> = [];
 
   onTestFinished(() => {
-    sentryHandle.current = previousHandle;
+    setSentryHandleForTesting(previousHandle);
   });
 
   await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {

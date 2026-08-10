@@ -11,6 +11,7 @@ import invariant from 'tiny-invariant';
 import * as z from 'zod';
 import { createService } from './create-service';
 import { sentryHandle } from './sentry-handle';
+import { setSentryHandleForTesting } from './set-sentry-handle-for-testing';
 import type { ServiceContext } from './types';
 
 function buildTestContract() {
@@ -547,20 +548,20 @@ test('it reports an unexpected handler error to the error backend exactly once',
   const reported: Array<unknown> = [];
 
   onTestFinished(() => {
-    sentryHandle.current = previousHandle;
+    setSentryHandleForTesting(previousHandle);
   });
 
   // no SENTRY_DSN is set, so createService's own `startErrorReporting` call below no-ops and
   // never overwrites this stub — the only two calls `reportUnexpectedError` makes
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a hand-built stub exposing only the two calls reportUnexpectedError makes; a real SentryModule handle isn't buildable inline
-  sentryHandle.current = {
+  setSentryHandleForTesting({
     captureException: (error: unknown) => {
       reported.push(error);
     },
     withScope: (fn: (scope: Readonly<FakeSentryScope>) => void) => {
       fn({ setTag: () => {} });
     },
-  } as unknown as NonNullable<typeof sentryHandle.current>;
+  } as unknown as NonNullable<typeof sentryHandle.current>);
 
   const service = await createService({
     buildRouter: () => buildTestRouter(contract),
