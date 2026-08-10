@@ -123,6 +123,7 @@ export interface Avatars {
   level: Generated<number>;
   mode: Generated<AvatarMode>;
   name: string;
+  seed: number;
   simBudgetMs: Generated<Int8>;
   simMeteredAt: Generated<Timestamp>;
   updatedAt: Generated<Timestamp>;
