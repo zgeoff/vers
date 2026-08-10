@@ -1377,7 +1377,7 @@ test('it stamps a poolID matching the sealed derivation truth for the current co
   const expected = deriveWorldmapContent(document.encounter, {
     coord,
     scopeSecret,
-    userSeed: 0,
+    userSeed: avatar.seed,
   });
 
   expect(activity.encounterNode).toStrictEqual({
@@ -1394,6 +1394,99 @@ test('it stamps a poolID matching the sealed derivation truth for the current co
       simVersion: activity.simVersion,
     }),
   );
+});
+
+test("it seals the stamped poolID under the avatar's own seed, not a shared placeholder", async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  // a fixed id and seed, verified against this test's two-pool content to pick a different pool
+  // than userSeed 0 would — a start that reverted to a pinned zero seed would stamp the other pool
+  // and fail the assertion below, rather than passing by coincidence
+  const avatar = await createAvatarRow(ctx.db, {
+    id: 'avatar_seed_divergent_pool',
+    seed: 700,
+    userId: viewer.user.id,
+  });
+
+  const contentVersion = '849849';
+
+  const document = createMockContentDocument({
+    contentVersion,
+    encounter: {
+      contentVersion,
+      archetypes: [
+        {
+          id: 'placeholder-brawler',
+          name: 'World Map Enemy',
+          baseLevel: 1,
+          baseLife: 30,
+          baseXP: 10,
+          attackMin: 1,
+          attackMax: 3,
+          attackSpeed: 0.5,
+        },
+        {
+          id: 'placeholder-skirmisher',
+          name: 'World Map Skirmisher',
+          baseLevel: 1,
+          baseLife: 20,
+          baseXP: 8,
+          attackMin: 1,
+          attackMax: 4,
+          attackSpeed: 0.7,
+        },
+      ],
+      pools: [
+        { id: 'brawler-den', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] },
+        { id: 'skirmisher-flock', entries: [{ archetypeID: 'placeholder-skirmisher', weight: 1 }] },
+      ],
+      tuning: {
+        waveCountMin: 3,
+        waveCountMax: 6,
+        waveSizeMin: 3,
+        waveSizeMax: 6,
+        difficultyScalingFactor: 1,
+      },
+    },
+  });
+
+  await createSimVersionRow(ctx.db, { maxContentVersion: document.contentVersion });
+  await createContentVersion(ctx.db, document);
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: '1_0',
+    scopeType: 'world_map_node',
+  });
+
+  const coord = findCellCoord('1_0');
+
+  invariant(coord, 'scope id 1_0 must resolve to a valid cell coordinate');
+
+  const scopeSecret = buildMockScopeSecret(avatar.id, 'worldmap', 1);
+
+  const sealedUnderZero = deriveWorldmapContent(document.encounter, {
+    coord,
+    scopeSecret,
+    userSeed: 0,
+  });
+
+  const sealedUnderAvatarSeed = deriveWorldmapContent(document.encounter, {
+    coord,
+    scopeSecret,
+    userSeed: avatar.seed,
+  });
+
+  expect(sealedUnderAvatarSeed.poolID).not.toBe(sealedUnderZero.poolID);
+
+  expect(activity.encounterNode).toStrictEqual({
+    difficulty: getDifficulty(coord[0], coord[1]),
+    poolID: sealedUnderAvatarSeed.poolID,
+  });
 });
 
 test('it fails a start with a 500 when the keys dispatch fails', async () => {

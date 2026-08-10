@@ -19,7 +19,7 @@ test('it reactivates a parked activity whose stamped sim version is now active',
 
   const avatar = await ctx.db
     .insertInto('avatars')
-    .values({ id: 'avatar_reactivated', name: 'avatar-reactivated', userId: user.user.id })
+    .values({ id: 'avatar_reactivated', name: 'avatar-reactivated', seed: 1, userId: user.user.id })
     .returningAll()
     .executeTakeFirstOrThrow();
 
@@ -65,7 +65,7 @@ test('it returns a parked activity to the status it parked from', async () => {
 
   const avatar = await ctx.db
     .insertInto('avatars')
-    .values({ id: 'avatar_restored', name: 'avatar-restored', userId: user.user.id })
+    .values({ id: 'avatar_restored', name: 'avatar-restored', seed: 1, userId: user.user.id })
     .returningAll()
     .executeTakeFirstOrThrow();
 
@@ -112,7 +112,7 @@ test('it leaves a parked activity untouched when no sim version is active for it
 
   const avatar = await ctx.db
     .insertInto('avatars')
-    .values({ id: 'avatar_orphaned', name: 'avatar-orphaned', userId: user.user.id })
+    .values({ id: 'avatar_orphaned', name: 'avatar-orphaned', seed: 1, userId: user.user.id })
     .returningAll()
     .executeTakeFirstOrThrow();
 
@@ -158,7 +158,7 @@ test('it never touches an already-active activity, even when its sim version is 
 
   const avatar = await ctx.db
     .insertInto('avatars')
-    .values({ id: 'avatar_active', name: 'avatar-active', userId: user.user.id })
+    .values({ id: 'avatar_active', name: 'avatar-active', seed: 1, userId: user.user.id })
     .returningAll()
     .executeTakeFirstOrThrow();
 

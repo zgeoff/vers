@@ -32,6 +32,7 @@ test('it creates an avatar owned by the acting user, defaulted to trade mode', a
     level: 1,
     mode: 'trade',
     name: 'Brutus',
+    seed: expect.toBeNumber(),
     updatedAt: expect.toBeValidDate(),
     userID: viewer.user.id,
     xp: 0,

@@ -12,6 +12,7 @@ export function toAvatarData(row: Readonly<Selectable<Avatars>>): AvatarData {
     level: row.level,
     mode: row.mode,
     name: row.name,
+    seed: row.seed,
     updatedAt: row.updatedAt,
     userID: row.userId,
     xp: row.xp,

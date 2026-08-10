@@ -11,6 +11,7 @@ interface FindDescriptorDivergenceInput {
     readonly difficulty: number;
     readonly poolID?: string | undefined;
   };
+  readonly userSeed: number;
 }
 
 /**
@@ -34,7 +35,7 @@ export function findDescriptorDivergence(
     ...deriveWorldmapContent(input.content, {
       coord,
       scopeSecret: input.scopeSecret,
-      userSeed: 0,
+      userSeed: input.userSeed,
     }),
   };
 
