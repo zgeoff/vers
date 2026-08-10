@@ -214,9 +214,9 @@ resolved onto a row a prior, partially committed request already minted at the s
 `terminal`); a bailout always leaves the confirmed head advanced past the committed prefix, so a
 rising count tracks how often an offline catch-up's outer resync must re-plan, not lost progress.
 `vers.activity.content_incompatible_rejections` splits by `path`: `requested` covers a client-sent
-sim version hash, `fallback` covers the registry-current version the transitional hash-less path
-resolves. `vers.analytics.delivery_failures` splits by `reason`: `rejected` covers a non-2xx
-response from the Tinybird Events API, `quarantined` covers a row the API accepted but failed schema
+sim version hash, `fallback` covers the registry-current version resolved for a start that carries
+no hash. `vers.analytics.delivery_failures` splits by `reason`: `rejected` covers a non-2xx response
+from the Tinybird Events API, `quarantined` covers a row the API accepted but failed schema
 validation on, `unreachable` covers a network failure or the upstream deadline tripping.
 
 `vers.web.service_call_retries` and `vers.web.service_call_failures` cover app-web's bounded

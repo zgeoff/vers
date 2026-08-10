@@ -5,7 +5,6 @@ import { planSimVersionActions } from './plan-sim-version-actions';
 import type { FleetImage } from './types';
 
 const ENGINE_HASH = 'a1b2c3d4e5f6'.padEnd(64, '0');
-const MAX_CONTENT_VERSION = '2';
 const PROVIDER_APP = 'vers-replay-a1b2c3d4e5f6';
 const REGION = 'syd';
 
@@ -20,7 +19,7 @@ test('it provisions everything for a fresh engine hash', () => {
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: false,
     providerMachineExists: false,
     providerMachineID: null,
@@ -44,7 +43,7 @@ test('it provisions everything for a fresh engine hash', () => {
         bunVersion: '1.3.10',
         engineHash: ENGINE_HASH,
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-        maxContentVersion: MAX_CONTENT_VERSION,
+        maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
       },
       kind: 'upsert-registry-row',
@@ -57,7 +56,7 @@ test('it carries the declared region on a fresh provision', () => {
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: false,
     providerMachineExists: false,
     providerMachineID: null,
@@ -77,7 +76,7 @@ test('it takes no action when the registry row is current and the machine runs t
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
@@ -86,7 +85,7 @@ test('it takes no action when the registry row is current and the machine runs t
     region: REGION,
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-      maxContentVersion: MAX_CONTENT_VERSION,
+      maxContentVersion: '2',
     }),
   });
 
@@ -98,7 +97,7 @@ test('it recreates the provider app and refreshes the row when the app is missin
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: false,
     providerMachineExists: false,
     providerMachineID: null,
@@ -107,7 +106,7 @@ test('it recreates the provider app and refreshes the row when the app is missin
     region: REGION,
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-      maxContentVersion: MAX_CONTENT_VERSION,
+      maxContentVersion: '2',
     }),
   });
 
@@ -125,7 +124,7 @@ test('it recreates the provider app and refreshes the row when the app is missin
         bunVersion: '1.3.10',
         engineHash: ENGINE_HASH,
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-        maxContentVersion: MAX_CONTENT_VERSION,
+        maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
       },
       kind: 'upsert-registry-row',
@@ -138,7 +137,7 @@ test('it only refreshes the registry row when the fleet digest has drifted from 
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
@@ -147,7 +146,7 @@ test('it only refreshes the registry row when the fleet digest has drifted from 
     region: REGION,
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@sha256:stale`,
-      maxContentVersion: MAX_CONTENT_VERSION,
+      maxContentVersion: '2',
     }),
   });
 
@@ -157,7 +156,7 @@ test('it only refreshes the registry row when the fleet digest has drifted from 
         bunVersion: '1.3.10',
         engineHash: ENGINE_HASH,
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-        maxContentVersion: MAX_CONTENT_VERSION,
+        maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
       },
       kind: 'upsert-registry-row',
@@ -170,7 +169,7 @@ test('it only refreshes the registry row when the bundled max content version ha
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
@@ -189,7 +188,7 @@ test('it only refreshes the registry row when the bundled max content version ha
         bunVersion: '1.3.10',
         engineHash: ENGINE_HASH,
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-        maxContentVersion: MAX_CONTENT_VERSION,
+        maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
       },
       kind: 'upsert-registry-row',
@@ -202,7 +201,7 @@ test('it relaunches only the machine when the app survives but its machine is go
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: false,
     providerMachineID: null,
@@ -211,7 +210,7 @@ test('it relaunches only the machine when the app survives but its machine is go
     region: REGION,
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-      maxContentVersion: MAX_CONTENT_VERSION,
+      maxContentVersion: '2',
     }),
   });
 
@@ -227,7 +226,7 @@ test('it relaunches only the machine when the app survives but its machine is go
         bunVersion: '1.3.10',
         engineHash: ENGINE_HASH,
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-        maxContentVersion: MAX_CONTENT_VERSION,
+        maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
       },
       kind: 'upsert-registry-row',
@@ -240,7 +239,7 @@ test('it replaces a running machine whose image digest has drifted from the flee
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
@@ -249,7 +248,7 @@ test('it replaces a running machine whose image digest has drifted from the flee
     region: REGION,
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-      maxContentVersion: MAX_CONTENT_VERSION,
+      maxContentVersion: '2',
     }),
   });
 
@@ -266,7 +265,7 @@ test('it replaces a running machine whose image digest has drifted from the flee
         bunVersion: '1.3.10',
         engineHash: ENGINE_HASH,
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-        maxContentVersion: MAX_CONTENT_VERSION,
+        maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
       },
       kind: 'upsert-registry-row',
@@ -279,7 +278,7 @@ test('it replaces a running machine sitting outside the declared region even whe
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
@@ -288,7 +287,7 @@ test('it replaces a running machine sitting outside the declared region even whe
     region: REGION,
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-      maxContentVersion: MAX_CONTENT_VERSION,
+      maxContentVersion: '2',
     }),
   });
 
@@ -305,7 +304,7 @@ test('it replaces a running machine sitting outside the declared region even whe
         bunVersion: '1.3.10',
         engineHash: ENGINE_HASH,
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-        maxContentVersion: MAX_CONTENT_VERSION,
+        maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
       },
       kind: 'upsert-registry-row',
@@ -318,7 +317,7 @@ test('it refreshes only the row when the app and machine exist but the row is mi
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
@@ -334,7 +333,7 @@ test('it refreshes only the row when the app and machine exist but the row is mi
         bunVersion: '1.3.10',
         engineHash: ENGINE_HASH,
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
-        maxContentVersion: MAX_CONTENT_VERSION,
+        maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
       },
       kind: 'upsert-registry-row',
@@ -347,7 +346,7 @@ test('it launches the provider machine by tag, never by digest', () => {
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: false,
     providerMachineExists: false,
     providerMachineID: null,
@@ -368,7 +367,7 @@ test('it replaces the provider machine by tag, never by digest', () => {
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
@@ -389,7 +388,7 @@ test('it derives the provider app name and flycast URL from the first 12 hex cha
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: false,
     providerMachineExists: false,
     providerMachineID: null,
@@ -415,7 +414,7 @@ test('it takes no action when the fleet has no single resolved image', () => {
     bunVersion: '1.3.10',
     engineHash: ENGINE_HASH,
     fleetImage: null,
-    maxContentVersion: MAX_CONTENT_VERSION,
+    maxContentVersion: '2',
     providerAppExists: false,
     providerMachineExists: false,
     providerMachineID: null,
