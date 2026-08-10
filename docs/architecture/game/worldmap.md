@@ -180,7 +180,7 @@ reward magnitude.
 
 `REVEAL_RADIUS` is the one knob that sets both the look-ahead bound and offline exploration depth.
 It holds in the range of 2 to 5 hops, and never above 5: look-ahead value climbs with the radius and
-the scanning exploit returns as it approaches infinity, so the ceiling is a security bound, not a
+the scanning exploit returns as it approaches infinity, so the cap is a security bound, not a
 preference.
 
 ## Package layout
