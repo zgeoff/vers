@@ -27,7 +27,7 @@ report 'Process residue (date stamps, investigation framing, memory citations, Â
 # AGENTS.md owns the banned-words list; keep this pattern in sync. Judgment-only bans
 # (bites, ceiling, floor) are not grepped. CAS stays case-sensitive so "CAs" passes.
 report 'Banned words (judge each match â€” the AGENTS.md registry and markdown-fence senses are legal):' \
-  "$(git grep -nPi '\bsurfaces?\b|load-bearing|\bseams?\b|\bfenc(e|ed|ing)\b|(?-i:\bCAS\b)' -- "$@")"
+  "$(git grep -nPi '\bsurfaces?\b|load-bearing|\bseams?\b|\bfenc(e|es|ed|ing)\b|(?-i:\bCAS\b)' -- "$@")"
 
 report 'Untagged code fences:' \
   "$(git ls-files -- "$@" | grep '\.md$' | xargs -r awk \
