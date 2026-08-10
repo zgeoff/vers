@@ -51,8 +51,8 @@ test('it claims the run back with a claiming report on continue-here', async () 
     // clicking, rather than retrying the click itself, keeps the click a single user action
     await waitFor(() => {
       expect(
-        rendered.queryClient.getQueryData(buildActiveAvatarQueryOptions().queryKey),
-      ).toBeDefined();
+        rendered.queryClient.getQueryState(buildActiveAvatarQueryOptions().queryKey)?.status,
+      ).toBe('success');
     });
 
     await user.click(screen.getByRole('button', { name: 'Continue here' }));
