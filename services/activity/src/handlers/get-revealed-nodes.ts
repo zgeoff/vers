@@ -1,0 +1,145 @@
+import { findCurrentContentVersion } from '@vers/content-registry';
+import type { ContentDocument } from '@vers/contract-activity';
+import type { SecretRef } from '@vers/contract-keys';
+import type { DB } from '@vers/db';
+import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
+import {
+  REVEAL_RADIUS,
+  collectRevealedCells,
+  decodeMortonKey,
+  findCellCoord,
+  toNodeID,
+} from '@vers/worldmap-core';
+import type { RevealSource } from '@vers/worldmap-core';
+import type { CryptoKey } from 'jose';
+import type { Kysely } from 'kysely';
+import invariant from 'tiny-invariant';
+import { recordRevealQuery } from '../metrics/record-reveal-query';
+import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
+
+/**
+ * Db handle plus the memoized content-document loader and keys dispatch a reveal query reads its
+ * scope secret over — the same dependencies `startActivity` closes over, minus the key version and
+ * signing inputs a read never stamps.
+ */
+interface GetRevealedNodesDeps {
+  readonly db: Kysely<DB>;
+  readonly keysServiceURL: string;
+  readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
+  readonly privateKey: CryptoKey;
+  readonly secretRef: SecretRef;
+  readonly secretVersion: number;
+}
+
+/**
+ * oRPC handler opts for the authed `getRevealedNodes` procedure.
+ */
+interface GetRevealedNodesOpts {
+  readonly context: { readonly actingUserId: null | string };
+  readonly errors: {
+    readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
+    readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
+  };
+  readonly input: {
+    readonly avatarID: string;
+    readonly viewport: {
+      readonly maxCX: number;
+      readonly maxCY: number;
+      readonly minCX: number;
+      readonly minCY: number;
+    };
+  };
+}
+
+interface RevealedNode {
+  readonly id: string;
+  readonly poolID?: string;
+}
+
+interface GetRevealedNodesResult {
+  readonly contentVersion: string;
+  readonly nodes: Array<RevealedNode>;
+}
+
+/**
+ * Returns the disclosed content for every cell the avatar's verified first-clear grants reveal
+ * inside the requested viewport. The revealed region is a projection, never stored state: it is
+ * `⋃ disc(position(N), REVEAL_RADIUS)` over the avatar's `first_clear`-kind grants, recomputed
+ * fresh on every call from the grants table alone. A grant key that doesn't parse as a world-map
+ * node id — a grant kind sharing the table with an unrelated future feature — contributes no
+ * source rather than failing the query. Only cells the disc union actually covers can appear in the
+ * response; the viewport bounds what is returned, never what is eligible to be revealed.
+ */
+export async function getRevealedNodes(
+  deps: GetRevealedNodesDeps,
+  opts: GetRevealedNodesOpts,
+): Promise<GetRevealedNodesResult> {
+  if (opts.context.actingUserId === null) {
+    throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+  }
+
+  const avatar = await deps.db
+    .selectFrom('avatars')
+    .select(['id', 'seed'])
+    .where('id', '=', opts.input.avatarID)
+    .where('userId', '=', opts.context.actingUserId)
+    .executeTakeFirst();
+
+  if (avatar === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  const grants = await deps.db
+    .selectFrom('avatarGrants')
+    .select('key')
+    .where('avatarId', '=', avatar.id)
+    .where('kind', '=', 'first_clear')
+    .execute();
+
+  const sources: Array<RevealSource> = [];
+
+  for (const grant of grants) {
+    const coord = findCellCoord(grant.key);
+
+    if (coord !== undefined) {
+      sources.push({ coord, radius: REVEAL_RADIUS });
+    }
+  }
+
+  const revealedCells = collectRevealedCells(sources, opts.input.viewport);
+
+  const contentVersion = await findCurrentContentVersion(deps.db);
+
+  invariant(contentVersion !== undefined, 'content registry has no current version');
+
+  const document = await deps.loadContentDocument(contentVersion);
+
+  invariant(document, `current content version ${contentVersion} is not published`);
+
+  const scopeSecret = await readScopeSecret(
+    {
+      issuer: 'service-activity',
+      keysServiceURL: deps.keysServiceURL,
+      privateKey: deps.privateKey,
+    },
+    { avatarID: avatar.id, secretRef: deps.secretRef, secretVersion: deps.secretVersion },
+  );
+
+  const nodes = revealedCells.map((key): RevealedNode => {
+    const coord = decodeMortonKey(key);
+
+    const content = deriveWorldmapContent(document.encounter, {
+      coord,
+      scopeSecret,
+      userSeed: avatar.seed,
+    });
+
+    const id = toNodeID(coord[0], coord[1]);
+
+    return content.poolID === undefined ? { id } : { id, poolID: content.poolID };
+  });
+
+  recordRevealQuery(nodes.length, grants.length);
+
+  return { contentVersion, nodes };
+}
