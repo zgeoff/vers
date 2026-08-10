@@ -120,13 +120,16 @@ The rules below decide most situations; where they don't, these do:
   value into a passing comparison — and a conditional path in a test means two tests. An `if` inside
   an MSW handler implementation scripting a call sequence ("first call fails, second succeeds") is
   handler scripting, not test branching.
-- Nothing replaces global timers or wall-clock reads — no fake timers, no `setSystemTime`. Code that
-  steps with time takes a duration or timestamp argument (`simulation.run(10_000)`,
-  `advanceToDuration(20_000)`); code with an internal loop takes an injected controlled clock
-  stepped explicitly (xstate's `SimulatedClock` driven by `clock.increment(ms)`, or a
-  `createFastClock()` passed as the runtime's `now` option). A wall-clock-dependent row is built
-  with a relative fixture (`expiresAt: new Date(Date.now() - 1000)`) and asserted with range
-  matchers (`toBeAfter`, `toBeBefore`, `toBeWithin`).
+- Time control follows the code's own shape, most explicit form first. Code that steps with time
+  takes a duration or timestamp argument (`simulation.run(10_000)`, `advanceToDuration(20_000)`);
+  code with an internal loop takes an injected controlled clock stepped explicitly (xstate's
+  `SimulatedClock` driven by `clock.increment(ms)`, or a `createFastClock()` passed as the runtime's
+  `now` option). A unit with no injection point that reads the global clock or schedules real timers
+  is driven with `setSystemTime` and fake timers, restored when the test finishes — the fallback for
+  code whose time the test cannot otherwise reach, not a substitute for an injection point the code
+  already offers. A wall-clock-dependent row is built with a relative fixture
+  (`expiresAt: new Date(Date.now() - 1000)`) and asserted with range matchers (`toBeAfter`,
+  `toBeBefore`, `toBeWithin`).
 - Waiting on an async condition is `waitFor`, never a `setTimeout` — RTL's `waitFor` in React
   packages (it wraps retries in `act`), `@vers/test-utils` elsewhere.
 - A test that passes alone but fails in the full run has a cleanup gap: binary-search the file list
