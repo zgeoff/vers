@@ -26,9 +26,10 @@ const initializeOutputSchema = z
   })
   .readonly();
 
-const startRejectionSchema = z
-  .object({ activeAvatarName: z.string(), reason: z.literal('avatar-not-active') })
-  .readonly();
+const startRejectionSchema = z.discriminatedUnion('reason', [
+  z.object({ activeAvatarName: z.string(), reason: z.literal('avatar-not-active') }).readonly(),
+  z.object({ reason: z.literal('sim-version-expired') }).readonly(),
+]);
 
 /**
  * One start call's outcome, answered directly rather than correlated over a broadcast.

@@ -1,6 +1,7 @@
 import type { ORPCError } from '@orpc/client';
 import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
+import { BUNDLED_ENGINE_HASH } from './bundled-engine-hash';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { isAbortError } from './is-abort-error';
 import { reportWorkerFault } from './report-worker-fault';
@@ -85,6 +86,14 @@ async function runStart(
     };
   }
 
+  // a swept hash reads back unknown rather than expired — either way the remedy is the same reload
+  if (
+    isDefinedError(error) &&
+    (error.code === 'SIM_VERSION_EXPIRED' || error.code === 'SIM_VERSION_UNKNOWN')
+  ) {
+    return { kind: 'failed', rejection: { reason: 'sim-version-expired' } };
+  }
+
   if (!isDefinedError(error) || error.code !== 'CONFLICT') {
     // a defined rejection is the service answering; anything else belongs in the error backend
     if (!isDefinedError(error)) {
@@ -142,6 +151,14 @@ async function runStart(
       };
     }
 
+    // a swept hash reads back unknown rather than expired — either way the remedy is the same reload
+    if (
+      isDefinedError(retryError) &&
+      (retryError.code === 'SIM_VERSION_EXPIRED' || retryError.code === 'SIM_VERSION_UNKNOWN')
+    ) {
+      return { kind: 'failed', rejection: { reason: 'sim-version-expired' } };
+    }
+
     if (!isDefinedError(retryError)) {
       reportWorkerFault('start', retryError);
     }
@@ -170,6 +187,7 @@ function tryStartActivity(
       avatarID: input.avatarID,
       scopeID: input.scopeID,
       scopeType: input.scopeType,
+      simVersion: BUNDLED_ENGINE_HASH,
       startKey: token,
     }),
   );

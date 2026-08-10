@@ -497,6 +497,91 @@ test("it settles a start rejected for a non-active avatar as failed, carrying th
   });
 });
 
+test('it settles a start rejected as SIM_VERSION_EXPIRED as failed with a sim-version-expired rejection', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const context = createStubWorkerContext({ client: ctx.client, submitter: createStubSubmitter() });
+
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion: null } });
+    }),
+  );
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(result).toStrictEqual({
+    kind: 'failed',
+    rejection: { reason: 'sim-version-expired' },
+  });
+});
+
+test('it settles a start rejected as SIM_VERSION_UNKNOWN as failed with a sim-version-expired rejection', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const context = createStubWorkerContext({ client: ctx.client, submitter: createStubSubmitter() });
+
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.SIM_VERSION_UNKNOWN({ data: { currentSimVersion: null } });
+    }),
+  );
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(result).toStrictEqual({
+    kind: 'failed',
+    rejection: { reason: 'sim-version-expired' },
+  });
+});
+
+test('it reports no worker fault for a start rejected as SIM_VERSION_EXPIRED', async () => {
+  const previousHandle = sentryHandle.current;
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const context = createStubWorkerContext({ client: ctx.client, submitter: createStubSubmitter() });
+
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion: null } });
+    }),
+  );
+
+  await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(recorded).toStrictEqual([]);
+});
+
 test('it reports no worker fault for a start rejected because the avatar is not active', async () => {
   const previousHandle = sentryHandle.current;
   const recorded: Array<Readonly<ErrorEvent>> = [];
