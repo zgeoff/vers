@@ -35,29 +35,34 @@ import { updateWriterDisplacedStatus } from './update-writer-displaced-status';
 import type { ResyncStatus } from './worker-to-client-message-schema';
 
 /**
- * Runs one resync end to end — the mailbox-inner body: the reconnect recovery queues it as a
- * turn, while the start flow and continuations call it directly from inside their own turns
- * (queueing there would deadlock). Every install re-checks `signals.stop`, the caller's
- * entry-captured stop signal, so a stop raised after the caller began — including during a queue
- * wait — aborts the install; the cancel composite additionally cancels in-flight reads on a worker
- * shutdown. Only a plan covering a real away period broadcasts a `ResyncStatus` progression ending
- * on `done` or `capped`, so a tab's welcome-back UI always resolves; zero-gap outcomes stay
- * silent so a fresh login never opens it. An outright failure reports the fault and broadcasts
- * `failed`, never a connection-status change, and never rejects — a tab's retry re-signals it.
- * `UNAUTHORIZED` broadcasts `session-expired` instead, with no fault report: the only remedy is
- * a fresh sign-in, so the tab renders that rather than a futile retry. An abort settles silently
- * — broadcasting `failed` would flash an error for a deliberate stop. When `avatarID` came from a
- * durable start intent that the account has since switched away from, the service's own rejection
- * names the account's actual active avatar — the authoritative recovery target, never a
- * caller-derived guess that can itself be stale. That reported avatar's own catch-up runs in the
- * dead intent avatar's place whenever the two differ, and `avatar-switched` broadcasts afterward
- * as the cycle's terminal status, carrying that pass's tallies so the player sees both the switch
- * notice and what the catch-up earned; the stamped resync avatar follows the pass onto the
- * reported avatar. When the reported avatar already matches `avatarID`, no pass runs and the
- * stamped resync avatar clears instead, so a dead intent avatar isn't resynced again next cycle.
+ * Runs one resync end to end — the mailbox-inner body. The reconnect recovery queues it as a
+ * turn; the start flow and continuations call it directly from inside their own turns, where
+ * queueing would deadlock. Every install re-checks `signals.stop`, the caller's entry-captured
+ * stop signal, so a stop raised after the caller began — including during a queue wait — aborts
+ * the install; the cancel composite additionally cancels in-flight reads on a worker shutdown.
+ *
+ * Only a plan covering a real away period broadcasts a `ResyncStatus` progression ending on
+ * `done` or `capped`, so a tab's welcome-back UI always resolves. Zero-gap outcomes stay silent,
+ * so a fresh login never opens it.
+ *
+ * An outright failure reports the fault and broadcasts `failed` — never a connection-status
+ * change — and never rejects; a tab's retry re-signals it. `UNAUTHORIZED` broadcasts
+ * `session-expired` instead, with no fault report: the only remedy is a fresh sign-in, so the tab
+ * renders that rather than a futile retry. An abort settles silently — broadcasting `failed`
+ * would flash an error for a deliberate stop.
+ *
+ * When `avatarID` came from a durable start intent that the account has since switched away from,
+ * the service's own rejection names the account's actual active avatar — the authoritative
+ * recovery target, never a caller-derived guess that can itself be stale. When the two differ,
+ * the reported avatar's own catch-up runs in the dead intent avatar's place, the stamped resync
+ * avatar follows the pass onto it, and `avatar-switched` broadcasts afterward as the cycle's
+ * terminal status, carrying the pass's tallies — the player sees both the switch notice and what
+ * the catch-up earned. When they already match, no pass runs and the stamped resync avatar
+ * clears, so a dead intent avatar isn't resynced again next cycle.
+ *
  * A held intent the service refuses as stale for the current content broadcasts
- * `sim-version-expired` and runs no pass — a reload is the only remedy, on the entry drain and the
- * blocked-intent retry alike.
+ * `sim-version-expired` and runs no pass — a reload is the only remedy, on the entry drain and
+ * the blocked-intent retry alike.
  */
 export async function runResyncFlow(
   context: WorkerContext,

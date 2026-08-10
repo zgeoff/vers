@@ -178,23 +178,25 @@ const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set([
 
 /**
  * Owns a worker's outbound checkpoint submissions: mapping, the durable queue, and one serialized
- * in-flight batch per activity. Response handling follows the activity service's response
- * contract: a fresh head on success or `CONFLICT` advances the cursor and confirms the queue up to
- * it; `CHECKPOINT_INVALID` and `NOT_FOUND` stop the stream (keeping and discarding its queue rows,
- * respectively); `ACTIVITY_CAPPED`, `ACTIVITY_TERMINAL`, and `SESSION_EVICTED` stop the stream and
- * discard its rows — the server accepts nothing further for it; anything else — `UNAUTHORIZED` or
- * a transport failure — holds the queue untouched and starts a per-activity retry loop. Each flush
- * rides a freshly minted trace, and a streak of non-defined flush failures reports a stall without
- * stopping the stream.
+ * in-flight batch per activity. Each flush rides a freshly minted trace, and a streak of
+ * non-defined flush failures reports a stall without stopping the stream. Response handling
+ * follows the activity service's response contract:
  *
- * An activity whose stream stops with its rows discarded — `ACTIVITY_CAPPED`, `ACTIVITY_TERMINAL`,
- * `SESSION_EVICTED`, `NOT_FOUND` — has its cursor and registration evicted from both tracking maps,
- * so a later registration re-seeds fresh rather than resolving stale state; a fully confirmed
- * terminal checkpoint evicts the same way once its flush lands. `SESSION_EVICTED` additionally
- * marks the activity as evicted until a later registration supersedes it, so lifecycle flows can
- * tell a displaced stream from one that drained clean. `CHECKPOINT_INVALID` keeps its rows and its
- * tombstoned state for the worker's lifetime, so a later registration attempt never resends what
- * the server already rejected.
+ * - a fresh head on success or `CONFLICT` advances the cursor and confirms the queue up to it
+ * - `CHECKPOINT_INVALID` stops the stream and keeps its queue rows
+ * - `NOT_FOUND` stops the stream and discards its queue rows
+ * - `ACTIVITY_CAPPED`, `ACTIVITY_TERMINAL`, and `SESSION_EVICTED` stop the stream and discard its
+ *   queue rows — the server accepts nothing further for it
+ * - anything else — `UNAUTHORIZED` or a transport failure — holds the queue untouched and starts
+ *   a per-activity retry loop
+ *
+ * An activity whose stream stops with its rows discarded has its cursor and registration evicted
+ * from both tracking maps, so a later registration re-seeds fresh rather than resolving stale
+ * state; a fully confirmed terminal checkpoint evicts the same way once its flush lands.
+ * `SESSION_EVICTED` additionally marks the activity as evicted until a later registration
+ * supersedes it, so lifecycle flows can tell a displaced stream from one that drained clean.
+ * `CHECKPOINT_INVALID` keeps its rows and its tombstoned state for the worker's lifetime, so a
+ * later registration attempt never resends what the server already rejected.
  */
 export function createCheckpointSubmitter(
   options: Readonly<CreateCheckpointSubmitterOptions>,

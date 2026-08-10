@@ -3,19 +3,7 @@ interface Env {
 }
 
 /**
- *
- * A reusable Zod transformer that adds environment utility properties to any
- * environment schema that includes a NODE_ENV field.
- *
- * @example
- * ```ts
- * const envSchema = z
- *   .object({
- *     NODE_ENV: z.enum(['development', 'test', 'production', 'e2e']),
- *     // ... other env vars
- *   })
- *   .transform(expandEnv);
- * ```
+ * Composes with a Zod env schema as its `.transform(expandEnv)` step.
  */
 export function expandEnv<T extends Env>(env: T) {
   return {

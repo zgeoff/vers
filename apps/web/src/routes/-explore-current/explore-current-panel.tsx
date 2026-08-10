@@ -39,17 +39,21 @@ interface StartAttemptReport {
  * The world map node detail view: a spinner until the worker answers the requested start, then
  * the encounter, its auto-retry toggle, and its codex slot. The worker owns the whole start; the
  * panel awaits the call directly and renders its own outcome, so another tab's run never reads as
- * this one's. A failed start renders a retry action. Once the start goes live the panel navigates
- * to the engagement screen, once per activity — latched in `@vers/idle-client`'s store rather than
- * a component ref, so a remount (the browser back button, re-drilling the same node) that re-fires
- * the start call and finds the same activity already live reads it as already engaged rather than
- * bouncing the player back. A start rejected because the account's active avatar changed renders a
- * distinct notice naming the current one, with a reload action rather than the generic retry — the
- * route's own data still names the stale avatar, and only a reload re-runs every gate against the
- * new one. A start rejected because the running build's engine no longer supports the current
- * content renders its own reload notice for the same reason: no in-page recovery can fetch a newer
- * bundle. While an offline catch-up is still fast-forwarding, the panel withholds its start call
- * — the lockout overlay above it covers the UI, but this keeps a mounted panel from auto-sending a
+ * this one's. A failed start renders a retry action.
+ *
+ * Once the start goes live the panel navigates to the engagement screen, once per activity —
+ * latched in `@vers/idle-client`'s store rather than a component ref, so a remount (the browser
+ * back button, re-drilling the same node) that re-fires the start call and finds the same
+ * activity already live reads it as already engaged rather than bouncing the player back.
+ *
+ * Two rejections render a reload notice instead of the generic retry. A start refused because
+ * the account's active avatar changed names the current avatar: the route's own data still names
+ * the stale one, and only a reload re-runs every gate against the new one. A start refused
+ * because the running build's engine no longer supports the current content reloads for its own
+ * reason: no in-page recovery can fetch a newer bundle.
+ *
+ * While an offline catch-up is still fast-forwarding, the panel withholds its start call — the
+ * lockout overlay above it covers the UI, but this keeps a mounted panel from auto-sending a
  * start of its own underneath it.
  */
 export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
