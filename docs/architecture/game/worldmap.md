@@ -125,7 +125,7 @@ player farms the known offline and ventures into fog online.
 Every `activities` row carries `secretRef`/`secretVersion`, so the verifier runs the descriptor
 check on every stream's first pass; `service-keys` custodies the versioned roots in
 `SCOPE_SECRET_ROOTS` and derives each avatar's scope secret from the referenced root, and
-`descriptor(coord)` folds in a `userSeed` pinned to 0 until a per-avatar seed exists.
+`descriptor(coord)` folds in the avatar's own stored `seed` column.
 
 Regeneration beats storage for an infinite per-avatar map: `descriptor(coord)` is O(1) and stores
 nothing. Tamper-resistance follows without extra machinery — encounter derivation already recomputes
