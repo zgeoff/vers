@@ -228,6 +228,60 @@ test('it records no start intent on a defined error other than CONFLICT', async 
   expect(heldIntent).toBeUndefined();
 });
 
+test('it broadcasts the sim-version-expired status and parks nothing when the bundled engine is refused as SIM_VERSION_EXPIRED', async () => {
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion: null } });
+    }),
+  );
+
+  const submitter = createStubSubmitter();
+  const context = createStubWorkerContext({ submitter });
+  const simulation = createSimulation();
+  const previousActivity = createMockActivityData();
+
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  await runContinuation(context, simulation, previousActivity);
+
+  expect(context.getActivity()).toBeNull();
+
+  expect(context.getBroadcasts()).toPartiallyContain({
+    status: { kind: 'sim-version-expired' },
+    type: WorkerMessageType.ResyncStatus,
+  });
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
+});
+
+test('it broadcasts the sim-version-expired status when a swept hash is refused as SIM_VERSION_UNKNOWN', async () => {
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.SIM_VERSION_UNKNOWN({ data: { currentSimVersion: null } });
+    }),
+  );
+
+  const submitter = createStubSubmitter();
+  const context = createStubWorkerContext({ submitter });
+  const simulation = createSimulation();
+  const previousActivity = createMockActivityData();
+
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
+
+  await runContinuation(context, simulation, previousActivity);
+
+  expect(context.getBroadcasts()).toPartiallyContain({
+    status: { kind: 'sim-version-expired' },
+    type: WorkerMessageType.ResyncStatus,
+  });
+});
+
 test('it stops the row it started when a stop lands mid-flight', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });

@@ -6,6 +6,7 @@ import { loadContentDocument } from '../content/load-content-document';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { WorkerMessageType } from '../types';
+import { BUNDLED_ENGINE_HASH } from './bundled-engine-hash';
 import { resetSimulation } from './reset-simulation';
 import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
@@ -23,9 +24,12 @@ import type { FlowSignals, WorkerContext } from './types';
  * the failure is the activity's, not the connection's. AVATAR_NOT_ACTIVE means the account
  * switched avatars mid-session: nothing is parked, since this avatar's chain has nowhere to
  * continue to, and the tab is told which avatar is now active rather than left on a silently
- * reset runtime. Queued from the tick loop, the entry guard is the staleness check: a turn whose
- * simulation/activity pair lost the runtime while it waited returns untouched. Past the start
- * call only stops can interleave; a row started under one is stopped back durably.
+ * reset runtime. A rejected sim version means this build's engine can no longer replay the
+ * current content: nothing is parked, since a reload is the only remedy, and the tab is told to
+ * offer it rather than left on a silently reset runtime. Queued from the tick loop, the entry
+ * guard is the staleness check: a turn whose simulation/activity pair lost the runtime while it
+ * waited returns untouched. Past the start call only stops can interleave; a row started under
+ * one is stopped back durably.
  */
 export async function runContinuation(
   context: WorkerContext,
@@ -47,6 +51,7 @@ export async function runContinuation(
       avatarID: activity.avatarID,
       scopeID: activity.scopeID,
       scopeType: activity.scopeType,
+      simVersion: BUNDLED_ENGINE_HASH,
       startKey: `continue_${activity.id}`,
     }),
   );
@@ -90,6 +95,22 @@ export async function runContinuation(
         kind: 'avatar-switched',
         levelUps: 0,
       },
+      type: WorkerMessageType.ResyncStatus,
+    });
+
+    return;
+  }
+
+  // a swept hash reads back unknown rather than expired — either way the remedy is the same
+  // reload, and nothing is parked: the bundled engine that would replay it is the one refused
+  if (
+    isDefinedError(error) &&
+    (error.code === 'SIM_VERSION_EXPIRED' || error.code === 'SIM_VERSION_UNKNOWN')
+  ) {
+    stopAndReset(context, simulation);
+
+    context.broadcast({
+      status: { kind: 'sim-version-expired' },
       type: WorkerMessageType.ResyncStatus,
     });
 

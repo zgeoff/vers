@@ -57,6 +57,15 @@ test('it accepts a well-formed resync-status message', () => {
   });
 });
 
+test('it accepts a well-formed resync-status message with a sim-version-expired status', () => {
+  const message = { status: { kind: 'sim-version-expired' }, type: WorkerMessageType.ResyncStatus };
+
+  expect(workerToClientMessageSchema.safeParse(message)).toMatchObject({
+    data: message,
+    success: true,
+  });
+});
+
 test('it accepts a well-formed reward-slots-recorded message', () => {
   const message = {
     activityID: 'activity_1',

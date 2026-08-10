@@ -1,4 +1,4 @@
-export { BUNDLED_CONTENT_VERSION } from './bundled-content-version';
+export { BUNDLED_CONTENT_VERSION } from '@vers/content-version';
 export { deriveWorldmapContent } from './derive-worldmap-content';
 export type { DeriveWorldmapContentInput, WorldmapContent } from './derive-worldmap-content';
 export { deriveWorldmapDescriptor } from './derive-worldmap-descriptor';

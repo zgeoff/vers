@@ -2,11 +2,21 @@ import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
+import { BUNDLED_ENGINE_HASH } from './bundled-engine-hash';
 import { submitStopIntent } from './submit-stop-intent';
 import type { FlowSignals, WorkerContext } from './types';
 
 export type PendingStartFlushResult =
-  | { readonly outcome: 'blocked' | 'capped' | 'none' | 'stale' | 'stopped' | 'undelivered' }
+  | {
+      readonly outcome:
+        | 'blocked'
+        | 'capped'
+        | 'none'
+        | 'sim-version-expired'
+        | 'stale'
+        | 'stopped'
+        | 'undelivered';
+    }
   | {
       readonly activeAvatarID: string;
       readonly activeAvatarName: string;
@@ -24,10 +34,12 @@ export type PendingStartFlushResult =
  * any other `CONFLICT` is a different claim (`stale`). `AVATAR_NOT_ACTIVE` means the account
  * switched avatars while the intent was held: the intent is dropped and the outcome carries the
  * account's actual active avatar's id and name (`avatar-switched`) — the caller's authoritative
- * recovery target, not a value it must derive itself. An auth rejection keeps the intent —
- * the session lapsing says nothing about the continuation — while any other defined rejection is
- * the service declaring it dead; both rethrow into the caller's failure handling. A stop landing
- * mid-call has the minted row stopped back durably (`stopped`).
+ * recovery target, not a value it must derive itself. `SIM_VERSION_EXPIRED` and
+ * `SIM_VERSION_UNKNOWN` mean this build's engine no longer replays the current content: the intent
+ * is dropped, since only a reload can deliver it (`sim-version-expired`). An auth rejection keeps
+ * the intent — the session lapsing says nothing about the continuation — while any other defined
+ * rejection is the service declaring it dead; both rethrow into the caller's failure handling. A
+ * stop landing mid-call has the minted row stopped back durably (`stopped`).
  */
 export async function flushPendingStart(
   context: WorkerContext,
@@ -51,6 +63,7 @@ export async function flushPendingStart(
       avatarID: intent.avatarID,
       scopeID: intent.scopeID,
       scopeType: intent.scopeType,
+      simVersion: BUNDLED_ENGINE_HASH,
       startKey: `continue_${intent.activityID}`,
     }),
   );
@@ -84,6 +97,14 @@ export async function flushPendingStart(
       activeAvatarName: error.data.activeAvatarName,
       outcome: 'avatar-switched',
     };
+  }
+
+  // a swept hash reads back unknown rather than expired — either way the remedy is the same
+  // reload, and the intent is dropped: the bundled engine that would replay it is the one refused
+  if (error.code === 'SIM_VERSION_EXPIRED' || error.code === 'SIM_VERSION_UNKNOWN') {
+    await removePendingStartIntent(intent.activityID);
+
+    return { outcome: 'sim-version-expired' };
   }
 
   if (error.code !== 'CONFLICT') {

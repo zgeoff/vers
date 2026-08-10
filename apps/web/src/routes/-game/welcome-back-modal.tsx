@@ -2,6 +2,7 @@ import { Button, Dialog, Text } from '@vers/design-system';
 import { setResyncStatus, useResyncStatus } from '@vers/idle-client';
 import type { ResyncStatus } from '@vers/idle-client';
 import { AvatarSwitchedNotice } from '../../components/avatar-switched-notice';
+import { GameUpdatedNotice } from '../../components/game-updated-notice';
 import { getLoginPathWithRedirect } from '../../lib/auth/get-login-path-with-redirect';
 import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
 import { sendIdleReportOnline } from '../../lib/idle/send-idle-report-online';
@@ -16,7 +17,9 @@ import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
  * opens on a sign-in link, since no retry can succeed until the player signs back in — the login
  * redirect returns them here, where the fresh session's own resync resumes the catch-up. A resync
  * dropped for an avatar the account switched away from opens on a reload action — the tab's own
- * state still names the old avatar, and only a reload re-runs every gate against the new one.
+ * state still names the old avatar, and only a reload re-runs every gate against the new one. A
+ * resync dropped because the running build's engine no longer supports the current content also
+ * opens on a reload action, for the same reason: no in-page recovery can fetch a newer bundle.
  * While the catch-up is still fast-forwarding, the dialog is a non-dismissible lockout — the
  * player can't act on stale state until the resync settles into one of its terminal outcomes.
  */
@@ -101,6 +104,10 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
     );
   }
 
+  if (resyncStatus.kind === 'sim-version-expired') {
+    return <GameUpdatedNotice />;
+  }
+
   if (resyncStatus.kind === 'failed') {
     return (
       <>
@@ -139,6 +146,7 @@ function formatResyncStatus(
       | { readonly kind: 'failed' }
       | { readonly kind: 'fast-forwarding' }
       | { readonly kind: 'session-expired' }
+      | { readonly kind: 'sim-version-expired' }
     >
   >,
 ): string {

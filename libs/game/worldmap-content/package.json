@@ -14,6 +14,7 @@
     "@noble/hashes": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
+    "@vers/content-version": "workspace:*",
     "@vers/contract-keys": "workspace:*",
     "@vers/game-utils": "workspace:*",
     "@vers/service-auth": "workspace:*",
