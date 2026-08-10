@@ -187,6 +187,7 @@ export interface SimVersions {
   deployedAt: Generated<Timestamp>;
   engineHash: string;
   imageRef: string;
+  maxContentVersion: string;
   providerUrl: string;
   retainedUntil: Timestamp;
   status: Generated<string>;
