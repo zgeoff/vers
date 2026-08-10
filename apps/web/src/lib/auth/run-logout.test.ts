@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { getAuthSession } from './get-auth-session';
 import { runLogout } from './run-logout';
@@ -8,15 +7,15 @@ test('it clears the auth session cookie before redirecting home by default', asy
   const outcome = await withRequestContext(
     { cookies: { en_session: { accessToken: 'a', refreshToken: 'r', sessionID: 's' } } },
     async () => {
-      const redirectHref = await runLogout()
-        .then(() => null)
-        .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+      const promise = runLogout();
 
-      return { redirectHref, session: await getAuthSession() };
+      await expect(promise).rejects.toMatchObject({ options: { href: '/' } });
+
+      return getAuthSession();
     },
   );
 
-  expect(outcome.value).toStrictEqual({ redirectHref: '/', session: {} });
+  expect(outcome.value).toStrictEqual({});
 });
 
 test('it redirects to a caller-supplied same-origin path', () => {

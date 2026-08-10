@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import * as db from '@vers/mock-services/db';
+import invariant from 'tiny-invariant';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -21,9 +21,7 @@ test('it rejects a submission with a filled-in honeypot field', async () => {
 
   const outcome = await withRequestContext({}, () => runSignup(formData));
 
-  if (!(outcome.value instanceof Response)) {
-    throw new Error('expected a Response');
-  }
+  invariant(outcome.value instanceof Response, 'expected a Response');
 
   expect(outcome.value.status).toBe(400);
 });
@@ -33,9 +31,7 @@ test('it reports a field error for an invalid email', async () => {
     runSignup(buildFormData({ email: 'not-an-email' })),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({ email: ['Email is invalid'] });
 });
@@ -43,15 +39,13 @@ test('it reports a field error for an invalid email', async () => {
 test('it redirects to verify-otp without creating a verification for an email already in use', async () => {
   await db.userCollection.create({ email: 'signup-existing@vers.test' });
 
-  const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await runSignup(buildFormData({ email: 'signup-existing@vers.test' }))
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+  const promise = withRequestContext({}, () =>
+    runSignup(buildFormData({ email: 'signup-existing@vers.test' })),
+  );
 
-    return redirectHref;
+  await expect(promise).rejects.toMatchObject({
+    options: { href: '/verify-otp?target=signup-existing%40vers.test&type=onboarding' },
   });
-
-  expect(outcome.value).toBe('/verify-otp?target=signup-existing%40vers.test&type=onboarding');
 
   const verification = db.verificationCollection.findFirst((q) =>
     q.where({ target: 'signup-existing@vers.test', type: 'onboarding' }),
@@ -76,15 +70,13 @@ test('it redirects to verify-otp without creating a verification for an email al
 });
 
 test('it creates an onboarding verification and redirects to verify-otp', async () => {
-  const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await runSignup(buildFormData({ email: 'signup-new@vers.test' }))
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+  const promise = withRequestContext({}, () =>
+    runSignup(buildFormData({ email: 'signup-new@vers.test' })),
+  );
 
-    return redirectHref;
+  await expect(promise).rejects.toMatchObject({
+    options: { href: '/verify-otp?target=signup-new%40vers.test&type=onboarding' },
   });
-
-  expect(outcome.value).toBe('/verify-otp?target=signup-new%40vers.test&type=onboarding');
 
   const verification = db.verificationCollection.findFirst((q) =>
     q.where({ target: 'signup-new@vers.test', type: 'onboarding' }),

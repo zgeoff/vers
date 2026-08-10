@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import * as db from '@vers/mock-services/db';
 import { createStepUpTransactionToken } from '../../lib/auth/create-step-up-transaction-token';
 import { buildFormData } from '../../test-utils/build-form-data';
@@ -73,21 +72,17 @@ test('it reports invalid credentials for the wrong current password before gatin
 test('it changes the password and redirects to account for a caller with no 2FA', async () => {
   const signedIn = await createSignedInUser({ password: 'original-password' });
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const redirectHref = await runChangePassword(
+  const promise = withRequestContext({ cookies: signedIn.cookies }, () =>
+    runChangePassword(
       buildFormData({
         confirmPassword: 'new-password123',
         currentPassword: 'original-password',
         password: 'new-password123',
       }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+    ),
+  );
 
-    return redirectHref;
-  });
-
-  expect(outcome.value).toBe('/account');
+  await expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
 
   expect(db.userCollection.findFirst((q) => q.where({ id: signedIn.userID }))).toMatchObject({
     password: 'new-password123',
@@ -117,26 +112,22 @@ test('it changes the password once a valid step-up token is attached', async () 
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await createStepUpTransactionToken({
       action: 'ChangePassword',
       sessionID: signedIn.sessionID,
       target: signedIn.userID,
     });
 
-    const redirectHref = await runChangePassword(
+    const promise = runChangePassword(
       buildFormData({
         confirmPassword: 'new-password123',
         currentPassword: 'original-password',
         password: 'new-password123',
         stepUpToken: minted.token,
       }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+    );
 
-    return redirectHref;
+    await expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
   });
-
-  expect(outcome.value).toBe('/account');
 });

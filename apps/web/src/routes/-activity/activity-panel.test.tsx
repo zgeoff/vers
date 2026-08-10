@@ -34,9 +34,9 @@ test('it shows the settling indicator while appended progress is still settling'
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(<ActivityPanel />);
 
-    await waitFor(() => {
-      expect(rendered.getAllByTestId('settling-indicator')).toHaveLength(1);
-    });
+    const indicators = await rendered.findAllByTestId('settling-indicator');
+
+    expect(indicators).toHaveLength(1);
   });
 });
 
@@ -54,10 +54,9 @@ test('it shows no settling indicator once the appended progress is fully verifie
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(<ActivityPanel />);
 
-    await waitFor(() => {
-      expect(rendered.getByRole('heading', { name: 'Engagement' })).toBeVisible();
-    });
+    const heading = await rendered.findByRole('heading', { name: 'Engagement' });
 
+    expect(heading).toBeVisible();
     expect(rendered.queryByTestId('settling-indicator')).not.toBeInTheDocument();
   });
 });

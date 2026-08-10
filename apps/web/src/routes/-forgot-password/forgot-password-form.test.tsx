@@ -1,5 +1,5 @@
 import { expect, mock, test } from 'bun:test';
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { buildDeferred } from '../../test-utils/build-deferred';
 import { renderWithRouter } from '../../test-utils/render-with-router';
@@ -38,11 +38,9 @@ test('it shows a generic failure message when the server rejects the submission'
     await user.type(emailInput, 'player@vers.test');
     await user.click(screen.getByRole('button', { name: 'Reset Password' }));
 
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent(
-        'Something went wrong. Please try again.',
-      );
-    });
+    const alert = await screen.findByRole('alert');
+
+    expect(alert).toHaveTextContent('Something went wrong. Please try again.');
   });
 });
 

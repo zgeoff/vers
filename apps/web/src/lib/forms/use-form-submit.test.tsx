@@ -110,9 +110,9 @@ test('it shows a generic error message when the server rejects the submission', 
   await user.type(screen.getByPlaceholderText('Password'), 'password123');
   await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-  await waitFor(() => {
-    expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong. Please try again.');
-  });
+  const alert = await screen.findByRole('alert');
+
+  expect(alert).toHaveTextContent('Something went wrong. Please try again.');
 });
 
 test('it shows no error after a redirect resolves the submission', async () => {
@@ -126,8 +126,10 @@ test('it shows no error after a redirect resolves the submission', async () => {
   await user.type(screen.getByPlaceholderText('Password'), 'password123');
   await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
+  const button = await screen.findByRole('button', { name: 'Sign in' });
+
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Sign in' })).not.toBeDisabled();
+    expect(button).not.toBeDisabled();
   });
 
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -161,10 +163,7 @@ test('it reports no success when the server rejects the submission', async () =>
   await user.type(emailInput, 'player@vers.test');
   await user.type(screen.getByPlaceholderText('Password'), 'password123');
   await user.click(screen.getByRole('button', { name: 'Sign in' }));
-
-  await waitFor(() => {
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-  });
+  await screen.findByRole('alert');
 
   expect(onSuccess).not.toHaveBeenCalled();
 });

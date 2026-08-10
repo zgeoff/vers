@@ -46,11 +46,13 @@ test('it claims the run back with a claiming report on continue-here', async () 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     render(<PlayingElsewhereNotice />);
 
-    // a click lands only once the avatar id has resolved; an early one leaves the notice open,
-    // so the loop retries exactly as a player would
-    await waitFor(async () => {
-      await user.click(screen.getByRole('button', { name: 'Continue here' }));
+    // a click lands only once the avatar id has resolved; awaiting the query result before
+    // clicking, rather than retrying the click itself, keeps the click a single user action
+    const continueButton = await screen.findByRole('button', { name: 'Continue here' });
 
+    await user.click(continueButton);
+
+    await waitFor(() => {
       expect(client.reportOnline).toHaveBeenCalledExactlyOnceWith(
         { avatarID: avatar.id, claim: true },
         expect.anything(),
@@ -75,7 +77,7 @@ test('it dismisses by clearing the displaced state, and a fresh displacement re-
   // fresh worker broadcast and re-opens the notice
   setWriterDisplacedActivityID('activity_1');
 
-  await waitFor(() => {
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-  });
+  const dialog = await screen.findByRole('dialog');
+
+  expect(dialog).toBeInTheDocument();
 });

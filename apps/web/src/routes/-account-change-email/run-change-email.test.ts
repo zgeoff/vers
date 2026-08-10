@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import * as db from '@vers/mock-services/db';
 import { createStepUpTransactionToken } from '../../lib/auth/create-step-up-transaction-token';
 import { buildFormData } from '../../test-utils/build-form-data';
@@ -23,15 +22,13 @@ test('it reports a field error for an invalid email', async () => {
 test('it starts a change-email verification and redirects to verify-otp for a caller with no 2FA', async () => {
   const signedIn = await createSignedInUser();
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const redirectHref = await runChangeEmail(buildFormData({ email: 'new@vers.test' }))
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+  const promise = withRequestContext({ cookies: signedIn.cookies }, () =>
+    runChangeEmail(buildFormData({ email: 'new@vers.test' })),
+  );
 
-    return redirectHref;
+  await expect(promise).rejects.toMatchObject({
+    options: { href: '/verify-otp?target=new%40vers.test&type=change-email' },
   });
-
-  expect(outcome.value).toBe('/verify-otp?target=new%40vers.test&type=change-email');
 
   const verification = db.verificationCollection.findFirst((q) =>
     q.where({ target: 'new@vers.test' }),
@@ -68,21 +65,19 @@ test('it applies the change once a valid step-up token is attached', async () =>
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await createStepUpTransactionToken({
       action: 'ChangeEmail',
       sessionID: signedIn.sessionID,
       target: signedIn.userID,
     });
 
-    const redirectHref = await runChangeEmail(
+    const promise = runChangeEmail(
       buildFormData({ email: 'token-new@vers.test', stepUpToken: minted.token }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+    );
 
-    return redirectHref;
+    await expect(promise).rejects.toMatchObject({
+      options: { href: '/verify-otp?target=token-new%40vers.test&type=change-email' },
+    });
   });
-
-  expect(outcome.value).toBe('/verify-otp?target=token-new%40vers.test&type=change-email');
 });

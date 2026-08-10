@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import * as db from '@vers/mock-services/db';
+import invariant from 'tiny-invariant';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -33,9 +33,7 @@ test('it rejects a submission with a filled-in honeypot field', async () => {
 
   const outcome = await withRequestContext({}, () => resetPasswordHandler(formData));
 
-  if (!(outcome.value instanceof Response)) {
-    throw new Error('expected a Response');
-  }
+  invariant(outcome.value instanceof Response, 'expected a Response');
 
   expect(outcome.value.status).toBe(400);
 });
@@ -52,9 +50,7 @@ test('it reports a field error for a mismatched password confirmation', async ()
     ),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({ confirmPassword: ['The passwords must match'] });
 });
@@ -71,9 +67,7 @@ test('it reports a form error for an email with no matching account', async () =
     ),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({
     '': ['This reset link is invalid or has expired.'],
@@ -94,9 +88,7 @@ test('it reports a form error for a stale or invalid reset token', async () => {
     ),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({
     '': ['This reset link is invalid or has expired.'],
@@ -120,22 +112,18 @@ test('it resets the password, signs the caller out everywhere, and redirects to 
 
   await db.sessionCollection.create({ userID: user.id });
 
-  const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await resetPasswordHandler(
+  const promise = withRequestContext({}, () =>
+    resetPasswordHandler(
       buildFormData({
         confirmPassword: 'new-password123',
         email: 'reset-password-success@vers.test',
         password: 'new-password123',
         resetToken: 'the-right-token',
       }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+    ),
+  );
 
-    return redirectHref;
-  });
-
-  expect(outcome.value).toBe('/login');
+  await expect(promise).rejects.toMatchObject({ options: { href: '/login' } });
 
   const updated = db.userCollection.findFirst((q) => q.where({ id: user.id }));
 

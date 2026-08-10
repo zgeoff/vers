@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import * as db from '@vers/mock-services/db';
 import { createStepUpTransactionToken } from '../../lib/auth/create-step-up-transaction-token';
 import { buildFormData } from '../../test-utils/build-form-data';
@@ -37,21 +36,17 @@ test('it removes the 2FA verification and redirects to account once a valid toke
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const minted = await createStepUpTransactionToken({
       action: 'TwoFactorAuthDisable',
       sessionID: signedIn.sessionID,
       target: signedIn.userID,
     });
 
-    const redirectHref = await runDisableTwoFactorAuth(buildFormData({ stepUpToken: minted.token }))
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+    const promise = runDisableTwoFactorAuth(buildFormData({ stepUpToken: minted.token }));
 
-    return redirectHref;
+    await expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
   });
-
-  expect(outcome.value).toBe('/account');
 
   expect(
     db.verificationCollection.findFirst((q) => q.where({ target: signedIn.userID, type: '2fa' })),

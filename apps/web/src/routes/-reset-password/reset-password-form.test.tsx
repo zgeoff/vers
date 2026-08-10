@@ -94,11 +94,9 @@ test('it shows a generic failure message when the server rejects the submission'
     await user.type(screen.getByLabelText('Confirm Password'), 'new-password123');
     await user.click(screen.getByRole('button', { name: 'Reset Password' }));
 
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent(
-        'Something went wrong. Please try again.',
-      );
-    });
+    const alert = await screen.findByRole('alert');
+
+    expect(alert).toHaveTextContent('Something went wrong. Please try again.');
   });
 });
 

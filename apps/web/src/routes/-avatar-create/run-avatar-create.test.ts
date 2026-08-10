@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import * as db from '@vers/mock-services/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
@@ -37,15 +36,11 @@ test('it reports a field error for a name that is already taken', async () => {
 test('it creates the avatar and enters the game', async () => {
   const signedIn = await createSignedInUser();
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const redirectHref = await runAvatarCreate(buildFormData({ name: 'Karnak' }))
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+  const promise = withRequestContext({ cookies: signedIn.cookies }, () =>
+    runAvatarCreate(buildFormData({ name: 'Karnak' })),
+  );
 
-    return redirectHref;
-  });
-
-  expect(outcome.value).toBe('/explore');
+  await expect(promise).rejects.toMatchObject({ options: { href: '/explore' } });
 
   const created = db.avatarCollection.findFirst((q) =>
     q.where({ name: 'Karnak', userID: signedIn.userID }),
@@ -57,13 +52,11 @@ test('it creates the avatar and enters the game', async () => {
 test('it creates a Self-Found avatar when that mode is requested', async () => {
   const signedIn = await createSignedInUser();
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
-    runAvatarCreate(buildFormData({ mode: 'self_found', name: 'Vagrant' }))
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null)),
+  const promise = withRequestContext({ cookies: signedIn.cookies }, () =>
+    runAvatarCreate(buildFormData({ mode: 'self_found', name: 'Vagrant' })),
   );
 
-  expect(outcome.value).toBe('/explore');
+  await expect(promise).rejects.toMatchObject({ options: { href: '/explore' } });
 
   const created = db.avatarCollection.findFirst((q) =>
     q.where({ name: 'Vagrant', userID: signedIn.userID }),

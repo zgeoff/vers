@@ -3,12 +3,12 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
-import { idleWorkerHandleStub } from '../../test-utils/idle-worker-handle-stub';
 import { renderWithRouter } from '../../test-utils/render-with-router';
+import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { NavRail } from './nav-rail';
 
 function setActiveActivity(): void {
-  idleWorkerHandleStub.set({
+  setIdleWorkerHandle({
     activity: createMockActivitySnapshot(),
     client: undefined,
     failureAction: ActivityFailureAction.Abort,
