@@ -26,7 +26,10 @@ test('it starts a change-email verification and redirects to verify-otp for a ca
     runChangeEmail(buildFormData({ email: 'new@vers.test' })),
   );
 
-  await expect(promise).rejects.toMatchObject({
+  // the db reads below must observe the rejected call's verification/email side effects settled
+  await promise.catch(() => {});
+
+  expect(promise).rejects.toMatchObject({
     options: { href: '/verify-otp?target=new%40vers.test&type=change-email' },
   });
 
@@ -76,7 +79,7 @@ test('it applies the change once a valid step-up token is attached', async () =>
       buildFormData({ email: 'token-new@vers.test', stepUpToken: minted.token }),
     );
 
-    await expect(promise).rejects.toMatchObject({
+    expect(promise).rejects.toMatchObject({
       options: { href: '/verify-otp?target=token-new%40vers.test&type=change-email' },
     });
   });

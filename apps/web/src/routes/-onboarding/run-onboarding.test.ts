@@ -137,7 +137,10 @@ test('it creates the account, signs the caller in, and clears the onboarding ses
         }),
       );
 
-      await expect(promise).rejects.toMatchObject({ options: { href: '/respite' } });
+      // the outer cookie/db reads must observe the rejected call's account-creation settled
+      await promise.catch(() => {});
+
+      expect(promise).rejects.toMatchObject({ options: { href: '/respite' } });
     },
   );
 

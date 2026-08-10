@@ -48,7 +48,10 @@ test('it flips the verification to 2fa and redirects to account for a correct co
     verifyTwoFactorSetupHandler(buildFormData({ code: '123456', target: signedIn.userID })),
   );
 
-  await expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
+  // the db read below must observe the rejected call's verification-flip step settled
+  await promise.catch(() => {});
+
+  expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
 
   expect(
     db.verificationCollection.findFirst((q) => q.where({ target: signedIn.userID })),

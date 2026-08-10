@@ -18,19 +18,22 @@ test('it clears the pending session and redirects home on cancel', async () => {
     async () => {
       const promise = runForceLogout(buildFormData({ intent: 'cancel' }));
 
-      await expect(promise).rejects.toMatchObject({ options: { href: '/' } });
+      // the outer cookie read must observe the rejected call's cookie-clear step settled
+      await promise.catch(() => {});
+
+      expect(promise).rejects.toMatchObject({ options: { href: '/' } });
     },
   );
 
   expect(outcome.cookies['en_verification']).toStrictEqual({});
 });
 
-test('it redirects home without acting when there is no pending session to confirm', async () => {
+test('it redirects home without acting when there is no pending session to confirm', () => {
   const promise = withRequestContext({}, () =>
     runForceLogout(buildFormData({ intent: 'confirm' })),
   );
 
-  await expect(promise).rejects.toMatchObject({ options: { href: '/' } });
+  expect(promise).rejects.toMatchObject({ options: { href: '/' } });
 });
 
 test('it signs out every other live session and completes sign-in on confirm', async () => {
@@ -54,7 +57,10 @@ test('it signs out every other live session and completes sign-in on confirm', a
     async () => {
       const promise = runForceLogout(buildFormData({ intent: 'confirm' }));
 
-      await expect(promise).rejects.toMatchObject({ options: { href: '/respite' } });
+      // the outer cookie/db reads must observe the rejected call's side effects settled
+      await promise.catch(() => {});
+
+      expect(promise).rejects.toMatchObject({ options: { href: '/respite' } });
     },
   );
 
@@ -84,5 +90,5 @@ test('it honors a stashed redirect target on confirm', async () => {
     () => runForceLogout(buildFormData({ intent: 'confirm' })),
   );
 
-  await expect(promise).rejects.toMatchObject({ options: { href: '/nexus' } });
+  expect(promise).rejects.toMatchObject({ options: { href: '/nexus' } });
 });

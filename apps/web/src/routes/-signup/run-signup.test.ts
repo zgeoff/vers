@@ -43,7 +43,10 @@ test('it redirects to verify-otp without creating a verification for an email al
     runSignup(buildFormData({ email: 'signup-existing@vers.test' })),
   );
 
-  await expect(promise).rejects.toMatchObject({
+  // the db reads below must observe the rejected call's verification/email side effects settled
+  await promise.catch(() => {});
+
+  expect(promise).rejects.toMatchObject({
     options: { href: '/verify-otp?target=signup-existing%40vers.test&type=onboarding' },
   });
 
@@ -74,7 +77,10 @@ test('it creates an onboarding verification and redirects to verify-otp', async 
     runSignup(buildFormData({ email: 'signup-new@vers.test' })),
   );
 
-  await expect(promise).rejects.toMatchObject({
+  // the db reads below must observe the rejected call's verification/email side effects settled
+  await promise.catch(() => {});
+
+  expect(promise).rejects.toMatchObject({
     options: { href: '/verify-otp?target=signup-new%40vers.test&type=onboarding' },
   });
 

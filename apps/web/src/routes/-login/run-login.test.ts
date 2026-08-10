@@ -77,8 +77,13 @@ test('it redirects to verify-otp and stores the pending session for a 2FA-enable
       buildFormData({ email: 'two-factor@vers.test', password: 'password123' }),
     );
 
-    await expect(promise).rejects.toMatchObject({
-      options: { href: expect.stringMatching(/^\/verify-otp\?/) },
+    // the outer cookie reads must observe the rejected call's session side effects settled
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({
+      options: {
+        href: `/verify-otp?${new URLSearchParams({ target: user.id, type: '2fa' }).toString()}`,
+      },
     });
   });
 
@@ -99,7 +104,10 @@ test('it redirects to force-logout and stores the pending session when another s
       buildFormData({ email: 'force-logout@vers.test', password: 'password123' }),
     );
 
-    await expect(promise).rejects.toMatchObject({ options: { href: '/login/force-logout' } });
+    // the outer cookie read must observe the rejected call's session side effects settled
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({ options: { href: '/login/force-logout' } });
   });
 
   expect(outcome.cookies['en_verification']).toStrictEqual({
@@ -126,7 +134,10 @@ test('it stashes the redirect target alongside the pending force-logout session'
       }),
     );
 
-    await expect(promise).rejects.toMatchObject({ options: { href: '/login/force-logout' } });
+    // the outer cookie read must observe the rejected call's session side effects settled
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({ options: { href: '/login/force-logout' } });
   });
 
   expect(outcome.cookies['en_verification']).toContainEntry(['loginLogout#redirect', '/nexus']);
@@ -144,7 +155,10 @@ test('it signs a first-time caller in directly and clears their redirect target'
       }),
     );
 
-    await expect(promise).rejects.toMatchObject({ options: { href: '/nexus' } });
+    // the outer cookie read must observe the rejected call's session side effects settled
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({ options: { href: '/nexus' } });
   });
 
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
@@ -158,6 +172,9 @@ test('it lands a caller with no redirect target on the avatar roster', async () 
       buildFormData({ email: 'default-landing@vers.test', password: 'password123' }),
     );
 
-    await expect(promise).rejects.toMatchObject({ options: { href: '/respite' } });
+    // nothing follows, but the callback must still settle the promise it constructs
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({ options: { href: '/respite' } });
   });
 });

@@ -123,7 +123,10 @@ test('it resets the password, signs the caller out everywhere, and redirects to 
     ),
   );
 
-  await expect(promise).rejects.toMatchObject({ options: { href: '/login' } });
+  // the db reads below must observe the rejected call's password-reset side effects settled
+  await promise.catch(() => {});
+
+  expect(promise).rejects.toMatchObject({ options: { href: '/login' } });
 
   const updated = db.userCollection.findFirst((q) => q.where({ id: user.id }));
 

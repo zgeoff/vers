@@ -45,7 +45,11 @@ test('it removes the 2FA verification and redirects to account once a valid toke
 
     const promise = runDisableTwoFactorAuth(buildFormData({ stepUpToken: minted.token }));
 
-    await expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
+    // the db read after this callback must observe the rejected call's verification-removal
+    // step settled
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
   });
 
   expect(

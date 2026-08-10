@@ -9,7 +9,10 @@ test('it clears the auth session cookie before redirecting home by default', asy
     async () => {
       const promise = runLogout();
 
-      await expect(promise).rejects.toMatchObject({ options: { href: '/' } });
+      // the cookie read below must observe the rejected call's clear-session step settled
+      await promise.catch(() => {});
+
+      expect(promise).rejects.toMatchObject({ options: { href: '/' } });
 
       return getAuthSession();
     },

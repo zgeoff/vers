@@ -67,7 +67,10 @@ test('it records the verified email and redirects to onboarding', async () => {
       }),
     );
 
-    await expect(promise).rejects.toMatchObject({ options: { href: '/onboarding' } });
+    // the outer cookie read must observe the rejected call's verification side effects settled
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({ options: { href: '/onboarding' } });
   });
 
   expect(outcome.cookies['en_verification']).toStrictEqual({
@@ -92,7 +95,7 @@ test('it bounces back to login when a 2FA verify has no pending session', async 
     ),
   );
 
-  await expect(promise).rejects.toMatchObject({ options: { href: '/login' } });
+  expect(promise).rejects.toMatchObject({ options: { href: '/login' } });
 });
 
 test('it completes a pending 2FA login and clears the redirect target', async () => {
@@ -118,7 +121,10 @@ test('it completes a pending 2FA login and clears the redirect target', async ()
         }),
       );
 
-      await expect(promise).rejects.toMatchObject({ options: { href: '/nexus' } });
+      // the outer cookie reads must observe the rejected call's session side effects settled
+      await promise.catch(() => {});
+
+      expect(promise).rejects.toMatchObject({ options: { href: '/nexus' } });
     },
   );
 

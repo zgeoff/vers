@@ -96,7 +96,7 @@ test('it overrides only the mocked procedure, leaving the rest on the base backe
   expect(other).toStrictEqual({ value: 'base-other' });
 });
 
-test('it surfaces a mock-thrown typed error as a defined ORPCError client-side', async () => {
+test('it surfaces a mock-thrown typed error as a defined ORPCError client-side', () => {
   server.use(...buildBaseHandlers());
 
   const mock = buildContractMock({
@@ -113,7 +113,7 @@ test('it surfaces a mock-thrown typed error as a defined ORPCError client-side',
 
   const client = buildClient('user_3');
 
-  await expect(client.getSecret({})).rejects.toMatchObject({ data: { reason: 'missing-session' } });
+  expect(client.getSecret({})).rejects.toMatchObject({ data: { reason: 'missing-session' } });
 });
 
 test('it overrides a nested-namespace procedure while a sibling top-level call stays on the base backend', async () => {

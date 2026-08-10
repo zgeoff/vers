@@ -11,7 +11,7 @@ test('it redirects to account when 2FA is already enabled', async () => {
 
   const promise = withRequestContext({ cookies: signedIn.cookies }, () => loadTwoFactorSetup());
 
-  await expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
+  expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
 });
 
 test('it creates a pending 2fa-setup verification and returns its QR data for a fresh caller', async () => {

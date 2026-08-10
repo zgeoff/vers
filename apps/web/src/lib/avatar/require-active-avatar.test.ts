@@ -10,7 +10,7 @@ test('it redirects to the create sheet when the caller has no avatar', async () 
 
   const promise = withRequestContext({ cookies: signedIn.cookies }, () => requireActiveAvatar());
 
-  await expect(promise).rejects.toMatchObject({ options: { href: '/avatars/create' } });
+  expect(promise).rejects.toMatchObject({ options: { href: '/avatars/create' } });
 });
 
 test('it redirects to the roster when avatars exist but none is active', async () => {
@@ -20,7 +20,7 @@ test('it redirects to the roster when avatars exist but none is active', async (
 
   const promise = withRequestContext({ cookies: signedIn.cookies }, () => requireActiveAvatar());
 
-  await expect(promise).rejects.toMatchObject({ options: { href: '/avatars' } });
+  expect(promise).rejects.toMatchObject({ options: { href: '/avatars' } });
 });
 
 test('it does not redirect when the caller has an active avatar', async () => {

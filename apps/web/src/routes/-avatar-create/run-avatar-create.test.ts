@@ -40,7 +40,10 @@ test('it creates the avatar and enters the game', async () => {
     runAvatarCreate(buildFormData({ name: 'Karnak' })),
   );
 
-  await expect(promise).rejects.toMatchObject({ options: { href: '/explore' } });
+  // the db read below must observe the rejected call's avatar-create step settled
+  await promise.catch(() => {});
+
+  expect(promise).rejects.toMatchObject({ options: { href: '/explore' } });
 
   const created = db.avatarCollection.findFirst((q) =>
     q.where({ name: 'Karnak', userID: signedIn.userID }),
@@ -56,7 +59,10 @@ test('it creates a Self-Found avatar when that mode is requested', async () => {
     runAvatarCreate(buildFormData({ mode: 'self_found', name: 'Vagrant' })),
   );
 
-  await expect(promise).rejects.toMatchObject({ options: { href: '/explore' } });
+  // the db read below must observe the rejected call's avatar-create step settled
+  await promise.catch(() => {});
+
+  expect(promise).rejects.toMatchObject({ options: { href: '/explore' } });
 
   const created = db.avatarCollection.findFirst((q) =>
     q.where({ name: 'Vagrant', userID: signedIn.userID }),

@@ -60,9 +60,12 @@ test('#sendWelcome it delivers the email on drain, sending the job id as the ide
 
   await ctx.queue.drain('send-welcome');
 
-  await waitFor(() => expect(sentEmails.get('player@example.com')).toBeDefined(), {
-    timeoutMs: 5000,
-  });
+  await waitFor(
+    () => {
+      expect(sentEmails.get('player@example.com')).toBeDefined();
+    },
+    { timeoutMs: 5000 },
+  );
 
   expect(sentEmails.get('player@example.com')).toMatchObject({
     idempotencyKey: result.jobID,
@@ -89,9 +92,12 @@ test('#sendExistingAccount it enqueues and delivers with the tried-to-signup add
 
   await ctx.queue.drain('send-existing-account');
 
-  await waitFor(() => expect(sentEmails.get('existing@example.com')).toBeDefined(), {
-    timeoutMs: 5000,
-  });
+  await waitFor(
+    () => {
+      expect(sentEmails.get('existing@example.com')).toBeDefined();
+    },
+    { timeoutMs: 5000 },
+  );
 
   expect(sentEmails.get('existing@example.com')).toMatchObject({
     idempotencyKey: result.jobID,
@@ -111,9 +117,12 @@ test('#sendChangeEmailVerification it enqueues and delivers to the account s cur
 
   await ctx.queue.drain('send-change-email-verification');
 
-  await waitFor(() => expect(sentEmails.get('old@example.com')).toBeDefined(), {
-    timeoutMs: 5000,
-  });
+  await waitFor(
+    () => {
+      expect(sentEmails.get('old@example.com')).toBeDefined();
+    },
+    { timeoutMs: 5000 },
+  );
 
   expect(sentEmails.get('old@example.com')).toMatchObject({
     idempotencyKey: result.jobID,
@@ -128,9 +137,12 @@ test('#sendChangeEmailNotification it enqueues and delivers with no props beyond
 
   await ctx.queue.drain('send-change-email-notification');
 
-  await waitFor(() => expect(sentEmails.get('player@example.com')).toBeDefined(), {
-    timeoutMs: 5000,
-  });
+  await waitFor(
+    () => {
+      expect(sentEmails.get('player@example.com')).toBeDefined();
+    },
+    { timeoutMs: 5000 },
+  );
 
   expect(sentEmails.get('player@example.com')).toMatchObject({
     idempotencyKey: result.jobID,
@@ -148,9 +160,12 @@ test('#sendResetPassword it enqueues and delivers', async () => {
 
   await ctx.queue.drain('send-reset-password');
 
-  await waitFor(() => expect(sentEmails.get('player@example.com')).toBeDefined(), {
-    timeoutMs: 5000,
-  });
+  await waitFor(
+    () => {
+      expect(sentEmails.get('player@example.com')).toBeDefined();
+    },
+    { timeoutMs: 5000 },
+  );
 
   expect(sentEmails.get('player@example.com')).toMatchObject({
     idempotencyKey: result.jobID,
@@ -168,9 +183,12 @@ test('#sendPasswordChanged it enqueues and delivers', async () => {
 
   await ctx.queue.drain('send-password-changed');
 
-  await waitFor(() => expect(sentEmails.get('player@example.com')).toBeDefined(), {
-    timeoutMs: 5000,
-  });
+  await waitFor(
+    () => {
+      expect(sentEmails.get('player@example.com')).toBeDefined();
+    },
+    { timeoutMs: 5000 },
+  );
 
   expect(sentEmails.get('player@example.com')).toMatchObject({
     idempotencyKey: result.jobID,

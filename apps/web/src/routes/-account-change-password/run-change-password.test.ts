@@ -82,7 +82,10 @@ test('it changes the password and redirects to account for a caller with no 2FA'
     ),
   );
 
-  await expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
+  // the db read below must observe the rejected call's password-change step settled
+  await promise.catch(() => {});
+
+  expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
 
   expect(db.userCollection.findFirst((q) => q.where({ id: signedIn.userID }))).toMatchObject({
     password: 'new-password123',
@@ -128,6 +131,6 @@ test('it changes the password once a valid step-up token is attached', async () 
       }),
     );
 
-    await expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
+    expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
   });
 });
