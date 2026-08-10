@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
@@ -16,13 +16,11 @@ test('it commits real writes visible to a second connection onto the same clone'
 
   const raw = postgres(location.databaseURL, { connection: { search_path: location.searchPath } });
 
-  try {
-    const rows = await raw`select id from users where id = ${created.user.id}`;
+  onTestFinished(() => raw.end());
 
-    expect(rows).toHaveLength(1);
-  } finally {
-    await raw.end();
-  }
+  const rows = await raw`select id from users where id = ${created.user.id}`;
+
+  expect(rows).toHaveLength(1);
 });
 
 test('it nests a db.transaction() call', async () => {
@@ -101,13 +99,11 @@ test('it drops the clone schema once disposed', async () => {
 
   const raw = postgres(location.databaseURL);
 
-  try {
-    const rows = await raw`select 1 from pg_namespace where nspname = ${location.searchPath}`;
+  onTestFinished(() => raw.end());
 
-    expect(rows).toHaveLength(0);
-  } finally {
-    await raw.end();
-  }
+  const rows = await raw`select 1 from pg_namespace where nspname = ${location.searchPath}`;
+
+  expect(rows).toHaveLength(0);
 });
 
 test('it rejects a write that violates a cloned foreign key', async () => {

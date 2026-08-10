@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import assert from 'node:assert/strict';
 import { parseRollKeyRoots } from './parse-roll-key-roots';
 
 const TRADE_ROOT = '11'.repeat(32);
@@ -64,15 +63,8 @@ test('it never echoes root material in a rejection message', () => {
     trade: { current: 1, roots: { 1: 'not-hex-but-secret-shaped' } },
   });
 
-  let thrown: unknown;
-
-  try {
-    parseRollKeyRoots(payload);
-  } catch (error) {
-    thrown = error;
-  }
-
-  assert.ok(thrown instanceof Error);
-
-  expect(thrown.message).not.toInclude('not-hex-but-secret-shaped');
+  expect(() => parseRollKeyRoots(payload)).toThrowWithMessage(
+    Error,
+    'invalid ROLL_KEY_ROOTS: population "trade" key version 1 is not 64-character hex',
+  );
 });

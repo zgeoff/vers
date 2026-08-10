@@ -169,11 +169,17 @@ test('it retries a failed job after its retry delay', async () => {
 
   expect(beforeDelay).toStrictEqual({ completed: 0, failed: 0 });
 
-  await new Promise((resolve) => {
-    setTimeout(resolve, 2500);
-  });
+  // the failed job sits out its retry delay before a drain can fetch it again
+  const afterDelay = await waitFor(
+    async () => {
+      const drained = await queue.drain();
 
-  const afterDelay = await queue.drain();
+      expect(drained).toStrictEqual({ completed: 1, failed: 0 });
+
+      return drained;
+    },
+    { timeoutMs: 5000 },
+  );
 
   expect(afterDelay).toStrictEqual({ completed: 1, failed: 0 });
   expect(attempts).toBe(2);
@@ -218,11 +224,17 @@ test('it retries a failed job on an exponential backoff schedule when the defini
 
   expect(firstDrain).toStrictEqual({ completed: 0, failed: 1 });
 
-  await new Promise((resolve) => {
-    setTimeout(resolve, 3000);
-  });
+  // the failed job sits out its exponential backoff delay before a drain can fetch it again
+  const afterBackoff = await waitFor(
+    async () => {
+      const drained = await queue.drain();
 
-  const afterBackoff = await queue.drain();
+      expect(drained).toStrictEqual({ completed: 1, failed: 0 });
+
+      return drained;
+    },
+    { timeoutMs: 5000 },
+  );
 
   expect(afterBackoff).toStrictEqual({ completed: 1, failed: 0 });
   expect(attempts).toBe(2);

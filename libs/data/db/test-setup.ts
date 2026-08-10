@@ -1,10 +1,13 @@
 import '@zgeoff/bun-test-extended';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { registerBunTestCleanup } from '@vers/test-utils/bun';
 import { buildTestTemplateDBName } from './src/test-support/build-test-template-db-name';
 import { createTestTemplate } from './src/test-support/create-test-template';
 import { isTestContainerReachable } from './src/test-support/is-test-container-reachable';
 import { readCurrentBranch } from './src/test-support/read-current-branch';
+
+registerBunTestCleanup();
 
 const TEST_CONTAINER_PORT = 32_999;
 const TEST_TEMPLATE_DB = 'test_template';
