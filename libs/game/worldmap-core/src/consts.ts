@@ -40,3 +40,19 @@ export const MAX_DIFFICULTY = 100;
  * The home cell every avatar starts from and difficulty measures distance against.
  */
 export const ORIGIN_CELL: readonly [number, number] = [0, 0];
+
+/**
+ * Bits per axis packed into a Morton key. 26 bits per axis keeps the interleaved result within 52
+ * of `Number.MAX_SAFE_INTEGER`'s 53 mantissa bits, while supporting a zigzag-encoded coordinate
+ * magnitude up to about 33.5 million cells from origin in either direction on each axis — far past
+ * any distance actually reachable.
+ */
+export const MORTON_AXIS_BITS = 26;
+
+/**
+ * Hex-hop radius the reveal projection discloses around each verified first-clear node. The design
+ * band is 2 to 5 hops, and 5 is a security bound rather than a tuning preference: look-ahead value
+ * and the map-scanning exploit's return both climb with the radius, so a value approaching that
+ * bound trades security margin for reveal depth.
+ */
+export const REVEAL_RADIUS = 2;
