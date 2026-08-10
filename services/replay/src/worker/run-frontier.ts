@@ -1,5 +1,7 @@
+import type { ContentDocument } from '@vers/contract-activity';
 import { SecretRefSchema } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
+import type { EncounterContent } from '@vers/game-utils';
 import type { SimulationDriver } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
@@ -53,6 +55,10 @@ export async function runFrontier(
     return { kind: 'idle' };
   }
 
+  const document = await deps.loadContentDocument(loaded.activity.contentVersion);
+
+  invariant(document, `unknown content version: ${loaded.activity.contentVersion}`);
+
   const unbackedSnapshot = await hasRejectedSnapshotSource(trx, loaded.activity.id);
 
   if (unbackedSnapshot) {
@@ -96,7 +102,7 @@ export async function runFrontier(
     );
 
     const descriptorDivergence = findDescriptorDivergence({
-      contentVersion: segment.activity.contentVersion,
+      content: document.encounter,
       scopeID: segment.activity.scopeID,
       scopeSecret,
       stampedEncounterNode: segment.activity.encounterNode,
@@ -115,10 +121,10 @@ export async function runFrontier(
   }
 
   if (segment.activity.simVersion === deps.simVersion) {
-    return runFrontierInProcess(trx, deps, cache, segment);
+    return runFrontierInProcess(trx, deps, cache, segment, document);
   }
 
-  return runFrontierCrossVersion(trx, deps, cache, segment);
+  return runFrontierCrossVersion(trx, deps, cache, segment, document);
 }
 
 interface NextSeedCheckpoint {
@@ -158,6 +164,7 @@ async function runFrontierInProcess(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
+  document: Readonly<ContentDocument>,
 ): Promise<ReplayIterationOutcome> {
   const unverified = segment.checkpoints.slice(segment.verifiedHead);
   const rawCached = cache.get(segment.activity.id);
@@ -170,7 +177,7 @@ async function runFrontierInProcess(
   }
 
   const compareContext = buildCompareContext(segment);
-  const driver = cached?.driver ?? buildFreshDriver(segment);
+  const driver = cached?.driver ?? buildFreshDriver(document.encounter, segment);
   const stopAtState = findStopAtState(segment.checkpoints);
 
   const duration = buildSegmentDuration(
@@ -194,10 +201,10 @@ async function runFrontierInProcess(
     : compareReplaySegment(unverified, replayed, compareContext);
 
   if (verdict?.kind === 'match') {
-    return applyMatch(trx, deps, segment, replayed, driver, verdict);
+    return applyMatch(trx, deps, segment, replayed, driver, verdict, document);
   }
 
-  const confirmDriver = buildFreshDriver(segment);
+  const confirmDriver = buildFreshDriver(document.encounter, segment);
 
   const confirmAdvance = await confirmDriver.advanceToDuration(
     duration,
@@ -227,9 +234,10 @@ async function runFrontierCrossVersion(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
+  document: Readonly<ContentDocument>,
 ): Promise<ReplayIterationOutcome> {
   const unverified = segment.checkpoints.slice(segment.verifiedHead);
-  const job = buildCrossVersionJob(segment);
+  const job = buildCrossVersionJob(document.encounter, segment);
   const runDeps = { db: trx, privateKey: deps.privateKey, simVersion: deps.simVersion };
 
   const outcome = await runReplaySegment(runDeps, job);
@@ -249,7 +257,7 @@ async function runFrontierCrossVersion(
       : compareReplaySegment(unverified, replayed, compareContext);
 
   if (verdict?.kind === 'match') {
-    return applyMatch(trx, deps, segment, replayed, undefined, verdict);
+    return applyMatch(trx, deps, segment, replayed, undefined, verdict, document);
   }
 
   const confirmOutcome = await runReplaySegment(runDeps, job);
@@ -305,6 +313,7 @@ async function applyMatch(
   replayed: ReadonlyArray<ReplayedCheckpoint>,
   driver: SimulationDriver | undefined,
   verdict: Extract<CompareVerdict, { kind: 'match' }>,
+  document: Readonly<ContentDocument>,
 ): Promise<ReplayIterationOutcome> {
   const rewardFacts = verdict.rewardFacts;
   const settlement = buildSettlement(segment.activity.settledXP, verdict);
@@ -323,11 +332,11 @@ async function applyMatch(
     { keysServiceURL: deps.keysServiceURL, privateKey: deps.privateKey },
     {
       avatarID: segment.activity.avatarID,
-      contentVersion: segment.activity.contentVersion,
       keyVersion: segment.activity.keyVersion,
       rewardFacts,
       scopeID: segment.activity.scopeID,
       scopeType: segment.activity.scopeType,
+      tables: document.loot,
     },
   );
 
@@ -553,14 +562,20 @@ function pickParkRejectionReason(
   return 'version-park';
 }
 
-function buildFreshDriver(segment: Readonly<ReplaySegment>): SimulationDriver {
-  const input = buildSimulationInput(segment.activity);
+function buildFreshDriver(
+  content: Readonly<EncounterContent>,
+  segment: Readonly<ReplaySegment>,
+): SimulationDriver {
+  const input = buildSimulationInput(content, segment.activity);
 
   return createSimulationDriver(input.activity, input.avatar);
 }
 
-function buildCrossVersionJob(segment: Readonly<ReplaySegment>) {
-  const input = buildSimulationInput(segment.activity);
+function buildCrossVersionJob(
+  content: Readonly<EncounterContent>,
+  segment: Readonly<ReplaySegment>,
+) {
+  const input = buildSimulationInput(content, segment.activity);
   const stopAtState = findStopAtState(segment.checkpoints);
 
   const duration = buildSegmentDuration(

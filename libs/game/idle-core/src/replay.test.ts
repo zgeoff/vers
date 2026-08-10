@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { buildStateFromSeed } from '@vers/game-utils';
+import type { EncounterContent } from '@vers/game-utils';
 import invariant from 'tiny-invariant';
 import { buildSimulationInput } from './core/build-simulation-input';
 import { createSimulationDriver } from './core/create-simulation-driver';
@@ -15,7 +16,49 @@ import { ActivityFailureAction } from './types';
  */
 
 test('it replays a completed attempt to an identical checkpoint stream', async () => {
-  const input = buildSimulationInput({
+  const content: EncounterContent = {
+    contentVersion: '1',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+      {
+        id: 'placeholder-skirmisher',
+        name: 'World Map Skirmisher',
+        baseLevel: 1,
+        baseLife: 20,
+        baseXP: 8,
+        attackMin: 1,
+        attackMax: 4,
+        attackSpeed: 0.7,
+      },
+    ],
+    pools: [
+      {
+        id: 'default',
+        entries: [
+          { archetypeID: 'placeholder-brawler', weight: 1 },
+          { archetypeID: 'placeholder-skirmisher', weight: 1 },
+        ],
+      },
+    ],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
+  const input = buildSimulationInput(content, {
     avatarID: 'avatar-golden-completed',
     buildSnapshot: { level: 10, xp: 0 },
     contentVersion: '1',
@@ -411,7 +454,49 @@ test('it replays a completed attempt to an identical checkpoint stream', async (
 });
 
 test('it replays a failed attempt to an identical checkpoint stream', async () => {
-  const input = buildSimulationInput({
+  const content: EncounterContent = {
+    contentVersion: '1',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+      {
+        id: 'placeholder-skirmisher',
+        name: 'World Map Skirmisher',
+        baseLevel: 1,
+        baseLife: 20,
+        baseXP: 8,
+        attackMin: 1,
+        attackMax: 4,
+        attackSpeed: 0.7,
+      },
+    ],
+    pools: [
+      {
+        id: 'default',
+        entries: [
+          { archetypeID: 'placeholder-brawler', weight: 1 },
+          { archetypeID: 'placeholder-skirmisher', weight: 1 },
+        ],
+      },
+    ],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
+  const input = buildSimulationInput(content, {
     avatarID: 'avatar-golden-failed',
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: '1',
@@ -460,7 +545,49 @@ test('it replays a failed attempt to an identical checkpoint stream', async () =
  * not just the unit level.
  */
 test('it replays a same-tick multi-enemy avatar-death stream to an identical checkpoint stream', async () => {
-  const input = buildSimulationInput({
+  const content: EncounterContent = {
+    contentVersion: '1',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+      {
+        id: 'placeholder-skirmisher',
+        name: 'World Map Skirmisher',
+        baseLevel: 1,
+        baseLife: 20,
+        baseXP: 8,
+        attackMin: 1,
+        attackMax: 4,
+        attackSpeed: 0.7,
+      },
+    ],
+    pools: [
+      {
+        id: 'default',
+        entries: [
+          { archetypeID: 'placeholder-brawler', weight: 1 },
+          { archetypeID: 'placeholder-skirmisher', weight: 1 },
+        ],
+      },
+    ],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
+  const input = buildSimulationInput(content, {
     avatarID: 'avatar-golden-divergence',
     buildSnapshot: { level: 2, xp: 0 },
     contentVersion: '1',
@@ -501,7 +628,50 @@ test('it replays a same-tick multi-enemy avatar-death stream to an identical che
 });
 
 test('it replays a retrying multi-attempt stream to an identical checkpoint stream', async () => {
+  const content: EncounterContent = {
+    contentVersion: '1',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+      {
+        id: 'placeholder-skirmisher',
+        name: 'World Map Skirmisher',
+        baseLevel: 1,
+        baseLife: 20,
+        baseXP: 8,
+        attackMin: 1,
+        attackMax: 4,
+        attackSpeed: 0.7,
+      },
+    ],
+    pools: [
+      {
+        id: 'default',
+        entries: [
+          { archetypeID: 'placeholder-brawler', weight: 1 },
+          { archetypeID: 'placeholder-skirmisher', weight: 1 },
+        ],
+      },
+    ],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
   const input = buildSimulationInput(
+    content,
     {
       avatarID: 'avatar-golden-retry',
       buildSnapshot: { level: 1, xp: 0 },
@@ -936,7 +1106,49 @@ test('it replays a retrying multi-attempt stream to an identical checkpoint stre
 });
 
 test('it replays a multi-clear stream to an identical checkpoint stream', async () => {
-  const input = buildSimulationInput({
+  const content: EncounterContent = {
+    contentVersion: '1',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+      {
+        id: 'placeholder-skirmisher',
+        name: 'World Map Skirmisher',
+        baseLevel: 1,
+        baseLife: 20,
+        baseXP: 8,
+        attackMin: 1,
+        attackMax: 4,
+        attackSpeed: 0.7,
+      },
+    ],
+    pools: [
+      {
+        id: 'default',
+        entries: [
+          { archetypeID: 'placeholder-brawler', weight: 1 },
+          { archetypeID: 'placeholder-skirmisher', weight: 1 },
+        ],
+      },
+    ],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
+  const input = buildSimulationInput(content, {
     avatarID: 'avatar-golden-clears',
     buildSnapshot: { level: 10, xp: 0 },
     contentVersion: '1',
@@ -1619,8 +1831,6 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
   `);
 });
 
-const EQUIVALENCE_SEEDS = [17, 90_210, 8_675_309, 424_242_424, 3_047_525_658, 555_000_111];
-
 /**
  * Every replay path must consume the stamped seed identically: the single-attempt runner and the
  * checkpoint-capturing driver are separate orchestrations of the same engine, so their streams for
@@ -1628,6 +1838,50 @@ const EQUIVALENCE_SEEDS = [17, 90_210, 8_675_309, 424_242_424, 3_047_525_658, 55
  * beside the driver.
  */
 test('it produces one identical checkpoint stream across the attempt and driver paths', async () => {
+  const content: EncounterContent = {
+    contentVersion: '1',
+    archetypes: [
+      {
+        id: 'placeholder-brawler',
+        name: 'World Map Enemy',
+        baseLevel: 1,
+        baseLife: 30,
+        baseXP: 10,
+        attackMin: 1,
+        attackMax: 3,
+        attackSpeed: 0.5,
+      },
+      {
+        id: 'placeholder-skirmisher',
+        name: 'World Map Skirmisher',
+        baseLevel: 1,
+        baseLife: 20,
+        baseXP: 8,
+        attackMin: 1,
+        attackMax: 4,
+        attackSpeed: 0.7,
+      },
+    ],
+    pools: [
+      {
+        id: 'default',
+        entries: [
+          { archetypeID: 'placeholder-brawler', weight: 1 },
+          { archetypeID: 'placeholder-skirmisher', weight: 1 },
+        ],
+      },
+    ],
+    tuning: {
+      waveCountMin: 3,
+      waveCountMax: 6,
+      waveSizeMin: 3,
+      waveSizeMax: 6,
+      difficultyScalingFactor: 1,
+    },
+  };
+
+  const EQUIVALENCE_SEEDS = [17, 90_210, 8_675_309, 424_242_424, 3_047_525_658, 555_000_111];
+
   for (const seed of EQUIVALENCE_SEEDS) {
     const source = {
       avatarID: 'avatar-equivalence',
@@ -1638,7 +1892,7 @@ test('it produces one identical checkpoint stream across the attempt and driver 
       seed: buildStateFromSeed(seed),
     };
 
-    const attemptInput = buildSimulationInput(source);
+    const attemptInput = buildSimulationInput(content, source);
 
     const attempt = await runAttempt(attemptInput.activity, attemptInput.avatar, {
       maxDurationMs: 120_000,
@@ -1646,7 +1900,7 @@ test('it produces one identical checkpoint stream across the attempt and driver 
 
     invariant(attempt.outcome !== 'exceeded-budget', `seed ${seed} must terminate in budget`);
 
-    const driverInput = buildSimulationInput(source);
+    const driverInput = buildSimulationInput(content, source);
     const driver = createSimulationDriver(driverInput.activity, driverInput.avatar);
 
     const advanced = await driver.advanceToDuration(120_000, undefined, attempt.checkpoints.length);

@@ -1,6 +1,5 @@
 export { buildPositionStream } from './build-position-stream';
 export { buildSaltStream } from './build-salt-stream';
-export { getTables } from './get-tables';
 export { rollAffixesFromStream } from './roll-affixes-from-stream';
 export { rollItemFromStream } from './roll-item-from-stream';
 

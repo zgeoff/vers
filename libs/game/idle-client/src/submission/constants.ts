@@ -23,8 +23,15 @@ export const RETRY_BACKOFF_CAP_MS = 300_000;
  */
 export const FLUSH_STALL_THRESHOLD = 3;
 export const CHECKPOINT_QUEUE_DB_NAME = 'vers-idle-checkpoint-queue';
-export const CHECKPOINT_QUEUE_DB_VERSION = 2;
+export const CHECKPOINT_QUEUE_DB_VERSION = 3;
 export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
+
+/**
+ * The object store caching published content documents by `contentVersion` — immutable once
+ * published, so a cached row never needs invalidation, only a self-healing overwrite on a failed
+ * parse.
+ */
+export const CONTENT_DOCUMENT_STORE_NAME = 'content-documents';
 
 /**
  * The `preferences` object store's one record key. A worker drives one avatar's simulation at a

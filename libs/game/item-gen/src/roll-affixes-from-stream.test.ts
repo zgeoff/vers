@@ -2,14 +2,32 @@ import { expect, test } from 'bun:test';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import { buildSaltStream } from './build-salt-stream';
 import { rollAffixesFromStream } from './roll-affixes-from-stream';
-import { tablesV1 } from './tables/tables-v1';
-import type { RolledAffix } from './types';
+import type { LootTables, RolledAffix } from './types';
 
 test('it redraws only values and keeps affix identities on a values-only roll', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
 
   const rolled = rollAffixesFromStream(
-    tablesV1,
+    tables,
     {
       baseID: 'placeholder-blade',
       rarityID: 'rare',
@@ -30,10 +48,29 @@ test('it redraws only values and keeps affix identities on a values-only roll', 
 });
 
 test('it keeps original values for protected groups on a values-only roll', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
 
   const rolled = rollAffixesFromStream(
-    tablesV1,
+    tables,
     {
       baseID: 'placeholder-blade',
       rarityID: 'rare',
@@ -51,10 +88,29 @@ test('it keeps original values for protected groups on a values-only roll', () =
 });
 
 test('it rolls a forced affix without a pick draw and counts it toward the total', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
 
   const rolled = rollAffixesFromStream(
-    tablesV1,
+    tables,
     { baseID: 'placeholder-blade', rarityID: 'magic', affixes: [] },
     { count: 1, forceAffixIDs: ['pct-guard'] },
     stream,
@@ -65,10 +121,29 @@ test('it rolls a forced affix without a pick draw and counts it toward the total
 });
 
 test('it draws the count from the rarity range when the constraint omits it', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
 
   const rolled = rollAffixesFromStream(
-    tablesV1,
+    tables,
     { baseID: 'placeholder-blade', rarityID: 'rare', affixes: [] },
     {},
     stream,
@@ -78,10 +153,29 @@ test('it draws the count from the rarity range when the constraint omits it', ()
 });
 
 test('it clamps the roll when the pool runs out of groups', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
 
   const rolled = rollAffixesFromStream(
-    tablesV1,
+    tables,
     { baseID: 'placeholder-blade', rarityID: 'rare', affixes: [] },
     { count: 5 },
     stream,
@@ -91,10 +185,29 @@ test('it clamps the roll when the pool runs out of groups', () => {
 });
 
 test('it never repeats a group within one roll', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
 
   const rolled = rollAffixesFromStream(
-    tablesV1,
+    tables,
     { baseID: 'placeholder-blade', rarityID: 'rare', affixes: [] },
     { count: 2 },
     stream,
@@ -106,10 +219,29 @@ test('it never repeats a group within one roll', () => {
 });
 
 test('it excludes occupied groups from the picks when asked', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
 
   const rolled = rollAffixesFromStream(
-    tablesV1,
+    tables,
     {
       baseID: 'placeholder-blade',
       rarityID: 'rare',
@@ -124,18 +256,37 @@ test('it excludes occupied groups from the picks when asked', () => {
 });
 
 test('it reproduces identical rolls from identical streams', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const first = buildSaltStream(hexToBytes('ab'.repeat(32)));
   const second = buildSaltStream(hexToBytes('ab'.repeat(32)));
 
   const rolledFirst = rollAffixesFromStream(
-    tablesV1,
+    tables,
     { baseID: 'placeholder-blade', rarityID: 'rare', affixes: [] },
     {},
     first,
   );
 
   const rolledSecond = rollAffixesFromStream(
-    tablesV1,
+    tables,
     { baseID: 'placeholder-blade', rarityID: 'rare', affixes: [] },
     {},
     second,
@@ -145,11 +296,30 @@ test('it reproduces identical rolls from identical streams', () => {
 });
 
 test('it rejects a forced list larger than the affix count', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
 
   expect(() =>
     rollAffixesFromStream(
-      tablesV1,
+      tables,
       { baseID: 'placeholder-blade', rarityID: 'rare', affixes: [] },
       { count: 1, forceAffixIDs: ['flat-power', 'flat-guard'] },
       stream,
@@ -158,11 +328,30 @@ test('it rejects a forced list larger than the affix count', () => {
 });
 
 test('it rejects forced affixes sharing a group', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
 
   expect(() =>
     rollAffixesFromStream(
-      tablesV1,
+      tables,
       { baseID: 'placeholder-blade', rarityID: 'rare', affixes: [] },
       { count: 2, forceAffixIDs: ['flat-power', 'pct-power'] },
       stream,
@@ -171,11 +360,30 @@ test('it rejects forced affixes sharing a group', () => {
 });
 
 test('it rejects a values-only roll combined with an identity-changing constraint', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
 
   expect(() =>
     rollAffixesFromStream(
-      tablesV1,
+      tables,
       { baseID: 'placeholder-blade', rarityID: 'rare', affixes: [] },
       { valuesOnly: true, count: 1 },
       stream,
@@ -184,11 +392,30 @@ test('it rejects a values-only roll combined with an identity-changing constrain
 });
 
 test('it rejects a base rarity missing from the tables', () => {
+  const tables: LootTables = {
+    contentVersion: '1',
+    rarities: [
+      { id: 'common', weight: 70, affixCountMin: 0, affixCountMax: 0 },
+      { id: 'magic', weight: 25, affixCountMin: 1, affixCountMax: 2 },
+      { id: 'rare', weight: 5, affixCountMin: 2, affixCountMax: 2 },
+    ],
+    bases: [
+      { id: 'placeholder-blade', weight: 60 },
+      { id: 'placeholder-focus', weight: 40 },
+    ],
+    affixes: [
+      { id: 'flat-power', groupID: 'power', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-power', groupID: 'power', weight: 1, valueMin: 1, valueMax: 5 },
+      { id: 'flat-guard', groupID: 'guard', weight: 3, valueMin: 1, valueMax: 10 },
+      { id: 'pct-guard', groupID: 'guard', weight: 1, valueMin: 1, valueMax: 5 },
+    ],
+  };
+
   const stream = buildSaltStream(hexToBytes('ab'.repeat(32)));
 
   expect(() =>
     rollAffixesFromStream(
-      tablesV1,
+      tables,
       { baseID: 'placeholder-blade', rarityID: 'mythic', affixes: [] },
       {},
       stream,

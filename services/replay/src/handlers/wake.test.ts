@@ -1,4 +1,6 @@
 import { expect, test } from 'bun:test';
+import { createContentVersion } from '@vers/content-registry';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import type { ReplayContract } from '@vers/contract-replay';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
@@ -8,6 +10,9 @@ import { createHonestActivityFixture } from '../test-utils/create-honest-activit
 
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
+
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
+
   const service = await createReplayService({ db: db.db });
   const viewer = await createAnonymousViewer({ audience: 'service-replay' });
 

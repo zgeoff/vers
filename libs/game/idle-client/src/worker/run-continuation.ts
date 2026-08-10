@@ -2,6 +2,7 @@ import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
+import { loadContentDocument } from '../content/load-content-document';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { WorkerMessageType } from '../types';
@@ -57,7 +58,7 @@ export async function runContinuation(
       return;
     }
 
-    await startContinuationFrom(context, simulation, started);
+    await startContinuationFrom(context, simulation, started, signals);
 
     return;
   }
@@ -110,8 +111,26 @@ async function startContinuationFrom(
   context: WorkerContext,
   simulation: Simulation,
   row: Readonly<ActivityData>,
+  signals: Readonly<FlowSignals>,
 ): Promise<void> {
-  const input = buildSimulationInput(row, { failureAction: context.getFailureAction() });
+  const document = await loadContentDocument(
+    context.getClient(),
+    row.contentVersion,
+    signals.cancel,
+  );
+
+  // the signal only cancels the load's fetch — a cached document resolves without consulting it,
+  // so a stop that landed during the load is re-checked here: installing would revive the run the
+  // player just ended, and the minted row is stopped back durably, as any player stop delivers
+  if (signals.stop.aborted) {
+    await submitStopIntent(context, row);
+
+    return;
+  }
+
+  const input = buildSimulationInput(document.encounter, row, {
+    failureAction: context.getFailureAction(),
+  });
 
   simulation.startActivity(input.avatar, input.activity);
   context.setActivity(row);

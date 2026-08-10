@@ -1,6 +1,7 @@
 import { expect, mock, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/browser';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import { createMockEncounterContent } from '@vers/game-utils/test-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import {
   ActivityFailureAction,
@@ -225,7 +226,11 @@ test('it keeps the queued rows of an activity that went live while the resync wa
 
   // a fresher activity goes live while the resync is parked on its held-batch flush, exactly as
   // a set-activity request landing mid-resync would install it
-  const input = buildSimulationInput(freshActivity);
+  const input = buildSimulationInput(
+    createMockEncounterContent({ contentVersion: '2' }),
+    freshActivity,
+  );
+
   const simulation = createSimulation();
 
   simulation.startActivity(input.avatar, input.activity);
@@ -308,7 +313,7 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
     startedAt: new Date(Date.now() - 2000),
   });
 
-  const input = buildSimulationInput(activity);
+  const input = buildSimulationInput(createMockEncounterContent({ contentVersion: '2' }), activity);
 
   const attempt = await runAttempt(input.activity, input.avatar, { maxDurationMs: 120_000 });
 
@@ -384,7 +389,7 @@ test('it reports a divergence fault, broadcasts the dead stream, and skips regis
     startedAt: new Date(Date.now() - 2000),
   });
 
-  const input = buildSimulationInput(activity);
+  const input = buildSimulationInput(createMockEncounterContent({ contentVersion: '2' }), activity);
 
   const attempt = await runAttempt(input.activity, input.avatar, { maxDurationMs: 120_000 });
 
@@ -1313,7 +1318,7 @@ test('it broadcasts the displacement and clears a live sim the writer was taken 
   });
 
   // the run is simulating live on this device when another session takes the writer
-  const input = buildSimulationInput(activity);
+  const input = buildSimulationInput(createMockEncounterContent({ contentVersion: '2' }), activity);
   const simulation = createSimulation();
 
   simulation.startActivity(input.avatar, input.activity);

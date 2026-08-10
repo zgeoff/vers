@@ -1,6 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 import { findActiveAvatar, findLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
-import type { ActivityData, BuildSnapshot } from '@vers/contract-activity';
+import { findCurrentContentVersion } from '@vers/content-registry';
+import type { ActivityData, BuildSnapshot, ContentDocument } from '@vers/contract-activity';
 import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
@@ -10,6 +11,7 @@ import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
 import type { CryptoKey } from 'jose';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
+import invariant from 'tiny-invariant';
 import { getOptimisticBuild } from '../get-optimistic-build';
 import { isUniqueViolation } from '../is-unique-violation';
 import { recordAvatarNotActiveRejection } from '../metrics/record-avatar-not-active-rejection';
@@ -24,15 +26,16 @@ import type {
 import { toActivityData } from './to-activity-data';
 
 /**
- * Db handle plus the content and key versions every new activity is minted against, and the keys
- * dispatch a start reads its scope secret over — the sim version is resolved per request from the
- * registry, never a fixed dep.
+ * Db handle plus the memoized content-document loader and key version every new activity is
+ * minted against, and the keys dispatch a start reads its scope secret over — both the sim
+ * version and the current content version are resolved per request from their registries, never
+ * a fixed dep.
  */
 interface StartActivityDeps {
-  readonly contentVersion: string;
   readonly db: Kysely<DB>;
   readonly keysServiceURL: string;
   readonly keyVersion: number;
+  readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
   readonly privateKey: CryptoKey;
   readonly secretRef: SecretRef;
   readonly secretVersion: number;
@@ -122,6 +125,14 @@ export async function startActivity(
     throw opts.errors.NODE_UNKNOWN({ data: {} });
   }
 
+  const contentVersion = await findCurrentContentVersion(deps.db);
+
+  invariant(contentVersion !== undefined, 'content registry has no current version');
+
+  const document = await deps.loadContentDocument(contentVersion);
+
+  invariant(document, `current content version ${contentVersion} is not published`);
+
   // Read before the transaction opens, keeping the advisory-lock window it holds small; a keys
   // dispatch failure (the service unreachable, or a config bug the keys client's own guard already
   // demoted to a plain Error) escapes uncaught to the central error interceptor, a 500 — never a
@@ -137,7 +148,7 @@ export async function startActivity(
 
   const encounterNode = {
     difficulty: resolved.difficulty,
-    ...deriveWorldmapContent(deps.contentVersion, {
+    ...deriveWorldmapContent(document.encounter, {
       coord: resolved.coord,
       scopeSecret,
       userSeed: 0,
@@ -188,7 +199,7 @@ export async function startActivity(
       };
 
       const startHash = buildStartHash({
-        contentVersion: deps.contentVersion,
+        contentVersion,
         encounterNode,
         keyVersion: deps.keyVersion,
         seed,
@@ -200,7 +211,7 @@ export async function startActivity(
         .values({
           avatarId: opts.input.avatarID,
           buildSnapshot,
-          contentVersion: deps.contentVersion,
+          contentVersion,
           encounterNode,
           id,
           keyVersion: deps.keyVersion,

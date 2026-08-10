@@ -11,6 +11,7 @@ import {
   createSimulation,
 } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
+import { loadContentDocument } from '../content/load-content-document';
 import { runReconstruction } from '../resync/run-reconstruction';
 import { runResync } from '../resync/run-resync';
 import type { FastForwardReport, ResyncPlan, ResyncResult } from '../resync/types';
@@ -133,8 +134,17 @@ async function runResyncPass(
 ): Promise<ResyncResult> {
   const result = await runResync({
     avatarID,
-    buildSimulationInput: (activity) =>
-      buildSimulationInput(activity, { failureAction: context.getFailureAction() }),
+    buildSimulationInput: async (source) => {
+      const document = await loadContentDocument(
+        context.getClient(),
+        source.contentVersion,
+        signals.cancel,
+      );
+
+      return buildSimulationInput(document.encounter, source, {
+        failureAction: context.getFailureAction(),
+      });
+    },
     claimWriter: claim,
     client: context.getClient(),
     isActivityLive: (activityID) => context.getSimulation().activity?.id === activityID,
@@ -545,7 +555,13 @@ async function applyHeadAttach(
   signals: Readonly<FlowSignals>,
   options: HeadAttachOptions,
 ): Promise<void> {
-  const input = buildSimulationInput(activity, {
+  const document = await loadContentDocument(
+    context.getClient(),
+    activity.contentVersion,
+    signals.cancel,
+  );
+
+  const input = buildSimulationInput(document.encounter, activity, {
     failureAction: context.getFailureAction(),
   });
 

@@ -28,6 +28,7 @@
     "@testcontainers/postgresql": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
+    "@vers/contract-activity": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "kysely-codegen": "catalog:",
     "kysely-ctl": "catalog:",

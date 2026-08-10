@@ -1,3 +1,4 @@
+import type { ContentDocument } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import type { SimulationDriver } from '@vers/idle-core';
 import type { CryptoKey } from 'jose';
@@ -48,6 +49,13 @@ export interface ReplayWorkerDeps {
    * The keys service origin the mint step derives a segment's avatar roll key from.
    */
   readonly keysServiceURL: string;
+
+  /**
+   * Loads a pinned content version's document — memoized per process, since published documents
+   * are immutable — for replaying and minting against the version a segment's activity stamped.
+   */
+  readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
+
   readonly logger: pino.Logger;
 
   /**

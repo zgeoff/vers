@@ -14,10 +14,9 @@ interface RunFastForwardOptions {
    * verifier derives the same way from the same source, so a stream must never carry one avatar
    * across continuations.
    */
-  readonly buildSimulationInput: (source: Readonly<SimulationInputSource>) => {
-    activity: ActivityInput;
-    avatar: AvatarData;
-  };
+  readonly buildSimulationInput: (
+    source: Readonly<SimulationInputSource>,
+  ) => Promise<{ activity: ActivityInput; avatar: AvatarData }>;
 
   readonly client: Pick<ActivityServiceClient, 'advanceActivity'>;
 

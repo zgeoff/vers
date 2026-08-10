@@ -43,22 +43,23 @@ test('it resolves to none for an avatar with no activity history', async () => {
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     client: ctx.client,
     submitter: ctx.submitter,
   });
@@ -77,22 +78,23 @@ test('it rejects the progress fetch when the given signal is already aborted', a
   await expect(
     runResync({
       avatarID: viewer.avatar.id,
-      buildSimulationInput: (started) => ({
-        activity: createMockActivityInput({
-          encounter: {
-            waves: [
-              Array.from({ length: 6 }, () => createMockEnemyData()),
-              Array.from({ length: 6 }, () => createMockEnemyData()),
-              Array.from({ length: 3 }, () => createMockEnemyData()),
-              Array.from({ length: 4 }, () => createMockEnemyData()),
-            ],
-          },
-          failureAction: ActivityFailureAction.Abort,
-          id: started.id,
-          seed: started.seed,
+      buildSimulationInput: (started) =>
+        Promise.resolve({
+          activity: createMockActivityInput({
+            encounter: {
+              waves: [
+                Array.from({ length: 6 }, () => createMockEnemyData()),
+                Array.from({ length: 6 }, () => createMockEnemyData()),
+                Array.from({ length: 3 }, () => createMockEnemyData()),
+                Array.from({ length: 4 }, () => createMockEnemyData()),
+              ],
+            },
+            failureAction: ActivityFailureAction.Abort,
+            id: started.id,
+            seed: started.seed,
+          }),
+          avatar: createMockAvatarData(),
         }),
-        avatar: createMockAvatarData(),
-      }),
       client: ctx.client,
       signal: controller.signal,
       submitter: ctx.submitter,
@@ -113,22 +115,23 @@ test('it rebases from the stop index without simulating when the activity is cap
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     client: ctx.client,
     submitter: ctx.submitter,
   });
@@ -160,22 +163,23 @@ test('it attaches live when the gap is negligible, leaving the submitter untouch
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     client: ctx.client,
     submitter: ctx.submitter,
   });
@@ -206,24 +210,25 @@ test('it fast-forwards a real offline gap and reports the outcome', async () => 
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
-      }),
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
 
-      // life 1 fails the first attempt fast, and the abort policy ends the fast-forward there
-      avatar: createMockAvatarData({ life: 1 }),
-    }),
+        // life 1 fails the first attempt fast, and the abort policy ends the fast-forward there
+        avatar: createMockAvatarData({ life: 1 }),
+      }),
     client: ctx.client,
     submitter: ctx.submitter,
   });
@@ -265,24 +270,25 @@ test('it awaits onProgressFetched with the settled progress before planning a fa
 
   const resync = runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
-      }),
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
 
-      // life 1 fails the first attempt fast, and the abort policy ends the fast-forward there
-      avatar: createMockAvatarData({ life: 1 }),
-    }),
+        // life 1 fails the first attempt fast, and the abort policy ends the fast-forward there
+        avatar: createMockAvatarData({ life: 1 }),
+      }),
     client: ctx.client,
     onProgress,
     onProgressFetched,
@@ -326,22 +332,23 @@ test('it delivers checkpoints a previous worker left queued and plans against th
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     client: ctx.client,
     submitter: ctx.submitter,
   });
@@ -384,22 +391,23 @@ test('it refuses to plan while stranded checkpoints cannot be delivered', async 
   expect(
     runResync({
       avatarID: viewer.avatar.id,
-      buildSimulationInput: (started) => ({
-        activity: createMockActivityInput({
-          encounter: {
-            waves: [
-              Array.from({ length: 6 }, () => createMockEnemyData()),
-              Array.from({ length: 6 }, () => createMockEnemyData()),
-              Array.from({ length: 3 }, () => createMockEnemyData()),
-              Array.from({ length: 4 }, () => createMockEnemyData()),
-            ],
-          },
-          failureAction: ActivityFailureAction.Abort,
-          id: started.id,
-          seed: started.seed,
+      buildSimulationInput: (started) =>
+        Promise.resolve({
+          activity: createMockActivityInput({
+            encounter: {
+              waves: [
+                Array.from({ length: 6 }, () => createMockEnemyData()),
+                Array.from({ length: 6 }, () => createMockEnemyData()),
+                Array.from({ length: 3 }, () => createMockEnemyData()),
+                Array.from({ length: 4 }, () => createMockEnemyData()),
+              ],
+            },
+            failureAction: ActivityFailureAction.Abort,
+            id: started.id,
+            seed: started.seed,
+          }),
+          avatar: createMockAvatarData(),
         }),
-        avatar: createMockAvatarData(),
-      }),
       client: ctx.client,
       submitter: ctx.submitter,
     }),
@@ -420,22 +428,23 @@ test('it downgrades a fast-forward to attach-live when the activity is already s
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     client: ctx.client,
     isActivityLive: (activityID) => activityID === activity.id,
     submitter: ctx.submitter,
@@ -465,22 +474,23 @@ test('it leaves a live activity queue untouched instead of draining it', async (
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     client: ctx.client,
     isActivityLive: (activityID) => activityID === activity.id,
     submitter: ctx.submitter,
@@ -526,22 +536,23 @@ test('it resolves active-elsewhere without claiming when another session holds t
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     client: ctx.client,
     submitter: ctx.submitter,
   });
@@ -584,22 +595,23 @@ test('it takes over the writer before planning when claiming a run another sessi
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     claimWriter: true,
     client: ctx.client,
     submitter: ctx.submitter,
@@ -633,22 +645,23 @@ test('it skips the claim when this session already holds the writer', async () =
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     claimWriter: true,
     client: ctx.client,
     submitter: ctx.submitter,
@@ -694,22 +707,23 @@ test('it refetches after a claim that reveals appends the fetch missed', async (
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     claimWriter: true,
     client: ctx.client,
     submitter: ctx.submitter,
@@ -757,22 +771,23 @@ test('it plans the terminal outcome without claiming when the run ends before th
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     claimWriter: true,
     client: ctx.client,
     submitter: ctx.submitter,
@@ -823,22 +838,23 @@ test('it drains a stale fork before claiming, so the fork lands as an eviction, 
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     claimWriter: true,
     client: ctx.client,
     submitter: ctx.submitter,
@@ -881,22 +897,23 @@ test('it reports a lost writer for a live run another session took, then resolve
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     client: ctx.client,
     isActivityLive: (activityID) => activityID === activity.id,
     onWriterLost,
@@ -944,22 +961,23 @@ test('it yields to a third session that claims over this one before the refetch'
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) => ({
-      activity: createMockActivityInput({
-        encounter: {
-          waves: [
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 6 }, () => createMockEnemyData()),
-            Array.from({ length: 3 }, () => createMockEnemyData()),
-            Array.from({ length: 4 }, () => createMockEnemyData()),
-          ],
-        },
-        failureAction: ActivityFailureAction.Abort,
-        id: started.id,
-        seed: started.seed,
+    buildSimulationInput: (started) =>
+      Promise.resolve({
+        activity: createMockActivityInput({
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
+          failureAction: ActivityFailureAction.Abort,
+          id: started.id,
+          seed: started.seed,
+        }),
+        avatar: createMockAvatarData(),
       }),
-      avatar: createMockAvatarData(),
-    }),
     claimWriter: true,
     client: ctx.client,
     submitter: ctx.submitter,
