@@ -3,7 +3,6 @@ import { OpenAPIGenerator } from '@orpc/openapi';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
 import { activityContract } from './activity-contract';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
-import { createMockCatchUpContinuation } from './test-utils/factories/create-mock-catch-up-continuation';
 
 test('it declares UNAUTHORIZED and FORBIDDEN on every owner-scoped procedure', () => {
   expect(activityContract.getCurrentActivity['~orpc'].errorMap).toContainAllKeys([
@@ -65,26 +64,70 @@ test('it declares a bespoke ACTIVITY_CAPPED with an explicit status on trackActi
 test('it rejects an advanceActivity request whose checkpoints exceed the cap across continuations', () => {
   const half = Math.ceil(MAX_CATCH_UP_BATCH_CHECKPOINTS / 2);
 
+  const checkpoint = {
+    hash: 'hash',
+    payload: {
+      chainIndex: 0,
+      entropySource: 'server-key',
+      nextSeed: 'seed',
+      seed: 'seed',
+      time: 0,
+      type: 'progress',
+    },
+    prevHash: 'prev',
+    version: 1,
+  };
+
   // Each continuation is under the per-array cap; only their sum trips the aggregate bound.
   const input = {
     activityID: 'act_source',
     continuations: [
-      createMockCatchUpContinuation({ checkpointCount: half }),
-      createMockCatchUpContinuation({ checkpointCount: half + 1 }),
+      {
+        buildSnapshot: { level: 1, xp: 0 },
+        checkpoints: Array.from({ length: half }, () => checkpoint),
+        id: 'act_continuation_1',
+        startKey: 'continue_1',
+      },
+      {
+        buildSnapshot: { level: 1, xp: 0 },
+        checkpoints: Array.from({ length: half + 1 }, () => checkpoint),
+        id: 'act_continuation_2',
+        startKey: 'continue_2',
+      },
     ],
     expectedHead: 0,
   };
 
-  expect(activityContract.advanceActivity['~orpc'].inputSchema?.safeParse(input).success).toBe(
-    false,
-  );
+  const result = activityContract.advanceActivity['~orpc'].inputSchema?.safeParse(input);
+
+  expect(result?.success).toBe(false);
+  expect(result?.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
 });
 
 test('it accepts an advanceActivity request at the aggregate checkpoint cap', () => {
+  const checkpoint = {
+    hash: 'hash',
+    payload: {
+      chainIndex: 0,
+      entropySource: 'server-key',
+      nextSeed: 'seed',
+      seed: 'seed',
+      time: 0,
+      type: 'progress',
+    },
+    prevHash: 'prev',
+    version: 1,
+  };
+
   const input = {
     activityID: 'act_source',
     continuations: [
-      createMockCatchUpContinuation({ checkpointCount: MAX_CATCH_UP_BATCH_CHECKPOINTS }),
+      {
+        buildSnapshot: { level: 1, xp: 0 },
+        checkpoints: Array.from({ length: MAX_CATCH_UP_BATCH_CHECKPOINTS }, () => checkpoint),
+        id: 'act_continuation_1',
+        startKey: 'continue_1',
+      },
     ],
     expectedHead: 0,
   };
