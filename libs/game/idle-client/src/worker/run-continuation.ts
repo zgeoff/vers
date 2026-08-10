@@ -16,20 +16,21 @@ import type { FlowSignals, WorkerContext } from './types';
  * Starts the next continuation after a terminal checkpoint: a fresh server row for the same
  * scope, continuing the RNG chain the terminal checkpoint's `nextSeed` anchors, registered from
  * a zero cursor. Restarting the same row is impossible — the server closed it to appends on the
- * terminal checkpoint. Duplicate deliveries dedupe on the start key, so a `CONFLICT` is a
- * genuinely different claim and is handed to a full resync — adopting a conflicting row from a
- * zero cursor would fork the checkpoint chain. The same-row case (terminal append still
- * unacknowledged) and a transport failure both park a durable start intent for a later resync's
- * drain, surviving a worker reload; any other rejection parks nothing — the service answered, so
- * the failure is the activity's, not the connection's. AVATAR_NOT_ACTIVE means the account
- * switched avatars mid-session: nothing is parked, since this avatar's chain has nowhere to
- * continue to, and the tab is told which avatar is now active rather than left on a silently
- * reset runtime. An expired sim version means this build's engine can no longer replay the
- * current content: nothing is parked, since a reload is the only remedy, and the tab is told to
- * offer it rather than left on a silently reset runtime. Queued from the tick loop, the entry
- * guard is the staleness check: a turn whose simulation/activity pair lost the runtime while it
- * waited returns untouched. Past the start call only stops can interleave; a row started under
- * one is stopped back durably.
+ * terminal checkpoint.
+ *
+ * Duplicate deliveries dedupe on the start key, so a `CONFLICT` is a genuinely different claim
+ * and is handed to a full resync — adopting a conflicting row from a zero cursor would fork the
+ * checkpoint chain. The same-row case (a terminal append still unacknowledged) and a transport
+ * failure both park a durable start intent for a later resync's drain, surviving a worker reload.
+ * Any other rejection parks nothing — the service answered, so the failure is the activity's, not
+ * the connection's. Two of those rejections also notify the tab, which would otherwise be left on
+ * a silently reset runtime: `AVATAR_NOT_ACTIVE` names the avatar the account switched to
+ * mid-session, and an expired sim version has the tab offer a reload — the only remedy once this
+ * build's engine can no longer replay the current content.
+ *
+ * Queued from the tick loop, the entry guard is the staleness check: a turn whose
+ * simulation/activity pair lost the runtime while it waited returns untouched. Past the start
+ * call only stops can interleave; a row started under one is stopped back durably.
  */
 export async function runContinuation(
   context: WorkerContext,
