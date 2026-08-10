@@ -183,6 +183,8 @@ Libraries (`libs/`, grouped by domain):
 - `libs/game/roll-crypto` - avatar roll-key derivation and the rolled-reward digest PRF
 - `libs/game/item-gen` - entropy-agnostic item interpreter: roll streams, interpretation of
   caller-supplied loot tables, affix constraints
+- `libs/game/content-version` - the newest content version this build's engine code derives and
+  replays, shared by the deploy CLI and the engine packages
 - `libs/game/idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
 - `libs/game/idle-core` - deterministic seeded simulation engine
 - `libs/game/worldmap-content` - sealed worldmap content derivation and the s2s scope-secret read it

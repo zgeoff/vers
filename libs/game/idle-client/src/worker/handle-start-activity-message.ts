@@ -86,11 +86,7 @@ async function runStart(
     };
   }
 
-  // a swept hash reads back unknown rather than expired — either way the remedy is the same reload
-  if (
-    isDefinedError(error) &&
-    (error.code === 'SIM_VERSION_EXPIRED' || error.code === 'SIM_VERSION_UNKNOWN')
-  ) {
+  if (isDefinedError(error) && error.code === 'SIM_VERSION_EXPIRED') {
     return { kind: 'failed', rejection: { reason: 'sim-version-expired' } };
   }
 
@@ -151,11 +147,7 @@ async function runStart(
       };
     }
 
-    // a swept hash reads back unknown rather than expired — either way the remedy is the same reload
-    if (
-      isDefinedError(retryError) &&
-      (retryError.code === 'SIM_VERSION_EXPIRED' || retryError.code === 'SIM_VERSION_UNKNOWN')
-    ) {
+    if (isDefinedError(retryError) && retryError.code === 'SIM_VERSION_EXPIRED') {
       return { kind: 'failed', rejection: { reason: 'sim-version-expired' } };
     }
 
@@ -175,19 +167,35 @@ function isSuperseded(context: WorkerContext, token: string): boolean {
 
 /**
  * One start-activity mint, deliberately unsigned: the response is the only handle on the minted
- * row, and the stop-back compensation needs it.
+ * row, and the stop-back compensation needs it. SIM_VERSION_UNKNOWN on the bundled hash retries
+ * once with no hash at all, falling back onto the registry's current stamp rather than treating a
+ * deploy's registry-write lag as this build's engine being stale — the documented remedy for the
+ * code is to refresh and retry, not to reload.
  */
-function tryStartActivity(
+async function tryStartActivity(
   context: WorkerContext,
   input: Readonly<StartActivityInput>,
   token: string,
 ) {
-  return safe(
+  const first = await safe(
     context.getClient().startActivity({
       avatarID: input.avatarID,
       scopeID: input.scopeID,
       scopeType: input.scopeType,
       simVersion: BUNDLED_ENGINE_HASH,
+      startKey: token,
+    }),
+  );
+
+  if (!isDefinedError(first[0]) || first[0].code !== 'SIM_VERSION_UNKNOWN') {
+    return first;
+  }
+
+  return safe(
+    context.getClient().startActivity({
+      avatarID: input.avatarID,
+      scopeID: input.scopeID,
+      scopeType: input.scopeType,
       startKey: token,
     }),
   );

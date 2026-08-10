@@ -265,8 +265,15 @@ gets one: `vers-replay-<hash12>` (the engine hash's first 12 hex characters), a 
 address, and a machine launched from `vers-service-replay`'s current deployment tag. Provisioning
 always launches by tag — `flyctl machine run` mangles a `@sha256:` digest reference — and records
 the digest `machines list --json` resolves it to separately. The registry row stores that
-digest-pinned image ref and the provider app's flycast URL. The row refreshes whenever the fleet's
-resolved digest differs from what's stored, even when the provider app itself needs no change.
+digest-pinned image ref, the provider app's flycast URL, and the build's bundled max content version
+(`BUNDLED_CONTENT_VERSION`, `libs/game/content-version`) — the newest content version this engine
+build derives and replays. The row refreshes whenever the fleet's resolved digest or the bundled
+content version differs from what's stored, even when the provider app itself needs no change.
+
+`startActivity` refuses to stamp a version whose row's max content version falls behind the content
+registry's current version, answering `SIM_VERSION_EXPIRED` rather than accepting a start it could
+never replay. An engine build must deploy and reconcile its row's max content version before the
+content-registry publish that depends on it goes out — the ordering this refusal assumes.
 
 Pruning stale provider apps and expired registry rows is a separate sweep's job — the deploy CLI
 only ever creates and refreshes.

@@ -521,7 +521,47 @@ test('it settles a start rejected as SIM_VERSION_EXPIRED as failed with a sim-ve
   });
 });
 
-test('it settles a start rejected as SIM_VERSION_UNKNOWN as failed with a sim-version-expired rejection', async () => {
+test('it starts normally when a bundled hash reads back unknown but the registry-current retry succeeds', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const context = createStubWorkerContext({ client: ctx.client, submitter: createStubSubmitter() });
+
+  // the first call's hash misses a registry write still in flight for this deploy; the retry
+  // drops the hash and lands on the registry's current stamp instead
+  let attempts = 0;
+
+  server.use(
+    mockActivityService.startActivity.handler(async (opts) => {
+      attempts += 1;
+
+      if (attempts === 1) {
+        throw opts.errors.SIM_VERSION_UNKNOWN({ data: { currentSimVersion: null } });
+      }
+
+      const minted = await db.activityCollection.create({
+        avatarID: viewer.avatar.id,
+        scopeID: '0_0',
+        scopeType: 'world_map_node',
+        status: 'active',
+      });
+
+      return minted;
+    }),
+  );
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(attempts).toBe(2);
+
+  invariant(result.kind === 'started', 'expected a started status');
+});
+
+test('it settles a start rejected as SIM_VERSION_UNKNOWN as failed with no rejection once the registry-current retry also comes back unknown', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
@@ -539,10 +579,7 @@ test('it settles a start rejected as SIM_VERSION_UNKNOWN as failed with a sim-ve
     scopeType: 'world_map_node',
   });
 
-  expect(result).toStrictEqual({
-    kind: 'failed',
-    rejection: { reason: 'sim-version-expired' },
-  });
+  expect(result).toStrictEqual({ kind: 'failed' });
 });
 
 test('it reports no worker fault for a start rejected as SIM_VERSION_EXPIRED', async () => {
